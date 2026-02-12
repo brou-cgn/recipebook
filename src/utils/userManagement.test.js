@@ -840,6 +840,11 @@ describe('User Management Utilities', () => {
       const recipeNoAuthor = { id: '2', title: 'No Author Recipe' };
       expect(canEditRecipe(editUser, recipeNoAuthor)).toBe(false);
     });
+
+    test('should allow admin to edit recipe without author (e.g., sample recipes)', () => {
+      const recipeNoAuthor = { id: '2', title: 'Sample Recipe Without Author' };
+      expect(canEditRecipe(adminUser, recipeNoAuthor)).toBe(true);
+    });
   });
 
   describe('canDeleteRecipe', () => {
@@ -889,6 +894,11 @@ describe('User Management Utilities', () => {
 
     test('should return false for null user', () => {
       expect(canDeleteRecipe(null, recipe)).toBe(false);
+    });
+
+    test('should allow admin to delete recipe without author (e.g., sample recipes)', () => {
+      const recipeNoAuthor = { id: '2', title: 'Sample Recipe Without Author' };
+      expect(canDeleteRecipe(adminUser, recipeNoAuthor)).toBe(true);
     });
   });
 
