@@ -48,7 +48,7 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #402C1C;
 }
 
 .form-group textarea {
@@ -64,8 +64,9 @@
 
 .form-section h3 {
   margin: 0 0 1rem 0;
-  color: #4CAF50;
+  color: #1a1a1a;
   font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .no-recipes {
@@ -93,8 +94,8 @@
 }
 
 .recipe-checkbox:hover {
-  border-color: #4CAF50;
-  background: #f1f8f4;
+  border-color: #402C1C;
+  background: #f9f6f3;
 }
 
 .recipe-checkbox input[type="checkbox"] {
@@ -144,12 +145,12 @@
 }
 
 .save-button {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
 }
 
 .save-button:hover {
-  background: #45a049;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }

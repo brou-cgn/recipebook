@@ -36,8 +36,9 @@
 
 .settings-section h3 {
   margin: 0 0 1rem 0;
-  color: #4CAF50;
+  color: #1a1a1a;
   font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .list-input {
@@ -57,11 +58,11 @@
 
 .list-input input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #402C1C;
 }
 
 .list-input button {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -73,7 +74,7 @@
 }
 
 .list-input button:hover {
-  background: #45a049;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
 }
 
 .list-items {
@@ -143,12 +144,12 @@
 }
 
 .save-button {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
 }
 
 .save-button:hover {
-  background: #45a049;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }

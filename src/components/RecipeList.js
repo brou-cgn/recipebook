@@ -5,16 +5,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe }) {
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
-        <h2>My Recipes</h2>
+        <h2>Meine Rezepte</h2>
         <button className="add-button" onClick={onAddRecipe}>
-          + Add Recipe
+          + Rezept hinzufügen
         </button>
       </div>
       
       {recipes.length === 0 ? (
         <div className="empty-state">
-          <p>No recipes yet!</p>
-          <p className="empty-hint">Tap "Add Recipe" to create your first recipe</p>
+          <p>Noch keine Rezepte!</p>
+          <p className="empty-hint">Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen</p>
         </div>
       ) : (
         <div className="recipe-grid">
@@ -35,8 +35,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe }) {
               <div className="recipe-card-content">
                 <h3>{recipe.title}</h3>
                 <div className="recipe-meta">
-                  <span>🥘 {recipe.ingredients?.length || 0} ingredients</span>
-                  <span>📝 {recipe.steps?.length || 0} steps</span>
+                  <span>{recipe.ingredients?.length || 0} Zutaten</span>
+                  <span>{recipe.steps?.length || 0} Schritte</span>
                 </div>
               </div>
             </div>

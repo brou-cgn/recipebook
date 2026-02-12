@@ -1,5 +1,5 @@
 .header {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   color: white;
   padding: 1.5rem 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -46,7 +46,7 @@
 
 .toggle-btn.active {
   background: rgba(255, 255, 255, 0.9);
-  color: #4CAF50;
+  color: #1a1a1a;
 }
 
 .header-title {

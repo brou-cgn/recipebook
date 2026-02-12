@@ -18,14 +18,14 @@ function Settings({ onBack }) {
 
   const handleSave = () => {
     saveCustomLists(lists);
-    alert('Settings saved successfully!');
+    alert('Einstellungen erfolgreich gespeichert!');
   };
 
   const handleReset = () => {
-    if (window.confirm('Are you sure you want to reset all lists to defaults?')) {
+    if (window.confirm('Möchten Sie wirklich alle Listen auf die Standardwerte zurücksetzen?')) {
       const defaultLists = resetCustomLists();
       setLists(defaultLists);
-      alert('Lists reset to defaults!');
+      alert('Listen auf Standardwerte zurückgesetzt!');
     }
   };
 
@@ -84,23 +84,23 @@ function Settings({ onBack }) {
     <div className="settings-container">
       <div className="settings-header">
         <button className="back-button" onClick={onBack}>
-          ← Back
+          ← Zurück
         </button>
-        <h2>⚙️ Settings</h2>
+        <h2>Einstellungen</h2>
       </div>
 
       <div className="settings-content">
         <div className="settings-section">
-          <h3>Cuisine Types</h3>
+          <h3>Kulinarik-Typen</h3>
           <div className="list-input">
             <input
               type="text"
               value={newCuisine}
               onChange={(e) => setNewCuisine(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCuisine()}
-              placeholder="Add new cuisine type..."
+              placeholder="Neuen Kulinarik-Typ hinzufügen..."
             />
-            <button onClick={addCuisine}>Add</button>
+            <button onClick={addCuisine}>Hinzufügen</button>
           </div>
           <div className="list-items">
             {lists.cuisineTypes.map((cuisine) => (
@@ -109,7 +109,7 @@ function Settings({ onBack }) {
                 <button
                   className="remove-btn"
                   onClick={() => removeCuisine(cuisine)}
-                  title="Remove"
+                  title="Entfernen"
                 >
                   ✕
                 </button>
@@ -119,16 +119,16 @@ function Settings({ onBack }) {
         </div>
 
         <div className="settings-section">
-          <h3>Meal Categories</h3>
+          <h3>Speisekategorien</h3>
           <div className="list-input">
             <input
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addCategory()}
-              placeholder="Add new meal category..."
+              placeholder="Neue Speisekategorie hinzufügen..."
             />
-            <button onClick={addCategory}>Add</button>
+            <button onClick={addCategory}>Hinzufügen</button>
           </div>
           <div className="list-items">
             {lists.mealCategories.map((category) => (
@@ -137,7 +137,7 @@ function Settings({ onBack }) {
                 <button
                   className="remove-btn"
                   onClick={() => removeCategory(category)}
-                  title="Remove"
+                  title="Entfernen"
                 >
                   ✕
                 </button>
@@ -147,16 +147,16 @@ function Settings({ onBack }) {
         </div>
 
         <div className="settings-section">
-          <h3>Measurement Units</h3>
+          <h3>Maßeinheiten</h3>
           <div className="list-input">
             <input
               type="text"
               value={newUnit}
               onChange={(e) => setNewUnit(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addUnit()}
-              placeholder="Add new unit..."
+              placeholder="Neue Einheit hinzufügen..."
             />
-            <button onClick={addUnit}>Add</button>
+            <button onClick={addUnit}>Hinzufügen</button>
           </div>
           <div className="list-items">
             {lists.units.map((unit) => (
@@ -165,7 +165,7 @@ function Settings({ onBack }) {
                 <button
                   className="remove-btn"
                   onClick={() => removeUnit(unit)}
-                  title="Remove"
+                  title="Entfernen"
                 >
                   ✕
                 </button>
@@ -176,10 +176,10 @@ function Settings({ onBack }) {
 
         <div className="settings-actions">
           <button className="reset-button" onClick={handleReset}>
-            Reset to Defaults
+            Auf Standard zurücksetzen
           </button>
           <button className="save-button" onClick={handleSave}>
-            Save Settings
+            Einstellungen speichern
           </button>
         </div>
       </div>

@@ -26,12 +26,12 @@ function MenuForm({ menu, recipes, onSave, onCancel }) {
     e.preventDefault();
     
     if (!name.trim()) {
-      alert('Please enter a menu name');
+      alert('Bitte geben Sie einen Menü-Namen ein');
       return;
     }
 
     if (selectedRecipes.length === 0) {
-      alert('Please select at least one recipe');
+      alert('Bitte wählen Sie mindestens ein Rezept aus');
       return;
     }
 
@@ -48,37 +48,37 @@ function MenuForm({ menu, recipes, onSave, onCancel }) {
   return (
     <div className="menu-form-container">
       <div className="menu-form-header">
-        <h2>{menu ? 'Edit Menu' : 'Create New Menu'}</h2>
+        <h2>{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
       </div>
 
       <form className="menu-form" onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="menuName">Menu Name *</label>
+          <label htmlFor="menuName">Menü-Name *</label>
           <input
             type="text"
             id="menuName"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Sunday Dinner, Holiday Feast"
+            placeholder="z.B. Sonntagsessen, Festtagsmenü"
             required
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="menuDescription">Description (optional)</label>
+          <label htmlFor="menuDescription">Beschreibung (optional)</label>
           <textarea
             id="menuDescription"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe this menu..."
+            placeholder="Beschreiben Sie dieses Menü..."
             rows="3"
           />
         </div>
 
         <div className="form-section">
-          <h3>Select Recipes</h3>
+          <h3>Rezepte auswählen</h3>
           {recipes.length === 0 ? (
-            <p className="no-recipes">No recipes available. Please create some recipes first.</p>
+            <p className="no-recipes">Keine Rezepte verfügbar. Bitte erstellen Sie zuerst einige Rezepte.</p>
           ) : (
             <div className="recipe-selection">
               {recipes.map((recipe) => (
@@ -98,10 +98,10 @@ function MenuForm({ menu, recipes, onSave, onCancel }) {
 
         <div className="form-actions">
           <button type="button" className="cancel-button" onClick={onCancel}>
-            Cancel
+            Abbrechen
           </button>
           <button type="submit" className="save-button">
-            {menu ? 'Update Menu' : 'Create Menu'}
+            {menu ? 'Menü aktualisieren' : 'Menü erstellen'}
           </button>
         </div>
       </form>

@@ -5,7 +5,7 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
+    if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
       onDelete(recipe.id);
     }
   };
@@ -39,27 +39,32 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
 
+  // Handle both array and string formats for kulinarik
+  const cuisineDisplay = Array.isArray(recipe.kulinarik) 
+    ? recipe.kulinarik.join(', ') 
+    : recipe.kulinarik;
+
   return (
     <div className="recipe-detail-container">
       <div className="recipe-detail-header">
         <button className="back-button" onClick={onBack}>
-          ← Back
+          ← Zurück
         </button>
         <div className="action-buttons">
           {onToggleFavorite && (
             <button 
               className={`favorite-button ${recipe.isFavorite ? 'is-favorite' : ''}`}
               onClick={() => onToggleFavorite(recipe.id)}
-              title={recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              title={recipe.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
             >
-              {recipe.isFavorite ? '★ Favorite' : '☆ Favorite'}
+              {recipe.isFavorite ? '★ Favorit' : '☆ Favorit'}
             </button>
           )}
           <button className="edit-button" onClick={() => onEdit(recipe)}>
-            ✏️ Edit
+            Bearbeiten
           </button>
           <button className="delete-button" onClick={handleDelete}>
-            🗑️ Delete
+            Löschen
           </button>
         </div>
       </div>
@@ -74,26 +79,23 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
         <h1 className="recipe-title">{recipe.title}</h1>
 
         <div className="recipe-metadata">
-          {recipe.kulinarik && (
+          {cuisineDisplay && (
             <div className="metadata-item">
-              <span className="metadata-icon">🌍</span>
-              <span className="metadata-label">Cuisine:</span>
-              <span className="metadata-value cuisine-badge">{recipe.kulinarik}</span>
+              <span className="metadata-label">Kulinarik:</span>
+              <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
             </div>
           )}
           
           {recipe.speisekategorie && (
             <div className="metadata-item">
-              <span className="metadata-icon">🍽️</span>
-              <span className="metadata-label">Category:</span>
+              <span className="metadata-label">Kategorie:</span>
               <span className="metadata-value">{recipe.speisekategorie}</span>
             </div>
           )}
           
           {recipe.schwierigkeit && (
             <div className="metadata-item">
-              <span className="metadata-icon">📊</span>
-              <span className="metadata-label">Difficulty:</span>
+              <span className="metadata-label">Schwierigkeit:</span>
               <span className="metadata-value difficulty-stars">
                 {'⭐'.repeat(recipe.schwierigkeit)}
               </span>
@@ -102,16 +104,15 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
           
           {recipe.kochdauer && (
             <div className="metadata-item">
-              <span className="metadata-icon">⏱️</span>
-              <span className="metadata-label">Time:</span>
-              <span className="metadata-value">{recipe.kochdauer} min</span>
+              <span className="metadata-label">Zeit:</span>
+              <span className="metadata-value">{recipe.kochdauer} Min.</span>
             </div>
           )}
         </div>
 
         <section className="recipe-section">
           <div className="section-header">
-            <h2>🥘 Ingredients ({recipe.ingredients?.length || 0})</h2>
+            <h2>Zutaten ({recipe.ingredients?.length || 0})</h2>
             {recipe.portionen && (
               <div className="serving-control">
                 <button 
@@ -122,7 +123,7 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
                   -
                 </button>
                 <span className="serving-display">
-                  {currentServings} {currentServings === 1 ? 'serving' : 'servings'}
+                  {currentServings} {currentServings === 1 ? 'Portion' : 'Portionen'}
                 </span>
                 <button 
                   className="serving-btn"
@@ -136,16 +137,16 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
           <ul className="ingredients-list">
             {recipe.ingredients?.map((ingredient, index) => (
               <li key={index}>{scaleIngredient(ingredient)}</li>
-            )) || <li>No ingredients listed</li>}
+            )) || <li>Keine Zutaten aufgelistet</li>}
           </ul>
         </section>
 
         <section className="recipe-section">
-          <h2>📝 Preparation Steps</h2>
+          <h2>Zubereitungsschritte</h2>
           <ol className="steps-list">
             {recipe.steps?.map((step, index) => (
               <li key={index}>{step}</li>
-            )) || <li>No preparation steps listed</li>}
+            )) || <li>Keine Zubereitungsschritte aufgelistet</li>}
           </ol>
         </section>
       </div>

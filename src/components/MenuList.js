@@ -9,16 +9,16 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu }) {
   return (
     <div className="menu-list-container">
       <div className="menu-list-header">
-        <h2>My Menus</h2>
+        <h2>Meine Menüs</h2>
         <button className="add-menu-button" onClick={onAddMenu}>
-          + Create Menu
+          + Menü erstellen
         </button>
       </div>
       
       {menus.length === 0 ? (
         <div className="empty-state">
-          <p>No menus yet!</p>
-          <p className="empty-hint">Tap "Create Menu" to organize your recipes into menus</p>
+          <p>Noch keine Menüs!</p>
+          <p className="empty-hint">Tippen Sie auf "Menü erstellen", um Ihre Rezepte in Menüs zu organisieren</p>
         </div>
       ) : (
         <div className="menu-grid">
@@ -34,7 +34,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu }) {
                   <p className="menu-description">{menu.description}</p>
                 )}
                 <div className="menu-meta">
-                  <span>📋 {getRecipeCount(menu)} recipes</span>
+                  <span>{getRecipeCount(menu)} Rezepte</span>
                 </div>
               </div>
             </div>

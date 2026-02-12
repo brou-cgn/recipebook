@@ -46,13 +46,13 @@
 }
 
 .edit-button {
-  color: #2196F3;
-  border-color: #2196F3;
+  color: #402C1C;
+  border-color: #402C1C;
 }
 
 .edit-button:hover {
-  background: #E3F2FD;
-  border-color: #1976D2;
+  background: #f9f6f3;
+  border-color: #1a1a1a;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -80,7 +80,7 @@
   margin: 0 0 1rem 0;
   color: #333;
   font-size: 2rem;
-  border-bottom: 3px solid #2196F3;
+  border-bottom: 3px solid #402C1C;
   padding-bottom: 0.5rem;
 }
 
@@ -122,8 +122,9 @@
 
 .menu-recipes-section h2 {
   margin: 0 0 1.5rem 0;
-  color: #2196F3;
+  color: #1a1a1a;
   font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .no-recipes {

@@ -70,12 +70,12 @@
 }
 
 .edit-button {
-  color: #4CAF50;
-  border-color: #4CAF50;
+  color: #402C1C;
+  border-color: #402C1C;
 }
 
 .edit-button:hover {
-  background: #4CAF50;
+  background: #402C1C;
   color: white;
 }
 
@@ -149,7 +149,7 @@
 }
 
 .cuisine-badge {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -174,8 +174,9 @@
 
 .recipe-section h2 {
   margin: 0 0 1rem 0;
-  color: #4CAF50;
+  color: #1a1a1a;
   font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .section-header {
@@ -197,7 +198,7 @@
 }
 
 .serving-btn {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
   color: white;
   border: none;
   width: 32px;
@@ -213,7 +214,7 @@
 }
 
 .serving-btn:hover:not(:disabled) {
-  background: #45a049;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   transform: scale(1.1);
 }
 

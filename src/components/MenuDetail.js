@@ -3,7 +3,7 @@ import './MenuDetail.css';
 
 function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe }) {
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${menu.name}"?`)) {
+    if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
       onDelete(menu.id);
     }
   };
@@ -14,14 +14,14 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe })
     <div className="menu-detail-container">
       <div className="menu-detail-header">
         <button className="back-button" onClick={onBack}>
-          ← Back
+          ← Zurück
         </button>
         <div className="action-buttons">
           <button className="edit-button" onClick={() => onEdit(menu)}>
-            ✏️ Edit
+            Bearbeiten
           </button>
           <button className="delete-button" onClick={handleDelete}>
-            🗑️ Delete
+            Löschen
           </button>
         </div>
       </div>
@@ -35,15 +35,14 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe })
 
         <div className="menu-stats">
           <span className="stat-item">
-            <span className="stat-icon">📋</span>
-            <span className="stat-value">{menuRecipes.length} Recipes</span>
+            <span className="stat-value">{menuRecipes.length} Rezepte</span>
           </span>
         </div>
 
         <section className="menu-recipes-section">
-          <h2>Recipes in this Menu</h2>
+          <h2>Rezepte in diesem Menü</h2>
           {menuRecipes.length === 0 ? (
-            <p className="no-recipes">No recipes in this menu</p>
+            <p className="no-recipes">Keine Rezepte in diesem Menü</p>
           ) : (
             <div className="recipes-grid">
               {menuRecipes.map((recipe) => (
@@ -63,8 +62,8 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe })
                   <div className="recipe-card-content">
                     <h3>{recipe.title}</h3>
                     <div className="recipe-meta">
-                      <span>🥘 {recipe.ingredients?.length || 0} ingredients</span>
-                      <span>📝 {recipe.steps?.length || 0} steps</span>
+                      <span>{recipe.ingredients?.length || 0} Zutaten</span>
+                      <span>{recipe.steps?.length || 0} Schritte</span>
                     </div>
                   </div>
                 </div>

@@ -8,7 +8,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
-  const [kulinarik, setKulinarik] = useState('');
+  const [kulinarik, setKulinarik] = useState([]);
   const [schwierigkeit, setSchwierigkeit] = useState(3);
   const [kochdauer, setKochdauer] = useState(30);
   const [speisekategorie, setSpeisekategorie] = useState('');
@@ -27,7 +27,14 @@ function RecipeForm({ recipe, onSave, onCancel }) {
       setTitle(recipe.title || '');
       setImage(recipe.image || '');
       setPortionen(recipe.portionen || 4);
-      setKulinarik(recipe.kulinarik || '');
+      // Handle both old string format and new array format for kulinarik
+      if (Array.isArray(recipe.kulinarik)) {
+        setKulinarik(recipe.kulinarik);
+      } else if (recipe.kulinarik) {
+        setKulinarik([recipe.kulinarik]);
+      } else {
+        setKulinarik([]);
+      }
       setSchwierigkeit(recipe.schwierigkeit || 3);
       setKochdauer(recipe.kochdauer || 30);
       setSpeisekategorie(recipe.speisekategorie || '');
@@ -114,7 +121,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
     e.preventDefault();
     
     if (!title.trim()) {
-      alert('Please enter a recipe title');
+      alert('Bitte geben Sie einen Rezepttitel ein');
       return;
     }
 
@@ -123,7 +130,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
       title: title.trim(),
       image: image.trim(),
       portionen: parseInt(portionen) || 4,
-      kulinarik: kulinarik.trim(),
+      kulinarik: kulinarik,
       schwierigkeit: parseInt(schwierigkeit) || 3,
       kochdauer: parseInt(kochdauer) || 30,
       speisekategorie: speisekategorie.trim(),
@@ -137,21 +144,21 @@ function RecipeForm({ recipe, onSave, onCancel }) {
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
-        <h2>{recipe ? 'Edit Recipe' : 'Add New Recipe'}</h2>
+        <h2>{recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen'}</h2>
       </div>
 
       <form className="recipe-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <div className="form-group-header">
-            <label htmlFor="title">Recipe Title *</label>
+            <label htmlFor="title">Rezepttitel *</label>
             {containsEmojis(title) && (
               <button
                 type="button"
                 className="emoji-remove-btn"
                 onClick={handleRemoveEmojisFromTitle}
-                title="Remove emojis from title"
+                title="Emojis entfernen"
               >
-                Remove Emojis
+                Emojis entfernen
               </button>
             )}
           </div>
@@ -160,17 +167,17 @@ function RecipeForm({ recipe, onSave, onCancel }) {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Spaghetti Carbonara"
+            placeholder="z.B. Spaghetti Carbonara"
             required
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="image">Recipe Image (optional)</label>
+          <label htmlFor="image">Rezeptbild (optional)</label>
           <div className="image-input-container">
             <div className="image-upload-section">
               <label htmlFor="imageFile" className="image-upload-label">
-                {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                {uploadingImage ? 'Hochladen...' : 'Bild hochladen'}
               </label>
               <input
                 type="file"
@@ -180,14 +187,14 @@ function RecipeForm({ recipe, onSave, onCancel }) {
                 style={{ display: 'none' }}
                 disabled={uploadingImage}
               />
-              <span className="or-separator">or</span>
+              <span className="or-separator">oder</span>
             </div>
             <input
               type="url"
               id="image"
               value={image && !isBase64Image(image) ? image : ''}
               onChange={(e) => setImage(e.target.value)}
-              placeholder="Enter image URL"
+              placeholder="Bild-URL eingeben"
               disabled={uploadingImage}
             />
           </div>
@@ -198,9 +205,9 @@ function RecipeForm({ recipe, onSave, onCancel }) {
                 type="button"
                 className="remove-image-btn"
                 onClick={() => setImage('')}
-                title="Remove image"
+                title="Bild entfernen"
               >
-                ✕ Remove
+                ✕ Entfernen
               </button>
             </div>
           )}
@@ -208,7 +215,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
 
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="portionen">Servings (Portionen)</label>
+            <label htmlFor="portionen">Portionen</label>
             <input
               type="number"
               id="portionen"
@@ -221,7 +228,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="kochdauer">Cooking Time (minutes)</label>
+            <label htmlFor="kochdauer">Kochzeit (Minuten)</label>
             <input
               type="number"
               id="kochdauer"
@@ -234,38 +241,45 @@ function RecipeForm({ recipe, onSave, onCancel }) {
           </div>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="kulinarik">Cuisine Type</label>
-            <select
-              id="kulinarik"
-              value={kulinarik}
-              onChange={(e) => setKulinarik(e.target.value)}
-            >
-              <option value="">Select cuisine...</option>
-              {customLists.cuisineTypes.map((cuisine) => (
-                <option key={cuisine} value={cuisine}>{cuisine}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="speisekategorie">Meal Category</label>
-            <select
-              id="speisekategorie"
-              value={speisekategorie}
-              onChange={(e) => setSpeisekategorie(e.target.value)}
-            >
-              <option value="">Select category...</option>
-              {customLists.mealCategories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
+        <div className="form-group">
+          <label htmlFor="kulinarik">Kulinarik (Mehrfachauswahl möglich)</label>
+          <div className="cuisine-multi-select">
+            {customLists.cuisineTypes.map((cuisine) => (
+              <label key={cuisine} className="cuisine-checkbox">
+                <input
+                  type="checkbox"
+                  value={cuisine}
+                  checked={kulinarik.includes(cuisine)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setKulinarik([...kulinarik, cuisine]);
+                    } else {
+                      setKulinarik(kulinarik.filter(c => c !== cuisine));
+                    }
+                  }}
+                />
+                <span>{cuisine}</span>
+              </label>
+            ))}
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="schwierigkeit">Difficulty Level</label>
+          <label htmlFor="speisekategorie">Speisekategorie</label>
+          <select
+            id="speisekategorie"
+            value={speisekategorie}
+            onChange={(e) => setSpeisekategorie(e.target.value)}
+          >
+            <option value="">Kategorie auswählen...</option>
+            {customLists.mealCategories.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="schwierigkeit">Schwierigkeitsgrad</label>
           <div className="difficulty-selector">
             {[1, 2, 3, 4, 5].map((level) => (
               <label key={level} className="difficulty-option">
@@ -286,15 +300,15 @@ function RecipeForm({ recipe, onSave, onCancel }) {
 
         <div className="form-section">
           <div className="section-header">
-            <h3>🥘 Ingredients</h3>
+            <h3>Zutaten</h3>
             {ingredients.some(i => containsEmojis(i)) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
                 onClick={handleRemoveEmojisFromIngredients}
-                title="Remove emojis from all ingredients"
+                title="Emojis aus allen Zutaten entfernen"
               >
-                Remove Emojis
+                Emojis entfernen
               </button>
             )}
           </div>
@@ -304,7 +318,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
                 type="text"
                 value={ingredient}
                 onChange={(e) => handleIngredientChange(index, e.target.value)}
-                placeholder={`Ingredient ${index + 1}`}
+                placeholder={`Zutat ${index + 1}`}
               />
               {ingredients.length > 1 && (
                 <button
@@ -318,21 +332,21 @@ function RecipeForm({ recipe, onSave, onCancel }) {
             </div>
           ))}
           <button type="button" className="add-item-button" onClick={handleAddIngredient}>
-            + Add Ingredient
+            + Zutat hinzufügen
           </button>
         </div>
 
         <div className="form-section">
           <div className="section-header">
-            <h3>📝 Preparation Steps</h3>
+            <h3>Zubereitungsschritte</h3>
             {steps.some(s => containsEmojis(s)) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
                 onClick={handleRemoveEmojisFromSteps}
-                title="Remove emojis from all steps"
+                title="Emojis aus allen Schritten entfernen"
               >
-                Remove Emojis
+                Emojis entfernen
               </button>
             )}
           </div>
@@ -342,7 +356,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
               <textarea
                 value={step}
                 onChange={(e) => handleStepChange(index, e.target.value)}
-                placeholder={`Step ${index + 1}`}
+                placeholder={`Schritt ${index + 1}`}
                 rows="2"
               />
               {steps.length > 1 && (
@@ -357,16 +371,16 @@ function RecipeForm({ recipe, onSave, onCancel }) {
             </div>
           ))}
           <button type="button" className="add-item-button" onClick={handleAddStep}>
-            + Add Step
+            + Schritt hinzufügen
           </button>
         </div>
 
         <div className="form-actions">
           <button type="button" className="cancel-button" onClick={onCancel}>
-            Cancel
+            Abbrechen
           </button>
           <button type="submit" className="save-button">
-            {recipe ? 'Update Recipe' : 'Save Recipe'}
+            {recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
           </button>
         </div>
       </form>
