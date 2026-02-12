@@ -217,7 +217,6 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
               value={authorId}
               onChange={(e) => setAuthorId(e.target.value)}
             >
-              <option value="">Autor auswählen...</option>
               {getUsers().map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.vorname} {user.nachname} ({user.email})
