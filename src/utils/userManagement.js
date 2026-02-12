@@ -333,7 +333,7 @@ export const deleteUser = (userId) => {
 };
 
 /**
- * Check if user has permission to edit recipes
+ * Check if user has permission to edit recipes (general permission)
  * @param {Object} user - User object
  * @returns {boolean}
  */
@@ -343,12 +343,39 @@ export const canEditRecipes = (user) => {
 };
 
 /**
- * Check if user has permission to delete recipes
+ * Check if user has permission to delete recipes (general permission)
  * @param {Object} user - User object
  * @returns {boolean}
  */
 export const canDeleteRecipes = (user) => {
   if (!user) return false;
+  return user.role === ROLES.ADMIN;
+};
+
+/**
+ * Check if user can edit a specific recipe
+ * @param {Object} user - User object
+ * @param {Object} recipe - Recipe object with authorId field
+ * @returns {boolean}
+ */
+export const canEditRecipe = (user, recipe) => {
+  if (!user) return false;
+  // Admins can edit any recipe
+  if (user.role === ROLES.ADMIN) return true;
+  // Users with edit permission can only edit their own recipes
+  if (user.role === ROLES.EDIT && recipe && recipe.authorId === user.id) return true;
+  return false;
+};
+
+/**
+ * Check if user can delete a specific recipe
+ * @param {Object} user - User object
+ * @param {Object} recipe - Recipe object with authorId field
+ * @returns {boolean}
+ */
+export const canDeleteRecipe = (user, recipe) => {
+  if (!user) return false;
+  // Only admins can delete recipes
   return user.role === ROLES.ADMIN;
 };
 

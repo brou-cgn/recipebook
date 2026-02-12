@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import './RecipeDetail.css';
-import { canEditRecipes, canDeleteRecipes } from '../utils/userManagement';
+import { canEditRecipe, canDeleteRecipe } from '../utils/userManagement';
 
 function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, currentUser }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
 
-  const userCanEdit = canEditRecipes(currentUser);
-  const userCanDelete = canDeleteRecipes(currentUser);
+  const userCanEdit = canEditRecipe(currentUser, recipe);
+  const userCanDelete = canDeleteRecipe(currentUser, recipe);
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {

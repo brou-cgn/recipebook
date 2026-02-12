@@ -13,6 +13,8 @@ import {
   deleteUser,
   canEditRecipes,
   canDeleteRecipes,
+  canEditRecipe,
+  canDeleteRecipe,
   getRoleDisplayName,
   validatePassword,
   updateUserName,
@@ -767,6 +769,123 @@ describe('User Management Utilities', () => {
       
       const loginResult = loginUser('test@example.com', 'password123');
       expect(loginResult.success).toBe(false);
+    });
+  });
+
+  describe('canEditRecipe', () => {
+    let adminUser, editUser, readUser, recipe;
+
+    beforeEach(() => {
+      // Create test users
+      const adminResult = registerUser({
+        vorname: 'Admin',
+        nachname: 'User',
+        email: 'admin@example.com',
+        password: 'password123'
+      });
+      adminUser = adminResult.user;
+
+      const editResult = registerUser({
+        vorname: 'Edit',
+        nachname: 'User',
+        email: 'edit@example.com',
+        password: 'password123'
+      });
+      editUser = editResult.user;
+      updateUserRole(editUser.id, ROLES.EDIT);
+      // Refresh user object after role update
+      editUser = getUsers().find(u => u.id === editUser.id);
+
+      const readResult = registerUser({
+        vorname: 'Read',
+        nachname: 'User',
+        email: 'read@example.com',
+        password: 'password123'
+      });
+      readUser = readResult.user;
+
+      // Create test recipe with editUser as author
+      recipe = {
+        id: '1',
+        title: 'Test Recipe',
+        authorId: editUser.id
+      };
+    });
+
+    test('should allow admin to edit any recipe', () => {
+      expect(canEditRecipe(adminUser, recipe)).toBe(true);
+    });
+
+    test('should allow author to edit their own recipe', () => {
+      expect(canEditRecipe(editUser, recipe)).toBe(true);
+    });
+
+    test('should not allow edit user to edit other users recipes', () => {
+      const otherRecipe = { ...recipe, authorId: adminUser.id };
+      expect(canEditRecipe(editUser, otherRecipe)).toBe(false);
+    });
+
+    test('should not allow read user to edit any recipe', () => {
+      expect(canEditRecipe(readUser, recipe)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(canEditRecipe(null, recipe)).toBe(false);
+    });
+
+    test('should return false for recipe without author', () => {
+      const recipeNoAuthor = { id: '2', title: 'No Author Recipe' };
+      expect(canEditRecipe(editUser, recipeNoAuthor)).toBe(false);
+    });
+  });
+
+  describe('canDeleteRecipe', () => {
+    let adminUser, editUser, recipe;
+
+    beforeEach(() => {
+      // Create test users
+      const adminResult = registerUser({
+        vorname: 'Admin',
+        nachname: 'User',
+        email: 'admin@example.com',
+        password: 'password123'
+      });
+      adminUser = adminResult.user;
+
+      const editResult = registerUser({
+        vorname: 'Edit',
+        nachname: 'User',
+        email: 'edit@example.com',
+        password: 'password123'
+      });
+      editUser = editResult.user;
+      updateUserRole(editUser.id, ROLES.EDIT);
+      // Refresh user object after role update
+      editUser = getUsers().find(u => u.id === editUser.id);
+
+      // Create test recipe
+      recipe = {
+        id: '1',
+        title: 'Test Recipe',
+        authorId: editUser.id
+      };
+    });
+
+    test('should allow admin to delete any recipe', () => {
+      expect(canDeleteRecipe(adminUser, recipe)).toBe(true);
+    });
+
+    test('should not allow edit user to delete their own recipe', () => {
+      expect(canDeleteRecipe(editUser, recipe)).toBe(false);
+    });
+
+    test('should not allow edit user to delete other users recipes', () => {
+      const otherRecipe = { ...recipe, authorId: adminUser.id };
+      expect(canDeleteRecipe(editUser, otherRecipe)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(canDeleteRecipe(null, recipe)).toBe(false);
     });
   });
 });

@@ -3,8 +3,9 @@ import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64 } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
+import { getUsers } from '../utils/userManagement';
 
-function RecipeForm({ recipe, onSave, onCancel }) {
+function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
@@ -16,6 +17,7 @@ function RecipeForm({ recipe, onSave, onCancel }) {
   const [steps, setSteps] = useState(['']);
   const [imageError, setImageError] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [authorId, setAuthorId] = useState('');
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -40,8 +42,12 @@ function RecipeForm({ recipe, onSave, onCancel }) {
       setSpeisekategorie(recipe.speisekategorie || '');
       setIngredients(recipe.ingredients?.length > 0 ? recipe.ingredients : ['']);
       setSteps(recipe.steps?.length > 0 ? recipe.steps : ['']);
+      setAuthorId(recipe.authorId || currentUser?.id || '');
+    } else {
+      // New recipe - set current user as author
+      setAuthorId(currentUser?.id || '');
     }
-  }, [recipe]);
+  }, [recipe, currentUser]);
 
   useEffect(() => {
     setCustomLists(getCustomLists());
@@ -135,7 +141,8 @@ function RecipeForm({ recipe, onSave, onCancel }) {
       kochdauer: parseInt(kochdauer) || 30,
       speisekategorie: speisekategorie.trim(),
       ingredients: ingredients.filter(i => i.trim() !== ''),
-      steps: steps.filter(s => s.trim() !== '')
+      steps: steps.filter(s => s.trim() !== ''),
+      authorId: authorId
     };
 
     onSave(recipeData);
@@ -199,6 +206,31 @@ function RecipeForm({ recipe, onSave, onCancel }) {
                 ✕ Entfernen
               </button>
             </div>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="author">Autor</label>
+          {currentUser?.isAdmin ? (
+            <select
+              id="author"
+              value={authorId}
+              onChange={(e) => setAuthorId(e.target.value)}
+            >
+              {getUsers().map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.vorname} {user.nachname} ({user.email})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              id="author"
+              value={`${currentUser?.vorname || ''} ${currentUser?.nachname || ''}`}
+              disabled
+              style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+            />
           )}
         </div>
 

@@ -325,6 +325,7 @@ function App() {
             recipe={editingRecipe}
             onSave={handleSaveRecipe}
             onCancel={handleCancelForm}
+            currentUser={currentUser}
           />
         ) : selectedRecipe ? (
           <RecipeDetail
