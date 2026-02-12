@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists } from '../utils/customLists';
+import { getUsers, updateUserAdminStatus, getAdminCount, isCurrentUserAdmin } from '../utils/userManagement';
 
-function Settings({ onBack }) {
+function Settings({ onBack, currentUser }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -11,9 +12,15 @@ function Settings({ onBack }) {
   const [newCuisine, setNewCuisine] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newUnit, setNewUnit] = useState('');
+  const [users, setUsers] = useState([]);
+  const [message, setMessage] = useState({ text: '', type: '' }); // 'success' or 'error'
+  const [activeTab, setActiveTab] = useState('lists'); // 'lists' or 'users'
 
   useEffect(() => {
     setLists(getCustomLists());
+    if (isCurrentUserAdmin()) {
+      setUsers(getUsers());
+    }
   }, []);
 
   const handleSave = () => {
@@ -80,6 +87,27 @@ function Settings({ onBack }) {
     });
   };
 
+  const handleToggleAdmin = (userId, currentAdminStatus) => {
+    const newAdminStatus = !currentAdminStatus;
+    const result = updateUserAdminStatus(userId, newAdminStatus);
+    
+    if (result.success) {
+      setUsers(getUsers());
+      setMessage({ text: result.message, type: 'success' });
+    } else {
+      setMessage({ text: result.message, type: 'error' });
+    }
+    
+    // Clear message after 3 seconds
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+  };
+
+  const canRemoveAdmin = (userId, isAdmin) => {
+    if (!isAdmin) return true;
+    const adminCount = getAdminCount();
+    return adminCount > 1;
+  };
+
   return (
     <div className="settings-container">
       <div className="settings-header">
@@ -89,8 +117,27 @@ function Settings({ onBack }) {
         <h2>Einstellungen</h2>
       </div>
 
+      {isCurrentUserAdmin() && (
+        <div className="settings-tabs">
+          <button
+            className={`tab-button ${activeTab === 'lists' ? 'active' : ''}`}
+            onClick={() => setActiveTab('lists')}
+          >
+            Listen & Kategorien
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Benutzerverwaltung
+          </button>
+        </div>
+      )}
+
       <div className="settings-content">
-        <div className="settings-section">
+        {activeTab === 'lists' ? (
+          <>
+            <div className="settings-section">
           <h3>Kulinarik-Typen</h3>
           <div className="list-input">
             <input
@@ -182,6 +229,79 @@ function Settings({ onBack }) {
             Einstellungen speichern
           </button>
         </div>
+      </>
+        ) : (
+          <>
+            {message.text && (
+              <div className={`message ${message.type}`}>
+                {message.text}
+              </div>
+            )}
+            <p className="info-text">
+              Hier können Sie alle registrierten Benutzerkonten einsehen und Administrator-Rechte verwalten.
+            </p>
+            
+            {users.length === 0 ? (
+              <div className="empty-state">
+                <p>Keine Benutzer vorhanden.</p>
+              </div>
+            ) : (
+              <div className="users-table-container">
+                <table className="users-table">
+                  <thead>
+                    <tr>
+                      <th>Vorname</th>
+                      <th>Nachname</th>
+                      <th>E-Mail</th>
+                      <th>Registriert am</th>
+                      <th>Administrator</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className={user.id === currentUser?.id ? 'current-user' : ''}>
+                        <td>{user.vorname}</td>
+                        <td>{user.nachname}</td>
+                        <td>{user.email}</td>
+                        <td>{new Date(user.createdAt).toLocaleDateString('de-DE')}</td>
+                        <td>
+                          <label className="admin-toggle">
+                            <input
+                              type="checkbox"
+                              checked={user.isAdmin}
+                              onChange={() => handleToggleAdmin(user.id, user.isAdmin)}
+                              disabled={!canRemoveAdmin(user.id, user.isAdmin)}
+                              title={
+                                !canRemoveAdmin(user.id, user.isAdmin)
+                                  ? 'Es muss mindestens ein Administrator vorhanden sein'
+                                  : 'Admin-Status ändern'
+                              }
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                          {user.isAdmin && getAdminCount() === 1 && (
+                            <span className="admin-lock-hint" title="Einziger Administrator">
+                              🔒
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            <div className="user-stats">
+              <div className="stat-item">
+                <strong>Gesamt:</strong> {users.length} Benutzer
+              </div>
+              <div className="stat-item">
+                <strong>Administratoren:</strong> {getAdminCount()}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
