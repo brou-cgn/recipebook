@@ -1,7 +1,7 @@
 import React from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
-import { groupRecipesByParent } from '../utils/recipeVersioning';
+import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { isRecipeFavorite } from '../utils/userFavorites';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
@@ -52,7 +52,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
       ) : (
         <div className="recipe-grid">
           {recipeGroups.map(group => {
-            const recipe = group.primaryRecipe;
+            // Sort versions to get the one that should be displayed first
+            const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, isRecipeFavorite, recipes);
+            const recipe = sortedVersions[0] || group.primaryRecipe;
             const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
             const authorName = getAuthorName(recipe.authorId);
             return (
