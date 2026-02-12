@@ -21,10 +21,10 @@ afterEach(() => {
   localStorage.clear();
 });
 
-test('renders RecipeBook header', () => {
+test('renders DishBook header', () => {
   setupLoggedInUser();
   render(<App />);
-  const headerElement = screen.getByText(/RecipeBook/i);
+  const headerElement = screen.getByText(/DishBook/i);
   expect(headerElement).toBeInTheDocument();
 });
 

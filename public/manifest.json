@@ -1,6 +1,6 @@
 {
-  "short_name": "RecipeBook",
-  "name": "RecipeBook - Your Digital Recipe Collection",
+  "short_name": "DishBook",
+  "name": "DishBook - Unsere Besten",
   "icons": [
     {
       "src": "favicon.ico",
@@ -22,5 +22,5 @@
   "display": "standalone",
   "theme_color": "#4CAF50",
   "background_color": "#ffffff",
-  "description": "A Progressive Web App for managing your favorite recipes"
+  "description": "DishBook - A Progressive Web App for managing your favorite recipes"
 }

@@ -20,8 +20,8 @@ function Header({
     <header className="header">
       <div className="header-content">
         <div className="header-title">
-          <h1>RecipeBook</h1>
-          <p className="tagline">Ihre digitale Rezeptsammlung</p>
+          <h1>DishBook</h1>
+          <p className="tagline">Unsere Besten</p>
         </div>
         <div className="header-actions">
           {onViewChange && (
