@@ -22,8 +22,8 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/userManagement', () => ({
   getUsers: () => [
-    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true },
-    { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false },
+    { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true, role: 'admin' },
+    { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false, role: 'edit' },
   ],
   ROLES: {
     ADMIN: 'admin',
