@@ -18,6 +18,11 @@ import {
   registerUser,
   loginAsGuest
 } from './utils/userManagement';
+import { 
+  toggleFavorite,
+  isRecipeFavorite,
+  migrateGlobalFavorites
+} from './utils/userFavorites';
 
 function App() {
   const [recipes, setRecipes] = useState([]);
@@ -57,6 +62,13 @@ function App() {
     }
     setRecipesLoaded(true);
   }, []);
+
+  // Migrate old global favorites to user-specific favorites (one-time migration)
+  useEffect(() => {
+    if (currentUser && recipesLoaded && recipes.length > 0) {
+      migrateGlobalFavorites(currentUser.id, recipes);
+    }
+  }, [currentUser, recipesLoaded, recipes]);
 
   // Save recipes to localStorage whenever they change (but only after initial load)
   useEffect(() => {
@@ -145,12 +157,18 @@ function App() {
   };
 
   const handleToggleFavorite = (recipeId) => {
-    setRecipes(recipes.map(r => 
-      r.id === recipeId ? { ...r, isFavorite: !r.isFavorite } : r
-    ));
-    // Update selectedRecipe if it's the one being toggled
+    if (!currentUser) return;
+    
+    // Toggle in user-specific favorites storage
+    toggleFavorite(currentUser.id, recipeId);
+    
+    // Trigger a re-render by updating state (but we don't modify the recipe objects anymore)
+    // Force update by setting state to a new array reference
+    setRecipes([...recipes]);
+    
+    // Update selectedRecipe to trigger re-render if it's the one being toggled
     if (selectedRecipe && selectedRecipe.id === recipeId) {
-      setSelectedRecipe({ ...selectedRecipe, isFavorite: !selectedRecipe.isFavorite });
+      setSelectedRecipe({ ...selectedRecipe });
     }
   };
 
@@ -312,6 +330,7 @@ function App() {
             recipes={recipes}
             onSave={handleSaveMenu}
             onCancel={handleCancelMenuForm}
+            currentUser={currentUser}
           />
         ) : selectedMenu ? (
           <MenuDetail
@@ -321,6 +340,7 @@ function App() {
             onEdit={handleEditMenu}
             onDelete={handleDeleteMenu}
             onSelectRecipe={handleSelectRecipe}
+            currentUser={currentUser}
           />
         ) : (
           <MenuList
@@ -358,8 +378,8 @@ function App() {
               if (categoryFilter && recipe.speisekategorie !== categoryFilter) {
                 return false;
               }
-              // Apply favorites filter
-              if (showFavoritesOnly && !recipe.isFavorite) {
+              // Apply favorites filter - check user-specific favorites
+              if (showFavoritesOnly && !isRecipeFavorite(currentUser?.id, recipe.id)) {
                 return false;
               }
               return true;

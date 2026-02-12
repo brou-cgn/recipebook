@@ -2,6 +2,7 @@ import React from 'react';
 import './RecipeList.css';
 import { canEditRecipes } from '../utils/userManagement';
 import { groupRecipesByParent } from '../utils/recipeVersioning';
+import { isRecipeFavorite } from '../utils/userFavorites';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
   // Generate dynamic heading based on filters
@@ -41,13 +42,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
         <div className="recipe-grid">
           {recipeGroups.map(group => {
             const recipe = group.primaryRecipe;
+            const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
             return (
               <div
                 key={recipe.id}
                 className="recipe-card"
                 onClick={() => handleRecipeClick(group)}
               >
-                {recipe.isFavorite && (
+                {isFavorite && (
                   <div className="favorite-badge">★</div>
                 )}
                 {group.versionCount > 1 && (

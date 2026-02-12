@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe } from '../utils/recipeVersioning';
+import { isRecipeFavorite } from '../utils/userFavorites';
 
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
@@ -21,6 +22,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
+  const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
@@ -71,11 +73,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         <div className="action-buttons">
           {onToggleFavorite && (
             <button 
-              className={`favorite-button ${recipe.isFavorite ? 'is-favorite' : ''}`}
+              className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
               onClick={() => onToggleFavorite(recipe.id)}
-              title={recipe.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+              title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
             >
-              {recipe.isFavorite ? '★ Favorit' : '☆ Favorit'}
+              {isFavorite ? '★ Favorit' : '☆ Favorit'}
             </button>
           )}
           {userCanDirectlyEdit && (

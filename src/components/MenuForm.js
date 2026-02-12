@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './MenuForm.css';
+import { isRecipeFavorite } from '../utils/userFavorites';
 
-function MenuForm({ menu, recipes, onSave, onCancel }) {
+function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedRecipes, setSelectedRecipes] = useState([]);
@@ -81,17 +82,20 @@ function MenuForm({ menu, recipes, onSave, onCancel }) {
             <p className="no-recipes">Keine Rezepte verfügbar. Bitte erstellen Sie zuerst einige Rezepte.</p>
           ) : (
             <div className="recipe-selection">
-              {recipes.map((recipe) => (
-                <label key={recipe.id} className="recipe-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedRecipes.includes(recipe.id)}
-                    onChange={() => handleToggleRecipe(recipe.id)}
-                  />
-                  <span className="recipe-name">{recipe.title}</span>
-                  {recipe.isFavorite && <span className="favorite-indicator">★</span>}
-                </label>
-              ))}
+              {recipes.map((recipe) => {
+                const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                return (
+                  <label key={recipe.id} className="recipe-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedRecipes.includes(recipe.id)}
+                      onChange={() => handleToggleRecipe(recipe.id)}
+                    />
+                    <span className="recipe-name">{recipe.title}</span>
+                    {isFavorite && <span className="favorite-indicator">★</span>}
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>
