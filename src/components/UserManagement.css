@@ -199,19 +199,102 @@
   transition: all 0.2s;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   background: #e5e5e5;
   transform: scale(1.1);
 }
 
-.edit-btn:hover {
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-btn:hover:not(:disabled) {
   background: #e3f2fd;
   border-color: #2196f3;
 }
 
-.password-btn:hover {
+.role-btn:hover:not(:disabled) {
+  background: #f3e5f5;
+  border-color: #9c27b0;
+}
+
+.password-btn:hover:not(:disabled) {
   background: #fff3e0;
   border-color: #ff9800;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: #ffebee;
+  border-color: #f44336;
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-badge.role-admin {
+  background: #e8eaf6;
+  color: #3f51b5;
+  border: 1px solid #c5cae9;
+}
+
+.role-badge.role-edit {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.role-badge.role-comment {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.role-badge.role-read {
+  background: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffe0b2;
+}
+
+.role-badge.role-guest {
+  background: #f5f5f5;
+  color: #757575;
+  border: 1px solid #e0e0e0;
+}
+
+/* Permissions Info Box */
+.permissions-info {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.permissions-info h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.permissions-info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.permissions-info li {
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* Modal Styles */
@@ -271,7 +354,8 @@
   font-size: 14px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #ddd;
@@ -280,10 +364,29 @@
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.role-select {
+  cursor: pointer;
+}
+
+.role-description {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 5px;
+  margin-top: 15px;
+  font-size: 13px;
+  color: #555;
+  border-left: 3px solid #667eea;
+}
+
+.role-description p {
+  margin: 0;
 }
 
 .field-error {
@@ -300,7 +403,8 @@
 }
 
 .btn-cancel,
-.btn-save {
+.btn-save,
+.btn-delete {
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
@@ -324,8 +428,36 @@
   color: white;
 }
 
-.btn-save:hover {
+.btn-save:hover:not(:disabled) {
   background: #5568d3;
+}
+
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-delete {
+  background: #f44336;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #d32f2f;
+}
+
+.modal-danger {
+  border-top: 4px solid #f44336;
+}
+
+.modal-warning {
+  background: #fff3cd;
+  color: #856404;
+  padding: 12px 15px;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border-left: 3px solid #ffc107;
 }
 
 @media (max-width: 768px) {

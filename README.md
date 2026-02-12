@@ -11,6 +11,103 @@ A Progressive Web App (PWA) for managing your favorite recipes. Built with React
 - 🖼️ **Image Support**: Add images to your recipes
 - 📝 **Ingredients & Steps**: Organize recipes with detailed ingredient lists and preparation steps
 - 💿 **Local Storage**: All recipes are saved locally in your browser
+- 👥 **User Management**: Role-based access control with administrators and different permission levels
+- 🔐 **Security**: Password-protected accounts with different access rights
+
+## User Management and Permissions
+
+RecipeBook includes a comprehensive user management system with role-based access control.
+
+### User Roles and Permissions
+
+The application implements a hierarchical permission system with the following roles:
+
+1. **Administrator** 👑
+   - Full access to all features
+   - Can edit and delete any recipe
+   - Can manage users and assign permissions
+   - Can delete users
+   - Includes all permissions from lower roles
+
+2. **Bearbeiten (Edit)** ✏️
+   - Can create and edit their own recipes
+   - Can comment on recipes (future feature)
+   - Can read all recipes
+   - Includes Comment and Read permissions
+
+3. **Kommentieren (Comment)** 💬
+   - Can comment on recipes (future feature)
+   - Can read all recipes
+   - Includes Read permissions
+
+4. **Lesen (Read)** 👁️
+   - Can only view recipes
+   - Cannot create, edit, or delete recipes
+
+5. **Gast (Guest)** 🚶
+   - Temporary access for unregistered users
+   - Can only view recipes
+   - No persistent account
+
+### Permission Hierarchy
+
+The permission system follows a hierarchical model where higher roles inherit all permissions from lower roles:
+
+```
+Administrator → Edit → Comment → Read → Guest
+```
+
+- **Edit** permission includes **Comment** and **Read**
+- **Comment** permission includes **Read**
+- Only **Administrators** can delete recipes
+- Only **Administrators** can manage users and permissions
+
+### Getting Started
+
+#### First User Setup
+
+The first user to register automatically becomes an administrator with full permissions. This ensures that there is always at least one administrator who can manage the system.
+
+#### User Registration
+
+New users can register through the login screen:
+1. Click "Registrieren" on the login page
+2. Fill in your details (first name, last name, email, password)
+3. Submit the registration form
+4. New users receive **Read** permissions by default
+
+#### Guest Access
+
+Users can also access the application as a guest:
+1. Click "Als Gast anmelden" on the login page
+2. Guest users can view recipes but cannot edit or create content
+3. Guest sessions are temporary and not saved
+
+### User Management (Admin Only)
+
+Administrators can manage users through the Settings menu:
+
+1. Navigate to Settings → Benutzerverwaltung
+2. View all registered users with their current permissions
+3. Assign or change user roles:
+   - Click the 🔐 button next to a user
+   - Select the desired permission level
+   - Confirm the change
+4. Reset user passwords:
+   - Click the 🔑 button
+   - Set a temporary password
+   - User will be prompted to change it on next login
+5. Delete users:
+   - Click the 🗑️ button
+   - Confirm deletion
+   - Note: Cannot delete yourself or the last administrator
+
+### Security Notes
+
+- Passwords are hashed before storage (client-side for demo purposes)
+- At least one administrator must always exist in the system
+- Users cannot delete their own accounts
+- Administrators cannot remove admin rights if they are the last admin
 
 ## Getting Started
 

@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import './UserManagement.css';
 import { 
   getUsers, 
-  updateUserAdminStatus, 
+  updateUserRole,
   getAdminCount, 
   updateUserName, 
   setTemporaryPassword,
-  validatePassword 
+  validatePassword,
+  deleteUser,
+  ROLES,
+  getRoleDisplayName
 } from '../utils/userManagement';
 
 function UserManagement({ onBack, currentUser }) {
@@ -17,6 +20,9 @@ function UserManagement({ onBack, currentUser }) {
   const [passwordResetUser, setPasswordResetUser] = useState(null);
   const [tempPassword, setTempPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [roleEditUser, setRoleEditUser] = useState(null);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
 
   useEffect(() => {
     loadUsers();
@@ -26,13 +32,14 @@ function UserManagement({ onBack, currentUser }) {
     setUsers(getUsers());
   };
 
-  const handleToggleAdmin = (userId, currentAdminStatus) => {
-    const newAdminStatus = !currentAdminStatus;
-    const result = updateUserAdminStatus(userId, newAdminStatus);
+  const handleRoleChange = (userId, newRole) => {
+    const result = updateUserRole(userId, newRole);
     
     if (result.success) {
       loadUsers();
       setMessage({ text: result.message, type: 'success' });
+      setRoleEditUser(null);
+      setSelectedRole('');
     } else {
       setMessage({ text: result.message, type: 'error' });
     }
@@ -41,10 +48,37 @@ function UserManagement({ onBack, currentUser }) {
     setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
-  const canRemoveAdmin = (userId, isAdmin) => {
-    if (!isAdmin) return true;
-    const adminCount = getAdminCount();
-    return adminCount > 1;
+  const handleOpenRoleEdit = (user) => {
+    setRoleEditUser(user);
+    setSelectedRole(user.role);
+  };
+
+  const handleCancelRoleEdit = () => {
+    setRoleEditUser(null);
+    setSelectedRole('');
+  };
+
+  const handleDeleteUser = (userId) => {
+    const result = deleteUser(userId);
+    
+    if (result.success) {
+      loadUsers();
+      setMessage({ text: result.message, type: 'success' });
+      setDeleteConfirmUser(null);
+    } else {
+      setMessage({ text: result.message, type: 'error' });
+      setDeleteConfirmUser(null);
+    }
+    
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+  };
+
+  const handleOpenDeleteConfirm = (user) => {
+    setDeleteConfirmUser(user);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmUser(null);
   };
 
   const handleEditUser = (user) => {
@@ -122,8 +156,19 @@ function UserManagement({ onBack, currentUser }) {
           </div>
         )}
         <p className="info-text">
-          Hier können Sie alle registrierten Benutzerkonten einsehen und Administrator-Rechte verwalten.
+          Hier können Sie alle registrierten Benutzerkonten einsehen und Berechtigungen verwalten.
         </p>
+        
+        <div className="permissions-info">
+          <h3>Berechtigungshierarchie:</h3>
+          <ul>
+            <li><strong>Administrator:</strong> Vollzugriff - kann alle Rezepte bearbeiten und löschen, Benutzer verwalten. Beinhaltet alle anderen Berechtigungen.</li>
+            <li><strong>Bearbeiten:</strong> Kann eigene Rezepte bearbeiten und kommentieren. Beinhaltet Kommentieren und Lesen.</li>
+            <li><strong>Kommentieren:</strong> Kann Rezepte kommentieren (zukünftige Funktion). Beinhaltet Lesen.</li>
+            <li><strong>Lesen:</strong> Kann Rezepte nur ansehen.</li>
+            <li><strong>Gast:</strong> Temporärer Zugriff nur zum Lesen.</li>
+          </ul>
+        </div>
         
         {users.length === 0 ? (
           <div className="empty-state">
@@ -138,7 +183,7 @@ function UserManagement({ onBack, currentUser }) {
                   <th>Nachname</th>
                   <th>E-Mail</th>
                   <th>Registriert am</th>
-                  <th>Administrator</th>
+                  <th>Berechtigung</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -150,25 +195,9 @@ function UserManagement({ onBack, currentUser }) {
                     <td>{user.email}</td>
                     <td>{new Date(user.createdAt).toLocaleDateString('de-DE')}</td>
                     <td>
-                      <label className="admin-toggle">
-                        <input
-                          type="checkbox"
-                          checked={user.isAdmin}
-                          onChange={() => handleToggleAdmin(user.id, user.isAdmin)}
-                          disabled={!canRemoveAdmin(user.id, user.isAdmin)}
-                          title={
-                            !canRemoveAdmin(user.id, user.isAdmin)
-                              ? 'Es muss mindestens ein Administrator vorhanden sein'
-                              : 'Admin-Status ändern'
-                          }
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                      {user.isAdmin && getAdminCount() === 1 && (
-                        <span className="admin-lock-hint" title="Einziger Administrator">
-                          🔒
-                        </span>
-                      )}
+                      <span className={`role-badge role-${user.role}`}>
+                        {getRoleDisplayName(user.role)}
+                      </span>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -180,11 +209,26 @@ function UserManagement({ onBack, currentUser }) {
                           ✏️
                         </button>
                         <button 
+                          className="action-btn role-btn" 
+                          onClick={() => handleOpenRoleEdit(user)}
+                          title="Berechtigung ändern"
+                        >
+                          🔐
+                        </button>
+                        <button 
                           className="action-btn password-btn" 
                           onClick={() => handleOpenPasswordReset(user)}
                           title="Temporäres Passwort setzen"
                         >
                           🔑
+                        </button>
+                        <button 
+                          className="action-btn delete-btn" 
+                          onClick={() => handleOpenDeleteConfirm(user)}
+                          title="Benutzer löschen"
+                          disabled={user.id === currentUser?.id}
+                        >
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -243,6 +287,60 @@ function UserManagement({ onBack, currentUser }) {
         </div>
       )}
 
+      {/* Role Edit Modal */}
+      {roleEditUser && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Berechtigung ändern</h3>
+            <p className="modal-subtitle">
+              Benutzer: {roleEditUser.vorname} {roleEditUser.nachname} ({roleEditUser.email})
+            </p>
+            <p className="modal-info">
+              Aktuelle Berechtigung: <strong>{getRoleDisplayName(roleEditUser.role)}</strong>
+            </p>
+            <div className="form-group">
+              <label>Neue Berechtigung</label>
+              <select 
+                value={selectedRole} 
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="role-select"
+              >
+                <option value={ROLES.ADMIN}>Administrator</option>
+                <option value={ROLES.EDIT}>Bearbeiten</option>
+                <option value={ROLES.COMMENT}>Kommentieren</option>
+                <option value={ROLES.READ}>Lesen</option>
+              </select>
+            </div>
+            <div className="role-description">
+              {selectedRole === ROLES.ADMIN && (
+                <p>Vollzugriff - kann alle Rezepte bearbeiten und löschen, Benutzer verwalten.</p>
+              )}
+              {selectedRole === ROLES.EDIT && (
+                <p>Kann eigene Rezepte bearbeiten. Beinhaltet Kommentieren und Lesen.</p>
+              )}
+              {selectedRole === ROLES.COMMENT && (
+                <p>Kann Rezepte kommentieren (zukünftige Funktion). Beinhaltet Lesen.</p>
+              )}
+              {selectedRole === ROLES.READ && (
+                <p>Kann Rezepte nur ansehen.</p>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={handleCancelRoleEdit}>
+                Abbrechen
+              </button>
+              <button 
+                className="btn-save" 
+                onClick={() => handleRoleChange(roleEditUser.id, selectedRole)}
+                disabled={selectedRole === roleEditUser.role}
+              >
+                Berechtigung ändern
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Password Reset Modal */}
       {passwordResetUser && (
         <div className="modal-overlay">
@@ -272,6 +370,32 @@ function UserManagement({ onBack, currentUser }) {
               </button>
               <button className="btn-save" onClick={handleSetTemporaryPassword}>
                 Passwort setzen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteConfirmUser && (
+        <div className="modal-overlay">
+          <div className="modal modal-danger">
+            <h3>Benutzer löschen</h3>
+            <p className="modal-subtitle">
+              Benutzer: {deleteConfirmUser.vorname} {deleteConfirmUser.nachname} ({deleteConfirmUser.email})
+            </p>
+            <p className="modal-warning">
+              ⚠️ Sind Sie sicher, dass Sie diesen Benutzer löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={handleCancelDelete}>
+                Abbrechen
+              </button>
+              <button 
+                className="btn-delete" 
+                onClick={() => handleDeleteUser(deleteConfirmUser.id)}
+              >
+                Benutzer löschen
               </button>
             </div>
           </div>
