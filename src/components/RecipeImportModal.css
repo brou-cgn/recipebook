@@ -1,0 +1,271 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.import-modal {
+  background: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.import-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.import-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.import-modal-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.import-instructions {
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.import-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.import-textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.import-error {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #ffebee;
+  border: 1px solid #ef5350;
+  border-radius: 4px;
+  color: #c62828;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+
+.import-help {
+  margin-top: 20px;
+}
+
+.example-button {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 8px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.example-button:hover {
+  text-decoration: underline;
+}
+
+.example-section {
+  margin-top: 12px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.example-section h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #333;
+  font-size: 1rem;
+}
+
+.example-json {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.load-example-button {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.load-example-button:hover {
+  background-color: #1976D2;
+}
+
+.notion-help {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  border-left: 4px solid #2196F3;
+}
+
+.notion-help h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #1565C0;
+  font-size: 1rem;
+}
+
+.notion-help ol {
+  margin: 12px 0;
+  padding-left: 24px;
+  color: #333;
+}
+
+.notion-help li {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.notion-note {
+  margin: 12px 0 0 0;
+  padding: 12px;
+  background-color: white;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.notion-note strong {
+  color: #1565C0;
+}
+
+.import-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: #f5f5f5;
+  border-color: #999;
+}
+
+.import-button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.import-button:hover {
+  background-color: #45a049;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .import-modal {
+    max-width: 100%;
+  }
+
+  .import-modal-header {
+    padding: 16px;
+  }
+
+  .import-modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .import-modal-content {
+    padding: 16px;
+  }
+
+  .import-textarea {
+    font-size: 0.85rem;
+  }
+
+  .example-json {
+    font-size: 0.75rem;
+  }
+
+  .import-modal-actions {
+    padding: 16px;
+  }
+}

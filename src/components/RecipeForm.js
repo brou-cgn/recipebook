@@ -4,6 +4,7 @@ import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64 } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
+import RecipeImportModal from './RecipeImportModal';
 
 function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
   const [title, setTitle] = useState('');
@@ -18,6 +19,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
   const [imageError, setImageError] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [authorId, setAuthorId] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -148,10 +150,46 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
     onSave(recipeData);
   };
 
+  const handleImport = (importedRecipe) => {
+    // Populate form with imported data
+    setTitle(importedRecipe.title || '');
+    setImage(importedRecipe.image || '');
+    setPortionen(importedRecipe.portionen || 4);
+    
+    // Handle kulinarik as array
+    if (Array.isArray(importedRecipe.kulinarik)) {
+      setKulinarik(importedRecipe.kulinarik);
+    } else if (importedRecipe.kulinarik) {
+      setKulinarik([importedRecipe.kulinarik]);
+    } else {
+      setKulinarik([]);
+    }
+    
+    setSchwierigkeit(importedRecipe.schwierigkeit || 3);
+    setKochdauer(importedRecipe.kochdauer || 30);
+    setSpeisekategorie(importedRecipe.speisekategorie || '');
+    // Import always provides non-empty arrays (validated by parseRecipeData)
+    setIngredients(importedRecipe.ingredients || []);
+    setSteps(importedRecipe.steps || []);
+    
+    // Close the import modal
+    setShowImportModal(false);
+  };
+
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
         <h2>{recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen'}</h2>
+        {!recipe && (
+          <button
+            type="button"
+            className="import-button-header"
+            onClick={() => setShowImportModal(true)}
+            title="Rezept aus externer Quelle importieren"
+          >
+            📥 Importieren
+          </button>
+        )}
       </div>
 
       <form className="recipe-form" onSubmit={handleSubmit}>
@@ -400,6 +438,13 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
           </button>
         </div>
       </form>
+
+      {showImportModal && (
+        <RecipeImportModal
+          onImport={handleImport}
+          onCancel={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 }
