@@ -4,21 +4,9 @@ import './RecipeList.css';
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly }) {
   // Generate dynamic heading based on filters
   const getHeading = () => {
-    let heading = '';
-    
-    // Add "Meine" prefix if favorites filter is active
-    if (showFavoritesOnly) {
-      heading = 'Meine ';
-    }
-    
-    // Add category name or "Rezepte" if no category selected
-    if (categoryFilter) {
-      heading += categoryFilter;
-    } else {
-      heading += 'Rezepte';
-    }
-    
-    return heading;
+    const prefix = showFavoritesOnly ? 'Meine ' : '';
+    const category = categoryFilter || 'Rezepte';
+    return `${prefix}${category}`;
   };
 
   return (
