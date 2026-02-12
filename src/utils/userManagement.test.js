@@ -15,6 +15,9 @@ import {
   canDeleteRecipes,
   canEditRecipe,
   canDeleteRecipe,
+  canCommentOnRecipes,
+  canReadRecipes,
+  hasPermission,
   getRoleDisplayName,
   validatePassword,
   updateUserName,
@@ -886,6 +889,163 @@ describe('User Management Utilities', () => {
 
     test('should return false for null user', () => {
       expect(canDeleteRecipe(null, recipe)).toBe(false);
+    });
+  });
+
+  describe('hasPermission', () => {
+    test('should allow admin to access any permission level', () => {
+      const adminUser = { role: ROLES.ADMIN };
+      expect(hasPermission(adminUser, ROLES.READ)).toBe(true);
+      expect(hasPermission(adminUser, ROLES.COMMENT)).toBe(true);
+      expect(hasPermission(adminUser, ROLES.EDIT)).toBe(true);
+      expect(hasPermission(adminUser, ROLES.ADMIN)).toBe(true);
+    });
+
+    test('should allow edit user to access edit, comment, and read', () => {
+      const editUser = { role: ROLES.EDIT };
+      expect(hasPermission(editUser, ROLES.READ)).toBe(true);
+      expect(hasPermission(editUser, ROLES.COMMENT)).toBe(true);
+      expect(hasPermission(editUser, ROLES.EDIT)).toBe(true);
+      expect(hasPermission(editUser, ROLES.ADMIN)).toBe(false);
+    });
+
+    test('should allow comment user to access comment and read', () => {
+      const commentUser = { role: ROLES.COMMENT };
+      expect(hasPermission(commentUser, ROLES.READ)).toBe(true);
+      expect(hasPermission(commentUser, ROLES.COMMENT)).toBe(true);
+      expect(hasPermission(commentUser, ROLES.EDIT)).toBe(false);
+      expect(hasPermission(commentUser, ROLES.ADMIN)).toBe(false);
+    });
+
+    test('should allow read user only read access', () => {
+      const readUser = { role: ROLES.READ };
+      expect(hasPermission(readUser, ROLES.READ)).toBe(true);
+      expect(hasPermission(readUser, ROLES.COMMENT)).toBe(false);
+      expect(hasPermission(readUser, ROLES.EDIT)).toBe(false);
+      expect(hasPermission(readUser, ROLES.ADMIN)).toBe(false);
+    });
+
+    test('should not grant guest user any permissions', () => {
+      const guestUser = { role: ROLES.GUEST };
+      expect(hasPermission(guestUser, ROLES.READ)).toBe(false);
+      expect(hasPermission(guestUser, ROLES.COMMENT)).toBe(false);
+      expect(hasPermission(guestUser, ROLES.EDIT)).toBe(false);
+      expect(hasPermission(guestUser, ROLES.ADMIN)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(hasPermission(null, ROLES.READ)).toBe(false);
+    });
+
+    test('should return false for user without role', () => {
+      const userWithoutRole = { id: '1' };
+      expect(hasPermission(userWithoutRole, ROLES.READ)).toBe(false);
+    });
+  });
+
+  describe('canCommentOnRecipes', () => {
+    test('should return true for admin users', () => {
+      const adminUser = { role: ROLES.ADMIN };
+      expect(canCommentOnRecipes(adminUser)).toBe(true);
+    });
+
+    test('should return true for edit users', () => {
+      const editUser = { role: ROLES.EDIT };
+      expect(canCommentOnRecipes(editUser)).toBe(true);
+    });
+
+    test('should return true for comment users', () => {
+      const commentUser = { role: ROLES.COMMENT };
+      expect(canCommentOnRecipes(commentUser)).toBe(true);
+    });
+
+    test('should return false for read users', () => {
+      const readUser = { role: ROLES.READ };
+      expect(canCommentOnRecipes(readUser)).toBe(false);
+    });
+
+    test('should return false for guest users', () => {
+      const guestUser = { role: ROLES.GUEST };
+      expect(canCommentOnRecipes(guestUser)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(canCommentOnRecipes(null)).toBe(false);
+    });
+  });
+
+  describe('canReadRecipes', () => {
+    test('should return true for admin users', () => {
+      const adminUser = { role: ROLES.ADMIN };
+      expect(canReadRecipes(adminUser)).toBe(true);
+    });
+
+    test('should return true for edit users', () => {
+      const editUser = { role: ROLES.EDIT };
+      expect(canReadRecipes(editUser)).toBe(true);
+    });
+
+    test('should return true for comment users', () => {
+      const commentUser = { role: ROLES.COMMENT };
+      expect(canReadRecipes(commentUser)).toBe(true);
+    });
+
+    test('should return true for read users', () => {
+      const readUser = { role: ROLES.READ };
+      expect(canReadRecipes(readUser)).toBe(true);
+    });
+
+    // GUEST is a special temporary role for unauthenticated access
+    // It's not part of the assignable role hierarchy but has read-only access
+    test('should return true for guest users', () => {
+      const guestUser = { role: ROLES.GUEST };
+      expect(canReadRecipes(guestUser)).toBe(true);
+    });
+
+    test('should return false for null user', () => {
+      expect(canReadRecipes(null)).toBe(false);
+    });
+  });
+
+  describe('Permission Hierarchy Integration', () => {
+    test('should respect Edit includes Comment and Read', () => {
+      const editUser = { role: ROLES.EDIT };
+      expect(canEditRecipes(editUser)).toBe(true);
+      expect(canCommentOnRecipes(editUser)).toBe(true);
+      expect(canReadRecipes(editUser)).toBe(true);
+      expect(canDeleteRecipes(editUser)).toBe(false); // Only admin can delete
+    });
+
+    test('should respect Comment includes Read', () => {
+      const commentUser = { role: ROLES.COMMENT };
+      expect(canEditRecipes(commentUser)).toBe(false);
+      expect(canCommentOnRecipes(commentUser)).toBe(true);
+      expect(canReadRecipes(commentUser)).toBe(true);
+      expect(canDeleteRecipes(commentUser)).toBe(false);
+    });
+
+    test('should respect Read only has read permission', () => {
+      const readUser = { role: ROLES.READ };
+      expect(canEditRecipes(readUser)).toBe(false);
+      expect(canCommentOnRecipes(readUser)).toBe(false);
+      expect(canReadRecipes(readUser)).toBe(true);
+      expect(canDeleteRecipes(readUser)).toBe(false);
+    });
+
+    test('should respect Admin has all permissions', () => {
+      const adminUser = { role: ROLES.ADMIN };
+      expect(canEditRecipes(adminUser)).toBe(true);
+      expect(canCommentOnRecipes(adminUser)).toBe(true);
+      expect(canReadRecipes(adminUser)).toBe(true);
+      expect(canDeleteRecipes(adminUser)).toBe(true);
+    });
+
+    test('should respect Guest only has read permission', () => {
+      const guestUser = { role: ROLES.GUEST };
+      expect(canEditRecipes(guestUser)).toBe(false);
+      expect(canCommentOnRecipes(guestUser)).toBe(false);
+      expect(canReadRecipes(guestUser)).toBe(true);
+      expect(canDeleteRecipes(guestUser)).toBe(false);
     });
   });
 });

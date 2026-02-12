@@ -333,17 +333,71 @@ export const deleteUser = (userId) => {
 };
 
 /**
+ * Check if user has a specific permission level or higher based on hierarchy
+ * Hierarchy: ADMIN > EDIT > COMMENT > READ > GUEST
+ * @param {Object} user - User object
+ * @param {string} requiredRole - Required role level
+ * @returns {boolean}
+ */
+export const hasPermission = (user, requiredRole) => {
+  if (!user || !user.role) return false;
+  
+  // Define role hierarchy (higher number = more permissions)
+  const roleHierarchy = {
+    [ROLES.GUEST]: 1,
+    [ROLES.READ]: 2,
+    [ROLES.COMMENT]: 3,
+    [ROLES.EDIT]: 4,
+    [ROLES.ADMIN]: 5
+  };
+  
+  const userLevel = roleHierarchy[user.role] || 0;
+  const requiredLevel = roleHierarchy[requiredRole] || 0;
+  
+  return userLevel >= requiredLevel;
+};
+
+/**
  * Check if user has permission to edit recipes (general permission)
+ * Admins and users with EDIT role can edit recipes.
+ * Edit permission includes Comment and Read permissions.
  * @param {Object} user - User object
  * @returns {boolean}
  */
 export const canEditRecipes = (user) => {
   if (!user) return false;
-  return user.role === ROLES.ADMIN || user.role === ROLES.EDIT;
+  return hasPermission(user, ROLES.EDIT);
+};
+
+/**
+ * Check if user has permission to comment on recipes
+ * Comment permission includes Read permissions.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canCommentOnRecipes = (user) => {
+  if (!user) return false;
+  return hasPermission(user, ROLES.COMMENT);
+};
+
+/**
+ * Check if user has permission to read recipes
+ * All registered users and guests can read recipes.
+ * Note: GUEST is a special temporary role that has read-only access but is not
+ * part of the assignable role hierarchy.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canReadRecipes = (user) => {
+  if (!user) return false;
+  // All users including guests can read recipes
+  // GUEST is a special temporary role for unauthenticated access
+  return hasPermission(user, ROLES.READ) || user.role === ROLES.GUEST;
 };
 
 /**
  * Check if user has permission to delete recipes (general permission)
+ * Only administrators can delete recipes.
  * @param {Object} user - User object
  * @returns {boolean}
  */
@@ -354,6 +408,8 @@ export const canDeleteRecipes = (user) => {
 
 /**
  * Check if user can edit a specific recipe
+ * Admins can edit any recipe.
+ * Users with EDIT permission can only edit their own recipes.
  * @param {Object} user - User object
  * @param {Object} recipe - Recipe object with authorId field
  * @returns {boolean}
@@ -363,12 +419,13 @@ export const canEditRecipe = (user, recipe) => {
   // Admins can edit any recipe
   if (user.role === ROLES.ADMIN) return true;
   // Users with edit permission can only edit their own recipes
-  if (user.role === ROLES.EDIT && recipe && recipe.authorId === user.id) return true;
+  if (hasPermission(user, ROLES.EDIT) && recipe && recipe.authorId === user.id) return true;
   return false;
 };
 
 /**
  * Check if user can delete a specific recipe
+ * Only administrators may delete recipes.
  * @param {Object} user - User object
  * @param {Object} recipe - Recipe object with authorId field
  * @returns {boolean}
