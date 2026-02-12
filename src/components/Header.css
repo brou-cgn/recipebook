@@ -69,9 +69,9 @@
 }
 
 .favorites-filter.active {
-  background: rgba(255, 215, 0, 0.3);
-  border-color: rgba(255, 215, 0, 0.8);
-  color: #FFD700;
+  background: rgba(223, 122, 0, 0.3);
+  border-color: rgba(223, 122, 0, 0.8);
+  color: #DF7A00;
 }
 
 .view-toggle {

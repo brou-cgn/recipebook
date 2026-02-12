@@ -47,26 +47,26 @@
 }
 
 .favorite-button {
-  color: #ff9800;
-  border-color: #ff9800;
+  color: #DF7A00;
+  border-color: #DF7A00;
 }
 
 .favorite-button:hover {
   background: #fff3e0;
-  border-color: #f57c00;
+  border-color: #DF7A00;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .favorite-button.is-favorite {
-  background: #ff9800;
+  background: #DF7A00;
   color: white;
-  border-color: #ff9800;
+  border-color: #DF7A00;
 }
 
 .favorite-button.is-favorite:hover {
-  background: #f57c00;
-  border-color: #f57c00;
+  background: #DF7A00;
+  border-color: #DF7A00;
 }
 
 .edit-button {
@@ -159,7 +159,7 @@
 
 .difficulty-stars {
   font-size: 1.1rem;
-  color: #ffc107;
+  color: #DF7A00;
 }
 
 
