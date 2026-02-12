@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-function Login({ onLogin, onSwitchToRegister }) {
+function Login({ onLogin, onSwitchToRegister, onGuestLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,6 +13,12 @@ function Login({ onLogin, onSwitchToRegister }) {
     const result = onLogin(email, password);
     if (!result.success) {
       setError(result.message);
+    }
+  };
+
+  const handleGuestLogin = () => {
+    if (onGuestLogin) {
+      onGuestLogin();
     }
   };
 
@@ -53,6 +59,18 @@ function Login({ onLogin, onSwitchToRegister }) {
           >
             Jetzt registrieren
           </button>
+          {onGuestLogin && (
+            <>
+              <p className="or-divider">oder</p>
+              <button 
+                type="button" 
+                className="guest-btn"
+                onClick={handleGuestLogin}
+              >
+                Als Gast anmelden
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -7,7 +7,14 @@ import {
   getCurrentUser,
   isCurrentUserAdmin,
   updateUserAdminStatus,
-  getAdminCount
+  getAdminCount,
+  loginAsGuest,
+  updateUserRole,
+  deleteUser,
+  canEditRecipes,
+  canDeleteRecipes,
+  getRoleDisplayName,
+  ROLES
 } from './userManagement';
 
 describe('User Management Utilities', () => {
@@ -328,6 +335,236 @@ describe('User Management Utilities', () => {
       const retrieved = getUsers();
       
       expect(retrieved).toEqual(users);
+    });
+  });
+
+  describe('loginAsGuest', () => {
+    test('should create guest user session', () => {
+      const result = loginAsGuest();
+
+      expect(result.success).toBe(true);
+      expect(result.user.role).toBe(ROLES.GUEST);
+      expect(result.user.isGuest).toBe(true);
+      expect(result.user.isAdmin).toBe(false);
+    });
+
+    test('should set guest as current user', () => {
+      loginAsGuest();
+      const currentUser = getCurrentUser();
+
+      expect(currentUser).not.toBeNull();
+      expect(currentUser.role).toBe(ROLES.GUEST);
+      expect(currentUser.isGuest).toBe(true);
+    });
+
+    test('should not save guest to users list', () => {
+      loginAsGuest();
+      const users = getUsers();
+
+      expect(users.length).toBe(0);
+    });
+  });
+
+  describe('updateUserRole', () => {
+    let adminUser, regularUser;
+
+    beforeEach(() => {
+      // Create admin user (first user)
+      const adminResult = registerUser({
+        vorname: 'Admin',
+        nachname: 'User',
+        email: 'admin@example.com',
+        password: 'password123'
+      });
+      adminUser = adminResult.user;
+
+      // Create regular user (second user)
+      const regularResult = registerUser({
+        vorname: 'Regular',
+        nachname: 'User',
+        email: 'regular@example.com',
+        password: 'password123'
+      });
+      regularUser = regularResult.user;
+    });
+
+    test('should update user role to edit', () => {
+      const result = updateUserRole(regularUser.id, ROLES.EDIT);
+      
+      expect(result.success).toBe(true);
+      
+      const users = getUsers();
+      const updatedUser = users.find(u => u.id === regularUser.id);
+      expect(updatedUser.role).toBe(ROLES.EDIT);
+      expect(updatedUser.isAdmin).toBe(false);
+    });
+
+    test('should update user role to admin', () => {
+      const result = updateUserRole(regularUser.id, ROLES.ADMIN);
+      
+      expect(result.success).toBe(true);
+      
+      const users = getUsers();
+      const updatedUser = users.find(u => u.id === regularUser.id);
+      expect(updatedUser.role).toBe(ROLES.ADMIN);
+      expect(updatedUser.isAdmin).toBe(true);
+    });
+
+    test('should not allow removing last admin', () => {
+      const result = updateUserRole(adminUser.id, ROLES.READ);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('mindestens ein Administrator');
+      
+      const users = getUsers();
+      const unchangedUser = users.find(u => u.id === adminUser.id);
+      expect(unchangedUser.isAdmin).toBe(true);
+    });
+
+    test('should reject invalid role', () => {
+      const result = updateUserRole(regularUser.id, 'invalid_role');
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('Ungültige Berechtigung');
+    });
+
+    test('should update current user if they are being modified', () => {
+      loginUser('admin@example.com', 'password123');
+      
+      // Promote regular user to admin first
+      updateUserRole(regularUser.id, ROLES.ADMIN);
+      
+      // Now change the logged-in admin to read role
+      updateUserRole(adminUser.id, ROLES.READ);
+      
+      const currentUser = getCurrentUser();
+      expect(currentUser.role).toBe(ROLES.READ);
+      expect(currentUser.isAdmin).toBe(false);
+    });
+  });
+
+  describe('deleteUser', () => {
+    let adminUser, regularUser;
+
+    beforeEach(() => {
+      // Create admin user (first user)
+      const adminResult = registerUser({
+        vorname: 'Admin',
+        nachname: 'User',
+        email: 'admin@example.com',
+        password: 'password123'
+      });
+      adminUser = adminResult.user;
+
+      // Create regular user (second user)
+      const regularResult = registerUser({
+        vorname: 'Regular',
+        nachname: 'User',
+        email: 'regular@example.com',
+        password: 'password123'
+      });
+      regularUser = regularResult.user;
+    });
+
+    test('should delete regular user', () => {
+      const result = deleteUser(regularUser.id);
+      
+      expect(result.success).toBe(true);
+      
+      const users = getUsers();
+      expect(users.length).toBe(1);
+      expect(users.find(u => u.id === regularUser.id)).toBeUndefined();
+    });
+
+    test('should not allow deleting last admin', () => {
+      const result = deleteUser(adminUser.id);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('letzte Administrator');
+      
+      const users = getUsers();
+      expect(users.find(u => u.id === adminUser.id)).toBeDefined();
+    });
+
+    test('should not allow user to delete themselves', () => {
+      // First promote regular user to admin so we have 2 admins
+      updateUserRole(regularUser.id, ROLES.ADMIN);
+      
+      // Login as regular user
+      loginUser('regular@example.com', 'password123');
+      
+      const result = deleteUser(regularUser.id);
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('nicht selbst löschen');
+    });
+
+    test('should handle non-existent user', () => {
+      const result = deleteUser('non-existent-id');
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('nicht gefunden');
+    });
+  });
+
+  describe('canEditRecipes', () => {
+    test('should return true for admin users', () => {
+      const adminUser = { role: ROLES.ADMIN, isAdmin: true };
+      expect(canEditRecipes(adminUser)).toBe(true);
+    });
+
+    test('should return true for edit users', () => {
+      const editUser = { role: ROLES.EDIT, isAdmin: false };
+      expect(canEditRecipes(editUser)).toBe(true);
+    });
+
+    test('should return false for read users', () => {
+      const readUser = { role: ROLES.READ, isAdmin: false };
+      expect(canEditRecipes(readUser)).toBe(false);
+    });
+
+    test('should return false for guest users', () => {
+      const guestUser = { role: ROLES.GUEST, isAdmin: false };
+      expect(canEditRecipes(guestUser)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(canEditRecipes(null)).toBe(false);
+    });
+  });
+
+  describe('canDeleteRecipes', () => {
+    test('should return true for admin users', () => {
+      const adminUser = { role: ROLES.ADMIN, isAdmin: true };
+      expect(canDeleteRecipes(adminUser)).toBe(true);
+    });
+
+    test('should return false for edit users', () => {
+      const editUser = { role: ROLES.EDIT, isAdmin: false };
+      expect(canDeleteRecipes(editUser)).toBe(false);
+    });
+
+    test('should return false for read users', () => {
+      const readUser = { role: ROLES.READ, isAdmin: false };
+      expect(canDeleteRecipes(readUser)).toBe(false);
+    });
+
+    test('should return false for null user', () => {
+      expect(canDeleteRecipes(null)).toBe(false);
+    });
+  });
+
+  describe('getRoleDisplayName', () => {
+    test('should return correct display names', () => {
+      expect(getRoleDisplayName(ROLES.ADMIN)).toBe('Administrator');
+      expect(getRoleDisplayName(ROLES.EDIT)).toBe('Bearbeiten');
+      expect(getRoleDisplayName(ROLES.COMMENT)).toBe('Kommentieren');
+      expect(getRoleDisplayName(ROLES.READ)).toBe('Lesen');
+      expect(getRoleDisplayName(ROLES.GUEST)).toBe('Gast');
+    });
+
+    test('should return role itself for unknown role', () => {
+      expect(getRoleDisplayName('unknown')).toBe('unknown');
     });
   });
 });

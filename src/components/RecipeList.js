@@ -1,7 +1,8 @@
 import React from 'react';
 import './RecipeList.css';
+import { canEditRecipes } from '../utils/userManagement';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
   // Generate dynamic heading based on filters
   const getHeading = () => {
     const prefix = showFavoritesOnly ? 'Meine ' : '';
@@ -9,13 +10,17 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
     return `${prefix}${category}`;
   };
 
+  const userCanEdit = canEditRecipes(currentUser);
+
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
         <h2>{getHeading()}</h2>
-        <button className="add-button" onClick={onAddRecipe}>
-          + Rezept hinzufügen
-        </button>
+        {userCanEdit && (
+          <button className="add-button" onClick={onAddRecipe}>
+            + Rezept hinzufügen
+          </button>
+        )}
       </div>
       
       {recipes.length === 0 ? (

@@ -14,7 +14,10 @@ import {
   loginUser, 
   logoutUser, 
   getCurrentUser, 
-  registerUser
+  registerUser,
+  loginAsGuest,
+  canEditRecipes,
+  canDeleteRecipes
 } from './utils/userManagement';
 
 function App() {
@@ -232,6 +235,14 @@ function App() {
     setAuthView('register');
   };
 
+  const handleGuestLogin = () => {
+    const result = loginAsGuest();
+    if (result.success) {
+      setCurrentUser(result.user);
+    }
+    return result;
+  };
+
   // If user is not logged in, show login/register view
   if (!currentUser) {
     return (
@@ -241,6 +252,7 @@ function App() {
           <Login 
             onLogin={handleLogin}
             onSwitchToRegister={handleSwitchToRegister}
+            onGuestLogin={handleGuestLogin}
           />
         ) : (
           <Register 
@@ -308,6 +320,7 @@ function App() {
             onEdit={handleEditRecipe}
             onDelete={handleDeleteRecipe}
             onToggleFavorite={handleToggleFavorite}
+            currentUser={currentUser}
           />
         ) : (
           <RecipeList
@@ -326,6 +339,7 @@ function App() {
             onAddRecipe={handleAddRecipe}
             categoryFilter={categoryFilter}
             showFavoritesOnly={showFavoritesOnly}
+            currentUser={currentUser}
           />
         )
       )}

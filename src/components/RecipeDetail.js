@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import './RecipeDetail.css';
+import { canEditRecipes, canDeleteRecipes } from '../utils/userManagement';
 
-function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
+function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, currentUser }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
+
+  const userCanEdit = canEditRecipes(currentUser);
+  const userCanDelete = canDeleteRecipes(currentUser);
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
@@ -60,12 +64,16 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
               {recipe.isFavorite ? '★ Favorit' : '☆ Favorit'}
             </button>
           )}
-          <button className="edit-button" onClick={() => onEdit(recipe)}>
-            Bearbeiten
-          </button>
-          <button className="delete-button" onClick={handleDelete}>
-            Löschen
-          </button>
+          {userCanEdit && (
+            <button className="edit-button" onClick={() => onEdit(recipe)}>
+              Bearbeiten
+            </button>
+          )}
+          {userCanDelete && (
+            <button className="delete-button" onClick={handleDelete}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
 

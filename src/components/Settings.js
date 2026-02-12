@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists } from '../utils/customLists';
-import { getUsers, updateUserAdminStatus, getAdminCount, isCurrentUserAdmin } from '../utils/userManagement';
+import { 
+  getUsers, 
+  getAdminCount, 
+  isCurrentUserAdmin, 
+  updateUserRole,
+  deleteUser,
+  ROLES,
+  getRoleDisplayName
+} from '../utils/userManagement';
 
 function Settings({ onBack, currentUser }) {
   const [lists, setLists] = useState({
@@ -101,9 +109,8 @@ function Settings({ onBack, currentUser }) {
     });
   };
 
-  const handleToggleAdmin = (userId, currentAdminStatus) => {
-    const newAdminStatus = !currentAdminStatus;
-    const result = updateUserAdminStatus(userId, newAdminStatus);
+  const handleRoleChange = (userId, newRole) => {
+    const result = updateUserRole(userId, newRole);
     
     if (result.success) {
       setUsers(getUsers());
@@ -113,10 +120,17 @@ function Settings({ onBack, currentUser }) {
     }
   };
 
-  const canRemoveAdmin = (userId, isAdmin) => {
-    if (!isAdmin) return true;
-    const adminCount = getAdminCount();
-    return adminCount > 1;
+  const handleDeleteUser = (userId, userName) => {
+    if (window.confirm(`Möchten Sie den Benutzer "${userName}" wirklich löschen?`)) {
+      const result = deleteUser(userId);
+      
+      if (result.success) {
+        setUsers(getUsers());
+        setMessage({ text: result.message, type: 'success' });
+      } else {
+        setMessage({ text: result.message, type: 'error' });
+      }
+    }
   };
 
   return (
@@ -249,7 +263,13 @@ function Settings({ onBack, currentUser }) {
               </div>
             )}
             <p className="info-text">
-              Hier können Sie alle registrierten Benutzerkonten einsehen und Administrator-Rechte verwalten.
+              Hier können Sie alle registrierten Benutzerkonten einsehen, Berechtigungen verwalten und Benutzer löschen.
+              <br /><br />
+              <strong>Berechtigungsgruppen:</strong>
+              <br />• <strong>Administrator:</strong> Volle Rechte inkl. Benutzerverwaltung und Rezepte löschen
+              <br />• <strong>Bearbeiten:</strong> Kann Rezepte erstellen und bearbeiten
+              <br />• <strong>Kommentieren:</strong> Aktuell nur Leserechte (zukünftig zusätzliche Rechte)
+              <br />• <strong>Lesen:</strong> Nur Leserechte
             </p>
             
             {users.length === 0 ? (
@@ -265,7 +285,8 @@ function Settings({ onBack, currentUser }) {
                       <th>Nachname</th>
                       <th>E-Mail</th>
                       <th>Registriert am</th>
-                      <th>Administrator</th>
+                      <th>Berechtigung</th>
+                      <th>Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -276,25 +297,25 @@ function Settings({ onBack, currentUser }) {
                         <td>{user.email}</td>
                         <td>{new Date(user.createdAt).toLocaleDateString('de-DE')}</td>
                         <td>
-                          <label className="admin-toggle">
-                            <input
-                              type="checkbox"
-                              checked={user.isAdmin}
-                              onChange={() => handleToggleAdmin(user.id, user.isAdmin)}
-                              disabled={!canRemoveAdmin(user.id, user.isAdmin)}
-                              title={
-                                !canRemoveAdmin(user.id, user.isAdmin)
-                                  ? 'Es muss mindestens ein Administrator vorhanden sein'
-                                  : 'Admin-Status ändern'
-                              }
-                            />
-                            <span className="toggle-slider"></span>
-                          </label>
-                          {user.isAdmin && getAdminCount() === 1 && (
-                            <span className="admin-lock-hint" title="Einziger Administrator">
-                              🔒
-                            </span>
-                          )}
+                          <select
+                            className="role-select"
+                            value={user.role || (user.isAdmin ? ROLES.ADMIN : ROLES.READ)}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                          >
+                            <option value={ROLES.ADMIN}>{getRoleDisplayName(ROLES.ADMIN)}</option>
+                            <option value={ROLES.EDIT}>{getRoleDisplayName(ROLES.EDIT)}</option>
+                            <option value={ROLES.COMMENT}>{getRoleDisplayName(ROLES.COMMENT)}</option>
+                            <option value={ROLES.READ}>{getRoleDisplayName(ROLES.READ)}</option>
+                          </select>
+                        </td>
+                        <td>
+                          <button
+                            className="delete-user-btn"
+                            onClick={() => handleDeleteUser(user.id, `${user.vorname} ${user.nachname}`)}
+                            title="Benutzer löschen"
+                          >
+                            🗑️
+                          </button>
                         </td>
                       </tr>
                     ))}

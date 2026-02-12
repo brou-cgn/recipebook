@@ -101,3 +101,29 @@
 .switch-btn:hover {
   color: #764ba2;
 }
+
+.or-divider {
+  margin: 15px 0 10px 0;
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.guest-btn {
+  width: 100%;
+  padding: 10px;
+  background: #f0f0f0;
+  color: #555;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.guest-btn:hover {
+  background: #e0e0e0;
+  border-color: #ccc;
+}

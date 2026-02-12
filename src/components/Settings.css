@@ -359,3 +359,38 @@
 .stat-item strong {
   color: #333;
 }
+
+.role-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.role-select:hover {
+  border-color: #999;
+}
+
+.delete-user-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.delete-user-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
+}
