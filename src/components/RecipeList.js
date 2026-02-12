@@ -1,6 +1,7 @@
 import React from 'react';
 import './RecipeList.css';
 import { canEditRecipes } from '../utils/userManagement';
+import { groupRecipesByParent } from '../utils/recipeVersioning';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
   // Generate dynamic heading based on filters
@@ -11,6 +12,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
   };
 
   const userCanEdit = canEditRecipes(currentUser);
+
+  // Group recipes by parent
+  const recipeGroups = groupRecipesByParent(recipes);
+
+  const handleRecipeClick = (group) => {
+    // Always select the primary recipe; RecipeDetail will handle showing version selector
+    onSelectRecipe(group.primaryRecipe);
+  };
 
   return (
     <div className="recipe-list-container">
@@ -30,29 +39,37 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
         </div>
       ) : (
         <div className="recipe-grid">
-          {recipes.map(recipe => (
-            <div
-              key={recipe.id}
-              className="recipe-card"
-              onClick={() => onSelectRecipe(recipe)}
-            >
-              {recipe.isFavorite && (
-                <div className="favorite-badge">★</div>
-              )}
-              {recipe.image && (
-                <div className="recipe-image">
-                  <img src={recipe.image} alt={recipe.title} />
-                </div>
-              )}
-              <div className="recipe-card-content">
-                <h3>{recipe.title}</h3>
-                <div className="recipe-meta">
-                  <span>{recipe.ingredients?.length || 0} Zutaten</span>
-                  <span>{recipe.steps?.length || 0} Schritte</span>
+          {recipeGroups.map(group => {
+            const recipe = group.primaryRecipe;
+            return (
+              <div
+                key={recipe.id}
+                className="recipe-card"
+                onClick={() => handleRecipeClick(group)}
+              >
+                {recipe.isFavorite && (
+                  <div className="favorite-badge">★</div>
+                )}
+                {group.versionCount > 1 && (
+                  <div className="version-badge">
+                    {group.versionCount} Versionen
+                  </div>
+                )}
+                {recipe.image && (
+                  <div className="recipe-image">
+                    <img src={recipe.image} alt={recipe.title} />
+                  </div>
+                )}
+                <div className="recipe-card-content">
+                  <h3>{recipe.title}</h3>
+                  <div className="recipe-meta">
+                    <span>{recipe.ingredients?.length || 0} Zutaten</span>
+                    <span>{recipe.steps?.length || 0} Schritte</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

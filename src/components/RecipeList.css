@@ -89,6 +89,21 @@
   z-index: 1;
 }
 
+.version-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: #402C1C;
+  color: white;
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  white-space: nowrap;
+}
+
 .recipe-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
