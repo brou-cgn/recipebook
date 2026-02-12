@@ -122,6 +122,17 @@ export const getFavoriteRecipes = (userId, recipes) => {
 };
 
 /**
+ * Check if any recipe in a group is a favorite for a specific user
+ * @param {string} userId - User ID
+ * @param {Array} recipeGroup - Array of recipe objects (e.g., from groupRecipesByParent)
+ * @returns {boolean} True if any recipe in the group is a favorite for this user
+ */
+export const hasAnyFavoriteInGroup = (userId, recipeGroup) => {
+  if (!userId || !recipeGroup || !Array.isArray(recipeGroup)) return false;
+  return recipeGroup.some(recipe => isRecipeFavorite(userId, recipe.id));
+};
+
+/**
  * Migrate old global favorites to user-specific favorites
  * This is a one-time migration for existing data
  * @param {string} userId - User ID to migrate favorites to

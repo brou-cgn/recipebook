@@ -18,8 +18,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
   const recipeGroups = groupRecipesByParent(recipes);
 
   const handleRecipeClick = (group) => {
-    // Always select the primary recipe; RecipeDetail will handle showing version selector
-    onSelectRecipe(group.primaryRecipe);
+    // Select the recipe that is at the top according to current sorting order
+    // This ensures consistency between the overview and detail view
+    const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, isRecipeFavorite, recipes);
+    const topRecipe = sortedVersions[0] || group.primaryRecipe;
+    onSelectRecipe(topRecipe);
   };
 
   // Get all users once to avoid repeated calls

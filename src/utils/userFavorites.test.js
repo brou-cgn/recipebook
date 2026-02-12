@@ -7,7 +7,8 @@ import {
   removeFavorite,
   toggleFavorite,
   getFavoriteRecipes,
-  migrateGlobalFavorites
+  migrateGlobalFavorites,
+  hasAnyFavoriteInGroup
 } from './userFavorites';
 
 // Clear localStorage before each test
@@ -280,6 +281,78 @@ describe('userFavorites utility functions', () => {
       
       expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe3']);
       expect(getUserFavorites('user2')).toEqual(['recipe5']);
+    });
+  });
+
+  describe('hasAnyFavoriteInGroup', () => {
+    beforeEach(() => {
+      // Set up favorites for user1
+      const favorites = {
+        'user1': ['recipe2', 'recipe5']
+      };
+      saveAllUserFavorites(favorites);
+    });
+
+    test('returns true when one recipe in group is a favorite', () => {
+      const recipeGroup = [
+        { id: 'recipe1', title: 'Recipe 1' },
+        { id: 'recipe2', title: 'Recipe 2' }, // This is a favorite
+        { id: 'recipe3', title: 'Recipe 3' }
+      ];
+      
+      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
+    });
+
+    test('returns true when multiple recipes in group are favorites', () => {
+      const recipeGroup = [
+        { id: 'recipe2', title: 'Recipe 2' }, // This is a favorite
+        { id: 'recipe5', title: 'Recipe 5' }  // This is also a favorite
+      ];
+      
+      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
+    });
+
+    test('returns false when no recipes in group are favorites', () => {
+      const recipeGroup = [
+        { id: 'recipe1', title: 'Recipe 1' },
+        { id: 'recipe3', title: 'Recipe 3' },
+        { id: 'recipe4', title: 'Recipe 4' }
+      ];
+      
+      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(false);
+    });
+
+    test('returns false when recipe group is empty', () => {
+      expect(hasAnyFavoriteInGroup('user1', [])).toBe(false);
+    });
+
+    test('returns false when userId is null/undefined', () => {
+      const recipeGroup = [
+        { id: 'recipe2', title: 'Recipe 2' }
+      ];
+      
+      expect(hasAnyFavoriteInGroup(null, recipeGroup)).toBe(false);
+      expect(hasAnyFavoriteInGroup(undefined, recipeGroup)).toBe(false);
+    });
+
+    test('returns false when recipeGroup is null/undefined', () => {
+      expect(hasAnyFavoriteInGroup('user1', null)).toBe(false);
+      expect(hasAnyFavoriteInGroup('user1', undefined)).toBe(false);
+    });
+
+    test('returns false when recipeGroup is not an array', () => {
+      expect(hasAnyFavoriteInGroup('user1', 'not an array')).toBe(false);
+      expect(hasAnyFavoriteInGroup('user1', {})).toBe(false);
+    });
+
+    test('works correctly for different users', () => {
+      const recipeGroup = [
+        { id: 'recipe2', title: 'Recipe 2' }, // Favorite for user1
+        { id: 'recipe3', title: 'Recipe 3' }
+      ];
+      
+      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
+      expect(hasAnyFavoriteInGroup('user2', recipeGroup)).toBe(false);
     });
   });
 });
