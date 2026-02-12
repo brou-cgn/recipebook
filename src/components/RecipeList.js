@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './RecipeList.css';
 import { canEditRecipes } from '../utils/userManagement';
 import { groupRecipesByParent } from '../utils/recipeVersioning';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
-  const [selectedVersions, setSelectedVersions] = useState({});
   // Generate dynamic heading based on filters
   const getHeading = () => {
     const prefix = showFavoritesOnly ? 'Meine ' : '';
