@@ -9,7 +9,9 @@ const setupLoggedInUser = () => {
     vorname: 'Test',
     nachname: 'User',
     email: 'test@example.com',
-    isAdmin: true
+    isAdmin: true,
+    role: 'admin',
+    requiresPasswordChange: false
   };
   localStorage.setItem('currentUser', JSON.stringify(mockUser));
 };

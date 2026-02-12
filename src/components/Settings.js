@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists } from '../utils/customLists';
-import { 
-  getUsers, 
-  getAdminCount, 
-  isCurrentUserAdmin, 
-  updateUserRole,
-  deleteUser,
-  ROLES,
-  getRoleDisplayName
-} from '../utils/userManagement';
+import { isCurrentUserAdmin } from '../utils/userManagement';
+import UserManagement from './UserManagement';
 
 function Settings({ onBack, currentUser }) {
   const [lists, setLists] = useState({
@@ -20,30 +13,13 @@ function Settings({ onBack, currentUser }) {
   const [newCuisine, setNewCuisine] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newUnit, setNewUnit] = useState('');
-  const [users, setUsers] = useState([]);
-  const [message, setMessage] = useState({ text: '', type: '' }); // 'success' or 'error'
   const [activeTab, setActiveTab] = useState('lists'); // 'lists' or 'users'
   const isAdmin = isCurrentUserAdmin();
 
   // Cleanup timeout on unmount
   useEffect(() => {
-    let timeoutId;
-    if (message.text) {
-      timeoutId = setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-    }
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [message.text]);
-
-  useEffect(() => {
     setLists(getCustomLists());
-    if (isAdmin) {
-      setUsers(getUsers());
-    }
-  }, [isAdmin]);
+  }, []);
 
   const handleSave = () => {
     saveCustomLists(lists);
@@ -107,30 +83,6 @@ function Settings({ onBack, currentUser }) {
       ...lists,
       units: lists.units.filter(u => u !== unit)
     });
-  };
-
-  const handleRoleChange = (userId, newRole) => {
-    const result = updateUserRole(userId, newRole);
-    
-    if (result.success) {
-      setUsers(getUsers());
-      setMessage({ text: result.message, type: 'success' });
-    } else {
-      setMessage({ text: result.message, type: 'error' });
-    }
-  };
-
-  const handleDeleteUser = (userId, userName) => {
-    if (window.confirm(`Möchten Sie den Benutzer "${userName}" wirklich löschen?`)) {
-      const result = deleteUser(userId);
-      
-      if (result.success) {
-        setUsers(getUsers());
-        setMessage({ text: result.message, type: 'success' });
-      } else {
-        setMessage({ text: result.message, type: 'error' });
-      }
-    }
   };
 
   return (
@@ -256,83 +208,7 @@ function Settings({ onBack, currentUser }) {
         </div>
       </>
         ) : (
-          <>
-            {message.text && (
-              <div className={`message ${message.type}`}>
-                {message.text}
-              </div>
-            )}
-            <p className="info-text">
-              Hier können Sie alle registrierten Benutzerkonten einsehen, Berechtigungen verwalten und Benutzer löschen.
-              <br /><br />
-              <strong>Berechtigungsgruppen:</strong>
-              <br />• <strong>Administrator:</strong> Volle Rechte inkl. Benutzerverwaltung und Rezepte löschen
-              <br />• <strong>Bearbeiten:</strong> Kann Rezepte erstellen und bearbeiten
-              <br />• <strong>Kommentieren:</strong> Aktuell nur Leserechte (zukünftig zusätzliche Rechte)
-              <br />• <strong>Lesen:</strong> Nur Leserechte
-            </p>
-            
-            {users.length === 0 ? (
-              <div className="empty-state">
-                <p>Keine Benutzer vorhanden.</p>
-              </div>
-            ) : (
-              <div className="users-table-container">
-                <table className="users-table">
-                  <thead>
-                    <tr>
-                      <th>Vorname</th>
-                      <th>Nachname</th>
-                      <th>E-Mail</th>
-                      <th>Registriert am</th>
-                      <th>Berechtigung</th>
-                      <th>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id} className={user.id === currentUser?.id ? 'current-user' : ''}>
-                        <td>{user.vorname}</td>
-                        <td>{user.nachname}</td>
-                        <td>{user.email}</td>
-                        <td>{new Date(user.createdAt).toLocaleDateString('de-DE')}</td>
-                        <td>
-                          <select
-                            className="role-select"
-                            value={user.role || (user.isAdmin ? ROLES.ADMIN : ROLES.READ)}
-                            onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          >
-                            <option value={ROLES.ADMIN}>{getRoleDisplayName(ROLES.ADMIN)}</option>
-                            <option value={ROLES.EDIT}>{getRoleDisplayName(ROLES.EDIT)}</option>
-                            <option value={ROLES.COMMENT}>{getRoleDisplayName(ROLES.COMMENT)}</option>
-                            <option value={ROLES.READ}>{getRoleDisplayName(ROLES.READ)}</option>
-                          </select>
-                        </td>
-                        <td>
-                          <button
-                            className="delete-user-btn"
-                            onClick={() => handleDeleteUser(user.id, `${user.vorname} ${user.nachname}`)}
-                            title="Benutzer löschen"
-                          >
-                            🗑️
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            
-            <div className="user-stats">
-              <div className="stat-item">
-                <strong>Gesamt:</strong> {users.length} Benutzer
-              </div>
-              <div className="stat-item">
-                <strong>Administratoren:</strong> {getAdminCount()}
-              </div>
-            </div>
-          </>
+          <UserManagement onBack={() => setActiveTab('lists')} currentUser={currentUser} />
         )}
       </div>
     </div>
