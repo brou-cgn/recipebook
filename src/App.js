@@ -10,6 +10,7 @@ import MenuDetail from './components/MenuDetail';
 import MenuForm from './components/MenuForm';
 import Login from './components/Login';
 import Register from './components/Register';
+import PasswordChangeModal from './components/PasswordChangeModal';
 import { 
   loginUser, 
   logoutUser, 
@@ -34,6 +35,7 @@ function App() {
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
 
   // Check for existing user session on mount
   useEffect(() => {
@@ -211,13 +213,26 @@ function App() {
     const result = loginUser(email, password);
     if (result.success) {
       setCurrentUser(result.user);
+      if (result.requiresPasswordChange) {
+        setRequiresPasswordChange(true);
+      }
     }
     return result;
+  };
+
+  const handlePasswordChanged = () => {
+    setRequiresPasswordChange(false);
+    // Refresh current user to update the requiresPasswordChange flag
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+    }
   };
 
   const handleLogout = () => {
     logoutUser();
     setCurrentUser(null);
+    setRequiresPasswordChange(false);
   };
 
   const handleRegister = (userData) => {
@@ -340,6 +355,12 @@ function App() {
             currentUser={currentUser}
           />
         )
+      )}
+      {requiresPasswordChange && currentUser && (
+        <PasswordChangeModal 
+          user={currentUser}
+          onPasswordChanged={handlePasswordChanged}
+        />
       )}
     </div>
   );
