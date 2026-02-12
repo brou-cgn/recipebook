@@ -2,25 +2,46 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
+// Mock user setup for tests
+const setupLoggedInUser = () => {
+  const mockUser = {
+    id: 'test-user-id',
+    vorname: 'Test',
+    nachname: 'User',
+    email: 'test@example.com',
+    isAdmin: true
+  };
+  localStorage.setItem('currentUser', JSON.stringify(mockUser));
+};
+
+// Clear user after each test
+afterEach(() => {
+  localStorage.clear();
+});
+
 test('renders RecipeBook header', () => {
+  setupLoggedInUser();
   render(<App />);
   const headerElement = screen.getByText(/RecipeBook/i);
   expect(headerElement).toBeInTheDocument();
 });
 
-test('renders My Recipes section', () => {
+test('renders "Rezepte" heading with no filters', () => {
+  setupLoggedInUser();
   render(<App />);
-  const recipesHeading = screen.getByText(/Meine Rezepte/i);
+  const recipesHeading = screen.getByRole('heading', { name: /^Rezepte$/, level: 2 });
   expect(recipesHeading).toBeInTheDocument();
 });
 
 test('renders Add Recipe button', () => {
+  setupLoggedInUser();
   render(<App />);
   const addButton = screen.getByRole('button', { name: /Rezept hinzufügen/i });
   expect(addButton).toBeInTheDocument();
 });
 
 test('recipe form includes new metadata fields', () => {
+  setupLoggedInUser();
   render(<App />);
   const addButton = screen.getByRole('button', { name: /Rezept hinzufügen/i });
   fireEvent.click(addButton);
@@ -34,6 +55,7 @@ test('recipe form includes new metadata fields', () => {
 });
 
 test('recipe form has default values for new fields', () => {
+  setupLoggedInUser();
   render(<App />);
   const addButton = screen.getByRole('button', { name: /Rezept hinzufügen/i });
   fireEvent.click(addButton);
@@ -48,6 +70,7 @@ test('recipe form has default values for new fields', () => {
 });
 
 test('category filter is displayed in header', () => {
+  setupLoggedInUser();
   render(<App />);
   const categoryFilter = screen.getByRole('combobox', { name: /Nach Kategorie filtern/i });
   expect(categoryFilter).toBeInTheDocument();
@@ -55,12 +78,14 @@ test('category filter is displayed in header', () => {
 });
 
 test('favorites filter button is displayed in header', () => {
+  setupLoggedInUser();
   render(<App />);
   const favoritesButton = screen.getByRole('button', { name: /Favoriten/i });
   expect(favoritesButton).toBeInTheDocument();
 });
 
 test('category filter shows only recipes of selected category', () => {
+  setupLoggedInUser();
   render(<App />);
   
   // Initially should show all 3 sample recipes
@@ -76,4 +101,50 @@ test('category filter shows only recipes of selected category', () => {
   expect(screen.queryByText('Spaghetti Carbonara')).not.toBeInTheDocument();
   expect(screen.queryByText('Classic Margherita Pizza')).not.toBeInTheDocument();
   expect(screen.getByText('Chocolate Chip Cookies')).toBeInTheDocument();
+});
+
+test('heading changes to category name when category filter is selected', () => {
+  setupLoggedInUser();
+  render(<App />);
+  
+  // Initially should show "Rezepte" as heading (not button text)
+  const initialHeading = screen.getByRole('heading', { name: /^Rezepte$/, level: 2 });
+  expect(initialHeading).toBeInTheDocument();
+  
+  // Change category filter
+  const categoryFilter = screen.getByRole('combobox', { name: /Nach Kategorie filtern/i });
+  fireEvent.change(categoryFilter, { target: { value: 'Dessert' } });
+  
+  // Heading should now show "Dessert"
+  const newHeading = screen.getByRole('heading', { name: /^Dessert$/, level: 2 });
+  expect(newHeading).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: /^Rezepte$/, level: 2 })).not.toBeInTheDocument();
+});
+
+test('heading shows "Meine Rezepte" when favorites filter is active with no category', () => {
+  setupLoggedInUser();
+  render(<App />);
+  
+  // Click favorites filter
+  const favoritesButton = screen.getByRole('button', { name: /Favoriten/i });
+  fireEvent.click(favoritesButton);
+  
+  // Heading should show "Meine Rezepte"
+  expect(screen.getByText('Meine Rezepte')).toBeInTheDocument();
+});
+
+test('heading shows "Meine" + category when both filters are active', () => {
+  setupLoggedInUser();
+  render(<App />);
+  
+  // Select category
+  const categoryFilter = screen.getByRole('combobox', { name: /Nach Kategorie filtern/i });
+  fireEvent.change(categoryFilter, { target: { value: 'Main Course' } });
+  
+  // Click favorites filter
+  const favoritesButton = screen.getByRole('button', { name: /Favoriten/i });
+  fireEvent.click(favoritesButton);
+  
+  // Heading should show "Meine Main Course"
+  expect(screen.getByText('Meine Main Course')).toBeInTheDocument();
 });
