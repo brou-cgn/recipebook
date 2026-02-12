@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
-import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe } from '../utils/recipeVersioning';
+import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { isRecipeFavorite } from '../utils/userFavorites';
 
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
@@ -10,7 +10,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   // Get all versions for this recipe
   const parentRecipe = getParentRecipe(allRecipes, selectedRecipe) || (!isRecipeVersion(selectedRecipe) ? selectedRecipe : null);
-  const allVersions = parentRecipe ? [parentRecipe, ...getRecipeVersions(allRecipes, parentRecipe.id)] : [selectedRecipe];
+  const unsortedVersions = parentRecipe ? [parentRecipe, ...getRecipeVersions(allRecipes, parentRecipe.id)] : [selectedRecipe];
+  
+  // Sort versions according to priority: favorite > own > version number
+  const allVersions = sortRecipeVersions(unsortedVersions, currentUser?.id, isRecipeFavorite, allRecipes);
   const hasMultipleVersions = allVersions.length > 1;
 
   // Update selected recipe when initial recipe changes

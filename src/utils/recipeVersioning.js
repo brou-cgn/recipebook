@@ -90,6 +90,56 @@ export const getVersionNumber = (allRecipes, recipe) => {
 };
 
 /**
+ * Sort recipe versions according to priority:
+ * 1. Favorited version (if exists)
+ * 2. Own version (authored by current user, if exists and no favorite)
+ * 3. Ascending version number (all others)
+ * 
+ * @param {Array} versions - Array of recipe versions to sort
+ * @param {string} currentUserId - ID of current user
+ * @param {Function} isFavoriteFunc - Function to check if recipe is favorite: (userId, recipeId) => boolean
+ * @param {Array} allRecipes - All recipes (needed for version number calculation)
+ * @returns {Array} Sorted array of recipe versions
+ */
+export const sortRecipeVersions = (versions, currentUserId, isFavoriteFunc, allRecipes) => {
+  if (!versions || versions.length === 0) return [];
+  
+  // Create a copy to avoid mutating the original array
+  const sortedVersions = [...versions];
+  
+  sortedVersions.sort((a, b) => {
+    // Check if either is favorited
+    const aIsFavorite = currentUserId && isFavoriteFunc ? isFavoriteFunc(currentUserId, a.id) : false;
+    const bIsFavorite = currentUserId && isFavoriteFunc ? isFavoriteFunc(currentUserId, b.id) : false;
+    
+    // Priority 1: Favorited version comes first
+    if (aIsFavorite && !bIsFavorite) return -1;
+    if (!aIsFavorite && bIsFavorite) return 1;
+    
+    // Priority 2: Own version (if no favorite)
+    if (!aIsFavorite && !bIsFavorite && currentUserId) {
+      const aIsOwn = a.authorId === currentUserId;
+      const bIsOwn = b.authorId === currentUserId;
+      
+      if (aIsOwn && !bIsOwn) return -1;
+      if (!aIsOwn && bIsOwn) return 1;
+    }
+    
+    // Priority 3: Sort by version number (ascending)
+    if (allRecipes) {
+      const aVersion = getVersionNumber(allRecipes, a);
+      const bVersion = getVersionNumber(allRecipes, b);
+      return aVersion - bVersion;
+    }
+    
+    // Fallback: maintain original order
+    return 0;
+  });
+  
+  return sortedVersions;
+};
+
+/**
  * Group recipes by parent recipe (combines original and all versions into groups)
  * @param {Array} allRecipes - All recipes
  * @returns {Array} Array of recipe groups, each containing the primary recipe and all versions
