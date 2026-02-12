@@ -4,7 +4,8 @@ import {
   getParentRecipe,
   isRecipeVersion,
   createRecipeVersion,
-  getVersionNumber
+  getVersionNumber,
+  groupRecipesByParent
 } from './recipeVersioning';
 
 describe('Recipe Versioning Utilities', () => {
@@ -185,6 +186,56 @@ describe('Recipe Versioning Utilities', () => {
       const versionNum = getVersionNumber(recipesWithNew, versionWithoutDate);
       expect(typeof versionNum).toBe('number');
       expect(versionNum).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('groupRecipesByParent', () => {
+    it('should group original recipe with its versions', () => {
+      const groups = groupRecipesByParent(allRecipes);
+      
+      // Find the group containing the original recipe
+      const group = groups.find(g => g.primaryRecipe.id === 'recipe-1');
+      
+      expect(group).toBeDefined();
+      expect(group.versionCount).toBe(3); // original + 2 versions
+      expect(group.allRecipes).toHaveLength(3);
+      expect(group.allRecipes).toContainEqual(originalRecipe);
+      expect(group.allRecipes).toContainEqual(version1);
+      expect(group.allRecipes).toContainEqual(version2);
+    });
+
+    it('should create separate group for recipe without versions', () => {
+      const groups = groupRecipesByParent(allRecipes);
+      
+      const group = groups.find(g => g.primaryRecipe.id === 'recipe-4');
+      
+      expect(group).toBeDefined();
+      expect(group.versionCount).toBe(1);
+      expect(group.allRecipes).toHaveLength(1);
+      expect(group.allRecipes).toContainEqual(unrelatedRecipe);
+    });
+
+    it('should process each recipe only once', () => {
+      const groups = groupRecipesByParent(allRecipes);
+      
+      // Count total recipes across all groups
+      const totalRecipes = groups.reduce((sum, g) => sum + g.allRecipes.length, 0);
+      
+      expect(totalRecipes).toBe(allRecipes.length);
+    });
+
+    it('should handle empty recipe list', () => {
+      const groups = groupRecipesByParent([]);
+      expect(groups).toHaveLength(0);
+    });
+
+    it('should use original recipe as primary recipe', () => {
+      const groups = groupRecipesByParent(allRecipes);
+      
+      const group = groups.find(g => g.primaryRecipe.id === 'recipe-1');
+      
+      expect(group.primaryRecipe).toEqual(originalRecipe);
+      expect(group.primaryRecipe.parentRecipeId).toBeUndefined();
     });
   });
 });

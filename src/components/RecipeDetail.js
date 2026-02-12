@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
-import { isRecipeVersion, getVersionNumber } from '../utils/recipeVersioning';
+import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe } from '../utils/recipeVersioning';
 
-function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
+  const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
 
+  // Get all versions for this recipe
+  const parentRecipe = getParentRecipe(allRecipes, selectedRecipe) || (!isRecipeVersion(selectedRecipe) ? selectedRecipe : null);
+  const allVersions = parentRecipe ? [parentRecipe, ...getRecipeVersions(allRecipes, parentRecipe.id)] : [selectedRecipe];
+  const hasMultipleVersions = allVersions.length > 1;
+
+  // Update selected recipe when initial recipe changes
+  useEffect(() => {
+    setSelectedRecipe(initialRecipe);
+  }, [initialRecipe]);
+
+  const recipe = selectedRecipe;
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
@@ -87,7 +99,36 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, onCr
       </div>
 
       <div className="recipe-detail-content">
-        {isVersion && (
+        {hasMultipleVersions && (
+          <div className="version-selector">
+            <label htmlFor="version-select">Version auswählen:</label>
+            <select 
+              id="version-select"
+              value={recipe.id}
+              onChange={(e) => {
+                const selected = allVersions.find(v => v.id === e.target.value);
+                if (selected) {
+                  setSelectedRecipe(selected);
+                  setServingMultiplier(1); // Reset serving multiplier when switching versions
+                }
+              }}
+              className="version-select"
+            >
+              {allVersions.map((version, index) => {
+                const isOriginal = !version.parentRecipeId;
+                const label = isOriginal 
+                  ? `Original (${version.title})`
+                  : `Version ${getVersionNumber(allRecipes, version)} (${version.title})`;
+                return (
+                  <option key={version.id} value={version.id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+        {isVersion && !hasMultipleVersions && (
           <div className="version-badge">
             Version {versionNumber}
           </div>

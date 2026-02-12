@@ -88,3 +88,57 @@ export const getVersionNumber = (allRecipes, recipe) => {
   const index = sortedVersions.findIndex(v => v.id === recipe.id);
   return index >= 0 ? index + 1 : 0;
 };
+
+/**
+ * Group recipes by parent recipe (combines original and all versions into groups)
+ * @param {Array} allRecipes - All recipes
+ * @returns {Array} Array of recipe groups, each containing the primary recipe and all versions
+ */
+export const groupRecipesByParent = (allRecipes) => {
+  const groups = [];
+  const processedIds = new Set();
+  
+  allRecipes.forEach(recipe => {
+    // Skip if already processed
+    if (processedIds.has(recipe.id)) {
+      return;
+    }
+    
+    // If this is a version, find its parent
+    if (recipe.parentRecipeId) {
+      const parent = allRecipes.find(r => r.id === recipe.parentRecipeId);
+      
+      // If parent exists and not processed yet, create group with parent
+      if (parent && !processedIds.has(parent.id)) {
+        const versions = getRecipeVersions(allRecipes, parent.id);
+        const allInGroup = [parent, ...versions];
+        
+        groups.push({
+          primaryRecipe: parent,
+          allRecipes: allInGroup,
+          versionCount: versions.length + 1 // +1 for the original
+        });
+        
+        // Mark all as processed
+        allInGroup.forEach(r => processedIds.add(r.id));
+      }
+      // If parent doesn't exist or already processed, this is an orphan - skip for now
+      // It will be processed when we encounter the parent or as standalone
+    } else {
+      // This is an original recipe
+      const versions = getRecipeVersions(allRecipes, recipe.id);
+      const allInGroup = [recipe, ...versions];
+      
+      groups.push({
+        primaryRecipe: recipe,
+        allRecipes: allInGroup,
+        versionCount: allInGroup.length
+      });
+      
+      // Mark all as processed
+      allInGroup.forEach(r => processedIds.add(r.id));
+    }
+  });
+  
+  return groups;
+};
