@@ -275,8 +275,6 @@ function RecipeForm({ recipe, onSave, onCancel }) {
                 key={level}
                 className={`star ${schwierigkeit >= level ? 'filled' : 'empty'}`}
                 onClick={() => setSchwierigkeit(level)}
-                onMouseEnter={(e) => e.currentTarget.parentElement.setAttribute('data-hover', level)}
-                onMouseLeave={(e) => e.currentTarget.parentElement.removeAttribute('data-hover')}
               >
                 {schwierigkeit >= level ? '★' : '☆'}
               </span>
