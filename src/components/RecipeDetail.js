@@ -1,12 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './RecipeDetail.css';
 
 function RecipeDetail({ recipe, onBack, onEdit, onDelete }) {
+  const [servingMultiplier, setServingMultiplier] = useState(1);
+
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete "${recipe.title}"?`)) {
       onDelete(recipe.id);
     }
   };
+
+  const scaleIngredient = (ingredient) => {
+    if (servingMultiplier === 1) return ingredient;
+    
+    // Match numbers with optional fractions and units
+    const regex = /(\d+(?:[.,]\d+)?|\d+\/\d+)\s*([a-zA-Z]+)?/g;
+    
+    return ingredient.replace(regex, (match, number, unit) => {
+      // Convert fraction to decimal if needed
+      let value;
+      if (number.includes('/')) {
+        const [num, denom] = number.split('/');
+        value = parseFloat(num) / parseFloat(denom);
+      } else {
+        value = parseFloat(number.replace(',', '.'));
+      }
+      
+      const scaled = value * servingMultiplier;
+      const formatted = scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1);
+      
+      return unit ? `${formatted} ${unit}` : formatted;
+    });
+  };
+
+  const currentServings = (recipe.portionen || 4) * servingMultiplier;
 
   return (
     <div className="recipe-detail-container">
@@ -33,11 +60,69 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete }) {
 
         <h1 className="recipe-title">{recipe.title}</h1>
 
+        <div className="recipe-metadata">
+          {recipe.kulinarik && (
+            <div className="metadata-item">
+              <span className="metadata-icon">🌍</span>
+              <span className="metadata-label">Cuisine:</span>
+              <span className="metadata-value cuisine-badge">{recipe.kulinarik}</span>
+            </div>
+          )}
+          
+          {recipe.speisekategorie && (
+            <div className="metadata-item">
+              <span className="metadata-icon">🍽️</span>
+              <span className="metadata-label">Category:</span>
+              <span className="metadata-value">{recipe.speisekategorie}</span>
+            </div>
+          )}
+          
+          {recipe.schwierigkeit && (
+            <div className="metadata-item">
+              <span className="metadata-icon">📊</span>
+              <span className="metadata-label">Difficulty:</span>
+              <span className="metadata-value difficulty-stars">
+                {'⭐'.repeat(recipe.schwierigkeit)}
+              </span>
+            </div>
+          )}
+          
+          {recipe.kochdauer && (
+            <div className="metadata-item">
+              <span className="metadata-icon">⏱️</span>
+              <span className="metadata-label">Time:</span>
+              <span className="metadata-value">{recipe.kochdauer} min</span>
+            </div>
+          )}
+        </div>
+
         <section className="recipe-section">
-          <h2>🥘 Ingredients ({recipe.ingredients?.length || 0})</h2>
+          <div className="section-header">
+            <h2>🥘 Ingredients ({recipe.ingredients?.length || 0})</h2>
+            {recipe.portionen && (
+              <div className="serving-control">
+                <button 
+                  className="serving-btn"
+                  onClick={() => setServingMultiplier(Math.max(0.5, servingMultiplier - 0.5))}
+                  disabled={servingMultiplier <= 0.5}
+                >
+                  -
+                </button>
+                <span className="serving-display">
+                  {currentServings} serving{currentServings !== 1 ? 's' : ''}
+                </span>
+                <button 
+                  className="serving-btn"
+                  onClick={() => setServingMultiplier(servingMultiplier + 0.5)}
+                >
+                  +
+                </button>
+              </div>
+            )}
+          </div>
           <ul className="ingredients-list">
             {recipe.ingredients?.map((ingredient, index) => (
-              <li key={index}>{ingredient}</li>
+              <li key={index}>{scaleIngredient(ingredient)}</li>
             )) || <li>No ingredients listed</li>}
           </ul>
         </section>

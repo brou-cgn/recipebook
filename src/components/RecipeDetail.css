@@ -90,8 +90,54 @@
   margin: 0;
   color: #333;
   font-size: 2rem;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: none;
 }
+
+.recipe-metadata {
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.metadata-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.metadata-icon {
+  font-size: 1.2rem;
+}
+
+.metadata-label {
+  font-weight: 600;
+  color: #666;
+}
+
+.metadata-value {
+  color: #333;
+}
+
+.cuisine-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.difficulty-stars {
+  font-size: 1.1rem;
+  color: #ffc107;
+}
+
 
 .recipe-section {
   padding: 1.5rem;
@@ -107,6 +153,59 @@
   color: #4CAF50;
   font-size: 1.25rem;
 }
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.serving-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f9f9f9;
+  padding: 0.5rem;
+  border-radius: 8px;
+}
+
+.serving-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.serving-btn:hover:not(:disabled) {
+  background: #45a049;
+  transform: scale(1.1);
+}
+
+.serving-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.serving-display {
+  min-width: 100px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
 
 .ingredients-list,
 .steps-list {
@@ -153,8 +252,22 @@
     font-size: 1.5rem;
     padding: 1rem;
   }
+
+  .recipe-metadata {
+    padding: 0 1rem 1rem;
+  }
   
   .recipe-section {
     padding: 1rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .serving-control {
+    width: 100%;
+    justify-content: center;
   }
 }
