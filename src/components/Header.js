@@ -1,7 +1,18 @@
 import React from 'react';
 import './Header.css';
+import { getCustomLists } from '../utils/customLists';
 
-function Header({ onSettingsClick, currentView, onViewChange }) {
+function Header({ 
+  onSettingsClick, 
+  currentView, 
+  onViewChange,
+  categoryFilter,
+  onCategoryFilterChange,
+  showFavoritesOnly,
+  onToggleFavoritesFilter
+}) {
+  const customLists = getCustomLists();
+  
   return (
     <header className="header">
       <div className="header-content">
@@ -23,6 +34,28 @@ function Header({ onSettingsClick, currentView, onViewChange }) {
                 onClick={() => onViewChange('menus')}
               >
                 Menüs
+              </button>
+            </div>
+          )}
+          {currentView === 'recipes' && onCategoryFilterChange && (
+            <div className="filter-controls">
+              <select
+                className="category-filter"
+                value={categoryFilter}
+                onChange={(e) => onCategoryFilterChange(e.target.value)}
+                title="Nach Kategorie filtern"
+              >
+                <option value="">Alle Kategorien</option>
+                {customLists.mealCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+              <button
+                className={`favorites-filter ${showFavoritesOnly ? 'active' : ''}`}
+                onClick={onToggleFavoritesFilter}
+                title={showFavoritesOnly ? 'Alle anzeigen' : 'Nur Favoriten anzeigen'}
+              >
+                ★ Favoriten
               </button>
             </div>
           )}

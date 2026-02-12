@@ -17,6 +17,61 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.category-filter {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.category-filter:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.category-filter option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.favorites-filter {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.favorites-filter:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+.favorites-filter.active {
+  background: rgba(255, 215, 0, 0.3);
+  border-color: rgba(255, 215, 0, 0.8);
+  color: #FFD700;
 }
 
 .view-toggle {
@@ -91,6 +146,16 @@
     gap: 1rem;
   }
 
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-controls {
+    width: 100%;
+    justify-content: center;
+  }
+
   .settings-btn {
     align-self: flex-end;
   }
@@ -105,8 +170,15 @@
     font-size: 0.8rem;
   }
 
-  .settings-btn {
+  .settings-btn,
+  .category-filter,
+  .favorites-filter {
     font-size: 0.85rem;
     padding: 0.5rem 1rem;
+  }
+
+  .toggle-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
   }
 }
