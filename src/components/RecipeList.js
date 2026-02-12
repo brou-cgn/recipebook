@@ -1,11 +1,24 @@
 import React from 'react';
 import './RecipeList.css';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly }) {
+  // Generate dynamic heading based on category and favorites status
+  const getHeading = () => {
+    const prefix = showFavoritesOnly ? 'Meine ' : '';
+    
+    if (categoryFilter) {
+      // Specific category selected
+      return `${prefix}${categoryFilter}`;
+    } else {
+      // All categories
+      return `${prefix}Rezepte`;
+    }
+  };
+
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
-        <h2>Meine Rezepte</h2>
+        <h2>{getHeading()}</h2>
         <button className="add-button" onClick={onAddRecipe}>
           + Rezept hinzufügen
         </button>
