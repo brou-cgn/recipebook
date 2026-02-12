@@ -15,6 +15,8 @@ import {
   canDeleteRecipes,
   canEditRecipe,
   canDeleteRecipe,
+  canDirectlyEditRecipe,
+  canCreateNewVersion,
   canCommentOnRecipes,
   canReadRecipes,
   hasPermission,
@@ -1056,6 +1058,68 @@ describe('User Management Utilities', () => {
       expect(canCommentOnRecipes(guestUser)).toBe(false);
       expect(canReadRecipes(guestUser)).toBe(true);
       expect(canDeleteRecipes(guestUser)).toBe(false);
+    });
+  });
+
+  describe('Recipe-specific permissions (new versioning)', () => {
+    const adminUser = { id: 'admin-1', role: ROLES.ADMIN };
+    const editUser = { id: 'user-1', role: ROLES.EDIT };
+    const readUser = { id: 'user-2', role: ROLES.READ };
+    const recipeByEditUser = { id: 'recipe-1', title: 'Test Recipe', authorId: 'user-1' };
+    const recipeByAnotherUser = { id: 'recipe-2', title: 'Other Recipe', authorId: 'other-user' };
+
+    describe('canDirectlyEditRecipe', () => {
+      test('should allow admin to directly edit any recipe', () => {
+        expect(canDirectlyEditRecipe(adminUser, recipeByEditUser)).toBe(true);
+        expect(canDirectlyEditRecipe(adminUser, recipeByAnotherUser)).toBe(true);
+      });
+
+      test('should allow author to directly edit their own recipe', () => {
+        expect(canDirectlyEditRecipe(editUser, recipeByEditUser)).toBe(true);
+      });
+
+      test('should not allow user to directly edit other users recipes', () => {
+        expect(canDirectlyEditRecipe(editUser, recipeByAnotherUser)).toBe(false);
+      });
+
+      test('should not allow users without edit permission to directly edit any recipe', () => {
+        expect(canDirectlyEditRecipe(readUser, recipeByEditUser)).toBe(false);
+        expect(canDirectlyEditRecipe(readUser, recipeByAnotherUser)).toBe(false);
+      });
+
+      test('should return false if user or recipe is null', () => {
+        expect(canDirectlyEditRecipe(null, recipeByEditUser)).toBe(false);
+        expect(canDirectlyEditRecipe(editUser, null)).toBe(false);
+        expect(canDirectlyEditRecipe(null, null)).toBe(false);
+      });
+    });
+
+    describe('canCreateNewVersion', () => {
+      test('should allow admin to create new versions', () => {
+        expect(canCreateNewVersion(adminUser)).toBe(true);
+      });
+
+      test('should allow users with EDIT permission to create new versions', () => {
+        expect(canCreateNewVersion(editUser)).toBe(true);
+      });
+
+      test('should not allow users with only READ permission to create new versions', () => {
+        expect(canCreateNewVersion(readUser)).toBe(false);
+      });
+
+      test('should not allow users with COMMENT permission to create new versions', () => {
+        const commentUser = { id: 'user-3', role: ROLES.COMMENT };
+        expect(canCreateNewVersion(commentUser)).toBe(false);
+      });
+
+      test('should not allow guest users to create new versions', () => {
+        const guestUser = { id: 'guest-1', role: ROLES.GUEST };
+        expect(canCreateNewVersion(guestUser)).toBe(false);
+      });
+
+      test('should return false if user is null', () => {
+        expect(canCreateNewVersion(null)).toBe(false);
+      });
     });
   });
 });

@@ -437,6 +437,35 @@ export const canDeleteRecipe = (user, recipe) => {
 };
 
 /**
+ * Check if user can directly edit a specific recipe (overwrite it)
+ * Only admins and the original author can directly edit a recipe.
+ * This is a stricter check than canEditRecipe.
+ * @param {Object} user - User object
+ * @param {Object} recipe - Recipe object with authorId field
+ * @returns {boolean}
+ */
+export const canDirectlyEditRecipe = (user, recipe) => {
+  if (!user || !recipe) return false;
+  // Admins can directly edit any recipe
+  if (user.role === ROLES.ADMIN) return true;
+  // Original author can directly edit their own recipe
+  if (recipe.authorId === user.id) return true;
+  return false;
+};
+
+/**
+ * Check if user can create a new version of a recipe
+ * Users with EDIT permission or higher can create new versions.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canCreateNewVersion = (user) => {
+  if (!user) return false;
+  // Users with EDIT permission or higher (including admins) can create new versions
+  return hasPermission(user, ROLES.EDIT);
+};
+
+/**
  * Get display name for a role
  * @param {string} role - Role constant
  * @returns {string}

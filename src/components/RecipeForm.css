@@ -35,6 +35,40 @@
   background-color: #1976D2;
 }
 
+.version-info-banner {
+  background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+  border-left: 4px solid #2196F3;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.version-info-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.version-info-text {
+  flex: 1;
+}
+
+.version-info-text strong {
+  color: #1976D2;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.version-info-text p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .recipe-form {
   background: white;
   border-radius: 12px;

@@ -24,6 +24,7 @@ function App() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [isCreatingVersion, setIsCreatingVersion] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentView, setCurrentView] = useState('recipes');
   const [menus, setMenus] = useState([]);
@@ -87,21 +88,30 @@ function App() {
 
   const handleAddRecipe = () => {
     setEditingRecipe(null);
+    setIsCreatingVersion(false);
     setIsFormOpen(true);
   };
 
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
+    setIsCreatingVersion(false);
+    setIsFormOpen(true);
+    setSelectedRecipe(null);
+  };
+
+  const handleCreateVersion = (recipe) => {
+    setEditingRecipe(recipe);
+    setIsCreatingVersion(true);
     setIsFormOpen(true);
     setSelectedRecipe(null);
   };
 
   const handleSaveRecipe = (recipe) => {
-    if (editingRecipe) {
-      // Update existing recipe
+    if (editingRecipe && !isCreatingVersion) {
+      // Update existing recipe (direct edit)
       setRecipes(recipes.map(r => r.id === recipe.id ? recipe : r));
     } else {
-      // Add new recipe
+      // Add new recipe or new version
       const newRecipe = {
         ...recipe,
         id: Date.now().toString()
@@ -110,6 +120,7 @@ function App() {
     }
     setIsFormOpen(false);
     setEditingRecipe(null);
+    setIsCreatingVersion(false);
   };
 
   const handleDeleteRecipe = (recipeId) => {
@@ -120,6 +131,7 @@ function App() {
   const handleCancelForm = () => {
     setIsFormOpen(false);
     setEditingRecipe(null);
+    setIsCreatingVersion(false);
   };
 
   const handleOpenSettings = () => {
@@ -326,6 +338,7 @@ function App() {
             onSave={handleSaveRecipe}
             onCancel={handleCancelForm}
             currentUser={currentUser}
+            isCreatingVersion={isCreatingVersion}
           />
         ) : selectedRecipe ? (
           <RecipeDetail
@@ -334,7 +347,9 @@ function App() {
             onEdit={handleEditRecipe}
             onDelete={handleDeleteRecipe}
             onToggleFavorite={handleToggleFavorite}
+            onCreateVersion={handleCreateVersion}
             currentUser={currentUser}
+            allRecipes={recipes}
           />
         ) : (
           <RecipeList

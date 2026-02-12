@@ -35,7 +35,8 @@
 
 .edit-button,
 .delete-button,
-.favorite-button {
+.favorite-button,
+.version-button {
   background: white;
   border: 2px solid #ddd;
   padding: 0.75rem 1rem;
@@ -79,6 +80,16 @@
   color: white;
 }
 
+.version-button {
+  color: #2196F3;
+  border-color: #2196F3;
+}
+
+.version-button:hover {
+  background: #2196F3;
+  color: white;
+}
+
 .delete-button {
   color: #f44336;
   border-color: #f44336;
@@ -94,6 +105,21 @@
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  position: relative;
+}
+
+.version-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .recipe-detail-image {

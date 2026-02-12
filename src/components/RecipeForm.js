@@ -6,7 +6,7 @@ import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import RecipeImportModal from './RecipeImportModal';
 
-function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
+function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
@@ -19,6 +19,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
   const [imageError, setImageError] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [authorId, setAuthorId] = useState('');
+  const [parentRecipeId, setParentRecipeId] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
@@ -44,12 +45,21 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
       setSpeisekategorie(recipe.speisekategorie || '');
       setIngredients(recipe.ingredients?.length > 0 ? recipe.ingredients : ['']);
       setSteps(recipe.steps?.length > 0 ? recipe.steps : ['']);
-      setAuthorId(recipe.authorId || currentUser?.id || '');
+      
+      // If creating a version, set current user as author and track parent
+      if (isCreatingVersion) {
+        setAuthorId(currentUser?.id || '');
+        setParentRecipeId(recipe.id || '');
+      } else {
+        setAuthorId(recipe.authorId || currentUser?.id || '');
+        setParentRecipeId(recipe.parentRecipeId || '');
+      }
     } else {
       // New recipe - set current user as author
       setAuthorId(currentUser?.id || '');
+      setParentRecipeId('');
     }
-  }, [recipe, currentUser]);
+  }, [recipe, currentUser, isCreatingVersion]);
 
   useEffect(() => {
     setCustomLists(getCustomLists());
@@ -134,7 +144,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
     }
 
     const recipeData = {
-      id: recipe?.id,
+      id: isCreatingVersion ? undefined : recipe?.id,
       title: title.trim(),
       image: image.trim(),
       portionen: parseInt(portionen) || 4,
@@ -144,7 +154,10 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
       speisekategorie: speisekategorie.trim(),
       ingredients: ingredients.filter(i => i.trim() !== ''),
       steps: steps.filter(s => s.trim() !== ''),
-      authorId: authorId
+      authorId: authorId,
+      parentRecipeId: parentRecipeId || undefined,
+      createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
+      versionCreatedFrom: isCreatingVersion ? recipe?.title : undefined
     };
 
     onSave(recipeData);
@@ -179,8 +192,10 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
-        <h2>{recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen'}</h2>
-        {!recipe && (
+        <h2>
+          {isCreatingVersion ? 'Neue Version erstellen' : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
+        </h2>
+        {!recipe && !isCreatingVersion && (
           <button
             type="button"
             className="import-button-header"
@@ -191,6 +206,16 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser }) {
           </button>
         )}
       </div>
+
+      {isCreatingVersion && (
+        <div className="version-info-banner">
+          <span className="version-info-icon">ℹ️</span>
+          <div className="version-info-text">
+            <strong>Neue Version erstellen</strong>
+            <p>Sie erstellen eine neue Version von "{recipe?.title}". Das Original bleibt unverändert.</p>
+          </div>
+        </div>
+      )}
 
       <form className="recipe-form" onSubmit={handleSubmit}>
         <div className="form-group">

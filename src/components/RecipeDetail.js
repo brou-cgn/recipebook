@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import './RecipeDetail.css';
-import { canEditRecipe, canDeleteRecipe } from '../utils/userManagement';
+import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
+import { isRecipeVersion, getVersionNumber } from '../utils/recipeVersioning';
 
-function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, currentUser }) {
+function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
 
-  const userCanEdit = canEditRecipe(currentUser, recipe);
+  const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
+  const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
+  const isVersion = isRecipeVersion(recipe);
+  const versionNumber = isVersion ? getVersionNumber(allRecipes, recipe) : 0;
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
@@ -64,9 +68,14 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, curr
               {recipe.isFavorite ? '★ Favorit' : '☆ Favorit'}
             </button>
           )}
-          {userCanEdit && (
+          {userCanDirectlyEdit && (
             <button className="edit-button" onClick={() => onEdit(recipe)}>
               Bearbeiten
+            </button>
+          )}
+          {userCanCreateVersion && !userCanDirectlyEdit && (
+            <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+              Neue Version erstellen
             </button>
           )}
           {userCanDelete && (
@@ -78,6 +87,11 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite, curr
       </div>
 
       <div className="recipe-detail-content">
+        {isVersion && (
+          <div className="version-badge">
+            Version {versionNumber}
+          </div>
+        )}
         {recipe.image && (
           <div className="recipe-detail-image">
             <img src={recipe.image} alt={recipe.title} />
