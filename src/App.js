@@ -345,6 +345,8 @@ function App() {
             })}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
+            categoryFilter={categoryFilter}
+            showFavoritesOnly={showFavoritesOnly}
           />
         )
       )}
