@@ -10,13 +10,11 @@ import MenuDetail from './components/MenuDetail';
 import MenuForm from './components/MenuForm';
 import Login from './components/Login';
 import Register from './components/Register';
-import UserManagement from './components/UserManagement';
 import { 
   loginUser, 
   logoutUser, 
   getCurrentUser, 
-  registerUser,
-  isCurrentUserAdmin 
+  registerUser
 } from './utils/userManagement';
 
 function App() {
@@ -35,7 +33,6 @@ function App() {
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
-  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
   // Check for existing user session on mount
   useEffect(() => {
@@ -220,7 +217,6 @@ function App() {
   const handleLogout = () => {
     logoutUser();
     setCurrentUser(null);
-    setIsUserManagementOpen(false);
   };
 
   const handleRegister = (userData) => {
@@ -234,17 +230,6 @@ function App() {
 
   const handleSwitchToRegister = () => {
     setAuthView('register');
-  };
-
-  const handleOpenUserManagement = () => {
-    setIsUserManagementOpen(true);
-    setSelectedRecipe(null);
-    setIsFormOpen(false);
-    setIsSettingsOpen(false);
-  };
-
-  const handleCloseUserManagement = () => {
-    setIsUserManagementOpen(false);
   };
 
   // If user is not logged in, show login/register view
@@ -279,15 +264,9 @@ function App() {
         onToggleFavoritesFilter={handleToggleFavoritesFilter}
         currentUser={currentUser}
         onLogout={handleLogout}
-        onUserManagement={isCurrentUserAdmin() ? handleOpenUserManagement : null}
       />
-      {isUserManagementOpen ? (
-        <UserManagement 
-          onBack={handleCloseUserManagement}
-          currentUser={currentUser}
-        />
-      ) : isSettingsOpen ? (
-        <Settings onBack={handleCloseSettings} />
+      {isSettingsOpen ? (
+        <Settings onBack={handleCloseSettings} currentUser={currentUser} />
       ) : currentView === 'menus' ? (
         // Menu views
         isMenuFormOpen ? (

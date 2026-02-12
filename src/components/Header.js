@@ -62,7 +62,7 @@ function Header({
               </button>
             </div>
           )}
-          {onSettingsClick && (
+          {onSettingsClick && currentUser?.isAdmin && (
             <button className="settings-btn" onClick={onSettingsClick} title="Einstellungen">
               Einstellungen
             </button>
@@ -73,11 +73,6 @@ function Header({
                 {currentUser.vorname} {currentUser.nachname}
                 {currentUser.isAdmin && <span className="admin-badge">Admin</span>}
               </span>
-              {currentUser.isAdmin && onUserManagement && (
-                <button className="user-management-btn" onClick={onUserManagement} title="Benutzerverwaltung">
-                  👥 Benutzer
-                </button>
-              )}
               {onLogout && (
                 <button className="logout-btn" onClick={onLogout} title="Abmelden">
                   Abmelden
