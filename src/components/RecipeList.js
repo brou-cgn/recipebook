@@ -24,6 +24,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe }) {
               className="recipe-card"
               onClick={() => onSelectRecipe(recipe)}
             >
+              {recipe.isFavorite && (
+                <div className="favorite-badge">★</div>
+              )}
               {recipe.image && (
                 <div className="recipe-image">
                   <img src={recipe.image} alt={recipe.title} />

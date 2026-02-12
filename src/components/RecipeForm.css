@@ -25,12 +25,23 @@
   margin-bottom: 1.5rem;
 }
 
+.form-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
   color: #333;
   font-weight: 600;
   font-size: 0.95rem;
+}
+
+.form-group-header label {
+  margin-bottom: 0;
 }
 
 .form-group input[type="text"],
@@ -57,6 +68,7 @@
   border-radius: 8px;
   overflow: hidden;
   max-height: 200px;
+  position: relative;
 }
 
 .image-preview img {
@@ -66,14 +78,76 @@
   object-fit: cover;
 }
 
+.remove-image-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.remove-image-btn:hover {
+  background: rgba(211, 47, 47, 0.95);
+}
+
+.image-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.image-upload-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-upload-label {
+  background: #4CAF50;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-block;
+  margin-bottom: 0;
+}
+
+.image-upload-label:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.or-separator {
+  color: #999;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .form-section {
   margin-bottom: 2rem;
   padding-top: 1rem;
   border-top: 2px solid #f0f0f0;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .form-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: #4CAF50;
   font-size: 1.25rem;
 }
@@ -232,6 +306,30 @@
 .star-rating {
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.emoji-remove-btn,
+.emoji-remove-btn-small {
+  background: #ff9800;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.emoji-remove-btn:hover,
+.emoji-remove-btn-small:hover {
+  background: #f57c00;
+  transform: translateY(-1px);
+}
+
+.emoji-remove-btn-small {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.75rem;
 }
 
 @media (max-width: 480px) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './RecipeDetail.css';
 
-function RecipeDetail({ recipe, onBack, onEdit, onDelete }) {
+function RecipeDetail({ recipe, onBack, onEdit, onDelete, onToggleFavorite }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
 
   const handleDelete = () => {
@@ -46,6 +46,15 @@ function RecipeDetail({ recipe, onBack, onEdit, onDelete }) {
           ← Back
         </button>
         <div className="action-buttons">
+          {onToggleFavorite && (
+            <button 
+              className={`favorite-button ${recipe.isFavorite ? 'is-favorite' : ''}`}
+              onClick={() => onToggleFavorite(recipe.id)}
+              title={recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {recipe.isFavorite ? '★ Favorite' : '☆ Favorite'}
+            </button>
+          )}
           <button className="edit-button" onClick={() => onEdit(recipe)}>
             ✏️ Edit
           </button>

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeForm.css';
+import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
+import { fileToBase64, isBase64Image } from '../utils/imageUtils';
+import { getCustomLists } from '../utils/customLists';
 
 function RecipeForm({ recipe, onSave, onCancel }) {
   const [title, setTitle] = useState('');
@@ -12,6 +15,12 @@ function RecipeForm({ recipe, onSave, onCancel }) {
   const [ingredients, setIngredients] = useState(['']);
   const [steps, setSteps] = useState(['']);
   const [imageError, setImageError] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [customLists, setCustomLists] = useState({
+    cuisineTypes: [],
+    mealCategories: [],
+    units: []
+  });
 
   useEffect(() => {
     if (recipe) {
@@ -26,6 +35,10 @@ function RecipeForm({ recipe, onSave, onCancel }) {
       setSteps(recipe.steps?.length > 0 ? recipe.steps : ['']);
     }
   }, [recipe]);
+
+  useEffect(() => {
+    setCustomLists(getCustomLists());
+  }, []);
 
   useEffect(() => {
     setImageError(false);
@@ -63,6 +76,40 @@ function RecipeForm({ recipe, onSave, onCancel }) {
     setSteps(newSteps);
   };
 
+  const handleRemoveEmojisFromTitle = () => {
+    if (containsEmojis(title)) {
+      setTitle(removeEmojis(title));
+    }
+  };
+
+  const handleRemoveEmojisFromIngredients = () => {
+    const cleaned = ingredients.map(ingredient => removeEmojis(ingredient));
+    setIngredients(cleaned);
+  };
+
+  const handleRemoveEmojisFromSteps = () => {
+    const cleaned = steps.map(step => removeEmojis(step));
+    setSteps(cleaned);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setImageError(false);
+
+    try {
+      const base64 = await fileToBase64(file);
+      setImage(base64);
+    } catch (error) {
+      alert(error.message);
+      setImageError(true);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -95,7 +142,19 @@ function RecipeForm({ recipe, onSave, onCancel }) {
 
       <form className="recipe-form" onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="title">Recipe Title *</label>
+          <div className="form-group-header">
+            <label htmlFor="title">Recipe Title *</label>
+            {containsEmojis(title) && (
+              <button
+                type="button"
+                className="emoji-remove-btn"
+                onClick={handleRemoveEmojisFromTitle}
+                title="Remove emojis from title"
+              >
+                Remove Emojis
+              </button>
+            )}
+          </div>
           <input
             type="text"
             id="title"
@@ -107,17 +166,42 @@ function RecipeForm({ recipe, onSave, onCancel }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="image">Image URL (optional)</label>
-          <input
-            type="url"
-            id="image"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-            placeholder="https://example.com/image.jpg"
-          />
+          <label htmlFor="image">Recipe Image (optional)</label>
+          <div className="image-input-container">
+            <div className="image-upload-section">
+              <label htmlFor="imageFile" className="image-upload-label">
+                {uploadingImage ? 'Uploading...' : 'Upload Image'}
+              </label>
+              <input
+                type="file"
+                id="imageFile"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+                disabled={uploadingImage}
+              />
+              <span className="or-separator">or</span>
+            </div>
+            <input
+              type="url"
+              id="image"
+              value={image && !isBase64Image(image) ? image : ''}
+              onChange={(e) => setImage(e.target.value)}
+              placeholder="Enter image URL"
+              disabled={uploadingImage}
+            />
+          </div>
           {image && !imageError && (
             <div className="image-preview">
               <img src={image} alt="Preview" onError={() => setImageError(true)} />
+              <button
+                type="button"
+                className="remove-image-btn"
+                onClick={() => setImage('')}
+                title="Remove image"
+              >
+                ✕ Remove
+              </button>
             </div>
           )}
         </div>
@@ -159,19 +243,9 @@ function RecipeForm({ recipe, onSave, onCancel }) {
               onChange={(e) => setKulinarik(e.target.value)}
             >
               <option value="">Select cuisine...</option>
-              <option value="Italian">Italian</option>
-              <option value="Thai">Thai</option>
-              <option value="Chinese">Chinese</option>
-              <option value="Japanese">Japanese</option>
-              <option value="Indian">Indian</option>
-              <option value="Mexican">Mexican</option>
-              <option value="French">French</option>
-              <option value="German">German</option>
-              <option value="American">American</option>
-              <option value="Mediterranean">Mediterranean</option>
-              <option value="Vegetarian">Vegetarian</option>
-              <option value="Vegan">Vegan</option>
-              <option value="Other">Other</option>
+              {customLists.cuisineTypes.map((cuisine) => (
+                <option key={cuisine} value={cuisine}>{cuisine}</option>
+              ))}
             </select>
           </div>
 
@@ -183,14 +257,9 @@ function RecipeForm({ recipe, onSave, onCancel }) {
               onChange={(e) => setSpeisekategorie(e.target.value)}
             >
               <option value="">Select category...</option>
-              <option value="Appetizer">Appetizer</option>
-              <option value="Main Course">Main Course</option>
-              <option value="Dessert">Dessert</option>
-              <option value="Soup">Soup</option>
-              <option value="Salad">Salad</option>
-              <option value="Snack">Snack</option>
-              <option value="Beverage">Beverage</option>
-              <option value="Side Dish">Side Dish</option>
+              {customLists.mealCategories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -216,7 +285,19 @@ function RecipeForm({ recipe, onSave, onCancel }) {
         </div>
 
         <div className="form-section">
-          <h3>🥘 Ingredients</h3>
+          <div className="section-header">
+            <h3>🥘 Ingredients</h3>
+            {ingredients.some(i => containsEmojis(i)) && (
+              <button
+                type="button"
+                className="emoji-remove-btn-small"
+                onClick={handleRemoveEmojisFromIngredients}
+                title="Remove emojis from all ingredients"
+              >
+                Remove Emojis
+              </button>
+            )}
+          </div>
           {ingredients.map((ingredient, index) => (
             <div key={index} className="form-list-item">
               <input
@@ -242,7 +323,19 @@ function RecipeForm({ recipe, onSave, onCancel }) {
         </div>
 
         <div className="form-section">
-          <h3>📝 Preparation Steps</h3>
+          <div className="section-header">
+            <h3>📝 Preparation Steps</h3>
+            {steps.some(s => containsEmojis(s)) && (
+              <button
+                type="button"
+                className="emoji-remove-btn-small"
+                onClick={handleRemoveEmojisFromSteps}
+                title="Remove emojis from all steps"
+              >
+                Remove Emojis
+              </button>
+            )}
+          </div>
           {steps.map((step, index) => (
             <div key={index} className="form-list-item">
               <span className="step-number">{index + 1}.</span>

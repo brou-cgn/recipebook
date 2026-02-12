@@ -4,12 +4,22 @@ import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
 import Header from './components/Header';
+import Settings from './components/Settings';
+import MenuList from './components/MenuList';
+import MenuDetail from './components/MenuDetail';
+import MenuForm from './components/MenuForm';
 
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentView, setCurrentView] = useState('recipes');
+  const [menus, setMenus] = useState([]);
+  const [selectedMenu, setSelectedMenu] = useState(null);
+  const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
+  const [editingMenu, setEditingMenu] = useState(null);
 
   // Load recipes from localStorage on mount
   useEffect(() => {
@@ -26,6 +36,19 @@ function App() {
   useEffect(() => {
     localStorage.setItem('recipes', JSON.stringify(recipes));
   }, [recipes]);
+
+  // Load menus from localStorage on mount
+  useEffect(() => {
+    const savedMenus = localStorage.getItem('menus');
+    if (savedMenus) {
+      setMenus(JSON.parse(savedMenus));
+    }
+  }, []);
+
+  // Save menus to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('menus', JSON.stringify(menus));
+  }, [menus]);
 
   const handleSelectRecipe = (recipe) => {
     setSelectedRecipe(recipe);
@@ -72,28 +95,135 @@ function App() {
     setEditingRecipe(null);
   };
 
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(true);
+    setSelectedRecipe(null);
+    setIsFormOpen(false);
+  };
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+  };
+
+  const handleToggleFavorite = (recipeId) => {
+    setRecipes(recipes.map(r => 
+      r.id === recipeId ? { ...r, isFavorite: !r.isFavorite } : r
+    ));
+  };
+
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+    setSelectedRecipe(null);
+    setSelectedMenu(null);
+    setIsFormOpen(false);
+    setIsMenuFormOpen(false);
+    setIsSettingsOpen(false);
+  };
+
+  // Menu handlers
+  const handleSelectMenu = (menu) => {
+    setSelectedMenu(menu);
+  };
+
+  const handleBackToMenuList = () => {
+    setSelectedMenu(null);
+  };
+
+  const handleAddMenu = () => {
+    setEditingMenu(null);
+    setIsMenuFormOpen(true);
+  };
+
+  const handleEditMenu = (menu) => {
+    setEditingMenu(menu);
+    setIsMenuFormOpen(true);
+    setSelectedMenu(null);
+  };
+
+  const handleSaveMenu = (menu) => {
+    if (editingMenu) {
+      // Update existing menu
+      setMenus(menus.map(m => m.id === menu.id ? menu : m));
+    } else {
+      // Add new menu
+      const newMenu = {
+        ...menu,
+        id: Date.now().toString()
+      };
+      setMenus([...menus, newMenu]);
+    }
+    setIsMenuFormOpen(false);
+    setEditingMenu(null);
+  };
+
+  const handleDeleteMenu = (menuId) => {
+    setMenus(menus.filter(m => m.id !== menuId));
+    setSelectedMenu(null);
+  };
+
+  const handleCancelMenuForm = () => {
+    setIsMenuFormOpen(false);
+    setEditingMenu(null);
+  };
+
   return (
     <div className="App">
-      <Header />
-      {isFormOpen ? (
-        <RecipeForm
-          recipe={editingRecipe}
-          onSave={handleSaveRecipe}
-          onCancel={handleCancelForm}
-        />
-      ) : selectedRecipe ? (
-        <RecipeDetail
-          recipe={selectedRecipe}
-          onBack={handleBackToList}
-          onEdit={handleEditRecipe}
-          onDelete={handleDeleteRecipe}
-        />
+      <Header 
+        onSettingsClick={handleOpenSettings}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+      />
+      {isSettingsOpen ? (
+        <Settings onBack={handleCloseSettings} />
+      ) : currentView === 'menus' ? (
+        // Menu views
+        isMenuFormOpen ? (
+          <MenuForm
+            menu={editingMenu}
+            recipes={recipes}
+            onSave={handleSaveMenu}
+            onCancel={handleCancelMenuForm}
+          />
+        ) : selectedMenu ? (
+          <MenuDetail
+            menu={selectedMenu}
+            recipes={recipes}
+            onBack={handleBackToMenuList}
+            onEdit={handleEditMenu}
+            onDelete={handleDeleteMenu}
+            onSelectRecipe={handleSelectRecipe}
+          />
+        ) : (
+          <MenuList
+            menus={menus}
+            recipes={recipes}
+            onSelectMenu={handleSelectMenu}
+            onAddMenu={handleAddMenu}
+          />
+        )
       ) : (
-        <RecipeList
-          recipes={recipes}
-          onSelectRecipe={handleSelectRecipe}
-          onAddRecipe={handleAddRecipe}
-        />
+        // Recipe views
+        isFormOpen ? (
+          <RecipeForm
+            recipe={editingRecipe}
+            onSave={handleSaveRecipe}
+            onCancel={handleCancelForm}
+          />
+        ) : selectedRecipe ? (
+          <RecipeDetail
+            recipe={selectedRecipe}
+            onBack={handleBackToList}
+            onEdit={handleEditRecipe}
+            onDelete={handleDeleteRecipe}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        ) : (
+          <RecipeList
+            recipes={recipes}
+            onSelectRecipe={handleSelectRecipe}
+            onAddRecipe={handleAddRecipe}
+          />
+        )
       )}
     </div>
   );
