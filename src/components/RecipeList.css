@@ -93,8 +93,9 @@
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  background: #402C1C;
-  color: white;
+  background: white;
+  color: #DF7A00;
+  border: 2px solid #DF7A00;
   padding: 0.35rem 0.75rem;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -102,6 +103,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   z-index: 1;
   white-space: nowrap;
+  max-width: calc(100% - 5rem);
 }
 
 .recipe-card:hover {
@@ -143,6 +145,13 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.recipe-author {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #666;
+  text-align: right;
 }
 
 @media (max-width: 768px) {

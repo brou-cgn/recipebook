@@ -1,6 +1,6 @@
 import React from 'react';
 import './RecipeList.css';
-import { canEditRecipes } from '../utils/userManagement';
+import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent } from '../utils/recipeVersioning';
 import { isRecipeFavorite } from '../utils/userFavorites';
 
@@ -20,6 +20,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
   const handleRecipeClick = (group) => {
     // Always select the primary recipe; RecipeDetail will handle showing version selector
     onSelectRecipe(group.primaryRecipe);
+  };
+
+  // Helper function to get author name
+  const getAuthorName = (authorId) => {
+    if (!authorId) return null;
+    const users = getUsers();
+    const author = users.find(u => u.id === authorId);
+    if (!author) return null;
+    return `${author.vorname} ${author.nachname}`;
   };
 
   return (
@@ -43,6 +52,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
           {recipeGroups.map(group => {
             const recipe = group.primaryRecipe;
             const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+            const authorName = getAuthorName(recipe.authorId);
             return (
               <div
                 key={recipe.id}
@@ -68,6 +78,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
                     <span>{recipe.ingredients?.length || 0} Zutaten</span>
                     <span>{recipe.steps?.length || 0} Schritte</span>
                   </div>
+                  {authorName && (
+                    <div className="recipe-author">{authorName}</div>
+                  )}
                 </div>
               </div>
             );
