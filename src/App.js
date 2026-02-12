@@ -115,6 +115,10 @@ function App() {
     setRecipes(recipes.map(r => 
       r.id === recipeId ? { ...r, isFavorite: !r.isFavorite } : r
     ));
+    // Update selectedRecipe if it's the one being toggled
+    if (selectedRecipe && selectedRecipe.id === recipeId) {
+      setSelectedRecipe({ ...selectedRecipe, isFavorite: !selectedRecipe.isFavorite });
+    }
   };
 
   const handleViewChange = (view) => {

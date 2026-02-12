@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
-import { fileToBase64, isBase64Image } from '../utils/imageUtils';
+import { fileToBase64 } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
 
 function RecipeForm({ recipe, onSave, onCancel }) {
@@ -175,26 +175,15 @@ function RecipeForm({ recipe, onSave, onCancel }) {
         <div className="form-group">
           <label htmlFor="image">Rezeptbild (optional)</label>
           <div className="image-input-container">
-            <div className="image-upload-section">
-              <label htmlFor="imageFile" className="image-upload-label">
-                {uploadingImage ? 'Hochladen...' : 'Bild hochladen'}
-              </label>
-              <input
-                type="file"
-                id="imageFile"
-                accept="image/*"
-                onChange={handleImageUpload}
-                style={{ display: 'none' }}
-                disabled={uploadingImage}
-              />
-              <span className="or-separator">oder</span>
-            </div>
+            <label htmlFor="imageFile" className="image-upload-label">
+              {uploadingImage ? 'Hochladen...' : 'Bild hochladen'}
+            </label>
             <input
-              type="url"
-              id="image"
-              value={image && !isBase64Image(image) ? image : ''}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="Bild-URL eingeben"
+              type="file"
+              id="imageFile"
+              accept="image/*"
+              onChange={handleImageUpload}
+              style={{ display: 'none' }}
               disabled={uploadingImage}
             />
           </div>
@@ -280,20 +269,17 @@ function RecipeForm({ recipe, onSave, onCancel }) {
 
         <div className="form-group">
           <label htmlFor="schwierigkeit">Schwierigkeitsgrad</label>
-          <div className="difficulty-selector">
+          <div className="difficulty-slider">
             {[1, 2, 3, 4, 5].map((level) => (
-              <label key={level} className="difficulty-option">
-                <input
-                  type="radio"
-                  name="schwierigkeit"
-                  value={level}
-                  checked={schwierigkeit === level}
-                  onChange={(e) => setSchwierigkeit(parseInt(e.target.value))}
-                />
-                <span className="star-rating">
-                  {'⭐'.repeat(level)}
-                </span>
-              </label>
+              <span
+                key={level}
+                className={`star ${schwierigkeit >= level ? 'filled' : 'empty'}`}
+                onClick={() => setSchwierigkeit(level)}
+                onMouseEnter={(e) => e.currentTarget.parentElement.setAttribute('data-hover', level)}
+                onMouseLeave={(e) => e.currentTarget.parentElement.removeAttribute('data-hover')}
+              >
+                {schwierigkeit >= level ? '★' : '☆'}
+              </span>
             ))}
           </div>
         </div>

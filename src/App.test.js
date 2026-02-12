@@ -43,9 +43,8 @@ test('recipe form has default values for new fields', () => {
   expect(screen.getByLabelText(/Kochzeit/i)).toHaveValue(30);
   
   // Check that difficulty level 3 is selected by default
-  const difficultyRadios = screen.getAllByRole('radio');
-  const selectedRadio = difficultyRadios.find(radio => radio.checked);
-  expect(selectedRadio).toHaveAttribute('value', '3');
+  const filledStars = document.querySelectorAll('.difficulty-slider .star.filled');
+  expect(filledStars).toHaveLength(3);
 });
 
 test('category filter is displayed in header', () => {
