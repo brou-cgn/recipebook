@@ -21,8 +21,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
-  const isVersion = isRecipeVersion(recipe);
-  const versionNumber = isVersion ? getVersionNumber(allRecipes, recipe) : 0;
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
@@ -126,11 +124,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 );
               })}
             </select>
-          </div>
-        )}
-        {isVersion && !hasMultipleVersions && (
-          <div className="version-badge">
-            Version {versionNumber}
           </div>
         )}
         {recipe.image && (

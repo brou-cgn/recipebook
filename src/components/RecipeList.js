@@ -17,13 +17,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
   const recipeGroups = groupRecipesByParent(recipes);
 
   const handleRecipeClick = (group) => {
-    if (group.versionCount > 1) {
-      // If there are multiple versions, select the first one by default
-      // The RecipeDetail component will handle showing all versions
-      onSelectRecipe(group.primaryRecipe);
-    } else {
-      onSelectRecipe(group.primaryRecipe);
-    }
+    // Always select the primary recipe; RecipeDetail will handle showing version selector
+    onSelectRecipe(group.primaryRecipe);
   };
 
   return (
