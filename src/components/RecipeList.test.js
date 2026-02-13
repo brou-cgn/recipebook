@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeList from './RecipeList';
 import * as userFavorites from '../utils/userFavorites';
 
@@ -28,7 +28,6 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter=""
-        showFavoritesOnly={false}
       />
     );
     
@@ -42,9 +41,12 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter=""
-        showFavoritesOnly={true}
       />
     );
+    
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Rezepte')).toBeInTheDocument();
   });
@@ -56,7 +58,6 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Appetizer"
-        showFavoritesOnly={false}
       />
     );
     
@@ -70,9 +71,12 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Main Course"
-        showFavoritesOnly={true}
       />
     );
+    
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Main Course')).toBeInTheDocument();
   });
@@ -84,7 +88,6 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Hauptspeise"
-        showFavoritesOnly={false}
       />
     );
     
@@ -98,9 +101,12 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Appetizer"
-        showFavoritesOnly={true}
       />
     );
+    
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Appetizer')).toBeInTheDocument();
   });

@@ -24,11 +24,6 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     return true;
   });
 
-  const handleToggleFavorite = (e, menuId) => {
-    e.stopPropagation(); // Prevent menu selection when clicking favorite button
-    onToggleMenuFavorite(menuId);
-  };
-
   return (
     <div className="menu-list-container">
       <div className="menu-list-header">
