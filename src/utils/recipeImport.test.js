@@ -1,6 +1,9 @@
 import {
   parseRecipeData,
   importFromJSON,
+  importFromNotionMarkdown,
+  importFromNotionCSV,
+  importRecipe,
   importFromURL,
   EXAMPLE_NOTION_RECIPE
 } from './recipeImport';
@@ -211,6 +214,77 @@ describe('recipeImport', () => {
       expect(result.title).toBe('Pizza Bianco al Tartufo');
       expect(result.ingredients.length).toBeGreaterThan(0);
       expect(result.steps.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('importFromNotionMarkdown', () => {
+    test('imports valid Notion markdown', () => {
+      const markdown = `# Test Recipe
+
+Portionen: 4
+
+## Zutaten
+
+- Ingredient 1
+- Ingredient 2
+
+## Zubereitung
+
+1. Step 1
+2. Step 2
+`;
+
+      const result = importFromNotionMarkdown(markdown);
+      expect(result.title).toBe('Test Recipe');
+      expect(result.portionen).toBe(4);
+      expect(result.ingredients).toEqual(['Ingredient 1', 'Ingredient 2']);
+      expect(result.steps).toEqual(['Step 1', 'Step 2']);
+    });
+  });
+
+  describe('importFromNotionCSV', () => {
+    test('throws error when CSV lacks ingredients and steps', () => {
+      // CSV format cannot contain ingredients/steps lists
+      // This limitation is by design - CSV is only for metadata
+      const csv = `Name,Portionen,Schwierigkeit
+Test Recipe,4,3`;
+
+      expect(() => importFromNotionCSV(csv)).toThrow('mindestens eine Zutat');
+    });
+  });
+
+  describe('importRecipe', () => {
+    test('auto-detects JSON format', () => {
+      const json = JSON.stringify({
+        title: 'JSON Recipe',
+        ingredients: ['Ingredient 1'],
+        steps: ['Step 1']
+      });
+
+      const result = importRecipe(json);
+      expect(result.title).toBe('JSON Recipe');
+    });
+
+    test('auto-detects Markdown format', () => {
+      const markdown = `# Markdown Recipe
+
+## Ingredients
+- Ingredient 1
+## Steps
+- Step 1
+`;
+
+      const result = importRecipe(markdown);
+      expect(result.title).toBe('Markdown Recipe');
+    });
+
+    test('throws error for unrecognized format', () => {
+      const invalidContent = 'Just some random text';
+      expect(() => importRecipe(invalidContent)).toThrow('Format konnte nicht erkannt werden');
+    });
+
+    test('throws error for empty content', () => {
+      expect(() => importRecipe('')).toThrow('Kein Inhalt zum Importieren');
     });
   });
 });

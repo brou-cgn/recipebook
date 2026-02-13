@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import './RecipeImportModal.css';
-import { importFromJSON, EXAMPLE_NOTION_RECIPE } from '../utils/recipeImport';
+import { importRecipe, EXAMPLE_NOTION_RECIPE } from '../utils/recipeImport';
+import { EXAMPLE_NOTION_MARKDOWN } from '../utils/notionParser';
 
 function RecipeImportModal({ onImport, onCancel }) {
   const [importText, setImportText] = useState('');
   const [error, setError] = useState('');
   const [showExample, setShowExample] = useState(false);
+  const [exampleType, setExampleType] = useState('json'); // 'json' or 'markdown'
 
   const handleImport = () => {
     setError('');
@@ -16,15 +18,19 @@ function RecipeImportModal({ onImport, onCancel }) {
     }
 
     try {
-      const recipe = importFromJSON(importText);
+      const recipe = importRecipe(importText);
       onImport(recipe);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const handleLoadExample = () => {
-    setImportText(JSON.stringify(EXAMPLE_NOTION_RECIPE, null, 2));
+  const handleLoadExample = (type) => {
+    if (type === 'json') {
+      setImportText(JSON.stringify(EXAMPLE_NOTION_RECIPE, null, 2));
+    } else {
+      setImportText(EXAMPLE_NOTION_MARKDOWN);
+    }
     setShowExample(false);
   };
 
@@ -38,14 +44,14 @@ function RecipeImportModal({ onImport, onCancel }) {
 
         <div className="import-modal-content">
           <p className="import-instructions">
-            Fügen Sie Ihre Rezeptdaten im JSON-Format ein:
+            Fügen Sie Ihre Rezeptdaten ein. Unterstützte Formate: JSON, Notion Markdown, CSV
           </p>
 
           <textarea
             className="import-textarea"
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
-            placeholder={`{\n  "title": "Rezeptname",\n  "portionen": 4,\n  "ingredients": ["Zutat 1", "Zutat 2"],\n  "steps": ["Schritt 1", "Schritt 2"]\n}`}
+            placeholder={`JSON:\n{\n  "title": "Rezeptname",\n  "ingredients": [...],\n  "steps": [...]\n}\n\nNotion Markdown:\n# Rezeptname\nPortionen: 4\n## Zutaten\n- Zutat 1\n## Zubereitung\n1. Schritt 1`}
             rows="15"
           />
 
@@ -61,36 +67,79 @@ function RecipeImportModal({ onImport, onCancel }) {
               className="example-button"
               onClick={() => setShowExample(!showExample)}
             >
-              {showExample ? '▼ Beispiel ausblenden' : '▶ Beispiel anzeigen'}
+              {showExample ? '▼ Beispiele ausblenden' : '▶ Beispiele anzeigen'}
             </button>
             
             {showExample && (
               <div className="example-section">
-                <h4>Beispiel-Rezept (Notion-Struktur)</h4>
-                <pre className="example-json">
-                  {JSON.stringify(EXAMPLE_NOTION_RECIPE, null, 2)}
-                </pre>
-                <button 
-                  type="button"
-                  className="load-example-button"
-                  onClick={handleLoadExample}
-                >
-                  Beispiel laden
-                </button>
+                <div className="example-tabs">
+                  <button
+                    className={`example-tab ${exampleType === 'json' ? 'active' : ''}`}
+                    onClick={() => setExampleType('json')}
+                  >
+                    JSON
+                  </button>
+                  <button
+                    className={`example-tab ${exampleType === 'markdown' ? 'active' : ''}`}
+                    onClick={() => setExampleType('markdown')}
+                  >
+                    Notion Markdown
+                  </button>
+                </div>
+                
+                {exampleType === 'json' ? (
+                  <>
+                    <h4>Beispiel-Rezept (JSON)</h4>
+                    <pre className="example-json">
+                      {JSON.stringify(EXAMPLE_NOTION_RECIPE, null, 2)}
+                    </pre>
+                    <button 
+                      type="button"
+                      className="load-example-button"
+                      onClick={() => handleLoadExample('json')}
+                    >
+                      JSON-Beispiel laden
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h4>Beispiel-Rezept (Notion Markdown)</h4>
+                    <pre className="example-json">
+                      {EXAMPLE_NOTION_MARKDOWN}
+                    </pre>
+                    <button 
+                      type="button"
+                      className="load-example-button"
+                      onClick={() => handleLoadExample('markdown')}
+                    >
+                      Markdown-Beispiel laden
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
 
           <div className="notion-help">
             <h4>💡 Notion-Rezepte importieren</h4>
+            <p><strong>Methode 1: Markdown Export (empfohlen)</strong></p>
             <ol>
               <li>Öffnen Sie das Rezept in Notion</li>
-              <li>Kopieren Sie die Rezeptdaten</li>
-              <li>Konvertieren Sie die Daten in das JSON-Format (siehe Beispiel oben)</li>
-              <li>Fügen Sie die JSON-Daten hier ein</li>
+              <li>Klicken Sie auf "..." → "Export" → "Markdown & CSV"</li>
+              <li>Öffnen Sie die exportierte .md Datei</li>
+              <li>Kopieren Sie den gesamten Inhalt</li>
+              <li>Fügen Sie ihn hier ein und klicken Sie auf "Importieren"</li>
             </ol>
+            
+            <p><strong>Methode 2: Direkt kopieren</strong></p>
+            <ol>
+              <li>Kopieren Sie den Inhalt Ihres Notion-Rezepts</li>
+              <li>Strukturieren Sie es wie im Markdown-Beispiel</li>
+              <li>Fügen Sie es hier ein</li>
+            </ol>
+
             <p className="notion-note">
-              <strong>Hinweis:</strong> Direkte URL-Imports von Notion werden in einer zukünftigen Version unterstützt.
+              <strong>Tipp:</strong> Das Format wird automatisch erkannt - Sie können JSON, Markdown oder CSV einfügen.
             </p>
           </div>
         </div>

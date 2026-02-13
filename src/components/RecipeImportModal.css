@@ -123,6 +123,33 @@
   border-radius: 4px;
 }
 
+.example-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.example-tab {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.example-tab:hover {
+  background-color: #f0f0f0;
+}
+
+.example-tab.active {
+  background-color: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
 .example-section h4 {
   margin-top: 0;
   margin-bottom: 12px;

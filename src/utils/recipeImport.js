@@ -2,9 +2,13 @@
  * Recipe Import Utility
  * Provides functionality to import recipes from external sources
  * Currently supports:
- * - Manual JSON import (for Notion exports)
+ * - Manual JSON import
+ * - Notion Markdown export
+ * - Notion CSV export
  * - Extensible architecture for future formats
  */
+
+import { parseNotionMarkdown, parseNotionCSV } from './notionParser';
 
 /**
  * Parse and validate imported recipe data
@@ -61,6 +65,69 @@ export function importFromJSON(jsonString) {
     }
     throw error;
   }
+}
+
+/**
+ * Import recipe from Notion Markdown export
+ * @param {string} markdownContent - Notion Markdown export content
+ * @returns {Object} - Parsed recipe object
+ */
+export function importFromNotionMarkdown(markdownContent) {
+  const recipe = parseNotionMarkdown(markdownContent);
+  return parseRecipeData(recipe);
+}
+
+/**
+ * Import recipe from Notion CSV export
+ * @param {string} csvContent - Notion CSV export content
+ * @returns {Object} - Parsed recipe object
+ */
+export function importFromNotionCSV(csvContent) {
+  const recipe = parseNotionCSV(csvContent);
+  return parseRecipeData(recipe);
+}
+
+/**
+ * Auto-detect import format and parse accordingly
+ * @param {string} content - Import content (JSON, Markdown, or CSV)
+ * @returns {Object} - Parsed recipe object
+ */
+export function importRecipe(content) {
+  if (!content || typeof content !== 'string') {
+    throw new Error('Kein Inhalt zum Importieren');
+  }
+
+  const trimmed = content.trim();
+
+  // Try to detect format
+  // JSON: starts with { or [
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return importFromJSON(trimmed);
+  }
+
+  // CSV: contains comma-separated values with headers
+  const lines = trimmed.split('\n').filter(l => l.trim());
+  if (lines.length >= 2 && lines[0].includes(',') && !lines[0].startsWith('#')) {
+    try {
+      return importFromNotionCSV(trimmed);
+    } catch (error) {
+      // If CSV parsing fails, fall through to Markdown
+    }
+  }
+
+  // Markdown: default fallback
+  // Check if it looks like Markdown (has # headings or properties)
+  if (trimmed.includes('#') || trimmed.includes(':') || trimmed.includes('|')) {
+    return importFromNotionMarkdown(trimmed);
+  }
+
+  throw new Error(
+    'Format konnte nicht erkannt werden.\n\n' +
+    'Unterstützte Formate:\n' +
+    '- JSON (beginnt mit { oder [)\n' +
+    '- Notion Markdown (enthält # Überschriften)\n' +
+    '- CSV (komma-separierte Werte)'
+  );
 }
 
 /**
