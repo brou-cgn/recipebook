@@ -16,7 +16,8 @@ import {
   logoutUser, 
   getCurrentUser, 
   registerUser,
-  loginAsGuest
+  loginAsGuest,
+  getUsers
 } from './utils/userManagement';
 import { 
   toggleFavorite,
@@ -371,6 +372,7 @@ function App() {
             onCreateVersion={handleCreateVersion}
             currentUser={currentUser}
             allRecipes={recipes}
+            allUsers={getUsers()}
           />
         ) : (
           <RecipeList

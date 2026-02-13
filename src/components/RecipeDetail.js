@@ -4,7 +4,7 @@ import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { isRecipeFavorite } from '../utils/userFavorites';
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [] }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [] }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
 
@@ -35,6 +35,35 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
   const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+
+  // Get current version index
+  const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
+  
+  // Navigation handlers
+  const handlePreviousVersion = () => {
+    if (currentVersionIndex > 0) {
+      setSelectedRecipe(allVersions[currentVersionIndex - 1]);
+      setServingMultiplier(1);
+    }
+  };
+
+  const handleNextVersion = () => {
+    if (currentVersionIndex < allVersions.length - 1) {
+      setSelectedRecipe(allVersions[currentVersionIndex + 1]);
+      setServingMultiplier(1);
+    }
+  };
+
+  // Get author name
+  const getAuthorName = (authorId) => {
+    if (!authorId || !allUsers || allUsers.length === 0) return null;
+    const author = allUsers.find(u => u.id === authorId);
+    if (!author) return null;
+    return `${author.vorname} ${author.nachname}`;
+  };
+
+  const authorName = getAuthorName(recipe.authorId);
+  const versionNumber = getVersionNumber(allRecipes, recipe);
 
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
@@ -116,35 +145,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       </div>
 
       <div className="recipe-detail-content">
-        {hasMultipleVersions && (
-          <div className="version-selector">
-            <label htmlFor="version-select">Version auswählen:</label>
-            <select 
-              id="version-select"
-              value={recipe.id}
-              onChange={(e) => {
-                const selected = allVersions.find(v => v.id === e.target.value);
-                if (selected) {
-                  setSelectedRecipe(selected);
-                  setServingMultiplier(1); // Reset serving multiplier when switching versions
-                }
-              }}
-              className="version-select"
-            >
-              {allVersions.map((version, index) => {
-                const isOriginal = !version.parentRecipeId;
-                const label = isOriginal 
-                  ? `Original (${version.title})`
-                  : `Version ${getVersionNumber(allRecipes, version)} (${version.title})`;
-                return (
-                  <option key={version.id} value={version.id}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        )}
         {recipe.image && (
           <div className="recipe-detail-image">
             <img src={recipe.image} alt={recipe.title} />
@@ -152,6 +152,37 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         )}
 
         <h1 className="recipe-title">{recipe.title}</h1>
+
+        <div className="recipe-captions">
+          {hasMultipleVersions && (
+            <div className="version-navigation">
+              <button 
+                className="version-arrow"
+                onClick={handlePreviousVersion}
+                disabled={currentVersionIndex === 0}
+                title="Vorherige Version"
+              >
+                ←
+              </button>
+              <span className="version-caption">
+                {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
+              </span>
+              <button 
+                className="version-arrow"
+                onClick={handleNextVersion}
+                disabled={currentVersionIndex === allVersions.length - 1}
+                title="Nächste Version"
+              >
+                →
+              </button>
+            </div>
+          )}
+          {authorName && (
+            <div className="author-caption">
+              Autor: {authorName}
+            </div>
+          )}
+        </div>
 
         <div className="recipe-metadata">
           {cuisineDisplay && (
