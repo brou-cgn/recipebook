@@ -36,12 +36,17 @@
 .favorite-button {
   background: white;
   border: 2px solid #ddd;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
+  padding: 0.75rem;
+  border-radius: 6px;
   font-size: 1.25rem;
   cursor: pointer;
   transition: all 0.3s ease;
   color: #666;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .favorite-button:hover {
@@ -52,9 +57,9 @@
 }
 
 .favorite-button.favorite-active {
-  color: #DF7A00;
+  color: white;
   border-color: #DF7A00;
-  background: #fff3e0;
+  background: #DF7A00;
 }
 
 .edit-button,
@@ -227,7 +232,7 @@
   color: white;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
