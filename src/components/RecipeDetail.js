@@ -192,8 +192,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               <div className="serving-control">
                 <button 
                   className="serving-btn"
-                  onClick={() => setServingMultiplier(Math.max(1 / (recipe.portionen || 4), servingMultiplier - 0.5))}
-                  disabled={servingMultiplier <= 1 / (recipe.portionen || 4)}
+                  onClick={() => {
+                    const newMultiplier = servingMultiplier - 0.5;
+                    const newServings = (recipe.portionen || 4) * newMultiplier;
+                    if (newServings >= 1) {
+                      setServingMultiplier(newMultiplier);
+                    }
+                  }}
+                  disabled={currentServings <= 1}
                 >
                   -
                 </button>
