@@ -270,7 +270,7 @@ describe('RecipeList - Version Count Display', () => {
     localStorage.clear();
   });
 
-  test('displays version count for recipe with single version', () => {
+  test('does not display version count for recipe with single version', () => {
     render(
       <RecipeList
         recipes={[mockRecipe1]}
@@ -280,7 +280,9 @@ describe('RecipeList - Version Count Display', () => {
       />
     );
 
-    expect(screen.getByText('1 Version')).toBeInTheDocument();
+    // Version count should not be displayed when there's only 1 version
+    const versionCount = document.querySelector('.version-count');
+    expect(versionCount).not.toBeInTheDocument();
   });
 
   test('displays version count for recipe with multiple versions', () => {
@@ -293,12 +295,9 @@ describe('RecipeList - Version Count Display', () => {
       />
     );
 
-    // Check both the badge and footer version count exist
-    const versionTexts = screen.getAllByText(/2 Versionen/);
-    expect(versionTexts.length).toBeGreaterThanOrEqual(1);
-    
-    // Verify the footer version count specifically
+    // Verify the footer version count is displayed (badge is removed)
     const versionCount = document.querySelector('.version-count');
+    expect(versionCount).toBeInTheDocument();
     expect(versionCount).toHaveTextContent('2 Versionen');
   });
 
