@@ -323,7 +323,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               value={portionUnitId}
               onChange={(e) => setPortionUnitId(e.target.value)}
             >
-              {customLists.portionUnits.map((unit) => (
+              {(customLists.portionUnits || []).map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.singular} / {unit.plural}
                 </option>
