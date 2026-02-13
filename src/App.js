@@ -21,11 +21,9 @@ import {
 } from './utils/userManagement';
 import { 
   toggleFavorite,
-  migrateGlobalFavorites,
-  hasAnyFavoriteInGroup
+  migrateGlobalFavorites
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
-import { groupRecipesByParent } from './utils/recipeVersioning';
 
 // Helper function to check if a recipe matches the category filter
 function matchesCategoryFilter(recipe, categoryFilter) {
@@ -51,7 +49,6 @@ function App() {
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
@@ -195,15 +192,10 @@ function App() {
     setIsSettingsOpen(false);
     // Reset filters when switching views
     setCategoryFilter('');
-    setShowFavoritesOnly(false);
   };
 
   const handleCategoryFilterChange = (category) => {
     setCategoryFilter(category);
-  };
-
-  const handleToggleFavoritesFilter = () => {
-    setShowFavoritesOnly(!showFavoritesOnly);
   };
 
   // Menu handlers
@@ -344,8 +336,6 @@ function App() {
         onViewChange={handleViewChange}
         categoryFilter={categoryFilter}
         onCategoryFilterChange={handleCategoryFilterChange}
-        showFavoritesOnly={showFavoritesOnly}
-        onToggleFavoritesFilter={handleToggleFavoritesFilter}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
@@ -406,33 +396,10 @@ function App() {
           />
         ) : (
           <RecipeList
-            recipes={(() => {
-              // If favorites filter is on, we need to filter by groups
-              if (showFavoritesOnly) {
-                const recipeGroups = groupRecipesByParent(recipes);
-                // Keep only groups that have at least one favorite version
-                const favoriteGroups = recipeGroups.filter(group => 
-                  hasAnyFavoriteInGroup(currentUser?.id, group.allRecipes)
-                );
-                // Flatten back to individual recipes and apply category filter
-                const favoriteRecipes = favoriteGroups.flatMap(group => {
-                  // Filter recipes in this group by category
-                  if (categoryFilter) {
-                    return group.allRecipes.filter(recipe => matchesCategoryFilter(recipe, categoryFilter));
-                  }
-                  return group.allRecipes;
-                });
-                
-                return favoriteRecipes;
-              }
-              
-              // Normal filtering without favorites
-              return recipes.filter(recipe => matchesCategoryFilter(recipe, categoryFilter));
-            })()}
+            recipes={recipes.filter(recipe => matchesCategoryFilter(recipe, categoryFilter))}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
             categoryFilter={categoryFilter}
-            showFavoritesOnly={showFavoritesOnly}
             currentUser={currentUser}
           />
         )

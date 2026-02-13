@@ -113,28 +113,20 @@
 }
 
 .favorite-badge {
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  border-radius: 50%;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #DF7A00;
+  color: white;
   width: 2.25rem;
   height: 2.25rem;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.favorite-badge:hover {
-  transform: scale(1.1);
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-.favorite-badge.favorite-active {
-  color: #FFD700;
-  background: rgba(255, 255, 255, 1);
+  z-index: 1;
 }
 
 .private-badge {
@@ -172,6 +164,14 @@
   font-size: 0.9rem;
   color: #666;
   font-weight: 500;
+}
+
+.menu-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-start;
 }
 
 @media (max-width: 768px) {

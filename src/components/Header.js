@@ -8,8 +8,6 @@ function Header({
   onViewChange,
   categoryFilter,
   onCategoryFilterChange,
-  showFavoritesOnly,
-  onToggleFavoritesFilter,
   currentUser,
   onLogout,
   onUserManagement
@@ -53,13 +51,6 @@ function Header({
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>
-              <button
-                className={`favorites-filter ${showFavoritesOnly ? 'active' : ''}`}
-                onClick={onToggleFavoritesFilter}
-                title={showFavoritesOnly ? 'Alle anzeigen' : 'Nur Favoriten anzeigen'}
-              >
-                ★ Favoriten
-              </button>
             </div>
           )}
           {onSettingsClick && currentUser?.isAdmin && (

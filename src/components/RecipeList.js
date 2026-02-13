@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { isRecipeFavorite } from '../utils/userFavorites';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, showFavoritesOnly, currentUser }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   // Generate dynamic heading based on filters
   const getHeading = () => {
     const prefix = showFavoritesOnly ? 'Meine ' : '';
@@ -14,8 +15,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
 
   const userCanEdit = canEditRecipes(currentUser);
 
+  // Filter recipes based on favorites if enabled
+  const filteredRecipes = showFavoritesOnly 
+    ? recipes.filter(recipe => isRecipeFavorite(currentUser?.id, recipe.id))
+    : recipes;
+
   // Group recipes by parent
-  const recipeGroups = groupRecipesByParent(recipes);
+  const recipeGroups = groupRecipesByParent(filteredRecipes);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
@@ -40,17 +46,30 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
     <div className="recipe-list-container">
       <div className="recipe-list-header">
         <h2>{getHeading()}</h2>
-        {userCanEdit && (
-          <button className="add-button" onClick={onAddRecipe}>
-            + Rezept hinzufügen
+        <div className="recipe-list-actions">
+          <button 
+            className={`favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
+          >
+            ★ Favoriten
           </button>
-        )}
+          {userCanEdit && (
+            <button className="add-button" onClick={onAddRecipe}>
+              + Rezept hinzufügen
+            </button>
+          )}
+        </div>
       </div>
       
-      {recipes.length === 0 ? (
+      {filteredRecipes.length === 0 ? (
         <div className="empty-state">
-          <p>Noch keine Rezepte!</p>
-          <p className="empty-hint">Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen</p>
+          <p>{showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
+          <p className="empty-hint">
+            {showFavoritesOnly 
+              ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
+              : 'Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen'}
+          </p>
         </div>
       ) : (
         <div className="recipe-grid">
