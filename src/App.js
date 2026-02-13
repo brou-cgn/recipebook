@@ -388,7 +388,13 @@ function App() {
                 const favoriteRecipes = favoriteGroups.flatMap(group => {
                   // Filter recipes in this group by category
                   if (categoryFilter) {
-                    return group.allRecipes.filter(recipe => recipe.speisekategorie === categoryFilter);
+                    return group.allRecipes.filter(recipe => {
+                      // Handle both array and string formats for speisekategorie
+                      if (Array.isArray(recipe.speisekategorie)) {
+                        return recipe.speisekategorie.includes(categoryFilter);
+                      }
+                      return recipe.speisekategorie === categoryFilter;
+                    });
                   }
                   return group.allRecipes;
                 });
@@ -399,8 +405,12 @@ function App() {
               // Normal filtering without favorites
               return recipes.filter(recipe => {
                 // Apply category filter
-                if (categoryFilter && recipe.speisekategorie !== categoryFilter) {
-                  return false;
+                if (categoryFilter) {
+                  // Handle both array and string formats for speisekategorie
+                  if (Array.isArray(recipe.speisekategorie)) {
+                    return recipe.speisekategorie.includes(categoryFilter);
+                  }
+                  return recipe.speisekategorie === categoryFilter;
                 }
                 return true;
               });
