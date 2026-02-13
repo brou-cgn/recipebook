@@ -1,26 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import './MenuForm.css';
 import { isRecipeFavorite } from '../utils/userFavorites';
+import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 
 function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedRecipes, setSelectedRecipes] = useState([]);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [sections, setSections] = useState([]);
+  const [availableSections, setAvailableSections] = useState([]);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [showSectionInput, setShowSectionInput] = useState(false);
 
   useEffect(() => {
+    // Load available section names
+    setAvailableSections(getSavedSections());
+
     if (menu) {
       setName(menu.name || '');
       setDescription(menu.description || '');
-      setSelectedRecipes(menu.recipeIds || []);
+      setIsPrivate(menu.isPrivate || false);
+      
+      // Load existing sections or create a default one
+      if (menu.sections && menu.sections.length > 0) {
+        setSections(menu.sections);
+      } else {
+        // Migrate old menu format (recipeIds directly on menu) to sections
+        if (menu.recipeIds && menu.recipeIds.length > 0) {
+          setSections([createMenuSection('Alle Rezepte', menu.recipeIds)]);
+        } else {
+          setSections([createMenuSection('Hauptgang', [])]);
+        }
+      }
+    } else {
+      // New menu - create default section
+      setSections([createMenuSection('Hauptgang', [])]);
     }
   }, [menu]);
 
-  const handleToggleRecipe = (recipeId) => {
-    if (selectedRecipes.includes(recipeId)) {
-      setSelectedRecipes(selectedRecipes.filter(id => id !== recipeId));
-    } else {
-      setSelectedRecipes([...selectedRecipes, recipeId]);
+  const handleAddSection = (sectionName = null) => {
+    const name = sectionName || newSectionName.trim();
+    if (!name) {
+      alert('Bitte geben Sie einen Abschnittsnamen ein');
+      return;
     }
+
+    // Check if section already exists
+    if (sections.some(s => s.name.toLowerCase() === name.toLowerCase())) {
+      alert('Ein Abschnitt mit diesem Namen existiert bereits');
+      return;
+    }
+
+    setSections([...sections, createMenuSection(name, [])]);
+    setNewSectionName('');
+    setShowSectionInput(false);
+
+    // Save new section name for future use
+    saveSectionNames([name]);
+    if (!availableSections.includes(name)) {
+      setAvailableSections([...availableSections, name]);
+    }
+  };
+
+  const handleRemoveSection = (index) => {
+    if (sections.length === 1) {
+      alert('Ein Menü muss mindestens einen Abschnitt haben');
+      return;
+    }
+
+    if (sections[index].recipeIds.length > 0) {
+      if (!window.confirm('Dieser Abschnitt enthält Rezepte. Wirklich löschen?')) {
+        return;
+      }
+    }
+
+    setSections(sections.filter((_, i) => i !== index));
+  };
+
+  const handleToggleRecipeInSection = (sectionIndex, recipeId) => {
+    const newSections = [...sections];
+    const section = newSections[sectionIndex];
+
+    if (section.recipeIds.includes(recipeId)) {
+      // Remove recipe from this section
+      section.recipeIds = section.recipeIds.filter(id => id !== recipeId);
+    } else {
+      // Add recipe to this section (and remove from other sections)
+      newSections.forEach((s, i) => {
+        if (i === sectionIndex) {
+          s.recipeIds = [...s.recipeIds, recipeId];
+        } else {
+          s.recipeIds = s.recipeIds.filter(id => id !== recipeId);
+        }
+      });
+    }
+
+    setSections(newSections);
+  };
+
+  const handleMoveSectionUp = (index) => {
+    if (index === 0) return;
+    const newSections = [...sections];
+    [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
+    setSections(newSections);
+  };
+
+  const handleMoveSectionDown = (index) => {
+    if (index === sections.length - 1) return;
+    const newSections = [...sections];
+    [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
+    setSections(newSections);
   };
 
   const handleSubmit = (e) => {
@@ -31,19 +120,31 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
-    if (selectedRecipes.length === 0) {
+    // Check if at least one recipe is selected
+    const totalRecipes = sections.reduce((sum, section) => sum + section.recipeIds.length, 0);
+    if (totalRecipes === 0) {
       alert('Bitte wählen Sie mindestens ein Rezept aus');
       return;
     }
+
+    // Collect all recipe IDs for backward compatibility
+    const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
 
     const menuData = {
       id: menu?.id,
       name: name.trim(),
       description: description.trim(),
-      recipeIds: selectedRecipes
+      isPrivate: isPrivate,
+      createdBy: menu?.createdBy || currentUser?.id,
+      sections: sections,
+      recipeIds: allRecipeIds // Keep for backward compatibility
     };
 
     onSave(menuData);
+  };
+
+  const getRecipeSection = (recipeId) => {
+    return sections.findIndex(section => section.recipeIds.includes(recipeId));
   };
 
   return (
@@ -76,26 +177,139 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           />
         </div>
 
-        <div className="form-section">
-          <h3>Rezepte auswählen</h3>
+        <div className="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+            />
+            <span>Privates Menü (nur für mich sichtbar)</span>
+          </label>
+        </div>
+
+        <div className="form-section sections-management">
+          <div className="sections-header">
+            <h3>Abschnitte & Rezepte</h3>
+            <button 
+              type="button" 
+              className="add-section-button"
+              onClick={() => setShowSectionInput(!showSectionInput)}
+            >
+              + Abschnitt hinzufügen
+            </button>
+          </div>
+
+          {showSectionInput && (
+            <div className="new-section-input">
+              <div className="section-quick-select">
+                <label>Vordefinierte Abschnitte:</label>
+                <div className="quick-select-buttons">
+                  {availableSections.map(sectionName => (
+                    <button
+                      key={sectionName}
+                      type="button"
+                      className="quick-select-button"
+                      onClick={() => handleAddSection(sectionName)}
+                      disabled={sections.some(s => s.name === sectionName)}
+                    >
+                      {sectionName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="custom-section-input">
+                <label>Oder eigenen Namen eingeben:</label>
+                <div className="input-with-button">
+                  <input
+                    type="text"
+                    value={newSectionName}
+                    onChange={(e) => setNewSectionName(e.target.value)}
+                    placeholder="z.B. Fingerfood, Amuse-Bouche"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSection();
+                      }
+                    }}
+                  />
+                  <button type="button" onClick={() => handleAddSection()}>
+                    Hinzufügen
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {recipes.length === 0 ? (
             <p className="no-recipes">Keine Rezepte verfügbar. Bitte erstellen Sie zuerst einige Rezepte.</p>
           ) : (
-            <div className="recipe-selection">
-              {recipes.map((recipe) => {
-                const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
-                return (
-                  <label key={recipe.id} className="recipe-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedRecipes.includes(recipe.id)}
-                      onChange={() => handleToggleRecipe(recipe.id)}
-                    />
-                    <span className="recipe-name">{recipe.title}</span>
-                    {isFavorite && <span className="favorite-indicator">★</span>}
-                  </label>
-                );
-              })}
+            <div className="sections-list">
+              {sections.map((section, sectionIndex) => (
+                <div key={sectionIndex} className="section-block">
+                  <div className="section-header">
+                    <h4>{section.name}</h4>
+                    <div className="section-actions">
+                      <button
+                        type="button"
+                        className="move-button"
+                        onClick={() => handleMoveSectionUp(sectionIndex)}
+                        disabled={sectionIndex === 0}
+                        title="Nach oben"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="move-button"
+                        onClick={() => handleMoveSectionDown(sectionIndex)}
+                        disabled={sectionIndex === sections.length - 1}
+                        title="Nach unten"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="remove-section-button"
+                        onClick={() => handleRemoveSection(sectionIndex)}
+                        title="Abschnitt löschen"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div className="recipe-selection">
+                    {recipes.map((recipe) => {
+                      const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                      const isInThisSection = section.recipeIds.includes(recipe.id);
+                      const currentSection = getRecipeSection(recipe.id);
+                      const isInOtherSection = currentSection !== -1 && currentSection !== sectionIndex;
+
+                      return (
+                        <label key={recipe.id} className="recipe-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={isInThisSection}
+                            onChange={() => handleToggleRecipeInSection(sectionIndex, recipe.id)}
+                          />
+                          <span className="recipe-name">
+                            {recipe.title}
+                            {isInOtherSection && (
+                              <span className="recipe-section-info">
+                                (in {sections[currentSection].name})
+                              </span>
+                            )}
+                          </span>
+                          {isFavorite && <span className="favorite-indicator">★</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="section-summary">
+                    {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

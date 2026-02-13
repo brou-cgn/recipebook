@@ -33,6 +33,30 @@
   gap: 0.5rem;
 }
 
+.favorite-button {
+  background: white;
+  border: 2px solid #ddd;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #666;
+}
+
+.favorite-button:hover {
+  border-color: #FFD700;
+  background: #FFFEF0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-button.favorite-active {
+  color: #FFD700;
+  border-color: #FFD700;
+  background: #FFFEF0;
+}
+
 .edit-button,
 .delete-button {
   background: white;
@@ -76,12 +100,33 @@
   padding: 2rem;
 }
 
+.menu-title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .menu-title {
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: #333;
   font-size: 2rem;
   border-bottom: 3px solid #402C1C;
   padding-bottom: 0.5rem;
+  flex: 1;
+}
+
+.private-indicator {
+  background: #402C1C;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
 }
 
 .menu-description {
@@ -114,6 +159,25 @@
   font-weight: 600;
   color: #333;
   font-size: 1rem;
+}
+
+.menu-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f0f0;
+}
+
+.menu-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.section-title {
+  margin: 0 0 1.5rem 0;
+  color: #402C1C;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .menu-recipes-section {

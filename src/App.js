@@ -24,6 +24,7 @@ import {
   migrateGlobalFavorites,
   hasAnyFavoriteInGroup
 } from './utils/userFavorites';
+import { toggleMenuFavorite } from './utils/menuFavorites';
 import { groupRecipesByParent } from './utils/recipeVersioning';
 
 // Helper function to check if a recipe matches the category filter
@@ -251,6 +252,21 @@ function App() {
     setEditingMenu(null);
   };
 
+  const handleToggleMenuFavorite = (menuId) => {
+    if (!currentUser) return;
+    
+    // Toggle in menu-specific favorites storage
+    toggleMenuFavorite(currentUser.id, menuId);
+    
+    // Force re-render by updating a timestamp
+    setMenus(prevMenus => [...prevMenus]);
+    
+    // Update selectedMenu if it's the one being toggled
+    if (selectedMenu && selectedMenu.id === menuId) {
+      setSelectedMenu({ ...selectedMenu });
+    }
+  };
+
   // User authentication handlers
   const handleLogin = (email, password) => {
     const result = loginUser(email, password);
@@ -353,6 +369,7 @@ function App() {
             onEdit={handleEditMenu}
             onDelete={handleDeleteMenu}
             onSelectRecipe={handleSelectRecipe}
+            onToggleMenuFavorite={handleToggleMenuFavorite}
             currentUser={currentUser}
           />
         ) : (
@@ -361,6 +378,8 @@ function App() {
             recipes={recipes}
             onSelectMenu={handleSelectMenu}
             onAddMenu={handleAddMenu}
+            onToggleMenuFavorite={handleToggleMenuFavorite}
+            currentUser={currentUser}
           />
         )
       ) : (
