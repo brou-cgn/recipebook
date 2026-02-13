@@ -31,12 +31,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         if (menu.recipeIds && menu.recipeIds.length > 0) {
           setSections([createMenuSection('Alle Rezepte', menu.recipeIds)]);
         } else {
-          setSections([createMenuSection('Hauptgang', [])]);
+          setSections([createMenuSection('Hauptspeise', [])]);
         }
       }
     } else {
       // New menu - create default section
-      setSections([createMenuSection('Hauptgang', [])]);
+      setSections([createMenuSection('Hauptspeise', [])]);
     }
   }, [menu]);
 
