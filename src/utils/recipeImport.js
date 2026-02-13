@@ -94,7 +94,7 @@ export function importFromNotionCSV(csvContent) {
  */
 export function importRecipe(content) {
   if (!content || typeof content !== 'string') {
-    throw new Error('Kein Inhalt zum Importieren bereitgestellt');
+    throw new Error('Kein Inhalt zum Importieren');
   }
 
   const trimmed = content.trim();

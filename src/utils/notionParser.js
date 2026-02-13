@@ -230,12 +230,8 @@ function extractNumber(text, min = 0, max = 10000) {
   const num = parseInt(match[0]);
   if (isNaN(num)) return null;
   
-  // Clamp to range if min/max provided
-  if (min !== undefined && max !== undefined) {
-    return Math.min(Math.max(num, min), max);
-  }
-  
-  return num;
+  // Clamp to range
+  return Math.min(Math.max(num, min), max);
 }
 
 /**

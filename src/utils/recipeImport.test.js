@@ -244,21 +244,12 @@ Portionen: 4
 
   describe('importFromNotionCSV', () => {
     test('throws error when CSV lacks ingredients and steps', () => {
+      // CSV format cannot contain ingredients/steps lists
+      // This limitation is by design - CSV is only for metadata
       const csv = `Name,Portionen,Schwierigkeit
 Test Recipe,4,3`;
 
       expect(() => importFromNotionCSV(csv)).toThrow('mindestens eine Zutat');
-    });
-
-    test('imports valid Notion CSV with all required fields', () => {
-      // CSV can't really contain ingredients/steps in a practical way
-      // This is more of a limitation test
-      const csv = `Name,Portionen,Schwierigkeit
-Test Recipe,4,3`;
-
-      // parseNotionCSV returns the recipe structure without validation
-      // importFromNotionCSV applies validation which requires ingredients/steps
-      expect(() => importFromNotionCSV(csv)).toThrow();
     });
   });
 
