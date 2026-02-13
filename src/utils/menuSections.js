@@ -20,12 +20,7 @@ export const getSavedSections = () => {
  * @returns {Array} Array of default section names
  */
 export const getDefaultSections = () => {
-  return [
-    'Vorspeise',
-    'Hauptspeise',
-    'Dessert',
-    'Drinks'
-  ];
+  return [];
 };
 
 /**

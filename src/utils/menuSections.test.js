@@ -15,13 +15,10 @@ beforeEach(() => {
 
 describe('menuSections utility functions', () => {
   describe('getDefaultSections', () => {
-    test('returns array of default section names', () => {
+    test('returns empty array (no predefined sections)', () => {
       const sections = getDefaultSections();
       expect(Array.isArray(sections)).toBe(true);
-      expect(sections.length).toBeGreaterThan(0);
-      expect(sections).toContain('Vorspeise');
-      expect(sections).toContain('Hauptspeise');
-      expect(sections).toContain('Dessert');
+      expect(sections.length).toBe(0);
     });
   });
 
