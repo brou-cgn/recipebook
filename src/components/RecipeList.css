@@ -148,9 +148,20 @@
   gap: 0.25rem;
 }
 
-.recipe-author {
+.recipe-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 0.5rem;
   font-size: 0.75rem;
+}
+
+.version-count {
+  color: #DF7A00;
+  font-weight: 600;
+}
+
+.recipe-author {
   color: #666;
   text-align: right;
 }

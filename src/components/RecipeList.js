@@ -85,9 +85,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
                     <span>{recipe.ingredients?.length || 0} Zutaten</span>
                     <span>{recipe.steps?.length || 0} Schritte</span>
                   </div>
-                  {authorName && (
-                    <div className="recipe-author">{authorName}</div>
-                  )}
+                  <div className="recipe-footer">
+                    <div className="version-count">
+                      {group.versionCount} {group.versionCount === 1 ? 'Version' : 'Versionen'}
+                    </div>
+                    {authorName && (
+                      <div className="recipe-author">{authorName}</div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
