@@ -105,8 +105,10 @@ function App() {
     setSelectedRecipe(recipe);
   };
 
-  const handleBackToList = () => {
+  const handleBackFromRecipeDetail = () => {
+    // Clear selected recipe to go back to either MenuDetail or RecipeList
     setSelectedRecipe(null);
+    // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
   };
 
   const handleAddRecipe = () => {
@@ -341,6 +343,19 @@ function App() {
       />
       {isSettingsOpen ? (
         <Settings onBack={handleCloseSettings} currentUser={currentUser} />
+      ) : selectedRecipe ? (
+        // Recipe detail view - shown regardless of currentView
+        <RecipeDetail
+          recipe={selectedRecipe}
+          onBack={handleBackFromRecipeDetail}
+          onEdit={handleEditRecipe}
+          onDelete={handleDeleteRecipe}
+          onToggleFavorite={handleToggleFavorite}
+          onCreateVersion={handleCreateVersion}
+          currentUser={currentUser}
+          allRecipes={recipes}
+          allUsers={getUsers()}
+        />
       ) : currentView === 'menus' ? (
         // Menu views
         isMenuFormOpen ? (
@@ -381,18 +396,6 @@ function App() {
             onCancel={handleCancelForm}
             currentUser={currentUser}
             isCreatingVersion={isCreatingVersion}
-          />
-        ) : selectedRecipe ? (
-          <RecipeDetail
-            recipe={selectedRecipe}
-            onBack={handleBackToList}
-            onEdit={handleEditRecipe}
-            onDelete={handleDeleteRecipe}
-            onToggleFavorite={handleToggleFavorite}
-            onCreateVersion={handleCreateVersion}
-            currentUser={currentUser}
-            allRecipes={recipes}
-            allUsers={getUsers()}
           />
         ) : (
           <RecipeList
