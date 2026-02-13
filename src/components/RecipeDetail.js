@@ -130,7 +130,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               onClick={() => onToggleFavorite(recipe.id)}
               title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
             >
-              {isFavorite ? '★ Favorit' : '☆ Favorit'}
+              {isFavorite ? '★' : '☆'}
             </button>
           )}
           {userCanDirectlyEdit && (

@@ -45,16 +45,16 @@
 }
 
 .favorite-button:hover {
-  border-color: #FFD700;
-  background: #FFFEF0;
+  border-color: #DF7A00;
+  background: #fff3e0;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .favorite-button.favorite-active {
-  color: #FFD700;
-  border-color: #FFD700;
-  background: #FFFEF0;
+  color: #DF7A00;
+  border-color: #DF7A00;
+  background: #fff3e0;
 }
 
 .edit-button,

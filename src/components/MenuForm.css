@@ -48,6 +48,7 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: #211D1A;
 }
 
 .form-group input[type="text"],
@@ -317,6 +318,7 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: #211D1A;
 }
 
 .recipe-name {
@@ -329,6 +331,105 @@
   color: #DF7A00;
   font-size: 1.1rem;
 }
+
+/* Typeahead styles */
+.typeahead-container {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.typeahead-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.typeahead-input:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.typeahead-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #402C1C;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.typeahead-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #eee;
+}
+
+.typeahead-item:last-child {
+  border-bottom: none;
+}
+
+.typeahead-item:hover {
+  background: #f9f6f3;
+}
+
+.typeahead-no-results {
+  padding: 0.75rem;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+}
+
+.selected-recipes {
+  margin-bottom: 1rem;
+}
+
+.selected-recipes h5 {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.selected-recipe-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #f9f6f3;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.remove-recipe-button {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  transition: color 0.2s ease;
+  line-height: 1;
+}
+
+.remove-recipe-button:hover {
+  color: #f44336;
+}
+
 
 .form-actions {
   display: flex;

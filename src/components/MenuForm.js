@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './MenuForm.css';
 import { isRecipeFavorite } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
+import { fuzzyFilter } from '../utils/fuzzySearch';
 
 function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
@@ -11,6 +12,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [availableSections, setAvailableSections] = useState([]);
   const [newSectionName, setNewSectionName] = useState('');
   const [showSectionInput, setShowSectionInput] = useState(false);
+  const [searchQueries, setSearchQueries] = useState({});
 
   useEffect(() => {
     // Load available section names
@@ -143,8 +145,41 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     onSave(menuData);
   };
 
-  const getRecipeSection = (recipeId) => {
-    return sections.findIndex(section => section.recipeIds.includes(recipeId));
+  const handleSearchChange = (sectionIndex, query) => {
+    setSearchQueries({
+      ...searchQueries,
+      [sectionIndex]: query
+    });
+  };
+
+  const handleAddRecipeToSection = (sectionIndex, recipeId) => {
+    handleToggleRecipeInSection(sectionIndex, recipeId);
+    // Clear search after adding
+    setSearchQueries({
+      ...searchQueries,
+      [sectionIndex]: ''
+    });
+  };
+
+  const handleRemoveRecipeFromSection = (sectionIndex, recipeId) => {
+    const newSections = [...sections];
+    newSections[sectionIndex].recipeIds = newSections[sectionIndex].recipeIds.filter(id => id !== recipeId);
+    setSections(newSections);
+  };
+
+  const getFilteredRecipes = (sectionIndex) => {
+    const query = searchQueries[sectionIndex] || '';
+    const section = sections[sectionIndex];
+    
+    // Filter out recipes already in this section
+    const availableRecipes = recipes.filter(recipe => !section.recipeIds.includes(recipe.id));
+    
+    if (!query.trim()) {
+      return availableRecipes;
+    }
+    
+    // Use fuzzy search
+    return fuzzyFilter(availableRecipes, query, recipe => recipe.title);
   };
 
   return (
@@ -279,31 +314,71 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                     </div>
                   </div>
                   <div className="recipe-selection">
-                    {recipes.map((recipe) => {
-                      const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
-                      const isInThisSection = section.recipeIds.includes(recipe.id);
-                      const currentSection = getRecipeSection(recipe.id);
-                      const isInOtherSection = currentSection !== -1 && currentSection !== sectionIndex;
-
-                      return (
-                        <label key={recipe.id} className="recipe-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={isInThisSection}
-                            onChange={() => handleToggleRecipeInSection(sectionIndex, recipe.id)}
-                          />
-                          <span className="recipe-name">
-                            {recipe.title}
-                            {isInOtherSection && (
-                              <span className="recipe-section-info">
-                                (in {sections[currentSection].name})
+                    {/* Display selected recipes */}
+                    {section.recipeIds.length > 0 && (
+                      <div className="selected-recipes">
+                        <h5>Ausgewählte Rezepte:</h5>
+                        {section.recipeIds.map(recipeId => {
+                          const recipe = recipes.find(r => r.id === recipeId);
+                          if (!recipe) return null;
+                          const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                          return (
+                            <div key={recipe.id} className="selected-recipe-item">
+                              <span className="recipe-name">
+                                {recipe.title}
+                                {isFavorite && <span className="favorite-indicator">★</span>}
                               </span>
-                            )}
-                          </span>
-                          {isFavorite && <span className="favorite-indicator">★</span>}
-                        </label>
-                      );
-                    })}
+                              <button
+                                type="button"
+                                className="remove-recipe-button"
+                                onClick={() => handleRemoveRecipeFromSection(sectionIndex, recipe.id)}
+                                title="Rezept entfernen"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
+                    {/* Typeahead search input */}
+                    <div className="typeahead-container">
+                      <input
+                        type="text"
+                        className="typeahead-input"
+                        placeholder="Rezept suchen und hinzufügen..."
+                        value={searchQueries[sectionIndex] || ''}
+                        onChange={(e) => handleSearchChange(sectionIndex, e.target.value)}
+                      />
+                      
+                      {/* Show dropdown only when there's a search query */}
+                      {searchQueries[sectionIndex] && searchQueries[sectionIndex].trim() && (
+                        <div className="typeahead-dropdown">
+                          {(() => {
+                            const filteredRecipes = getFilteredRecipes(sectionIndex);
+                            if (filteredRecipes.length === 0) {
+                              return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
+                            }
+                            return filteredRecipes.slice(0, 10).map(recipe => {
+                              const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                              return (
+                                <div
+                                  key={recipe.id}
+                                  className="typeahead-item"
+                                  onClick={() => handleAddRecipeToSection(sectionIndex, recipe.id)}
+                                >
+                                  <span className="recipe-name">
+                                    {recipe.title}
+                                  </span>
+                                  {isFavorite && <span className="favorite-indicator">★</span>}
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="section-summary">
                     {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
