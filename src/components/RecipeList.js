@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
-import { isRecipeFavorite } from '../utils/userFavorites';
+import { isRecipeFavorite, hasAnyFavoriteInGroup } from '../utils/userFavorites';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -15,13 +15,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
   const userCanEdit = canEditRecipes(currentUser);
 
-  // Filter recipes based on favorites if enabled
-  const filteredRecipes = showFavoritesOnly 
-    ? recipes.filter(recipe => isRecipeFavorite(currentUser?.id, recipe.id))
-    : recipes;
+  // Group recipes by parent first
+  const allRecipeGroups = groupRecipesByParent(recipes);
 
-  // Group recipes by parent
-  const recipeGroups = groupRecipesByParent(filteredRecipes);
+  // Filter groups based on favorites if enabled
+  const recipeGroups = showFavoritesOnly
+    ? allRecipeGroups.filter(group => hasAnyFavoriteInGroup(currentUser?.id, group.allRecipes))
+    : allRecipeGroups;
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
@@ -62,7 +62,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         </div>
       </div>
       
-      {filteredRecipes.length === 0 ? (
+      {recipeGroups.length === 0 ? (
         <div className="empty-state">
           <p>{showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
           <p className="empty-hint">

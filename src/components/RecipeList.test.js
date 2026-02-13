@@ -356,3 +356,171 @@ describe('RecipeList - Version Count Display', () => {
     expect(author).toBeInTheDocument();
   });
 });
+
+describe('RecipeList - Favorites Filter with Versions', () => {
+  const originalRecipe = {
+    id: 'recipe-1',
+    title: 'Original Recipe',
+    authorId: 'user-1',
+    ingredients: ['ingredient1', 'ingredient2'],
+    steps: ['step1', 'step2'],
+    createdAt: '2024-01-01T09:00:00Z'
+  };
+
+  const variation1 = {
+    id: 'recipe-2',
+    title: 'Variation 1',
+    parentRecipeId: 'recipe-1',
+    authorId: 'user-2',
+    ingredients: ['ingredient1', 'ingredient2', 'ingredient3'],
+    steps: ['step1', 'step2', 'step3'],
+    createdAt: '2024-01-01T10:00:00Z'
+  };
+
+  const variation2 = {
+    id: 'recipe-3',
+    title: 'Variation 2',
+    parentRecipeId: 'recipe-1',
+    authorId: 'user-3',
+    ingredients: ['ingredient1', 'ingredient2'],
+    steps: ['step1', 'step2'],
+    createdAt: '2024-01-01T11:00:00Z'
+  };
+
+  const currentUser = {
+    id: 'user-current',
+    vorname: 'Test',
+    nachname: 'User'
+  };
+
+  beforeEach(() => {
+    const users = [
+      currentUser,
+      { id: 'user-1', vorname: 'User', nachname: 'One' },
+      { id: 'user-2', vorname: 'User', nachname: 'Two' },
+      { id: 'user-3', vorname: 'User', nachname: 'Three' }
+    ];
+    localStorage.setItem('users', JSON.stringify(users));
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    jest.restoreAllMocks();
+  });
+
+  test('shows recipe group when only a variation is favorited', () => {
+    const recipes = [originalRecipe, variation1, variation2];
+    
+    // Mock the favorite function: only variation1 is favorited
+    jest.spyOn(userFavorites, 'isRecipeFavorite').mockImplementation((userId, recipeId) => {
+      return recipeId === 'recipe-2'; // only variation1 is favorited
+    });
+
+    jest.spyOn(userFavorites, 'hasAnyFavoriteInGroup').mockImplementation((userId, recipeGroup) => {
+      return recipeGroup.some(recipe => recipe.id === 'recipe-2');
+    });
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
+
+    // The recipe group should be displayed because variation1 is favorited
+    // The top recipe shown should be variation1 (the favorited one)
+    expect(screen.getByText('Variation 1')).toBeInTheDocument();
+  });
+
+  test('does not show recipe group when no version is favorited', () => {
+    const recipes = [originalRecipe, variation1, variation2];
+    
+    // Mock the favorite function: no recipes are favorited
+    jest.spyOn(userFavorites, 'isRecipeFavorite').mockImplementation(() => false);
+    jest.spyOn(userFavorites, 'hasAnyFavoriteInGroup').mockImplementation(() => false);
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
+
+    // No recipes should be shown
+    expect(screen.getByText('Keine favorisierten Rezepte!')).toBeInTheDocument();
+    expect(screen.queryByText('Original Recipe')).not.toBeInTheDocument();
+    expect(screen.queryByText('Variation 1')).not.toBeInTheDocument();
+  });
+
+  test('shows recipe group when original is favorited', () => {
+    const recipes = [originalRecipe, variation1];
+    
+    // Mock the favorite function: only the original is favorited
+    jest.spyOn(userFavorites, 'isRecipeFavorite').mockImplementation((userId, recipeId) => {
+      return recipeId === 'recipe-1'; // only original is favorited
+    });
+
+    jest.spyOn(userFavorites, 'hasAnyFavoriteInGroup').mockImplementation((userId, recipeGroup) => {
+      return recipeGroup.some(recipe => recipe.id === 'recipe-1');
+    });
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
+
+    // The recipe group should be displayed and show the original (which is favorited)
+    expect(screen.getByText('Original Recipe')).toBeInTheDocument();
+  });
+
+  test('shows recipe group when multiple versions are favorited', () => {
+    const recipes = [originalRecipe, variation1, variation2];
+    
+    // Mock the favorite function: both original and variation1 are favorited
+    jest.spyOn(userFavorites, 'isRecipeFavorite').mockImplementation((userId, recipeId) => {
+      return recipeId === 'recipe-1' || recipeId === 'recipe-2';
+    });
+
+    jest.spyOn(userFavorites, 'hasAnyFavoriteInGroup').mockImplementation((userId, recipeGroup) => {
+      return recipeGroup.some(recipe => recipe.id === 'recipe-1' || recipe.id === 'recipe-2');
+    });
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Click the favorites filter button to activate it
+    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favoritesButton);
+
+    // The recipe group should be displayed
+    // The top recipe could be either one based on sorting logic, but the group should exist
+    const recipeCards = document.querySelectorAll('.recipe-card');
+    expect(recipeCards.length).toBeGreaterThan(0);
+  });
+});
