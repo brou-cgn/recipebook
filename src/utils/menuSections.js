@@ -104,7 +104,7 @@ export const createMenuSection = (name, recipeIds = []) => {
  * @returns {boolean} True if valid
  */
 export const validateMenuSections = (sections) => {
-  if (!sections || !Array.isArray(sections)) return false;
+  if (!sections || !Array.isArray(sections) || sections.length === 0) return false;
   
   return sections.every(section => 
     section && 
