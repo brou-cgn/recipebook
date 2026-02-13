@@ -69,11 +69,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
                 {isFavorite && (
                   <div className="favorite-badge">★</div>
                 )}
-                {group.versionCount > 1 && (
-                  <div className="version-badge">
-                    {group.versionCount} Versionen
-                  </div>
-                )}
                 {recipe.image && (
                   <div className="recipe-image">
                     <img src={recipe.image} alt={recipe.title} />
@@ -85,9 +80,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, show
                     <span>{recipe.ingredients?.length || 0} Zutaten</span>
                     <span>{recipe.steps?.length || 0} Schritte</span>
                   </div>
-                  {authorName && (
-                    <div className="recipe-author">{authorName}</div>
-                  )}
+                  <div className="recipe-footer">
+                    {group.versionCount > 1 && (
+                      <div className="recipe-version-count">
+                        {group.versionCount} Versionen
+                      </div>
+                    )}
+                    {authorName && (
+                      <div className="recipe-author">{authorName}</div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

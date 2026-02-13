@@ -226,7 +226,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 <button 
                   className="serving-btn"
                   onClick={() => {
-                    const newMultiplier = servingMultiplier - 0.5;
+                    const newMultiplier = servingMultiplier - 1;
                     const newServings = (recipe.portionen || 4) * newMultiplier;
                     if (newServings >= 1) {
                       setServingMultiplier(newMultiplier);
@@ -241,7 +241,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </span>
                 <button 
                   className="serving-btn"
-                  onClick={() => setServingMultiplier(servingMultiplier + 0.5)}
+                  onClick={() => setServingMultiplier(servingMultiplier + 1)}
                 >
                   +
                 </button>
