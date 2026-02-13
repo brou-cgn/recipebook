@@ -17,7 +17,7 @@ export const getSavedSections = () => {
 
 /**
  * Get default section names for menus
- * @returns {Array} Array of default section names
+ * @returns {Array} Empty array (no predefined default sections)
  */
 export const getDefaultSections = () => {
   return [];
