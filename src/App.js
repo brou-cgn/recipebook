@@ -26,6 +26,13 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
+import {
+  subscribeToRecipes,
+  addRecipe as addRecipeToFirestore,
+  updateRecipe as updateRecipeInFirestore,
+  deleteRecipe as deleteRecipeFromFirestore,
+  seedSampleRecipes
+} from './utils/recipeFirestore';
 
 // Helper function to check if a recipe matches the category filter
 function matchesCategoryFilter(recipe, categoryFilter) {
@@ -88,17 +95,22 @@ function App() {
     applyFaviconSettings();
   }, []);
 
-  // Load recipes from localStorage on mount
+  // Set up real-time listener for recipes from Firestore
   useEffect(() => {
-    const savedRecipes = localStorage.getItem('recipes');
-    if (savedRecipes) {
-      setRecipes(JSON.parse(savedRecipes));
-    } else {
-      // Load sample recipes if none exist
-      setRecipes(getSampleRecipes());
-    }
-    setRecipesLoaded(true);
-  }, []);
+    if (!currentUser) return;
+
+    const unsubscribe = subscribeToRecipes((recipesFromFirestore) => {
+      setRecipes(recipesFromFirestore);
+      setRecipesLoaded(true);
+      
+      // Seed sample recipes if collection is empty (only for first user)
+      if (recipesFromFirestore.length === 0 && currentUser) {
+        seedSampleRecipes(currentUser.id);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // Migrate old global favorites to user-specific favorites (one-time migration)
   useEffect(() => {
@@ -106,13 +118,6 @@ function App() {
       migrateGlobalFavorites(currentUser.id, recipes);
     }
   }, [currentUser, recipesLoaded, recipes]);
-
-  // Save recipes to localStorage whenever they change (but only after initial load)
-  useEffect(() => {
-    if (recipesLoaded) {
-      localStorage.setItem('recipes', JSON.stringify(recipes));
-    }
-  }, [recipes, recipesLoaded]);
 
   // Load menus from localStorage on mount
   useEffect(() => {
@@ -157,26 +162,37 @@ function App() {
     setSelectedRecipe(null);
   };
 
-  const handleSaveRecipe = (recipe) => {
-    if (editingRecipe && !isCreatingVersion) {
-      // Update existing recipe (direct edit)
-      setRecipes(recipes.map(r => r.id === recipe.id ? recipe : r));
-    } else {
-      // Add new recipe or new version
-      const newRecipe = {
-        ...recipe,
-        id: Date.now().toString()
-      };
-      setRecipes([...recipes, newRecipe]);
+  const handleSaveRecipe = async (recipe) => {
+    if (!currentUser) return;
+
+    try {
+      if (editingRecipe && !isCreatingVersion) {
+        // Update existing recipe (direct edit)
+        const { id, ...updates } = recipe;
+        await updateRecipeInFirestore(id, updates);
+      } else {
+        // Add new recipe or new version
+        await addRecipeToFirestore(recipe, currentUser.id);
+      }
+      setIsFormOpen(false);
+      setEditingRecipe(null);
+      setIsCreatingVersion(false);
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      alert('Fehler beim Speichern des Rezepts. Bitte versuchen Sie es erneut.');
     }
-    setIsFormOpen(false);
-    setEditingRecipe(null);
-    setIsCreatingVersion(false);
   };
 
-  const handleDeleteRecipe = (recipeId) => {
-    setRecipes(recipes.filter(r => r.id !== recipeId));
-    setSelectedRecipe(null);
+  const handleDeleteRecipe = async (recipeId) => {
+    if (!currentUser) return;
+
+    try {
+      await deleteRecipeFromFirestore(recipeId);
+      setSelectedRecipe(null);
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      alert('Fehler beim Löschen des Rezepts. Bitte versuchen Sie es erneut.');
+    }
   };
 
   const handleCancelForm = () => {
@@ -447,99 +463,6 @@ function App() {
       )}
     </div>
   );
-}
-
-function getSampleRecipes() {
-  return [
-    {
-      id: '1',
-      title: 'Spaghetti Carbonara',
-      image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400',
-      portionen: 4,
-      kulinarik: 'Italian',
-      schwierigkeit: 3,
-      kochdauer: 30,
-      speisekategorie: 'Main Course',
-      ingredients: [
-        '400g Spaghetti',
-        '200g Pancetta or Guanciale',
-        '4 egg yolks',
-        '100g Pecorino Romano cheese',
-        'Black pepper',
-        'Salt'
-      ],
-      steps: [
-        'Cook spaghetti in salted boiling water according to package instructions.',
-        'While pasta cooks, cut pancetta into small pieces and fry until crispy.',
-        'In a bowl, mix egg yolks with grated Pecorino Romano and black pepper.',
-        'Drain pasta, reserving 1 cup of pasta water.',
-        'Add hot pasta to pancetta pan, remove from heat.',
-        'Quickly mix in egg mixture, adding pasta water to create a creamy sauce.',
-        'Serve immediately with extra cheese and black pepper.'
-      ]
-    },
-    {
-      id: '2',
-      title: 'Classic Margherita Pizza',
-      image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400',
-      portionen: 2,
-      kulinarik: 'Italian',
-      schwierigkeit: 2,
-      kochdauer: 25,
-      speisekategorie: 'Main Course',
-      ingredients: [
-        '500g Pizza dough',
-        '200g San Marzano tomatoes',
-        '200g Fresh mozzarella',
-        'Fresh basil leaves',
-        '2 tbsp Olive oil',
-        'Salt',
-        'Oregano'
-      ],
-      steps: [
-        'Preheat oven to 250°C (480°F).',
-        'Roll out pizza dough to desired thickness.',
-        'Crush tomatoes and spread evenly on dough, leaving a border.',
-        'Season with salt and oregano.',
-        'Tear mozzarella and distribute over the pizza.',
-        'Drizzle with olive oil.',
-        'Bake for 10-12 minutes until crust is golden.',
-        'Top with fresh basil leaves before serving.'
-      ]
-    },
-    {
-      id: '3',
-      title: 'Chocolate Chip Cookies',
-      image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400',
-      portionen: 24,
-      kulinarik: 'American',
-      schwierigkeit: 1,
-      kochdauer: 40,
-      speisekategorie: 'Dessert',
-      ingredients: [
-        '200g Butter, softened',
-        '150g Brown sugar',
-        '100g White sugar',
-        '2 Eggs',
-        '2 tsp Vanilla extract',
-        '300g All-purpose flour',
-        '1 tsp Baking soda',
-        '1/2 tsp Salt',
-        '300g Chocolate chips'
-      ],
-      steps: [
-        'Preheat oven to 180°C (350°F).',
-        'Cream together butter and both sugars until fluffy.',
-        'Beat in eggs and vanilla extract.',
-        'In separate bowl, mix flour, baking soda, and salt.',
-        'Gradually blend dry ingredients into wet mixture.',
-        'Fold in chocolate chips.',
-        'Drop spoonfuls of dough onto baking sheets.',
-        'Bake for 10-12 minutes until edges are golden.',
-        'Cool on baking sheet for 5 minutes before transferring.'
-      ]
-    }
-  ];
 }
 
 export default App;
