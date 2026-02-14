@@ -109,6 +109,16 @@ Administrators can manage users through the Settings menu:
 - Users cannot delete their own accounts
 - Administrators cannot remove admin rights if they are the last admin
 
+## 🌐 Live Demo
+
+The app is live and available at: **[https://brou-cgn.github.io/recipebook](https://brou-cgn.github.io/recipebook)**
+
+## 📦 Deployment
+
+This application is automatically deployed to GitHub Pages when changes are pushed to the `main` branch.
+
+For detailed deployment instructions and configuration, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ## Getting Started
 
 ### Prerequisites
