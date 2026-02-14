@@ -33,6 +33,12 @@ import {
   deleteRecipe as deleteRecipeFromFirestore,
   seedSampleRecipes
 } from './utils/recipeFirestore';
+import {
+  subscribeToMenus,
+  addMenu as addMenuToFirestore,
+  updateMenu as updateMenuInFirestore,
+  deleteMenu as deleteMenuFromFirestore
+} from './utils/menuFirestore';
 
 // Helper function to check if a recipe matches the category filter
 function matchesCategoryFilter(recipe, categoryFilter) {
@@ -119,18 +125,16 @@ function App() {
     }
   }, [currentUser, recipesLoaded, recipes]);
 
-  // Load menus from localStorage on mount
+  // Set up real-time listener for menus from Firestore
   useEffect(() => {
-    const savedMenus = localStorage.getItem('menus');
-    if (savedMenus) {
-      setMenus(JSON.parse(savedMenus));
-    }
-  }, []);
+    if (!currentUser) return;
 
-  // Save menus to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('menus', JSON.stringify(menus));
-  }, [menus]);
+    const unsubscribe = subscribeToMenus(currentUser.id, (menusFromFirestore) => {
+      setMenus(menusFromFirestore);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const handleSelectRecipe = (recipe) => {
     setSelectedRecipe(recipe);
@@ -262,25 +266,36 @@ function App() {
     setSelectedMenu(null);
   };
 
-  const handleSaveMenu = (menu) => {
-    if (editingMenu) {
-      // Update existing menu
-      setMenus(menus.map(m => m.id === menu.id ? menu : m));
-    } else {
-      // Add new menu
-      const newMenu = {
-        ...menu,
-        id: Date.now().toString()
-      };
-      setMenus([...menus, newMenu]);
+  const handleSaveMenu = async (menu) => {
+    if (!currentUser) return;
+
+    try {
+      if (editingMenu) {
+        // Update existing menu
+        const { id, ...updates } = menu;
+        await updateMenuInFirestore(id, updates);
+      } else {
+        // Add new menu
+        await addMenuToFirestore(menu, currentUser.id);
+      }
+      setIsMenuFormOpen(false);
+      setEditingMenu(null);
+    } catch (error) {
+      console.error('Error saving menu:', error);
+      alert('Fehler beim Speichern des Menüs. Bitte versuchen Sie es erneut.');
     }
-    setIsMenuFormOpen(false);
-    setEditingMenu(null);
   };
 
-  const handleDeleteMenu = (menuId) => {
-    setMenus(menus.filter(m => m.id !== menuId));
-    setSelectedMenu(null);
+  const handleDeleteMenu = async (menuId) => {
+    if (!currentUser) return;
+
+    try {
+      await deleteMenuFromFirestore(menuId);
+      setSelectedMenu(null);
+    } catch (error) {
+      console.error('Error deleting menu:', error);
+      alert('Fehler beim Löschen des Menüs. Bitte versuchen Sie es erneut.');
+    }
   };
 
   const handleCancelMenuForm = () => {
