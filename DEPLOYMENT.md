@@ -21,7 +21,29 @@ Die Anwendung ist verfügbar unter:
    - **Source**: Wähle "GitHub Actions"
    - Die Konfiguration wird automatisch erkannt
 
-### 2. Workflow-Berechtigung überprüfen
+### 2. Firebase Secrets konfigurieren (WICHTIG!)
+
+Die Anwendung benötigt Firebase-Zugangsdaten für die Authentifizierung und Datenbank. Diese müssen als GitHub Secrets hinterlegt werden:
+
+1. Gehe zu **Settings** → **Secrets and variables** → **Actions**
+2. Klicke auf **New repository secret**
+3. Füge folgende Secrets hinzu (Werte aus deiner Firebase Console):
+   - `REACT_APP_FIREBASE_API_KEY`
+   - `REACT_APP_FIREBASE_AUTH_DOMAIN`
+   - `REACT_APP_FIREBASE_PROJECT_ID`
+   - `REACT_APP_FIREBASE_STORAGE_BUCKET`
+   - `REACT_APP_FIREBASE_MESSAGING_SENDER_ID`
+   - `REACT_APP_FIREBASE_APP_ID`
+   - `REACT_APP_FIREBASE_MEASUREMENT_ID`
+
+**Wo finde ich diese Werte?**
+1. Gehe zu [Firebase Console](https://console.firebase.google.com/)
+2. Wähle dein Projekt aus
+3. Klicke auf das Zahnrad-Symbol → **Projekteinstellungen**
+4. Scrolle zu "Deine Apps" und wähle deine Web-App
+5. Die Konfigurationswerte findest du unter "Firebase SDK snippet" → "Config"
+
+### 3. Workflow-Berechtigung überprüfen
 
 1. Gehe zu **Settings** → **Actions** → **General**
 2. Scrolle zu "Workflow permissions"
@@ -29,7 +51,7 @@ Die Anwendung ist verfügbar unter:
    - ✅ "Read and write permissions" ODER
    - ✅ "Read repository contents and packages permissions" mit zusätzlicher Pages-Berechtigung
 
-### 3. Deployment starten
+### 4. Deployment starten
 
 Das Deployment startet automatisch bei jedem Push zum `main`-Branch.
 
@@ -98,6 +120,13 @@ Die Anwendung ist dann unter `http://localhost:3000` (oder einem anderen Port) v
 ---
 
 ## 🛠️ Troubleshooting
+
+### Problem: Leere Seite / Blank Page
+**Ursache**: Firebase-Konfiguration fehlt
+**Lösung**: 
+- Überprüfe, ob alle Firebase Secrets in GitHub Actions konfiguriert sind (siehe Schritt 2 oben)
+- Alle 7 REACT_APP_FIREBASE_* Secrets müssen gesetzt sein
+- Nach dem Hinzufügen der Secrets muss das Deployment erneut ausgelöst werden
 
 ### Problem: Deployment schlägt fehl
 **Lösung**: 
