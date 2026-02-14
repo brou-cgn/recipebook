@@ -475,6 +475,7 @@
   cursor: pointer;
   width: 18px;
   height: 18px;
+  accent-color: #211D1A;
 }
 
 .category-checkbox.disabled input[type="checkbox"] {
