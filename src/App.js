@@ -215,19 +215,22 @@ function App() {
     setIsSettingsOpen(false);
   };
 
-  const handleToggleFavorite = (recipeId) => {
+  const handleToggleFavorite = async (recipeId) => {
     if (!currentUser) return;
     
-    // Toggle in user-specific favorites storage
-    toggleFavorite(currentUser.id, recipeId);
-    
-    // Trigger a re-render by updating state (but we don't modify the recipe objects anymore)
-    // Force update by setting state to a new array reference
-    setRecipes([...recipes]);
-    
-    // Update selectedRecipe to trigger re-render if it's the one being toggled
-    if (selectedRecipe && selectedRecipe.id === recipeId) {
-      setSelectedRecipe({ ...selectedRecipe });
+    try {
+      // Toggle in user-specific favorites storage in Firestore
+      await toggleFavorite(currentUser.id, recipeId);
+      
+      // Trigger a re-render by updating state
+      setRecipes([...recipes]);
+      
+      // Update selectedRecipe to trigger re-render if it's the one being toggled
+      if (selectedRecipe && selectedRecipe.id === recipeId) {
+        setSelectedRecipe({ ...selectedRecipe });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -303,18 +306,22 @@ function App() {
     setEditingMenu(null);
   };
 
-  const handleToggleMenuFavorite = (menuId) => {
+  const handleToggleMenuFavorite = async (menuId) => {
     if (!currentUser) return;
     
-    // Toggle in menu-specific favorites storage
-    toggleMenuFavorite(currentUser.id, menuId);
-    
-    // Force re-render by updating a timestamp
-    setMenus(prevMenus => [...prevMenus]);
-    
-    // Update selectedMenu if it's the one being toggled
-    if (selectedMenu && selectedMenu.id === menuId) {
-      setSelectedMenu({ ...selectedMenu });
+    try {
+      // Toggle in menu-specific favorites storage in Firestore
+      await toggleMenuFavorite(currentUser.id, menuId);
+      
+      // Force re-render by updating state
+      setMenus(prevMenus => [...prevMenus]);
+      
+      // Update selectedMenu if it's the one being toggled
+      if (selectedMenu && selectedMenu.id === menuId) {
+        setSelectedMenu({ ...selectedMenu });
+      }
+    } catch (error) {
+      console.error('Error toggling menu favorite:', error);
     }
   };
 

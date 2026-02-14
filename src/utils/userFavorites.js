@@ -1,109 +1,103 @@
 /**
  * User Favorites Utilities
- * Handles user-specific favorite recipes storage and management
+ * Handles user-specific favorite recipes storage and management using Firestore
  */
 
-const USER_FAVORITES_KEY = 'userFavorites';
+import { db } from '../firebase';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 /**
- * Get all user favorites from localStorage
- * @returns {Object} Object with userId as keys and arrays of recipeIds as values
- */
-export const getAllUserFavorites = () => {
-  const favoritesJson = localStorage.getItem(USER_FAVORITES_KEY);
-  return favoritesJson ? JSON.parse(favoritesJson) : {};
-};
-
-/**
- * Save all user favorites to localStorage
- * @param {Object} favorites - Object with userId as keys and arrays of recipeIds as values
- */
-export const saveAllUserFavorites = (favorites) => {
-  localStorage.setItem(USER_FAVORITES_KEY, JSON.stringify(favorites));
-};
-
-/**
- * Get favorite recipe IDs for a specific user
+ * Get favorite recipe IDs for a specific user from Firestore
  * @param {string} userId - User ID
- * @returns {Array} Array of recipe IDs that are favorites for this user
+ * @returns {Promise<Array>} Promise resolving to array of recipe IDs that are favorites for this user
  */
-export const getUserFavorites = (userId) => {
+export const getUserFavorites = async (userId) => {
   if (!userId) return [];
-  const allFavorites = getAllUserFavorites();
-  return allFavorites[userId] || [];
+  
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      return userDoc.data().favoriteRecipes || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting user favorites:', error);
+    return [];
+  }
 };
 
 /**
  * Check if a recipe is a favorite for a specific user
+ * Note: This is an async operation, so UI components should manage state appropriately
  * @param {string} userId - User ID
  * @param {string} recipeId - Recipe ID
- * @returns {boolean} True if the recipe is a favorite for this user
+ * @returns {Promise<boolean>} Promise resolving to true if the recipe is a favorite for this user
  */
-export const isRecipeFavorite = (userId, recipeId) => {
+export const isRecipeFavorite = async (userId, recipeId) => {
   if (!userId || !recipeId) return false;
-  const userFavorites = getUserFavorites(userId);
+  
+  const userFavorites = await getUserFavorites(userId);
   return userFavorites.includes(recipeId);
 };
 
 /**
- * Add a recipe to user's favorites
+ * Add a recipe to user's favorites in Firestore
  * @param {string} userId - User ID
  * @param {string} recipeId - Recipe ID
- * @returns {boolean} True if added successfully
+ * @returns {Promise<boolean>} Promise resolving to true if added successfully
  */
-export const addFavorite = (userId, recipeId) => {
+export const addFavorite = async (userId, recipeId) => {
   if (!userId || !recipeId) return false;
   
-  const allFavorites = getAllUserFavorites();
-  const userFavorites = allFavorites[userId] || [];
-  
-  // Don't add if already a favorite
-  if (userFavorites.includes(recipeId)) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      favoriteRecipes: arrayUnion(recipeId)
+    });
     return true;
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+    return false;
   }
-  
-  // Add recipe to user's favorites
-  allFavorites[userId] = [...userFavorites, recipeId];
-  saveAllUserFavorites(allFavorites);
-  
-  return true;
 };
 
 /**
- * Remove a recipe from user's favorites
+ * Remove a recipe from user's favorites in Firestore
  * @param {string} userId - User ID
  * @param {string} recipeId - Recipe ID
- * @returns {boolean} True if removed successfully
+ * @returns {Promise<boolean>} Promise resolving to true if removed successfully
  */
-export const removeFavorite = (userId, recipeId) => {
+export const removeFavorite = async (userId, recipeId) => {
   if (!userId || !recipeId) return false;
   
-  const allFavorites = getAllUserFavorites();
-  const userFavorites = allFavorites[userId] || [];
-  
-  // Remove recipe from user's favorites
-  allFavorites[userId] = userFavorites.filter(id => id !== recipeId);
-  saveAllUserFavorites(allFavorites);
-  
-  return true;
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      favoriteRecipes: arrayRemove(recipeId)
+    });
+    return true;
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+    return false;
+  }
 };
 
 /**
  * Toggle a recipe's favorite status for a user
  * @param {string} userId - User ID
  * @param {string} recipeId - Recipe ID
- * @returns {boolean} New favorite status (true if now favorite, false if not)
+ * @returns {Promise<boolean>} Promise resolving to new favorite status (true if now favorite, false if not)
  */
-export const toggleFavorite = (userId, recipeId) => {
+export const toggleFavorite = async (userId, recipeId) => {
   if (!userId || !recipeId) return false;
   
-  const isFavorite = isRecipeFavorite(userId, recipeId);
+  const isFavorite = await isRecipeFavorite(userId, recipeId);
   
   if (isFavorite) {
-    removeFavorite(userId, recipeId);
+    await removeFavorite(userId, recipeId);
     return false;
   } else {
-    addFavorite(userId, recipeId);
+    await addFavorite(userId, recipeId);
     return true;
   }
 };
@@ -112,12 +106,12 @@ export const toggleFavorite = (userId, recipeId) => {
  * Get all favorite recipes for a user from a list of recipes
  * @param {string} userId - User ID
  * @param {Array} recipes - Array of recipe objects
- * @returns {Array} Array of favorite recipe objects
+ * @returns {Promise<Array>} Promise resolving to array of favorite recipe objects
  */
-export const getFavoriteRecipes = (userId, recipes) => {
+export const getFavoriteRecipes = async (userId, recipes) => {
   if (!userId || !recipes || !Array.isArray(recipes)) return [];
   
-  const favoriteIds = getUserFavorites(userId);
+  const favoriteIds = await getUserFavorites(userId);
   return recipes.filter(recipe => favoriteIds.includes(recipe.id));
 };
 
@@ -125,37 +119,49 @@ export const getFavoriteRecipes = (userId, recipes) => {
  * Check if any recipe in a group is a favorite for a specific user
  * @param {string} userId - User ID
  * @param {Array} recipeGroup - Array of recipe objects (e.g., from groupRecipesByParent)
- * @returns {boolean} True if any recipe in the group is a favorite for this user
+ * @returns {Promise<boolean>} Promise resolving to true if any recipe in the group is a favorite for this user
  */
-export const hasAnyFavoriteInGroup = (userId, recipeGroup) => {
+export const hasAnyFavoriteInGroup = async (userId, recipeGroup) => {
   if (!userId || !recipeGroup || !Array.isArray(recipeGroup)) return false;
-  return recipeGroup.some(recipe => isRecipeFavorite(userId, recipe.id));
+  
+  const favoriteIds = await getUserFavorites(userId);
+  return recipeGroup.some(recipe => favoriteIds.includes(recipe.id));
 };
 
 /**
- * Migrate old global favorites to user-specific favorites
+ * Migrate old localStorage favorites to Firestore (one-time migration)
  * This is a one-time migration for existing data
  * @param {string} userId - User ID to migrate favorites to
  * @param {Array} recipes - Array of recipe objects with isFavorite property
  */
-export const migrateGlobalFavorites = (userId, recipes) => {
+export const migrateGlobalFavorites = async (userId, recipes) => {
   if (!userId || !recipes || !Array.isArray(recipes)) return;
   
-  const allFavorites = getAllUserFavorites();
-  
-  // Don't migrate if this user already has favorites
-  if (allFavorites[userId] && allFavorites[userId].length > 0) {
-    return;
-  }
-  
-  // Find all recipes marked as favorite
-  const globalFavorites = recipes
-    .filter(recipe => recipe.isFavorite === true)
-    .map(recipe => recipe.id);
-  
-  // Migrate to user-specific favorites
-  if (globalFavorites.length > 0) {
-    allFavorites[userId] = globalFavorites;
-    saveAllUserFavorites(allFavorites);
+  try {
+    // Check if user already has favorites in Firestore
+    const currentFavorites = await getUserFavorites(userId);
+    if (currentFavorites.length > 0) {
+      // Already migrated
+      return;
+    }
+    
+    // Check localStorage for old favorites
+    const oldFavoritesJson = localStorage.getItem('userFavorites');
+    if (!oldFavoritesJson) return;
+    
+    const oldFavorites = JSON.parse(oldFavoritesJson);
+    const userOldFavorites = oldFavorites[userId] || [];
+    
+    if (userOldFavorites.length === 0) return;
+    
+    // Migrate to Firestore
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      favoriteRecipes: userOldFavorites
+    });
+    
+    console.log(`Migrated ${userOldFavorites.length} favorites for user ${userId}`);
+  } catch (error) {
+    console.error('Error migrating favorites:', error);
   }
 };

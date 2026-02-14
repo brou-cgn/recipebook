@@ -1,109 +1,102 @@
 /**
  * Menu Favorites Utilities
- * Handles user-specific favorite menus storage and management
+ * Handles user-specific favorite menus storage and management using Firestore
  */
 
-const MENU_FAVORITES_KEY = 'menuFavorites';
+import { db } from '../firebase';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 /**
- * Get all menu favorites from localStorage
- * @returns {Object} Object with userId as keys and arrays of menuIds as values
- */
-export const getAllMenuFavorites = () => {
-  const favoritesJson = localStorage.getItem(MENU_FAVORITES_KEY);
-  return favoritesJson ? JSON.parse(favoritesJson) : {};
-};
-
-/**
- * Save all menu favorites to localStorage
- * @param {Object} favorites - Object with userId as keys and arrays of menuIds as values
- */
-export const saveAllMenuFavorites = (favorites) => {
-  localStorage.setItem(MENU_FAVORITES_KEY, JSON.stringify(favorites));
-};
-
-/**
- * Get favorite menu IDs for a specific user
+ * Get favorite menu IDs for a specific user from Firestore
  * @param {string} userId - User ID
- * @returns {Array} Array of menu IDs that are favorites for this user
+ * @returns {Promise<Array>} Promise resolving to array of menu IDs that are favorites for this user
  */
-export const getUserMenuFavorites = (userId) => {
+export const getUserMenuFavorites = async (userId) => {
   if (!userId) return [];
-  const allFavorites = getAllMenuFavorites();
-  return allFavorites[userId] || [];
+  
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      return userDoc.data().favoriteMenus || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error getting user menu favorites:', error);
+    return [];
+  }
 };
 
 /**
  * Check if a menu is a favorite for a specific user
  * @param {string} userId - User ID
  * @param {string} menuId - Menu ID
- * @returns {boolean} True if the menu is a favorite for this user
+ * @returns {Promise<boolean>} Promise resolving to true if the menu is a favorite for this user
  */
-export const isMenuFavorite = (userId, menuId) => {
+export const isMenuFavorite = async (userId, menuId) => {
   if (!userId || !menuId) return false;
-  const userFavorites = getUserMenuFavorites(userId);
+  
+  const userFavorites = await getUserMenuFavorites(userId);
   return userFavorites.includes(menuId);
 };
 
 /**
- * Add a menu to user's favorites
+ * Add a menu to user's favorites in Firestore
  * @param {string} userId - User ID
  * @param {string} menuId - Menu ID
- * @returns {boolean} True if added successfully
+ * @returns {Promise<boolean>} Promise resolving to true if added successfully
  */
-export const addMenuFavorite = (userId, menuId) => {
+export const addMenuFavorite = async (userId, menuId) => {
   if (!userId || !menuId) return false;
   
-  const allFavorites = getAllMenuFavorites();
-  const userFavorites = allFavorites[userId] || [];
-  
-  // Don't add if already a favorite
-  if (userFavorites.includes(menuId)) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      favoriteMenus: arrayUnion(menuId)
+    });
     return true;
+  } catch (error) {
+    console.error('Error adding menu favorite:', error);
+    return false;
   }
-  
-  // Add menu to user's favorites
-  allFavorites[userId] = [...userFavorites, menuId];
-  saveAllMenuFavorites(allFavorites);
-  
-  return true;
 };
 
 /**
- * Remove a menu from user's favorites
+ * Remove a menu from user's favorites in Firestore
  * @param {string} userId - User ID
  * @param {string} menuId - Menu ID
- * @returns {boolean} True if removed successfully
+ * @returns {Promise<boolean>} Promise resolving to true if removed successfully
  */
-export const removeMenuFavorite = (userId, menuId) => {
+export const removeMenuFavorite = async (userId, menuId) => {
   if (!userId || !menuId) return false;
   
-  const allFavorites = getAllMenuFavorites();
-  const userFavorites = allFavorites[userId] || [];
-  
-  // Remove menu from user's favorites
-  allFavorites[userId] = userFavorites.filter(id => id !== menuId);
-  saveAllMenuFavorites(allFavorites);
-  
-  return true;
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      favoriteMenus: arrayRemove(menuId)
+    });
+    return true;
+  } catch (error) {
+    console.error('Error removing menu favorite:', error);
+    return false;
+  }
 };
 
 /**
  * Toggle a menu's favorite status for a user
  * @param {string} userId - User ID
  * @param {string} menuId - Menu ID
- * @returns {boolean} New favorite status (true if now favorite, false if not)
+ * @returns {Promise<boolean>} Promise resolving to new favorite status (true if now favorite, false if not)
  */
-export const toggleMenuFavorite = (userId, menuId) => {
+export const toggleMenuFavorite = async (userId, menuId) => {
   if (!userId || !menuId) return false;
   
-  const isFavorite = isMenuFavorite(userId, menuId);
+  const isFavorite = await isMenuFavorite(userId, menuId);
   
   if (isFavorite) {
-    removeMenuFavorite(userId, menuId);
+    await removeMenuFavorite(userId, menuId);
     return false;
   } else {
-    addMenuFavorite(userId, menuId);
+    await addMenuFavorite(userId, menuId);
     return true;
   }
 };
@@ -112,11 +105,11 @@ export const toggleMenuFavorite = (userId, menuId) => {
  * Get all favorite menus for a user from a list of menus
  * @param {string} userId - User ID
  * @param {Array} menus - Array of menu objects
- * @returns {Array} Array of favorite menu objects
+ * @returns {Promise<Array>} Promise resolving to array of favorite menu objects
  */
-export const getFavoriteMenus = (userId, menus) => {
+export const getFavoriteMenus = async (userId, menus) => {
   if (!userId || !menus || !Array.isArray(menus)) return [];
   
-  const favoriteIds = getUserMenuFavorites(userId);
+  const favoriteIds = await getUserMenuFavorites(userId);
   return menus.filter(menu => favoriteIds.includes(menu.id));
 };
