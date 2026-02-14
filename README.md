@@ -10,7 +10,8 @@ A Progressive Web App (PWA) for managing your favorite recipes. Built with React
 - 🍽️ **Recipe Management**: Add, edit, and delete recipes
 - 🖼️ **Image Support**: Add images to your recipes
 - 📝 **Ingredients & Steps**: Organize recipes with detailed ingredient lists and preparation steps
-- 💿 **Local Storage**: All recipes are saved locally in your browser
+- 🔥 **Firebase Integration**: Cloud-based storage with Firestore and Authentication
+- 💾 **Data Persistence**: All recipes are stored in Firebase Firestore with offline support
 - 👥 **User Management**: Role-based access control with administrators and different permission levels
 - 🔐 **Security**: Password-protected accounts with different access rights
 
@@ -128,6 +129,19 @@ This application is automatically deployed to GitHub Pages when changes are push
 
 - Node.js (version 14 or higher)
 - npm or yarn
+- A Firebase account (for database and authentication)
+
+### Firebase Setup
+
+Before running the application, you need to set up Firebase. Follow the detailed guide:
+
+📘 **[Firebase Setup Guide (German)](FIREBASE_SETUP.md)**
+
+Quick setup:
+1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+2. Register a web app and get your configuration
+3. Copy `.env.example` to `.env.local` and fill in your Firebase credentials
+4. Enable Firestore Database and Email/Password Authentication in Firebase Console
 
 ### Installation
 
@@ -210,14 +224,17 @@ The app can be installed on:
 Once installed, RecipeBook works completely offline thanks to:
 
 - Service Worker caching of app shell and assets
-- LocalStorage for recipe data persistence
+- Firestore offline persistence (IndexedDB)
+- PWA architecture with Workbox
 
 ## Technology Stack
 
 - **React 19**: Modern UI library
 - **Create React App**: Build tooling and configuration
+- **Firebase**: Backend infrastructure
+  - **Firestore**: NoSQL cloud database with offline support
+  - **Firebase Authentication**: User management and authentication
 - **Workbox**: Service worker and offline caching
-- **LocalStorage API**: Client-side data persistence
 - **CSS3**: Responsive styling with Flexbox and Grid
 
 ## Browser Support
@@ -267,6 +284,45 @@ recipebook/
 │   └── serviceWorkerRegistration.js
 └── package.json
 ```
+
+## Firebase Configuration
+
+RecipeBook uses Firebase for cloud storage, authentication, and offline functionality. 
+
+### Setting Up Your Own Firebase Project
+
+For detailed instructions on setting up Firebase, see **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)** (German).
+
+### Key Firebase Features Used
+
+1. **Firestore Database**
+   - Real-time recipe synchronization
+   - User data management
+   - Menu and favorites storage
+   - Offline persistence with IndexedDB
+
+2. **Firebase Authentication**
+   - Email/Password authentication
+   - Role-based access control
+   - User session management
+
+3. **Security**
+   - Environment variables for sensitive configuration
+   - Firestore security rules
+   - Client-side password hashing
+
+### Environment Variables
+
+The application uses environment variables to keep Firebase credentials secure:
+
+```env
+REACT_APP_FIREBASE_API_KEY=your_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+# ... see .env.example for all variables
+```
+
+**Important**: Never commit `.env.local` to version control. Use `.env.example` as a template.
 
 ## Contributing
 

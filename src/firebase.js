@@ -7,16 +7,25 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// Firebase configuration
+// Firebase configuration from environment variables
+// These values are loaded from .env.local file (not committed to git)
 const firebaseConfig = {
-  apiKey: "AIzaSyDCPFaNfzt86Z5BUmygw5UW-3qq5YENsjg",
-  authDomain: "broubook.firebaseapp.com",
-  projectId: "broubook",
-  storageBucket: "broubook.firebasestorage.app",
-  messagingSenderId: "78971303279",
-  appId: "1:78971303279:web:96048ecefe0f8c89a9249a",
-  measurementId: "G-LMY1XF3R70"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
+
+// Validate that all required environment variables are present
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error(
+    'Firebase configuration is missing. Please create a .env.local file with your Firebase credentials. ' +
+    'See .env.example for the required format.'
+  );
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
