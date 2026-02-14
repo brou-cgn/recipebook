@@ -117,7 +117,10 @@ The app is live and available at: **[https://brou-cgn.github.io/recipebook](http
 
 This application is automatically deployed to GitHub Pages when changes are pushed to the `main` branch.
 
-For detailed deployment instructions and configuration, see [DEPLOYMENT.md](DEPLOYMENT.md).
+### Documentation:
+- **[PUBLIKATION.md](PUBLIKATION.md)** - 🇩🇪 Vollständiger Leitfaden für die Veröffentlichung (Deutsch, für Laien verständlich)
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - 🇩🇪 Technische Deployment-Details (Deutsch)
+- **[VERÖFFENTLICHUNG.md](VERÖFFENTLICHUNG.md)** - 🇩🇪 Zusammenfassung der durchgeführten Schritte
 
 ## Getting Started
 
