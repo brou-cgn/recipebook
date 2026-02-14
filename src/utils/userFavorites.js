@@ -130,9 +130,10 @@ export const hasAnyFavoriteInGroup = async (userId, recipeGroup) => {
 
 /**
  * Migrate old localStorage favorites to Firestore (one-time migration)
- * This is a one-time migration for existing data
+ * This function migrates favorites from the old localStorage-based storage to Firestore.
+ * It checks the 'userFavorites' key in localStorage for user-specific favorites.
  * @param {string} userId - User ID to migrate favorites to
- * @param {Array} recipes - Array of recipe objects with isFavorite property
+ * @param {Array} recipes - Array of recipe objects (not used in current implementation but kept for API compatibility)
  */
 export const migrateGlobalFavorites = async (userId, recipes) => {
   if (!userId || !recipes || !Array.isArray(recipes)) return;

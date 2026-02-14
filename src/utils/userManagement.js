@@ -398,6 +398,9 @@ export const updateUserRole = async (userId, role) => {
 
 /**
  * Delete a user
+ * NOTE: This deletes the user profile from Firestore but does not delete the Firebase Auth account.
+ * Deleting the Auth account requires re-authentication and should be done via Firebase Admin SDK.
+ * The orphaned Auth account can still log in but will have no profile data.
  * @param {string} userId - ID of user to delete
  * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
  */
@@ -668,8 +671,10 @@ export const updateUserName = async (userId, vorname, nachname) => {
 
 /**
  * Set a temporary password for a user
+ * NOTE: Due to Firebase client SDK limitations, this function only sets the requiresPasswordChange flag.
+ * Actual password reset must be done through Firebase password reset email or implemented via Firebase Admin SDK.
  * @param {string} userId - ID of user to update
- * @param {string} tempPassword - Temporary password (plain text)
+ * @param {string} tempPassword - Temporary password (plain text) - Currently not used, kept for API compatibility
  * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
  */
 export const setTemporaryPassword = async (userId, tempPassword) => {
@@ -695,15 +700,14 @@ export const setTemporaryPassword = async (userId, tempPassword) => {
     }
     
     // Update user with temporary password flag in Firestore
-    await updateDoc(doc(db, 'users', userId), { requiresPasswordChange: true });
-    
-    // Note: Firebase doesn't allow admins to set passwords for other users client-side
+    // NOTE: Firebase doesn't allow admins to set passwords for other users client-side
     // This would need to be implemented with Firebase Admin SDK on the server
-    // For now, we'll just set the flag
+    // For now, we'll just set the flag and the user will need to reset via email
+    await updateDoc(doc(db, 'users', userId), { requiresPasswordChange: true });
     
     return {
       success: true,
-      message: 'Temporäres Passwort erfolgreich gesetzt.'
+      message: 'Benutzer muss Passwort zurücksetzen.'
     };
   } catch (error) {
     console.error('Error setting temporary password:', error);

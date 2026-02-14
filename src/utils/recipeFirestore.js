@@ -123,22 +123,52 @@ export const deleteRecipe = async (recipeId) => {
 
 /**
  * Seed sample recipes if none exist
+ * Uses a flag in Firestore settings to ensure seeding only happens once
  * @param {string} authorId - ID of the user to set as author
  * @returns {Promise<void>}
  */
 export const seedSampleRecipes = async (authorId) => {
   try {
-    const recipes = await getRecipes();
+    // Check if seeding has already been done
+    const { doc: firestoreDoc, getDoc, setDoc } = await import('firebase/firestore');
+    const { db } = await import('../firebase');
     
-    // Only seed if no recipes exist
-    if (recipes.length > 0) {
+    const settingsRef = firestoreDoc(db, 'settings', 'app');
+    const settingsSnap = await getDoc(settingsRef);
+    
+    // If settings exist and recipesSeeded flag is true, skip seeding
+    if (settingsSnap.exists() && settingsSnap.data().recipesSeeded) {
       return;
     }
     
+    // Double-check recipes collection is empty
+    const recipes = await getRecipes();
+    if (recipes.length > 0) {
+      // Recipes exist, set the flag and return
+      if (settingsSnap.exists()) {
+        await import('firebase/firestore').then(({ updateDoc }) =>
+          updateDoc(settingsRef, { recipesSeeded: true })
+        );
+      } else {
+        await setDoc(settingsRef, { recipesSeeded: true });
+      }
+      return;
+    }
+    
+    // Seed sample recipes
     const sampleRecipes = getSampleRecipes();
     
     for (const recipe of sampleRecipes) {
       await addRecipe(recipe, authorId);
+    }
+    
+    // Set the seeded flag
+    if (settingsSnap.exists()) {
+      await import('firebase/firestore').then(({ updateDoc }) =>
+        updateDoc(settingsRef, { recipesSeeded: true })
+      );
+    } else {
+      await setDoc(settingsRef, { recipesSeeded: true });
     }
   } catch (error) {
     console.error('Error seeding sample recipes:', error);
