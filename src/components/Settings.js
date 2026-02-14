@@ -298,7 +298,7 @@ function Settings({ onBack, currentUser }) {
             <div className="settings-section">
               <h3>Favicon</h3>
               <p className="section-description">
-                Personalisieren Sie das Favicon (Browser-Tab-Symbol) und den Titel Ihrer Recipebook-Instanz.
+                Personalisieren Sie das Favicon (Browser-Tab-Symbol) und den Titel Ihrer DishBook-Instanz.
               </p>
               
               {/* Favicon Text */}

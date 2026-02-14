@@ -1,3 +1,5 @@
+import { DEFAULT_FAVICON_TEXT, DEFAULT_SLOGAN } from './customLists';
+
 /**
  * Update the browser's favicon
  * @param {string|null} imageBase64 - Base64 encoded image or null to use default
@@ -25,10 +27,11 @@ export function updateFavicon(imageBase64) {
  * @param {string} text - Text to display in the title
  */
 export function updatePageTitle(text) {
+  const slogan = localStorage.getItem('headerSlogan') || DEFAULT_SLOGAN;
   if (text) {
-    document.title = `${text} - Unsere Besten`;
+    document.title = `${text} - ${slogan}`;
   } else {
-    document.title = 'DishBook - Unsere Besten';
+    document.title = `${DEFAULT_FAVICON_TEXT} - ${slogan}`;
   }
 }
 
