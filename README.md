@@ -122,6 +122,7 @@ This application is automatically deployed to GitHub Pages when changes are push
 👉 **[GitHub Secrets Setup Anleitung](GITHUB_SECRETS_SETUP.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
 
 ### 📚 Zugriffsanleitungen:
+- **[ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)
 - **[ZUGRIFF_ANLEITUNG.md](ZUGRIFF_ANLEITUNG.md)** - 📖 **Benutzer-Anleitung**: Wie Sie auf das System zugreifen (für Nicht-Techniker)
 - **[ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md)** - 🔍 **Technische Analyse**: Fehlerbehebung und Diagnostik (für Entwickler/Admins)
 
