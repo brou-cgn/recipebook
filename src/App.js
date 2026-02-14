@@ -17,7 +17,8 @@ import {
   getCurrentUser, 
   registerUser,
   loginAsGuest,
-  getUsers
+  getUsers,
+  onAuthStateChange
 } from './utils/userManagement';
 import { 
   toggleFavorite,
@@ -54,14 +55,33 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState([]);
 
-  // Check for existing user session on mount
+  // Set up Firebase auth state observer
   useEffect(() => {
-    const user = getCurrentUser();
-    if (user) {
+    const unsubscribe = onAuthStateChange((user) => {
       setCurrentUser(user);
-    }
+      if (user && user.requiresPasswordChange) {
+        setRequiresPasswordChange(true);
+      }
+      setAuthLoading(false);
+    });
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
+
+  // Load all users when current user is authenticated (for admin features)
+  useEffect(() => {
+    if (currentUser) {
+      const loadUsers = async () => {
+        const users = await getUsers();
+        setAllUsers(users);
+      };
+      loadUsers();
+    }
+  }, [currentUser]);
 
   // Apply favicon settings on mount
   useEffect(() => {
@@ -268,10 +288,10 @@ function App() {
   };
 
   // User authentication handlers
-  const handleLogin = (email, password) => {
-    const result = loginUser(email, password);
+  const handleLogin = async (email, password) => {
+    const result = await loginUser(email, password);
     if (result.success) {
-      setCurrentUser(result.user);
+      // User state will be updated by onAuthStateChange observer
       if (result.requiresPasswordChange) {
         setRequiresPasswordChange(true);
       }
@@ -281,21 +301,17 @@ function App() {
 
   const handlePasswordChanged = () => {
     setRequiresPasswordChange(false);
-    // Refresh current user to update the requiresPasswordChange flag
-    const user = getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-    }
+    // User state will be updated by onAuthStateChange observer
   };
 
-  const handleLogout = () => {
-    logoutUser();
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    await logoutUser();
+    // User state will be updated by onAuthStateChange observer
     setRequiresPasswordChange(false);
   };
 
-  const handleRegister = (userData) => {
-    const result = registerUser(userData);
+  const handleRegister = async (userData) => {
+    const result = await registerUser(userData);
     return result;
   };
 
@@ -307,13 +323,23 @@ function App() {
     setAuthView('register');
   };
 
-  const handleGuestLogin = () => {
-    const result = loginAsGuest();
-    if (result.success) {
-      setCurrentUser(result.user);
-    }
+  const handleGuestLogin = async () => {
+    const result = await loginAsGuest();
+    // User state will be updated by onAuthStateChange observer
     return result;
   };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="App">
+        <Header />
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          Laden...
+        </div>
+      </div>
+    );
+  }
 
   // If user is not logged in, show login/register view
   if (!currentUser) {
@@ -360,7 +386,7 @@ function App() {
           onCreateVersion={handleCreateVersion}
           currentUser={currentUser}
           allRecipes={recipes}
-          allUsers={getUsers()}
+          allUsers={allUsers}
         />
       ) : currentView === 'menus' ? (
         // Menu views

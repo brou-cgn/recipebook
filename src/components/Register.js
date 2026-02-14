@@ -11,6 +11,7 @@ function Register({ onRegister, onSwitchToLogin }) {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -19,50 +20,59 @@ function Register({ onRegister, onSwitchToLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setIsLoading(true);
     
-    // Trim all inputs to prevent whitespace issues (especially on mobile)
-    const trimmedPassword = (formData.password || '').trim();
-    const trimmedConfirmPassword = (formData.confirmPassword || '').trim();
-    
-    // Validate passwords match
-    if (trimmedPassword !== trimmedConfirmPassword) {
-      setError('Passwörter stimmen nicht überein.');
-      return;
-    }
-    
-    // Validate password length
-    if (trimmedPassword.length < 6) {
-      setError('Passwort muss mindestens 6 Zeichen lang sein.');
-      return;
-    }
-    
-    const result = onRegister({
-      vorname: (formData.vorname || '').trim(),
-      nachname: (formData.nachname || '').trim(),
-      email: (formData.email || '').trim(),
-      password: trimmedPassword
-    });
-    
-    if (result.success) {
-      setSuccess(result.message);
-      // Reset form
-      setFormData({
-        vorname: '',
-        nachname: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
+    try {
+      // Trim all inputs to prevent whitespace issues (especially on mobile)
+      const trimmedPassword = (formData.password || '').trim();
+      const trimmedConfirmPassword = (formData.confirmPassword || '').trim();
+      
+      // Validate passwords match
+      if (trimmedPassword !== trimmedConfirmPassword) {
+        setError('Passwörter stimmen nicht überein.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validate password length
+      if (trimmedPassword.length < 6) {
+        setError('Passwort muss mindestens 6 Zeichen lang sein.');
+        setIsLoading(false);
+        return;
+      }
+      
+      const result = await onRegister({
+        vorname: (formData.vorname || '').trim(),
+        nachname: (formData.nachname || '').trim(),
+        email: (formData.email || '').trim(),
+        password: trimmedPassword
       });
-      // Automatically switch to login after 2 seconds
-      setTimeout(() => {
-        onSwitchToLogin();
-      }, 2000);
-    } else {
-      setError(result.message);
+      
+      if (result.success) {
+        setSuccess(result.message);
+        // Reset form
+        setFormData({
+          vorname: '',
+          nachname: '',
+          email: '',
+          password: '',
+          confirmPassword: ''
+        });
+        // Automatically switch to login after 2 seconds
+        setTimeout(() => {
+          onSwitchToLogin();
+        }, 2000);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,6 +92,7 @@ function Register({ onRegister, onSwitchToLogin }) {
                 onChange={handleChange}
                 autoComplete="given-name"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="form-group">
@@ -94,6 +105,7 @@ function Register({ onRegister, onSwitchToLogin }) {
                 onChange={handleChange}
                 autoComplete="family-name"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -107,6 +119,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               onChange={handleChange}
               autoComplete="email"
               required
+              disabled={isLoading}
             />
           </div>
           <div className="form-group">
@@ -120,6 +133,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               autoComplete="new-password"
               required
               minLength="6"
+              disabled={isLoading}
             />
           </div>
           <div className="form-group">
@@ -133,11 +147,14 @@ function Register({ onRegister, onSwitchToLogin }) {
               autoComplete="new-password"
               required
               minLength="6"
+              disabled={isLoading}
             />
           </div>
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
-          <button type="submit" className="submit-btn">Registrieren</button>
+          <button type="submit" className="submit-btn" disabled={isLoading}>
+            {isLoading ? 'Registrierung läuft...' : 'Registrieren'}
+          </button>
         </form>
         <div className="register-footer">
           <p>Bereits ein Konto?</p>
@@ -145,6 +162,7 @@ function Register({ onRegister, onSwitchToLogin }) {
             type="button" 
             className="switch-btn"
             onClick={onSwitchToLogin}
+            disabled={isLoading}
           >
             Jetzt anmelden
           </button>
