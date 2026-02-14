@@ -1,4 +1,4 @@
-import { DEFAULT_FAVICON_TEXT, DEFAULT_SLOGAN } from './customLists';
+import { DEFAULT_FAVICON_TEXT, DEFAULT_SLOGAN, getSettings } from './customLists';
 
 /**
  * Update the browser's favicon
@@ -25,28 +25,33 @@ export function updateFavicon(imageBase64) {
 /**
  * Update the page title with the favicon text
  * @param {string} text - Text to display in the title
+ * @param {string} slogan - Slogan to display after the text
  */
-export function updatePageTitle(text) {
-  const slogan = localStorage.getItem('headerSlogan') || DEFAULT_SLOGAN;
+export function updatePageTitle(text, slogan) {
+  const sloganText = slogan || DEFAULT_SLOGAN;
   if (text) {
-    document.title = `${text} - ${slogan}`;
+    document.title = `${text} - ${sloganText}`;
   } else {
-    document.title = `${DEFAULT_FAVICON_TEXT} - ${slogan}`;
+    document.title = `${DEFAULT_FAVICON_TEXT} - ${sloganText}`;
   }
 }
 
 /**
- * Apply favicon settings from localStorage
+ * Apply favicon settings from Firestore
+ * @returns {Promise<void>}
  */
-export function applyFaviconSettings() {
-  const faviconImage = localStorage.getItem('faviconImage');
-  const faviconText = localStorage.getItem('faviconText');
-  
-  if (faviconImage) {
-    updateFavicon(faviconImage);
-  }
-  
-  if (faviconText) {
-    updatePageTitle(faviconText);
+export async function applyFaviconSettings() {
+  try {
+    const settings = await getSettings();
+    
+    if (settings.faviconImage) {
+      updateFavicon(settings.faviconImage);
+    }
+    
+    updatePageTitle(settings.faviconText, settings.headerSlogan);
+  } catch (error) {
+    console.error('Error applying favicon settings:', error);
+    // Apply defaults on error
+    updatePageTitle(DEFAULT_FAVICON_TEXT, DEFAULT_SLOGAN);
   }
 }

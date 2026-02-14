@@ -53,101 +53,225 @@ export const DEFAULT_PORTION_UNITS = [
 export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
+import { db } from '../firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+
+// Cache for settings to avoid repeated Firestore reads
+let settingsCache = null;
+
 /**
- * Get customizable lists from localStorage or return defaults
+ * Get settings from Firestore or return defaults
+ * @returns {Promise<Object>} Promise resolving to settings object
  */
-export function getCustomLists() {
-  const stored = localStorage.getItem('customLists');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      // Ensure portionUnits exists for backward compatibility
-      if (!parsed.portionUnits) {
-        parsed.portionUnits = DEFAULT_PORTION_UNITS;
-      }
-      return parsed;
-    } catch (e) {
-      console.error('Error parsing custom lists:', e);
-    }
+export async function getSettings() {
+  // Return cached settings if available
+  if (settingsCache) {
+    return settingsCache;
   }
   
+  try {
+    const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
+    
+    if (settingsDoc.exists()) {
+      const settings = settingsDoc.data();
+      
+      // Ensure all fields exist for backward compatibility
+      settingsCache = {
+        cuisineTypes: settings.cuisineTypes || DEFAULT_CUISINE_TYPES,
+        mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
+        units: settings.units || DEFAULT_UNITS,
+        portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
+        headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
+        faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
+        faviconImage: settings.faviconImage || null
+      };
+      
+      return settingsCache;
+    }
+    
+    // No settings document exists, return and create defaults
+    const defaultSettings = {
+      cuisineTypes: DEFAULT_CUISINE_TYPES,
+      mealCategories: DEFAULT_MEAL_CATEGORIES,
+      units: DEFAULT_UNITS,
+      portionUnits: DEFAULT_PORTION_UNITS,
+      headerSlogan: DEFAULT_SLOGAN,
+      faviconText: DEFAULT_FAVICON_TEXT,
+      faviconImage: null
+    };
+    
+    // Create the settings document
+    await setDoc(doc(db, 'settings', 'app'), defaultSettings);
+    settingsCache = defaultSettings;
+    
+    return defaultSettings;
+  } catch (error) {
+    console.error('Error getting settings:', error);
+    
+    // Return defaults on error
+    return {
+      cuisineTypes: DEFAULT_CUISINE_TYPES,
+      mealCategories: DEFAULT_MEAL_CATEGORIES,
+      units: DEFAULT_UNITS,
+      portionUnits: DEFAULT_PORTION_UNITS,
+      headerSlogan: DEFAULT_SLOGAN,
+      faviconText: DEFAULT_FAVICON_TEXT,
+      faviconImage: null
+    };
+  }
+}
+
+/**
+ * Get customizable lists from Firestore or return defaults
+ * @returns {Promise<Object>} Promise resolving to custom lists object
+ */
+export async function getCustomLists() {
+  const settings = await getSettings();
+  
   return {
-    cuisineTypes: DEFAULT_CUISINE_TYPES,
-    mealCategories: DEFAULT_MEAL_CATEGORIES,
-    units: DEFAULT_UNITS,
-    portionUnits: DEFAULT_PORTION_UNITS
+    cuisineTypes: settings.cuisineTypes,
+    mealCategories: settings.mealCategories,
+    units: settings.units,
+    portionUnits: settings.portionUnits
   };
 }
 
 /**
- * Save customizable lists to localStorage
+ * Save customizable lists to Firestore
+ * @param {Object} lists - Lists object containing cuisineTypes, mealCategories, units, portionUnits
+ * @returns {Promise<void>}
  */
-export function saveCustomLists(lists) {
-  localStorage.setItem('customLists', JSON.stringify(lists));
+export async function saveCustomLists(lists) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, lists);
+    
+    // Update cache
+    if (settingsCache) {
+      settingsCache = { ...settingsCache, ...lists };
+    }
+  } catch (error) {
+    console.error('Error saving custom lists:', error);
+    throw error;
+  }
 }
 
 /**
  * Reset lists to defaults
+ * @returns {Promise<Object>} Promise resolving to default lists
  */
-export function resetCustomLists() {
+export async function resetCustomLists() {
   const defaultLists = {
     cuisineTypes: DEFAULT_CUISINE_TYPES,
     mealCategories: DEFAULT_MEAL_CATEGORIES,
     units: DEFAULT_UNITS,
     portionUnits: DEFAULT_PORTION_UNITS
   };
-  saveCustomLists(defaultLists);
+  
+  await saveCustomLists(defaultLists);
   return defaultLists;
 }
 
 /**
- * Get the header slogan from localStorage or return default
+ * Get the header slogan from Firestore or return default
+ * @returns {Promise<string>} Promise resolving to header slogan
  */
-export function getHeaderSlogan() {
-  const stored = localStorage.getItem('headerSlogan');
-  return stored || DEFAULT_SLOGAN;
+export async function getHeaderSlogan() {
+  const settings = await getSettings();
+  return settings.headerSlogan;
 }
 
 /**
- * Save the header slogan to localStorage
+ * Save the header slogan to Firestore
+ * @param {string} slogan - Header slogan
+ * @returns {Promise<void>}
  */
-export function saveHeaderSlogan(slogan) {
-  localStorage.setItem('headerSlogan', slogan);
-}
-
-/**
- * Get the favicon image from localStorage
- * @returns {string|null} Base64 encoded image or null
- */
-export function getFaviconImage() {
-  return localStorage.getItem('faviconImage');
-}
-
-/**
- * Save the favicon image to localStorage
- * @param {string} imageBase64 - Base64 encoded image
- */
-export function saveFaviconImage(imageBase64) {
-  if (imageBase64) {
-    localStorage.setItem('faviconImage', imageBase64);
-  } else {
-    localStorage.removeItem('faviconImage');
+export async function saveHeaderSlogan(slogan) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { headerSlogan: slogan });
+    
+    // Update cache
+    if (settingsCache) {
+      settingsCache.headerSlogan = slogan;
+    }
+  } catch (error) {
+    console.error('Error saving header slogan:', error);
+    throw error;
   }
 }
 
 /**
- * Get the favicon text from localStorage or return default
- * @returns {string} Favicon text
+ * Get the favicon image from Firestore
+ * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
  */
-export function getFaviconText() {
-  const stored = localStorage.getItem('faviconText');
-  return stored || DEFAULT_FAVICON_TEXT;
+export async function getFaviconImage() {
+  const settings = await getSettings();
+  return settings.faviconImage;
 }
 
 /**
- * Save the favicon text to localStorage
- * @param {string} text - Favicon text
+ * Save the favicon image to Firestore
+ * @param {string} imageBase64 - Base64 encoded image
+ * @returns {Promise<void>}
  */
-export function saveFaviconText(text) {
-  localStorage.setItem('faviconText', text || DEFAULT_FAVICON_TEXT);
+export async function saveFaviconImage(imageBase64) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    
+    if (imageBase64) {
+      await updateDoc(settingsRef, { faviconImage: imageBase64 });
+      
+      // Update cache
+      if (settingsCache) {
+        settingsCache.faviconImage = imageBase64;
+      }
+    } else {
+      await updateDoc(settingsRef, { faviconImage: null });
+      
+      // Update cache
+      if (settingsCache) {
+        settingsCache.faviconImage = null;
+      }
+    }
+  } catch (error) {
+    console.error('Error saving favicon image:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the favicon text from Firestore or return default
+ * @returns {Promise<string>} Promise resolving to favicon text
+ */
+export async function getFaviconText() {
+  const settings = await getSettings();
+  return settings.faviconText;
+}
+
+/**
+ * Save the favicon text to Firestore
+ * @param {string} text - Favicon text
+ * @returns {Promise<void>}
+ */
+export async function saveFaviconText(text) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { faviconText: text || DEFAULT_FAVICON_TEXT });
+    
+    // Update cache
+    if (settingsCache) {
+      settingsCache.faviconText = text || DEFAULT_FAVICON_TEXT;
+    }
+  } catch (error) {
+    console.error('Error saving favicon text:', error);
+    throw error;
+  }
+}
+
+/**
+ * Clear the settings cache (useful when settings are updated)
+ */
+export function clearSettingsCache() {
+  settingsCache = null;
 }
