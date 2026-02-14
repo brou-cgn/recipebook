@@ -4,6 +4,7 @@ import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64 } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
+import { getImageForCategories } from '../utils/categoryImages';
 import RecipeImportModal from './RecipeImportModal';
 
 function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
@@ -153,10 +154,20 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       return;
     }
 
+    // Auto-populate title image from category images if creating new recipe without title image
+    let finalImage = image.trim();
+    if (!recipe && !finalImage && speisekategorie.length > 0) {
+      // New recipe without title image - try to get image from category
+      const categoryImage = getImageForCategories(speisekategorie);
+      if (categoryImage) {
+        finalImage = categoryImage;
+      }
+    }
+
     const recipeData = {
       id: isCreatingVersion ? undefined : recipe?.id,
       title: title.trim(),
-      image: image.trim(),
+      image: finalImage,
       portionen: parseInt(portionen) || 4,
       portionUnitId: portionUnitId,
       kulinarik: kulinarik,

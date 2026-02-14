@@ -34,6 +34,10 @@ jest.mock('../utils/userManagement', () => ({
   }
 }));
 
+jest.mock('../utils/categoryImages', () => ({
+  getImageForCategories: jest.fn(),
+}));
+
 describe('RecipeForm - Author Field', () => {
   const mockOnSave = jest.fn();
   const mockOnCancel = jest.fn();
@@ -501,6 +505,158 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         speisekategorie: ['Dessert'],
+      })
+    );
+  });
+});
+
+describe('RecipeForm - Category Image Integration', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Reset the mock implementation
+    const { getImageForCategories } = require('../utils/categoryImages');
+    getImageForCategories.mockReset();
+  });
+
+  test('uses category image as title image for new recipe without image', () => {
+    const { getImageForCategories } = require('../utils/categoryImages');
+    getImageForCategories.mockReturnValue('data:image/png;base64,category-image');
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Fill in required title
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Select a meal category
+    const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    const mainCourseOption = screen.getByRole('option', { name: 'Main Course' });
+    mainCourseOption.selected = true;
+    fireEvent.change(speisekategorieField);
+
+    // Submit form without uploading an image
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Check that getImageForCategories was called with the selected category
+    expect(getImageForCategories).toHaveBeenCalledWith(['Main Course']);
+
+    // Check that onSave was called with the category image
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Recipe',
+        image: 'data:image/png;base64,category-image',
+        speisekategorie: ['Main Course'],
+      })
+    );
+  });
+
+  test('does not use category image when recipe already has title image', () => {
+    const { getImageForCategories } = require('../utils/categoryImages');
+    getImageForCategories.mockReturnValue('data:image/png;base64,category-image');
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      kulinarik: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Dessert'],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      image: 'data:image/png;base64,existing-image',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Submit form without changing the image
+    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+
+    // Category image should NOT be used - existing image should be preserved
+    expect(getImageForCategories).not.toHaveBeenCalled();
+
+    // Check that onSave was called with the existing image
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'recipe-1',
+        image: 'data:image/png;base64,existing-image',
+      })
+    );
+  });
+
+  test('does not use category image when no categories selected', () => {
+    const { getImageForCategories } = require('../utils/categoryImages');
+    getImageForCategories.mockReturnValue(null);
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Fill in required title
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Submit form without selecting categories
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Check that onSave was called with empty image
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Recipe',
+        image: '',
+        speisekategorie: [],
       })
     );
   });
