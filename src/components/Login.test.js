@@ -56,6 +56,24 @@ describe('Login Component', () => {
     expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', 'password123');
   });
 
+  test('trims whitespace from email and password before login', () => {
+    mockOnLogin.mockReturnValue({ success: true });
+
+    render(<Login onLogin={mockOnLogin} onSwitchToRegister={mockOnSwitchToRegister} />);
+    
+    const emailInput = screen.getByLabelText(/E-Mail-Adresse/i);
+    const passwordInput = screen.getByLabelText(/Passwort/i);
+    const submitButton = screen.getByRole('button', { name: /Anmelden/i });
+
+    // Test with leading and trailing whitespace
+    fireEvent.change(emailInput, { target: { value: '  test@example.com  ' } });
+    fireEvent.change(passwordInput, { target: { value: '  password123  ' } });
+    fireEvent.click(submitButton);
+
+    // Should be called with trimmed values
+    expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+  });
+
   test('switches to register view when register button is clicked', () => {
     render(<Login onLogin={mockOnLogin} onSwitchToRegister={mockOnSwitchToRegister} />);
     

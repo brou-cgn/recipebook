@@ -10,7 +10,8 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin }) {
     e.preventDefault();
     setError('');
     
-    const result = onLogin(email, password);
+    // Trim email and password to prevent whitespace issues (especially on mobile)
+    const result = onLogin((email || '').trim(), (password || '').trim());
     if (!result.success) {
       setError(result.message);
     }
@@ -34,6 +35,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin }) {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </div>
@@ -44,6 +46,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin }) {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
           </div>

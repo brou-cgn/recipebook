@@ -24,23 +24,27 @@ function Register({ onRegister, onSwitchToLogin }) {
     setError('');
     setSuccess('');
     
+    // Trim all inputs to prevent whitespace issues (especially on mobile)
+    const trimmedPassword = (formData.password || '').trim();
+    const trimmedConfirmPassword = (formData.confirmPassword || '').trim();
+    
     // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
+    if (trimmedPassword !== trimmedConfirmPassword) {
       setError('Passwörter stimmen nicht überein.');
       return;
     }
     
     // Validate password length
-    if (formData.password.length < 6) {
+    if (trimmedPassword.length < 6) {
       setError('Passwort muss mindestens 6 Zeichen lang sein.');
       return;
     }
     
     const result = onRegister({
-      vorname: formData.vorname,
-      nachname: formData.nachname,
-      email: formData.email,
-      password: formData.password
+      vorname: (formData.vorname || '').trim(),
+      nachname: (formData.nachname || '').trim(),
+      email: (formData.email || '').trim(),
+      password: trimmedPassword
     });
     
     if (result.success) {
@@ -76,6 +80,7 @@ function Register({ onRegister, onSwitchToLogin }) {
                 name="vorname"
                 value={formData.vorname}
                 onChange={handleChange}
+                autoComplete="given-name"
                 required
               />
             </div>
@@ -87,6 +92,7 @@ function Register({ onRegister, onSwitchToLogin }) {
                 name="nachname"
                 value={formData.nachname}
                 onChange={handleChange}
+                autoComplete="family-name"
                 required
               />
             </div>
@@ -99,6 +105,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              autoComplete="email"
               required
             />
           </div>
@@ -110,6 +117,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               name="password"
               value={formData.password}
               onChange={handleChange}
+              autoComplete="new-password"
               required
               minLength="6"
             />
@@ -122,6 +130,7 @@ function Register({ onRegister, onSwitchToLogin }) {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              autoComplete="new-password"
               required
               minLength="6"
             />

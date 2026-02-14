@@ -131,4 +131,27 @@ describe('Register Component', () => {
 
     expect(mockOnSwitchToLogin).toHaveBeenCalled();
   });
+
+  test('trims whitespace from all inputs before registration', () => {
+    mockOnRegister.mockReturnValue({ success: true, message: 'Registrierung erfolgreich!' });
+
+    render(<Register onRegister={mockOnRegister} onSwitchToLogin={mockOnSwitchToLogin} />);
+    
+    // Test with leading and trailing whitespace
+    fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: '  Max  ' } });
+    fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: '  Mustermann  ' } });
+    fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: '  max@example.com  ' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: '  password123  ' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: '  password123  ' } });
+    
+    fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
+
+    // Should be called with trimmed values
+    expect(mockOnRegister).toHaveBeenCalledWith({
+      vorname: 'Max',
+      nachname: 'Mustermann',
+      email: 'max@example.com',
+      password: 'password123'
+    });
+  });
 });
