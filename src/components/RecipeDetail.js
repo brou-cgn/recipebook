@@ -281,20 +281,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             ← Zurück
           </button>
           
-          <button 
-            className={`cooking-mode-button ${cookingMode ? 'active' : ''}`}
-            onClick={toggleCookingMode}
-            title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren - Bildschirm bleibt an'}
-          >
-            <ChefHatIcon 
-              color={cookingMode ? 'white' : '#4CAF50'} 
-              size={20} 
-            />
-            <span className="cooking-mode-button-text">
-              {cookingMode ? 'Aktiv' : 'Kochmodus'}
-            </span>
-          </button>
-          
           <div className="action-buttons">
             {onToggleFavorite && (
               <button 
