@@ -314,4 +314,41 @@ Potential improvements:
 - [ ] Batch processing multiple images
 - [ ] Custom preprocessing options
 - [ ] OCR result caching
-- [ ] Text extraction optimization for recipe formats
+- [x] Text extraction optimization for recipe formats (see `ocrParser.js`)
+
+## Recipe Parser Integration
+
+The OCR service integrates with the recipe parser to convert recognized text into structured recipe data:
+
+```javascript
+import { recognizeText } from './utils/ocrService';
+import { parseOcrText } from './utils/ocrParser';
+import { parseRecipeData } from './utils/recipeImport';
+
+async function extractRecipeFromImage(imageBase64, language = 'eng') {
+  // Step 1: Perform OCR to extract text
+  const ocrResult = await recognizeText(imageBase64, language);
+  
+  // Step 2: Parse OCR text into structured recipe data
+  const lang = language === 'deu' ? 'de' : 'en';
+  const recipeData = parseOcrText(ocrResult.text, lang);
+  
+  // Step 3: Validate and normalize recipe data
+  const validatedRecipe = parseRecipeData(recipeData);
+  
+  return {
+    recipe: validatedRecipe,
+    confidence: ocrResult.confidence,
+    rawText: ocrResult.text
+  };
+}
+
+// Usage example:
+const result = await extractRecipeFromImage(imageBase64, 'deu');
+console.log('Recipe:', result.recipe);
+console.log('Title:', result.recipe.title);
+console.log('Ingredients:', result.recipe.ingredients);
+console.log('Steps:', result.recipe.steps);
+```
+
+For more details on the recipe parser, see the `ocrParser.js` documentation.
