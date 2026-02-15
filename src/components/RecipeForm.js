@@ -73,7 +73,11 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   }, [recipe, currentUser, isCreatingVersion]);
 
   useEffect(() => {
-    setCustomLists(getCustomLists());
+    const loadCustomLists = async () => {
+      const lists = await getCustomLists();
+      setCustomLists(lists);
+    };
+    loadCustomLists();
   }, []);
 
   useEffect(() => {

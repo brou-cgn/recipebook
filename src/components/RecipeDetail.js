@@ -12,9 +12,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [portionUnits, setPortionUnits] = useState([]);
 
   useEffect(() => {
-    const { getCustomLists } = require('../utils/customLists');
-    const lists = getCustomLists();
-    setPortionUnits(lists.portionUnits || []);
+    const loadPortionUnits = async () => {
+      const { getCustomLists } = require('../utils/customLists');
+      const lists = await getCustomLists();
+      setPortionUnits(lists.portionUnits || []);
+    };
+    loadPortionUnits();
   }, []);
 
   // Get all versions for this recipe

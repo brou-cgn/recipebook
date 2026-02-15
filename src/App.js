@@ -97,7 +97,10 @@ function App() {
 
   // Apply favicon settings on mount
   useEffect(() => {
-    applyFaviconSettings();
+    const loadFavicon = async () => {
+      await applyFaviconSettings();
+    };
+    loadFavicon();
   }, []);
 
   // Set up real-time listener for recipes from Firestore

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Header.css';
 import { getCustomLists, getHeaderSlogan } from '../utils/customLists';
 
@@ -12,8 +12,18 @@ function Header({
   onLogout,
   onUserManagement
 }) {
-  const customLists = getCustomLists();
-  const headerSlogan = getHeaderSlogan();
+  const [customLists, setCustomLists] = useState({ mealCategories: [] });
+  const [headerSlogan, setHeaderSlogan] = useState('');
+  
+  useEffect(() => {
+    const loadHeaderData = async () => {
+      const lists = await getCustomLists();
+      const slogan = await getHeaderSlogan();
+      setCustomLists(lists);
+      setHeaderSlogan(slogan);
+    };
+    loadHeaderData();
+  }, []);
   
   return (
     <header className="header">
