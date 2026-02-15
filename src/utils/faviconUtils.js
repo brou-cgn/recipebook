@@ -1,12 +1,12 @@
 import { DEFAULT_FAVICON_TEXT, DEFAULT_SLOGAN, getSettings } from './customLists';
 
 /**
- * Update the browser's favicon
+ * Update the browser's favicon and apple-touch-icon
  * @param {string|null} imageBase64 - Base64 encoded image or null to use default
  */
 export function updateFavicon(imageBase64) {
   // Find or create the favicon link element
-  let link = document.querySelector("link[rel*='icon']");
+  let link = document.querySelector("link[rel='icon']");
   
   if (!link) {
     link = document.createElement('link');
@@ -14,11 +14,22 @@ export function updateFavicon(imageBase64) {
     document.head.appendChild(link);
   }
   
+  // Find or create the apple-touch-icon link element
+  let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+  
+  if (!appleLink) {
+    appleLink = document.createElement('link');
+    appleLink.rel = 'apple-touch-icon';
+    document.head.appendChild(appleLink);
+  }
+  
   if (imageBase64) {
     link.href = imageBase64;
+    appleLink.href = imageBase64;
   } else {
-    // Reset to default favicon
+    // Reset to default icons
     link.href = `${process.env.PUBLIC_URL}/favicon.ico`;
+    appleLink.href = `${process.env.PUBLIC_URL}/logo192.png`;
   }
 }
 
@@ -44,9 +55,8 @@ export async function applyFaviconSettings() {
   try {
     const settings = await getSettings();
     
-    if (settings.faviconImage) {
-      updateFavicon(settings.faviconImage);
-    }
+    // Always call updateFavicon to ensure proper fallback to defaults
+    updateFavicon(settings.faviconImage);
     
     updatePageTitle(settings.faviconText, settings.headerSlogan);
   } catch (error) {
