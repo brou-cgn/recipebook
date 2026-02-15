@@ -122,7 +122,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         newIngredients[index] = createRecipeIngredient(recipeId, selectedRecipe.title);
       }
     } else {
-      // Clear selection - revert to empty text
+      // Clear selection or no recipe selected - revert to empty text ingredient
+      // Empty string is the base format for text ingredients (backward compatible)
       newIngredients[index] = '';
     }
     setIngredients(newIngredients);

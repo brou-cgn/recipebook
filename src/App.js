@@ -146,9 +146,11 @@ function App() {
     if (fromRecipe && selectedRecipe) {
       setRecipeNavigationStack([...recipeNavigationStack, selectedRecipe]);
     } else if (!fromRecipe) {
-      // Clear stack when coming from list/menu
+      // Clear stack when coming from list/menu (not from another recipe)
       setRecipeNavigationStack([]);
     }
+    // Note: If fromRecipe is true but selectedRecipe is null, we don't modify the stack
+    // This shouldn't happen in normal usage but is handled gracefully
     setSelectedRecipe(recipe);
   };
 

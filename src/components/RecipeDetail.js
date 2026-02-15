@@ -200,7 +200,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   const scaleIngredient = (ingredient) => {
     // Recipe ingredients cannot be scaled - they represent whole recipes
-    // and must be prepared separately according to their own portions
+    // and must be prepared separately according to their own portions.
+    // Users should prepare the linked recipe using its own portion settings,
+    // then use the prepared result as an ingredient in this recipe.
     if (isRecipeIngredient(ingredient)) {
       return getIngredientDisplayValue(ingredient, allRecipes);
     }
