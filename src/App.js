@@ -53,7 +53,6 @@ function matchesCategoryFilter(recipe, categoryFilter) {
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
@@ -141,31 +140,14 @@ function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleSelectRecipe = (recipe, fromRecipe = false) => {
-    // If we're navigating from another recipe, push current to stack
-    if (fromRecipe && selectedRecipe) {
-      setRecipeNavigationStack([...recipeNavigationStack, selectedRecipe]);
-    } else if (!fromRecipe) {
-      // Clear stack when coming from list/menu (not from another recipe)
-      setRecipeNavigationStack([]);
-    }
-    // Note: If fromRecipe is true but selectedRecipe is null, we don't modify the stack
-    // This shouldn't happen in normal usage but is handled gracefully
+  const handleSelectRecipe = (recipe) => {
     setSelectedRecipe(recipe);
   };
 
   const handleBackFromRecipeDetail = () => {
-    // Check if we have a navigation stack (came from another recipe)
-    if (recipeNavigationStack.length > 0) {
-      // Pop the last recipe from stack and go back to it
-      const previousRecipe = recipeNavigationStack[recipeNavigationStack.length - 1];
-      setRecipeNavigationStack(recipeNavigationStack.slice(0, -1));
-      setSelectedRecipe(previousRecipe);
-    } else {
-      // Clear selected recipe to go back to either MenuDetail or RecipeList
-      setSelectedRecipe(null);
-      // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
-    }
+    // Clear selected recipe to go back to either MenuDetail or RecipeList
+    setSelectedRecipe(null);
+    // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
   };
 
   const handleAddRecipe = () => {
@@ -454,7 +436,6 @@ function App() {
           onDelete={handleDeleteRecipe}
           onToggleFavorite={handleToggleFavorite}
           onCreateVersion={handleCreateVersion}
-          onSelectRecipe={handleSelectRecipe}
           currentUser={currentUser}
           allRecipes={recipes}
           allUsers={allUsers}
