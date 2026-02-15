@@ -13,18 +13,21 @@ jest.mock('../utils/imageUtils', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getCustomLists: () => ({
+  getCustomLists: () => Promise.resolve({
     cuisineTypes: ['Italian', 'Thai', 'Chinese'],
     mealCategories: ['Appetizer', 'Main Course', 'Dessert'],
     units: [],
+    portionUnits: [
+      { id: 'portion', singular: 'Portion', plural: 'Portionen' }
+    ]
   }),
 }));
 
 jest.mock('../utils/userManagement', () => ({
-  getUsers: () => [
+  getUsers: () => Promise.resolve([
     { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true, role: 'admin' },
     { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false, role: 'edit' },
-  ],
+  ]),
   ROLES: {
     ADMIN: 'admin',
     EDIT: 'edit',

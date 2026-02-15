@@ -28,8 +28,9 @@ function UserManagement({ onBack, currentUser }) {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    setUsers(getUsers());
+  const loadUsers = async () => {
+    const users = await getUsers();
+    setUsers(users);
   };
 
   const handleRoleChange = (userId, newRole) => {

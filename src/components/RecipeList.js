@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -6,6 +6,17 @@ import { isRecipeFavorite, hasAnyFavoriteInGroup } from '../utils/userFavorites'
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  
+  // Load all users once on mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      const users = await getUsers();
+      setAllUsers(users);
+    };
+    loadUsers();
+  }, []);
+  
   // Generate dynamic heading based on filters
   const getHeading = () => {
     const prefix = showFavoritesOnly ? 'Meine ' : '';
@@ -30,9 +41,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     const topRecipe = sortedVersions[0] || group.primaryRecipe;
     onSelectRecipe(topRecipe);
   };
-
-  // Get all users once to avoid repeated calls
-  const allUsers = getUsers();
 
   // Helper function to get author name
   const getAuthorName = (authorId) => {

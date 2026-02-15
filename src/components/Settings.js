@@ -38,11 +38,19 @@ function Settings({ onBack, currentUser }) {
 
   // Cleanup timeout on unmount
   useEffect(() => {
-    setLists(getCustomLists());
-    setHeaderSlogan(getHeaderSlogan());
-    setCategoryImages(getCategoryImages());
-    setFaviconImage(getFaviconImage());
-    setFaviconText(getFaviconText());
+    const loadSettings = async () => {
+      const lists = await getCustomLists();
+      const slogan = await getHeaderSlogan();
+      const faviconImg = await getFaviconImage();
+      const faviconTxt = await getFaviconText();
+      
+      setLists(lists);
+      setHeaderSlogan(slogan);
+      setCategoryImages(getCategoryImages());
+      setFaviconImage(faviconImg);
+      setFaviconText(faviconTxt);
+    };
+    loadSettings();
   }, []);
 
   const handleSave = () => {
