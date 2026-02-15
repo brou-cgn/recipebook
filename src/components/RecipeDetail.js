@@ -3,6 +3,7 @@ import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
+import ChefHatIcon from './icons/ChefHatIcon';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -285,7 +286,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             onClick={toggleCookingMode}
             title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren - Bildschirm bleibt an'}
           >
-            {cookingMode ? '👨‍🍳 Aktiv' : '👨‍🍳 Kochmodus'}
+            <ChefHatIcon 
+              color={cookingMode ? 'white' : '#4CAF50'} 
+              size={20} 
+            />
+            <span className="cooking-mode-button-text">
+              {cookingMode ? 'Aktiv' : 'Kochmodus'}
+            </span>
           </button>
           
           <div className="action-buttons">
@@ -328,7 +335,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   onClick={toggleCookingMode}
                   title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
                 >
-                  🥄
+                  <ChefHatIcon 
+                    color={cookingMode ? 'white' : '#4CAF50'} 
+                    size={24} 
+                  />
                 </button>
                 <button 
                   className="overlay-back-button"

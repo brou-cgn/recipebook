@@ -83,6 +83,9 @@
   transition: all 0.3s ease;
   white-space: nowrap;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .cooking-mode-button:hover {
