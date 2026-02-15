@@ -1,21 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './MenuDetail.css';
-import { isRecipeFavorite } from '../utils/userFavorites';
-import { isMenuFavorite } from '../utils/menuFavorites';
+import { getUserFavorites } from '../utils/userFavorites';
+import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { groupRecipesBySections } from '../utils/menuSections';
 
 function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser }) {
+  const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
+
+  // Load favorite IDs when user changes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const [menuFavorites, recipeFavorites] = await Promise.all([
+          getUserMenuFavorites(currentUser.id),
+          getUserFavorites(currentUser.id)
+        ]);
+        setFavoriteMenuIds(menuFavorites);
+        setFavoriteRecipeIds(recipeFavorites);
+      } else {
+        setFavoriteMenuIds([]);
+        setFavoriteRecipeIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
       onDelete(menu.id);
     }
   };
 
-  const handleToggleFavorite = () => {
-    onToggleMenuFavorite(menu.id);
-  };
+  // Derive favorite status from favoriteMenuIds
+  const isFavorite = favoriteMenuIds.includes(menu?.id);
 
-  const isFavorite = isMenuFavorite(currentUser?.id, menu.id);
+  const handleToggleFavorite = async () => {
+    await onToggleMenuFavorite(menu.id);
+    // Update local state immediately for responsive UI
+    if (isFavorite) {
+      setFavoriteMenuIds(favoriteMenuIds.filter(id => id !== menu.id));
+    } else {
+      setFavoriteMenuIds([...favoriteMenuIds, menu.id]);
+    }
+  };
 
   // Get recipes grouped by sections
   let recipeSections = [];
@@ -86,7 +113,7 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
             ) : (
               <div className="recipes-grid">
                 {section.recipes.map((recipe) => {
-                  const isRecipeFav = isRecipeFavorite(currentUser?.id, recipe.id);
+                  const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
                   return (
                     <div
                       key={recipe.id}

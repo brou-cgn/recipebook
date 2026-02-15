@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
-import { isRecipeFavorite, hasAnyFavoriteInGroup } from '../utils/userFavorites';
+import { getUserFavorites } from '../utils/userFavorites';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   
   // Load all users once on mount
   useEffect(() => {
@@ -16,6 +17,19 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
     loadUsers();
   }, []);
+
+  // Load favorite IDs when user changes or recipes change
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const favorites = await getUserFavorites(currentUser.id);
+        setFavoriteIds(favorites);
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
   
   // Generate dynamic heading based on filters
   const getHeading = () => {
@@ -31,13 +45,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
   // Filter groups based on favorites if enabled
   const recipeGroups = showFavoritesOnly
-    ? allRecipeGroups.filter(group => hasAnyFavoriteInGroup(currentUser?.id, group.allRecipes))
+    ? allRecipeGroups.filter(group => group.allRecipes.some(r => favoriteIds.includes(r.id)))
     : allRecipeGroups;
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
     // This ensures consistency between the overview and detail view
-    const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, isRecipeFavorite, recipes);
+    const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
     const topRecipe = sortedVersions[0] || group.primaryRecipe;
     onSelectRecipe(topRecipe);
   };
@@ -83,9 +97,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         <div className="recipe-grid">
           {recipeGroups.map(group => {
             // Sort versions to get the one that should be displayed first
-            const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, isRecipeFavorite, recipes);
+            const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
             const recipe = sortedVersions[0] || group.primaryRecipe;
-            const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+            const isFavorite = favoriteIds.includes(recipe.id);
             const authorName = getAuthorName(recipe.authorId);
             return (
               <div

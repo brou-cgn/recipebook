@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
-import { isRecipeFavorite } from '../utils/userFavorites';
+import { getUserFavorites } from '../utils/userFavorites';
 
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [] }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
+  const [favoriteIds, setFavoriteIds] = useState([]);
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
@@ -20,24 +21,40 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     loadPortionUnits();
   }, []);
 
-  // Get all versions for this recipe
-  const parentRecipe = getParentRecipe(allRecipes, selectedRecipe) || (!isRecipeVersion(selectedRecipe) ? selectedRecipe : null);
-  const unsortedVersions = parentRecipe ? [parentRecipe, ...getRecipeVersions(allRecipes, parentRecipe.id)] : [selectedRecipe];
-  
-  // Sort versions according to priority: favorite > own > version number
-  const allVersions = sortRecipeVersions(unsortedVersions, currentUser?.id, isRecipeFavorite, allRecipes);
-  const hasMultipleVersions = allVersions.length > 1;
+  // Load favorite IDs when user changes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const favorites = await getUserFavorites(currentUser.id);
+        setFavoriteIds(favorites);
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
 
   // Update selected recipe when initial recipe changes
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
   }, [initialRecipe]);
 
+  // Get all versions for this recipe
+  const parentRecipe = getParentRecipe(allRecipes, selectedRecipe) || (!isRecipeVersion(selectedRecipe) ? selectedRecipe : null);
+  const unsortedVersions = parentRecipe ? [parentRecipe, ...getRecipeVersions(allRecipes, parentRecipe.id)] : [selectedRecipe];
+  
+  // Sort versions according to priority: favorite > own > version number
+  const allVersions = sortRecipeVersions(unsortedVersions, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), allRecipes);
+  const hasMultipleVersions = allVersions.length > 1;
+
   const recipe = selectedRecipe;
+  
+  // Derive favorite status from favoriteIds
+  const isFavorite = favoriteIds.includes(recipe?.id);
+
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const userCanDelete = canDeleteRecipe(currentUser, recipe);
-  const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -130,7 +147,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
           {onToggleFavorite && (
             <button 
               className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
-              onClick={() => onToggleFavorite(recipe.id)}
+              onClick={async () => {
+                await onToggleFavorite(recipe.id);
+                // Update local state immediately for responsive UI
+                if (isFavorite) {
+                  setFavoriteIds(favoriteIds.filter(id => id !== recipe.id));
+                } else {
+                  setFavoriteIds([...favoriteIds, recipe.id]);
+                }
+              }}
               title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
             >
               {isFavorite ? '★' : '☆'}

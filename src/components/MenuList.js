@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './MenuList.css';
-import { isMenuFavorite } from '../utils/menuFavorites';
+import { getUserMenuFavorites } from '../utils/menuFavorites';
 
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+
+  // Load favorite IDs when user changes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const favorites = await getUserMenuFavorites(currentUser.id);
+        setFavoriteIds(favorites);
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
 
   const getRecipeCount = (menu) => {
     return menu.recipeIds?.length || 0;
@@ -18,7 +32,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     
     // Filter favorites if enabled
     if (showFavoritesOnly) {
-      return isMenuFavorite(currentUser?.id, menu.id);
+      return favoriteIds.includes(menu.id);
     }
     
     return true;
@@ -54,7 +68,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
       ) : (
         <div className="menu-grid">
           {filteredMenus.map(menu => {
-            const isFavorite = isMenuFavorite(currentUser?.id, menu.id);
+            const isFavorite = favoriteIds.includes(menu.id);
             return (
               <div
                 key={menu.id}

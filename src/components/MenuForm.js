@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './MenuForm.css';
-import { isRecipeFavorite } from '../utils/userFavorites';
+import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 
@@ -13,6 +13,20 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [newSectionName, setNewSectionName] = useState('');
   const [showSectionInput, setShowSectionInput] = useState(false);
   const [searchQueries, setSearchQueries] = useState({});
+  const [favoriteIds, setFavoriteIds] = useState([]);
+
+  // Load favorite IDs when user changes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const favorites = await getUserFavorites(currentUser.id);
+        setFavoriteIds(favorites);
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     // Load available section names
@@ -321,7 +335,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                         {section.recipeIds.map(recipeId => {
                           const recipe = recipes.find(r => r.id === recipeId);
                           if (!recipe) return null;
-                          const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                          const isFavorite = favoriteIds.includes(recipe.id);
                           return (
                             <div key={recipe.id} className="selected-recipe-item">
                               <span className="recipe-name">
@@ -361,7 +375,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                               return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
                             }
                             return filteredRecipes.slice(0, 10).map(recipe => {
-                              const isFavorite = isRecipeFavorite(currentUser?.id, recipe.id);
+                              const isFavorite = favoriteIds.includes(recipe.id);
                               return (
                                 <div
                                   key={recipe.id}
