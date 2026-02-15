@@ -26,10 +26,10 @@ jest.mock('../utils/recipeVersioning', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getCustomLists: () => ({
+  getCustomLists: () => Promise.resolve({
     portionUnits: [
-      { id: 1, singular: 'Portion', plural: 'Portionen' },
-      { id: 2, singular: 'Menge', plural: 'Mengen' },
+      { id: 'portion', singular: 'Portion', plural: 'Portionen' },
+      { id: 'serving', singular: 'Menge', plural: 'Mengen' },
     ],
     cuisineTypes: [],
     mealCategories: [],

@@ -3,6 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeList from './RecipeList';
 import * as userFavorites from '../utils/userFavorites';
 
+// Mock the user management utility
+jest.mock('../utils/userManagement', () => ({
+  canEditRecipes: jest.fn(() => true),
+  getUsers: () => Promise.resolve([]),
+}));
+
 const mockRecipes = [
   {
     id: '1',
