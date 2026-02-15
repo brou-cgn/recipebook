@@ -221,6 +221,90 @@
   transform: translateY(-1px);
 }
 
+/* Search Styles */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.search-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: scale(1.05);
+}
+
+.search-input-container {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.5rem);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.search-input {
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  outline: none;
+  width: 250px;
+  background: transparent;
+  color: #333;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-clear-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: #666;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.search-clear-btn:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.05);
+}
+
 /* Hamburger Menu Styles */
 .hamburger-menu-container {
   position: relative;
@@ -395,6 +479,10 @@
     left: auto;
     min-width: 280px;
   }
+
+  .search-input {
+    width: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -418,5 +506,16 @@
 
   .hamburger-line {
     width: 20px;
+  }
+
+  .search-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .search-input {
+    width: 180px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
   }
 }

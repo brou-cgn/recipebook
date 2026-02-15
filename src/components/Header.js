@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Header.css';
 import { getHeaderSlogan } from '../utils/customLists';
+import SearchIcon from './icons/SearchIcon';
 
 function Header({ 
   onSettingsClick, 
@@ -11,11 +12,15 @@ function Header({
   currentUser,
   onLogout,
   onUserManagement,
-  visible = true
+  visible = true,
+  onSearchChange
 }) {
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const menuRef = useRef(null);
+  const searchRef = useRef(null);
   
   useEffect(() => {
     const loadHeaderData = async () => {
@@ -31,19 +36,48 @@ function Header({
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchOpen(false);
+      }
     };
 
-    if (menuOpen) {
+    if (menuOpen || searchOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [menuOpen]);
+  }, [menuOpen, searchOpen]);
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
+  };
+
+  const toggleSearch = () => {
+    setSearchOpen(!searchOpen);
+    if (!searchOpen) {
+      // Focus the search input when opening (delay allows animation to complete)
+      const SEARCH_FOCUS_DELAY = 100;
+      setTimeout(() => {
+        searchRef.current?.querySelector('input')?.focus();
+      }, SEARCH_FOCUS_DELAY);
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchTerm('');
+    if (onSearchChange) {
+      onSearchChange('');
+    }
   };
 
   const handleViewChangeInternal = (view) => {
@@ -73,8 +107,39 @@ function Header({
               Einstellungen
             </button>
           )}
-          {currentUser && (
-            <div className="hamburger-menu-container" ref={menuRef}>
+          {currentUser && currentView === 'recipes' && (
+            <>
+              <div className="search-container" ref={searchRef}>
+                <button 
+                  className="search-btn" 
+                  onClick={toggleSearch}
+                  aria-label="Suche"
+                  title="Suche"
+                >
+                  <SearchIcon color="white" size={20} />
+                </button>
+                {searchOpen && (
+                  <div className="search-input-container">
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Rezepte durchsuchen..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                    />
+                    {searchTerm && (
+                      <button 
+                        className="search-clear-btn"
+                        onClick={handleSearchClear}
+                        aria-label="Suche löschen"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="hamburger-menu-container" ref={menuRef}>
               <button 
                 className="hamburger-btn" 
                 onClick={toggleMenu}
@@ -131,6 +196,7 @@ function Header({
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
       </div>

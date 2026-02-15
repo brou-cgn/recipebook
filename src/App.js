@@ -70,6 +70,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Set up Firebase auth state observer
   useEffect(() => {
@@ -374,6 +375,10 @@ function App() {
     setHeaderVisible(visible);
   };
 
+  const handleSearchChange = (term) => {
+    setSearchTerm(term);
+  };
+
   // Show loading state while checking auth
   if (authLoading) {
     return (
@@ -418,6 +423,7 @@ function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         visible={headerVisible}
+        onSearchChange={handleSearchChange}
       />
       {isSettingsOpen ? (
         <Settings onBack={handleCloseSettings} currentUser={currentUser} />
@@ -485,6 +491,7 @@ function App() {
             categoryFilter={categoryFilter}
             onCategoryFilterChange={handleCategoryFilterChange}
             currentUser={currentUser}
+            searchTerm={searchTerm}
           />
         )
       )}
