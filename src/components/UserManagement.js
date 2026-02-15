@@ -40,7 +40,7 @@ function UserManagement({ onBack, currentUser }) {
     const result = await updateUserRole(userId, newRole);
     
     if (result.success) {
-      loadUsers();
+      await loadUsers();
       setMessage({ text: result.message, type: 'success' });
       setRoleEditUser(null);
       setSelectedRole('');
@@ -66,7 +66,7 @@ function UserManagement({ onBack, currentUser }) {
     const result = await deleteUser(userId);
     
     if (result.success) {
-      loadUsers();
+      await loadUsers();
       setMessage({ text: result.message, type: 'success' });
       setDeleteConfirmUser(null);
     } else {
@@ -94,7 +94,7 @@ function UserManagement({ onBack, currentUser }) {
     const result = await updateUserName(editingUser.id, editForm.vorname, editForm.nachname);
     
     if (result.success) {
-      loadUsers();
+      await loadUsers();
       setMessage({ text: result.message, type: 'success' });
       setEditingUser(null);
       setEditForm({ vorname: '', nachname: '' });
