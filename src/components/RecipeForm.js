@@ -518,7 +518,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
                       >
                         <option value="">-- Rezept auswählen --</option>
                         {allRecipes
-                          .filter(r => !recipe || r.id !== recipe.id) // Don't allow linking to self
+                          .filter(r => !recipe || r.id !== recipe.id) // Prevent linking to self
                           .map((r) => (
                             <option key={r.id} value={r.id}>
                               {r.title}
