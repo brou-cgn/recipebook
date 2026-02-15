@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
-import { isRecipeFavorite, hasAnyFavoriteInGroup, getUserFavorites } from '../utils/userFavorites';
+import { getUserFavorites } from '../utils/userFavorites';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
