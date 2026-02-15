@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [] }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [cookingMode, setCookingMode] = useState(false);
+  const wakeLockRef = useRef(null);
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
@@ -38,6 +40,104 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
   }, [initialRecipe]);
+
+  // Mobile header visibility: hide header on mount, show on scroll up
+  useEffect(() => {
+    if (!onHeaderVisibilityChange) return;
+
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          
+          // Show header when scrolling up or at top
+          if (currentScrollY < lastScrollY || currentScrollY < 50) {
+            onHeaderVisibilityChange(true);
+          } 
+          // Hide header when scrolling down
+          else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            onHeaderVisibilityChange(false);
+          }
+          
+          lastScrollY = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    // Hide header initially on mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      onHeaderVisibilityChange(false);
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      // Show header again when leaving detail view
+      onHeaderVisibilityChange(true);
+    };
+  }, [onHeaderVisibilityChange]);
+
+  // Cooking mode: Wake Lock API integration
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if (!cookingMode) {
+        // Release wake lock if it exists
+        if (wakeLockRef.current) {
+          try {
+            await wakeLockRef.current.release();
+            wakeLockRef.current = null;
+          } catch (err) {
+            console.error('Error releasing wake lock:', err);
+          }
+        }
+        return;
+      }
+
+      // Request wake lock
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+          
+          // Re-acquire wake lock if page becomes visible again
+          const handleVisibilityChange = async () => {
+            if (wakeLockRef.current !== null && document.visibilityState === 'visible' && cookingMode) {
+              try {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+              } catch (err) {
+                console.error('Error re-acquiring wake lock:', err);
+              }
+            }
+          };
+          
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          
+          return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+          };
+        }
+      } catch (err) {
+        console.error('Error requesting wake lock:', err);
+      }
+    };
+
+    requestWakeLock();
+
+    // Cleanup on unmount
+    return () => {
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(err => {
+          console.error('Error releasing wake lock on unmount:', err);
+        });
+      }
+    };
+  }, [cookingMode]);
 
   // Get all versions for this recipe
   const parentRecipe = getParentRecipe(allRecipes, selectedRecipe) || (!isRecipeVersion(selectedRecipe) ? selectedRecipe : null);
@@ -137,12 +237,41 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     ? recipe.speisekategorie.join(', ')
     : recipe.speisekategorie;
 
+  const toggleCookingMode = () => {
+    setCookingMode(prev => !prev);
+  };
+
   return (
     <div className="recipe-detail-container">
+      {cookingMode && (
+        <div className="cooking-mode-indicator">
+          <div className="cooking-mode-content">
+            <span className="cooking-mode-icon">👨‍🍳</span>
+            <span className="cooking-mode-text">Kochmodus aktiv</span>
+            <button 
+              className="cooking-mode-exit"
+              onClick={toggleCookingMode}
+              title="Kochmodus beenden"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="recipe-detail-header">
         <button className="back-button" onClick={onBack}>
           ← Zurück
         </button>
+        
+        <button 
+          className={`cooking-mode-button ${cookingMode ? 'active' : ''}`}
+          onClick={toggleCookingMode}
+          title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren - Bildschirm bleibt an'}
+        >
+          {cookingMode ? '👨‍🍳 Aktiv' : '👨‍🍳 Kochmodus'}
+        </button>
+        
         <div className="action-buttons">
           {onToggleFavorite && (
             <button 

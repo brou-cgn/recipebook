@@ -10,7 +10,8 @@ function Header({
   onCategoryFilterChange,
   currentUser,
   onLogout,
-  onUserManagement
+  onUserManagement,
+  visible = true
 }) {
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [headerSlogan, setHeaderSlogan] = useState('');
@@ -26,7 +27,7 @@ function Header({
   }, []);
   
   return (
-    <header className="header">
+    <header className={`header ${!visible ? 'header-hidden' : ''}`}>
       <div className="header-content">
         <div className="header-title">
           <h1>DishBook</h1>

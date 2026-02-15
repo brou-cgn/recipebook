@@ -69,6 +69,7 @@ function App() {
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
+  const [headerVisible, setHeaderVisible] = useState(true);
 
   // Set up Firebase auth state observer
   useEffect(() => {
@@ -369,6 +370,10 @@ function App() {
     return result;
   };
 
+  const handleHeaderVisibilityChange = (visible) => {
+    setHeaderVisible(visible);
+  };
+
   // Show loading state while checking auth
   if (authLoading) {
     return (
@@ -412,6 +417,7 @@ function App() {
         onCategoryFilterChange={handleCategoryFilterChange}
         currentUser={currentUser}
         onLogout={handleLogout}
+        visible={headerVisible}
       />
       {isSettingsOpen ? (
         <Settings onBack={handleCloseSettings} currentUser={currentUser} />
@@ -427,6 +433,7 @@ function App() {
           currentUser={currentUser}
           allRecipes={recipes}
           allUsers={allUsers}
+          onHeaderVisibilityChange={handleHeaderVisibilityChange}
         />
       ) : currentView === 'menus' ? (
         // Menu views
