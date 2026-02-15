@@ -25,7 +25,7 @@
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .header-actions {
@@ -332,35 +332,74 @@
   background: rgba(255, 100, 100, 0.2);
 }
 
+.mobile-filter-controls {
+  padding: 0.5rem 1rem;
+}
+
+.mobile-category-filter {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.mobile-category-filter option {
+  background: #1a1a1a;
+  color: white;
+}
+
+.mobile-only-section {
+  display: none;
+}
+
+.mobile-only-item {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .mobile-only-section {
+    display: block;
+  }
+
+  .mobile-only-item {
+    display: block;
+  }
+
   .header-content {
-    flex-direction: column;
+    flex-direction: row;
     gap: 1rem;
+    align-items: flex-start;
   }
 
   .header-actions {
-    width: 100%;
-    justify-content: center;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 
   .filter-controls {
-    width: 100%;
-    justify-content: center;
+    display: none;
   }
 
   .settings-btn {
-    align-self: flex-end;
+    display: none;
   }
 
   .hamburger-dropdown {
     right: 0;
     left: auto;
+    min-width: 280px;
   }
 }
 
 @media (max-width: 480px) {
   .header-title {
-    text-align: center;
+    text-align: left;
   }
 
   .header h1 {
@@ -371,15 +410,13 @@
     font-size: 0.8rem;
   }
 
-  .settings-btn,
-  .category-filter,
-  .favorites-filter {
-    font-size: 0.85rem;
-    padding: 0.5rem 1rem;
+  .hamburger-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0.5rem;
   }
 
-  .toggle-btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.85rem;
+  .hamburger-line {
+    width: 20px;
   }
 }

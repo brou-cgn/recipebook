@@ -122,6 +122,27 @@ function Header({
                       </button>
                     </div>
                   )}
+                  {currentView === 'recipes' && onCategoryFilterChange && (
+                    <div className="menu-section mobile-only-section">
+                      <div className="menu-section-title">Filter</div>
+                      <div className="mobile-filter-controls">
+                        <select
+                          className="mobile-category-filter"
+                          value={categoryFilter}
+                          onChange={(e) => {
+                            onCategoryFilterChange(e.target.value);
+                            setMenuOpen(false);
+                          }}
+                          title="Nach Kategorie filtern"
+                        >
+                          <option value="">Alle Kategorien</option>
+                          {customLists.mealCategories.map((category) => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                   <div className="menu-section">
                     <div className="menu-section-title">Benutzer</div>
                     <div className="menu-user-info">
@@ -132,6 +153,14 @@ function Header({
                         <span className="admin-badge">Admin</span>
                       )}
                     </div>
+                    {onSettingsClick && currentUser?.isAdmin && (
+                      <button className="menu-item mobile-only-item" onClick={() => {
+                        onSettingsClick();
+                        setMenuOpen(false);
+                      }}>
+                        Einstellungen
+                      </button>
+                    )}
                     {onLogout && (
                       <button className="menu-item logout-item" onClick={handleLogoutInternal}>
                         Abmelden
