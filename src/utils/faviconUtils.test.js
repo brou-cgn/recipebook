@@ -26,6 +26,23 @@ describe('faviconUtils', () => {
     appleTouchIcon.href = '/logo192.png';
     document.head.appendChild(appleTouchIcon);
     
+    // Create initial meta tags for Open Graph and Twitter
+    const ogImage = document.createElement('meta');
+    ogImage.setAttribute('property', 'og:image');
+    ogImage.setAttribute('content', '/logo512.png');
+    document.head.appendChild(ogImage);
+    
+    const twitterImage = document.createElement('meta');
+    twitterImage.setAttribute('property', 'twitter:image');
+    twitterImage.setAttribute('content', '/logo512.png');
+    document.head.appendChild(twitterImage);
+    
+    // Create initial manifest link
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest.json';
+    document.head.appendChild(manifestLink);
+    
     // Reset mocks
     jest.clearAllMocks();
   });
@@ -105,6 +122,57 @@ describe('faviconUtils', () => {
       const iconLink = document.querySelector("link[rel='icon']");
       expect(iconLink.href).toBe(testImage);
     });
+
+    test('updates Open Graph and Twitter meta tags with custom image', () => {
+      const testImage = 'data:image/png;base64,customImage';
+      
+      updateFavicon(testImage);
+      
+      const ogImage = document.querySelector("meta[property='og:image']");
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      
+      expect(ogImage).not.toBeNull();
+      expect(ogImage.getAttribute('content')).toBe(testImage);
+      
+      expect(twitterImage).not.toBeNull();
+      expect(twitterImage.getAttribute('content')).toBe(testImage);
+    });
+
+    test('resets Open Graph and Twitter meta tags to default when imageBase64 is null', () => {
+      updateFavicon(null);
+      
+      const ogImage = document.querySelector("meta[property='og:image']");
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      
+      expect(ogImage.getAttribute('content')).toContain('/logo512.png');
+      expect(twitterImage.getAttribute('content')).toContain('/logo512.png');
+    });
+
+    test('creates Open Graph meta tag if it does not exist', () => {
+      // Remove existing og:image
+      const existingOgImage = document.querySelector("meta[property='og:image']");
+      existingOgImage.remove();
+      
+      const testImage = 'data:image/png;base64,test';
+      updateFavicon(testImage);
+      
+      const ogImage = document.querySelector("meta[property='og:image']");
+      expect(ogImage).not.toBeNull();
+      expect(ogImage.getAttribute('content')).toBe(testImage);
+    });
+
+    test('creates Twitter meta tag if it does not exist', () => {
+      // Remove existing twitter:image
+      const existingTwitterImage = document.querySelector("meta[property='twitter:image']");
+      existingTwitterImage.remove();
+      
+      const testImage = 'data:image/png;base64,test';
+      updateFavicon(testImage);
+      
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      expect(twitterImage).not.toBeNull();
+      expect(twitterImage.getAttribute('content')).toBe(testImage);
+    });
   });
 
   describe('updatePageTitle', () => {
@@ -142,9 +210,13 @@ describe('faviconUtils', () => {
 
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
+      const ogImage = document.querySelector("meta[property='og:image']");
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
       
       expect(iconLink.href).toBe(testImage);
       expect(appleIconLink.href).toBe(testImage);
+      expect(ogImage.getAttribute('content')).toBe(testImage);
+      expect(twitterImage.getAttribute('content')).toBe(testImage);
       expect(document.title).toBe('Custom Recipe Book - Delicious Recipes');
     });
 
@@ -158,9 +230,13 @@ describe('faviconUtils', () => {
 
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
+      const ogImage = document.querySelector("meta[property='og:image']");
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
       
       expect(iconLink.href).toContain('/favicon.ico');
       expect(appleIconLink.href).toContain('/logo192.png');
+      expect(ogImage.getAttribute('content')).toContain('/logo512.png');
+      expect(twitterImage.getAttribute('content')).toContain('/logo512.png');
       expect(document.title).toBe('Custom Recipe Book - Delicious Recipes');
     });
 
@@ -175,9 +251,13 @@ describe('faviconUtils', () => {
 
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
+      const ogImage = document.querySelector("meta[property='og:image']");
+      const twitterImage = document.querySelector("meta[property='twitter:image']");
       
       expect(iconLink.href).toContain('/favicon.ico');
       expect(appleIconLink.href).toContain('/logo192.png');
+      expect(ogImage.getAttribute('content')).toContain('/logo512.png');
+      expect(twitterImage.getAttribute('content')).toContain('/logo512.png');
       expect(document.title).toBe('Custom Recipe Book - Delicious Recipes');
     });
 
