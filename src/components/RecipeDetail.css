@@ -344,7 +344,7 @@
 }
 
 .recipe-metadata {
-  padding: 0 1.5rem 1.5rem;
+  padding: 1rem 1.5rem 1.5rem;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
@@ -516,7 +516,7 @@
   }
 
   .recipe-metadata {
-    padding: 0 1rem 1rem;
+    padding: 1rem 1rem 1rem;
   }
   
   .recipe-section {
