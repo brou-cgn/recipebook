@@ -369,9 +369,7 @@
   .mobile-only-item {
     display: block;
   }
-}
 
-@media (max-width: 768px) {
   .header-content {
     flex-direction: row;
     gap: 1rem;
