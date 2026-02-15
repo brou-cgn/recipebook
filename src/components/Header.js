@@ -108,7 +108,6 @@ function Header({
             </button>
           )}
           {currentUser && currentView === 'recipes' && (
-            <>
               <div className="search-container" ref={searchRef}>
                 <button 
                   className="search-btn" 
@@ -139,6 +138,8 @@ function Header({
                   </div>
                 )}
               </div>
+          )}
+          {currentUser && (
               <div className="hamburger-menu-container" ref={menuRef}>
               <button 
                 className="hamburger-btn" 
@@ -196,7 +197,6 @@ function Header({
                 </div>
               )}
             </div>
-            </>
           )}
         </div>
       </div>
