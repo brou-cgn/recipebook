@@ -3,12 +3,13 @@ import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
+import { normalizeIngredient, isRecipeIngredient, getIngredientDisplayValue } from '../utils/ingredientUtils';
 import ChefHatIcon from './icons/ChefHatIcon';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, onSelectRecipe, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -198,13 +199,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   const scaleIngredient = (ingredient) => {
-    if (servingMultiplier === 1) return ingredient;
+    // Recipe ingredients cannot be scaled
+    if (isRecipeIngredient(ingredient)) {
+      return getIngredientDisplayValue(ingredient, allRecipes);
+    }
+    
+    // Get the text value for scaling
+    const normalized = normalizeIngredient(ingredient);
+    const text = normalized.value;
+    
+    if (servingMultiplier === 1) return text;
     
     // Match numbers with optional fractions and units at the start or after whitespace
     // This pattern is designed to match quantities like "200g", "2 cups", "1/2 tsp"
     const regex = /(?:^|\s)(\d+(?:[.,]\d+)?|\d+\/\d+)\s*([a-zA-Z]+)?/g;
     
-    return ingredient.replace(regex, (match, number, unit) => {
+    return text.replace(regex, (match, number, unit) => {
       // Preserve leading whitespace if any
       const leadingSpace = match.startsWith(' ') ? ' ' : '';
       
@@ -222,6 +232,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       
       return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
     });
+  };
+
+  const handleRecipeLinkClick = (recipeId) => {
+    if (!onSelectRecipe) return;
+    
+    const linkedRecipe = allRecipes.find(r => r.id === recipeId);
+    if (linkedRecipe) {
+      onSelectRecipe(linkedRecipe, true); // true indicates navigation from another recipe
+    }
   };
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
@@ -467,9 +486,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             )}
           </div>
           <ul className="ingredients-list">
-            {recipe.ingredients?.map((ingredient, index) => (
-              <li key={index}>{scaleIngredient(ingredient)}</li>
-            )) || <li>Keine Zutaten aufgelistet</li>}
+            {recipe.ingredients?.map((ingredient, index) => {
+              const isRecipe = isRecipeIngredient(ingredient);
+              const displayText = scaleIngredient(ingredient);
+              
+              if (isRecipe) {
+                const normalized = normalizeIngredient(ingredient);
+                return (
+                  <li key={index}>
+                    <button
+                      className="recipe-link"
+                      onClick={() => handleRecipeLinkClick(normalized.recipeId)}
+                      title="Rezept öffnen"
+                    >
+                      📖 {displayText}
+                    </button>
+                  </li>
+                );
+              }
+              
+              return <li key={index}>{displayText}</li>;
+            }) || <li>Keine Zutaten aufgelistet</li>}
           </ul>
         </section>
 

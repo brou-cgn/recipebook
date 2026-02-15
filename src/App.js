@@ -53,6 +53,7 @@ function matchesCategoryFilter(recipe, categoryFilter) {
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [isCreatingVersion, setIsCreatingVersion] = useState(false);
@@ -140,14 +141,29 @@ function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleSelectRecipe = (recipe) => {
+  const handleSelectRecipe = (recipe, fromRecipe = false) => {
+    // If we're navigating from another recipe, push current to stack
+    if (fromRecipe && selectedRecipe) {
+      setRecipeNavigationStack([...recipeNavigationStack, selectedRecipe]);
+    } else if (!fromRecipe) {
+      // Clear stack when coming from list/menu
+      setRecipeNavigationStack([]);
+    }
     setSelectedRecipe(recipe);
   };
 
   const handleBackFromRecipeDetail = () => {
-    // Clear selected recipe to go back to either MenuDetail or RecipeList
-    setSelectedRecipe(null);
-    // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
+    // Check if we have a navigation stack (came from another recipe)
+    if (recipeNavigationStack.length > 0) {
+      // Pop the last recipe from stack and go back to it
+      const previousRecipe = recipeNavigationStack[recipeNavigationStack.length - 1];
+      setRecipeNavigationStack(recipeNavigationStack.slice(0, -1));
+      setSelectedRecipe(previousRecipe);
+    } else {
+      // Clear selected recipe to go back to either MenuDetail or RecipeList
+      setSelectedRecipe(null);
+      // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
+    }
   };
 
   const handleAddRecipe = () => {
@@ -436,6 +452,7 @@ function App() {
           onDelete={handleDeleteRecipe}
           onToggleFavorite={handleToggleFavorite}
           onCreateVersion={handleCreateVersion}
+          onSelectRecipe={handleSelectRecipe}
           currentUser={currentUser}
           allRecipes={recipes}
           allUsers={allUsers}

@@ -5,6 +5,8 @@ import { fileToBase64 } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
+import { normalizeIngredient, toStorageFormat, createRecipeIngredient, getIngredientDisplayValue } from '../utils/ingredientUtils';
+import { getRecipes } from '../utils/recipeFirestore';
 import RecipeImportModal from './RecipeImportModal';
 
 function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
@@ -30,6 +32,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     portionUnits: []
   });
   const [allUsers, setAllUsers] = useState([]);
+  const [allRecipes, setAllRecipes] = useState([]);
 
   useEffect(() => {
     if (recipe) {
@@ -82,8 +85,13 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       const users = await getUsers();
       setAllUsers(users);
     };
+    const loadRecipes = async () => {
+      const recipes = await getRecipes();
+      setAllRecipes(recipes);
+    };
     loadCustomLists();
     loadUsers();
+    loadRecipes();
   }, []);
 
   useEffect(() => {
@@ -103,6 +111,20 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const handleIngredientChange = (index, value) => {
     const newIngredients = [...ingredients];
     newIngredients[index] = value;
+    setIngredients(newIngredients);
+  };
+
+  const handleIngredientRecipeSelect = (index, recipeId) => {
+    const newIngredients = [...ingredients];
+    if (recipeId) {
+      const selectedRecipe = allRecipes.find(r => r.id === recipeId);
+      if (selectedRecipe) {
+        newIngredients[index] = createRecipeIngredient(recipeId, selectedRecipe.title);
+      }
+    } else {
+      // Clear selection - revert to empty text
+      newIngredients[index] = '';
+    }
     setIngredients(newIngredients);
   };
 
@@ -129,7 +151,14 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   };
 
   const handleRemoveEmojisFromIngredients = () => {
-    const cleaned = ingredients.map(ingredient => removeEmojis(ingredient));
+    const cleaned = ingredients.map(ingredient => {
+      const normalized = normalizeIngredient(ingredient);
+      // Only clean text ingredients
+      if (normalized.type === 'text') {
+        return removeEmojis(normalized.value);
+      }
+      return ingredient;
+    });
     setIngredients(cleaned);
   };
 
@@ -183,7 +212,15 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       schwierigkeit: parseInt(schwierigkeit) || 3,
       kochdauer: parseInt(kochdauer) || 30,
       speisekategorie: speisekategorie,
-      ingredients: ingredients.filter(i => i.trim() !== ''),
+      ingredients: ingredients
+        .map(i => toStorageFormat(i))
+        .filter(i => {
+          // Filter out empty text ingredients
+          if (typeof i === 'string') return i.trim() !== '';
+          // Keep recipe ingredients
+          if (typeof i === 'object' && i.type === 'recipe') return true;
+          return false;
+        }),
       steps: steps.filter(s => s.trim() !== ''),
       authorId: authorId,
       parentRecipeId: parentRecipeId || null,
@@ -450,7 +487,10 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         <div className="form-section">
           <div className="section-header">
             <h3>Zutaten</h3>
-            {ingredients.some(i => containsEmojis(i)) && (
+            {ingredients.some(i => {
+              const normalized = normalizeIngredient(i);
+              return normalized.type === 'text' && containsEmojis(normalized.value);
+            }) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
@@ -461,25 +501,69 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               </button>
             )}
           </div>
-          {ingredients.map((ingredient, index) => (
-            <div key={index} className="form-list-item">
-              <input
-                type="text"
-                value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e.target.value)}
-                placeholder={`Zutat ${index + 1}`}
-              />
-              {ingredients.length > 1 && (
-                <button
-                  type="button"
-                  className="remove-button"
-                  onClick={() => handleRemoveIngredient(index)}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          {ingredients.map((ingredient, index) => {
+            const normalized = normalizeIngredient(ingredient);
+            const isRecipe = normalized.type === 'recipe';
+            const displayValue = getIngredientDisplayValue(ingredient, allRecipes);
+            
+            return (
+              <div key={index} className="form-list-item">
+                <div className="ingredient-input-wrapper">
+                  <div className="ingredient-input-row">
+                    {isRecipe ? (
+                      <select
+                        className="ingredient-recipe-select"
+                        value={normalized.recipeId || ''}
+                        onChange={(e) => handleIngredientRecipeSelect(index, e.target.value)}
+                      >
+                        <option value="">-- Rezept auswählen --</option>
+                        {allRecipes
+                          .filter(r => !recipe || r.id !== recipe.id) // Don't allow linking to self
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.title}
+                            </option>
+                          ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        className="ingredient-text-input"
+                        value={displayValue}
+                        onChange={(e) => handleIngredientChange(index, e.target.value)}
+                        placeholder={`Zutat ${index + 1}`}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      className={`ingredient-type-toggle ${isRecipe ? 'active' : ''}`}
+                      onClick={() => {
+                        if (isRecipe) {
+                          // Switch to text
+                          handleIngredientChange(index, '');
+                        } else {
+                          // Switch to recipe
+                          handleIngredientRecipeSelect(index, '');
+                        }
+                      }}
+                      title={isRecipe ? 'Zu Text wechseln' : 'Rezept verlinken'}
+                    >
+                      {isRecipe ? '📖 Rezept' : '📝 Text'}
+                    </button>
+                  </div>
+                </div>
+                {ingredients.length > 1 && (
+                  <button
+                    type="button"
+                    className="remove-button"
+                    onClick={() => handleRemoveIngredient(index)}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
           <button type="button" className="add-item-button" onClick={handleAddIngredient}>
             + Zutat hinzufügen
           </button>

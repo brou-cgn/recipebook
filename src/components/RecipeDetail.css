@@ -520,6 +520,32 @@
   margin-bottom: 0;
 }
 
+.recipe-link {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.recipe-link:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-link:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 480px) {
   .recipe-detail-container {
     padding-top: 0;
