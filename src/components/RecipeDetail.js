@@ -14,6 +14,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+  const [recipeHistory, setRecipeHistory] = useState([]);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -197,7 +198,43 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
   };
 
+  const handleRecipeLinkClick = (recipeId) => {
+    const linkedRecipe = allRecipes.find(r => r.id === recipeId);
+    if (linkedRecipe) {
+      // Save current recipe to history
+      setRecipeHistory([...recipeHistory, selectedRecipe]);
+      // Navigate to linked recipe
+      setSelectedRecipe(linkedRecipe);
+      // Reset serving multiplier for new recipe
+      setServingMultiplier(1);
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+    }
+  };
+
+  const handleBackFromLinkedRecipe = () => {
+    if (recipeHistory.length > 0) {
+      const previousRecipe = recipeHistory[recipeHistory.length - 1];
+      setRecipeHistory(recipeHistory.slice(0, -1));
+      setSelectedRecipe(previousRecipe);
+      setServingMultiplier(1);
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+    } else {
+      onBack();
+    }
+  };
+
   const scaleIngredient = (ingredient) => {
+    // Don't scale recipe links
+    if (ingredient.startsWith('RECIPE_LINK:')) {
+      return ingredient;
+    }
+    
     if (servingMultiplier === 1) return ingredient;
     
     // Match numbers with optional fractions and units at the start or after whitespace
@@ -222,6 +259,34 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       
       return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
     });
+  };
+
+  const renderIngredient = (ingredient) => {
+    // Check if ingredient is a recipe link
+    if (ingredient.startsWith('RECIPE_LINK:')) {
+      const parts = ingredient.split(':');
+      const recipeId = parts[1];
+      const recipeTitle = parts[2] || 'Unbekanntes Rezept';
+      
+      return (
+        <span 
+          onClick={() => handleRecipeLinkClick(recipeId)}
+          style={{ 
+            color: '#2196F3', 
+            cursor: 'pointer', 
+            textDecoration: 'underline',
+            fontWeight: 'bold'
+          }}
+          onMouseEnter={(e) => e.target.style.textDecoration = 'none'}
+          onMouseLeave={(e) => e.target.style.textDecoration = 'underline'}
+        >
+          🔗 {recipeTitle}
+        </span>
+      );
+    }
+    
+    // Regular ingredient - scale and return
+    return scaleIngredient(ingredient);
   };
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
@@ -277,7 +342,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       
       {!isMobile && (
         <div className="recipe-detail-header">
-          <button className="back-button" onClick={onBack}>
+          <button className="back-button" onClick={handleBackFromLinkedRecipe}>
             ← Zurück
           </button>
           
@@ -328,7 +393,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </button>
                 <button 
                   className="overlay-back-button"
-                  onClick={onBack}
+                  onClick={handleBackFromLinkedRecipe}
                   title="Zurück"
                 >
                   ✕
@@ -468,7 +533,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
           </div>
           <ul className="ingredients-list">
             {recipe.ingredients?.map((ingredient, index) => (
-              <li key={index}>{scaleIngredient(ingredient)}</li>
+              <li key={index}>{renderIngredient(ingredient)}</li>
             )) || <li>Keine Zutaten aufgelistet</li>}
           </ul>
         </section>

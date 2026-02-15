@@ -7,7 +7,7 @@ import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import RecipeImportModal from './RecipeImportModal';
 
-function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
+function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
@@ -30,6 +30,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     portionUnits: []
   });
   const [allUsers, setAllUsers] = useState([]);
+  const [ingredientSuggestions, setIngredientSuggestions] = useState([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
   useEffect(() => {
     if (recipe) {
@@ -97,13 +99,42 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const handleRemoveIngredient = (index) => {
     if (ingredients.length > 1) {
       setIngredients(ingredients.filter((_, i) => i !== index));
+      // Clear suggestions if removing the active ingredient
+      if (activeSuggestionIndex === index) {
+        setIngredientSuggestions([]);
+        setActiveSuggestionIndex(-1);
+      }
     }
+  };
+
+  const handleSelectRecipeSuggestion = (index, recipeId, recipeTitle) => {
+    const newIngredients = [...ingredients];
+    newIngredients[index] = `RECIPE_LINK:${recipeId}:${recipeTitle}`;
+    setIngredients(newIngredients);
+    setIngredientSuggestions([]);
+    setActiveSuggestionIndex(-1);
   };
 
   const handleIngredientChange = (index, value) => {
     const newIngredients = [...ingredients];
     newIngredients[index] = value;
     setIngredients(newIngredients);
+    
+    // Show recipe suggestions if user types "@" followed by text
+    if (value.startsWith('@') && value.length > 1) {
+      const searchTerm = value.slice(1).toLowerCase();
+      const suggestions = allRecipes
+        .filter(r => r.title.toLowerCase().includes(searchTerm))
+        .slice(0, 5)
+        .map(r => ({ id: r.id, title: r.title }));
+      setIngredientSuggestions(suggestions);
+      setActiveSuggestionIndex(index);
+    } else {
+      if (activeSuggestionIndex === index) {
+        setIngredientSuggestions([]);
+        setActiveSuggestionIndex(-1);
+      }
+    }
   };
 
   const handleAddStep = () => {
@@ -461,25 +492,86 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               </button>
             )}
           </div>
-          {ingredients.map((ingredient, index) => (
-            <div key={index} className="form-list-item">
-              <input
-                type="text"
-                value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e.target.value)}
-                placeholder={`Zutat ${index + 1}`}
-              />
-              {ingredients.length > 1 && (
-                <button
-                  type="button"
-                  className="remove-button"
-                  onClick={() => handleRemoveIngredient(index)}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          {ingredients.map((ingredient, index) => {
+            const isRecipeLink = ingredient.startsWith('RECIPE_LINK:');
+            const displayValue = isRecipeLink 
+              ? ingredient.split(':')[2] || ingredient 
+              : ingredient;
+            
+            return (
+              <div key={index} className="form-list-item" style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={displayValue}
+                  onChange={(e) => handleIngredientChange(index, e.target.value)}
+                  placeholder={`Zutat ${index + 1} (oder @ für Rezeptsuche)`}
+                  style={isRecipeLink ? { 
+                    fontWeight: 'bold', 
+                    color: '#2196F3',
+                    backgroundColor: '#e3f2fd'
+                  } : {}}
+                  disabled={isRecipeLink}
+                />
+                {isRecipeLink && (
+                  <button
+                    type="button"
+                    className="remove-button"
+                    onClick={() => {
+                      const newIngredients = [...ingredients];
+                      newIngredients[index] = '';
+                      setIngredients(newIngredients);
+                    }}
+                    title="Rezept-Link entfernen"
+                    style={{ marginRight: '5px' }}
+                  >
+                    🔗✕
+                  </button>
+                )}
+                {ingredients.length > 1 && (
+                  <button
+                    type="button"
+                    className="remove-button"
+                    onClick={() => handleRemoveIngredient(index)}
+                  >
+                    ✕
+                  </button>
+                )}
+                {activeSuggestionIndex === index && ingredientSuggestions.length > 0 && (
+                  <div className="recipe-suggestions" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    zIndex: 1000,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    marginTop: '2px'
+                  }}>
+                    {ingredientSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion.id}
+                        onClick={() => handleSelectRecipeSuggestion(index, suggestion.id, suggestion.title)}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #eee',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                      >
+                        🔗 {suggestion.title}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
           <button type="button" className="add-item-button" onClick={handleAddIngredient}>
             + Zutat hinzufügen
           </button>
