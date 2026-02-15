@@ -244,6 +244,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     setCookingMode(prev => !prev);
   };
 
+  const handleToggleFavorite = async () => {
+    if (!onToggleFavorite) return;
+    
+    await onToggleFavorite(recipe.id);
+    // Update local state immediately for responsive UI
+    if (isFavorite) {
+      setFavoriteIds(favoriteIds.filter(id => id !== recipe.id));
+    } else {
+      setFavoriteIds([...favoriteIds, recipe.id]);
+    }
+  };
+
   return (
     <div className="recipe-detail-container">
       {cookingMode && (
@@ -280,15 +292,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             {onToggleFavorite && (
               <button 
                 className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
-                onClick={async () => {
-                  await onToggleFavorite(recipe.id);
-                  // Update local state immediately for responsive UI
-                  if (isFavorite) {
-                    setFavoriteIds(favoriteIds.filter(id => id !== recipe.id));
-                  } else {
-                    setFavoriteIds([...favoriteIds, recipe.id]);
-                  }
-                }}
+                onClick={handleToggleFavorite}
                 title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
               >
                 {isFavorite ? '★' : '☆'}
@@ -343,15 +347,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             {onToggleFavorite && (
               <button 
                 className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
-                onClick={async () => {
-                  await onToggleFavorite(recipe.id);
-                  // Update local state immediately for responsive UI
-                  if (isFavorite) {
-                    setFavoriteIds(favoriteIds.filter(id => id !== recipe.id));
-                  } else {
-                    setFavoriteIds([...favoriteIds, recipe.id]);
-                  }
-                }}
+                onClick={handleToggleFavorite}
                 title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
               >
                 {isFavorite ? '★' : '☆'}
