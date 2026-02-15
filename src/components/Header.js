@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Header.css';
 import { getCustomLists, getHeaderSlogan } from '../utils/customLists';
 
@@ -15,6 +15,8 @@ function Header({
 }) {
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [headerSlogan, setHeaderSlogan] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
   
   useEffect(() => {
     const loadHeaderData = async () => {
@@ -25,6 +27,41 @@ function Header({
     };
     loadHeaderData();
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
+
+  const toggleMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
+
+  const handleViewChangeInternal = (view) => {
+    if (onViewChange) {
+      onViewChange(view);
+    }
+    setMenuOpen(false);
+  };
+
+  const handleLogoutInternal = () => {
+    if (onLogout) {
+      onLogout();
+    }
+    setMenuOpen(false);
+  };
   
   return (
     <header className={`header ${!visible ? 'header-hidden' : ''}`}>
@@ -34,22 +71,6 @@ function Header({
           <p className="tagline">{headerSlogan}</p>
         </div>
         <div className="header-actions">
-          {onViewChange && (
-            <div className="view-toggle">
-              <button
-                className={`toggle-btn ${currentView === 'recipes' ? 'active' : ''}`}
-                onClick={() => onViewChange('recipes')}
-              >
-                Rezepte
-              </button>
-              <button
-                className={`toggle-btn ${currentView === 'menus' ? 'active' : ''}`}
-                onClick={() => onViewChange('menus')}
-              >
-                Menüs
-              </button>
-            </div>
-          )}
           {currentView === 'recipes' && onCategoryFilterChange && (
             <div className="filter-controls">
               <select
@@ -71,15 +92,53 @@ function Header({
             </button>
           )}
           {currentUser && (
-            <div className="user-info">
-              <span className="user-name">
-                {currentUser.vorname} {currentUser.nachname}
-                {currentUser.isAdmin && <span className="admin-badge">Admin</span>}
-              </span>
-              {onLogout && (
-                <button className="logout-btn" onClick={onLogout} title="Abmelden">
-                  Abmelden
-                </button>
+            <div className="hamburger-menu-container" ref={menuRef}>
+              <button 
+                className="hamburger-btn" 
+                onClick={toggleMenu}
+                aria-label="Menü öffnen"
+                aria-expanded={menuOpen}
+              >
+                <span className="hamburger-line"></span>
+                <span className="hamburger-line"></span>
+                <span className="hamburger-line"></span>
+              </button>
+              {menuOpen && (
+                <div className="hamburger-dropdown">
+                  {onViewChange && (
+                    <div className="menu-section">
+                      <div className="menu-section-title">Navigation</div>
+                      <button
+                        className={`menu-item ${currentView === 'recipes' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('recipes')}
+                      >
+                        Rezeptübersicht
+                      </button>
+                      <button
+                        className={`menu-item ${currentView === 'menus' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('menus')}
+                      >
+                        Menüübersicht
+                      </button>
+                    </div>
+                  )}
+                  <div className="menu-section">
+                    <div className="menu-section-title">Benutzer</div>
+                    <div className="menu-user-info">
+                      <span className="menu-user-name">
+                        {currentUser.vorname} {currentUser.nachname}
+                      </span>
+                      {currentUser.isAdmin && (
+                        <span className="admin-badge">Admin</span>
+                      )}
+                    </div>
+                    {onLogout && (
+                      <button className="menu-item logout-item" onClick={handleLogoutInternal}>
+                        Abmelden
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
