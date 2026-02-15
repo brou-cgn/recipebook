@@ -6,6 +6,7 @@ import RecipeDetail from './RecipeDetail';
 jest.mock('../utils/userFavorites', () => ({
   isRecipeFavorite: () => false,
   toggleRecipeFavorite: jest.fn(),
+  getUserFavorites: () => Promise.resolve([]),
 }));
 
 jest.mock('../utils/userManagement', () => ({
@@ -254,5 +255,97 @@ describe('RecipeDetail - Rating Stars Color', () => {
 
     const difficultyStars = document.querySelector('.difficulty-stars');
     expect(difficultyStars).toHaveClass('difficulty-stars');
+  });
+});
+
+describe('RecipeDetail - Cooking Mode', () => {
+  const mockRecipe = {
+    id: 'recipe-1',
+    title: 'Test Recipe',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['200 g Ingredient 1'],
+    steps: ['Step 1', 'Step 2'],
+  };
+
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  // Mock Wake Lock API
+  beforeEach(() => {
+    // Mock navigator.wakeLock
+    Object.defineProperty(navigator, 'wakeLock', {
+      writable: true,
+      value: {
+        request: jest.fn().mockResolvedValue({
+          release: jest.fn().mockResolvedValue(undefined),
+        }),
+      },
+    });
+  });
+
+  test('displays cooking mode button', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const cookingModeButton = screen.getByText(/Kochmodus/);
+    expect(cookingModeButton).toBeInTheDocument();
+  });
+
+  test('activates cooking mode when button is clicked', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const cookingModeButton = screen.getByText(/Kochmodus/);
+    fireEvent.click(cookingModeButton);
+
+    // Check that the button text changes to "Aktiv"
+    expect(screen.getByText(/Aktiv/)).toBeInTheDocument();
+    
+    // Check that the cooking mode indicator appears
+    expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
+  });
+
+  test('deactivates cooking mode when exit button is clicked', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const cookingModeButton = screen.getByText(/Kochmodus/);
+    fireEvent.click(cookingModeButton);
+
+    // Verify it's active
+    expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
+
+    // Find and click the exit button (×) in the indicator
+    const exitButton = document.querySelector('.cooking-mode-exit');
+    fireEvent.click(exitButton);
+
+    // Verify cooking mode is deactivated
+    expect(screen.queryByText('Kochmodus aktiv')).not.toBeInTheDocument();
   });
 });
