@@ -57,10 +57,11 @@ function Header({
   const toggleSearch = () => {
     setSearchOpen(!searchOpen);
     if (!searchOpen) {
-      // Focus the search input when opening
+      // Focus the search input when opening (delay allows animation to complete)
+      const SEARCH_FOCUS_DELAY = 100;
       setTimeout(() => {
         searchRef.current?.querySelector('input')?.focus();
-      }, 100);
+      }, SEARCH_FOCUS_DELAY);
     }
   };
 

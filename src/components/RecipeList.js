@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -60,28 +60,31 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   // Group recipes by parent first
   const allRecipeGroups = groupRecipesByParent(recipes);
 
-  // Filter groups based on favorites if enabled
-  let recipeGroups = showFavoritesOnly
-    ? allRecipeGroups.filter(group => group.allRecipes.some(r => favoriteIds.includes(r.id)))
-    : allRecipeGroups;
+  // Filter and sort recipe groups with memoization for performance
+  const recipeGroups = useMemo(() => {
+    // Filter groups based on favorites if enabled
+    let filteredGroups = showFavoritesOnly
+      ? allRecipeGroups.filter(group => group.allRecipes.some(r => favoriteIds.includes(r.id)))
+      : allRecipeGroups;
 
-  // Filter by search term
-  if (searchTerm && searchTerm.trim()) {
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    recipeGroups = recipeGroups.filter(group => {
-      // Search in any recipe title within the group
-      return group.allRecipes.some(recipe => 
-        recipe.title?.toLowerCase().includes(lowerSearchTerm)
-      );
+    // Filter by search term
+    if (searchTerm && searchTerm.trim()) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filteredGroups = filteredGroups.filter(group => {
+        // Search in any recipe title within the group
+        return group.allRecipes.some(recipe => 
+          recipe.title?.toLowerCase().includes(lowerSearchTerm)
+        );
+      });
+    }
+
+    // Sort groups alphabetically by the primary recipe's title
+    return filteredGroups.sort((a, b) => {
+      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
+      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      return titleA.localeCompare(titleB);
     });
-  }
-
-  // Sort groups alphabetically by the primary recipe's title
-  recipeGroups = recipeGroups.sort((a, b) => {
-    const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-    const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
-    return titleA.localeCompare(titleB);
-  });
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
