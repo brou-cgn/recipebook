@@ -69,58 +69,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     setSelectedRecipe(initialRecipe);
   }, [initialRecipe]);
 
-  // Scroll to content on mobile to hide header buttons initially (pull-to-reveal effect)
-  useEffect(() => {
-    if (isMobile && contentRef.current) {
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        // Scroll to the content element to hide the header above
-        contentRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
-      });
-    }
-  }, [initialRecipe, isMobile]); // Re-run when recipe or mobile state changes
-
-  // Mobile header visibility: hide header on mount, show on scroll up
+  // Keep header visible on mobile - removed auto-hide behavior
   useEffect(() => {
     if (!onHeaderVisibilityChange) return;
 
-    // Mobile breakpoint constant
-    const MOBILE_BREAKPOINT = 768;
-    
-    let lastScrollY = window.scrollY;
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
-          
-          // Show header when scrolling up or at top
-          if (currentScrollY < lastScrollY || currentScrollY < 50) {
-            onHeaderVisibilityChange(true);
-          } 
-          // Hide header when scrolling down
-          else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-            onHeaderVisibilityChange(false);
-          }
-          
-          lastScrollY = currentScrollY;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    // Hide header initially on mobile
-    const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-    if (isMobile) {
-      onHeaderVisibilityChange(false);
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Ensure header is visible when component mounts
+    onHeaderVisibilityChange(true);
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       // Show header again when leaving detail view
       onHeaderVisibilityChange(true);
     };
