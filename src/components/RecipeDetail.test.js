@@ -277,8 +277,8 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   let originalInnerWidth;
 
-  // Helper function to mock window width
-  const mockWindowWidth = (width) => {
+  // Helper function to set mock window width
+  const setMockWindowWidth = (width) => {
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
@@ -313,7 +313,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('does NOT display cooking mode button on desktop', () => {
     // Mock desktop width (> 480px)
-    mockWindowWidth(1024);
+    setMockWindowWidth(1024);
 
     render(
       <RecipeDetail
@@ -332,14 +332,14 @@ describe('RecipeDetail - Cooking Mode', () => {
     // Should not find "Kochmodus" text in desktop header
     const cookingModeButtons = screen.queryAllByText(/Kochmodus/);
     const desktopCookingModeButton = cookingModeButtons.find(btn => 
-      desktopHeader && desktopHeader.contains(btn)
+      desktopHeader.contains(btn)
     );
     expect(desktopCookingModeButton).toBeUndefined();
   });
 
   test('displays cooking mode button on mobile', () => {
     // Mock mobile width (<= 480px)
-    mockWindowWidth(400);
+    setMockWindowWidth(400);
 
     render(
       <RecipeDetail
@@ -358,7 +358,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('activates cooking mode on mobile when button is clicked', () => {
     // Mock mobile width (<= 480px)
-    mockWindowWidth(400);
+    setMockWindowWidth(400);
 
     render(
       <RecipeDetail
@@ -385,7 +385,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('deactivates cooking mode when exit button is clicked', () => {
     // Mock mobile width (<= 480px)
-    mockWindowWidth(400);
+    setMockWindowWidth(400);
 
     render(
       <RecipeDetail
