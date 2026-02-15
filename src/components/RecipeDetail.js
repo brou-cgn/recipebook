@@ -4,12 +4,15 @@ import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 
+// Mobile breakpoint constant
+const MOBILE_BREAKPOINT = 480;
+
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 480);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -35,7 +38,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         clearTimeout(timeoutId);
       }
       timeoutId = setTimeout(() => {
-        setIsMobile(window.innerWidth <= 480);
+        setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
       }, 150);
     };
     
@@ -68,7 +71,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   // Scroll to content on mobile to hide header buttons initially (pull-to-reveal effect)
   useEffect(() => {
-    const MOBILE_BREAKPOINT = 480;
     const isMobileView = window.innerWidth <= MOBILE_BREAKPOINT;
     
     if (isMobileView && contentRef.current) {
