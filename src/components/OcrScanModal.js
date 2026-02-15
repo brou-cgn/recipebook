@@ -52,7 +52,7 @@ function OcrScanModal({ onImport, onCancel }) {
         setCameraActive(true);
       }
     } catch (err) {
-      setError('Kamera-Zugriff fehlgeschlagen. Bitte erlauben Sie den Kamera-Zugriff oder verwenden Sie den Datei-Upload.');
+      setError(`Kamera-Zugriff fehlgeschlagen: ${err.message}. Bitte erlauben Sie den Kamera-Zugriff oder verwenden Sie den Datei-Upload.`);
     }
   };
 
@@ -91,6 +91,7 @@ function OcrScanModal({ onImport, onCancel }) {
 
   // Apply crop and proceed to OCR
   const applyCrop = async () => {
+    // If no crop area is selected, use the full image
     if (!completedCrop) {
       skipCrop();
       return;

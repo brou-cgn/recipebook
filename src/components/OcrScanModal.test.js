@@ -3,6 +3,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import OcrScanModal from './OcrScanModal';
 
+// Test configuration constants
+const OCR_TIMEOUT = 3000;
+
 // Mock the OCR service
 jest.mock('../utils/ocrService', () => ({
   recognizeText: jest.fn(),
@@ -151,7 +154,7 @@ describe('OcrScanModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Übernehmen')).toBeInTheDocument();
-    }, { timeout: 3000 });
+    }, { timeout: OCR_TIMEOUT });
 
     const importButton = screen.getByText('Übernehmen');
     fireEvent.click(importButton);
@@ -183,7 +186,7 @@ describe('OcrScanModal', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Übernehmen')).toBeInTheDocument();
-    }, { timeout: 3000 });
+    }, { timeout: OCR_TIMEOUT });
 
     const importButton = screen.getByText('Übernehmen');
     fireEvent.click(importButton);
@@ -219,6 +222,6 @@ describe('OcrScanModal', () => {
       
       fireEvent.change(textarea, { target: { value: 'Modified Text' } });
       expect(textarea).toHaveValue('Modified Text');
-    }, { timeout: 3000 });
+    }, { timeout: OCR_TIMEOUT });
   });
 });
