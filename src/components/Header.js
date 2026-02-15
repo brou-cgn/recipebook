@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Header.css';
-import { getCustomLists, getHeaderSlogan } from '../utils/customLists';
+import { getHeaderSlogan } from '../utils/customLists';
 
 function Header({ 
   onSettingsClick, 
@@ -13,16 +13,13 @@ function Header({
   onUserManagement,
   visible = true
 }) {
-  const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   
   useEffect(() => {
     const loadHeaderData = async () => {
-      const lists = await getCustomLists();
       const slogan = await getHeaderSlogan();
-      setCustomLists(lists);
       setHeaderSlogan(slogan);
     };
     loadHeaderData();
@@ -71,21 +68,6 @@ function Header({
           <p className="tagline">{headerSlogan}</p>
         </div>
         <div className="header-actions">
-          {currentView === 'recipes' && onCategoryFilterChange && (
-            <div className="filter-controls">
-              <select
-                className="category-filter"
-                value={categoryFilter}
-                onChange={(e) => onCategoryFilterChange(e.target.value)}
-                title="Nach Kategorie filtern"
-              >
-                <option value="">Alle Kategorien</option>
-                {customLists.mealCategories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-          )}
           {onSettingsClick && currentUser?.isAdmin && (
             <button className="settings-btn" onClick={onSettingsClick} title="Einstellungen">
               Einstellungen
@@ -120,27 +102,6 @@ function Header({
                       >
                         Menüübersicht
                       </button>
-                    </div>
-                  )}
-                  {currentView === 'recipes' && onCategoryFilterChange && (
-                    <div className="menu-section mobile-only-section">
-                      <div className="menu-section-title">Filter</div>
-                      <div className="mobile-filter-controls">
-                        <select
-                          className="mobile-category-filter"
-                          value={categoryFilter}
-                          onChange={(e) => {
-                            onCategoryFilterChange(e.target.value);
-                            setMenuOpen(false);
-                          }}
-                          title="Nach Kategorie filtern"
-                        >
-                          <option value="">Alle Kategorien</option>
-                          {customLists.mealCategories.map((category) => (
-                            <option key={category} value={category}>{category}</option>
-                          ))}
-                        </select>
-                      </div>
                     </div>
                   )}
                   <div className="menu-section">

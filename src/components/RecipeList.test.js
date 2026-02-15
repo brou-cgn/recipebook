@@ -9,6 +9,13 @@ jest.mock('../utils/userManagement', () => ({
   getUsers: () => Promise.resolve([]),
 }));
 
+// Mock the custom lists utility
+jest.mock('../utils/customLists', () => ({
+  getCustomLists: () => Promise.resolve({
+    mealCategories: ['Appetizer', 'Main Course', 'Dessert']
+  })
+}));
+
 const mockRecipes = [
   {
     id: '1',

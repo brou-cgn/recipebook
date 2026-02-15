@@ -3,11 +3,13 @@ import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
+import { getCustomLists } from '../utils/customLists';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [customLists, setCustomLists] = useState({ mealCategories: [] });
   
   // Load all users once on mount
   useEffect(() => {
@@ -16,6 +18,21 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       setAllUsers(users);
     };
     loadUsers();
+  }, []);
+
+  // Load custom lists (meal categories) on mount
+  useEffect(() => {
+    const loadCustomLists = async () => {
+      try {
+        const lists = await getCustomLists();
+        setCustomLists(lists);
+      } catch (error) {
+        console.error('Error loading custom lists:', error);
+        // Set to empty on error, component will still work
+        setCustomLists({ mealCategories: [] });
+      }
+    };
+    loadCustomLists();
   }, []);
 
   // Load favorite IDs when user changes or recipes change
@@ -69,13 +86,28 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       <div className="recipe-list-header">
         <h2>{getHeading()}</h2>
         <div className="recipe-list-actions">
-          <button 
-            className={`favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
-            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
-          >
-            ★ Favoriten
-          </button>
+          <div className="filter-group">
+            {onCategoryFilterChange && (
+              <select
+                className="category-filter-select"
+                value={categoryFilter}
+                onChange={(e) => onCategoryFilterChange(e.target.value)}
+                title="Nach Kategorie filtern"
+              >
+                <option value="">Alle Kategorien</option>
+                {customLists.mealCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            )}
+            <button 
+              className={`favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
+            >
+              ★ Favoriten
+            </button>
+          </div>
           {userCanEdit && (
             <button className="add-button" onClick={onAddRecipe}>
               + Rezept hinzufügen
