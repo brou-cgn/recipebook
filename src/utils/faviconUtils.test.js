@@ -33,7 +33,7 @@ describe('faviconUtils', () => {
     document.head.appendChild(ogImage);
     
     const twitterImage = document.createElement('meta');
-    twitterImage.setAttribute('property', 'twitter:image');
+    twitterImage.setAttribute('name', 'twitter:image');
     twitterImage.setAttribute('content', '/logo512.png');
     document.head.appendChild(twitterImage);
     
@@ -129,7 +129,7 @@ describe('faviconUtils', () => {
       updateFavicon(testImage);
       
       const ogImage = document.querySelector("meta[property='og:image']");
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       
       expect(ogImage).not.toBeNull();
       expect(ogImage.getAttribute('content')).toBe(testImage);
@@ -142,7 +142,7 @@ describe('faviconUtils', () => {
       updateFavicon(null);
       
       const ogImage = document.querySelector("meta[property='og:image']");
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       
       expect(ogImage.getAttribute('content')).toContain('/logo512.png');
       expect(twitterImage.getAttribute('content')).toContain('/logo512.png');
@@ -163,13 +163,13 @@ describe('faviconUtils', () => {
 
     test('creates Twitter meta tag if it does not exist', () => {
       // Remove existing twitter:image
-      const existingTwitterImage = document.querySelector("meta[property='twitter:image']");
+      const existingTwitterImage = document.querySelector("meta[name='twitter:image']");
       existingTwitterImage.remove();
       
       const testImage = 'data:image/png;base64,test';
       updateFavicon(testImage);
       
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       expect(twitterImage).not.toBeNull();
       expect(twitterImage.getAttribute('content')).toBe(testImage);
     });
@@ -211,7 +211,7 @@ describe('faviconUtils', () => {
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
       const ogImage = document.querySelector("meta[property='og:image']");
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       
       expect(iconLink.href).toBe(testImage);
       expect(appleIconLink.href).toBe(testImage);
@@ -231,7 +231,7 @@ describe('faviconUtils', () => {
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
       const ogImage = document.querySelector("meta[property='og:image']");
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       
       expect(iconLink.href).toContain('/favicon.ico');
       expect(appleIconLink.href).toContain('/logo192.png');
@@ -252,7 +252,7 @@ describe('faviconUtils', () => {
       const iconLink = document.querySelector("link[rel='icon']");
       const appleIconLink = document.querySelector("link[rel='apple-touch-icon']");
       const ogImage = document.querySelector("meta[property='og:image']");
-      const twitterImage = document.querySelector("meta[property='twitter:image']");
+      const twitterImage = document.querySelector("meta[name='twitter:image']");
       
       expect(iconLink.href).toContain('/favicon.ico');
       expect(appleIconLink.href).toContain('/logo192.png');

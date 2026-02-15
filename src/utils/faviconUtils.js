@@ -53,11 +53,11 @@ function updateSocialMetaTags(imageBase64) {
   }
   ogImage.setAttribute('content', imageUrl);
   
-  // Update Twitter image
-  let twitterImage = document.querySelector("meta[property='twitter:image']");
+  // Update Twitter image (Twitter uses 'name' attribute, not 'property')
+  let twitterImage = document.querySelector("meta[name='twitter:image']");
   if (!twitterImage) {
     twitterImage = document.createElement('meta');
-    twitterImage.setAttribute('property', 'twitter:image');
+    twitterImage.setAttribute('name', 'twitter:image');
     document.head.appendChild(twitterImage);
   }
   twitterImage.setAttribute('content', imageUrl);
@@ -91,7 +91,7 @@ export async function applyFaviconSettings() {
     updatePageTitle(settings.faviconText, settings.headerSlogan);
     
     // Update manifest with custom favicon
-    updateManifest(settings.faviconImage, settings.faviconText);
+    updateManifest(settings.faviconImage, settings.faviconText, settings.headerSlogan);
   } catch (error) {
     console.error('Error applying favicon settings:', error);
     // Apply defaults on error
@@ -103,19 +103,21 @@ export async function applyFaviconSettings() {
  * Update the PWA manifest with custom favicon
  * @param {string|null} imageBase64 - Base64 encoded image or null to use default
  * @param {string} faviconText - Text to use for the app name
+ * @param {string} headerSlogan - Slogan to use in the full app name
  */
-function updateManifest(imageBase64, faviconText) {
+function updateManifest(imageBase64, faviconText, headerSlogan) {
   // Skip manifest update if URL.createObjectURL is not available (e.g., in tests)
   if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
     return;
   }
   
   const appName = faviconText || DEFAULT_FAVICON_TEXT;
+  const slogan = headerSlogan || DEFAULT_SLOGAN;
   
   // Create a dynamic manifest
   const manifest = {
     short_name: appName,
-    name: `${appName} - Unsere Besten`,
+    name: `${appName} - ${slogan}`,
     icons: imageBase64 ? [
       {
         src: imageBase64,
