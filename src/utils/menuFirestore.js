@@ -14,18 +14,7 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
-
-/**
- * Remove undefined fields from an object
- * Firestore does not accept undefined values, so we need to filter them out
- * @param {Object} obj - Object to filter
- * @returns {Object} Object with undefined fields removed
- */
-const removeUndefinedFields = (obj) => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([_, value]) => value !== undefined)
-  );
-};
+import { removeUndefinedFields } from './firestoreUtils';
 
 /**
  * Set up real-time listener for menus
