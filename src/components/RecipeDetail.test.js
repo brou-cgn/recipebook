@@ -275,8 +275,22 @@ describe('RecipeDetail - Cooking Mode', () => {
     nachname: 'User',
   };
 
+  let originalInnerWidth;
+
+  // Helper function to mock window width
+  const mockWindowWidth = (width) => {
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: width,
+    });
+  };
+
   // Mock Wake Lock API
   beforeEach(() => {
+    // Save original innerWidth
+    originalInnerWidth = window.innerWidth;
+
     // Mock navigator.wakeLock
     Object.defineProperty(navigator, 'wakeLock', {
       writable: true,
@@ -288,13 +302,18 @@ describe('RecipeDetail - Cooking Mode', () => {
     });
   });
 
-  test('does NOT display cooking mode button on desktop', () => {
-    // Mock desktop width (> 480px)
+  afterEach(() => {
+    // Restore original innerWidth
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
       configurable: true,
-      value: 1024,
+      value: originalInnerWidth,
     });
+  });
+
+  test('does NOT display cooking mode button on desktop', () => {
+    // Mock desktop width (> 480px)
+    mockWindowWidth(1024);
 
     render(
       <RecipeDetail
@@ -320,11 +339,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('displays cooking mode button on mobile', () => {
     // Mock mobile width (<= 480px)
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 400,
-    });
+    mockWindowWidth(400);
 
     render(
       <RecipeDetail
@@ -343,11 +358,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('activates cooking mode on mobile when button is clicked', () => {
     // Mock mobile width (<= 480px)
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 400,
-    });
+    mockWindowWidth(400);
 
     render(
       <RecipeDetail
@@ -374,11 +385,7 @@ describe('RecipeDetail - Cooking Mode', () => {
 
   test('deactivates cooking mode when exit button is clicked', () => {
     // Mock mobile width (<= 480px)
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 400,
-    });
+    mockWindowWidth(400);
 
     render(
       <RecipeDetail
