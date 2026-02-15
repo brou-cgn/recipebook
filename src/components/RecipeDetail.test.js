@@ -289,9 +289,12 @@ describe('RecipeDetail - Cooking Mode', () => {
   });
 
   test('does NOT display cooking mode button on desktop', () => {
-    // Set desktop width (> 480px)
-    global.innerWidth = 1024;
-    global.dispatchEvent(new Event('resize'));
+    // Mock desktop width (> 480px)
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1024,
+    });
 
     render(
       <RecipeDetail
@@ -316,9 +319,12 @@ describe('RecipeDetail - Cooking Mode', () => {
   });
 
   test('displays cooking mode button on mobile', () => {
-    // Set mobile width (<= 480px)
-    global.innerWidth = 400;
-    global.dispatchEvent(new Event('resize'));
+    // Mock mobile width (<= 480px)
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 400,
+    });
 
     render(
       <RecipeDetail
@@ -336,9 +342,12 @@ describe('RecipeDetail - Cooking Mode', () => {
   });
 
   test('activates cooking mode on mobile when button is clicked', () => {
-    // Set mobile width (<= 480px)
-    global.innerWidth = 400;
-    global.dispatchEvent(new Event('resize'));
+    // Mock mobile width (<= 480px)
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 400,
+    });
 
     render(
       <RecipeDetail
@@ -364,9 +373,12 @@ describe('RecipeDetail - Cooking Mode', () => {
   });
 
   test('deactivates cooking mode when exit button is clicked', () => {
-    // Set mobile width (<= 480px)
-    global.innerWidth = 400;
-    global.dispatchEvent(new Event('resize'));
+    // Mock mobile width (<= 480px)
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 400,
+    });
 
     render(
       <RecipeDetail
