@@ -8,30 +8,22 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
 
-  // Load menu favorite IDs when user changes
+  // Load favorite IDs when user changes
   useEffect(() => {
-    const loadMenuFavorites = async () => {
+    const loadFavorites = async () => {
       if (currentUser?.id) {
-        const favorites = await getUserMenuFavorites(currentUser.id);
-        setFavoriteMenuIds(favorites);
+        const [menuFavorites, recipeFavorites] = await Promise.all([
+          getUserMenuFavorites(currentUser.id),
+          getUserFavorites(currentUser.id)
+        ]);
+        setFavoriteMenuIds(menuFavorites);
+        setFavoriteRecipeIds(recipeFavorites);
       } else {
         setFavoriteMenuIds([]);
-      }
-    };
-    loadMenuFavorites();
-  }, [currentUser?.id]);
-
-  // Load recipe favorite IDs when user changes
-  useEffect(() => {
-    const loadRecipeFavorites = async () => {
-      if (currentUser?.id) {
-        const favorites = await getUserFavorites(currentUser.id);
-        setFavoriteRecipeIds(favorites);
-      } else {
         setFavoriteRecipeIds([]);
       }
     };
-    loadRecipeFavorites();
+    loadFavorites();
   }, [currentUser?.id]);
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
