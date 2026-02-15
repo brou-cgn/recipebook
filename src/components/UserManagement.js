@@ -23,6 +23,7 @@ function UserManagement({ onBack, currentUser }) {
   const [roleEditUser, setRoleEditUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
+  const [adminCount, setAdminCount] = useState(0);
 
   useEffect(() => {
     loadUsers();
@@ -31,6 +32,8 @@ function UserManagement({ onBack, currentUser }) {
   const loadUsers = async () => {
     const users = await getUsers();
     setUsers(users);
+    const count = await getAdminCount();
+    setAdminCount(count);
   };
 
   const handleRoleChange = (userId, newRole) => {
@@ -245,7 +248,7 @@ function UserManagement({ onBack, currentUser }) {
             <strong>Gesamt:</strong> {users.length} Benutzer
           </div>
           <div className="stat-item">
-            <strong>Administratoren:</strong> {getAdminCount()}
+            <strong>Administratoren:</strong> {adminCount}
           </div>
         </div>
       </div>
