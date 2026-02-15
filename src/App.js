@@ -482,6 +482,7 @@ function App() {
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
             categoryFilter={categoryFilter}
+            onCategoryFilterChange={handleCategoryFilterChange}
             currentUser={currentUser}
           />
         )
