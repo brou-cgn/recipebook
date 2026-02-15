@@ -58,26 +58,34 @@
 }
 
 .favorites-filter-button {
-  background: white;
-  color: #666;
-  border: 2px solid #ddd;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 25px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .favorites-filter-button:hover {
-  border-color: #402C1C;
-  color: #402C1C;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .favorites-filter-button.active {
-  background: #402C1C;
+  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
   color: white;
-  border-color: #402C1C;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.favorites-filter-button.active:hover {
+  background: linear-gradient(135deg, #c46900 0%, #DF7A00 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
 }
 
 .add-button {
