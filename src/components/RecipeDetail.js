@@ -77,7 +77,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(() => {
         // Scroll to the content element to hide the header above
-        contentRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+        contentRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
       });
     }
   }, [initialRecipe]); // Re-run when recipe changes
