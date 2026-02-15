@@ -6,7 +6,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
 
-  // Load favorite IDs when user changes or menus change
+  // Load favorite IDs when user changes
   useEffect(() => {
     const loadFavorites = async () => {
       if (currentUser?.id) {
@@ -17,7 +17,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
       }
     };
     loadFavorites();
-  }, [currentUser?.id, menus]);
+  }, [currentUser?.id]);
 
   const getRecipeCount = (menu) => {
     return menu.recipeIds?.length || 0;

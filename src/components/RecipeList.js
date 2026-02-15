@@ -29,7 +29,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       }
     };
     loadFavorites();
-  }, [currentUser?.id, recipes]);
+  }, [currentUser?.id]);
   
   // Generate dynamic heading based on filters
   const getHeading = () => {
