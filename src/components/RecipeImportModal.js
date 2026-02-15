@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import './RecipeImportModal.css';
 import { importRecipe, EXAMPLE_NOTION_RECIPE } from '../utils/recipeImport';
 import { EXAMPLE_NOTION_MARKDOWN } from '../utils/notionParser';
+import OcrScanModal from './OcrScanModal';
 
 function RecipeImportModal({ onImport, onCancel }) {
   const [importText, setImportText] = useState('');
   const [error, setError] = useState('');
   const [showExample, setShowExample] = useState(false);
   const [exampleType, setExampleType] = useState('json'); // 'json' or 'markdown'
+  const [showOcrModal, setShowOcrModal] = useState(false);
 
   const handleImport = () => {
     setError('');
@@ -32,6 +34,11 @@ function RecipeImportModal({ onImport, onCancel }) {
       setImportText(EXAMPLE_NOTION_MARKDOWN);
     }
     setShowExample(false);
+  };
+
+  const handleOcrResult = (ocrText) => {
+    setImportText(ocrText);
+    setShowOcrModal(false);
   };
 
   return (
@@ -148,11 +155,26 @@ function RecipeImportModal({ onImport, onCancel }) {
           <button className="cancel-button" onClick={onCancel}>
             Abbrechen
           </button>
+          <button 
+            className="ocr-camera-button" 
+            onClick={() => setShowOcrModal(true)}
+            title="Rezept mit Kamera scannen"
+            aria-label="Rezept mit Kamera scannen"
+          >
+            📷
+          </button>
           <button className="import-button" onClick={handleImport}>
             Importieren
           </button>
         </div>
       </div>
+
+      {showOcrModal && (
+        <OcrScanModal
+          onImport={handleOcrResult}
+          onCancel={() => setShowOcrModal(false)}
+        />
+      )}
     </div>
   );
 }
