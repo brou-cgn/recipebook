@@ -11,6 +11,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 480);
   const wakeLockRef = useRef(null);
+  const contentRef = useRef(null);
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
@@ -64,6 +65,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
   }, [initialRecipe]);
+
+  // Scroll to content on mobile to hide header buttons initially (pull-to-reveal effect)
+  useEffect(() => {
+    const MOBILE_BREAKPOINT = 480;
+    const isMobileView = window.innerWidth <= MOBILE_BREAKPOINT;
+    
+    if (isMobileView && contentRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        // Scroll to the content element to hide the header above
+        contentRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      });
+    }
+  }, [initialRecipe]); // Re-run when recipe changes
 
   // Mobile header visibility: hide header on mount, show on scroll up
   useEffect(() => {
@@ -340,7 +355,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         </div>
       </div>
 
-      <div className="recipe-detail-content">
+      <div className="recipe-detail-content" ref={contentRef}>
         {recipe.image && (
           <div className="recipe-detail-image">
             <img src={recipe.image} alt={recipe.title} />
