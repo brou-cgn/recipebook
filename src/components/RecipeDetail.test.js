@@ -266,6 +266,7 @@ describe('RecipeDetail - Cooking Mode', () => {
     portionen: 4,
     ingredients: ['200 g Ingredient 1'],
     steps: ['Step 1', 'Step 2'],
+    image: 'test-image.jpg',
   };
 
   const currentUser = {
@@ -274,8 +275,22 @@ describe('RecipeDetail - Cooking Mode', () => {
     nachname: 'User',
   };
 
+  let originalInnerWidth;
+
+  // Helper function to set mock window width
+  const setMockWindowWidth = (width) => {
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: width,
+    });
+  };
+
   // Mock Wake Lock API
   beforeEach(() => {
+    // Save original innerWidth
+    originalInnerWidth = window.innerWidth;
+
     // Mock navigator.wakeLock
     Object.defineProperty(navigator, 'wakeLock', {
       writable: true,
@@ -287,22 +302,19 @@ describe('RecipeDetail - Cooking Mode', () => {
     });
   });
 
-  test('displays cooking mode button', () => {
-    render(
-      <RecipeDetail
-        recipe={mockRecipe}
-        onBack={() => {}}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        currentUser={currentUser}
-      />
-    );
-
-    const cookingModeButton = screen.getByText(/Kochmodus/);
-    expect(cookingModeButton).toBeInTheDocument();
+  afterEach(() => {
+    // Restore original innerWidth
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: originalInnerWidth,
+    });
   });
 
-  test('activates cooking mode when button is clicked', () => {
+  test('does NOT display cooking mode button on desktop', () => {
+    // Mock desktop width (> 480px)
+    setMockWindowWidth(1024);
+
     render(
       <RecipeDetail
         recipe={mockRecipe}
@@ -313,17 +325,68 @@ describe('RecipeDetail - Cooking Mode', () => {
       />
     );
 
-    const cookingModeButton = screen.getByText(/Kochmodus/);
-    fireEvent.click(cookingModeButton);
+    // Cooking mode button should NOT be in the desktop header
+    const desktopHeader = document.querySelector('.recipe-detail-header');
+    expect(desktopHeader).toBeInTheDocument();
+    
+    // Should not find "Kochmodus" text in desktop header
+    const cookingModeButtons = screen.queryAllByText(/Kochmodus/);
+    const desktopCookingModeButton = cookingModeButtons.find(btn => 
+      desktopHeader.contains(btn)
+    );
+    expect(desktopCookingModeButton).toBeUndefined();
+  });
 
-    // Check that the button text changes to "Aktiv"
-    expect(screen.getByText(/Aktiv/)).toBeInTheDocument();
+  test('displays cooking mode button on mobile', () => {
+    // Mock mobile width (<= 480px)
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Cooking mode button should be in the mobile overlay
+    const overlayButton = document.querySelector('.overlay-cooking-mode');
+    expect(overlayButton).toBeInTheDocument();
+  });
+
+  test('activates cooking mode on mobile when button is clicked', () => {
+    // Mock mobile width (<= 480px)
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Find the mobile overlay button
+    const overlayButton = document.querySelector('.overlay-cooking-mode');
+    expect(overlayButton).toBeInTheDocument();
+    
+    fireEvent.click(overlayButton);
     
     // Check that the cooking mode indicator appears
     expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
+    
+    // Check that the button has the active class
+    expect(overlayButton).toHaveClass('active');
   });
 
   test('deactivates cooking mode when exit button is clicked', () => {
+    // Mock mobile width (<= 480px)
+    setMockWindowWidth(400);
+
     render(
       <RecipeDetail
         recipe={mockRecipe}
@@ -335,8 +398,8 @@ describe('RecipeDetail - Cooking Mode', () => {
     );
 
     // Activate cooking mode
-    const cookingModeButton = screen.getByText(/Kochmodus/);
-    fireEvent.click(cookingModeButton);
+    const overlayButton = document.querySelector('.overlay-cooking-mode');
+    fireEvent.click(overlayButton);
 
     // Verify it's active
     expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();

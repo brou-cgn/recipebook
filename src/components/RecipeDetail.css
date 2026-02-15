@@ -71,38 +71,6 @@
   transform: scale(1.1);
 }
 
-.cooking-mode-button {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.cooking-mode-button:hover {
-  background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.cooking-mode-button.active {
-  background: linear-gradient(135deg, #DF7A00 0%, #c76d00 100%);
-  animation: pulse 2s infinite;
-}
-
-.cooking-mode-button.active:hover {
-  background: linear-gradient(135deg, #c76d00 0%, #DF7A00 100%);
-}
-
 @keyframes pulse {
   0%, 100% {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
