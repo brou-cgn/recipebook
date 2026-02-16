@@ -18,6 +18,7 @@ const geminiApiKey = defineSecret('GEMINI_API_KEY');
  * Rate limiting configuration
  */
 const RATE_LIMITS = {
+  admin: 1000, // 1000 scans per day for admin users
   authenticated: 20, // 20 scans per day for authenticated users
   guest: 5, // 5 scans per day for guest/anonymous users
 };
@@ -108,14 +109,17 @@ Important:
  * Check and update rate limit for a user
  * @param {string} userId - User ID (or IP for anonymous)
  * @param {boolean} isAuthenticated - Whether user is authenticated
+ * @param {boolean} isAdmin - Whether user is an admin
  * @returns {Promise<boolean>} True if under limit, false if exceeded
  */
-async function checkRateLimit(userId, isAuthenticated) {
+async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
   const db = admin.firestore();
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const docRef = db.collection('aiScanLimits').doc(`${userId}_${today}`);
 
-  const limit = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.guest;
+  const limit = isAdmin ? RATE_LIMITS.admin
+    : isAuthenticated ? RATE_LIMITS.authenticated
+    : RATE_LIMITS.guest;
 
   try {
     const result = await db.runTransaction(async (transaction) => {
@@ -128,6 +132,7 @@ async function checkRateLimit(userId, isAuthenticated) {
           date: today,
           count: 1,
           isAuthenticated: isAuthenticated,
+          isAdmin: isAdmin,
         });
         return true;
       }
@@ -360,13 +365,16 @@ exports.scanRecipeWithAI = onCall(
 
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
 
-      console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated})`);
+      console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated}, admin: ${isAdmin})`);
 
       // Rate limiting
-      const withinLimit = await checkRateLimit(userId, isAuthenticated);
+      const withinLimit = await checkRateLimit(userId, isAuthenticated, isAdmin);
       if (!withinLimit) {
-        const limit = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.guest;
+        const limit = isAdmin ? RATE_LIMITS.admin
+          : isAuthenticated ? RATE_LIMITS.authenticated
+          : RATE_LIMITS.guest;
         throw new HttpsError(
             'resource-exhausted',
             `Rate limit exceeded: maximum ${limit} scans per day`
@@ -432,6 +440,7 @@ exports.captureWebsiteScreenshot = onCall(
 
       const userId = auth.uid;
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
 
       console.log(`Screenshot request from user ${userId} for URL: ${url}`);
 
@@ -469,9 +478,11 @@ exports.captureWebsiteScreenshot = onCall(
 
       // Rate limiting (only checked after Puppeteer availability)
       // This code will run once Puppeteer is installed and the error above is removed
-      const withinLimit = await checkRateLimit(userId, isAuthenticated);
+      const withinLimit = await checkRateLimit(userId, isAuthenticated, isAdmin);
       if (!withinLimit) {
-        const limit = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.guest;
+        const limit = isAdmin ? RATE_LIMITS.admin
+          : isAuthenticated ? RATE_LIMITS.authenticated
+          : RATE_LIMITS.guest;
         throw new HttpsError(
             'resource-exhausted',
             `Rate limit exceeded: maximum ${limit} captures per day`

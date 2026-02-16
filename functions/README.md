@@ -10,7 +10,7 @@ A secure proxy for Google Gemini Vision API that provides AI-powered recipe reco
 
 **Features:**
 - ✅ Authentication: Only logged-in users can access
-- ✅ Rate limiting: 20 scans/day for users, 5/day for guests
+- ✅ Rate limiting: 1000 scans/day for admins, 20/day for users, 5/day for guests
 - ✅ Input validation: Max 5MB images, only image MIME types
 - ✅ Error handling: User-friendly error messages
 - ✅ Secure: API key stored as Firebase secret
@@ -71,6 +71,38 @@ Rate limits are enforced using Firestore:
   - `date`: Date (YYYY-MM-DD)
   - `count`: Number of scans
   - `isAuthenticated`: Boolean
+  - `isAdmin`: Boolean
+
+**Rate limit tiers:**
+- Admin users: 1000 scans per day
+- Authenticated users: 20 scans per day
+- Guest/anonymous users: 5 scans per day
+
+### Setting Admin Custom Claims
+
+To give a user admin privileges and higher rate limits, set a custom claim using the Firebase Admin SDK:
+
+```javascript
+const admin = require('firebase-admin');
+
+// Set admin claim for a user
+await admin.auth().setCustomUserClaims(uid, { admin: true });
+```
+
+Or use the Firebase CLI:
+
+```bash
+# Using Firebase Admin SDK in a Node.js script
+node -e "
+const admin = require('firebase-admin');
+admin.initializeApp();
+admin.auth().setCustomUserClaims('USER_UID_HERE', { admin: true })
+  .then(() => console.log('Admin claim set successfully'))
+  .catch(err => console.error('Error:', err));
+"
+```
+
+**Note:** Users need to sign out and sign back in for custom claims to take effect.
 
 ## Error Codes
 
