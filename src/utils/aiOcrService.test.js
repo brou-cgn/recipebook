@@ -8,8 +8,18 @@ import {
   recognizeRecipeWithAI,
   getAiOcrProviders,
   compareOcrMethods,
-  __testing__
 } from './aiOcrService';
+
+// Mock Firebase Functions
+jest.mock('../firebase', () => ({
+  functions: {},
+}));
+
+jest.mock('firebase/functions', () => ({
+  httpsCallable: jest.fn(),
+}));
+
+import { httpsCallable } from 'firebase/functions';
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -17,6 +27,7 @@ const originalEnv = process.env;
 beforeEach(() => {
   jest.resetModules();
   process.env = { ...originalEnv };
+  jest.clearAllMocks();
 });
 
 afterEach(() => {
@@ -25,13 +36,7 @@ afterEach(() => {
 
 describe('AI OCR Service', () => {
   describe('isAiOcrAvailable', () => {
-    test('returns false when API key is not configured', () => {
-      process.env.REACT_APP_GEMINI_API_KEY = '';
-      expect(isAiOcrAvailable('gemini')).toBe(false);
-    });
-
-    test('returns true when Gemini API key is configured', () => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-api-key';
+    test('returns true for gemini provider (Cloud Function based)', () => {
       expect(isAiOcrAvailable('gemini')).toBe(true);
     });
 
@@ -40,39 +45,21 @@ describe('AI OCR Service', () => {
     });
 
     test('defaults to gemini provider', () => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-api-key';
       expect(isAiOcrAvailable()).toBe(true);
+    });
+
+    test('returns false for openai provider (not yet implemented)', () => {
+      expect(isAiOcrAvailable('openai')).toBe(false);
     });
   });
 
   describe('getRecipeExtractionPrompt', () => {
-    test('returns German prompt when lang is de', () => {
-      const prompt = __testing__.getRecipeExtractionPrompt('de');
-      expect(prompt).toContain('Analysiere dieses Rezeptbild');
-      expect(prompt).toContain('titel');
-      expect(prompt).toContain('zutaten');
-      expect(prompt).toContain('zubereitung');
-    });
-
-    test('returns English prompt when lang is en', () => {
-      const prompt = __testing__.getRecipeExtractionPrompt('en');
-      expect(prompt).toContain('Analyze this recipe image');
-      expect(prompt).toContain('title');
-      expect(prompt).toContain('ingredients');
-      expect(prompt).toContain('steps');
-    });
-
-    test('includes structured JSON format in prompt', () => {
-      const prompt = __testing__.getRecipeExtractionPrompt('de');
-      expect(prompt).toContain('JSON');
-      expect(prompt).toContain('kulinarik');
-      expect(prompt).toContain('kategorie');
-      expect(prompt).toContain('schwierigkeit');
-    });
-
-    test('defaults to German when no language specified', () => {
-      const prompt = __testing__.getRecipeExtractionPrompt();
-      expect(prompt).toContain('Analysiere dieses Rezeptbild');
+    // Note: getRecipeExtractionPrompt is now only used in the Cloud Function
+    // These tests are removed as the function is no longer exported from the frontend
+    test('prompt generation is handled server-side', () => {
+      // The prompt generation logic is now in the Cloud Function
+      // This is a placeholder test to acknowledge the change
+      expect(true).toBe(true);
     });
   });
 
@@ -92,62 +79,56 @@ describe('AI OCR Service', () => {
     });
 
     test('reflects availability based on configuration', () => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-key';
       const providers = getAiOcrProviders();
+      // With Cloud Functions, gemini is always available
       expect(providers.gemini.available).toBe(true);
+      // OpenAI is not yet implemented
+      expect(providers.openai.available).toBe(false);
     });
   });
 
   describe('recognizeRecipeWithGemini', () => {
-    // Mock fetch for testing
-    global.fetch = jest.fn();
-
     beforeEach(() => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-api-key';
-      fetch.mockClear();
+      httpsCallable.mockClear();
     });
 
-    test('throws error when API key is not configured', async () => {
-      process.env.REACT_APP_GEMINI_API_KEY = '';
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+    test('validates image data', async () => {
+      const imageBase64 = '';
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'Gemini API key not configured'
+        'Invalid image data'
       );
     });
 
-    test('sends correct request to Gemini API', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({
-                titel: 'Spaghetti Carbonara',
-                portionen: 4,
-                zutaten: ['400g Spaghetti', '200g Speck'],
-                zubereitung: ['Pasta kochen', 'Speck anbraten']
-              })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+    test('calls Cloud Function with correct parameters', async () => {
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Spaghetti Carbonara',
+          servings: 4,
+          ingredients: ['400g Spaghetti', '200g Speck'],
+          steps: ['Pasta kochen', 'Speck anbraten'],
+          prepTime: '30 min',
+          cookTime: '15 min',
+          difficulty: 3,
+          cuisine: 'Italienisch',
+          category: 'Hauptgericht',
+          tags: [],
+          notes: '',
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       const result = await recognizeRecipeWithGemini(imageBase64, 'de');
 
-      expect(fetch).toHaveBeenCalledTimes(1);
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('generativelanguage.googleapis.com'),
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        })
-      );
+      expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'scanRecipeWithAI');
+      expect(mockCallable).toHaveBeenCalledWith({
+        imageBase64: imageBase64,
+        language: 'de',
+      });
       
       expect(result).toHaveProperty('title', 'Spaghetti Carbonara');
       expect(result).toHaveProperty('servings', 4);
@@ -155,84 +136,22 @@ describe('AI OCR Service', () => {
       expect(result).toHaveProperty('steps');
     });
 
-    test('handles JSON wrapped in markdown code blocks', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: '```json\n{"titel": "Test Recipe", "portionen": 2}\n```'
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
-      const result = await recognizeRecipeWithGemini(imageBase64, 'de');
-
-      expect(result).toHaveProperty('title', 'Test Recipe');
-      expect(result).toHaveProperty('servings', 2);
-    });
-
-    test('normalizes German response to standard format', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({
-                titel: 'Kuchen',
-                portionen: 8,
-                zubereitungszeit: '45 min',
-                kulinarik: 'Deutsch',
-                kategorie: 'Dessert',
-                zutaten: ['250g Mehl'],
-                zubereitung: ['Backen']
-              })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
-      });
-
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
-      const result = await recognizeRecipeWithGemini(imageBase64, 'de');
-
-      // Check normalized English keys
-      expect(result).toHaveProperty('title', 'Kuchen');
-      expect(result).toHaveProperty('servings', 8);
-      expect(result).toHaveProperty('prepTime', '45 min');
-      expect(result).toHaveProperty('cuisine', 'Deutsch');
-      expect(result).toHaveProperty('category', 'Dessert');
-      expect(result).toHaveProperty('ingredients');
-      expect(result).toHaveProperty('steps');
-    });
-
     test('calls progress callback at different stages', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ titel: 'Test', portionen: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
+
+      httpsCallable.mockReturnValue(mockCallable);
 
       const progressCallback = jest.fn();
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await recognizeRecipeWithGemini(imageBase64, 'de', progressCallback);
 
@@ -241,64 +160,107 @@ describe('AI OCR Service', () => {
       expect(progressCallback).toHaveBeenCalledWith(100);
     });
 
-    test('handles API errors gracefully', async () => {
-      fetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Bad Request',
-        json: async () => ({ error: { message: 'Invalid request' } })
+    test('handles authentication error', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'unauthenticated',
+        message: 'User not authenticated'
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'Gemini API error'
+        'logged in'
       );
     });
 
-    test('handles quota exceeded error', async () => {
-      fetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ error: { message: 'quota exceeded' } })
+    test('handles rate limit error', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'resource-exhausted',
+        message: 'Rate limit exceeded: maximum 20 scans per day'
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'quota'
+        'Rate limit exceeded'
       );
     });
 
-    test('strips data URL prefix from base64 image', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ titel: 'Test', portionen: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+    test('handles invalid argument error', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'invalid-argument',
+        message: 'Image too large'
       });
 
-      const imageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANS...';
-      await recognizeRecipeWithGemini(imageBase64, 'de');
+      httpsCallable.mockReturnValue(mockCallable);
 
-      const requestBody = JSON.parse(fetch.mock.calls[0][1].body);
-      expect(requestBody.contents[0].parts[1].inline_data.data).toBe('iVBORw0KGgoAAAANS...');
-      expect(requestBody.contents[0].parts[1].inline_data.mime_type).toBe('image/png');
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Image too large'
+      );
+    });
+
+    test('handles service not configured error', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'failed-precondition',
+        message: 'Service not configured'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'AI service not configured'
+      );
+    });
+
+    test('handles generic errors', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        message: 'Network error'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Network error'
+      );
+    });
+
+    test('passes language parameter correctly', async () => {
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test Recipe',
+          servings: 2,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      await recognizeRecipeWithGemini(imageBase64, 'en');
+
+      expect(mockCallable).toHaveBeenCalledWith({
+        imageBase64: imageBase64,
+        language: 'en',
+      });
     });
   });
 
   describe('recognizeRecipeWithAI', () => {
-    global.fetch = jest.fn();
-
     beforeEach(() => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-api-key';
-      fetch.mockClear();
+      httpsCallable.mockClear();
     });
 
     test('validates image data', async () => {
@@ -307,42 +269,38 @@ describe('AI OCR Service', () => {
     });
 
     test('uses Gemini as default provider', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ titel: 'Test', portionen: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150); // Valid length for testing
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       const result = await recognizeRecipeWithAI(imageBase64);
 
       expect(result.provider).toBe('gemini');
     });
 
     test('accepts custom provider option', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ titel: 'Test', portionen: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
+
+      httpsCallable.mockReturnValue(mockCallable);
 
       const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       const result = await recognizeRecipeWithAI(imageBase64, { provider: 'gemini' });
@@ -350,65 +308,48 @@ describe('AI OCR Service', () => {
       expect(result.provider).toBe('gemini');
     });
 
-    test('throws error when no provider is configured', async () => {
-      process.env.REACT_APP_GEMINI_API_KEY = '';
-      process.env.REACT_APP_OPENAI_API_KEY = '';
-
-      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
-      
-      await expect(recognizeRecipeWithAI(imageBase64)).rejects.toThrow(
-        'No AI OCR provider is configured'
-      );
-    });
-
-    test('falls back to available provider', async () => {
-      process.env.REACT_APP_GEMINI_API_KEY = 'test-key';
-      process.env.REACT_APP_OPENAI_API_KEY = '';
-
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ titel: 'Test', portionen: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+    test('falls back to Gemini when OpenAI provider is requested (not implemented)', async () => {
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
-      // Request OpenAI but it's not available, should fall back to Gemini
-      const result = await recognizeRecipeWithAI(imageBase64, { provider: 'openai' });
+      httpsCallable.mockReturnValue(mockCallable);
 
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      const result = await recognizeRecipeWithAI(imageBase64, { provider: 'openai' });
+      
+      // Should fall back to Gemini since OpenAI is not available
       expect(result.provider).toBe('gemini');
     });
 
     test('passes language option correctly', async () => {
-      const mockResponse = {
-        candidates: [{
-          content: {
-            parts: [{
-              text: JSON.stringify({ title: 'Test', servings: 1 })
-            }]
-          }
-        }]
-      };
-
-      fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
-      const result = await recognizeRecipeWithAI(imageBase64, { language: 'en' });
+      httpsCallable.mockReturnValue(mockCallable);
 
-      // Check that English keys are returned
-      expect(result).toHaveProperty('title');
-      expect(result).toHaveProperty('servings');
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      await recognizeRecipeWithAI(imageBase64, { language: 'en' });
+
+      expect(mockCallable).toHaveBeenCalledWith({
+        imageBase64: imageBase64,
+        language: 'en',
+      });
     });
   });
 
