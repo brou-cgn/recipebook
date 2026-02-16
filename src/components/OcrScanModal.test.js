@@ -356,8 +356,15 @@ describe('OcrScanModal', () => {
     expect(aiCall[1].onProgress).toBeInstanceOf(Function);
   });
 
-  test('modal starts scanning immediately when initialImage is provided', () => {
+  test('modal starts scanning immediately when initialImage is provided', async () => {
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     const initialImageData = 'data:image/png;base64,test';
+    
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Initial Image Recipe',
+      ingredients: ['Test'],
+      steps: ['Test Step']
+    });
 
     render(
       <OcrScanModal
@@ -369,7 +376,17 @@ describe('OcrScanModal', () => {
 
     // Should skip upload step and start scanning immediately
     expect(screen.queryByText('📁 Bild hochladen')).not.toBeInTheDocument();
-    expect(screen.getByText(/Analysiere Rezept/i)).toBeInTheDocument();
+    
+    // Wait for OCR to be called with the initial image
+    await waitFor(() => {
+      expect(recognizeRecipeWithAI).toHaveBeenCalledWith(
+        initialImageData,
+        expect.objectContaining({
+          language: 'de',
+          provider: 'gemini'
+        })
+      );
+    }, { timeout: OCR_TIMEOUT });
   });
 
   test('displays error when AI OCR fails', async () => {

@@ -22,12 +22,15 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const initialScanTriggered = useRef(false);
 
   // When initialImage is provided, start OCR automatically
   useEffect(() => {
-    if (initialImage) {
+    if (initialImage && !initialScanTriggered.current) {
+      initialScanTriggered.current = true;
       performOcr(initialImage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialImage]);
 
   // Handle file upload
