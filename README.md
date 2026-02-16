@@ -341,6 +341,18 @@ For developers interested in the OCR implementation:
 Detailed documentation:
 - [OCR Service API Documentation](OCR_SERVICE.md)
 - [OCR Scan Modal Component Documentation](OCR_SCAN_MODAL.md)
+- [AI OCR Platforms Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) - Analysis of AI-enhanced OCR options
+- [AI OCR Integration Guide](AI_OCR_INTEGRATION.md) - How to integrate AI OCR
+
+### AI-Enhanced OCR (Optional)
+
+For significantly improved OCR accuracy, the app supports AI-powered OCR through Google Gemini Vision:
+- **90-95% accuracy** (vs. 70-80% with Tesseract)
+- **Structured data extraction**: Automatically extracts title, ingredients, steps, cuisine, category
+- **Handwriting support**: Better recognition of handwritten recipes
+- **Free tier**: ~10,000+ requests/month
+
+See [AI OCR Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integration Guide](AI_OCR_INTEGRATION.md) for implementation.
 
 ### Troubleshooting
 
