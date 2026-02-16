@@ -33,6 +33,10 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     portionUnits: []
   });
   const [allUsers, setAllUsers] = useState([]);
+  const [buttonIcons, setButtonIcons] = useState({
+    importRecipe: '📥',
+    scanImage: '📷'
+  });
 
   useEffect(() => {
     if (recipe) {
@@ -85,8 +89,17 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       const users = await getUsers();
       setAllUsers(users);
     };
+    const loadButtonIcons = async () => {
+      const { getButtonIcons } = await import('../utils/customLists');
+      const icons = await getButtonIcons();
+      setButtonIcons({
+        importRecipe: icons.importRecipe || '📥',
+        scanImage: icons.scanImage || '📷'
+      });
+    };
     loadCustomLists();
     loadUsers();
+    loadButtonIcons();
   }, []);
 
   useEffect(() => {
@@ -286,7 +299,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
                 }
               }}
             >
-              📷 Bild scannen
+              {buttonIcons.scanImage}
             </label>
             <input
               type="file"
@@ -300,8 +313,9 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               className="import-button-header"
               onClick={() => setShowImportModal(true)}
               title="Rezept aus externer Quelle importieren"
+              aria-label="Rezept importieren"
             >
-              📥 Importieren
+              {buttonIcons.importRecipe}
             </button>
           </div>
         )}

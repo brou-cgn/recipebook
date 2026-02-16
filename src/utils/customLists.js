@@ -56,6 +56,13 @@ export const DEFAULT_PORTION_UNITS = [
 export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
+// Default button icons (emoji icons)
+export const DEFAULT_BUTTON_ICONS = {
+  cookingMode: '👨‍🍳',
+  importRecipe: '📥',
+  scanImage: '📷'
+};
+
 // Cache for settings to avoid repeated Firestore reads
 let settingsCache = null;
 
@@ -83,7 +90,8 @@ export async function getSettings() {
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
-        faviconImage: settings.faviconImage || null
+        faviconImage: settings.faviconImage || null,
+        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS
       };
       
       return settingsCache;
@@ -97,7 +105,8 @@ export async function getSettings() {
       portionUnits: DEFAULT_PORTION_UNITS,
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
-      faviconImage: null
+      faviconImage: null,
+      buttonIcons: DEFAULT_BUTTON_ICONS
     };
     
     // Create the settings document
@@ -116,7 +125,8 @@ export async function getSettings() {
       portionUnits: DEFAULT_PORTION_UNITS,
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
-      faviconImage: null
+      faviconImage: null,
+      buttonIcons: DEFAULT_BUTTON_ICONS
     };
   }
 }
@@ -274,4 +284,42 @@ export async function saveFaviconText(text) {
  */
 export function clearSettingsCache() {
   settingsCache = null;
+}
+
+/**
+ * Get the button icons from Firestore or return defaults
+ * @returns {Promise<Object>} Promise resolving to button icons object
+ */
+export async function getButtonIcons() {
+  const settings = await getSettings();
+  return settings.buttonIcons || DEFAULT_BUTTON_ICONS;
+}
+
+/**
+ * Save the button icons to Firestore
+ * @param {Object} buttonIcons - Button icons object
+ * @returns {Promise<void>}
+ */
+export async function saveButtonIcons(buttonIcons) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { buttonIcons });
+    
+    // Update cache
+    if (settingsCache) {
+      settingsCache.buttonIcons = buttonIcons;
+    }
+  } catch (error) {
+    console.error('Error saving button icons:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reset button icons to defaults
+ * @returns {Promise<Object>} Promise resolving to default button icons
+ */
+export async function resetButtonIcons() {
+  await saveButtonIcons(DEFAULT_BUTTON_ICONS);
+  return DEFAULT_BUTTON_ICONS;
 }

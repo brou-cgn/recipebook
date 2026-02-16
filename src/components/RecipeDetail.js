@@ -3,7 +3,6 @@ import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
-import ChefHatIcon from './icons/ChefHatIcon';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -19,14 +18,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
+  const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
 
   useEffect(() => {
-    const loadPortionUnits = async () => {
-      const { getCustomLists } = require('../utils/customLists');
+    const loadSettings = async () => {
+      const { getCustomLists, getButtonIcons } = require('../utils/customLists');
       const lists = await getCustomLists();
+      const icons = await getButtonIcons();
       setPortionUnits(lists.portionUnits || []);
+      setCookingModeIcon(icons.cookingMode || '👨‍🍳');
     };
-    loadPortionUnits();
+    loadSettings();
   }, []);
 
   // Track window size for responsive design with debouncing
@@ -262,7 +264,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       {cookingMode && (
         <div className="cooking-mode-indicator">
           <div className="cooking-mode-content">
-            <span className="cooking-mode-icon">👨‍🍳</span>
+            <span className="cooking-mode-icon">{cookingModeIcon}</span>
             <span className="cooking-mode-text">Kochmodus aktiv</span>
             <button 
               className="cooking-mode-exit"
@@ -320,11 +322,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   className={`overlay-cooking-mode ${cookingMode ? 'active' : ''}`}
                   onClick={toggleCookingMode}
                   title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
+                  aria-label={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
                 >
-                  <ChefHatIcon 
-                    color={cookingMode ? 'white' : '#4CAF50'} 
-                    size={24} 
-                  />
+                  {cookingModeIcon}
                 </button>
                 <button 
                   className="overlay-back-button"

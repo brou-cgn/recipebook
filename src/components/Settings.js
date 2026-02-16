@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -36,6 +36,13 @@ function Settings({ onBack, currentUser }) {
   const [faviconText, setFaviconText] = useState('');
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
+  // Button icons state
+  const [buttonIcons, setButtonIcons] = useState({
+    cookingMode: '👨‍🍳',
+    importRecipe: '📥',
+    scanImage: '📷'
+  });
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -43,12 +50,14 @@ function Settings({ onBack, currentUser }) {
       const slogan = await getHeaderSlogan();
       const faviconImg = await getFaviconImage();
       const faviconTxt = await getFaviconText();
+      const icons = await getButtonIcons();
       
       setLists(lists);
       setHeaderSlogan(slogan);
       setCategoryImages(getCategoryImages());
       setFaviconImage(faviconImg);
       setFaviconText(faviconTxt);
+      setButtonIcons(icons);
     };
     loadSettings();
   }, []);
@@ -58,6 +67,7 @@ function Settings({ onBack, currentUser }) {
     saveHeaderSlogan(headerSlogan);
     saveFaviconImage(faviconImage);
     saveFaviconText(faviconText);
+    saveButtonIcons(buttonIcons);
     
     // Apply favicon changes immediately
     updateFavicon(faviconImage);
@@ -363,6 +373,93 @@ function Settings({ onBack, currentUser }) {
                   Unterstützte Formate: JPEG, PNG, GIF, WebP. Maximale Größe: 5MB. 
                   Empfohlene Größe: 32x32 oder 64x64 Pixel.
                 </p>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Button-Icons</h3>
+              <p className="section-description">
+                Wählen Sie Icons für verschiedene Buttons. Die Buttons zeigen nur das Icon ohne Text.
+              </p>
+              
+              <div className="button-icons-config">
+                <div className="button-icon-item">
+                  <label htmlFor="cookingModeIcon">Kochmodus-Button (Rezeptdetailansicht):</label>
+                  <div className="button-icon-input-group">
+                    <input
+                      type="text"
+                      id="cookingModeIcon"
+                      value={buttonIcons.cookingMode}
+                      onChange={(e) => setButtonIcons({ ...buttonIcons, cookingMode: e.target.value })}
+                      placeholder="z.B. 👨‍🍳"
+                      maxLength={10}
+                    />
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, cookingMode: DEFAULT_BUTTON_ICONS.cookingMode })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      <span>{buttonIcons.cookingMode}</span>
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="importRecipeIcon">Import-Button (Neues Rezept):</label>
+                  <div className="button-icon-input-group">
+                    <input
+                      type="text"
+                      id="importRecipeIcon"
+                      value={buttonIcons.importRecipe}
+                      onChange={(e) => setButtonIcons({ ...buttonIcons, importRecipe: e.target.value })}
+                      placeholder="z.B. 📥"
+                      maxLength={10}
+                    />
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, importRecipe: DEFAULT_BUTTON_ICONS.importRecipe })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      <span>{buttonIcons.importRecipe}</span>
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="scanImageIcon">Bild-scannen-Button (Neues Rezept):</label>
+                  <div className="button-icon-input-group">
+                    <input
+                      type="text"
+                      id="scanImageIcon"
+                      value={buttonIcons.scanImage}
+                      onChange={(e) => setButtonIcons({ ...buttonIcons, scanImage: e.target.value })}
+                      placeholder="z.B. 📷"
+                      maxLength={10}
+                    />
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, scanImage: DEFAULT_BUTTON_ICONS.scanImage })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      <span>{buttonIcons.scanImage}</span>
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                </div>
               </div>
             </div>
 

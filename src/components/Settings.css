@@ -782,3 +782,89 @@
     width: 100%;
   }
 }
+
+/* Button Icons Configuration Styles */
+.button-icons-config {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.button-icon-item {
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+}
+
+.button-icon-item label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.button-icon-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.button-icon-input-group input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.button-icon-input-group input:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.reset-icon-btn {
+  background: #DF7A00;
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.reset-icon-btn:hover {
+  background: #f57c00;
+  transform: scale(1.05);
+}
+
+.icon-preview {
+  min-width: 60px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .button-icon-input-group {
+    flex-wrap: wrap;
+  }
+  
+  .button-icon-input-group input {
+    flex: 1 0 100%;
+  }
+  
+  .reset-icon-btn,
+  .icon-preview {
+    flex: 1;
+  }
+}
