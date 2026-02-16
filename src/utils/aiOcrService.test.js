@@ -53,16 +53,6 @@ describe('AI OCR Service', () => {
     });
   });
 
-  describe('getRecipeExtractionPrompt', () => {
-    // Note: getRecipeExtractionPrompt is now only used in the Cloud Function
-    // These tests are removed as the function is no longer exported from the frontend
-    test('prompt generation is handled server-side', () => {
-      // The prompt generation logic is now in the Cloud Function
-      // This is a placeholder test to acknowledge the change
-      expect(true).toBe(true);
-    });
-  });
-
   describe('getAiOcrProviders', () => {
     test('returns information about all providers', () => {
       const providers = getAiOcrProviders();

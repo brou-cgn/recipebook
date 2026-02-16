@@ -188,7 +188,7 @@ function validateImageData(imageBase64) {
     );
   }
 
-  // Estimate base64 size (base64 is ~33% larger than binary)
+  // Estimate base64 size (base64 encoding increases size by ~33%, so decoded size is 3/4 of encoded length)
   const estimatedSize = (base64Data.length * 3) / 4;
   if (estimatedSize > MAX_IMAGE_SIZE) {
     throw new HttpsError(
@@ -359,7 +359,7 @@ exports.scanRecipeWithAI = onCall(
       }
 
       const userId = auth.uid;
-      const isAuthenticated = !auth.token.firebase?.sign_in_provider?.includes('anonymous');
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
 
       console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated})`);
 
