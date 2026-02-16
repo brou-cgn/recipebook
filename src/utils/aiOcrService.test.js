@@ -180,6 +180,21 @@ describe('AI OCR Service', () => {
       );
     });
 
+    test('handles admin rate limit error', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'resource-exhausted',
+        message: 'Rate limit exceeded: maximum 1000 scans per day'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Rate limit exceeded'
+      );
+    });
+
     test('handles invalid argument error', async () => {
       const mockCallable = jest.fn().mockRejectedValue({
         code: 'invalid-argument',
