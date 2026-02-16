@@ -715,6 +715,27 @@ Zucker und Salz vermischen
           'Die Butter hinzufügen.'
         ]);
       });
+
+      test('preserves original punctuation in merged steps', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1. Step with period.
+2. Step without period
+3. Another with period.`;
+
+        const result = parseOcrText(text, 'en');
+        // Punctuation from original text is preserved
+        expect(result.steps).toEqual([
+          'Step with period.',
+          'Step without period',
+          'Another with period.'
+        ]);
+      });
     });
   });
 });
