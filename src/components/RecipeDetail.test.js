@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 
 // Mock the utility modules
+jest.mock('../utils/imageUtils', () => ({
+  isBase64Image: jest.fn(() => false),
+}));
+
 jest.mock('../utils/userFavorites', () => ({
   isRecipeFavorite: () => false,
   toggleRecipeFavorite: jest.fn(),
@@ -35,6 +39,11 @@ jest.mock('../utils/customLists', () => ({
     cuisineTypes: [],
     mealCategories: [],
     units: [],
+  }),
+  getButtonIcons: () => Promise.resolve({
+    cookingMode: '👨‍🍳',
+    importRecipe: '📥',
+    scanImage: '📷'
   }),
 }));
 
