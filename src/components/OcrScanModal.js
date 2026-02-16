@@ -1,18 +1,14 @@
-import React, { useState, useRef } from 'react';
-import ReactCrop from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import React, { useState, useRef, useEffect } from 'react';
 import './OcrScanModal.css';
-import { recognizeText, processCroppedImage } from '../utils/ocrService';
+import { recognizeText } from '../utils/ocrService';
 import { parseOcrTextSmart } from '../utils/ocrParser';
 import { getValidationSummary } from '../utils/ocrValidation';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI, isAiOcrAvailable } from '../utils/aiOcrService';
 
 function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
-  const [step, setStep] = useState(initialImage ? 'crop' : 'upload'); // 'upload', 'crop', 'scan', 'edit', 'ai-result'
+  const [step, setStep] = useState(initialImage ? 'scan' : 'upload'); // 'upload', 'scan', 'edit', 'ai-result'
   const [imageBase64, setImageBase64] = useState(initialImage);
-  const [crop, setCrop] = useState(null);
-  const [completedCrop, setCompletedCrop] = useState(null);
   const [language, setLanguage] = useState('de'); // 'de' or 'en'
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -26,7 +22,13 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const imgRef = useRef(null);
+
+  // When initialImage is provided, start OCR automatically
+  useEffect(() => {
+    if (initialImage) {
+      performOcr(initialImage);
+    }
+  }, [initialImage]);
 
   // Handle file upload
   const handleFileUpload = async (e) => {
@@ -37,7 +39,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     try {
       const base64 = await fileToBase64(file);
       setImageBase64(base64);
-      setStep('crop');
+      setStep('scan');
+      await performOcr(base64);
     } catch (err) {
       setError(err.message);
     }
@@ -76,7 +79,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     const base64 = canvas.toDataURL('image/png');
     setImageBase64(base64);
     stopCamera();
-    setStep('crop');
+    setStep('scan');
+    performOcr(base64);
   };
 
   // Stop camera
@@ -86,57 +90,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
       streamRef.current = null;
     }
     setCameraActive(false);
-  };
-
-  // Skip crop - processes the full image without cropping
-  // Called internally when no crop area is selected
-  const skipCrop = () => {
-    if (!imageBase64) {
-      setError('Kein Bild geladen. Bitte laden Sie zuerst ein Bild hoch.');
-      return;
-    }
-    setError('');
-    setStep('scan');
-    performOcr(imageBase64);
-  };
-
-  // Apply crop and proceed to OCR
-  const applyCrop = async () => {
-    // Check if AI OCR is available before proceeding
-    if (!isAiOcrAvailable('gemini')) {
-      setError('KI-Scan benötigt einen Gemini API-Key. Bitte konfigurieren Sie den API-Key in den Einstellungen.');
-      return;
-    }
-
-    // Validate crop selection
-    if (!completedCrop || !completedCrop.width || !completedCrop.height) {
-      // No crop area selected or invalid crop, use the full image
-      skipCrop();
-      return;
-    }
-
-    // Check for minimum crop dimensions (at least 50x50 pixels)
-    if (completedCrop.width < 50 || completedCrop.height < 50) {
-      setError('Die Auswahl ist zu klein. Bitte wählen Sie einen größeren Bereich aus oder überspringen Sie das Zuschneiden.');
-      return;
-    }
-
-    setError('');
-    try {
-      // Convert pixel crop to actual crop coordinates
-      const pixelCrop = {
-        x: Math.round(completedCrop.x),
-        y: Math.round(completedCrop.y),
-        width: Math.round(completedCrop.width),
-        height: Math.round(completedCrop.height)
-      };
-
-      const croppedImage = await processCroppedImage(imageBase64, pixelCrop);
-      setStep('scan');
-      await performOcr(croppedImage);
-    } catch (err) {
-      setError(err.message);
-    }
   };
 
   // Perform OCR
@@ -177,7 +130,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
       }
     } catch (err) {
       setError('OCR fehlgeschlagen: ' + err.message);
-      setStep('crop');
+      setStep('upload');
     } finally {
       setScanning(false);
       setScanProgress(0);
@@ -346,6 +299,24 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                 Fotografieren Sie ein Rezept oder laden Sie ein Bild hoch
               </p>
 
+              <div className="language-selector">
+                <label>Sprache:</label>
+                <div className="language-tabs">
+                  <button
+                    className={`language-tab ${language === 'de' ? 'active' : ''}`}
+                    onClick={() => setLanguage('de')}
+                  >
+                    🇩🇪 Deutsch
+                  </button>
+                  <button
+                    className={`language-tab ${language === 'en' ? 'active' : ''}`}
+                    onClick={() => setLanguage('en')}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+              </div>
+
               {!cameraActive && (
                 <div className="upload-buttons">
                   <button className="camera-button" onClick={startCamera}>
@@ -384,48 +355,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
               )}
 
               <canvas ref={canvasRef} style={{ display: 'none' }} />
-            </div>
-          )}
-
-          {/* Crop Step */}
-          {step === 'crop' && imageBase64 && (
-            <div className="crop-section">
-              <p className="ocr-instructions">
-                Wählen Sie den Bereich aus, der gescannt werden soll (optional)
-              </p>
-
-              <div className="language-selector">
-                <label>Sprache:</label>
-                <div className="language-tabs">
-                  <button
-                    className={`language-tab ${language === 'de' ? 'active' : ''}`}
-                    onClick={() => setLanguage('de')}
-                  >
-                    🇩🇪 Deutsch
-                  </button>
-                  <button
-                    className={`language-tab ${language === 'en' ? 'active' : ''}`}
-                    onClick={() => setLanguage('en')}
-                  >
-                    🇬🇧 English
-                  </button>
-                </div>
-              </div>
-
-              <div className="crop-container">
-                <ReactCrop
-                  crop={crop}
-                  onChange={(c) => setCrop(c)}
-                  onComplete={(c) => setCompletedCrop(c)}
-                >
-                  <img
-                    ref={imgRef}
-                    src={imageBase64}
-                    alt="Zu scannendes Bild"
-                    style={{ maxWidth: '100%' }}
-                  />
-                </ReactCrop>
-              </div>
             </div>
           )}
 
@@ -579,12 +508,6 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
           <button className="cancel-button" onClick={handleCancel}>
             Abbrechen
           </button>
-          
-          {step === 'crop' && (
-            <button className="scan-button" onClick={applyCrop}>
-              Scannen
-            </button>
-          )}
           
           {(step === 'edit' || step === 'ai-result') && (
             <button className="import-button" onClick={handleImport}>
