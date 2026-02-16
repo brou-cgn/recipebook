@@ -25,6 +25,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const initialScanTriggered = useRef(false);
 
   // When initialImage is provided, start OCR automatically
+  // We only want this to run once on mount, not when performOcr changes
   useEffect(() => {
     if (initialImage && !initialScanTriggered.current) {
       initialScanTriggered.current = true;
