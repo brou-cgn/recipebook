@@ -5,9 +5,10 @@ import './OcrScanModal.css';
 import { recognizeText, processCroppedImage } from '../utils/ocrService';
 import { parseOcrText } from '../utils/ocrParser';
 import { fileToBase64 } from '../utils/imageUtils';
+import { recognizeRecipeWithAI, isAiOcrAvailable } from '../utils/aiOcrService';
 
 function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
-  const [step, setStep] = useState(initialImage ? 'crop' : 'upload'); // 'upload', 'crop', 'scan', 'edit'
+  const [step, setStep] = useState(initialImage ? 'crop' : 'upload'); // 'upload', 'crop', 'scan', 'edit', 'ai-result'
   const [imageBase64, setImageBase64] = useState(initialImage);
   const [crop, setCrop] = useState(null);
   const [completedCrop, setCompletedCrop] = useState(null);
@@ -17,6 +18,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [ocrText, setOcrText] = useState('');
   const [error, setError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
+  const [ocrMode, setOcrMode] = useState('standard'); // 'standard' or 'ai'
+  const [aiResult, setAiResult] = useState(null);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -141,15 +144,28 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setError('');
 
     try {
-      const langCode = language === 'de' ? 'deu' : 'eng';
-      const result = await recognizeText(
-        imageToProcess,
-        langCode,
-        (progress) => setScanProgress(progress)
-      );
+      if (ocrMode === 'ai') {
+        // AI OCR using Gemini Vision
+        const result = await recognizeRecipeWithAI(imageToProcess, {
+          language,
+          provider: 'gemini',
+          onProgress: (progress) => setScanProgress(progress)
+        });
 
-      setOcrText(result.text);
-      setStep('edit');
+        setAiResult(result);
+        setStep('ai-result');
+      } else {
+        // Standard OCR using Tesseract
+        const langCode = language === 'de' ? 'deu' : 'eng';
+        const result = await recognizeText(
+          imageToProcess,
+          langCode,
+          (progress) => setScanProgress(progress)
+        );
+
+        setOcrText(result.text);
+        setStep('edit');
+      }
     } catch (err) {
       setError('OCR fehlgeschlagen: ' + err.message);
       setStep('crop');
@@ -163,6 +179,34 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const handleImport = () => {
     setError('');
 
+    // AI result import
+    if (step === 'ai-result' && aiResult) {
+      try {
+        // Parse time values more robustly
+        const parseTime = (timeStr) => {
+          if (!timeStr) return 0;
+          const numMatch = String(timeStr).match(/\d+/);
+          return numMatch ? parseInt(numMatch[0], 10) : 0;
+        };
+
+        const recipe = {
+          title: aiResult.title || '',
+          ingredients: aiResult.ingredients || [],
+          steps: aiResult.steps || [],
+          portionen: aiResult.servings || 4,
+          kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
+          kulinarik: aiResult.cuisine ? [aiResult.cuisine] : [],
+          schwierigkeit: aiResult.difficulty || 3,
+          speisekategorie: aiResult.category || '',
+        };
+        onImport(recipe);
+      } catch (err) {
+        setError(err.message);
+      }
+      return;
+    }
+
+    // Standard text import
     if (!ocrText.trim()) {
       setError('Kein Text erkannt. Bitte versuchen Sie es erneut.');
       return;
@@ -185,12 +229,71 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setCompletedCrop(null);
     setOcrText('');
     setError('');
+    setAiResult(null);
+    setOcrMode('standard');
   };
 
   // Handle cancel
   const handleCancel = () => {
     stopCamera();
     onCancel();
+  };
+
+  // Convert AI result to text format for editing
+  const convertAiResultToText = () => {
+    if (!aiResult) return;
+
+    let text = '';
+    
+    // Title
+    if (aiResult.title) {
+      text += aiResult.title + '\n\n';
+    }
+
+    // Meta information
+    if (aiResult.servings) {
+      text += `Portionen: ${aiResult.servings}\n`;
+    }
+    if (aiResult.prepTime || aiResult.cookTime) {
+      const time = aiResult.prepTime || aiResult.cookTime;
+      text += `Zeit: ${time}\n`;
+    }
+    if (aiResult.difficulty) {
+      text += `Schwierigkeit: ${aiResult.difficulty}\n`;
+    }
+    if (aiResult.cuisine) {
+      text += `Kulinarik: ${aiResult.cuisine}\n`;
+    }
+    if (aiResult.category) {
+      text += `Kategorie: ${aiResult.category}\n`;
+    }
+    text += '\n';
+
+    // Ingredients
+    if (aiResult.ingredients && aiResult.ingredients.length > 0) {
+      text += 'Zutaten\n\n';
+      aiResult.ingredients.forEach(ingredient => {
+        text += ingredient + '\n';
+      });
+      text += '\n';
+    }
+
+    // Steps
+    if (aiResult.steps && aiResult.steps.length > 0) {
+      text += 'Zubereitung\n\n';
+      aiResult.steps.forEach((step, index) => {
+        text += `${index + 1}. ${step}\n`;
+      });
+      text += '\n';
+    }
+
+    // Notes
+    if (aiResult.notes) {
+      text += `Notizen: ${aiResult.notes}\n`;
+    }
+
+    setOcrText(text.trim());
+    setStep('edit');
   };
 
   return (
@@ -275,6 +378,35 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                 </div>
               </div>
 
+              <div className="ocr-mode-selector">
+                <label>OCR-Modus:</label>
+                <div className="ocr-mode-tabs">
+                  <button
+                    className={`ocr-mode-tab ${ocrMode === 'standard' ? 'active' : ''}`}
+                    onClick={() => setOcrMode('standard')}
+                  >
+                    📝 Standard-OCR
+                  </button>
+                  <button
+                    className={`ocr-mode-tab ${ocrMode === 'ai' ? 'active' : ''} ${!isAiOcrAvailable('gemini') ? 'disabled' : ''}`}
+                    onClick={() => isAiOcrAvailable('gemini') && setOcrMode('ai')}
+                    disabled={!isAiOcrAvailable('gemini')}
+                  >
+                    🤖 KI-Scan (Gemini)
+                  </button>
+                </div>
+                {!isAiOcrAvailable('gemini') && (
+                  <p className="ai-hint">
+                    KI-Scan benötigt einen Gemini API-Key in den Einstellungen
+                  </p>
+                )}
+                {ocrMode === 'ai' && isAiOcrAvailable('gemini') && (
+                  <p className="ai-hint">
+                    ⚡ Das Bild wird zur Analyse an Google gesendet. Rezeptdaten werden direkt strukturiert erkannt.
+                  </p>
+                )}
+              </div>
+
               <div className="crop-container">
                 <ReactCrop
                   crop={crop}
@@ -296,7 +428,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
           {step === 'scan' && scanning && (
             <div className="scan-section">
               <p className="ocr-instructions">
-                Scanne Text...
+                {ocrMode === 'ai' ? '🤖 Analysiere Rezept mit KI...' : 'Scanne Text...'}
               </p>
               <div className="progress-container">
                 <div className="progress-bar">
@@ -307,6 +439,74 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                 </div>
                 <p className="progress-text">{scanProgress}%</p>
               </div>
+            </div>
+          )}
+
+          {/* AI Result Step */}
+          {step === 'ai-result' && aiResult && (
+            <div className="ai-result-section">
+              <p className="ocr-instructions">
+                KI-Analyse abgeschlossen - Überprüfen Sie die erkannten Daten
+              </p>
+
+              <h3 className="ai-result-title">{aiResult.title || 'Unbenanntes Rezept'}</h3>
+
+              {(aiResult.servings || aiResult.prepTime || aiResult.cookTime || aiResult.difficulty || aiResult.cuisine || aiResult.category) && (
+                <div className="ai-result-meta">
+                  {aiResult.servings && (
+                    <span className="ai-meta-badge">👥 {aiResult.servings} Portionen</span>
+                  )}
+                  {(aiResult.prepTime || aiResult.cookTime) && (
+                    <span className="ai-meta-badge">⏱️ {aiResult.prepTime || aiResult.cookTime}</span>
+                  )}
+                  {aiResult.difficulty && (
+                    <span className="ai-meta-badge">📊 Schwierigkeit: {aiResult.difficulty}/5</span>
+                  )}
+                  {aiResult.cuisine && (
+                    <span className="ai-meta-badge">🌍 {aiResult.cuisine}</span>
+                  )}
+                  {aiResult.category && (
+                    <span className="ai-meta-badge">📂 {aiResult.category}</span>
+                  )}
+                </div>
+              )}
+
+              {aiResult.ingredients && aiResult.ingredients.length > 0 && (
+                <div className="ai-result-ingredients">
+                  <h4>Zutaten</h4>
+                  <ul>
+                    {aiResult.ingredients.map((ingredient, index) => (
+                      <li key={index}>{ingredient}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {aiResult.steps && aiResult.steps.length > 0 && (
+                <div className="ai-result-steps">
+                  <h4>Zubereitung</h4>
+                  <ol>
+                    {aiResult.steps.map((step, index) => (
+                      <li key={index}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {aiResult.tags && aiResult.tags.length > 0 && (
+                <div className="ai-result-tags">
+                  <h4>Tags</h4>
+                  <div className="ai-tags-list">
+                    {aiResult.tags.map((tag, index) => (
+                      <span key={index} className="ai-tag">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button className="edit-text-button" onClick={convertAiResultToText}>
+                ✏️ Als Text bearbeiten
+              </button>
             </div>
           )}
 
@@ -354,7 +554,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
             </>
           )}
           
-          {step === 'edit' && (
+          {(step === 'edit' || step === 'ai-result') && (
             <button className="import-button" onClick={handleImport}>
               Übernehmen
             </button>

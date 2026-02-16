@@ -22,6 +22,12 @@ jest.mock('../utils/imageUtils', () => ({
   fileToBase64: jest.fn()
 }));
 
+// Mock the AI OCR service
+jest.mock('../utils/aiOcrService', () => ({
+  recognizeRecipeWithAI: jest.fn(),
+  isAiOcrAvailable: jest.fn()
+}));
+
 describe('OcrScanModal', () => {
   const mockOnImport = jest.fn();
   const mockOnCancel = jest.fn();
@@ -494,5 +500,223 @@ describe('OcrScanModal', () => {
     expect(screen.getByText(/Wählen Sie den Bereich aus/i)).toBeInTheDocument();
     expect(screen.getByText('Zuschneiden überspringen')).toBeInTheDocument();
     expect(screen.getByText('Scannen')).toBeInTheDocument();
+  });
+
+  // AI OCR Tests
+  test('shows AI OCR mode selector when in crop step', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('📝 Standard-OCR')).toBeInTheDocument();
+      expect(screen.getByText('🤖 KI-Scan (Gemini)')).toBeInTheDocument();
+    });
+  });
+
+  test('shows hint when AI OCR is not available', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(false);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/KI-Scan benötigt einen Gemini API-Key/i)).toBeInTheDocument();
+    });
+  });
+
+  test('AI OCR mode processes image with Gemini', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+    
+    const mockAiResult = {
+      title: 'AI-erkanntes Rezept',
+      servings: 4,
+      prepTime: '30 min',
+      difficulty: 3,
+      cuisine: 'Italienisch',
+      category: 'Hauptgericht',
+      ingredients: ['200g Pasta', '100g Tomaten'],
+      steps: ['Pasta kochen', 'Mit Tomaten servieren'],
+      tags: ['vegetarisch']
+    };
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    // Upload file
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('🤖 KI-Scan (Gemini)')).toBeInTheDocument();
+    });
+
+    // Select AI mode
+    const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
+    fireEvent.click(aiModeButton);
+
+    // Skip crop to start scanning
+    const skipButton = screen.getByText('Zuschneiden überspringen');
+    fireEvent.click(skipButton);
+
+    // Should show AI scanning progress
+    await waitFor(() => {
+      expect(screen.getByText(/Analysiere Rezept mit KI/i)).toBeInTheDocument();
+    });
+
+    // Should display AI result
+    await waitFor(() => {
+      expect(screen.getByText('AI-erkanntes Rezept')).toBeInTheDocument();
+      expect(screen.getByText(/200g Pasta/i)).toBeInTheDocument();
+      expect(screen.getByText(/Pasta kochen/i)).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+  });
+
+  test('AI result can be imported directly', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+    
+    const mockAiResult = {
+      title: 'Testrezept',
+      servings: 2,
+      prepTime: '20 min',
+      difficulty: 2,
+      cuisine: 'Deutsch',
+      category: 'Dessert',
+      ingredients: ['100g Zucker'],
+      steps: ['Zucker schmelzen']
+    };
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
+      fireEvent.click(aiModeButton);
+    });
+
+    const skipButton = screen.getByText('Zuschneiden überspringen');
+    fireEvent.click(skipButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Testrezept')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    const importButton = screen.getByText('Übernehmen');
+    fireEvent.click(importButton);
+
+    expect(mockOnImport).toHaveBeenCalledWith({
+      title: 'Testrezept',
+      ingredients: ['100g Zucker'],
+      steps: ['Zucker schmelzen'],
+      portionen: 2,
+      kochdauer: 20,
+      kulinarik: ['Deutsch'],
+      schwierigkeit: 2,
+      speisekategorie: 'Dessert'
+    });
+  });
+
+  test('AI result can be converted to text for editing', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+    
+    const mockAiResult = {
+      title: 'Kuchen',
+      servings: 8,
+      prepTime: '45 min',
+      difficulty: 3,
+      cuisine: 'International',
+      category: 'Dessert',
+      ingredients: ['200g Mehl', '100g Zucker'],
+      steps: ['Teig mischen', 'Backen']
+    };
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
+      fireEvent.click(aiModeButton);
+    });
+
+    const skipButton = screen.getByText('Zuschneiden überspringen');
+    fireEvent.click(skipButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Kuchen')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    const editButton = screen.getByText(/Als Text bearbeiten/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      const textarea = screen.getByPlaceholderText('Erkannter Text...');
+      expect(textarea).toBeInTheDocument();
+      expect(textarea.value).toContain('Kuchen');
+      expect(textarea.value).toContain('200g Mehl');
+      expect(textarea.value).toContain('Teig mischen');
+    });
+  });
+
+  test('handles AI OCR error gracefully', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+    
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+    recognizeRecipeWithAI.mockRejectedValue(new Error('API quota exceeded'));
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
+      fireEvent.click(aiModeButton);
+    });
+
+    const skipButton = screen.getByText('Zuschneiden überspringen');
+    fireEvent.click(skipButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/OCR fehlgeschlagen.*API quota exceeded/i)).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
   });
 });
