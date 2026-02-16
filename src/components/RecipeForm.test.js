@@ -10,6 +10,7 @@ jest.mock('../utils/emojiUtils', () => ({
 
 jest.mock('../utils/imageUtils', () => ({
   fileToBase64: jest.fn(),
+  isBase64Image: jest.fn(() => false),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -20,6 +21,11 @@ jest.mock('../utils/customLists', () => ({
     portionUnits: [
       { id: 'portion', singular: 'Portion', plural: 'Portionen' }
     ]
+  }),
+  getButtonIcons: () => Promise.resolve({
+    cookingMode: '👨‍🍳',
+    importRecipe: '📥',
+    scanImage: '📷'
   }),
 }));
 
@@ -693,7 +699,7 @@ describe('RecipeForm - OCR Scan Integration', () => {
     );
 
     // OCR scan label and file input should be present for new recipes
-    const ocrLabel = screen.getByText('📷 Bild scannen');
+    const ocrLabel = screen.getByTitle('Rezept mit Kamera scannen');
     expect(ocrLabel).toBeInTheDocument();
     expect(ocrLabel).toHaveClass('ocr-scan-button-header');
     
@@ -799,7 +805,7 @@ describe('RecipeForm - OCR Scan Integration', () => {
     );
 
     // Both OCR scan label and import button should be present
-    expect(screen.getByText('📷 Bild scannen')).toBeInTheDocument();
-    expect(screen.getByText('📥 Importieren')).toBeInTheDocument();
+    expect(screen.getByTitle('Rezept mit Kamera scannen')).toBeInTheDocument();
+    expect(screen.getByTitle('Rezept aus externer Quelle importieren')).toBeInTheDocument();
   });
 });

@@ -4,7 +4,7 @@ import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, sav
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
-import { fileToBase64 } from '../utils/imageUtils';
+import { fileToBase64, isBase64Image } from '../utils/imageUtils';
 import { updateFavicon, updatePageTitle } from '../utils/faviconUtils';
 
 const CATEGORY_ALREADY_ASSIGNED_ERROR = 'Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
@@ -42,6 +42,7 @@ function Settings({ onBack, currentUser }) {
     importRecipe: '📥',
     scanImage: '📷'
   });
+  const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -263,6 +264,27 @@ function Settings({ onBack, currentUser }) {
     setFaviconImage(null);
   };
 
+  // Button icon image handlers
+  const handleButtonIconImageUpload = async (iconKey, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingButtonIcon(iconKey);
+
+    try {
+      const base64 = await fileToBase64(file);
+      setButtonIcons({ ...buttonIcons, [iconKey]: base64 });
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingButtonIcon(null);
+    }
+  };
+
+  const handleRemoveButtonIconImage = (iconKey) => {
+    setButtonIcons({ ...buttonIcons, [iconKey]: DEFAULT_BUTTON_ICONS[iconKey] });
+  };
+
   return (
     <div className="settings-container">
       <div className="settings-header">
@@ -379,21 +401,48 @@ function Settings({ onBack, currentUser }) {
             <div className="settings-section">
               <h3>Button-Icons</h3>
               <p className="section-description">
-                Wählen Sie Icons für verschiedene Buttons. Die Buttons zeigen nur das Icon ohne Text.
+                Wählen Sie Icons für verschiedene Buttons. Sie können entweder Emojis/Text eingeben oder eigene Bilder hochladen.
               </p>
               
               <div className="button-icons-config">
                 <div className="button-icon-item">
                   <label htmlFor="cookingModeIcon">Kochmodus-Button (Rezeptdetailansicht):</label>
                   <div className="button-icon-input-group">
-                    <input
-                      type="text"
-                      id="cookingModeIcon"
-                      value={buttonIcons.cookingMode}
-                      onChange={(e) => setButtonIcons({ ...buttonIcons, cookingMode: e.target.value })}
-                      placeholder="z.B. 👨‍🍳"
-                      maxLength={10}
-                    />
+                    {!isBase64Image(buttonIcons.cookingMode) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="cookingModeIcon"
+                          value={buttonIcons.cookingMode}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookingMode: e.target.value })}
+                          placeholder="z.B. 👨‍🍳"
+                          maxLength={10}
+                        />
+                        <label htmlFor="cookingModeIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'cookingMode' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="cookingModeIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('cookingMode', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'cookingMode'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('cookingMode')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="reset-icon-btn"
@@ -403,23 +452,54 @@ function Settings({ onBack, currentUser }) {
                       ↻
                     </button>
                     <div className="icon-preview">
-                      <span>{buttonIcons.cookingMode}</span>
+                      {isBase64Image(buttonIcons.cookingMode) ? (
+                        <img src={buttonIcons.cookingMode} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.cookingMode}</span>
+                      )}
                     </div>
                   </div>
-                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
                 </div>
 
                 <div className="button-icon-item">
                   <label htmlFor="importRecipeIcon">Import-Button (Neues Rezept):</label>
                   <div className="button-icon-input-group">
-                    <input
-                      type="text"
-                      id="importRecipeIcon"
-                      value={buttonIcons.importRecipe}
-                      onChange={(e) => setButtonIcons({ ...buttonIcons, importRecipe: e.target.value })}
-                      placeholder="z.B. 📥"
-                      maxLength={10}
-                    />
+                    {!isBase64Image(buttonIcons.importRecipe) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="importRecipeIcon"
+                          value={buttonIcons.importRecipe}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, importRecipe: e.target.value })}
+                          placeholder="z.B. 📥"
+                          maxLength={10}
+                        />
+                        <label htmlFor="importRecipeIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'importRecipe' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="importRecipeIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('importRecipe', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'importRecipe'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('importRecipe')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="reset-icon-btn"
@@ -429,23 +509,54 @@ function Settings({ onBack, currentUser }) {
                       ↻
                     </button>
                     <div className="icon-preview">
-                      <span>{buttonIcons.importRecipe}</span>
+                      {isBase64Image(buttonIcons.importRecipe) ? (
+                        <img src={buttonIcons.importRecipe} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.importRecipe}</span>
+                      )}
                     </div>
                   </div>
-                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
                 </div>
 
                 <div className="button-icon-item">
                   <label htmlFor="scanImageIcon">Bild-scannen-Button (Neues Rezept):</label>
                   <div className="button-icon-input-group">
-                    <input
-                      type="text"
-                      id="scanImageIcon"
-                      value={buttonIcons.scanImage}
-                      onChange={(e) => setButtonIcons({ ...buttonIcons, scanImage: e.target.value })}
-                      placeholder="z.B. 📷"
-                      maxLength={10}
-                    />
+                    {!isBase64Image(buttonIcons.scanImage) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="scanImageIcon"
+                          value={buttonIcons.scanImage}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, scanImage: e.target.value })}
+                          placeholder="z.B. 📷"
+                          maxLength={10}
+                        />
+                        <label htmlFor="scanImageIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'scanImage' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="scanImageIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('scanImage', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'scanImage'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('scanImage')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="reset-icon-btn"
@@ -455,10 +566,14 @@ function Settings({ onBack, currentUser }) {
                       ↻
                     </button>
                     <div className="icon-preview">
-                      <span>{buttonIcons.scanImage}</span>
+                      {isBase64Image(buttonIcons.scanImage) ? (
+                        <img src={buttonIcons.scanImage} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.scanImage}</span>
+                      )}
                     </div>
                   </div>
-                  <p className="input-hint">Emoji oder kurzer Text (max. 10 Zeichen)</p>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
                 </div>
               </div>
             </div>

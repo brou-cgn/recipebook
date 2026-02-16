@@ -34,8 +34,15 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   transition: background-color 0.2s;
+}
+
+.button-icon-img {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
 }
 
 .import-button-header:hover,

@@ -3,6 +3,7 @@ import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
+import { isBase64Image } from '../utils/imageUtils';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -264,7 +265,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       {cookingMode && (
         <div className="cooking-mode-indicator">
           <div className="cooking-mode-content">
-            <span className="cooking-mode-icon">{cookingModeIcon}</span>
+            <span className="cooking-mode-icon">
+              {isBase64Image(cookingModeIcon) ? (
+                <img src={cookingModeIcon} alt="Kochmodus" className="cooking-mode-icon-img" />
+              ) : (
+                cookingModeIcon
+              )}
+            </span>
             <span className="cooking-mode-text">Kochmodus aktiv</span>
             <button 
               className="cooking-mode-exit"
@@ -324,7 +331,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
                   aria-label={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
                 >
-                  {cookingModeIcon}
+                  {isBase64Image(cookingModeIcon) ? (
+                    <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                  ) : (
+                    cookingModeIcon
+                  )}
                 </button>
                 <button 
                   className="overlay-back-button"

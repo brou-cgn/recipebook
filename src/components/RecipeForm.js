@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
-import { fileToBase64 } from '../utils/imageUtils';
+import { fileToBase64, isBase64Image } from '../utils/imageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
@@ -299,7 +299,11 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
                 }
               }}
             >
-              {buttonIcons.scanImage}
+              {isBase64Image(buttonIcons.scanImage) ? (
+                <img src={buttonIcons.scanImage} alt="Scan" className="button-icon-img" />
+              ) : (
+                buttonIcons.scanImage
+              )}
             </label>
             <input
               type="file"
@@ -315,7 +319,11 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               title="Rezept aus externer Quelle importieren"
               aria-label="Rezept importieren"
             >
-              {buttonIcons.importRecipe}
+              {isBase64Image(buttonIcons.importRecipe) ? (
+                <img src={buttonIcons.importRecipe} alt="Import" className="button-icon-img" />
+              ) : (
+                buttonIcons.importRecipe
+              )}
             </button>
           </div>
         )}
