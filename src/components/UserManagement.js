@@ -9,6 +9,7 @@ import {
   validatePassword,
   deleteUser,
   updateUserFotoscan,
+  updateUserWebimport,
   ROLES,
   getRoleDisplayName
 } from '../utils/userManagement';
@@ -158,6 +159,19 @@ function UserManagement({ onBack, currentUser }) {
     setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
+  const handleToggleWebimport = async (userId, currentValue) => {
+    const result = await updateUserWebimport(userId, !currentValue);
+    
+    if (result.success) {
+      await loadUsers();
+      setMessage({ text: result.message, type: 'success' });
+    } else {
+      setMessage({ text: result.message, type: 'error' });
+    }
+    
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+  };
+
   return (
     <div className="user-management-container">
       <div className="user-management-header">
@@ -203,6 +217,7 @@ function UserManagement({ onBack, currentUser }) {
                   <th>Registriert am</th>
                   <th>Berechtigung</th>
                   <th>Fotoscan</th>
+                  <th>Webimport</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -225,6 +240,15 @@ function UserManagement({ onBack, currentUser }) {
                         title={user.fotoscan ? 'Fotoscan deaktivieren' : 'Fotoscan aktivieren'}
                       >
                         {user.fotoscan ? '✓' : '✗'}
+                      </button>
+                    </td>
+                    <td>
+                      <button 
+                        className={`fotoscan-toggle ${user.webimport ? 'active' : ''}`}
+                        onClick={() => handleToggleWebimport(user.id, user.webimport)}
+                        title={user.webimport ? 'Webimport deaktivieren' : 'Webimport aktivieren'}
+                      >
+                        {user.webimport ? '✓' : '✗'}
                       </button>
                     </td>
                     <td>

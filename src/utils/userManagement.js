@@ -815,3 +815,43 @@ export const updateUserFotoscan = async (userId, fotoscan) => {
     };
   }
 };
+
+/**
+ * Update user's webimport permission
+ * @param {string} userId - User ID
+ * @param {boolean} webimport - New webimport value
+ * @returns {Promise<{success: boolean, message: string}>} Result object
+ */
+export const updateUserWebimport = async (userId, webimport) => {
+  try {
+    const users = await getUsers();
+    
+    // Find the user
+    const user = users.find(u => u.id === userId);
+    if (!user) {
+      return {
+        success: false,
+        message: 'Benutzer nicht gefunden.'
+      };
+    }
+    
+    // Update user in Firestore
+    await updateDoc(doc(db, 'users', userId), { webimport });
+    
+    // Update cache if it's the current user
+    if (currentUserCache && currentUserCache.id === userId) {
+      currentUserCache = { ...currentUserCache, webimport };
+    }
+    
+    return {
+      success: true,
+      message: 'Webimport-Einstellung erfolgreich aktualisiert.'
+    };
+  } catch (error) {
+    console.error('Error updating webimport:', error);
+    return {
+      success: false,
+      message: 'Fehler beim Aktualisieren der Webimport-Einstellung.'
+    };
+  }
+};

@@ -60,7 +60,8 @@ export const DEFAULT_FAVICON_TEXT = 'DishBook';
 export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '👨‍🍳',
   importRecipe: '📥',
-  scanImage: '📷'
+  scanImage: '📷',
+  webImport: '🌐'
 };
 
 // Cache for settings to avoid repeated Firestore reads

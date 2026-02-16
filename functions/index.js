@@ -402,3 +402,124 @@ exports.scanRecipeWithAI = onCall(
       }
     }
 );
+
+/**
+ * Cloud Function: Capture Website Screenshot
+ * This is a callable function that captures a screenshot of a website
+ *
+ * Input data:
+ * - url: The URL of the website to capture
+ *
+ * Returns: Base64 encoded screenshot
+ */
+exports.captureWebsiteScreenshot = onCall(
+    {
+      maxInstances: 10,
+      memory: '1GiB',
+      timeoutSeconds: 60,
+    },
+    async (request) => {
+      const {url} = request.data;
+
+      // Authentication check
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to use web import'
+        );
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+
+      console.log(`Screenshot request from user ${userId} for URL: ${url}`);
+
+      // Validate URL first (before rate limiting)
+      if (!url || typeof url !== 'string') {
+        throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
+      }
+
+      // Basic URL validation
+      try {
+        const urlObj = new URL(url);
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
+        }
+      } catch (error) {
+        throw new HttpsError('invalid-argument', 'Invalid URL format');
+      }
+
+      // Check if Puppeteer is available BEFORE rate limiting
+      // This prevents users from consuming their quota when the feature is unavailable
+      // Note: Puppeteer is NOT installed in this implementation
+      // To activate this feature:
+      // 1. Add puppeteer to package.json dependencies: npm install puppeteer@^21.0.0
+      // 2. Deploy to a Cloud Function with sufficient resources (2GB+ memory)
+      // 3. Uncomment the implementation code below
+      // 4. Remove this error check
+      
+      console.error('Puppeteer not configured in Cloud Functions');
+      throw new HttpsError(
+          'failed-precondition',
+          'Screenshot capture requires Puppeteer to be installed. ' +
+          'Please add "puppeteer": "^21.0.0" to functions/package.json and redeploy. ' +
+          'For now, please use the photo scan feature instead.'
+      );
+
+      // Rate limiting (only checked after Puppeteer availability)
+      // This code will run once Puppeteer is installed and the error above is removed
+      const withinLimit = await checkRateLimit(userId, isAuthenticated);
+      if (!withinLimit) {
+        const limit = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.guest;
+        throw new HttpsError(
+            'resource-exhausted',
+            `Rate limit exceeded: maximum ${limit} captures per day`
+        );
+      }
+
+      // Puppeteer implementation:
+      const puppeteer = require('puppeteer');
+
+      try {
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+        
+        // Navigate to the URL with timeout
+        await page.goto(url, { 
+          waitUntil: 'networkidle0',
+          timeout: 30000 
+        });
+
+        // Take screenshot
+        const screenshot = await page.screenshot({ 
+          encoding: 'base64',
+          fullPage: true 
+        });
+
+        await browser.close();
+
+        console.log(`Screenshot captured successfully for user ${userId}`);
+        
+        return {
+          screenshot: `data:image/png;base64,${screenshot}`,
+          url: url,
+          timestamp: new Date().toISOString()
+        };
+      } catch (error) {
+        console.error(`Screenshot capture failed for user ${userId}:`, error);
+        
+        if (error.message.includes('timeout')) {
+          throw new HttpsError('deadline-exceeded', 'Website took too long to load');
+        }
+        
+        throw new HttpsError('internal', 'Failed to capture screenshot: ' + error.message);
+      }
+      */
+    }
+);
