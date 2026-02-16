@@ -6,7 +6,6 @@ import {
   initOcrWorker,
   recognizeText,
   preprocessImage,
-  processCroppedImage,
   terminateWorker,
   getWorkerStatus,
   recognizeTextAuto
@@ -287,59 +286,6 @@ describe('ocrService', () => {
       expect(mockCtx.drawImage).toHaveBeenCalled();
       expect(mockCtx.getImageData).toHaveBeenCalled();
       expect(mockCtx.putImageData).toHaveBeenCalled();
-    });
-  });
-
-  describe('processCroppedImage', () => {
-    const mockBase64 = 'data:image/png;base64,test';
-
-    beforeEach(() => {
-      const mockCanvas = {
-        width: 0,
-        height: 0,
-        getContext: jest.fn(() => ({
-          drawImage: jest.fn()
-        })),
-        toDataURL: jest.fn(() => 'data:image/png;base64,cropped')
-      };
-
-      document.createElement = jest.fn(() => mockCanvas);
-
-      global.Image = class {
-        constructor() {
-          this.onload = null;
-          this.onerror = null;
-        }
-        
-        set src(value) {
-          setTimeout(() => {
-            if (this.onload) {
-              this.width = 200;
-              this.height = 200;
-              this.onload();
-            }
-          }, 0);
-        }
-      };
-    });
-
-    test('crops image with valid coordinates', async () => {
-      const crop = { x: 10, y: 10, width: 100, height: 100 };
-      const result = await processCroppedImage(mockBase64, crop);
-      
-      expect(result).toBe('data:image/png;base64,cropped');
-    });
-
-    test('returns original image when crop is invalid', async () => {
-      const result = await processCroppedImage(mockBase64, {});
-      
-      expect(result).toBe(mockBase64);
-    });
-
-    test('returns original image when no crop provided', async () => {
-      const result = await processCroppedImage(mockBase64, null);
-      
-      expect(result).toBe(mockBase64);
     });
   });
 

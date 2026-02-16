@@ -6,16 +6,14 @@ This document provides a visual walkthrough of the new AI OCR integration in the
 
 ## User Journey
 
-### 1. Crop Step - Mode Selection
+### 1. Upload Step - Mode Selection
 
-When a user uploads or captures an image, they arrive at the crop step where they can now choose between two OCR modes:
+When a user uploads or captures an image, they move to the scan step where they can choose between two OCR modes:
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │ Rezept scannen                                     ✕ │
 ├──────────────────────────────────────────────────────┤
-│                                                      │
-│ Wählen Sie den Bereich aus, der gescannt werden soll│
 │                                                      │
 │ Sprache:  [🇩🇪 Deutsch] [🇬🇧 English]                │
 │                                                      │
@@ -25,15 +23,8 @@ When a user uploads or captures an image, they arrive at the crop step where the
 │ ⚡ Das Bild wird zur Analyse an Google gesendet.    │
 │    Rezeptdaten werden direkt strukturiert erkannt.  │
 │                                                      │
-│ ┌──────────────────────────────────────────────┐   │
-│ │                                              │   │
-│ │         [Crop Area Selection]                │   │
-│ │                                              │   │
-│ └──────────────────────────────────────────────┘   │
-│                                                      │
 ├──────────────────────────────────────────────────────┤
-│                  [Abbrechen] [Zuschneiden           │
-│                              überspringen] [Scannen] │
+│                  [Abbrechen]               [Scannen] │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -62,7 +53,7 @@ If the user doesn't have a Gemini API key configured:
 - Cursor changes to "not-allowed"
 - Helpful hint message displayed
 
-### 3. AI Scanning Progress
+### 2. AI Scanning Progress
 
 When AI mode is selected and scanning starts:
 
@@ -84,7 +75,7 @@ When AI mode is selected and scanning starts:
 - Shows "Analysiere Rezept mit KI..." instead of "Scanne Text..."
 - Progress bar animates from 0-100%
 
-### 4. AI Result Preview (NEW Step)
+### 3. AI Result Preview (NEW Step)
 
 After successful AI scanning, a structured preview is shown:
 
@@ -138,7 +129,7 @@ After successful AI scanning, a structured preview is shown:
 - **Tags**: Orange background (#fff3e0), small rounded pills
 - **Edit Button**: Blue border, white background, converts to blue on hover
 
-### 5. Convert to Text (Optional)
+### 4. Convert to Text (Optional)
 
 If user clicks "Als Text bearbeiten", the AI result is converted to editable text:
 
@@ -234,7 +225,7 @@ const [ocrMode, setOcrMode] = useState('standard');  // 'standard' | 'ai'
 const [aiResult, setAiResult] = useState(null);      // Structured result object
 
 // Flow
-'crop' → (select mode) → 'scan' → 
+'upload' → (select mode) → 'scan' → 
   → if standard: 'edit' → import
   → if AI: 'ai-result' → import OR 'edit' → import
 ```

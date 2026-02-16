@@ -227,7 +227,6 @@ RecipeBook features powerful OCR (Optical Character Recognition) to digitize rec
 
 - **📷 Camera Capture**: Use your device camera to photograph recipes directly
 - **📁 File Upload**: Upload existing recipe images (JPG, PNG)
-- **✂️ Smart Cropping**: Optional image cropping to focus on the recipe text
 - **🌍 Multi-language Support**: Recognizes both German and English recipes
 - **✏️ Text Editing**: Review and correct OCR results before importing
 - **🔄 Offline Support**: Works completely offline after initial setup (PWA mode)
@@ -243,16 +242,12 @@ RecipeBook features powerful OCR (Optical Character Recognition) to digitize rec
    - **Camera**: Grant camera permissions and photograph your recipe
    - **File Upload**: Select a recipe image from your device
 
-3. **Select Language**
+3. **Select Language and Scan**
    - Choose the language of your recipe (🇩🇪 Deutsch or 🇬🇧 English)
+   - Click Scan to process the image
    - This helps improve OCR accuracy
 
-4. **Crop Image (Optional)**
-   - Use the cropping tool to select only the recipe text area
-   - Skip this step to use the full image
-   - Cropping improves accuracy and processing speed
-
-5. **Review and Edit**
+4. **Review and Edit**
    - Wait for OCR processing (typically 5-15 seconds)
    - Review the recognized text in the editable text field
    - Correct any OCR errors manually
@@ -262,7 +257,7 @@ RecipeBook features powerful OCR (Optical Character Recognition) to digitize rec
      - Preparation steps (Zubereitung/Instructions/Directions)
      - Metadata (Portionen/Servings, Kochdauer/Time)
 
-6. **Import Recipe**
+5. **Import Recipe**
    - Click "Übernehmen" to import the parsed recipe
    - The recipe form will be pre-filled with all extracted data
    - Review and save your recipe
@@ -276,7 +271,6 @@ For best results when scanning recipes:
 - **Focus**: Keep the camera steady and ensure text is in focus
 - **Orientation**: Hold the device parallel to the recipe page
 - **Full Text**: Include section headers like "Zutaten" and "Zubereitung"
-- **Cropping**: Use the crop tool to exclude non-recipe content
 
 ### Supported Recipe Formats
 
@@ -358,7 +352,6 @@ See [AI OCR Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integratio
 
 **OCR not accurate?**
 - Ensure good image quality and lighting
-- Use the crop feature to focus on recipe text
 - Try different language settings
 - Edit the recognized text manually before importing
 
@@ -368,7 +361,6 @@ See [AI OCR Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integratio
 - Try file upload as an alternative
 
 **Processing too slow?**
-- Crop the image to reduce size
 - Ensure good internet connection for initial language data download
 - After first use, works offline in PWA mode
 

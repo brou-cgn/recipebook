@@ -158,54 +158,6 @@ export async function preprocessImage(imageBase64) {
 }
 
 /**
- * Process cropped image for OCR
- * This function can be used with react-image-crop to process cropped areas
- * @param {string} imageBase64 - Original base64 image
- * @param {Object} crop - Crop coordinates {x, y, width, height}
- * @returns {Promise<string>} - Cropped base64 image
- */
-export async function processCroppedImage(imageBase64, crop) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!crop || !crop.width || !crop.height) {
-        resolve(imageBase64); // Return original if no crop
-        return;
-      }
-
-      const img = new Image();
-      
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size to crop size
-        canvas.width = crop.width;
-        canvas.height = crop.height;
-        
-        // Draw cropped portion of image
-        ctx.drawImage(
-          img,
-          crop.x, crop.y, crop.width, crop.height,
-          0, 0, crop.width, crop.height
-        );
-        
-        // Convert to base64
-        const croppedBase64 = canvas.toDataURL('image/png');
-        resolve(croppedBase64);
-      };
-      
-      img.onerror = (error) => {
-        reject(new Error(`Failed to load image for cropping: ${error}`));
-      };
-      
-      img.src = imageBase64;
-    } catch (error) {
-      reject(new Error(`Image cropping failed: ${error.message}`));
-    }
-  });
-}
-
-/**
  * Terminate OCR worker and free resources
  * @returns {Promise<void>}
  */

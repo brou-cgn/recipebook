@@ -1,16 +1,15 @@
 # OcrScanModal Component
 
 ## Overview
-The `OcrScanModal` component provides a complete OCR (Optical Character Recognition) workflow for scanning recipes from images. It supports both camera capture and file upload, with optional image cropping and text editing capabilities.
+The `OcrScanModal` component provides a complete OCR (Optical Character Recognition) workflow for scanning recipes from images. It supports both camera capture and file upload, with text editing capabilities.
 
 ## Features
 - 📷 **Camera Capture**: Use device camera to photograph recipes (requires camera permissions)
 - 📁 **File Upload**: Upload image files (JPG, PNG)
-- ✂️ **Image Cropping**: Optional cropping using react-image-crop
 - 🌍 **Multi-language**: Support for German (Deutsch) and English
 - 📊 **Progress Indicator**: Real-time OCR progress bar
 - ✏️ **Text Editing**: Review and edit recognized text before importing
-- 🔄 **Workflow Steps**: Upload → Crop → Scan → Edit → Import
+- 🔄 **Workflow Steps**: Upload → Scan → Edit → Import
 
 ## Usage
 
@@ -127,18 +126,14 @@ The `onImport` callback receives a recipe object with the following structure:
    - User can start camera or upload file
    - Camera requires browser permission
    - Accepts JPG and PNG files
-
-2. **Crop Step**
-   - Optional image cropping
    - Language selection (German/English)
-   - Can skip cropping to use full image
 
-3. **Scan Step**
+2. **Scan Step**
    - OCR processing with Tesseract.js
    - Progress bar shows completion percentage
    - Automatic transition to edit step
 
-4. **Edit Step**
+3. **Edit Step**
    - Displays recognized text in editable textarea
    - User can correct OCR errors
    - Option to start new scan
@@ -147,7 +142,6 @@ The `onImport` callback receives a recipe object with the following structure:
 ## Dependencies
 
 The component relies on these packages (already included in package.json):
-- `react-image-crop` - Image cropping functionality
 - `tesseract.js` - OCR processing
 
 And these utility modules:
@@ -168,7 +162,6 @@ And these utility modules:
 
 - Camera access defaults to rear camera (`facingMode: 'environment'`)
 - Responsive design adapts to mobile screens
-- Touch-friendly crop controls
 - Tested on iOS Safari and Chrome Android
 
 ## Performance Notes
@@ -194,7 +187,6 @@ The component includes comprehensive tests in `OcrScanModal.test.js`:
 - Modal rendering
 - Camera and file upload workflows
 - Language selection
-- Crop functionality
 - OCR processing
 - Text editing
 - Error handling
@@ -219,7 +211,6 @@ npm test OcrScanModal.test.js
 - Try file upload instead
 
 **OCR not accurate?**
-- Use the crop feature to focus on recipe text
 - Ensure good lighting and image quality
 - Edit recognized text before importing
 - Try different language setting

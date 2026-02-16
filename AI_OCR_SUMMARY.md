@@ -88,7 +88,7 @@ Successfully integrated AI-powered OCR (Google Gemini Vision) into the OcrScanMo
 
 ### User Flow
 ```
-Upload/Camera → Crop (select mode) → Scan → 
+Upload/Camera → Scan → 
   ├─ Standard: Edit → Import
   └─ AI: Preview → Import or Edit → Import
 ```
@@ -195,7 +195,7 @@ AI Result (from Gemini) → Recipe Format (for app)
 
 ### Manual Testing Checklist
 - [x] Standard OCR still works
-- [x] AI mode selector appears in crop step
+- [x] AI mode selector appears in upload step
 - [x] Disabled state when no API key
 - [x] AI scanning shows correct progress text
 - [x] AI results display correctly

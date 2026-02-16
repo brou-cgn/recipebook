@@ -126,12 +126,6 @@
   background-color: #da190b;
 }
 
-/* Crop Section */
-.crop-section {
-  display: flex;
-  flex-direction: column;
-}
-
 .language-selector {
   margin-bottom: 20px;
   display: flex;
@@ -223,16 +217,6 @@
   background-color: #f0f7ff;
   border-left: 3px solid #2196F3;
   border-radius: 4px;
-}
-
-.crop-container {
-  margin-top: 10px;
-  max-height: 400px;
-  overflow: auto;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  background-color: #f9f9f9;
 }
 
 /* Scan Section */
@@ -526,10 +510,6 @@
   .upload-button {
     font-size: 1rem;
     padding: 12px 24px;
-  }
-
-  .crop-container {
-    max-height: 300px;
   }
 
   .ocr-textarea {

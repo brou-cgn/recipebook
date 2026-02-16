@@ -74,7 +74,7 @@ service cloud.firestore {
 
 ### 1. OCR-Modus-Auswahl
 
-Im Crop-Schritt können Benutzer zwischen zwei Modi wählen:
+Im Upload-Schritt können Benutzer zwischen zwei Modi wählen:
 
 - **📝 Standard-OCR**: Verwendet Tesseract.js für einfache Texterkennung
 - **🤖 KI-Scan (Gemini)**: Nutzt Google Gemini Vision API für strukturierte Rezepterkennung
@@ -122,10 +122,10 @@ Neue State-Variablen:
 ### Flow-Änderungen
 
 #### Standard-OCR Flow (unverändert):
-1. Upload/Kamera → Crop → Scan → Edit → Import
+1. Upload/Kamera → Scan → Edit → Import
 
 #### KI-OCR Flow (neu):
-1. Upload/Kamera → Crop (KI-Modus wählen) → Scan → **AI-Result** → Import
+1. Upload/Kamera → Scan (KI-Modus wählen) → **AI-Result** → Import
    - Optional: AI-Result → Edit (als Text) → Import
 
 ### API Integration

@@ -9,13 +9,12 @@ Client-side OCR (Optical Character Recognition) service for RecipeBook using Tes
 - ✅ German (`deu`) and English (`eng`) language support
 - ✅ Progress tracking (0-100%)
 - ✅ Image preprocessing (grayscale, contrast enhancement)
-- ✅ Crop support via react-image-crop integration
 - ✅ Automatic language detection
 
 ## Installation
 Dependencies are already installed:
 ```bash
-npm install tesseract.js react-image-crop
+npm install tesseract.js
 ```
 
 ## API Reference
@@ -97,27 +96,6 @@ Preprocess image for better OCR accuracy (grayscale + contrast enhancement).
 import { preprocessImage } from './utils/ocrService';
 
 const preprocessed = await preprocessImage(originalImage);
-```
-
-### `processCroppedImage(imageBase64, crop)`
-Extract a cropped region from an image for OCR.
-
-**Parameters:**
-- `imageBase64` (string): Original base64 image
-- `crop` (object): Crop coordinates `{x, y, width, height}`
-
-**Returns:** `Promise<string>` - Cropped base64 image
-
-**Example:**
-```javascript
-import { processCroppedImage } from './utils/ocrService';
-
-const cropped = await processCroppedImage(imageBase64, {
-  x: 10,
-  y: 10,
-  width: 100,
-  height: 100
-});
 ```
 
 ### `terminateWorker()`
@@ -269,7 +247,6 @@ All 25 tests should pass, covering:
 - Worker initialization
 - Text recognition
 - Image preprocessing
-- Cropping functionality
 - Language switching
 - Error handling
 
@@ -280,12 +257,10 @@ All 25 tests should pass, covering:
 - Ensure good image quality
 - Use preprocessing function
 - Try different language settings
-- Crop to text region only
 
 ### Issue: Slow performance
 **Solution:**
 - Reduce image size before processing
-- Use cropping to focus on relevant areas
 - Ensure worker is initialized before batch processing
 
 ### Issue: Worker initialization fails
@@ -463,8 +438,7 @@ To get the best results when scanning recipes:
    - Number your steps (1., 2., 3.)
    - End sentences with punctuation (., !, ?)
    - Use clear section headers (Zutaten, Zubereitung, Ingredients, Instructions)
-4. **Crop Carefully**: Focus on the recipe text area to reduce noise
-5. **Review Before Import**: Always check and edit OCR results before importing
+4. **Review Before Import**: Always check and edit OCR results before importing
 
 ### Supported Text Patterns
 

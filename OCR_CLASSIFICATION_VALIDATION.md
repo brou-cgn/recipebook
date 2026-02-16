@@ -77,11 +77,10 @@ The system provides specific feedback about missing components:
 ### Basic Recipe Scanning
 
 1. **Upload or photograph** a recipe
-2. **Crop** the image (optional)
-3. **Scan** - the OCR will recognize the text
-4. **Review** the validation feedback
-5. **Edit** if needed
-6. **Import** the recipe
+2. **Scan** - the OCR will recognize the text
+3. **Review** the validation feedback
+4. **Edit** if needed
+5. **Import** the recipe
 
 ### Handling Low Quality Results
 
