@@ -1,18 +1,17 @@
 /**
  * AI-Enhanced OCR Service
  * Extends the existing OCR service with AI-powered recipe recognition
- * Supports Google Gemini Vision API for structured recipe extraction
+ * Now uses Firebase Cloud Functions as a secure proxy for API calls
  */
+
+import { functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 
 /**
  * Configuration for AI OCR providers
  * 
- * To use this service, you need to:
- * 1. Get a Gemini API key from https://aistudio.google.com/
- * 2. Add it to your .env.local file as REACT_APP_GEMINI_API_KEY
- * 
- * Note: Gemini API has a generous free tier, but usage limits apply.
- * See: https://ai.google.dev/pricing
+ * Note: With Cloud Functions, the API key is stored securely server-side.
+ * The frontend no longer needs REACT_APP_GEMINI_API_KEY.
  */
 
 /**
@@ -41,8 +40,10 @@ function getAiOcrConfig() {
  * @returns {boolean} True if the provider is configured
  */
 export function isAiOcrAvailable(provider = 'gemini') {
-  const config = getAiOcrConfig()[provider];
-  return !!(config && config.apiKey && config.apiKey !== '');
+  // With Cloud Functions, AI OCR is always available if the user is authenticated
+  // The API key is stored server-side, so we can't check it from the frontend
+  // For now, we assume it's always available for 'gemini' provider
+  return provider === 'gemini';
 }
 
 /**
@@ -117,152 +118,62 @@ Important:
 }
 
 /**
- * Recognize recipe using Google Gemini Vision API
+ * Recognize recipe using Google Gemini Vision API via Cloud Function
  * @param {string} imageBase64 - Base64 encoded image (with or without data URL prefix)
  * @param {string} lang - Language code ('de' or 'en')
  * @param {Function} onProgress - Optional progress callback
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProgress = null) {
-  const config = getAiOcrConfig().gemini;
-  
-  if (!config.apiKey) {
-    throw new Error('Gemini API key not configured. Please add REACT_APP_GEMINI_API_KEY to your .env.local file.');
-  }
-
   if (onProgress) onProgress(10);
 
-  // Remove data URL prefix if present
-  const base64Data = imageBase64.includes('base64,') 
-    ? imageBase64.split('base64,')[1] 
-    : imageBase64;
-
-  // Determine image MIME type from data URL or default to jpeg
-  let mimeType = 'image/jpeg';
-  if (imageBase64.startsWith('data:')) {
-    const match = imageBase64.match(/data:([^;]+);/);
-    if (match) mimeType = match[1];
+  // Validate image data
+  if (!imageBase64 || imageBase64.length < 100) {
+    throw new Error('Invalid image data');
   }
 
   if (onProgress) onProgress(20);
 
-  const prompt = getRecipeExtractionPrompt(lang);
-
-  const requestBody = {
-    contents: [
-      {
-        parts: [
-          { text: prompt },
-          {
-            inline_data: {
-              mime_type: mimeType,
-              data: base64Data
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1, // Low temperature for more consistent outputs
-      topK: 32,
-      topP: 1,
-      maxOutputTokens: 2048,
-    }
-  };
-
-  if (onProgress) onProgress(30);
-
   try {
-    const url = `${config.endpoint}/${config.model}:generateContent?key=${config.apiKey}`;
+    // Call the Cloud Function
+    const scanRecipeWithAI = httpsCallable(functions, 'scanRecipeWithAI');
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
+    if (onProgress) onProgress(30);
+
+    const result = await scanRecipeWithAI({
+      imageBase64: imageBase64,
+      language: lang,
     });
 
-    if (onProgress) onProgress(70);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Gemini API error: ${errorData.error?.message || response.statusText}`);
-    }
-
-    const data = await response.json();
-    
     if (onProgress) onProgress(90);
 
-    // Extract the text response
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!textResponse) {
-      throw new Error('No response from Gemini API');
-    }
+    const recipeData = result.data;
 
-    // Parse JSON response (handle markdown code blocks if present)
-    let jsonText = textResponse.trim();
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\n/, '').replace(/\n```$/, '');
+    if (!recipeData) {
+      throw new Error('No response from AI service');
     }
-
-    const recipeData = JSON.parse(jsonText);
 
     if (onProgress) onProgress(100);
 
-    // Normalize the data structure based on language
-    if (lang === 'de') {
-      return {
-        title: recipeData.titel || '',
-        servings: recipeData.portionen || 0,
-        prepTime: recipeData.zubereitungszeit || '',
-        cookTime: recipeData.kochzeit || '',
-        difficulty: recipeData.schwierigkeit || 0,
-        cuisine: recipeData.kulinarik || '',
-        category: recipeData.kategorie || '',
-        tags: recipeData.tags || [],
-        ingredients: recipeData.zutaten || [],
-        steps: recipeData.zubereitung || [],
-        notes: recipeData.notizen || '',
-        confidence: 95, // AI OCR typically has high confidence
-        provider: 'gemini',
-        rawResponse: textResponse
-      };
-    } else {
-      return {
-        title: recipeData.title || '',
-        servings: recipeData.servings || 0,
-        prepTime: recipeData.prepTime || '',
-        cookTime: recipeData.cookTime || '',
-        difficulty: recipeData.difficulty || 0,
-        cuisine: recipeData.cuisine || '',
-        category: recipeData.category || '',
-        tags: recipeData.tags || [],
-        ingredients: recipeData.ingredients || [],
-        steps: recipeData.steps || [],
-        notes: recipeData.notes || '',
-        confidence: 95,
-        provider: 'gemini',
-        rawResponse: textResponse
-      };
-    }
+    return recipeData;
 
   } catch (error) {
     if (onProgress) onProgress(0);
     
-    // Enhance error messages
-    if (error.message.includes('API key')) {
-      throw new Error('Invalid API key. Please check your Gemini API configuration.');
-    } else if (error.message.includes('quota')) {
-      throw new Error('API quota exceeded. Please try again later or upgrade your plan.');
-    } else if (error.message.includes('JSON')) {
-      throw new Error('Failed to parse recipe data. The image might not contain a valid recipe.');
+    // Enhance error messages based on Firebase error codes
+    if (error.code === 'unauthenticated') {
+      throw new Error('You must be logged in to use AI recipe scanning.');
+    } else if (error.code === 'resource-exhausted') {
+      throw new Error(error.message || 'API quota exceeded. Please try again later.');
+    } else if (error.code === 'invalid-argument') {
+      throw new Error(error.message || 'Invalid image data provided.');
+    } else if (error.code === 'failed-precondition') {
+      throw new Error('AI service not configured. Please contact administrator.');
+    } else if (error.message) {
+      throw new Error(error.message);
     }
     
-    throw error;
+    throw new Error('Failed to process image with AI. Please try again.');
   }
 }
 
@@ -345,12 +256,11 @@ export async function recognizeRecipeWithAI(imageBase64, options = {}) {
  * @returns {Object} Information about each provider
  */
 export function getAiOcrProviders() {
-  const config = getAiOcrConfig();
   return {
     gemini: {
       name: 'Google Gemini Vision',
       available: isAiOcrAvailable('gemini'),
-      model: config.gemini.model,
+      model: 'gemini-1.5-flash',
       features: [
         'Strukturierte Rezept-Extraktion',
         'Automatische Kulinarik-Erkennung',
@@ -358,14 +268,14 @@ export function getAiOcrProviders() {
         'Handschrift-Unterstützung',
         'Mehrsprachig'
       ],
-      freeTier: 'Großzügig (ca. 10.000+ Anfragen/Monat)',
-      privacy: 'Bilder werden an Google Server gesendet',
+      freeTier: 'Serverbasiert (Rate Limits: 20/Tag für User, 5/Tag für Gäste)',
+      privacy: 'Bilder werden sicher über Firebase Cloud Functions an Google gesendet',
       speed: 'Schnell (2-5 Sekunden)'
     },
     openai: {
       name: 'OpenAI GPT-4o Vision',
-      available: isAiOcrAvailable('openai'),
-      model: config.openai.model,
+      available: false, // Not yet implemented with Cloud Functions
+      model: 'gpt-4o',
       features: [
         'Höchste OCR-Qualität',
         'Strukturierte JSON-Ausgabe',
@@ -373,8 +283,8 @@ export function getAiOcrProviders() {
         'Handschrift-Unterstützung',
         'Mehrsprachig'
       ],
-      freeTier: 'Begrenzt ($5 Guthaben für neue Nutzer)',
-      privacy: 'Bilder werden an OpenAI Server gesendet',
+      freeTier: 'Nicht verfügbar',
+      privacy: 'Noch nicht implementiert',
       speed: 'Schnell (2-5 Sekunden)'
     }
   };

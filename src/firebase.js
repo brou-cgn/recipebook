@@ -6,6 +6,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getFunctions } from 'firebase/functions';
 
 // Firebase configuration from environment variables
 // These values are loaded from .env.local file (not committed to git)
@@ -37,6 +38,9 @@ const db = getFirestore(app);
 // Initialize Firebase Authentication
 const auth = getAuth(app);
 
+// Initialize Firebase Functions
+const functions = getFunctions(app);
+
 // Enable offline persistence for PWA support
 enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
@@ -48,4 +52,4 @@ enableIndexedDbPersistence(db).catch((err) => {
   }
 });
 
-export { app, db, auth };
+export { app, db, auth, functions };
