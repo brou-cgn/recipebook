@@ -103,7 +103,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   // Apply crop and proceed to OCR
   const applyCrop = async () => {
     // Check if AI OCR is available before proceeding
-    if (ocrMode === 'ai' && !isAiOcrAvailable('gemini')) {
+    if (!isAiOcrAvailable('gemini')) {
       setError('KI-Scan benötigt einen Gemini API-Key. Bitte konfigurieren Sie den API-Key in den Einstellungen.');
       return;
     }
