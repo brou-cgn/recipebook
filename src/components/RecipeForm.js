@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image } from '../utils/imageUtils';
+import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
@@ -167,14 +168,29 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     setImageError(false);
 
     try {
-      const base64 = await fileToBase64(file);
-      setImage(base64);
+      // Upload to Firebase Storage and get download URL
+      const downloadURL = await uploadRecipeImage(file);
+      
+      // Delete old image if it exists and is a Storage URL
+      if (image) {
+        await deleteRecipeImage(image);
+      }
+      
+      setImage(downloadURL);
     } catch (error) {
       alert(error.message);
       setImageError(true);
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleRemoveImage = async () => {
+    // Delete from Storage if it's a Storage URL
+    if (image) {
+      await deleteRecipeImage(image);
+    }
+    setImage('');
   };
 
   const handleSubmit = (e) => {
@@ -422,7 +438,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               <button
                 type="button"
                 className="remove-image-btn"
-                onClick={() => setImage('')}
+                onClick={handleRemoveImage}
                 title="Bild entfernen"
               >
                 ✕ Entfernen

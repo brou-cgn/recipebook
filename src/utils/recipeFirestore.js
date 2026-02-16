@@ -8,6 +8,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -15,6 +16,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
+import { deleteRecipeImage } from './storageUtils';
 
 /**
  * Set up real-time listener for recipes
@@ -122,7 +124,20 @@ export const updateRecipe = async (recipeId, updates) => {
  */
 export const deleteRecipe = async (recipeId) => {
   try {
+    // First, get the recipe to check if it has an image
     const recipeRef = doc(db, 'recipes', recipeId);
+    const recipeSnap = await getDoc(recipeRef);
+    
+    if (recipeSnap.exists()) {
+      const recipeData = recipeSnap.data();
+      
+      // Delete the image from Storage if it exists
+      if (recipeData.image) {
+        await deleteRecipeImage(recipeData.image);
+      }
+    }
+    
+    // Delete the recipe document
     await deleteDoc(recipeRef);
   } catch (error) {
     console.error('Error deleting recipe:', error);
