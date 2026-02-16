@@ -88,7 +88,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setCameraActive(false);
   };
 
-  // Skip crop (use full image) - kept for backward compatibility but not exposed in UI
+  // Skip crop - processes the full image without cropping
+  // Called internally when no crop area is selected
   const skipCrop = () => {
     if (!imageBase64) {
       setError('Kein Bild geladen. Bitte laden Sie zuerst ein Bild hoch.');

@@ -223,7 +223,7 @@ describe('OcrScanModal', () => {
       ingredients: [],
       steps: [],
       portionen: 4,
-      kochdauer: 30, // Default fallback
+      kochdauer: 30,
       kulinarik: [],
       schwierigkeit: 3,
       speisekategorie: ''
@@ -343,7 +343,7 @@ describe('OcrScanModal', () => {
       ingredients: ['Ingredient'],
       steps: ['Step'],
       portionen: 4,
-      kochdauer: 30, // Default fallback
+      kochdauer: 30,
       kulinarik: [],
       schwierigkeit: 3,
       speisekategorie: ''
