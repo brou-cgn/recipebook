@@ -203,7 +203,7 @@
 
 .recipe-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-top: 0.5rem;
   font-size: 0.75rem;
@@ -212,6 +212,7 @@
 .version-count {
   color: #DF7A00;
   font-weight: 600;
+  margin-right: auto;
 }
 
 .recipe-author {
