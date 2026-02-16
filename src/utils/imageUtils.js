@@ -48,18 +48,6 @@ export function isBase64Image(imageStr) {
 }
 
 /**
- * Check if a URL is a Firebase Storage URL
- * @param {string} imageUrl - The URL to check
- * @returns {boolean} - True if it's a Firebase Storage URL
- */
-export function isStorageUrl(imageUrl) {
-  if (!imageUrl || typeof imageUrl !== 'string') {
-    return false;
-  }
-  return imageUrl.includes('firebasestorage.googleapis.com');
-}
-
-/**
  * Validate if a string is a valid image URL or base64 data
  * @param {string} imageStr - The image URL or base64 string
  * @returns {boolean} - True if valid

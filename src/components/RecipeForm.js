@@ -167,16 +167,25 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     setUploadingImage(true);
     setImageError(false);
 
+    const oldImage = image;
+
     try {
       // Upload to Firebase Storage and get download URL
       const downloadURL = await uploadRecipeImage(file);
       
-      // Delete old image if it exists and is a Storage URL
-      if (image) {
-        await deleteRecipeImage(image);
-      }
-      
+      // Update state with new image
       setImage(downloadURL);
+      
+      // Delete old image if it exists and is a Storage URL
+      // Do this after successful upload to avoid orphaning the old image
+      if (oldImage) {
+        try {
+          await deleteRecipeImage(oldImage);
+        } catch (deleteError) {
+          // Log but don't fail the upload if deletion fails
+          console.warn('Failed to delete old image:', deleteError);
+        }
+      }
     } catch (error) {
       alert(error.message);
       setImageError(true);
@@ -186,11 +195,22 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   };
 
   const handleRemoveImage = async () => {
-    // Delete from Storage if it's a Storage URL
-    if (image) {
-      await deleteRecipeImage(image);
-    }
+    const imageToRemove = image;
+    
+    // Optimistically clear the UI
     setImage('');
+    
+    // Try to delete from Storage if it's a Storage URL
+    if (imageToRemove) {
+      try {
+        await deleteRecipeImage(imageToRemove);
+      } catch (error) {
+        // Log the error and restore the image in UI
+        console.error('Failed to delete image:', error);
+        setImage(imageToRemove);
+        alert('Fehler beim Löschen des Bildes. Bitte versuchen Sie es erneut.');
+      }
+    }
   };
 
   const handleSubmit = (e) => {
