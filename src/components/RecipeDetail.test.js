@@ -360,9 +360,13 @@ describe('RecipeDetail - Cooking Mode', () => {
       />
     );
 
-    // Cooking mode button should be in the mobile overlay
+    // When inactive, cooking mode static icon should be displayed (not the button)
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    expect(staticIcon).toBeInTheDocument();
+    
+    // The button should NOT be present when inactive
     const overlayButton = document.querySelector('.overlay-cooking-mode');
-    expect(overlayButton).toBeInTheDocument();
+    expect(overlayButton).not.toBeInTheDocument();
   });
 
   test('activates cooking mode on mobile when button is clicked', () => {
@@ -379,16 +383,19 @@ describe('RecipeDetail - Cooking Mode', () => {
       />
     );
 
-    // Find the mobile overlay button
-    const overlayButton = document.querySelector('.overlay-cooking-mode');
-    expect(overlayButton).toBeInTheDocument();
+    // Find the mobile overlay static icon (when inactive)
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    expect(staticIcon).toBeInTheDocument();
     
-    fireEvent.click(overlayButton);
+    // Click to activate cooking mode
+    fireEvent.click(staticIcon);
     
     // Check that the cooking mode indicator appears
     expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
     
-    // Check that the button has the active class
+    // Check that the button (not static icon) is now shown and has the active class
+    const overlayButton = document.querySelector('.overlay-cooking-mode');
+    expect(overlayButton).toBeInTheDocument();
     expect(overlayButton).toHaveClass('active');
   });
 
@@ -406,9 +413,9 @@ describe('RecipeDetail - Cooking Mode', () => {
       />
     );
 
-    // Activate cooking mode
-    const overlayButton = document.querySelector('.overlay-cooking-mode');
-    fireEvent.click(overlayButton);
+    // Activate cooking mode by clicking the static icon
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
 
     // Verify it's active
     expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
@@ -419,5 +426,9 @@ describe('RecipeDetail - Cooking Mode', () => {
 
     // Verify cooking mode is deactivated
     expect(screen.queryByText('Kochmodus aktiv')).not.toBeInTheDocument();
+    
+    // Verify the static icon is shown again (not the button)
+    const staticIconAfter = document.querySelector('.overlay-cooking-mode-static');
+    expect(staticIconAfter).toBeInTheDocument();
   });
 });

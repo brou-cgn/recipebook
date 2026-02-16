@@ -325,12 +325,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             <img src={recipe.image} alt={recipe.title} />
             {isMobile && (
               <div className="image-overlay-actions">
-                {cookingMode && (
+                {cookingMode ? (
                   <button 
-                    className={`overlay-cooking-mode ${cookingMode ? 'active' : ''}`}
+                    className="overlay-cooking-mode active"
                     onClick={toggleCookingMode}
-                    title={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
-                    aria-label={cookingMode ? 'Kochmodus beenden' : 'Kochmodus aktivieren'}
+                    title="Kochmodus beenden"
+                    aria-label="Kochmodus beenden"
                   >
                     {isBase64Image(cookingModeIcon) ? (
                       <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
@@ -338,9 +338,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       cookingModeIcon
                     )}
                   </button>
-                )}
-                {!cookingMode && (
-                  <div className="overlay-cooking-mode-static">
+                ) : (
+                  <div className="overlay-cooking-mode-static" onClick={toggleCookingMode} role="button" tabIndex="0" onKeyDown={(e) => e.key === 'Enter' && toggleCookingMode()}>
                     {isBase64Image(cookingModeIcon) ? (
                       <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
                     ) : (

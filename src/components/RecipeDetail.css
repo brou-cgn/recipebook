@@ -356,6 +356,16 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.overlay-cooking-mode-static:hover {
+  transform: scale(1.1);
+}
+
+.overlay-cooking-mode-static:active {
+  transform: scale(0.95);
 }
 
 .overlay-cooking-mode-icon-img {
