@@ -286,6 +286,13 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     setOcrImageBase64('');
   };
 
+  const handleWebImport = (webRecipe) => {
+    // Populate form with web imported data
+    handleImport(webRecipe);
+    // Close the web import modal
+    setShowWebImportModal(false);
+  };
+
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
@@ -657,7 +664,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
 
       {showWebImportModal && (
         <WebImportModal
-          onImport={handleImport}
+          onImport={handleWebImport}
           onCancel={() => setShowWebImportModal(false)}
         />
       )}
