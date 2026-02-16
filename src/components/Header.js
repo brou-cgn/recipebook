@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Header.css';
-import { getHeaderSlogan } from '../utils/customLists';
+import { getHeaderSlogan, getFaviconImage } from '../utils/customLists';
 import SearchIcon from './icons/SearchIcon';
 
 function Header({ 
@@ -16,6 +16,7 @@ function Header({
   onSearchChange
 }) {
   const [headerSlogan, setHeaderSlogan] = useState('');
+  const [faviconImage, setFaviconImage] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +26,9 @@ function Header({
   useEffect(() => {
     const loadHeaderData = async () => {
       const slogan = await getHeaderSlogan();
+      const logo = await getFaviconImage();
       setHeaderSlogan(slogan);
+      setFaviconImage(logo);
     };
     loadHeaderData();
   }, []);
@@ -98,8 +101,13 @@ function Header({
     <header className={`header ${!visible ? 'header-hidden' : ''}`}>
       <div className="header-content">
         <div className="header-title">
-          <h1>DishBook</h1>
-          <p className="tagline">{headerSlogan}</p>
+          {faviconImage && (
+            <img src={faviconImage} alt="Logo" className="header-logo" />
+          )}
+          <div className="header-title-text">
+            <h1>DishBook</h1>
+            <p className="tagline">{headerSlogan}</p>
+          </div>
         </div>
         <div className="header-actions">
           {onSettingsClick && currentUser?.isAdmin && (

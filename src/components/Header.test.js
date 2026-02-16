@@ -4,7 +4,8 @@ import Header from './Header';
 
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
-  getHeaderSlogan: () => Promise.resolve('Test Slogan')
+  getHeaderSlogan: () => Promise.resolve('Test Slogan'),
+  getFaviconImage: () => Promise.resolve(null)
 }));
 
 const mockCurrentUser = {
