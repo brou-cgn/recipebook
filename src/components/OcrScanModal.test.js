@@ -468,8 +468,16 @@ describe('OcrScanModal', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Neuer Scan/i)).toBeInTheDocument();
+      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
     }, { timeout: OCR_TIMEOUT });
+
+    // Convert to text editing mode to see "Neuer Scan" button
+    const editButton = screen.getByText(/Als Text bearbeiten/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Neuer Scan/i)).toBeInTheDocument();
+    });
 
     const newScanButton = screen.getByText(/Neuer Scan/i);
     fireEvent.click(newScanButton);
