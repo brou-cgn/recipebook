@@ -40,7 +40,8 @@ function Settings({ onBack, currentUser }) {
   const [buttonIcons, setButtonIcons] = useState({
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
-    scanImage: '📷'
+    scanImage: '📷',
+    webImport: '🌐'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -570,6 +571,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.scanImage} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.scanImage}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="webImportIcon">Webimport-Button (Neues Rezept):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.webImport) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="webImportIcon"
+                          value={buttonIcons.webImport}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, webImport: e.target.value })}
+                          placeholder="z.B. 🌐"
+                          maxLength={10}
+                        />
+                        <label htmlFor="webImportIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'webImport' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="webImportIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('webImport', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'webImport'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('webImport')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, webImport: DEFAULT_BUTTON_ICONS.webImport })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.webImport) ? (
+                        <img src={buttonIcons.webImport} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.webImport}</span>
                       )}
                     </div>
                   </div>

@@ -24,7 +24,8 @@
 }
 
 .import-button-header,
-.ocr-scan-button-header {
+.ocr-scan-button-header,
+.webimport-button-header {
   background-color: #2196F3;
   color: white;
   border: none;
@@ -46,7 +47,8 @@
 }
 
 .import-button-header:hover,
-.ocr-scan-button-header:hover {
+.ocr-scan-button-header:hover,
+.webimport-button-header:hover {
   background-color: #1976D2;
 }
 
@@ -475,7 +477,8 @@
   }
 
   .import-button-header,
-  .ocr-scan-button-header {
+  .ocr-scan-button-header,
+  .webimport-button-header {
     flex: 0 1 auto;
   }
   

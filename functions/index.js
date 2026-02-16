@@ -402,3 +402,122 @@ exports.scanRecipeWithAI = onCall(
       }
     }
 );
+
+/**
+ * Cloud Function: Capture Website Screenshot
+ * This is a callable function that captures a screenshot of a website
+ *
+ * Input data:
+ * - url: The URL of the website to capture
+ *
+ * Returns: Base64 encoded screenshot
+ */
+exports.captureWebsiteScreenshot = onCall(
+    {
+      maxInstances: 10,
+      memory: '1GiB',
+      timeoutSeconds: 60,
+    },
+    async (request) => {
+      const {url} = request.data;
+
+      // Authentication check
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to use web import'
+        );
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+
+      console.log(`Screenshot request from user ${userId} for URL: ${url}`);
+
+      // Rate limiting (same as AI scan)
+      const withinLimit = await checkRateLimit(userId, isAuthenticated);
+      if (!withinLimit) {
+        const limit = isAuthenticated ? RATE_LIMITS.authenticated : RATE_LIMITS.guest;
+        throw new HttpsError(
+            'resource-exhausted',
+            `Rate limit exceeded: maximum ${limit} captures per day`
+        );
+      }
+
+      // Validate URL
+      if (!url || typeof url !== 'string') {
+        throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
+      }
+
+      // Basic URL validation
+      try {
+        const urlObj = new URL(url);
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
+        }
+      } catch (error) {
+        throw new HttpsError('invalid-argument', 'Invalid URL format');
+      }
+
+      // Note: Puppeteer is NOT installed in this implementation
+      // This is a placeholder that will return a helpful error message
+      // To actually implement this, you would need to:
+      // 1. Add puppeteer to package.json dependencies
+      // 2. Deploy to a Cloud Function with sufficient resources
+      // 3. Implement the actual screenshot logic
+
+      console.error('Puppeteer not configured in Cloud Functions');
+      throw new HttpsError(
+          'unimplemented',
+          'Screenshot capture requires Puppeteer to be installed. ' +
+          'Please add "puppeteer": "^21.0.0" to functions/package.json and redeploy. ' +
+          'For now, please use the photo scan feature instead.'
+      );
+
+      // Future implementation would look like:
+      /*
+      const puppeteer = require('puppeteer');
+
+      try {
+        const browser = await puppeteer.launch({
+          headless: 'new',
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+        
+        // Navigate to the URL with timeout
+        await page.goto(url, { 
+          waitUntil: 'networkidle0',
+          timeout: 30000 
+        });
+
+        // Take screenshot
+        const screenshot = await page.screenshot({ 
+          encoding: 'base64',
+          fullPage: true 
+        });
+
+        await browser.close();
+
+        console.log(`Screenshot captured successfully for user ${userId}`);
+        
+        return {
+          screenshot: `data:image/png;base64,${screenshot}`,
+          url: url,
+          timestamp: new Date().toISOString()
+        };
+      } catch (error) {
+        console.error(`Screenshot capture failed for user ${userId}:`, error);
+        
+        if (error.message.includes('timeout')) {
+          throw new HttpsError('deadline-exceeded', 'Website took too long to load');
+        }
+        
+        throw new HttpsError('internal', 'Failed to capture screenshot: ' + error.message);
+      }
+      */
+    }
+);

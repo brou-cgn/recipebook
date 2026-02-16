@@ -8,6 +8,7 @@ import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredients } from '../utils/ingredientUtils';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
+import WebImportModal from './WebImportModal';
 
 function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
   const [title, setTitle] = useState('');
@@ -26,6 +27,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const [parentRecipeId, setParentRecipeId] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
+  const [showWebImportModal, setShowWebImportModal] = useState(false);
   const [ocrImageBase64, setOcrImageBase64] = useState('');
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
@@ -36,7 +38,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({
     importRecipe: '📥',
-    scanImage: '📷'
+    scanImage: '📷',
+    webImport: '🌐'
   });
 
   useEffect(() => {
@@ -95,7 +98,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       const icons = await getButtonIcons();
       setButtonIcons({
         importRecipe: icons.importRecipe || '📥',
-        scanImage: icons.scanImage || '📷'
+        scanImage: icons.scanImage || '📷',
+        webImport: icons.webImport || '🌐'
       });
     };
     loadCustomLists();
@@ -290,6 +294,21 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         </h2>
         {!recipe && !isCreatingVersion && (
           <div className="header-buttons">
+            {currentUser?.webimport && (
+              <button
+                type="button"
+                className="webimport-button-header"
+                onClick={() => setShowWebImportModal(true)}
+                title="Rezept von Website importieren"
+                aria-label="Webimport"
+              >
+                {isBase64Image(buttonIcons.webImport) ? (
+                  <img src={buttonIcons.webImport} alt="Webimport" className="button-icon-img" />
+                ) : (
+                  buttonIcons.webImport
+                )}
+              </button>
+            )}
             {currentUser?.fotoscan && (
               <>
                 <label
@@ -633,6 +652,13 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
           onImport={handleOcrScan}
           onCancel={handleOcrCancel}
           initialImage={ocrImageBase64}
+        />
+      )}
+
+      {showWebImportModal && (
+        <WebImportModal
+          onImport={handleImport}
+          onCancel={() => setShowWebImportModal(false)}
         />
       )}
     </div>
