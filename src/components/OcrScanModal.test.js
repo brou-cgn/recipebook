@@ -41,7 +41,7 @@ describe('OcrScanModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Set default return value for isAiOcrAvailable
+    // Re-set default return value after clearAllMocks removes it
     const { isAiOcrAvailable } = require('../utils/aiOcrService');
     isAiOcrAvailable.mockReturnValue(true);
   });
