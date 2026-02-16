@@ -477,4 +477,22 @@ describe('OcrScanModal', () => {
     expect(recognizeTextCall).toHaveLength(3);
     expect(recognizeTextCall[2]).toBeInstanceOf(Function); // Progress callback
   });
+
+  test('modal starts at crop step when initialImage is provided', () => {
+    const initialImageData = 'data:image/png;base64,test';
+
+    render(
+      <OcrScanModal
+        onImport={mockOnImport}
+        onCancel={mockOnCancel}
+        initialImage={initialImageData}
+      />
+    );
+
+    // Should skip upload step and go directly to crop step
+    expect(screen.queryByText('📁 Bild hochladen')).not.toBeInTheDocument();
+    expect(screen.getByText(/Wählen Sie den Bereich aus/i)).toBeInTheDocument();
+    expect(screen.getByText('Zuschneiden überspringen')).toBeInTheDocument();
+    expect(screen.getByText('Scannen')).toBeInTheDocument();
+  });
 });

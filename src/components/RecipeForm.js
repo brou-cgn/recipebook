@@ -25,6 +25,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const [parentRecipeId, setParentRecipeId] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
+  const [ocrImageBase64, setOcrImageBase64] = useState('');
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -237,11 +238,30 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     setShowImportModal(false);
   };
 
+  const handleOcrImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const base64 = await fileToBase64(file);
+      setOcrImageBase64(base64);
+      setShowOcrModal(true);
+    } catch (error) {
+      alert('Fehler beim Hochladen des Bildes: ' + error.message);
+    }
+  };
+
   const handleOcrScan = (ocrRecipe) => {
     // Populate form with OCR scanned data
     handleImport(ocrRecipe);
     // Close the OCR modal
     setShowOcrModal(false);
+    setOcrImageBase64('');
+  };
+
+  const handleOcrCancel = () => {
+    setShowOcrModal(false);
+    setOcrImageBase64('');
   };
 
   return (
@@ -252,15 +272,22 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         </h2>
         {!recipe && !isCreatingVersion && (
           <div className="header-buttons">
-            <button
-              type="button"
+            <label
+              htmlFor="ocrImageUpload"
               className="ocr-scan-button-header"
-              onClick={() => setShowOcrModal(true)}
               title="Rezept mit Kamera scannen"
               aria-label="Rezept mit Kamera scannen"
+              style={{ cursor: 'pointer' }}
             >
               📷 Bild scannen
-            </button>
+            </label>
+            <input
+              type="file"
+              id="ocrImageUpload"
+              accept="image/jpeg,image/jpg,image/png"
+              onChange={handleOcrImageUpload}
+              style={{ display: 'none' }}
+            />
             <button
               type="button"
               className="import-button-header"
@@ -564,7 +591,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       {showOcrModal && (
         <OcrScanModal
           onImport={handleOcrScan}
-          onCancel={() => setShowOcrModal(false)}
+          onCancel={handleOcrCancel}
+          initialImage={ocrImageBase64}
         />
       )}
     </div>

@@ -6,9 +6,9 @@ import { recognizeText, processCroppedImage } from '../utils/ocrService';
 import { parseOcrText } from '../utils/ocrParser';
 import { fileToBase64 } from '../utils/imageUtils';
 
-function OcrScanModal({ onImport, onCancel }) {
-  const [step, setStep] = useState('upload'); // 'upload', 'crop', 'scan', 'edit'
-  const [imageBase64, setImageBase64] = useState('');
+function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
+  const [step, setStep] = useState(initialImage ? 'crop' : 'upload'); // 'upload', 'crop', 'scan', 'edit'
+  const [imageBase64, setImageBase64] = useState(initialImage);
   const [crop, setCrop] = useState(null);
   const [completedCrop, setCompletedCrop] = useState(null);
   const [language, setLanguage] = useState('de'); // 'de' or 'en'

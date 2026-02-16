@@ -692,10 +692,16 @@ describe('RecipeForm - OCR Scan Integration', () => {
       />
     );
 
-    // OCR scan button should be present for new recipes
-    const ocrButton = screen.getByRole('button', { name: /Rezept mit Kamera scannen/i });
-    expect(ocrButton).toBeInTheDocument();
-    expect(ocrButton).toHaveClass('ocr-scan-button-header');
+    // OCR scan label and file input should be present for new recipes
+    const ocrLabel = screen.getByText('📷 Bild scannen');
+    expect(ocrLabel).toBeInTheDocument();
+    expect(ocrLabel).toHaveClass('ocr-scan-button-header');
+    
+    // Verify the hidden file input exists
+    const ocrInput = document.getElementById('ocrImageUpload');
+    expect(ocrInput).toBeInTheDocument();
+    expect(ocrInput).toHaveAttribute('type', 'file');
+    expect(ocrInput).toHaveAttribute('accept', 'image/jpeg,image/jpg,image/png');
   });
 
   test('does not show OCR scan button when editing existing recipe', () => {
@@ -731,12 +737,19 @@ describe('RecipeForm - OCR Scan Integration', () => {
       />
     );
 
-    // OCR scan button should NOT be present for existing recipes
-    const ocrButton = screen.queryByRole('button', { name: /Rezept mit Kamera scannen/i });
-    expect(ocrButton).not.toBeInTheDocument();
+    // OCR scan label should NOT be present for existing recipes
+    const ocrLabel = screen.queryByText('📷 Bild scannen');
+    expect(ocrLabel).not.toBeInTheDocument();
+    
+    // Verify the file input also doesn't exist
+    const ocrInput = document.getElementById('ocrImageUpload');
+    expect(ocrInput).not.toBeInTheDocument();
   });
 
-  test('OCR scan button opens OCR modal when clicked', () => {
+  test('OCR file upload opens OCR modal with image', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -755,12 +768,15 @@ describe('RecipeForm - OCR Scan Integration', () => {
       />
     );
 
-    // Click the OCR scan button
-    const ocrButton = screen.getByRole('button', { name: /Rezept mit Kamera scannen/i });
-    fireEvent.click(ocrButton);
+    // Select a file for OCR scanning
+    const ocrInput = document.getElementById('ocrImageUpload');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(ocrInput, { target: { files: [file] } });
 
     // Verify OCR modal is open
-    expect(screen.getByText('Rezept scannen')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Rezept scannen')).toBeInTheDocument();
+    });
   });
 
   test('shows both OCR scan and import buttons for new recipe', () => {
@@ -782,8 +798,8 @@ describe('RecipeForm - OCR Scan Integration', () => {
       />
     );
 
-    // Both buttons should be present
-    expect(screen.getByRole('button', { name: /Rezept mit Kamera scannen/i })).toBeInTheDocument();
+    // Both OCR scan label and import button should be present
+    expect(screen.getByText('📷 Bild scannen')).toBeInTheDocument();
     expect(screen.getByText('📥 Importieren')).toBeInTheDocument();
   });
 });
