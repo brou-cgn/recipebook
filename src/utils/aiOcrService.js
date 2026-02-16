@@ -15,19 +15,25 @@
  * See: https://ai.google.dev/pricing
  */
 
-const AI_OCR_CONFIG = {
-  gemini: {
-    apiKey: process.env.REACT_APP_GEMINI_API_KEY,
-    model: 'gemini-1.5-flash', // Free tier model
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-  },
-  // Future providers can be added here
-  openai: {
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-    model: 'gpt-4o',
-    endpoint: 'https://api.openai.com/v1/chat/completions',
-  }
-};
+/**
+ * Get configuration for AI OCR providers
+ * Reads from environment variables dynamically
+ */
+function getAiOcrConfig() {
+  return {
+    gemini: {
+      apiKey: process.env.REACT_APP_GEMINI_API_KEY || '',
+      model: 'gemini-1.5-flash', // Free tier model
+      endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
+    },
+    // Future providers can be added here
+    openai: {
+      apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
+      model: 'gpt-4o',
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+    }
+  };
+}
 
 /**
  * Check if AI OCR is available and configured
@@ -35,8 +41,8 @@ const AI_OCR_CONFIG = {
  * @returns {boolean} True if the provider is configured
  */
 export function isAiOcrAvailable(provider = 'gemini') {
-  const config = AI_OCR_CONFIG[provider];
-  return config && config.apiKey && config.apiKey !== '';
+  const config = getAiOcrConfig()[provider];
+  return !!(config && config.apiKey && config.apiKey !== '');
 }
 
 /**
@@ -118,7 +124,7 @@ Important:
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProgress = null) {
-  const config = AI_OCR_CONFIG.gemini;
+  const config = getAiOcrConfig().gemini;
   
   if (!config.apiKey) {
     throw new Error('Gemini API key not configured. Please add REACT_APP_GEMINI_API_KEY to your .env.local file.');
@@ -339,11 +345,12 @@ export async function recognizeRecipeWithAI(imageBase64, options = {}) {
  * @returns {Object} Information about each provider
  */
 export function getAiOcrProviders() {
+  const config = getAiOcrConfig();
   return {
     gemini: {
       name: 'Google Gemini Vision',
       available: isAiOcrAvailable('gemini'),
-      model: AI_OCR_CONFIG.gemini.model,
+      model: config.gemini.model,
       features: [
         'Strukturierte Rezept-Extraktion',
         'Automatische Kulinarik-Erkennung',
@@ -358,7 +365,7 @@ export function getAiOcrProviders() {
     openai: {
       name: 'OpenAI GPT-4o Vision',
       available: isAiOcrAvailable('openai'),
-      model: AI_OCR_CONFIG.openai.model,
+      model: config.openai.model,
       features: [
         'Höchste OCR-Qualität',
         'Strukturierte JSON-Ausgabe',
@@ -433,6 +440,6 @@ export async function compareOcrMethods(imageBase64, language = 'de') {
 
 // Export configuration for testing purposes
 export const __testing__ = {
-  AI_OCR_CONFIG,
+  getAiOcrConfig,
   getRecipeExtractionPrompt
 };

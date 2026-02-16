@@ -322,7 +322,7 @@ describe('AI OCR Service', () => {
         json: async () => mockResponse
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150); // Valid length for testing
       const result = await recognizeRecipeWithAI(imageBase64);
 
       expect(result.provider).toBe('gemini');
@@ -344,7 +344,7 @@ describe('AI OCR Service', () => {
         json: async () => mockResponse
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       const result = await recognizeRecipeWithAI(imageBase64, { provider: 'gemini' });
 
       expect(result.provider).toBe('gemini');
@@ -354,7 +354,7 @@ describe('AI OCR Service', () => {
       process.env.REACT_APP_GEMINI_API_KEY = '';
       process.env.REACT_APP_OPENAI_API_KEY = '';
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithAI(imageBase64)).rejects.toThrow(
         'No AI OCR provider is configured'
@@ -380,7 +380,7 @@ describe('AI OCR Service', () => {
         json: async () => mockResponse
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       // Request OpenAI but it's not available, should fall back to Gemini
       const result = await recognizeRecipeWithAI(imageBase64, { provider: 'openai' });
 
@@ -403,7 +403,7 @@ describe('AI OCR Service', () => {
         json: async () => mockResponse
       });
 
-      const imageBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       const result = await recognizeRecipeWithAI(imageBase64, { language: 'en' });
 
       // Check that English keys are returned
