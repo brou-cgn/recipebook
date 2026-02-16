@@ -930,6 +930,58 @@ describe('RecipeForm - Fotoscan Feature', () => {
     const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
     expect(importButton).toBeInTheDocument();
   });
+
+  test('import button is visible for non-admin users with edit role', () => {
+    const nonAdminEditUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,  // Explicitly NOT an admin
+      role: 'edit',    // Has edit role
+      fotoscan: false,
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={nonAdminEditUser}
+      />
+    );
+
+    // Import button should be visible for non-admin users with edit role
+    const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).toBeInTheDocument();
+    expect(importButton).toHaveClass('import-button-header');
+  });
+
+  test('import button is visible for admin users', () => {
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+      fotoscan: false,
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Import button should be visible for admin users
+    const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).toBeInTheDocument();
+    expect(importButton).toHaveClass('import-button-header');
+  });
 });
 
 describe('RecipeForm - Ingredient Formatting', () => {
