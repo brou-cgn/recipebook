@@ -178,12 +178,14 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       
       // Delete old image if it exists and is a Storage URL
       // Do this after successful upload to avoid orphaning the old image
+      // Note: If deletion fails, the old image remains in storage but won't affect functionality
       if (oldImage) {
         try {
           await deleteRecipeImage(oldImage);
         } catch (deleteError) {
           // Log but don't fail the upload if deletion fails
-          console.warn('Failed to delete old image:', deleteError);
+          // The orphaned image will be cleaned up by Firebase Storage lifecycle rules or manual cleanup
+          console.warn('Failed to delete old image from storage:', deleteError);
         }
       }
     } catch (error) {
@@ -208,7 +210,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         // Log the error and restore the image in UI
         console.error('Failed to delete image:', error);
         setImage(imageToRemove);
-        alert('Fehler beim Löschen des Bildes. Bitte versuchen Sie es erneut.');
+        alert('Das Bild konnte nicht aus dem Speicher gelöscht werden. Sie können das Rezept weiterhin bearbeiten, aber das alte Bild bleibt möglicherweise im Speicher.');
       }
     }
   };

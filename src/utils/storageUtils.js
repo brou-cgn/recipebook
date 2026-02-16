@@ -74,6 +74,7 @@ export async function deleteRecipeImage(imageUrl) {
     // Extract the path from the download URL
     // Firebase Storage URLs format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media...
     const url = new URL(imageUrl);
+    // url.pathname doesn't include query params, so we safely extract just the path
     const pathMatch = url.pathname.match(/\/o\/(.+)/);
     
     if (!pathMatch || !pathMatch[1]) {
