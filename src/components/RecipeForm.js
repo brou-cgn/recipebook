@@ -321,19 +321,21 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
                 />
               </>
             )}
-            <button
-              type="button"
-              className="import-button-header"
-              onClick={() => setShowImportModal(true)}
-              title="Rezept aus externer Quelle importieren"
-              aria-label="Rezept importieren"
-            >
-              {isBase64Image(buttonIcons.importRecipe) ? (
-                <img src={buttonIcons.importRecipe} alt="Import" className="button-icon-img" />
-              ) : (
-                buttonIcons.importRecipe
-              )}
-            </button>
+            {currentUser?.isAdmin && (
+              <button
+                type="button"
+                className="import-button-header"
+                onClick={() => setShowImportModal(true)}
+                title="Rezept aus externer Quelle importieren"
+                aria-label="Rezept importieren"
+              >
+                {isBase64Image(buttonIcons.importRecipe) ? (
+                  <img src={buttonIcons.importRecipe} alt="Import" className="button-icon-img" />
+                ) : (
+                  buttonIcons.importRecipe
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

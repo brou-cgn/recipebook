@@ -787,14 +787,14 @@ describe('RecipeForm - OCR Scan Integration', () => {
     });
   });
 
-  test('shows both OCR scan and import buttons for new recipe', () => {
-    const regularUser = {
-      id: 'user-1',
-      vorname: 'Regular',
+  test('shows both OCR scan and import buttons for admin with fotoscan', () => {
+    const adminWithFotoscan = {
+      id: 'admin-1',
+      vorname: 'Admin',
       nachname: 'User',
-      email: 'user@example.com',
-      isAdmin: false,
-      role: 'edit',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
       fotoscan: true,
     };
 
@@ -803,11 +803,11 @@ describe('RecipeForm - OCR Scan Integration', () => {
         recipe={null}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-        currentUser={regularUser}
+        currentUser={adminWithFotoscan}
       />
     );
 
-    // Both OCR scan label and import button should be present
+    // Both OCR scan label and import button should be present for admin with fotoscan
     expect(screen.getByTitle('Rezept mit Kamera scannen')).toBeInTheDocument();
     expect(screen.getByTitle('Rezept aus externer Quelle importieren')).toBeInTheDocument();
   });
@@ -906,14 +906,14 @@ describe('RecipeForm - Fotoscan Feature', () => {
     expect(ocrLabel).not.toBeInTheDocument();
   });
 
-  test('import button is always visible regardless of fotoscan setting', () => {
-    const userWithoutFotoscan = {
-      id: 'user-1',
-      vorname: 'Regular',
+  test('import button is visible for admin regardless of fotoscan setting', () => {
+    const adminWithoutFotoscan = {
+      id: 'admin-1',
+      vorname: 'Admin',
       nachname: 'User',
-      email: 'user@example.com',
-      isAdmin: false,
-      role: 'edit',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
       fotoscan: false,
     };
 
@@ -922,13 +922,199 @@ describe('RecipeForm - Fotoscan Feature', () => {
         recipe={null}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
-        currentUser={userWithoutFotoscan}
+        currentUser={adminWithoutFotoscan}
       />
     );
 
-    // Import button should be visible even when fotoscan is disabled
+    // Import button should be visible for admin even when fotoscan is disabled
     const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
     expect(importButton).toBeInTheDocument();
+  });
+});
+
+describe('RecipeForm - Import Button Authorization', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows import button for admin users', () => {
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Import button should be visible for admin users
+    const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).toBeInTheDocument();
+    expect(importButton).toHaveClass('import-button-header');
+  });
+
+  test('hides import button for non-admin users', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Import button should NOT be visible for non-admin users
+    const importButton = screen.queryByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).not.toBeInTheDocument();
+  });
+
+  test('hides import button when isAdmin is undefined', () => {
+    const userWithoutAdminFlag = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      role: 'edit',
+      // isAdmin is undefined
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithoutAdminFlag}
+      />
+    );
+
+    // Import button should NOT be visible when isAdmin is undefined
+    const importButton = screen.queryByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).not.toBeInTheDocument();
+  });
+
+  test('hides import button when editing existing recipe (even for admin)', () => {
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      kulinarik: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: [],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      image: '',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Import button should NOT be visible when editing (even for admin)
+    const importButton = screen.queryByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).not.toBeInTheDocument();
+  });
+
+  test('hides import button when creating version (even for admin)', () => {
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      kulinarik: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: [],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      image: '',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+        isCreatingVersion={true}
+      />
+    );
+
+    // Import button should NOT be visible when creating a version
+    const importButton = screen.queryByTitle('Rezept aus externer Quelle importieren');
+    expect(importButton).not.toBeInTheDocument();
+  });
+
+  test('admin can click import button and it opens modal', () => {
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Click the import button
+    const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
+    fireEvent.click(importButton);
+
+    // Verify the import modal is opened
+    expect(screen.getByText('Rezept importieren')).toBeInTheDocument();
   });
 });
 
