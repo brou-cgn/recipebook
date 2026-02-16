@@ -501,5 +501,263 @@ Zubereitung
         expect(validated.steps.length).toBeGreaterThan(0);
       });
     });
+
+    describe('Bullet point filtering', () => {
+      test('ignores standalone bullet points', () => {
+        const text = `Recipe
+
+Zutaten
+
+-
+200g Mehl
+•
+2 Eier
+*
+
+Zubereitung
+1. Mix ingredients`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.ingredients).toEqual(['200g Mehl', '2 Eier']);
+      });
+
+      test('ignores multiple consecutive bullet points', () => {
+        const text = `Recipe
+
+Zutaten
+
+-
+-
+-
+200g Mehl
+
+Zubereitung
+1. Mix`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.ingredients).toEqual(['200g Mehl']);
+      });
+
+      test('does not ignore bullet points with content', () => {
+        const text = `Recipe
+
+Zutaten
+
+- 200g Mehl
+- 2 Eier
+
+Zubereitung
+1. Mix`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.ingredients).toEqual(['200g Mehl', '2 Eier']);
+      });
+    });
+
+    describe('Intelligent step merging', () => {
+      test('merges multi-line steps without sentence endings', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1. Den Ofen vorheizen und
+das Backblech vorbereiten
+2. Mehl in eine Schüssel geben`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.steps).toEqual([
+          'Den Ofen vorheizen und das Backblech vorbereiten',
+          'Mehl in eine Schüssel geben'
+        ]);
+      });
+
+      test('does not merge steps that end with period', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+Den Ofen vorheizen.
+Das Backblech vorbereiten.
+Mehl in eine Schüssel geben.`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.steps).toEqual([
+          'Den Ofen vorheizen.',
+          'Das Backblech vorbereiten.',
+          'Mehl in eine Schüssel geben.'
+        ]);
+      });
+
+      test('merges continuation lines with numbered steps', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1. Den Ofen auf 180°C vorheizen
+und ein Backblech mit
+Backpapier auslegen
+2. Mehl und Zucker vermischen`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.steps).toEqual([
+          'Den Ofen auf 180°C vorheizen und ein Backblech mit Backpapier auslegen',
+          'Mehl und Zucker vermischen'
+        ]);
+      });
+
+      test('handles mixed numbered and non-numbered lines', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1. First step
+continues here
+2. Second step`;
+
+        const result = parseOcrText(text, 'en');
+        expect(result.steps).toEqual([
+          'First step continues here',
+          'Second step'
+        ]);
+      });
+
+      test('respects question marks and exclamation marks as sentence endings', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+Is the oven ready?
+Preheat to 180°C!
+Mix ingredients.`;
+
+        const result = parseOcrText(text, 'en');
+        expect(result.steps).toEqual([
+          'Is the oven ready?',
+          'Preheat to 180°C!',
+          'Mix ingredients.'
+        ]);
+      });
+
+      test('handles steps without any numbering', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+Preheat the oven to 180°C.
+Mix flour and sugar together.
+Bake for 20 minutes.`;
+
+        const result = parseOcrText(text, 'en');
+        expect(result.steps).toEqual([
+          'Preheat the oven to 180°C.',
+          'Mix flour and sugar together.',
+          'Bake for 20 minutes.'
+        ]);
+      });
+
+      test('handles steps with parenthesis numbering', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1) First step
+continues on next line
+2) Second step`;
+
+        const result = parseOcrText(text, 'en');
+        expect(result.steps).toEqual([
+          'First step continues on next line',
+          'Second step'
+        ]);
+      });
+
+      test('handles complex multi-paragraph steps', () => {
+        const text = `Recipe
+
+Zutaten
+- 500g Mehl
+
+Zubereitung
+
+1. Den Backofen auf 180°C
+Ober-/Unterhitze vorheizen.
+Ein Backblech mit
+Backpapier auslegen.
+2. In einer großen Schüssel Mehl,
+Zucker und Salz vermischen
+3. Die Butter hinzufügen.`;
+
+        const result = parseOcrText(text, 'de');
+        expect(result.steps).toEqual([
+          'Den Backofen auf 180°C Ober-/Unterhitze vorheizen. Ein Backblech mit Backpapier auslegen.',
+          'In einer großen Schüssel Mehl, Zucker und Salz vermischen',
+          'Die Butter hinzufügen.'
+        ]);
+      });
+
+      test('preserves original punctuation in merged steps', () => {
+        const text = `Recipe
+
+Zutaten
+- Mehl
+
+Zubereitung
+
+1. Step with period.
+2. Step without period
+3. Another with period.`;
+
+        const result = parseOcrText(text, 'en');
+        // Punctuation from original text is preserved
+        expect(result.steps).toEqual([
+          'Step with period.',
+          'Step without period',
+          'Another with period.'
+        ]);
+      });
+
+      test('handles periods at end of continuation lines', () => {
+        const text = `Recipe
+
+Zutaten
+- Flour
+
+Zubereitung
+
+1. First sentence.
+Second sentence (no period)
+2. Another step`;
+
+        const result = parseOcrText(text, 'en');
+        // Continuation lines without periods are merged
+        // Lines ending with period start new step when next line is numbered
+        expect(result.steps).toEqual([
+          'First sentence.',
+          'Second sentence (no period)',
+          'Another step'
+        ]);
+      });
+    });
   });
 });

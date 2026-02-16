@@ -352,3 +352,133 @@ console.log('Steps:', result.recipe.steps);
 ```
 
 For more details on the recipe parser, see the `ocrParser.js` documentation.
+
+## OCR Parser - Text Recognition Improvements
+
+### Smart Bullet Point Handling
+
+The OCR parser now intelligently filters out standalone bullet points that don't contain text. This prevents false step/ingredient entries from OCR artifacts.
+
+**Example:**
+```
+Input OCR text:
+-
+200g Mehl
+•
+2 Eier
+*
+
+Output:
+ingredients: ["200g Mehl", "2 Eier"]
+```
+
+### Intelligent Step Merging
+
+Recipe preparation steps are now merged intelligently based on:
+1. **Numbering** (1., 2., 3., etc.) - Always starts a new step
+2. **Sentence Endings** (. ! ?) - Starts a new step for non-numbered lines
+3. **Line Continuation** - Lines without sentence endings are merged with the current step
+
+This reduces false step subdivisions caused by line breaks in OCR text.
+
+**Example 1: Numbered Steps with Multiple Lines**
+```
+Input OCR text:
+1. Den Backofen auf 180°C
+Ober-/Unterhitze vorheizen.
+Ein Backblech mit
+Backpapier auslegen.
+2. In einer Schüssel Mehl
+und Zucker vermischen
+
+Output:
+steps: [
+  "Den Backofen auf 180°C Ober-/Unterhitze vorheizen. Ein Backblech mit Backpapier auslegen.",
+  "In einer Schüssel Mehl und Zucker vermischen"
+]
+```
+
+**Example 2: Non-Numbered Steps with Sentence Endings**
+```
+Input OCR text:
+Preheat the oven to 180°C.
+Mix flour and sugar together.
+Bake for 20 minutes.
+
+Output:
+steps: [
+  "Preheat the oven to 180°C.",
+  "Mix flour and sugar together.",
+  "Bake for 20 minutes."
+]
+```
+
+**Example 3: Multi-Line Steps Without Numbering or Punctuation**
+```
+Input OCR text:
+Preheat the oven and
+prepare the baking sheet
+Mix all ingredients
+
+Output:
+steps: [
+  "Preheat the oven and prepare the baking sheet Mix all ingredients"
+]
+
+Note: Without sentence endings or numbering, ALL lines are merged into a single step.
+This is a limitation of pure text-based parsing without semantic understanding.
+
+BEST PRACTICE: Always use proper punctuation to separate steps:
+
+Input with periods (recommended):
+Preheat the oven and prepare the baking sheet.
+Mix all ingredients.
+
+Output:
+steps: [
+  "Preheat the oven and prepare the baking sheet.",
+  "Mix all ingredients."
+]
+
+Or use numbering:
+
+Input with numbering (recommended):
+1. Preheat the oven and prepare the baking sheet
+2. Mix all ingredients
+
+Output:
+steps: [
+  "Preheat the oven and prepare the baking sheet",
+  "Mix all ingredients"
+]
+```
+
+### Best Practices for OCR Quality
+
+To get the best results when scanning recipes:
+
+1. **Use Clear Images**: High contrast between text and background
+2. **Good Lighting**: Avoid shadows and glare
+3. **Proper Formatting**: 
+   - Number your steps (1., 2., 3.)
+   - End sentences with punctuation (., !, ?)
+   - Use clear section headers (Zutaten, Zubereitung, Ingredients, Instructions)
+4. **Crop Carefully**: Focus on the recipe text area to reduce noise
+5. **Review Before Import**: Always check and edit OCR results before importing
+
+### Supported Text Patterns
+
+**Section Headers:**
+- German: `Zutaten`, `Zubereitung`, `Anleitung`, `Schritte`
+- English: `Ingredients`, `Instructions`, `Directions`, `Steps`, `Preparation`, `Method`
+
+**List Markers:**
+- Bullet points: `-`, `*`, `•`
+- Numbering: `1.`, `2)`, `3.`, etc.
+
+**Properties:**
+- Servings: `Portionen: 4`, `Servings: 4`, `für 8 Personen`
+- Time: `Kochdauer: 30`, `Zeit: 45`, `Time: 60`
+- Difficulty: `Schwierigkeit: 3`, `Difficulty: 2`
+- Cuisine: `Kulinarik: Italienisch`, `Cuisine: Italian`
+- Category: `Kategorie: Hauptgericht`, `Category: Main Course`

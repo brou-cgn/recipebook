@@ -12,6 +12,34 @@
  * - Quantity recognition in ingredients (200g, 2 EL, etc.)
  * - Compatible with parseRecipeData() from recipeImport.js
  * 
+ * Smart Text Processing Features:
+ * - **Bullet Point Filtering**: Standalone bullet points (-, *, •) without text are ignored
+ * - **Intelligent Step Merging**: Multi-line steps are intelligently combined:
+ *   - Numbered steps (1., 2., etc.) always start a new step
+ *   - Lines within a numbered step are merged even if they contain periods
+ *   - Non-numbered lines ending with sentence punctuation (. ! ?) start new steps
+ *   - Continuation lines without sentence endings are merged with the current step
+ * 
+ * Examples of Smart Step Merging:
+ * 
+ * Input:
+ * ```
+ * 1. Den Backofen auf 180°C
+ * Ober-/Unterhitze vorheizen.
+ * Ein Backblech mit
+ * Backpapier auslegen.
+ * 2. In einer Schüssel Mehl
+ * und Zucker vermischen
+ * ```
+ * 
+ * Output:
+ * ```
+ * [
+ *   "Den Backofen auf 180°C Ober-/Unterhitze vorheizen. Ein Backblech mit Backpapier auslegen.",
+ *   "In einer Schüssel Mehl und Zucker vermischen"
+ * ]
+ * ```
+ * 
  * Usage:
  * ```javascript
  * import { parseOcrText } from './ocrParser';
@@ -75,9 +103,15 @@ export function parseOcrText(text, lang = 'de') {
 
   let currentSection = null;
   let titleFound = false;
+  let rawStepLines = []; // Collect raw step lines for intelligent merging
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    
+    // Skip standalone bullet points
+    if (isStandaloneBulletPoint(line)) {
+      continue;
+    }
     
     // Extract title from first non-empty line if not yet found
     // Skip lines that start with list markers or are section headers or properties
@@ -90,6 +124,11 @@ export function parseOcrText(text, lang = 'de') {
     // Detect section headings
     const section = detectSection(line);
     if (section) {
+      // If leaving steps section, process collected step lines
+      if (currentSection === 'steps' && rawStepLines.length > 0) {
+        recipe.steps = mergeStepLines(rawStepLines);
+        rawStepLines = [];
+      }
       currentSection = section;
       continue;
     }
@@ -118,11 +157,14 @@ export function parseOcrText(text, lang = 'de') {
         recipe.ingredients.push(ingredient);
       }
     } else if (currentSection === 'steps') {
-      const step = parseStepLine(line);
-      if (step) {
-        recipe.steps.push(step);
-      }
+      // Collect raw step lines instead of parsing immediately
+      rawStepLines.push(line);
     }
+  }
+  
+  // Process any remaining step lines
+  if (rawStepLines.length > 0) {
+    recipe.steps = mergeStepLines(rawStepLines);
   }
 
   // Fallback: if no title found, use generic title
@@ -199,6 +241,17 @@ function isListItem(line) {
 }
 
 /**
+ * Check if line is only a bullet point marker (should be ignored)
+ * @param {string} line - Line text
+ * @returns {boolean}
+ */
+function isStandaloneBulletPoint(line) {
+  // Match lines that are only bullet points or bullet points with minimal content
+  // Hyphen is escaped to avoid being interpreted as a range operator
+  return /^[\-*•]+\s*$/.test(line);
+}
+
+/**
  * Parse property-value line
  * @param {string} line - Line text
  * @returns {Object|null} - {key, value} or null
@@ -268,11 +321,75 @@ function applyProperty(recipe, key, value) {
 }
 
 /**
+ * Merge step lines intelligently based on numbering and sentence endings
+ * @param {Array<string>} rawLines - Raw step lines
+ * @returns {Array<string>} - Merged steps
+ */
+function mergeStepLines(rawLines) {
+  if (!rawLines || rawLines.length === 0) return [];
+
+  const steps = [];
+  let currentStep = '';
+  let inNumberedStep = false; // Track if we're inside a numbered step
+  
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const cleaned = parseStepLine(line);
+    
+    if (!cleaned) continue;
+    
+    // Check if this line starts with a number (new step indicator)
+    const startsWithNumber = /^\d+[.)]\s/.test(line);
+    
+    // Check if current accumulated text ends with sentence-ending punctuation
+    const currentEndsWithPunctuation = currentStep.length > 0 && /[.!?]\s*$/.test(currentStep);
+    
+    // Peek ahead to see if the next line starts with a number
+    let nextStartsWithNumber = false;
+    if (i + 1 < rawLines.length) {
+      nextStartsWithNumber = /^\d+[.)]\s/.test(rawLines[i + 1]);
+    }
+    
+    // Start a new step if:
+    // 1. Current step is empty (first step)
+    // 2. This line starts with a number
+    // 3. Previous step ended with punctuation AND (we're not in a numbered step OR next line is numbered)
+    const shouldStartNewStep = !currentStep || 
+                                startsWithNumber || 
+                                (currentEndsWithPunctuation && (!inNumberedStep || nextStartsWithNumber));
+    
+    if (shouldStartNewStep) {
+      // Save the previous step if it exists
+      if (currentStep) {
+        steps.push(currentStep.trim());
+      }
+      currentStep = cleaned;
+      inNumberedStep = startsWithNumber;
+    } else {
+      // Continue the current step (append with space)
+      currentStep += ' ' + cleaned;
+    }
+  }
+  
+  // Don't forget to add the last step
+  if (currentStep) {
+    steps.push(currentStep.trim());
+  }
+  
+  return steps;
+}
+
+/**
  * Parse ingredient line
  * @param {string} line - Line text
  * @returns {string|null} - Parsed ingredient or null
  */
 function parseIngredientLine(line) {
+  // Skip standalone bullet points
+  if (isStandaloneBulletPoint(line)) {
+    return null;
+  }
+  
   // Remove list markers (-, *, •, numbers followed by dot or parenthesis)
   let cleaned = line.replace(/^[-*•]\s*/, '').replace(/^\d+[.)]\s*/, '').trim();
   
