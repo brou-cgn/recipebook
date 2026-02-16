@@ -244,7 +244,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey) {
       temperature: 0.1, // Low temperature for more consistent outputs
       topK: 32,
       topP: 1,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192, // Erhöht von 2048 für vollständige Rezepte mit Zubereitungsschritten
     },
   };
 
