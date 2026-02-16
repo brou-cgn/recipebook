@@ -538,7 +538,8 @@
 
   .ocr-modal-actions {
     padding: 16px;
-    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: space-between;
   }
 
   .language-selector {

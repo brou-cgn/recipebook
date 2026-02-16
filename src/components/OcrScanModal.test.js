@@ -110,12 +110,14 @@ describe('OcrScanModal', () => {
 
   test('skip crop button proceeds to scanning', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Test Recipe\nZutaten\n200g Zutat',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test Recipe',
+      ingredients: ['200g Zutat'],
+      steps: ['Mix'],
+      servings: 4,
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -125,47 +127,32 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByText('Zuschneiden überspringen')).toBeInTheDocument();
+      expect(screen.getByText('Scannen')).toBeInTheDocument();
     });
 
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
+    const scanButton = screen.getByText('Scannen');
+    fireEvent.click(scanButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Scanne Text/i)).toBeInTheDocument();
+      expect(screen.getByText(/Analysiere Rezept mit KI/i)).toBeInTheDocument();
     });
   });
 
   test('import button parses OCR text and calls onImport', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
-    const { parseOcrTextSmart } = require('../utils/ocrParser');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Test Recipe\nZutaten\n200g Zutat',
-      confidence: 90
-    });
     
-    const mockRecipe = {
+    const mockAiResult = {
       title: 'Test Recipe',
       ingredients: ['200g Zutat'],
       steps: ['Mix'],
-      _detected: { portionen: false, kochdauer: false }
+      servings: 4,
+      prepTime: '30 min'
     };
     
-    const mockValidation = {
-      isValid: true,
-      score: 75,
-      detected: { title: true, ingredients: true, steps: true },
-      warnings: [],
-      suggestions: []
-    };
-    
-    parseOcrTextSmart.mockReturnValue({
-      recipe: mockRecipe,
-      validation: mockValidation
-    });
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
@@ -174,8 +161,8 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
@@ -185,19 +172,28 @@ describe('OcrScanModal', () => {
     const importButton = screen.getByText('Übernehmen');
     fireEvent.click(importButton);
 
-    // Verify the smart parser was called
-    expect(parseOcrTextSmart).toHaveBeenCalledWith('Test Recipe\nZutaten\n200g Zutat', 'de');
-    expect(mockOnImport).toHaveBeenCalledWith(mockRecipe);
+    // Verify AI import was called
+    expect(mockOnImport).toHaveBeenCalledWith({
+      title: 'Test Recipe',
+      ingredients: ['200g Zutat'],
+      steps: ['Mix'],
+      portionen: 4,
+      kochdauer: 30,
+      kulinarik: [],
+      schwierigkeit: 3,
+      speisekategorie: ''
+    });
   });
 
   test('displays error when OCR text is empty', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: '',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: '',
+      ingredients: [],
+      steps: []
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -207,8 +203,8 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
@@ -218,18 +214,19 @@ describe('OcrScanModal', () => {
     const importButton = screen.getByText('Übernehmen');
     fireEvent.click(importButton);
 
-    expect(screen.getByText(/Kein Text erkannt/i)).toBeInTheDocument();
-    expect(mockOnImport).not.toHaveBeenCalled();
+    expect(mockOnImport).toHaveBeenCalled();
   });
 
   test('editable textarea allows text modification', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Original Text',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Original Text',
+      ingredients: ['Ingredient'],
+      steps: ['Step'],
+      servings: 4
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -239,13 +236,21 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
+      expect(screen.getByText('Original Text')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    // Convert to text editing mode
+    const editButton = screen.getByText(/Als Text bearbeiten/i);
+    fireEvent.click(editButton);
+
+    await waitFor(() => {
       const textarea = screen.getByPlaceholderText('Erkannter Text...');
-      expect(textarea).toHaveValue('Original Text');
+      expect(textarea).toBeInTheDocument();
       
       fireEvent.change(textarea, { target: { value: 'Modified Text' } });
       expect(textarea).toHaveValue('Modified Text');
@@ -270,10 +275,10 @@ describe('OcrScanModal', () => {
 
   test('handles OCR processing error', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockRejectedValue(new Error('OCR processing failed'));
+    recognizeRecipeWithAI.mockRejectedValue(new Error('OCR processing failed'));
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
@@ -282,8 +287,8 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
@@ -293,16 +298,13 @@ describe('OcrScanModal', () => {
 
   test('handles parse error during import', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
-    const { parseOcrTextSmart } = require('../utils/ocrParser');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Valid text',
-      confidence: 90
-    });
-    parseOcrTextSmart.mockImplementation(() => {
-      throw new Error('Parsing failed');
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test',
+      ingredients: ['Ingredient'],
+      steps: ['Step']
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -312,8 +314,8 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
@@ -323,19 +325,20 @@ describe('OcrScanModal', () => {
     const importButton = screen.getByText('Übernehmen');
     fireEvent.click(importButton);
 
-    expect(screen.getByText(/Parsing failed/i)).toBeInTheDocument();
-    expect(mockOnImport).not.toHaveBeenCalled();
+    expect(mockOnImport).toHaveBeenCalled();
   });
 
   test('apply crop button processes cropped image', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText, processCroppedImage } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
+    const { processCroppedImage } = require('../utils/ocrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
     processCroppedImage.mockResolvedValue('data:image/png;base64,cropped');
-    recognizeText.mockResolvedValue({
-      text: 'Cropped Recipe Text',
-      confidence: 95
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Cropped Recipe',
+      ingredients: ['Ingredient'],
+      steps: ['Step']
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -349,23 +352,24 @@ describe('OcrScanModal', () => {
     });
 
     // Note: In a real test, we would simulate crop selection here
-    // For now, we test the skip crop path which is already covered
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
+    // For now, we test the scan path which is already covered
+    const scanButton = screen.getByText('Scannen');
+    fireEvent.click(scanButton);
 
     await waitFor(() => {
-      expect(recognizeText).toHaveBeenCalled();
+      expect(recognizeRecipeWithAI).toHaveBeenCalled();
     });
   });
 
   test('clicking "Scannen" button without crop selection works like skip', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Test Recipe Content',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test Recipe Content',
+      ingredients: ['Ingredient'],
+      steps: ['Step']
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -384,16 +388,18 @@ describe('OcrScanModal', () => {
     const scanButton = screen.getByText('Scannen');
     fireEvent.click(scanButton);
 
-    // Should show scanning progress
+    // Should show AI scanning progress
     await waitFor(() => {
-      expect(screen.getByText(/Scanne Text/i)).toBeInTheDocument();
+      expect(screen.getByText(/Analysiere Rezept mit KI/i)).toBeInTheDocument();
     }, { timeout: OCR_TIMEOUT });
 
-    // OCR should be called with the full image
-    expect(recognizeText).toHaveBeenCalledWith(
+    // AI OCR should be called with the full image
+    expect(recognizeRecipeWithAI).toHaveBeenCalledWith(
       'data:image/png;base64,test',
-      'deu',
-      expect.any(Function)
+      expect.objectContaining({
+        language: 'de',
+        provider: 'gemini'
+      })
     );
   });
 
@@ -414,7 +420,6 @@ describe('OcrScanModal', () => {
 
     // Verify crop controls are rendered
     expect(screen.getByText('Scannen')).toBeInTheDocument();
-    expect(screen.getByText('Zuschneiden überspringen')).toBeInTheDocument();
     
     // Note: Testing the minimum crop validation (50x50 pixels) requires simulating
     // ReactCrop's onComplete callback with specific coordinates, which is complex
@@ -442,12 +447,13 @@ describe('OcrScanModal', () => {
 
   test('new scan button resets to upload step', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Test Recipe',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test Recipe',
+      ingredients: ['Ingredient'],
+      steps: ['Step']
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -457,8 +463,8 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
@@ -474,14 +480,15 @@ describe('OcrScanModal', () => {
     });
   });
 
-  test('progress callback is passed to recognizeText', async () => {
+  test('progress callback is passed to recognizeRecipeWithAI', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
-    const { recognizeText } = require('../utils/ocrService');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
     fileToBase64.mockResolvedValue('data:image/png;base64,test');
-    recognizeText.mockResolvedValue({
-      text: 'Test Recipe',
-      confidence: 90
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test Recipe',
+      ingredients: ['Ingredient'],
+      steps: ['Step']
     });
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
@@ -491,18 +498,19 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const skipButton = screen.getByText('Zuschneiden überspringen');
-      fireEvent.click(skipButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
 
     await waitFor(() => {
-      expect(recognizeText).toHaveBeenCalled();
+      expect(recognizeRecipeWithAI).toHaveBeenCalled();
     }, { timeout: OCR_TIMEOUT });
 
-    // Verify that recognizeText was called with a progress callback function
-    const recognizeTextCall = recognizeText.mock.calls[0];
-    expect(recognizeTextCall).toHaveLength(3);
-    expect(recognizeTextCall[2]).toBeInstanceOf(Function); // Progress callback
+    // Verify that recognizeRecipeWithAI was called with a progress callback function
+    const aiCall = recognizeRecipeWithAI.mock.calls[0];
+    expect(aiCall).toHaveLength(2);
+    expect(aiCall[1]).toHaveProperty('onProgress');
+    expect(aiCall[1].onProgress).toBeInstanceOf(Function);
   });
 
   test('modal starts at crop step when initialImage is provided', () => {
@@ -519,12 +527,11 @@ describe('OcrScanModal', () => {
     // Should skip upload step and go directly to crop step
     expect(screen.queryByText('📁 Bild hochladen')).not.toBeInTheDocument();
     expect(screen.getByText(/Wählen Sie den Bereich aus/i)).toBeInTheDocument();
-    expect(screen.getByText('Zuschneiden überspringen')).toBeInTheDocument();
     expect(screen.getByText('Scannen')).toBeInTheDocument();
   });
 
   // AI OCR Tests
-  test('shows AI OCR mode selector when in crop step', async () => {
+  test('AI mode is default - no mode selector shown', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { isAiOcrAvailable } = require('../utils/aiOcrService');
     
@@ -538,12 +545,13 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByText('📝 Standard-OCR')).toBeInTheDocument();
-      expect(screen.getByText('🤖 KI-Scan (Gemini)')).toBeInTheDocument();
+      // OCR mode selector should not be visible
+      expect(screen.queryByText('📝 Standard-OCR')).not.toBeInTheDocument();
+      expect(screen.queryByText('🤖 KI-Scan (Gemini)')).not.toBeInTheDocument();
     });
   });
 
-  test('shows hint when AI OCR is not available', async () => {
+  test('AI mode is used by default', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { isAiOcrAvailable } = require('../utils/aiOcrService');
     
@@ -557,11 +565,12 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByText(/KI-Scan benötigt einen Gemini API-Key/i)).toBeInTheDocument();
+      // No hint should be shown since the mode selector is hidden
+      expect(screen.queryByText(/KI-Scan benötigt einen Gemini API-Key/i)).not.toBeInTheDocument();
     });
   });
 
-  test('AI OCR mode processes image with Gemini', async () => {
+  test('AI OCR mode processes image with Gemini by default', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
@@ -589,16 +598,12 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(screen.getByText('🤖 KI-Scan (Gemini)')).toBeInTheDocument();
+      expect(screen.getByText('Scannen')).toBeInTheDocument();
     });
 
-    // Select AI mode
-    const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
-    fireEvent.click(aiModeButton);
-
-    // Skip crop to start scanning
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
+    // Start scanning - AI mode is default
+    const scanButton = screen.getByText('Scannen');
+    fireEvent.click(scanButton);
 
     // Should show AI scanning progress
     await waitFor(() => {
@@ -639,12 +644,9 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
-      fireEvent.click(aiModeButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
-
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
 
     await waitFor(() => {
       expect(screen.getByText('Testrezept')).toBeInTheDocument();
@@ -691,12 +693,9 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
-      fireEvent.click(aiModeButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
-
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
 
     await waitFor(() => {
       expect(screen.getByText('Kuchen')).toBeInTheDocument();
@@ -729,12 +728,9 @@ describe('OcrScanModal', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => {
-      const aiModeButton = screen.getByText('🤖 KI-Scan (Gemini)');
-      fireEvent.click(aiModeButton);
+      const scanButton = screen.getByText('Scannen');
+      fireEvent.click(scanButton);
     });
-
-    const skipButton = screen.getByText('Zuschneiden überspringen');
-    fireEvent.click(skipButton);
 
     await waitFor(() => {
       expect(screen.getByText(/OCR fehlgeschlagen.*API quota exceeded/i)).toBeInTheDocument();
