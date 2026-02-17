@@ -191,6 +191,31 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     return `${author.vorname} ${author.nachname}`;
   }, [recipe.authorId, allUsers]);
 
+  // Format creation date
+  const formattedCreatedAt = useMemo(() => {
+    if (!recipe.createdAt) return null;
+    try {
+      // Handle Firestore Timestamp objects or ISO strings
+      let date;
+      if (recipe.createdAt?.toDate) {
+        // Firestore Timestamp object
+        date = recipe.createdAt.toDate();
+      } else if (typeof recipe.createdAt === 'string') {
+        // ISO string
+        date = new Date(recipe.createdAt);
+      } else if (recipe.createdAt instanceof Date) {
+        // Already a Date object
+        date = recipe.createdAt;
+      } else {
+        return null;
+      }
+      return date.toLocaleDateString('de-DE');
+    } catch (error) {
+      console.error('Error formatting creation date:', error);
+      return null;
+    }
+  }, [recipe.createdAt]);
+
   const versionNumber = useMemo(() => 
     hasMultipleVersions ? getVersionNumber(allRecipes, recipe) : 0, 
     [hasMultipleVersions, allRecipes, recipe]
@@ -486,9 +511,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               </button>
             </div>
           )}
-          {authorName && (
-            <div className="author-caption">
-              Autor: {authorName}
+          {(authorName || formattedCreatedAt) && (
+            <div className="author-date-caption">
+              {authorName && <span className="author-name">Autor: {authorName}</span>}
+              {formattedCreatedAt && <span className="creation-date">{formattedCreatedAt}</span>}
             </div>
           )}
         </div>

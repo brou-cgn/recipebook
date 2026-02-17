@@ -302,6 +302,28 @@
   text-align: center;
 }
 
+/* Author and date caption container */
+.author-date-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.author-name {
+  flex: 0 0 auto;
+}
+
+.creation-date {
+  flex: 0 0 auto;
+  text-align: right;
+  color: #888;
+}
+
 .recipe-detail-image {
   width: 100%;
   height: 300px;
