@@ -569,3 +569,149 @@ describe('RecipeDetail - Recipe Links', () => {
     });
   });
 });
+
+describe('RecipeDetail - Creation Date Display', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  const allUsers = [
+    { id: 'user-1', vorname: 'Test', nachname: 'User' },
+    { id: 'user-2', vorname: 'Another', nachname: 'Author' },
+  ];
+
+  test('displays creation date when available', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      createdAt: '2024-01-15T10:30:00Z',
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        allUsers={allUsers}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that the creation date is displayed in German format (D.M.YYYY or DD.MM.YYYY)
+    expect(screen.getByText('15.1.2024')).toBeInTheDocument();
+  });
+
+  test('displays author and creation date together', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-2',
+      createdAt: '2024-02-20T14:45:00Z',
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        allUsers={allUsers}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that both author and date are displayed
+    expect(screen.getByText(/Autor: Another Author/)).toBeInTheDocument();
+    expect(screen.getByText('20.2.2024')).toBeInTheDocument();
+  });
+
+  test('does not display creation date when not available', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      // No createdAt field
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        allUsers={allUsers}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that author is still displayed
+    expect(screen.getByText(/Autor: Test User/)).toBeInTheDocument();
+    
+    // Creation date should not be in the document (no specific date text)
+    expect(screen.queryByText(/\d{2}\.\d{2}\.\d{4}/)).not.toBeInTheDocument();
+  });
+
+  test('handles Firestore Timestamp objects', () => {
+    const mockFirestoreTimestamp = {
+      toDate: () => new Date('2024-03-10T08:00:00Z'),
+    };
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      createdAt: mockFirestoreTimestamp,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        allUsers={allUsers}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that the creation date is displayed correctly
+    expect(screen.getByText('10.3.2024')).toBeInTheDocument();
+  });
+
+  test('handles Date objects', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      createdAt: new Date('2024-04-05T12:00:00Z'),
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        allUsers={allUsers}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that the creation date is displayed correctly
+    expect(screen.getByText('5.4.2024')).toBeInTheDocument();
+  });
+});
