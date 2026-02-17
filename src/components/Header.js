@@ -202,6 +202,9 @@ function Header({
                       </button>
                     )}
                   </div>
+                  <div className="menu-version">
+                    v{process.env.REACT_APP_VERSION || '0.1.1'}
+                  </div>
                 </div>
               )}
             </div>

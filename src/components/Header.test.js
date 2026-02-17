@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Header from './Header';
 
 // Mock the custom lists utility
@@ -86,5 +86,30 @@ describe('Header - Hamburger Menu Visibility', () => {
     
     // The hamburger menu button should not be present without a user
     expect(screen.queryByLabelText('Menü öffnen')).not.toBeInTheDocument();
+  });
+
+  test('version should be displayed in hamburger menu', () => {
+    // Set up the environment variable for version
+    const originalVersion = process.env.REACT_APP_VERSION;
+    process.env.REACT_APP_VERSION = '0.1.1';
+
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+    
+    // Open the hamburger menu
+    const hamburgerBtn = screen.getByLabelText('Menü öffnen');
+    fireEvent.click(hamburgerBtn);
+    
+    // Check if version is displayed
+    expect(screen.getByText(/v0\.1\.1/)).toBeInTheDocument();
+
+    // Restore original environment variable
+    process.env.REACT_APP_VERSION = originalVersion;
   });
 });
