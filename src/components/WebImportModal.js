@@ -151,7 +151,7 @@ function WebImportModal({ onImport, onCancel }) {
             <div className="loading-section">
               <p className="web-import-instructions">
                 {progress < 50 
-                  ? '📸 Erfasse Website-Screenshot...' 
+                  ? 'Analysiere Website...' 
                   : '🤖 Analysiere Rezept mit KI...'}
               </p>
               <div className="progress-container">
