@@ -4,6 +4,7 @@ import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
+import { isRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -14,6 +15,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+  const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
 
@@ -260,6 +262,63 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
   };
 
+  const handleRecipeLinkClick = (recipeId) => {
+    const linkedRecipe = allRecipes.find(r => r.id === recipeId);
+    if (linkedRecipe) {
+      // Push current recipe to navigation stack
+      setRecipeNavigationStack([...recipeNavigationStack, selectedRecipe]);
+      // Navigate to linked recipe
+      setSelectedRecipe(linkedRecipe);
+      setServingMultiplier(1);
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+    }
+  };
+
+  const handleBackFromLinkedRecipe = () => {
+    if (recipeNavigationStack.length > 0) {
+      // Pop from navigation stack and go back
+      const previousRecipe = recipeNavigationStack[recipeNavigationStack.length - 1];
+      setRecipeNavigationStack(recipeNavigationStack.slice(0, -1));
+      setSelectedRecipe(previousRecipe);
+      setServingMultiplier(1);
+      // Scroll to top
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0;
+      }
+    } else {
+      // No navigation stack, use normal back handler
+      onBack();
+    }
+  };
+
+  const renderIngredient = (ingredient, index) => {
+    const recipeLink = decodeRecipeLink(ingredient);
+    
+    if (recipeLink) {
+      // This is a recipe link
+      const linkedRecipe = allRecipes.find(r => r.id === recipeLink.recipeId);
+      const displayName = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
+      
+      return (
+        <li key={index} className="ingredient-with-link">
+          <button
+            className="recipe-link-button"
+            onClick={() => handleRecipeLinkClick(recipeLink.recipeId)}
+            title={`Öffne Rezept: ${displayName}`}
+          >
+            🔗 {displayName}
+          </button>
+        </li>
+      );
+    }
+    
+    // Regular ingredient
+    return <li key={index}>{scaleIngredient(ingredient)}</li>;
+  };
+
   return (
     <div className="recipe-detail-container">
       {cookingMode && (
@@ -286,7 +345,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       
       {!isMobile && (
         <div className="recipe-detail-header">
-          <button className="back-button" onClick={onBack}>
+          <button className="back-button" onClick={handleBackFromLinkedRecipe}>
             ← Zurück
           </button>
           
@@ -356,7 +415,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 )}
                 <button 
                   className="overlay-back-button"
-                  onClick={onBack}
+                  onClick={handleBackFromLinkedRecipe}
                   title="Zurück"
                 >
                   ✕
@@ -495,9 +554,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
             )}
           </div>
           <ul className="ingredients-list">
-            {recipe.ingredients?.map((ingredient, index) => (
-              <li key={index}>{scaleIngredient(ingredient)}</li>
-            )) || <li>Keine Zutaten aufgelistet</li>}
+            {recipe.ingredients?.map((ingredient, index) => 
+              renderIngredient(ingredient, index)
+            ) || <li>Keine Zutaten aufgelistet</li>}
           </ul>
         </section>
 

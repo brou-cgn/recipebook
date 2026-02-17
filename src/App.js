@@ -481,6 +481,7 @@ function App() {
             onCancel={handleCancelForm}
             currentUser={currentUser}
             isCreatingVersion={isCreatingVersion}
+            allRecipes={recipes}
           />
         ) : (
           <RecipeList

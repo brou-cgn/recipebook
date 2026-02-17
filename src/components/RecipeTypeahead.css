@@ -1,0 +1,171 @@
+.recipe-typeahead-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.recipe-typeahead-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recipe-typeahead-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 0.5rem;
+}
+
+.recipe-typeahead-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.recipe-typeahead-input:focus {
+  outline: none;
+  border-color: #ff6b6b;
+}
+
+.recipe-typeahead-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  color: #666;
+  line-height: 1;
+}
+
+.recipe-typeahead-close:hover {
+  color: #333;
+}
+
+.recipe-typeahead-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.recipe-typeahead-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.15s ease;
+}
+
+.recipe-typeahead-item:hover,
+.recipe-typeahead-item.selected {
+  background-color: #f8f8f8;
+}
+
+.recipe-typeahead-item.selected {
+  border-left: 3px solid #ff6b6b;
+}
+
+.recipe-typeahead-item-content {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.recipe-typeahead-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.recipe-typeahead-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-typeahead-title {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-typeahead-category {
+  font-size: 0.85rem;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-typeahead-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #999;
+}
+
+.recipe-typeahead-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #e0e0e0;
+  background-color: #f8f8f8;
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 480px) {
+  .recipe-typeahead-overlay {
+    padding: 0.5rem;
+  }
+
+  .recipe-typeahead-container {
+    max-width: 100%;
+    max-height: 90vh;
+  }
+
+  .recipe-typeahead-header {
+    padding: 0.75rem;
+  }
+
+  .recipe-typeahead-item {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .recipe-typeahead-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .recipe-typeahead-title {
+    font-size: 0.95rem;
+  }
+
+  .recipe-typeahead-category {
+    font-size: 0.8rem;
+  }
+
+  .recipe-typeahead-footer {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+  }
+}

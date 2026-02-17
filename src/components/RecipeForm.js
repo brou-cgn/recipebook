@@ -7,11 +7,13 @@ import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredients } from '../utils/ingredientUtils';
+import { encodeRecipeLink, startsWithHash } from '../utils/recipeLinks';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
+import RecipeTypeahead from './RecipeTypeahead';
 
-function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false }) {
+function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
@@ -42,6 +44,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     scanImage: '📷',
     webImport: '🌐'
   });
+  const [showTypeahead, setShowTypeahead] = useState(false);
+  const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
 
   useEffect(() => {
     if (recipe) {
@@ -126,6 +130,18 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     const newIngredients = [...ingredients];
     newIngredients[index] = value;
     setIngredients(newIngredients);
+    
+    // Check if user is typing # to trigger recipe typeahead
+    if (startsWithHash(value)) {
+      setTypeaheadIngredientIndex(index);
+      setShowTypeahead(true);
+    } else {
+      // Hide typeahead if # is removed
+      if (typeaheadIngredientIndex === index) {
+        setShowTypeahead(false);
+        setTypeaheadIngredientIndex(null);
+      }
+    }
   };
 
   const handleAddStep = () => {
@@ -329,6 +345,25 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     handleImport(webRecipe);
     // Close the web import modal
     setShowWebImportModal(false);
+  };
+
+  const handleRecipeSelect = (selectedRecipe) => {
+    if (typeaheadIngredientIndex !== null) {
+      const newIngredients = [...ingredients];
+      // Replace the ingredient with the recipe link format
+      newIngredients[typeaheadIngredientIndex] = encodeRecipeLink(
+        selectedRecipe.id,
+        selectedRecipe.title
+      );
+      setIngredients(newIngredients);
+    }
+    setShowTypeahead(false);
+    setTypeaheadIngredientIndex(null);
+  };
+
+  const handleTypeaheadCancel = () => {
+    setShowTypeahead(false);
+    setTypeaheadIngredientIndex(null);
   };
 
   return (
@@ -704,6 +739,15 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         <WebImportModal
           onImport={handleWebImport}
           onCancel={() => setShowWebImportModal(false)}
+        />
+      )}
+
+      {showTypeahead && typeaheadIngredientIndex !== null && (
+        <RecipeTypeahead
+          recipes={allRecipes.filter(r => r.id !== recipe?.id)}
+          onSelect={handleRecipeSelect}
+          onCancel={handleTypeaheadCancel}
+          inputValue={ingredients[typeaheadIngredientIndex] || ''}
         />
       )}
     </div>
