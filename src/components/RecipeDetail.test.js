@@ -432,3 +432,91 @@ describe('RecipeDetail - Cooking Mode', () => {
     expect(staticIconAfter).toBeInTheDocument();
   });
 });
+
+describe('RecipeDetail - Recipe Links', () => {
+  const mockLinkedRecipe = {
+    id: 'recipe-linked',
+    title: 'Pizzateig',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['500g Mehl', '300ml Wasser'],
+    steps: ['Mischen'],
+  };
+
+  const mockRecipeWithLinks = {
+    id: 'recipe-1',
+    title: 'Pizza',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: [
+      '200g Mehl',
+      '#recipe:recipe-linked:Pizzateig',
+      '1 Teil #recipe:recipe-linked:Pizzateig',
+      '50g #recipe:recipe-linked:Tomatensoße',
+    ],
+    steps: ['Step 1'],
+  };
+
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  test('displays recipe link without emoji', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipeWithLinks}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that recipe link button exists and doesn't contain emoji
+    const linkButtons = screen.getAllByRole('button', { name: /Pizzateig/i });
+    expect(linkButtons.length).toBeGreaterThan(0);
+    
+    // Verify the button text does NOT start with 🔗
+    linkButtons.forEach(button => {
+      expect(button.textContent).not.toMatch(/^🔗/);
+    });
+  });
+
+  test('displays recipe link with quantity prefix', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipeWithLinks}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that ingredient with quantity prefix is displayed correctly
+    expect(screen.getByText('1 Teil')).toBeInTheDocument();
+    expect(screen.getByText('50g')).toBeInTheDocument();
+  });
+
+  test('displays recipe link without quantity prefix (backward compatibility)', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipeWithLinks}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Recipe link without quantity should still work
+    const linkButtons = screen.getAllByRole('button', { name: /Pizzateig/i });
+    // We have 3 recipe links in total (one without quantity, two with quantities)
+    expect(linkButtons.length).toBe(3);
+  });
+});
