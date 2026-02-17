@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Demo - RecipeBook</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #402C1C;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .feature-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .form-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .form-list-item:hover {
+            background: #f0f0f0;
+        }
+
+        .drag-handle {
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: grab;
+            padding: 0.5rem 0.4rem;
+            font-size: 1rem;
+            line-height: 1;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: pan-y;
+            user-select: none;
+        }
+
+        .drag-handle:hover {
+            background: #e8e8e8;
+            color: #402C1C;
+            border-color: #402C1C;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+            background: #ddd;
+        }
+
+        input, textarea {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #402C1C;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .step-number {
+            padding: 0.75rem 0;
+            font-weight: 600;
+            color: #666;
+            min-width: 2rem;
+        }
+
+        .features {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .features h4 {
+            color: #402C1C;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            padding: 8px 0;
+            color: #333;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+
+        .note strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Drag & Drop Demonstration</h1>
+        <p class="subtitle">Rezeptzutaten und Zubereitungsschritte neu sortieren</p>
+        
+        <span class="feature-badge">✨ Neu implementiert</span>
+
+        <div class="section">
+            <h3>Zutaten</h3>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Zutat verschieben">⋮⋮</button>
+                <input type="text" value="200 g Mehl" readonly />
+            </div>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Zutat verschieben">⋮⋮</button>
+                <input type="text" value="100 ml Milch" readonly />
+            </div>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Zutat verschieben">⋮⋮</button>
+                <input type="text" value="2 Eier" readonly />
+            </div>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Zutat verschieben">⋮⋮</button>
+                <input type="text" value="1 Prise Salz" readonly />
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Zubereitungsschritte</h3>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Schritt verschieben">⋮⋮</button>
+                <span class="step-number">1.</span>
+                <textarea readonly>Mehl in eine Schüssel sieben</textarea>
+            </div>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Schritt verschieben">⋮⋮</button>
+                <span class="step-number">2.</span>
+                <textarea readonly>Milch und Eier hinzufügen</textarea>
+            </div>
+            <div class="form-list-item">
+                <button class="drag-handle" type="button" aria-label="Schritt verschieben">⋮⋮</button>
+                <span class="step-number">3.</span>
+                <textarea readonly>Alles zu einem glatten Teig verrühren</textarea>
+            </div>
+        </div>
+
+        <div class="features">
+            <h4>✨ Implementierte Features</h4>
+            <ul>
+                <li>Drag & Drop mit Maus auf Desktop</li>
+                <li>Touch-Unterstützung für mobile Geräte</li>
+                <li>Tastaturnavigation für Barrierefreiheit</li>
+                <li>Visuelles Feedback beim Ziehen (Cursor, Opacity)</li>
+                <li>Änderungen werden beim Speichern des Rezepts dauerhaft gespeichert</li>
+                <li>Moderne @dnd-kit Bibliothek für beste Performance</li>
+                <li>Umfassende Test-Abdeckung</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>💡 Hinweis zur Bedienung:</strong>
+            Diese Demo zeigt nur die visuelle Darstellung. In der echten Anwendung können Sie die Elemente 
+            durch Klicken und Ziehen des ⋮⋮-Handles neu anordnen. Die Reihenfolge wird automatisch 
+            gespeichert, wenn Sie das Rezept speichern.
+        </div>
+    </div>
+</body>
+</html>
