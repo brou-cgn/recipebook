@@ -670,8 +670,7 @@
 
 /* Recipe link styles */
 .ingredient-with-link {
-  list-style: none;
-  padding-left: 0;
+  /* Keep consistent list styling with other ingredients */
 }
 
 .recipe-link-button {

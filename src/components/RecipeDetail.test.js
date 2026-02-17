@@ -546,7 +546,7 @@ describe('RecipeDetail - Recipe Links', () => {
     expect(screen.getByText('2 Teil')).toBeInTheDocument();
   });
 
-  test('recipe link ingredients always start with bullet (•)', () => {
+  test('recipe link ingredients use consistent list styling', () => {
     render(
       <RecipeDetail
         recipe={mockRecipeWithLinks}
@@ -562,9 +562,10 @@ describe('RecipeDetail - Recipe Links', () => {
     const ingredientsList = document.querySelector('.ingredients-list');
     const listItems = ingredientsList.querySelectorAll('li.ingredient-with-link');
     
-    // Each recipe link ingredient should start with •
+    // Recipe link ingredients should NOT have manual bullet prefix
+    // They should use browser's native list styling like other ingredients
     listItems.forEach(item => {
-      expect(item.textContent).toMatch(/^•/);
+      expect(item.textContent).not.toMatch(/^•/);
     });
   });
 });

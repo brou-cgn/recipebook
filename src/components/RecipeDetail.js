@@ -309,7 +309,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       
       return (
         <li key={index} className="ingredient-with-link">
-          • {scaledQuantity && <span>{scaledQuantity} </span>}
+          {scaledQuantity && <span>{scaledQuantity} </span>}
           <button
             className="recipe-link-button"
             onClick={() => handleRecipeLinkClick(recipeLink.recipeId)}
