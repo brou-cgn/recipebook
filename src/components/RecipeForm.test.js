@@ -47,6 +47,62 @@ jest.mock('../utils/categoryImages', () => ({
   getImageForCategories: jest.fn(),
 }));
 
+jest.mock('../utils/ingredientUtils', () => {
+  const actual = jest.requireActual('../utils/ingredientUtils');
+  return {
+    formatIngredientSpacing: actual.formatIngredientSpacing,
+  };
+});
+
+jest.mock('../utils/storageUtils', () => ({
+  uploadRecipeImage: jest.fn(),
+  deleteRecipeImage: jest.fn(),
+}));
+
+jest.mock('../utils/recipeLinks', () => ({
+  encodeRecipeLink: jest.fn((id, title) => `#${id}-${title}`),
+  startsWithHash: (text) => text.startsWith('#'),
+}));
+
+// Mock @dnd-kit modules
+jest.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children }) => <div>{children}</div>,
+  closestCenter: jest.fn(),
+  PointerSensor: jest.fn(),
+  TouchSensor: jest.fn(),
+  KeyboardSensor: jest.fn(),
+  useSensor: jest.fn(),
+  useSensors: jest.fn(() => []),
+}));
+
+jest.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }) => <div>{children}</div>,
+  arrayMove: jest.fn((array, oldIndex, newIndex) => {
+    const newArray = [...array];
+    const [item] = newArray.splice(oldIndex, 1);
+    newArray.splice(newIndex, 0, item);
+    return newArray;
+  }),
+  sortableKeyboardCoordinates: jest.fn(),
+  verticalListSortingStrategy: jest.fn(),
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: jest.fn(),
+    transform: null,
+    transition: null,
+    isDragging: false,
+  }),
+}));
+
+jest.mock('@dnd-kit/utilities', () => ({
+  CSS: {
+    Transform: {
+      toString: () => '',
+    },
+  },
+}));
+
 describe('RecipeForm - Author Field', () => {
   const mockOnSave = jest.fn();
   const mockOnCancel = jest.fn();
@@ -55,7 +111,7 @@ describe('RecipeForm - Author Field', () => {
     jest.clearAllMocks();
   });
 
-  test('shows author dropdown for admin user', () => {
+  test('shows author dropdown for admin user', async () => {
     const adminUser = {
       id: 'admin-1',
       vorname: 'Admin',
@@ -78,9 +134,11 @@ describe('RecipeForm - Author Field', () => {
     const authorField = screen.getByLabelText('Autor');
     expect(authorField.tagName).toBe('SELECT');
 
-    // Check that it contains options for all users
-    expect(screen.getByText('Admin User (admin@example.com)')).toBeInTheDocument();
-    expect(screen.getByText('Regular User (user@example.com)')).toBeInTheDocument();
+    // Wait for users to load
+    await waitFor(() => {
+      expect(screen.getByText('Admin User (admin@example.com)')).toBeInTheDocument();
+      expect(screen.getByText('Regular User (user@example.com)')).toBeInTheDocument();
+    });
   });
 
   test('shows author as disabled text input for non-admin user', () => {
@@ -1595,5 +1653,240 @@ describe('RecipeForm - Drag and Drop', () => {
     // Should have 4 drag handles
     const dragHandles = screen.getAllByLabelText('Schritt verschieben');
     expect(dragHandles).toHaveLength(4);
+  });
+});
+
+describe('RecipeForm - Heading Functionality', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const mockUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+    email: 'test@example.com',
+    isAdmin: false,
+    role: 'edit',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('renders toggle type button for ingredients', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      const toggleButtons = screen.getAllByTitle(/Als Überschrift formatieren|Als Zutat formatieren/);
+      expect(toggleButtons.length).toBeGreaterThan(0);
+    });
+  });
+
+  test('can toggle ingredient to heading and back', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+      expect(ingredientInput).toBeInTheDocument();
+    });
+
+    // Find the toggle button for the first ingredient
+    const toggleButton = screen.getAllByTitle('Als Überschrift formatieren')[0];
+    expect(toggleButton).toBeInTheDocument();
+
+    // Click to toggle to heading
+    fireEvent.click(toggleButton);
+
+    await waitFor(() => {
+      const headingInput = screen.getByPlaceholderText('Zwischenüberschrift');
+      expect(headingInput).toBeInTheDocument();
+    });
+
+    // Find the toggle button again (now should say "Als Zutat formatieren")
+    const toggleBackButton = screen.getByTitle('Als Zutat formatieren');
+    expect(toggleBackButton).toBeInTheDocument();
+
+    // Click to toggle back to ingredient
+    fireEvent.click(toggleBackButton);
+
+    await waitFor(() => {
+      const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+      expect(ingredientInput).toBeInTheDocument();
+    });
+  });
+
+  test('can toggle step to heading and back', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      const stepInput = screen.getByPlaceholderText('Schritt 1');
+      expect(stepInput).toBeInTheDocument();
+    });
+
+    // Find the toggle button for the first step
+    const toggleButtons = screen.getAllByTitle('Als Überschrift formatieren');
+    const stepToggleButton = toggleButtons[toggleButtons.length - 1]; // Last one should be for steps
+    expect(stepToggleButton).toBeInTheDocument();
+
+    // Click to toggle to heading
+    fireEvent.click(stepToggleButton);
+
+    await waitFor(() => {
+      // Should have a heading placeholder
+      const headingInputs = screen.getAllByPlaceholderText('Zwischenüberschrift');
+      expect(headingInputs.length).toBeGreaterThan(0);
+    });
+  });
+
+  test('saves recipe with heading items correctly', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Zutat 1')).toBeInTheDocument();
+    });
+
+    // Add some text to ingredient
+    const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+    fireEvent.change(ingredientInput, { target: { value: 'Teig' } });
+
+    // Toggle to heading
+    const toggleButton = screen.getAllByTitle('Als Überschrift formatieren')[0];
+    fireEvent.click(toggleButton);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Zwischenüberschrift')).toBeInTheDocument();
+    });
+
+    // Fill in title (required field)
+    const titleInput = screen.getByPlaceholderText('z.B. Spaghetti Carbonara');
+    fireEvent.change(titleInput, { target: { value: 'Test Rezept' } });
+
+    // Add text to the step (required to have non-empty content)
+    const stepInput = screen.getByPlaceholderText('Schritt 1');
+    fireEvent.change(stepInput, { target: { value: 'Test Schritt' } });
+
+    // Submit form
+    const form = titleInput.closest('form');
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalled();
+    });
+
+    const savedData = mockOnSave.mock.calls[0][0];
+    
+    // Check that ingredients array contains object with type and text
+    expect(savedData.ingredients).toBeDefined();
+    expect(savedData.ingredients.length).toBeGreaterThan(0);
+    expect(savedData.ingredients[0]).toHaveProperty('type');
+    expect(savedData.ingredients[0]).toHaveProperty('text');
+    expect(savedData.ingredients[0].type).toBe('heading');
+    expect(savedData.ingredients[0].text).toBe('Teig');
+  });
+
+  test('loads recipe with heading items correctly', async () => {
+    const recipeWithHeadings = {
+      id: 'test-1',
+      title: 'Test Recipe',
+      ingredients: [
+        { type: 'heading', text: 'Für den Teig' },
+        { type: 'ingredient', text: '200g Mehl' },
+        { type: 'ingredient', text: '100ml Milch' },
+      ],
+      steps: [
+        { type: 'heading', text: 'Vorbereitung' },
+        { type: 'step', text: 'Mehl sieben' },
+      ],
+      portionen: 4,
+      portionUnitId: 'portion',
+      kulinarik: [],
+      speisekategorie: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      authorId: 'user-1',
+    };
+
+    render(
+      <RecipeForm
+        recipe={recipeWithHeadings}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      // Should display heading placeholder for first ingredient
+      const headingInputs = screen.getAllByPlaceholderText('Zwischenüberschrift');
+      expect(headingInputs.length).toBeGreaterThan(0);
+      
+      // Should display heading text
+      expect(headingInputs[0].value).toBe('Für den Teig');
+      
+      // Should display regular ingredient
+      const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
+      expect(ingredientInputs.length).toBe(2);
+      expect(ingredientInputs[0].value).toBe('200g Mehl');
+    });
+  });
+
+  test('maintains backward compatibility with string-based ingredients', async () => {
+    const oldRecipe = {
+      id: 'test-old',
+      title: 'Old Recipe',
+      ingredients: ['200g Mehl', '100ml Milch'],
+      steps: ['Mehl sieben', 'Milch hinzufügen'],
+      portionen: 4,
+      portionUnitId: 'portion',
+      kulinarik: [],
+      speisekategorie: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      authorId: 'user-1',
+    };
+
+    render(
+      <RecipeForm
+        recipe={oldRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+      />
+    );
+
+    await waitFor(() => {
+      // Should convert strings to objects and display correctly
+      const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
+      expect(ingredientInputs.length).toBe(2);
+      expect(ingredientInputs[0].value).toBe('200g Mehl');
+      expect(ingredientInputs[1].value).toBe('100ml Milch');
+    });
   });
 });

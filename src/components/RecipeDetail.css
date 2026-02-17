@@ -576,6 +576,24 @@
   margin-bottom: 0;
 }
 
+/* Heading styles for ingredients and steps */
+.ingredient-heading,
+.step-heading {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #402C1C;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  list-style: none;
+  margin-left: -1.5rem;
+  padding-left: 0;
+}
+
+.ingredient-heading:first-child,
+.step-heading:first-child {
+  margin-top: 0;
+}
+
 @media (max-width: 480px) {
   .recipe-detail-container {
     padding-top: 0;
