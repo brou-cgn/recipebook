@@ -367,7 +367,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
           {step === 'scan' && scanning && (
             <div className="scan-section">
               <p className="ocr-instructions">
-                {ocrMode === 'ai' ? '🤖 Analysiere Rezept mit KI...' : 'Scanne Text...'}
+                {ocrMode === 'ai' ? 'Analysiere Rezept...' : 'Scanne Text...'}
               </p>
               <div className="progress-container">
                 <div className="progress-bar">
