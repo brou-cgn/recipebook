@@ -431,6 +431,15 @@
   background: rgba(255, 100, 100, 0.2);
 }
 
+.menu-version {
+  padding: 0.5rem 1rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .mobile-filter-controls {
   padding: 0.5rem 1rem;
 }
