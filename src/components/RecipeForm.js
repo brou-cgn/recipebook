@@ -12,6 +12,126 @@ import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
 import RecipeTypeahead from './RecipeTypeahead';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  TouchSensor,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable Ingredient Item Component
+function SortableIngredient({ id, ingredient, index, onChange, onRemove, canRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`form-list-item ${isDragging ? 'dragging' : ''}`}
+    >
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Zutat verschieben"
+      >
+        ⋮⋮
+      </button>
+      <input
+        type="text"
+        value={ingredient}
+        onChange={(e) => onChange(index, e.target.value)}
+        placeholder={`Zutat ${index + 1}`}
+      />
+      {canRemove && (
+        <button
+          type="button"
+          className="remove-button"
+          onClick={() => onRemove(index)}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Sortable Step Item Component
+function SortableStep({ id, step, index, onChange, onRemove, canRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`form-list-item ${isDragging ? 'dragging' : ''}`}
+    >
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Schritt verschieben"
+      >
+        ⋮⋮
+      </button>
+      <span className="step-number">{index + 1}.</span>
+      <textarea
+        value={step}
+        onChange={(e) => onChange(index, e.target.value)}
+        placeholder={`Schritt ${index + 1}`}
+        rows="2"
+      />
+      {canRemove && (
+        <button
+          type="button"
+          className="remove-button"
+          onClick={() => onRemove(index)}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
 
 function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
   const [title, setTitle] = useState('');
@@ -46,6 +166,15 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   });
   const [showTypeahead, setShowTypeahead] = useState(false);
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
+
+  // Drag and drop sensors with touch support
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (recipe) {
@@ -158,6 +287,31 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     const newSteps = [...steps];
     newSteps[index] = value;
     setSteps(newSteps);
+  };
+
+  // Drag and drop handlers
+  const handleDragEndIngredients = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setIngredients((items) => {
+        const oldIndex = items.findIndex((_, idx) => `ingredient-${idx}` === active.id);
+        const newIndex = items.findIndex((_, idx) => `ingredient-${idx}` === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleDragEndSteps = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setSteps((items) => {
+        const oldIndex = items.findIndex((_, idx) => `step-${idx}` === active.id);
+        const newIndex = items.findIndex((_, idx) => `step-${idx}` === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleRemoveEmojisFromTitle = () => {
@@ -654,25 +808,28 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               </button>
             )}
           </div>
-          {ingredients.map((ingredient, index) => (
-            <div key={index} className="form-list-item">
-              <input
-                type="text"
-                value={ingredient}
-                onChange={(e) => handleIngredientChange(index, e.target.value)}
-                placeholder={`Zutat ${index + 1}`}
-              />
-              {ingredients.length > 1 && (
-                <button
-                  type="button"
-                  className="remove-button"
-                  onClick={() => handleRemoveIngredient(index)}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEndIngredients}
+          >
+            <SortableContext
+              items={ingredients.map((_, index) => `ingredient-${index}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              {ingredients.map((ingredient, index) => (
+                <SortableIngredient
+                  key={`ingredient-${index}`}
+                  id={`ingredient-${index}`}
+                  ingredient={ingredient}
+                  index={index}
+                  onChange={handleIngredientChange}
+                  onRemove={handleRemoveIngredient}
+                  canRemove={ingredients.length > 1}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <button type="button" className="add-item-button" onClick={handleAddIngredient}>
             + Zutat hinzufügen
           </button>
@@ -692,26 +849,28 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               </button>
             )}
           </div>
-          {steps.map((step, index) => (
-            <div key={index} className="form-list-item">
-              <span className="step-number">{index + 1}.</span>
-              <textarea
-                value={step}
-                onChange={(e) => handleStepChange(index, e.target.value)}
-                placeholder={`Schritt ${index + 1}`}
-                rows="2"
-              />
-              {steps.length > 1 && (
-                <button
-                  type="button"
-                  className="remove-button"
-                  onClick={() => handleRemoveStep(index)}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEndSteps}
+          >
+            <SortableContext
+              items={steps.map((_, index) => `step-${index}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              {steps.map((step, index) => (
+                <SortableStep
+                  key={`step-${index}`}
+                  id={`step-${index}`}
+                  step={step}
+                  index={index}
+                  onChange={handleStepChange}
+                  onRemove={handleRemoveStep}
+                  canRemove={steps.length > 1}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <button type="button" className="add-item-button" onClick={handleAddStep}>
             + Schritt hinzufügen
           </button>
