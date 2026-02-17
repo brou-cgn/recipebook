@@ -479,9 +479,9 @@ describe('RecipeDetail - Recipe Links', () => {
     const linkButtons = screen.getAllByRole('button', { name: /Pizzateig/i });
     expect(linkButtons.length).toBeGreaterThan(0);
     
-    // Verify the button text does NOT start with 🔗
+    // Verify the button text does NOT contain the 🔗 emoji anywhere
     linkButtons.forEach(button => {
-      expect(button.textContent).not.toMatch(/^🔗/);
+      expect(button.textContent).not.toContain('🔗');
     });
   });
 

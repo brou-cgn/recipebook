@@ -24,7 +24,8 @@ export const decodeRecipeLink = (ingredient) => {
 
   // Match pattern with optional quantity prefix
   // Examples: "#recipe:id:name" or "1 Teil #recipe:id:name" or "50g #recipe:id:name"
-  const match = ingredient.match(/^(.*?)\s*#recipe:([^:]+):(.+)$/);
+  // Pattern ensures no # symbols in the quantity prefix
+  const match = ingredient.match(/^([^#]*?)\s*#recipe:([^:]+):(.+)$/);
   if (match) {
     const quantityPrefix = match[1].trim();
     return {

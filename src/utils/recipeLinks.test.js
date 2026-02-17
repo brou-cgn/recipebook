@@ -80,6 +80,13 @@ describe('recipeLinks utilities', () => {
       expect(decodeRecipeLink('')).toBeNull();
       expect(decodeRecipeLink(null)).toBeNull();
     });
+
+    test('rejects malformed input with # in quantity prefix', () => {
+      // Should not accept multiple # symbols before recipe link
+      expect(decodeRecipeLink('### #recipe:abc:test')).toBeNull();
+      expect(decodeRecipeLink('100# #recipe:abc:test')).toBeNull();
+      expect(decodeRecipeLink('text # more #recipe:abc:test')).toBeNull();
+    });
   });
 
   describe('isRecipeLink', () => {
