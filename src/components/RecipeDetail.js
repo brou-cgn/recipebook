@@ -302,11 +302,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       const linkedRecipe = allRecipes.find(r => r.id === recipeLink.recipeId);
       const displayName = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
       
+      // Scale the quantity prefix if present
+      const scaledQuantity = recipeLink.quantityPrefix 
+        ? scaleIngredient(recipeLink.quantityPrefix)
+        : '';
+      
       return (
         <li key={index} className="ingredient-with-link">
-          {recipeLink.quantityPrefix && (
-            <span>{recipeLink.quantityPrefix} </span>
-          )}
+          • {scaledQuantity && <span>{scaledQuantity} </span>}
           <button
             className="recipe-link-button"
             onClick={() => handleRecipeLinkClick(recipeLink.recipeId)}
