@@ -52,7 +52,7 @@ function RecipeTypeahead({
   useEffect(() => {
     if (listRef.current) {
       const selectedElement = listRef.current.children[selectedIndex];
-      if (selectedElement) {
+      if (selectedElement && typeof selectedElement.scrollIntoView === 'function') {
         selectedElement.scrollIntoView({
           block: 'nearest',
           behavior: 'smooth'

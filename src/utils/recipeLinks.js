@@ -57,5 +57,9 @@ export const extractRecipeLinks = (ingredients) => {
  * Check if ingredient text starts with # (indicating potential recipe link)
  */
 export const startsWithHash = (text) => {
-  return text && typeof text === 'string' && text.trim().startsWith('#');
+  if (!text || typeof text !== 'string') {
+    return false;
+  }
+  const trimmed = text.trim();
+  return trimmed !== '' && trimmed.startsWith('#');
 };
