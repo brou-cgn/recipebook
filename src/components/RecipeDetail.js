@@ -4,7 +4,7 @@ import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
-import { isRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
