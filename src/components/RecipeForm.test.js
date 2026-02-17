@@ -1301,3 +1301,299 @@ describe('RecipeForm - Ingredient Formatting', () => {
     );
   });
 });
+
+// Mock dnd-kit modules for drag and drop tests
+jest.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children }) => <div>{children}</div>,
+  closestCenter: jest.fn(),
+  KeyboardSensor: jest.fn(),
+  PointerSensor: jest.fn(),
+  TouchSensor: jest.fn(),
+  useSensor: jest.fn(),
+  useSensors: jest.fn(() => []),
+}));
+
+jest.mock('@dnd-kit/sortable', () => ({
+  arrayMove: (array, fromIndex, toIndex) => {
+    const newArray = [...array];
+    const [movedItem] = newArray.splice(fromIndex, 1);
+    newArray.splice(toIndex, 0, movedItem);
+    return newArray;
+  },
+  SortableContext: ({ children }) => <div>{children}</div>,
+  sortableKeyboardCoordinates: jest.fn(),
+  verticalListSortingStrategy: jest.fn(),
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: jest.fn(),
+    transform: null,
+    transition: null,
+    isDragging: false,
+  }),
+}));
+
+jest.mock('@dnd-kit/utilities', () => ({
+  CSS: {
+    Transform: {
+      toString: () => '',
+    },
+  },
+}));
+
+describe('RecipeForm - Drag and Drop', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('renders drag handles for ingredients', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Add a second ingredient to ensure drag handles are visible
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+
+    // Check for drag handles (⋮⋮ symbol)
+    const dragHandles = screen.getAllByLabelText('Zutat verschieben');
+    expect(dragHandles.length).toBeGreaterThan(0);
+  });
+
+  test('renders drag handles for steps', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Add a second step to ensure drag handles are visible
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+
+    // Check for drag handles (⋮⋮ symbol)
+    const dragHandles = screen.getAllByLabelText('Schritt verschieben');
+    expect(dragHandles.length).toBeGreaterThan(0);
+  });
+
+  test('ingredients maintain order when submitted', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Fill in title
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Add ingredients in specific order
+    const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
+    fireEvent.change(ingredientInputs[0], { target: { value: 'First Ingredient' } });
+    
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    const updatedInputs = screen.getAllByPlaceholderText(/Zutat/);
+    fireEvent.change(updatedInputs[1], { target: { value: 'Second Ingredient' } });
+
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    const finalInputs = screen.getAllByPlaceholderText(/Zutat/);
+    fireEvent.change(finalInputs[2], { target: { value: 'Third Ingredient' } });
+
+    // Submit form
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Verify ingredients are saved in the correct order
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ingredients: ['First Ingredient', 'Second Ingredient', 'Third Ingredient'],
+      })
+    );
+  });
+
+  test('steps maintain order when submitted', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Fill in title
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Add steps in specific order
+    const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
+    fireEvent.change(stepInputs[0], { target: { value: 'First Step' } });
+    
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    const updatedInputs = screen.getAllByPlaceholderText(/Schritt/);
+    fireEvent.change(updatedInputs[1], { target: { value: 'Second Step' } });
+
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    const finalInputs = screen.getAllByPlaceholderText(/Schritt/);
+    fireEvent.change(finalInputs[2], { target: { value: 'Third Step' } });
+
+    // Submit form
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Verify steps are saved in the correct order
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: ['First Step', 'Second Step', 'Third Step'],
+      })
+    );
+  });
+
+  test('drag handles have proper accessibility attributes', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Check ingredient drag handles
+    const ingredientDragHandles = screen.getAllByLabelText('Zutat verschieben');
+    ingredientDragHandles.forEach(handle => {
+      expect(handle).toHaveAttribute('aria-label', 'Zutat verschieben');
+      expect(handle.tagName).toBe('BUTTON');
+    });
+
+    // Check step drag handles
+    const stepDragHandles = screen.getAllByLabelText('Schritt verschieben');
+    stepDragHandles.forEach(handle => {
+      expect(handle).toHaveAttribute('aria-label', 'Schritt verschieben');
+      expect(handle.tagName).toBe('BUTTON');
+    });
+  });
+
+  test('multiple ingredients can be added and each has a drag handle', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Add multiple ingredients
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+
+    // Should have 4 ingredients total (1 initial + 3 added)
+    const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
+    expect(ingredientInputs).toHaveLength(4);
+
+    // Should have 4 drag handles
+    const dragHandles = screen.getAllByLabelText('Zutat verschieben');
+    expect(dragHandles).toHaveLength(4);
+  });
+
+  test('multiple steps can be added and each has a drag handle', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Add multiple steps
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+
+    // Should have 4 steps total (1 initial + 3 added)
+    const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
+    expect(stepInputs).toHaveLength(4);
+
+    // Should have 4 drag handles
+    const dragHandles = screen.getAllByLabelText('Schritt verschieben');
+    expect(dragHandles).toHaveLength(4);
+  });
+});
