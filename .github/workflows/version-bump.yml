@@ -1,0 +1,153 @@
+name: Auto Version Bump
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: "The new version number"
+        value: ${{ jobs.bump-version.outputs.version }}
+      bump_type:
+        description: "The type of version bump (major, minor, patch)"
+        value: ${{ jobs.bump-version.outputs.bump_type }}
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.new_version }}
+      bump_type: ${{ steps.determine-bump.outputs.bump_type }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Get last version tag
+        id: get-last-tag
+        run: |
+          # Get the last version tag (if any)
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous version tag found"
+            echo "last_tag=" >> $GITHUB_OUTPUT
+          else
+            echo "Last version tag: $LAST_TAG"
+            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Get commits since last tag
+        id: get-commits
+        run: |
+          LAST_TAG="${{ steps.get-last-tag.outputs.last_tag }}"
+          if [ -z "$LAST_TAG" ]; then
+            # No tags yet, get all commits
+            COMMITS=$(git log --pretty=format:"%s" --no-merges)
+          else
+            # Get commits since last tag
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --no-merges)
+          fi
+          
+          # Check if there are any commits
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits found"
+            echo "has_commits=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_commits=true" >> $GITHUB_OUTPUT
+            echo "Commits since last tag:"
+            echo "$COMMITS"
+          fi
+          
+          # Save commits to file for next step
+          echo "$COMMITS" > /tmp/commits.txt
+      
+      - name: Determine version bump type
+        id: determine-bump
+        run: |
+          if [ "${{ steps.get-commits.outputs.has_commits }}" = "false" ]; then
+            echo "No commits to analyze, defaulting to patch"
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          COMMITS=$(cat /tmp/commits.txt)
+          BUMP_TYPE="patch"
+          
+          # Check for BREAKING CHANGE (major)
+          if echo "$COMMITS" | grep -qi "BREAKING CHANGE\|^[a-z]*!:"; then
+            BUMP_TYPE="major"
+            echo "🚨 BREAKING CHANGE detected - MAJOR version bump"
+          # Check for feat: (minor)
+          elif echo "$COMMITS" | grep -qi "^feat\|^feature"; then
+            BUMP_TYPE="minor"
+            echo "✨ New feature detected - MINOR version bump"
+          # Check for fix: (patch)
+          elif echo "$COMMITS" | grep -qi "^fix\|^bugfix\|^patch\|^perf\|^refactor\|^docs\|^chore"; then
+            BUMP_TYPE="patch"
+            echo "🐛 Fix/patch detected - PATCH version bump"
+          else
+            BUMP_TYPE="patch"
+            echo "ℹ️  No conventional commit found - defaulting to PATCH"
+          fi
+          
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+      
+      - name: Bump version
+        id: bump
+        run: |
+          BUMP_TYPE="${{ steps.determine-bump.outputs.bump_type }}"
+          
+          # Read current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Bump version using npm version
+          # The --no-git-tag-version flag prevents npm from creating a tag (we'll do it manually)
+          npm version $BUMP_TYPE --no-git-tag-version
+          
+          # Read new version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Commit the version change
+          git add package.json
+          if [ -f "package-lock.json" ]; then
+            git add package-lock.json
+          fi
+          
+          git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
+          
+          # Create and push tag
+          git tag "v$NEW_VERSION"
+          
+          echo "✅ Version bumped from $CURRENT_VERSION to $NEW_VERSION"
+      
+      - name: Push changes
+        run: |
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create version summary
+        run: |
+          echo "## 🎉 Version Bump Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump Type**: ${{ steps.determine-bump.outputs.bump_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Version**: v${{ steps.bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag Created**: v${{ steps.bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
