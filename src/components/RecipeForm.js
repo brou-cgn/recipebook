@@ -6,7 +6,7 @@ import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
 import { getCustomLists } from '../utils/customLists';
 import { getUsers } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
-import { formatIngredients } from '../utils/ingredientUtils';
+import { formatIngredientSpacing } from '../utils/ingredientUtils';
 import { encodeRecipeLink, startsWithHash } from '../utils/recipeLinks';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
@@ -31,7 +31,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 // Sortable Ingredient Item Component
-function SortableIngredient({ id, ingredient, index, onChange, onRemove, canRemove }) {
+function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType }) {
   const {
     attributes,
     listeners,
@@ -47,11 +47,15 @@ function SortableIngredient({ id, ingredient, index, onChange, onRemove, canRemo
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Handle both old string format and new object format
+  const isHeading = typeof item === 'object' && item.type === 'heading';
+  const text = typeof item === 'object' ? item.text : item;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item ${isDragging ? 'dragging' : ''}`}
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
       <button
         type="button"
@@ -64,10 +68,20 @@ function SortableIngredient({ id, ingredient, index, onChange, onRemove, canRemo
       </button>
       <input
         type="text"
-        value={ingredient}
+        value={text}
         onChange={(e) => onChange(index, e.target.value)}
-        placeholder={`Zutat ${index + 1}`}
+        placeholder={isHeading ? 'Zwischenüberschrift' : `Zutat ${index + 1}`}
+        className={isHeading ? 'heading-input' : ''}
       />
+      <button
+        type="button"
+        className="toggle-type-button"
+        onClick={() => onToggleType(index)}
+        title={isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
+        aria-label={isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
+      >
+        {isHeading ? '¶' : 'H'}
+      </button>
       {canRemove && (
         <button
           type="button"
@@ -82,7 +96,7 @@ function SortableIngredient({ id, ingredient, index, onChange, onRemove, canRemo
 }
 
 // Sortable Step Item Component
-function SortableStep({ id, step, index, onChange, onRemove, canRemove }) {
+function SortableStep({ id, item, index, onChange, onRemove, canRemove, onToggleType }) {
   const {
     attributes,
     listeners,
@@ -98,11 +112,15 @@ function SortableStep({ id, step, index, onChange, onRemove, canRemove }) {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Handle both old string format and new object format
+  const isHeading = typeof item === 'object' && item.type === 'heading';
+  const text = typeof item === 'object' ? item.text : item;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item ${isDragging ? 'dragging' : ''}`}
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
       <button
         type="button"
@@ -113,13 +131,23 @@ function SortableStep({ id, step, index, onChange, onRemove, canRemove }) {
       >
         ⋮⋮
       </button>
-      <span className="step-number">{index + 1}.</span>
+      {!isHeading && <span className="step-number">{index + 1}.</span>}
       <textarea
-        value={step}
+        value={text}
         onChange={(e) => onChange(index, e.target.value)}
-        placeholder={`Schritt ${index + 1}`}
-        rows="2"
+        placeholder={isHeading ? 'Zwischenüberschrift' : `Schritt ${index + 1}`}
+        rows={isHeading ? '1' : '2'}
+        className={isHeading ? 'heading-input' : ''}
       />
+      <button
+        type="button"
+        className="toggle-type-button"
+        onClick={() => onToggleType(index)}
+        title={isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
+        aria-label={isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
+      >
+        {isHeading ? '¶' : 'H'}
+      </button>
       {canRemove && (
         <button
           type="button"
@@ -176,6 +204,28 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     })
   );
 
+  // Helper function to normalize items (convert strings to objects if needed)
+  const normalizeItems = (items) => {
+    if (!items || items.length === 0) return [{ type: 'ingredient', text: '' }];
+    return items.map(item => {
+      if (typeof item === 'string') {
+        return { type: 'ingredient', text: item };
+      }
+      return item;
+    });
+  };
+
+  // Helper function to normalize steps (convert strings to objects if needed)
+  const normalizeSteps = (items) => {
+    if (!items || items.length === 0) return [{ type: 'step', text: '' }];
+    return items.map(item => {
+      if (typeof item === 'string') {
+        return { type: 'step', text: item };
+      }
+      return item;
+    });
+  };
+
   useEffect(() => {
     if (recipe) {
       setTitle(recipe.title || '');
@@ -200,8 +250,8 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       } else {
         setSpeisekategorie([]);
       }
-      setIngredients(recipe.ingredients?.length > 0 ? recipe.ingredients : ['']);
-      setSteps(recipe.steps?.length > 0 ? recipe.steps : ['']);
+      setIngredients(recipe.ingredients?.length > 0 ? normalizeItems(recipe.ingredients) : [{ type: 'ingredient', text: '' }]);
+      setSteps(recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }]);
       
       // If creating a version, set current user as author and track parent
       if (isCreatingVersion) {
@@ -246,7 +296,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   }, [image]);
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, '']);
+    setIngredients([...ingredients, { type: 'ingredient', text: '' }]);
   };
 
   const handleRemoveIngredient = (index) => {
@@ -257,11 +307,13 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
 
   const handleIngredientChange = (index, value) => {
     const newIngredients = [...ingredients];
-    newIngredients[index] = value;
+    const currentItem = newIngredients[index];
+    // Preserve the type, only update text
+    newIngredients[index] = { ...currentItem, text: value };
     setIngredients(newIngredients);
     
-    // Check if user is typing # to trigger recipe typeahead
-    if (startsWithHash(value)) {
+    // Check if user is typing # to trigger recipe typeahead (only for ingredient type)
+    if (currentItem.type === 'ingredient' && startsWithHash(value)) {
       setTypeaheadIngredientIndex(index);
       setShowTypeahead(true);
     } else {
@@ -273,8 +325,25 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     }
   };
 
+  const handleToggleIngredientType = (index) => {
+    const newIngredients = [...ingredients];
+    const currentItem = newIngredients[index];
+    // Toggle between 'ingredient' and 'heading'
+    newIngredients[index] = {
+      ...currentItem,
+      type: currentItem.type === 'heading' ? 'ingredient' : 'heading'
+    };
+    setIngredients(newIngredients);
+    
+    // Hide typeahead if switching to heading
+    if (newIngredients[index].type === 'heading' && typeaheadIngredientIndex === index) {
+      setShowTypeahead(false);
+      setTypeaheadIngredientIndex(null);
+    }
+  };
+
   const handleAddStep = () => {
-    setSteps([...steps, '']);
+    setSteps([...steps, { type: 'step', text: '' }]);
   };
 
   const handleRemoveStep = (index) => {
@@ -285,7 +354,20 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
 
   const handleStepChange = (index, value) => {
     const newSteps = [...steps];
-    newSteps[index] = value;
+    const currentItem = newSteps[index];
+    // Preserve the type, only update text
+    newSteps[index] = { ...currentItem, text: value };
+    setSteps(newSteps);
+  };
+
+  const handleToggleStepType = (index) => {
+    const newSteps = [...steps];
+    const currentItem = newSteps[index];
+    // Toggle between 'step' and 'heading'
+    newSteps[index] = {
+      ...currentItem,
+      type: currentItem.type === 'heading' ? 'step' : 'heading'
+    };
     setSteps(newSteps);
   };
 
@@ -321,12 +403,18 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   };
 
   const handleRemoveEmojisFromIngredients = () => {
-    const cleaned = ingredients.map(ingredient => removeEmojis(ingredient));
+    const cleaned = ingredients.map(item => ({
+      ...item,
+      text: removeEmojis(item.text)
+    }));
     setIngredients(cleaned);
   };
 
   const handleRemoveEmojisFromSteps = () => {
-    const cleaned = steps.map(step => removeEmojis(step));
+    const cleaned = steps.map(item => ({
+      ...item,
+      text: removeEmojis(item.text)
+    }));
     setSteps(cleaned);
   };
 
@@ -403,9 +491,21 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       }
     }
 
-    // Format ingredients to ensure proper spacing between numbers and units
-    const filteredIngredients = ingredients.filter(i => i.trim() !== '');
-    const formattedIngredients = formatIngredients(filteredIngredients);
+    // Filter out empty items and convert to storage format
+    // For ingredients/steps, store as objects to preserve heading information
+    const filteredIngredients = ingredients.filter(i => i.text.trim() !== '');
+    // Format ingredients but preserve type information
+    const formattedIngredients = filteredIngredients.map(item => {
+      if (item.type === 'heading') {
+        // Don't format headings, keep them as-is
+        return item;
+      }
+      // Format ingredient text to ensure proper spacing
+      return {
+        ...item,
+        text: formatIngredientSpacing(item.text)
+      };
+    });
 
     const recipeData = {
       title: title.trim(),
@@ -417,7 +517,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       kochdauer: parseInt(kochdauer) || 30,
       speisekategorie: speisekategorie,
       ingredients: formattedIngredients,
-      steps: steps.filter(s => s.trim() !== ''),
+      steps: steps.filter(s => s.text.trim() !== ''),
       authorId: authorId,
       parentRecipeId: parentRecipeId || null,
       createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
@@ -461,8 +561,9 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
     }
     
     // Import always provides non-empty arrays (validated by parseRecipeData)
-    setIngredients(importedRecipe.ingredients || []);
-    setSteps(importedRecipe.steps || []);
+    // Normalize to object format
+    setIngredients(normalizeItems(importedRecipe.ingredients || []));
+    setSteps(normalizeSteps(importedRecipe.steps || []));
     
     // Close the import modal
     setShowImportModal(false);
@@ -507,14 +608,17 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       const currentIngredient = newIngredients[typeaheadIngredientIndex];
       
       // Check if there's a quantity prefix before the # symbol
-      const hashIndex = currentIngredient.indexOf('#');
-      const quantityPrefix = hashIndex > 0 ? currentIngredient.substring(0, hashIndex).trim() : '';
+      const hashIndex = currentIngredient.text.indexOf('#');
+      const quantityPrefix = hashIndex > 0 ? currentIngredient.text.substring(0, hashIndex).trim() : '';
       
       // Create the recipe link with quantity prefix if it exists
       const recipeLink = encodeRecipeLink(selectedRecipe.id, selectedRecipe.title);
-      newIngredients[typeaheadIngredientIndex] = quantityPrefix 
-        ? `${quantityPrefix} ${recipeLink}`
-        : recipeLink;
+      newIngredients[typeaheadIngredientIndex] = {
+        ...currentIngredient,
+        text: quantityPrefix 
+          ? `${quantityPrefix} ${recipeLink}`
+          : recipeLink
+      };
       
       setIngredients(newIngredients);
     }
@@ -797,7 +901,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         <div className="form-section">
           <div className="section-header">
             <h3>Zutaten</h3>
-            {ingredients.some(i => containsEmojis(i)) && (
+            {ingredients.some(i => containsEmojis(i.text)) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
@@ -817,14 +921,15 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               items={ingredients.map((_, index) => `ingredient-${index}`)}
               strategy={verticalListSortingStrategy}
             >
-              {ingredients.map((ingredient, index) => (
+              {ingredients.map((item, index) => (
                 <SortableIngredient
                   key={`ingredient-${index}`}
                   id={`ingredient-${index}`}
-                  ingredient={ingredient}
+                  item={item}
                   index={index}
                   onChange={handleIngredientChange}
                   onRemove={handleRemoveIngredient}
+                  onToggleType={handleToggleIngredientType}
                   canRemove={ingredients.length > 1}
                 />
               ))}
@@ -838,7 +943,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
         <div className="form-section">
           <div className="section-header">
             <h3>Zubereitungsschritte</h3>
-            {steps.some(s => containsEmojis(s)) && (
+            {steps.some(s => containsEmojis(s.text)) && (
               <button
                 type="button"
                 className="emoji-remove-btn-small"
@@ -858,14 +963,15 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
               items={steps.map((_, index) => `step-${index}`)}
               strategy={verticalListSortingStrategy}
             >
-              {steps.map((step, index) => (
+              {steps.map((item, index) => (
                 <SortableStep
                   key={`step-${index}`}
                   id={`step-${index}`}
-                  step={step}
+                  item={item}
                   index={index}
                   onChange={handleStepChange}
                   onRemove={handleRemoveStep}
+                  onToggleType={handleToggleStepType}
                   canRemove={steps.length > 1}
                 />
               ))}
@@ -913,7 +1019,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
           recipes={allRecipes.filter(r => r.id !== recipe?.id)}
           onSelect={handleRecipeSelect}
           onCancel={handleTypeaheadCancel}
-          inputValue={ingredients[typeaheadIngredientIndex] || ''}
+          inputValue={ingredients[typeaheadIngredientIndex]?.text || ''}
         />
       )}
     </div>

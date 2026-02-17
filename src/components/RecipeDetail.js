@@ -320,7 +320,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   const renderIngredient = (ingredient, index) => {
-    const recipeLink = decodeRecipeLink(ingredient);
+    // Handle both old string format and new object format
+    const item = typeof ingredient === 'string' 
+      ? { type: 'ingredient', text: ingredient }
+      : ingredient;
+
+    // Render heading
+    if (item.type === 'heading') {
+      return (
+        <li key={index} className="ingredient-heading">
+          {item.text}
+        </li>
+      );
+    }
+
+    // Check if it's a recipe link
+    const recipeLink = decodeRecipeLink(item.text);
     
     if (recipeLink) {
       // This is a recipe link
@@ -347,7 +362,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
     
     // Regular ingredient
-    return <li key={index}>{scaleIngredient(ingredient)}</li>;
+    return <li key={index}>{scaleIngredient(item.text)}</li>;
   };
 
   return (
@@ -595,9 +610,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         <section className="recipe-section">
           <h2>Zubereitungsschritte</h2>
           <ol className="steps-list">
-            {recipe.steps?.map((step, index) => (
-              <li key={index}>{step}</li>
-            )) || <li>Keine Zubereitungsschritte aufgelistet</li>}
+            {recipe.steps?.map((step, index) => {
+              // Handle both old string format and new object format
+              const item = typeof step === 'string' 
+                ? { type: 'step', text: step }
+                : step;
+              
+              // Render heading as non-numbered item
+              if (item.type === 'heading') {
+                return <li key={index} className="step-heading">{item.text}</li>;
+              }
+              
+              // Regular step
+              return <li key={index}>{item.text}</li>;
+            }) || <li>Keine Zubereitungsschritte aufgelistet</li>}
           </ol>
         </section>
       </div>
