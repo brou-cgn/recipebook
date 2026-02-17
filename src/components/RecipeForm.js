@@ -350,11 +350,18 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
   const handleRecipeSelect = (selectedRecipe) => {
     if (typeaheadIngredientIndex !== null) {
       const newIngredients = [...ingredients];
-      // Replace the ingredient with the recipe link format
-      newIngredients[typeaheadIngredientIndex] = encodeRecipeLink(
-        selectedRecipe.id,
-        selectedRecipe.title
-      );
+      const currentIngredient = newIngredients[typeaheadIngredientIndex];
+      
+      // Check if there's a quantity prefix before the # symbol
+      const hashIndex = currentIngredient.indexOf('#');
+      const quantityPrefix = hashIndex > 0 ? currentIngredient.substring(0, hashIndex).trim() : '';
+      
+      // Create the recipe link with quantity prefix if it exists
+      const recipeLink = encodeRecipeLink(selectedRecipe.id, selectedRecipe.title);
+      newIngredients[typeaheadIngredientIndex] = quantityPrefix 
+        ? `${quantityPrefix} ${recipeLink}`
+        : recipeLink;
+      
       setIngredients(newIngredients);
     }
     setShowTypeahead(false);
