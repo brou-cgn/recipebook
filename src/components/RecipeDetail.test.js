@@ -519,4 +519,52 @@ describe('RecipeDetail - Recipe Links', () => {
     // We have 3 recipe links in total (one without quantity, two with quantities)
     expect(linkButtons.length).toBe(3);
   });
+
+  test('scales recipe link quantity prefix when portions are changed', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipeWithLinks}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Initial state: 1 Teil for 4 portions
+    expect(screen.getByText('1 Teil')).toBeInTheDocument();
+
+    // Increment to 8 portions (double)
+    const incrementButton = screen.getAllByRole('button').find(btn => btn.textContent === '+');
+    fireEvent.click(incrementButton); // 5 portions
+    fireEvent.click(incrementButton); // 6 portions
+    fireEvent.click(incrementButton); // 7 portions
+    fireEvent.click(incrementButton); // 8 portions
+
+    // Should now be 2 Teil (1 * 2)
+    expect(screen.getByText('2 Teil')).toBeInTheDocument();
+  });
+
+  test('recipe link ingredients always start with bullet (•)', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipeWithLinks}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Find all list items that contain recipe links
+    const ingredientsList = document.querySelector('.ingredients-list');
+    const listItems = ingredientsList.querySelectorAll('li.ingredient-with-link');
+    
+    // Each recipe link ingredient should start with •
+    listItems.forEach(item => {
+      expect(item.textContent).toMatch(/^•/);
+    });
+  });
 });
