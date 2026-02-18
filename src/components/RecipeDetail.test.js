@@ -603,8 +603,8 @@ describe('RecipeDetail - Creation Date Display', () => {
       />
     );
 
-    // Check that the creation date is displayed in German format (D.M.YYYY or DD.MM.YYYY)
-    expect(screen.getByText('15.1.2024')).toBeInTheDocument();
+    // Check that the creation date is displayed with label in German format (D.M.YYYY or DD.MM.YYYY)
+    expect(screen.getByText('Erstellt am: 15.1.2024')).toBeInTheDocument();
   });
 
   test('displays author and creation date together', () => {
@@ -630,7 +630,7 @@ describe('RecipeDetail - Creation Date Display', () => {
 
     // Check that both author and date are displayed
     expect(screen.getByText(/Autor: Another Author/)).toBeInTheDocument();
-    expect(screen.getByText('20.2.2024')).toBeInTheDocument();
+    expect(screen.getByText('Erstellt am: 20.2.2024')).toBeInTheDocument();
   });
 
   test('does not display creation date when not available', () => {
@@ -686,8 +686,8 @@ describe('RecipeDetail - Creation Date Display', () => {
       />
     );
 
-    // Check that the creation date is displayed correctly
-    expect(screen.getByText('10.3.2024')).toBeInTheDocument();
+    // Check that the creation date is displayed correctly with label
+    expect(screen.getByText('Erstellt am: 10.3.2024')).toBeInTheDocument();
   });
 
   test('handles Date objects', () => {
@@ -711,7 +711,7 @@ describe('RecipeDetail - Creation Date Display', () => {
       />
     );
 
-    // Check that the creation date is displayed correctly
-    expect(screen.getByText('5.4.2024')).toBeInTheDocument();
+    // Check that the creation date is displayed correctly with label
+    expect(screen.getByText('Erstellt am: 5.4.2024')).toBeInTheDocument();
   });
 });

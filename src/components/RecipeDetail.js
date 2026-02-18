@@ -529,7 +529,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
           {(authorName || formattedCreatedAt) && (
             <div className="author-date-caption">
               {authorName && <span className="author-name">Autor: {authorName}</span>}
-              {formattedCreatedAt && <span className="creation-date">{formattedCreatedAt}</span>}
+              {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
             </div>
           )}
         </div>
