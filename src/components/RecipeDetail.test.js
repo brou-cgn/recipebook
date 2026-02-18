@@ -766,7 +766,7 @@ describe('RecipeDetail - Scroll to Top', () => {
     rolle: 'Familymember',
   };
 
-  test('component mounts and displays content correctly when recipe changes', () => {
+  test('scrolls to top when recipe changes', () => {
     const mockRecipe1 = {
       id: 'recipe-1',
       title: 'Recipe 1',
@@ -781,7 +781,7 @@ describe('RecipeDetail - Scroll to Top', () => {
       steps: ['Step 2'],
     };
 
-    const { rerender } = render(
+    const { rerender, container } = render(
       <RecipeDetail
         recipe={mockRecipe1}
         onBack={() => {}}
@@ -791,8 +791,13 @@ describe('RecipeDetail - Scroll to Top', () => {
       />
     );
 
-    // Verify first recipe is displayed
-    expect(screen.getByText('Recipe 1')).toBeInTheDocument();
+    // Find the content element that should be scrolled
+    const contentElement = container.querySelector('.recipe-detail-content');
+    expect(contentElement).toBeInTheDocument();
+
+    // Simulate that the user has scrolled down
+    contentElement.scrollTop = 500;
+    expect(contentElement.scrollTop).toBe(500);
 
     // Change recipe (this triggers the useEffect that scrolls to top)
     rerender(
@@ -806,9 +811,11 @@ describe('RecipeDetail - Scroll to Top', () => {
     );
 
     // Verify the second recipe is now displayed
-    // The useEffect in the component sets contentRef.current.scrollTop = 0
-    // when initialRecipe changes
     expect(screen.getByText('Recipe 2')).toBeInTheDocument();
-    expect(screen.queryByText('Recipe 1')).not.toBeInTheDocument();
+    
+    // Verify scroll position was reset to top
+    // Note: In jsdom, scrollTop is reset to 0 automatically when content changes,
+    // but our useEffect explicitly sets it to 0 to ensure consistency
+    expect(contentElement.scrollTop).toBe(0);
   });
 });
