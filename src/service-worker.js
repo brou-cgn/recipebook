@@ -67,11 +67,11 @@ async function saveToIndexedDB(key, value) {
 }
 
 // Helper function to resize images
-function resizeImage(base64, targetSize) {
+async function resizeImage(base64, targetSize) {
+  const img = new Image();
+  
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const canvas = new OffscreenCanvas(targetSize, targetSize);
         const ctx = canvas.getContext('2d');
@@ -85,7 +85,8 @@ function resizeImage(base64, targetSize) {
         
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
         
-        canvas.convertToBlob({ type: 'image/png' }).then(resolve).catch(reject);
+        const blob = await canvas.convertToBlob({ type: 'image/png' });
+        resolve(blob);
       } catch (error) {
         reject(error);
       }

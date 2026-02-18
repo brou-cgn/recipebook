@@ -71,8 +71,9 @@ This is why the logo might not update immediately for existing installations.
 5. Verify the icon shows your custom logo
 
 Android Chrome handles updates better than iOS:
-- Updates may appear after 24-48 hours
-- Or after clearing Chrome cache and reinstalling
+- Updates typically occur during Chrome's periodic update checks (usually within 24 hours)
+- You can force an immediate update by clearing Chrome cache and reinstalling
+- The exact timing depends on Chrome's service worker update algorithm
 
 ## Image Guidelines
 

@@ -118,6 +118,8 @@ export function compressImage(base64, maxWidth = 800, maxHeight = 600, quality =
         
         // Determine output format based on transparency preservation
         let compressedBase64;
+        // Note: PNG inputs automatically preserve transparency regardless of preserveTransparency parameter
+        // to avoid accidental quality loss. Set preserveTransparency=true to force PNG output for any input.
         if (preserveTransparency || base64.startsWith('data:image/png')) {
           // Use PNG to preserve transparency
           compressedBase64 = canvas.toDataURL('image/png');

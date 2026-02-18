@@ -138,6 +138,55 @@ describe('imageUtils', () => {
       document.createElement = originalCreateElement;
     });
 
+    test('respects preserveTransparency parameter for non-PNG images', async () => {
+      // Mock Image and canvas operations
+      const mockCanvas = {
+        width: 0,
+        height: 0,
+        getContext: jest.fn(() => ({
+          drawImage: jest.fn(),
+        })),
+        toDataURL: jest.fn(() => 'data:image/png;base64,compressed'),
+      };
+
+      const originalCreateElement = document.createElement;
+      document.createElement = jest.fn((tag) => {
+        if (tag === 'canvas') {
+          return mockCanvas;
+        }
+        return originalCreateElement.call(document, tag);
+      });
+
+      // Create a mock Image constructor
+      const mockImage = {
+        onload: null,
+        onerror: null,
+        src: '',
+      };
+
+      global.Image = jest.fn(() => mockImage);
+
+      // Pass preserveTransparency=true for a JPEG input
+      const promise = compressImage('data:image/jpeg;base64,test', 800, 600, 0.7, true);
+      
+      // Simulate image load
+      setTimeout(() => {
+        if (mockImage.onload) {
+          mockImage.width = 1600;
+          mockImage.height = 1200;
+          mockImage.onload();
+        }
+      }, 0);
+
+      const result = await promise;
+      expect(result).toBe('data:image/png;base64,compressed');
+      // When preserveTransparency=true, should output PNG regardless of input format
+      expect(mockCanvas.toDataURL).toHaveBeenCalledWith('image/png');
+
+      // Restore original functions
+      document.createElement = originalCreateElement;
+    });
+
     test('handles image load errors', async () => {
       // Mock Image constructor
       const mockImage = {
