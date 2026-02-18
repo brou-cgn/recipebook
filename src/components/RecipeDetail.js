@@ -370,8 +370,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
           }
         });
 
-        // Update currentStepIndex if it changed
-        setCurrentStepIndex(closestIndex);
+        // Update currentStepIndex only if it changed
+        setCurrentStepIndex(prevIndex => {
+          if (prevIndex !== closestIndex) {
+            return closestIndex;
+          }
+          return prevIndex;
+        });
       }, 100); // 100ms debounce
     };
 
