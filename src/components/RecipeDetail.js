@@ -288,44 +288,52 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
   };
 
-  // Swipe gesture handling
+  // Get actual step items (filter out headings) - moved before useEffect
+  const stepItems = useMemo(() => {
+    const steps = recipe.steps || [];
+    return steps.filter(step => {
+      const item = typeof step === 'string' ? { type: 'step', text: step } : step;
+      return item.type !== 'heading';
+    });
+  }, [recipe.steps]);
+
+  const totalSteps = stepItems.length;
+
+  // Keyboard navigation for cooking mode
   useEffect(() => {
-    if (!cookingMode || !stepsContainerRef.current) return;
+    if (!cookingMode) return;
 
-    let touchStartX = 0;
-    let touchEndX = 0;
-    const minSwipeDistance = 50;
-
-    const handleTouchStart = (e) => {
-      touchStartX = e.touches[0].clientX;
-    };
-
-    const handleTouchMove = (e) => {
-      touchEndX = e.touches[0].clientX;
-    };
-
-    const handleTouchEnd = () => {
-      const steps = recipe.steps || [];
-      if (touchStartX - touchEndX > minSwipeDistance) {
-        // Swipe left - next step
-        setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
-      } else if (touchEndX - touchStartX > minSwipeDistance) {
-        // Swipe right - previous step
+    const handleKeyDown = (e) => {
+      const steps = stepItems;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
         setCurrentStepIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
       }
     };
 
-    const container = stepsContainerRef.current;
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cookingMode, stepItems]);
 
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [cookingMode, recipe.steps]);
+  // Scroll to current step card
+  useEffect(() => {
+    if (!cookingMode || !stepsContainerRef.current) return;
+
+    const container = stepsContainerRef.current;
+    const cards = container.querySelectorAll('.step-card');
+    const currentCard = cards[currentStepIndex];
+    
+    if (currentCard && currentCard.scrollIntoView) {
+      currentCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [currentStepIndex, cookingMode]);
 
   const handleToggleFavorite = async () => {
     if (!onToggleFavorite) return;
@@ -416,18 +424,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     // Regular ingredient
     return <li key={index}>{scaleIngredient(item.text)}</li>;
   };
-
-  // Get actual step items (filter out headings)
-  const stepItems = useMemo(() => {
-    const steps = recipe.steps || [];
-    return steps.filter(step => {
-      const item = typeof step === 'string' ? { type: 'step', text: step } : step;
-      return item.type !== 'heading';
-    });
-  }, [recipe.steps]);
-
-  const currentStep = stepItems[currentStepIndex];
-  const totalSteps = stepItems.length;
 
   return (
     <div className="recipe-detail-container">
@@ -533,15 +529,35 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               </ul>
             </section>
 
-            {/* Single step display with swipe support */}
-            <section className="cooking-mode-steps" ref={stepsContainerRef}>
-              <div className="current-step">
-                {currentStep ? (
-                  typeof currentStep === 'string' ? currentStep : currentStep.text
-                ) : 'Keine Zubereitungsschritte vorhanden'}
-                <div className="step-counter">
-                  Schritt {currentStepIndex + 1} von {totalSteps}
-                </div>
+            {/* Horizontal step cards with swipe support */}
+            <section className="cooking-mode-steps">
+              <div className="step-carousel" ref={stepsContainerRef}>
+                {stepItems.map((step, index) => (
+                  <div
+                    key={index}
+                    className={`step-card ${index === currentStepIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentStepIndex(index)}
+                  >
+                    <div className="step-content">
+                      {typeof step === 'string' ? step : step.text}
+                    </div>
+                    <div className="step-counter">
+                      Schritt {index + 1} von {totalSteps}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Progress indicator dots */}
+              <div className="step-dots">
+                {stepItems.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`step-dot ${index === currentStepIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentStepIndex(index)}
+                    aria-label={`Gehe zu Schritt ${index + 1}`}
+                  />
+                ))}
               </div>
             </section>
           </>

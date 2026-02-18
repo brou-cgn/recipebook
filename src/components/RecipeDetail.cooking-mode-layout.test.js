@@ -99,15 +99,16 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     const staticIcon = document.querySelector('.overlay-cooking-mode-static');
     fireEvent.click(staticIcon);
 
-    // Get the step counter and current step elements
-    const stepCounter = document.querySelector('.step-counter');
-    const currentStep = document.querySelector('.current-step');
+    // Get the step card elements
+    const stepCards = document.querySelectorAll('.step-card');
+    expect(stepCards.length).toBe(3);
+
+    // Get the first step card and its counter
+    const firstStepCard = stepCards[0];
+    const stepCounter = firstStepCard.querySelector('.step-counter');
     
     expect(stepCounter).toBeInTheDocument();
-    expect(currentStep).toBeInTheDocument();
-    
-    // The step counter should be inside the current-step element
-    expect(currentStep).toContainElement(stepCounter);
+    expect(firstStepCard).toContainElement(stepCounter);
     
     // Check that step counter has the correct text
     expect(stepCounter).toHaveTextContent('Schritt 1 von 3');
@@ -130,19 +131,19 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     const staticIcon = document.querySelector('.overlay-cooking-mode-static');
     fireEvent.click(staticIcon);
 
-    // Get the current step element
-    const currentStep = document.querySelector('.current-step');
-    expect(currentStep).toBeInTheDocument();
+    // Get the first step card
+    const firstStepCard = document.querySelector('.step-card');
+    expect(firstStepCard).toBeInTheDocument();
     
-    // Verify text-align is left (via computed styles would be better, but we can check the class)
-    // In the test environment, we can verify the element exists and contains the step text
-    expect(currentStep).toHaveTextContent('First step instructions');
+    // Verify it contains the step text (via step content)
+    const stepContent = firstStepCard.querySelector('.step-content');
+    expect(stepContent).toHaveTextContent('First step instructions');
   });
 
   test('step counter updates when navigating between steps', () => {
     setMockWindowWidth(400);
 
-    const { container } = render(
+    render(
       <RecipeDetail
         recipe={mockRecipe}
         onBack={() => {}}
@@ -156,20 +157,92 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     const staticIcon = document.querySelector('.overlay-cooking-mode-static');
     fireEvent.click(staticIcon);
 
-    // Initial state
-    const stepCounter = document.querySelector('.step-counter');
-    expect(stepCounter).toHaveTextContent('Schritt 1 von 3');
+    // Initial state - check first step card is active
+    const firstStepCard = document.querySelectorAll('.step-card')[0];
+    expect(firstStepCard).toHaveClass('active');
+    expect(firstStepCard.querySelector('.step-counter')).toHaveTextContent('Schritt 1 von 3');
 
-    // Simulate swipe left (next step)
-    const stepsContainer = container.querySelector('.cooking-mode-steps');
-    
-    // Simulate touch events for swipe
-    fireEvent.touchStart(stepsContainer, { touches: [{ clientX: 200 }] });
-    fireEvent.touchMove(stepsContainer, { touches: [{ clientX: 100 }] });
-    fireEvent.touchEnd(stepsContainer);
+    // Click on the second step card to navigate to it
+    const secondStepCard = document.querySelectorAll('.step-card')[1];
+    fireEvent.click(secondStepCard);
 
-    // Check that step counter updated
-    const updatedStepCounter = document.querySelector('.step-counter');
-    expect(updatedStepCounter).toHaveTextContent('Schritt 2 von 3');
+    // Check that second step card is now active
+    expect(secondStepCard).toHaveClass('active');
+    expect(secondStepCard.querySelector('.step-counter')).toHaveTextContent('Schritt 2 von 3');
+  });
+
+  test('progress indicator dots are displayed and clickable', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    // Check that dots are present
+    const dots = document.querySelectorAll('.step-dot');
+    expect(dots.length).toBe(3);
+
+    // Check that first dot is active
+    expect(dots[0]).toHaveClass('active');
+    expect(dots[1]).not.toHaveClass('active');
+    expect(dots[2]).not.toHaveClass('active');
+
+    // Click on the third dot
+    fireEvent.click(dots[2]);
+
+    // Check that third dot is now active
+    expect(dots[0]).not.toHaveClass('active');
+    expect(dots[1]).not.toHaveClass('active');
+    expect(dots[2]).toHaveClass('active');
+
+    // Check that the third step card is active
+    const stepCards = document.querySelectorAll('.step-card');
+    expect(stepCards[2]).toHaveClass('active');
+  });
+
+  test('keyboard navigation with arrow keys', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    // Check initial state
+    const stepCards = document.querySelectorAll('.step-card');
+    expect(stepCards[0]).toHaveClass('active');
+
+    // Press right arrow key
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+
+    // Check that second step is now active
+    expect(stepCards[1]).toHaveClass('active');
+    expect(stepCards[0]).not.toHaveClass('active');
+
+    // Press left arrow key
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+
+    // Check that first step is active again
+    expect(stepCards[0]).toHaveClass('active');
+    expect(stepCards[1]).not.toHaveClass('active');
   });
 });
