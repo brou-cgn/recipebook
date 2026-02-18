@@ -535,16 +535,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
             {/* Single step display with swipe support */}
             <section className="cooking-mode-steps" ref={stepsContainerRef}>
-              {/* Previous step peek (left) */}
-              {currentStepIndex > 0 && (
-                <div className="step-peek step-peek-left">
-                  {typeof stepItems[currentStepIndex - 1] === 'string' 
-                    ? stepItems[currentStepIndex - 1] 
-                    : stepItems[currentStepIndex - 1].text}
-                </div>
-              )}
-              
-              {/* Current step */}
               <div className="current-step">
                 {currentStep ? (
                   typeof currentStep === 'string' ? currentStep : currentStep.text
@@ -553,15 +543,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   Schritt {currentStepIndex + 1} von {totalSteps}
                 </div>
               </div>
-              
-              {/* Next step peek (right) */}
-              {currentStepIndex < totalSteps - 1 && (
-                <div className="step-peek step-peek-right">
-                  {typeof stepItems[currentStepIndex + 1] === 'string' 
-                    ? stepItems[currentStepIndex + 1] 
-                    : stepItems[currentStepIndex + 1].text}
-                </div>
-              )}
             </section>
           </>
         ) : (

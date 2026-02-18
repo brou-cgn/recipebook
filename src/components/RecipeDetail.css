@@ -782,13 +782,9 @@
   background: #f9f9f9;
   min-height: 300px;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
+  flex-direction: column;
+  gap: 1.5rem;
   touch-action: pan-y; /* Allow vertical scrolling but enable horizontal gestures */
-  position: relative;
-  overflow: hidden;
 }
 
 .current-step {
@@ -802,37 +798,6 @@
   min-height: 150px;
   position: relative;
   text-align: left;
-  flex-shrink: 0;
-  max-width: 100%;
-  z-index: 2;
-}
-
-.step-peek {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #333;
-  min-height: 150px;
-  position: absolute;
-  text-align: left;
-  opacity: 0.3;
-  filter: blur(1px);
-  pointer-events: none;
-  max-width: 60%;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.step-peek-left {
-  left: -40%;
-  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.step-peek-right {
-  right: -40%;
-  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .current-step .step-counter {
@@ -870,21 +835,6 @@
     padding: 1.5rem;
     padding-bottom: 3.5rem;
     font-size: 1rem;
-  }
-
-  .step-peek {
-    font-size: 1rem;
-    padding: 1.5rem;
-    padding-bottom: 3.5rem;
-    max-width: 70%;
-  }
-
-  .step-peek-left {
-    left: -50%;
-  }
-
-  .step-peek-right {
-    right: -50%;
   }
 
   .current-step .step-counter {
