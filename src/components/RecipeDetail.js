@@ -572,7 +572,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         ) : (
           // Normal mode layout
           <>
-            {recipe.image && !cookingMode && (
+            {recipe.image && (
               <div className="recipe-detail-image">
                 <img src={recipe.image} alt={recipe.title} />
                 {isMobile && (
@@ -603,7 +603,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               </div>
             )}
 
-            {isMobile && !cookingMode && (
+            {isMobile && (
               <div className="mobile-action-buttons">
                 {onToggleFavorite && (
                   <button 
