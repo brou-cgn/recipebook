@@ -393,10 +393,13 @@ describe('RecipeDetail - Cooking Mode', () => {
     // Check that the cooking mode indicator appears
     expect(screen.getByText('Kochmodus aktiv')).toBeInTheDocument();
     
-    // Check that the button (not static icon) is now shown and has the active class
+    // In cooking mode, the image should be hidden, so overlay button should not be present
     const overlayButton = document.querySelector('.overlay-cooking-mode');
-    expect(overlayButton).toBeInTheDocument();
-    expect(overlayButton).toHaveClass('active');
+    expect(overlayButton).not.toBeInTheDocument();
+    
+    // Check that the static icon is also not present anymore
+    const staticIconAfter = document.querySelector('.overlay-cooking-mode-static');
+    expect(staticIconAfter).not.toBeInTheDocument();
   });
 
   test('deactivates cooking mode when exit button is clicked', () => {

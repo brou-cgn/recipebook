@@ -16,8 +16,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
   const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
+  const stepsContainerRef = useRef(null);
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
@@ -273,7 +275,60 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   const toggleCookingMode = () => {
     setCookingMode(prev => !prev);
+    // Reset to first step when entering cooking mode
+    if (!cookingMode) {
+      setCurrentStepIndex(0);
+    }
   };
+
+  // Step navigation handlers
+  const handlePreviousStep = () => {
+    setCurrentStepIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextStep = () => {
+    const steps = recipe.steps || [];
+    setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
+  };
+
+  // Swipe gesture handling
+  useEffect(() => {
+    if (!cookingMode || !stepsContainerRef.current) return;
+
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const minSwipeDistance = 50;
+
+    const handleTouchStart = (e) => {
+      touchStartX = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e) => {
+      touchEndX = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      const steps = recipe.steps || [];
+      if (touchStartX - touchEndX > minSwipeDistance) {
+        // Swipe left - next step
+        setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
+      } else if (touchEndX - touchStartX > minSwipeDistance) {
+        // Swipe right - previous step
+        setCurrentStepIndex(prev => Math.max(0, prev - 1));
+      }
+    };
+
+    const container = stepsContainerRef.current;
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [cookingMode, recipe.steps]);
 
   const handleToggleFavorite = async () => {
     if (!onToggleFavorite) return;
@@ -365,6 +420,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     return <li key={index}>{scaleIngredient(item.text)}</li>;
   };
 
+  // Get actual step items (filter out headings)
+  const stepItems = useMemo(() => {
+    const steps = recipe.steps || [];
+    return steps.filter(step => {
+      const item = typeof step === 'string' ? { type: 'step', text: step } : step;
+      return item.type !== 'heading';
+    });
+  }, [recipe.steps]);
+
+  const currentStep = stepItems[currentStepIndex];
+  const totalSteps = stepItems.length;
+
   return (
     <div className="recipe-detail-container">
       {cookingMode && (
@@ -389,7 +456,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         </div>
       )}
       
-      {!isMobile && (
+      {!isMobile && !cookingMode && (
         <div className="recipe-detail-header">
           <button className="back-button" onClick={handleBackFromLinkedRecipe}>
             ← Zurück
@@ -424,153 +491,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         </div>
       )}
 
-      <div className="recipe-detail-content" ref={contentRef}>
-        {recipe.image && (
-          <div className="recipe-detail-image">
-            <img src={recipe.image} alt={recipe.title} />
-            {isMobile && (
-              <div className="image-overlay-actions">
-                {cookingMode ? (
-                  <button 
-                    className="overlay-cooking-mode active"
-                    onClick={toggleCookingMode}
-                    title="Kochmodus beenden"
-                    aria-label="Kochmodus beenden"
-                  >
-                    {isBase64Image(cookingModeIcon) ? (
-                      <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
-                    ) : (
-                      cookingModeIcon
-                    )}
-                  </button>
-                ) : (
-                  <div 
-                    className="overlay-cooking-mode-static" 
-                    onClick={toggleCookingMode} 
-                    role="button" 
-                    tabIndex="0" 
-                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCookingMode()}
-                    aria-label="Kochmodus aktivieren"
-                  >
-                    {isBase64Image(cookingModeIcon) ? (
-                      <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
-                    ) : (
-                      <span>{cookingModeIcon}</span>
-                    )}
-                  </div>
-                )}
-                <button 
-                  className="overlay-back-button"
-                  onClick={handleBackFromLinkedRecipe}
-                  title="Zurück"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {isMobile && (
-          <div className="mobile-action-buttons">
-            {onToggleFavorite && (
-              <button 
-                className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
-                onClick={handleToggleFavorite}
-                title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-              >
-                {isFavorite ? '★' : '☆'}
-              </button>
-            )}
-            {userCanDirectlyEdit && (
-              <button className="edit-button" onClick={() => onEdit(recipe)}>
-                Bearbeiten
-              </button>
-            )}
-            {userCanCreateVersion && !userCanDirectlyEdit && (
-              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
-                Eigene Version erstellen
-              </button>
-            )}
-            {userCanDelete && (
-              <button className="delete-button" onClick={handleDelete}>
-                Löschen
-              </button>
-            )}
-          </div>
-        )}
-
-        <h1 className="recipe-title">{recipe.title}</h1>
-
-        <div className="recipe-captions">
-          {hasMultipleVersions && (
-            <div className="version-navigation">
-              <button 
-                className="version-arrow"
-                onClick={handlePreviousVersion}
-                disabled={currentVersionIndex === 0}
-                title="Vorherige Version"
-              >
-                ←
-              </button>
-              <span className="version-caption">
-                {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
-              </span>
-              <button 
-                className="version-arrow"
-                onClick={handleNextVersion}
-                disabled={currentVersionIndex === allVersions.length - 1}
-                title="Nächste Version"
-              >
-                →
-              </button>
-            </div>
-          )}
-          {(authorName || formattedCreatedAt) && (
-            <div className="author-date-caption">
-              {authorName && <span className="author-name">Autor: {authorName}</span>}
-              {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
-            </div>
-          )}
-        </div>
-
-        <div className="recipe-metadata">
-          {cuisineDisplay && (
-            <div className="metadata-item">
-              <span className="metadata-label">Kulinarik:</span>
-              <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
-            </div>
-          )}
-          
-          {categoryDisplay && (
-            <div className="metadata-item">
-              <span className="metadata-label">Kategorie:</span>
-              <span className="metadata-value">{categoryDisplay}</span>
-            </div>
-          )}
-          
-          {recipe.schwierigkeit && (
-            <div className="metadata-item">
-              <span className="metadata-label">Schwierigkeit:</span>
-              <span className="metadata-value difficulty-stars">
-                {'⭐'.repeat(recipe.schwierigkeit)}
-              </span>
-            </div>
-          )}
-          
-          {recipe.kochdauer && (
-            <div className="metadata-item">
-              <span className="metadata-label">Zeit:</span>
-              <span className="metadata-value">{recipe.kochdauer} Min.</span>
-            </div>
-          )}
-        </div>
-
-        <section className="recipe-section">
-          <div className="section-header">
-            <h2>Zutaten ({recipe.ingredients?.length || 0})</h2>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''}`} ref={contentRef}>
+        {cookingMode ? (
+          // Cooking mode layout
+          <>
+            {/* Portion control at the top */}
             {recipe.portionen && (
-              <div className="serving-control">
+              <div className="cooking-mode-serving-control">
                 <button 
                   className="serving-btn"
                   onClick={() => {
@@ -599,33 +526,240 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </button>
               </div>
             )}
-          </div>
-          <ul className="ingredients-list">
-            {recipe.ingredients?.map((ingredient, index) => 
-              renderIngredient(ingredient, index)
-            ) || <li>Keine Zutaten aufgelistet</li>}
-          </ul>
-        </section>
 
-        <section className="recipe-section">
-          <h2>Zubereitungsschritte</h2>
-          <ol className="steps-list">
-            {recipe.steps?.map((step, index) => {
-              // Handle both old string format and new object format
-              const item = typeof step === 'string' 
-                ? { type: 'step', text: step }
-                : step;
+            {/* Ingredients list */}
+            <section className="cooking-mode-ingredients">
+              <ul className="ingredients-list">
+                {recipe.ingredients?.map((ingredient, index) => 
+                  renderIngredient(ingredient, index)
+                ) || <li>Keine Zutaten aufgelistet</li>}
+              </ul>
+            </section>
+
+            {/* Single step display with swipe support */}
+            <section className="cooking-mode-steps" ref={stepsContainerRef}>
+              <div className="step-navigation-header">
+                <button 
+                  className="step-nav-btn"
+                  onClick={handlePreviousStep}
+                  disabled={currentStepIndex === 0}
+                  title="Vorheriger Schritt"
+                >
+                  ←
+                </button>
+                <span className="step-counter">
+                  Schritt {currentStepIndex + 1} von {totalSteps}
+                </span>
+                <button 
+                  className="step-nav-btn"
+                  onClick={handleNextStep}
+                  disabled={currentStepIndex === totalSteps - 1}
+                  title="Nächster Schritt"
+                >
+                  →
+                </button>
+              </div>
+              <div className="current-step">
+                {currentStep ? (
+                  typeof currentStep === 'string' ? currentStep : currentStep.text
+                ) : 'Keine Zubereitungsschritte vorhanden'}
+              </div>
+              <div className="swipe-hint">
+                ← Wischen für nächsten/vorherigen Schritt →
+              </div>
+            </section>
+          </>
+        ) : (
+          // Normal mode layout
+          <>
+            {recipe.image && !cookingMode && (
+              <div className="recipe-detail-image">
+                <img src={recipe.image} alt={recipe.title} />
+                {isMobile && (
+                  <div className="image-overlay-actions">
+                    <div 
+                      className="overlay-cooking-mode-static" 
+                      onClick={toggleCookingMode} 
+                      role="button" 
+                      tabIndex="0" 
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCookingMode()}
+                      aria-label="Kochmodus aktivieren"
+                    >
+                      {isBase64Image(cookingModeIcon) ? (
+                        <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                      ) : (
+                        <span>{cookingModeIcon}</span>
+                      )}
+                    </div>
+                    <button 
+                      className="overlay-back-button"
+                      onClick={handleBackFromLinkedRecipe}
+                      title="Zurück"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isMobile && !cookingMode && (
+              <div className="mobile-action-buttons">
+                {onToggleFavorite && (
+                  <button 
+                    className={`favorite-button ${isFavorite ? 'is-favorite' : ''}`}
+                    onClick={handleToggleFavorite}
+                    title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+                  >
+                    {isFavorite ? '★' : '☆'}
+                  </button>
+                )}
+                {userCanDirectlyEdit && (
+                  <button className="edit-button" onClick={() => onEdit(recipe)}>
+                    Bearbeiten
+                  </button>
+                )}
+                {userCanCreateVersion && !userCanDirectlyEdit && (
+                  <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+                    Eigene Version erstellen
+                  </button>
+                )}
+                {userCanDelete && (
+                  <button className="delete-button" onClick={handleDelete}>
+                    Löschen
+                  </button>
+                )}
+              </div>
+            )}
+
+            <h1 className="recipe-title">{recipe.title}</h1>
+
+            <div className="recipe-captions">
+              {hasMultipleVersions && (
+                <div className="version-navigation">
+                  <button 
+                    className="version-arrow"
+                    onClick={handlePreviousVersion}
+                    disabled={currentVersionIndex === 0}
+                    title="Vorherige Version"
+                  >
+                    ←
+                  </button>
+                  <span className="version-caption">
+                    {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
+                  </span>
+                  <button 
+                    className="version-arrow"
+                    onClick={handleNextVersion}
+                    disabled={currentVersionIndex === allVersions.length - 1}
+                    title="Nächste Version"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+              {(authorName || formattedCreatedAt) && (
+                <div className="author-date-caption">
+                  {authorName && <span className="author-name">Autor: {authorName}</span>}
+                  {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
+                </div>
+              )}
+            </div>
+
+            <div className="recipe-metadata">
+              {cuisineDisplay && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Kulinarik:</span>
+                  <span className="metadata-value cuisine-badge">{cuisineDisplay}</span>
+                </div>
+              )}
               
-              // Render heading as non-numbered item
-              if (item.type === 'heading') {
-                return <li key={index} className="step-heading">{item.text}</li>;
-              }
+              {categoryDisplay && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Kategorie:</span>
+                  <span className="metadata-value">{categoryDisplay}</span>
+                </div>
+              )}
               
-              // Regular step
-              return <li key={index}>{item.text}</li>;
-            }) || <li>Keine Zubereitungsschritte aufgelistet</li>}
-          </ol>
-        </section>
+              {recipe.schwierigkeit && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Schwierigkeit:</span>
+                  <span className="metadata-value difficulty-stars">
+                    {'⭐'.repeat(recipe.schwierigkeit)}
+                  </span>
+                </div>
+              )}
+              
+              {recipe.kochdauer && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Zeit:</span>
+                  <span className="metadata-value">{recipe.kochdauer} Min.</span>
+                </div>
+              )}
+            </div>
+
+            <section className="recipe-section">
+              <div className="section-header">
+                <h2>Zutaten ({recipe.ingredients?.length || 0})</h2>
+                {recipe.portionen && (
+                  <div className="serving-control">
+                    <button 
+                      className="serving-btn"
+                      onClick={() => {
+                        const basePortions = recipe.portionen || 4;
+                        const newServings = currentServings - 1;
+                        if (newServings >= 1) {
+                          setServingMultiplier(newServings / basePortions);
+                        }
+                      }}
+                      disabled={currentServings <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="serving-display">
+                      {currentServings} {portionLabel}
+                    </span>
+                    <button 
+                      className="serving-btn"
+                      onClick={() => {
+                        const basePortions = recipe.portionen || 4;
+                        const newServings = currentServings + 1;
+                        setServingMultiplier(newServings / basePortions);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
+              <ul className="ingredients-list">
+                {recipe.ingredients?.map((ingredient, index) => 
+                  renderIngredient(ingredient, index)
+                ) || <li>Keine Zutaten aufgelistet</li>}
+              </ul>
+            </section>
+
+            <section className="recipe-section">
+              <h2>Zubereitungsschritte</h2>
+              <ol className="steps-list">
+                {recipe.steps?.map((step, index) => {
+                  // Handle both old string format and new object format
+                  const item = typeof step === 'string' 
+                    ? { type: 'step', text: step }
+                    : step;
+                  
+                  // Render heading as non-numbered item
+                  if (item.type === 'heading') {
+                    return <li key={index} className="step-heading">{item.text}</li>;
+                  }
+                  
+                  // Regular step
+                  return <li key={index}>{item.text}</li>;
+                }) || <li>Keine Zubereitungsschritte aufgelistet</li>}
+              </ol>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

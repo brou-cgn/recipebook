@@ -708,6 +708,170 @@
   }
 }
 
+/* Cooking mode specific styles */
+.recipe-detail-content.cooking-mode-active {
+  padding: 0;
+  margin-top: 60px; /* Space for cooking mode indicator */
+}
+
+.cooking-mode-serving-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cooking-mode-serving-control .serving-display {
+  font-size: 1.25rem;
+  font-weight: 700;
+  min-width: 150px;
+  color: white;
+}
+
+.cooking-mode-serving-control .serving-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #4CAF50;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+}
+
+.cooking-mode-serving-control .serving-btn:hover:not(:disabled) {
+  background: white;
+}
+
+.cooking-mode-serving-control .serving-btn:disabled {
+  background: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.cooking-mode-ingredients {
+  padding: 1.5rem;
+  background: white;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.cooking-mode-ingredients .ingredients-list {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.cooking-mode-steps {
+  padding: 2rem 1.5rem;
+  background: #f9f9f9;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  touch-action: pan-y; /* Allow vertical scrolling but enable horizontal gestures */
+}
+
+.step-navigation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.step-nav-btn {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-nav-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: scale(1.1);
+}
+
+.step-nav-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.step-counter {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #333;
+  flex: 1;
+  text-align: center;
+}
+
+.current-step {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.swipe-hint {
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin-top: auto;
+  padding: 1rem 0;
+}
+
+@media (max-width: 480px) {
+  .cooking-mode-serving-control {
+    padding: 1.25rem;
+  }
+
+  .cooking-mode-serving-control .serving-display {
+    font-size: 1.1rem;
+    min-width: 130px;
+  }
+
+  .cooking-mode-ingredients {
+    padding: 1.25rem;
+  }
+
+  .cooking-mode-steps {
+    padding: 1.5rem 1rem;
+  }
+
+  .step-navigation-header {
+    padding: 0.75rem;
+  }
+
+  .current-step {
+    padding: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .swipe-hint {
+    font-size: 0.85rem;
+  }
+}
+
 /* Recipe link styles */
 .ingredient-with-link {
   /* Keep consistent list styling with other ingredients */
