@@ -168,13 +168,13 @@ function Header({
                         className={`menu-item ${currentView === 'recipes' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('recipes')}
                       >
-                        Rezeptübersicht
+                        Rezepte
                       </button>
                       <button
                         className={`menu-item ${currentView === 'menus' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('menus')}
                       >
-                        Menüübersicht
+                        Menüs
                       </button>
                     </div>
                   )}
