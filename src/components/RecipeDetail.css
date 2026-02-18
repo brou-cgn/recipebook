@@ -780,14 +780,6 @@
   touch-action: pan-y; /* Allow vertical scrolling but enable horizontal gestures */
 }
 
-.cooking-mode-steps .step-counter {
-  font-weight: 700;
-  font-size: 1rem;
-  color: #333;
-  text-align: center;
-  padding: 0.75rem 0;
-}
-
 .current-step {
   background: white;
   padding: 2rem;
@@ -797,10 +789,20 @@
   color: #333;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  position: relative;
+  text-align: left;
+}
+
+.current-step .step-counter {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #888;
+  background: #f5f5f5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
 }
 
 .swipe-hint {
@@ -833,7 +835,13 @@
 
   .current-step {
     padding: 1.5rem;
+    padding-bottom: 3.5rem;
     font-size: 1rem;
+  }
+
+  .current-step .step-counter {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
   }
 
   .swipe-hint {

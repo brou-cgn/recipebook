@@ -528,13 +528,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
             {/* Single step display with swipe support */}
             <section className="cooking-mode-steps" ref={stepsContainerRef}>
-              <div className="step-counter">
-                Schritt {currentStepIndex + 1} von {totalSteps}
-              </div>
               <div className="current-step">
                 {currentStep ? (
                   typeof currentStep === 'string' ? currentStep : currentStep.text
                 ) : 'Keine Zubereitungsschritte vorhanden'}
+                <div className="step-counter">
+                  Schritt {currentStepIndex + 1} von {totalSteps}
+                </div>
               </div>
               <div className="swipe-hint">
                 ← Wischen für nächsten/vorherigen Schritt →
