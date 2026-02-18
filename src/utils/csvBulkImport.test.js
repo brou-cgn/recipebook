@@ -388,5 +388,47 @@ Test Recipe;Hauptgericht;Ingredient;Step`;
       // Verify it's not a Promise object
       expect(recipes[0].image).not.toHaveProperty('then');
     });
+
+    test('handles German umlauts (ä, ö, ü, ß) in recipe names and ingredients', async () => {
+      const csv = `Name;Portionen;Schwierigkeit;Zutat1;Zutat2;Zutat3;Zubereitungsschritt1;Zubereitungsschritt2
+Käsespätzle;4;3;500g Mehl;250g Käse;Butter;Teig kneten und Spätzle formen;Mit Käse überbacken
+Apfelstrudel;6;4;6 Äpfel;200g Mürbeteig;Zucker;Äpfel schälen und würfeln;Im Ofen backen
+Öl-Brot;2;1;300g Mehl;50ml Öl;Salz;Mehl mit Öl verkneten;Backen`;
+
+      const recipes = await parseBulkCSV(csv);
+
+      expect(recipes).toHaveLength(3);
+      
+      // Check first recipe with ä and ü
+      expect(recipes[0].title).toBe('Käsespätzle');
+      expect(recipes[0].ingredients[0].text).toBe('500g Mehl');
+      expect(recipes[0].ingredients[1].text).toBe('250g Käse');
+      expect(recipes[0].steps[0].text).toBe('Teig kneten und Spätzle formen');
+      expect(recipes[0].steps[1].text).toBe('Mit Käse überbacken');
+      
+      // Check second recipe with Ä
+      expect(recipes[1].title).toBe('Apfelstrudel');
+      expect(recipes[1].ingredients[0].text).toBe('6 Äpfel');
+      expect(recipes[1].steps[0].text).toBe('Äpfel schälen und würfeln');
+      
+      // Check third recipe with Ö
+      expect(recipes[2].title).toBe('Öl-Brot');
+      expect(recipes[2].ingredients[1].text).toBe('50ml Öl');
+    });
+
+    test('handles umlauts in author names and category fields', async () => {
+      const csv = `Name;Erstellt von;Kulinarik;Speisenkategorie;Zutat1;Zubereitungsschritt1
+Grünkohl;Müller;Traditionell,Würzig;Gemüse;500g Grünkohl;Kohl würzen`;
+
+      const recipes = await parseBulkCSV(csv);
+
+      expect(recipes).toHaveLength(1);
+      expect(recipes[0].title).toBe('Grünkohl');
+      expect(recipes[0].authorName).toBe('Müller');
+      expect(recipes[0].kulinarik).toEqual(['Traditionell', 'Würzig']);
+      expect(recipes[0].speisekategorie).toEqual(['Gemüse']);
+      expect(recipes[0].ingredients[0].text).toBe('500g Grünkohl');
+      expect(recipes[0].steps[0].text).toBe('Kohl würzen');
+    });
   });
 });

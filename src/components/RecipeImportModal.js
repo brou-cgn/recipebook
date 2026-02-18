@@ -43,6 +43,37 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
     }
   };
 
+  /**
+   * Read CSV file with proper encoding detection
+   * Tries UTF-8 first, then falls back to Windows-1252 (common for Excel in German locale)
+   * @param {File} file - The CSV file to read
+   * @returns {Promise<string>} - The file content as text
+   */
+  const readCSVFileWithEncoding = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Try UTF-8 first
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      const text = decoder.decode(arrayBuffer);
+      // If decoding succeeds and contains valid text, use it
+      return text;
+    } catch (e) {
+      // UTF-8 decoding failed, try Windows-1252
+      // This is common for CSV files created by Excel in European locales
+    }
+    
+    // Fallback to Windows-1252 encoding (common for German Excel files)
+    try {
+      const decoder = new TextDecoder('windows-1252');
+      return decoder.decode(arrayBuffer);
+    } catch (e) {
+      // Last resort: ISO-8859-1
+      const decoder = new TextDecoder('iso-8859-1');
+      return decoder.decode(arrayBuffer);
+    }
+  };
+
   const handleCSVFileUpload = async (e) => {
     setError('');
     setCsvRecipes(null);
@@ -63,7 +94,8 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
     }
 
     try {
-      const text = await file.text();
+      // Read file with proper encoding detection for umlauts
+      const text = await readCSVFileWithEncoding(file);
       
       // Parse CSV with category image support (parseBulkCSV is now async)
       const recipes = await parseBulkCSV(text, '', getImageForCategories);
