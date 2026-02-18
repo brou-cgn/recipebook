@@ -764,7 +764,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               {/* Draft status - only visible to admins when activated */}
               {recipe.isPrivate && isCurrentUserAdmin() && (
                 <div className="metadata-item">
-                  <span className="metadata-label">Status:</span>
+                  <span className="metadata-label">Entwurf:</span>
                   <label className="metadata-value private-badge clickable-status">
                     <input
                       type="checkbox"
