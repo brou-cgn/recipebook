@@ -5,7 +5,7 @@
  */
 
 import { db } from '../firebase';
-import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc, deleteField } from 'firebase/firestore';
 
 const CATEGORY_IMAGES_KEY = 'categoryImages';
 const CATEGORY_IMAGES_COLLECTION = 'categoryImages';
@@ -52,7 +52,7 @@ async function migrateFromSettingsDoc() {
         }
         
         // Remove categoryImages from settings/app to free up space
-        await updateDoc(doc(db, 'settings', 'app'), { categoryImages: [] });
+        await updateDoc(doc(db, 'settings', 'app'), { categoryImages: deleteField() });
         
         console.log('Migration completed successfully');
         return images;

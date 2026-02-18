@@ -24,10 +24,11 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => ({})),
   getDocs: jest.fn(),
   setDoc: jest.fn(),
-  deleteDoc: jest.fn()
+  deleteDoc: jest.fn(),
+  deleteField: jest.fn(() => '__DELETE_FIELD__')
 }));
 
-import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc, deleteField } from 'firebase/firestore';
 
 describe('categoryImages', () => {
   beforeEach(() => {
@@ -250,7 +251,7 @@ describe('categoryImages', () => {
       expect(deleteDoc).toHaveBeenCalled();
     });
 
-    test('handles deletion errors gracefully', async () => {
+    test('returns false when deleteDoc throws error', async () => {
       deleteDoc.mockRejectedValue(new Error('Delete failed'));
       const result = await removeCategoryImage('non-existent');
       expect(result).toBe(false);
