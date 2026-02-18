@@ -334,6 +334,57 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
   }, [currentStepIndex, cookingMode]);
 
+  // Auto-activate card on swipe/scroll
+  useEffect(() => {
+    if (!cookingMode || !stepsContainerRef.current) return;
+
+    const container = stepsContainerRef.current;
+    let scrollTimeout = null;
+
+    const handleScroll = () => {
+      // Clear existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+
+      // Debounce scroll events to avoid excessive updates
+      scrollTimeout = setTimeout(() => {
+        const cards = container.querySelectorAll('.step-card');
+        if (cards.length === 0) return;
+
+        // Calculate which card is most centered in the viewport
+        const containerRect = container.getBoundingClientRect();
+        const containerCenter = containerRect.left + containerRect.width / 2;
+
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        cards.forEach((card, index) => {
+          const cardRect = card.getBoundingClientRect();
+          const cardCenter = cardRect.left + cardRect.width / 2;
+          const distance = Math.abs(containerCenter - cardCenter);
+
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = index;
+          }
+        });
+
+        // Update currentStepIndex if it changed
+        setCurrentStepIndex(closestIndex);
+      }, 100); // 100ms debounce
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
+  }, [cookingMode]);
+
   const handleToggleFavorite = async () => {
     if (!onToggleFavorite) return;
     
