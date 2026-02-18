@@ -579,3 +579,43 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Private checkbox styling - admin only */
+.private-checkbox-group {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+  border: 2px solid #ff9800;
+  border-radius: 8px;
+}
+
+.private-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.private-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  margin-right: 0.75rem;
+  accent-color: #ff9800;
+  flex-shrink: 0;
+}
+
+.private-checkbox-text {
+  font-size: 1rem;
+  user-select: none;
+}
+
+.private-checkbox-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  padding-left: calc(20px + 0.75rem);
+}

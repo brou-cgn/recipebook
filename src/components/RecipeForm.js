@@ -4,7 +4,7 @@ import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
 import { getCustomLists } from '../utils/customLists';
-import { getUsers } from '../utils/userManagement';
+import { getUsers, isCurrentUserAdmin } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing } from '../utils/ingredientUtils';
 import { encodeRecipeLink, startsWithHash } from '../utils/recipeLinks';
@@ -194,6 +194,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   });
   const [showTypeahead, setShowTypeahead] = useState(false);
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
+  // Private checkbox state - only visible to admins
+  const [isPrivate, setIsPrivate] = useState(false);
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
@@ -252,6 +254,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       }
       setIngredients(recipe.ingredients?.length > 0 ? normalizeIngredients(recipe.ingredients) : [{ type: 'ingredient', text: '' }]);
       setSteps(recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }]);
+      setIsPrivate(recipe.isPrivate || false);
       
       // If creating a version, set current user as author and track parent
       if (isCreatingVersion) {
@@ -265,6 +268,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       // New recipe - set current user as author
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
+      setIsPrivate(false);
     }
   }, [recipe, currentUser, isCreatingVersion]);
 
@@ -535,6 +539,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       steps: stepsToSave,
       authorId: authorId,
       parentRecipeId: parentRecipeId || null,
+      isPrivate: isPrivate,
       createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
       versionCreatedFrom: isCreatingVersion ? recipe?.title : null
     };
@@ -1001,6 +1006,22 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             + Schritt hinzufügen
           </button>
         </div>
+
+        {/* Private checkbox - only visible to admins */}
+        {isCurrentUserAdmin() && (
+          <div className="form-group private-checkbox-group">
+            <label className="private-checkbox-label">
+              <input
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="private-checkbox"
+              />
+              <span className="private-checkbox-text">🔒 Dieses Rezept als privat markieren</span>
+            </label>
+            <p className="private-checkbox-hint">Hinweis: Diese Option ist nur für Administratoren sichtbar.</p>
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="button" className="cancel-button" onClick={onCancel}>

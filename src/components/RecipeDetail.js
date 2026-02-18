@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeDetail.css';
-import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe } from '../utils/userManagement';
+import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
@@ -745,6 +745,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 <div className="metadata-item">
                   <span className="metadata-label">Zeit:</span>
                   <span className="metadata-value">{recipe.kochdauer} Min.</span>
+                </div>
+              )}
+              
+              {/* Private badge - only visible to admins */}
+              {recipe.isPrivate && isCurrentUserAdmin() && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Status:</span>
+                  <span className="metadata-value private-badge">🔒 Privat</span>
                 </div>
               )}
             </div>
