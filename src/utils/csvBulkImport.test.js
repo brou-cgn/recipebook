@@ -233,5 +233,62 @@ Good Recipe 2,Ingredient,Step`;
 
       consoleSpy.mockRestore();
     });
+
+    // Tests for semicolon-delimited CSV files
+    test('parses semicolon-delimited CSV with one recipe', () => {
+      const csv = `Name;Portionen;Schwierigkeit;Zutat1;Zubereitungsschritt1
+Test Recipe;4;3;Ingredient 1;Step 1`;
+
+      const recipes = parseBulkCSV(csv);
+
+      expect(recipes).toHaveLength(1);
+      expect(recipes[0].title).toBe('Test Recipe');
+      expect(recipes[0].portionen).toBe(4);
+      expect(recipes[0].schwierigkeit).toBe(3);
+      expect(recipes[0].ingredients).toHaveLength(1);
+      expect(recipes[0].ingredients[0]).toEqual({ type: 'ingredient', text: 'Ingredient 1' });
+      expect(recipes[0].steps).toHaveLength(1);
+      expect(recipes[0].steps[0]).toEqual({ type: 'step', text: 'Step 1' });
+    });
+
+    test('parses semicolon-delimited CSV with multiple recipes', () => {
+      const csv = `Name;Zutat1;Zubereitungsschritt1
+Recipe 1;Ingredient A;Step A
+Recipe 2;Ingredient B;Step B
+Recipe 3;Ingredient C;Step C`;
+
+      const recipes = parseBulkCSV(csv);
+
+      expect(recipes).toHaveLength(3);
+      expect(recipes[0].title).toBe('Recipe 1');
+      expect(recipes[1].title).toBe('Recipe 2');
+      expect(recipes[2].title).toBe('Recipe 3');
+    });
+
+    test('parses semicolon-delimited CSV from the bug report', () => {
+      const csv = `Name;Erstellt am;Erstellt von;Kulinarik;Speisenkategorie;Portionen;Zubereitung;Schwierigkeit;Zutat1;Zubereitungsschritt1
+Babybrokkoli mit Weihnachtsbutter;27.11.2024;Benjamin Rousselli;Vegan;Gemüse;4;30;3;500g Brokkoli;Brokkoli kochen
+Pizza Bianco al Tartufo;08.02.2026;Benjamin Rousselli;Italienische Küche;Hauptgericht;2;25;4;300g Mehl;Teig zubereiten`;
+
+      const recipes = parseBulkCSV(csv);
+
+      expect(recipes).toHaveLength(2);
+      expect(recipes[0].title).toBe('Babybrokkoli mit Weihnachtsbutter');
+      expect(recipes[0].authorName).toBe('Benjamin Rousselli');
+      expect(recipes[0].createdAtStr).toBe('27.11.2024');
+      expect(recipes[1].title).toBe('Pizza Bianco al Tartufo');
+      expect(recipes[1].authorName).toBe('Benjamin Rousselli');
+      expect(recipes[1].createdAtStr).toBe('08.02.2026');
+    });
+
+    test('handles semicolon-delimited CSV with quoted values containing semicolons', () => {
+      const csv = `Name;Kulinarik;Zutat1;Zubereitungsschritt1
+"Recipe; Special Name";"Italian, Asian";Ingredient;Step`;
+
+      const recipes = parseBulkCSV(csv);
+
+      expect(recipes[0].title).toBe('Recipe; Special Name');
+      expect(recipes[0].kulinarik).toEqual(['Italian', 'Asian']);
+    });
   });
 });
