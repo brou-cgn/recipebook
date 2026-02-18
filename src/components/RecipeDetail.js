@@ -281,16 +281,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
   };
 
-  // Step navigation handlers
-  const handlePreviousStep = () => {
-    setCurrentStepIndex(prev => Math.max(0, prev - 1));
-  };
-
-  const handleNextStep = () => {
-    const steps = recipe.steps || [];
-    setCurrentStepIndex(prev => Math.min(steps.length - 1, prev + 1));
-  };
-
   // Swipe gesture handling
   useEffect(() => {
     if (!cookingMode || !stepsContainerRef.current) return;
@@ -538,26 +528,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
             {/* Single step display with swipe support */}
             <section className="cooking-mode-steps" ref={stepsContainerRef}>
-              <div className="step-navigation-header">
-                <button 
-                  className="step-nav-btn"
-                  onClick={handlePreviousStep}
-                  disabled={currentStepIndex === 0}
-                  title="Vorheriger Schritt"
-                >
-                  ←
-                </button>
-                <span className="step-counter">
-                  Schritt {currentStepIndex + 1} von {totalSteps}
-                </span>
-                <button 
-                  className="step-nav-btn"
-                  onClick={handleNextStep}
-                  disabled={currentStepIndex === totalSteps - 1}
-                  title="Nächster Schritt"
-                >
-                  →
-                </button>
+              <div className="step-counter">
+                Schritt {currentStepIndex + 1} von {totalSteps}
               </div>
               <div className="current-step">
                 {currentStep ? (
