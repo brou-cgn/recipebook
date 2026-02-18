@@ -428,6 +428,12 @@
   transform: scale(0.95);
 }
 
+.close-button-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 .mobile-action-buttons {
   display: flex;
   flex-wrap: wrap;

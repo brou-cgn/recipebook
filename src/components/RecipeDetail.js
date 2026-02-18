@@ -24,6 +24,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
   const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
+  const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -32,6 +33,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       const icons = await getButtonIcons();
       setPortionUnits(lists.portionUnits || []);
       setCookingModeIcon(icons.cookingMode || '👨‍🍳');
+      setCloseButtonIcon(icons.closeButton || '✕');
     };
     loadSettings();
   }, []);
@@ -75,6 +77,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   // Update selected recipe when initial recipe changes
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
+    // Scroll to top when opening recipe detail
+    if (contentRef.current) {
+      contentRef.current.scrollTop = 0;
+    }
   }, [initialRecipe]);
 
   // Keep header visible on mobile - removed auto-hide behavior
@@ -568,7 +574,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       onClick={handleBackFromLinkedRecipe}
                       title="Zurück"
                     >
-                      ✕
+                      {isBase64Image(closeButtonIcon) ? (
+                        <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
+                      ) : (
+                        closeButtonIcon
+                      )}
                     </button>
                   </div>
                 )}

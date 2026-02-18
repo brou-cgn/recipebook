@@ -61,7 +61,8 @@ export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '👨‍🍳',
   importRecipe: '📥',
   scanImage: '📷',
-  webImport: '🌐'
+  webImport: '🌐',
+  closeButton: '✕'
 };
 
 // Cache for settings to avoid repeated Firestore reads

@@ -45,7 +45,8 @@ function Settings({ onBack, currentUser }) {
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
     scanImage: '📷',
-    webImport: '🌐'
+    webImport: '🌐',
+    closeButton: '✕'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -721,6 +722,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.webImport} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.webImport}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="closeButtonIcon">Schließen-Button (Rezeptdetailansicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.closeButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="closeButtonIcon"
+                          value={buttonIcons.closeButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, closeButton: e.target.value })}
+                          placeholder="z.B. ✕"
+                          maxLength={10}
+                        />
+                        <label htmlFor="closeButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'closeButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="closeButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('closeButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'closeButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('closeButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, closeButton: DEFAULT_BUTTON_ICONS.closeButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.closeButton) ? (
+                        <img src={buttonIcons.closeButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.closeButton}</span>
                       )}
                     </div>
                   </div>
