@@ -78,6 +78,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
     // Scroll to top when opening recipe detail
+    window.scrollTo(0, 0);
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
