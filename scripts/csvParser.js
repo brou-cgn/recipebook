@@ -34,13 +34,12 @@ function parseCSV(filePath) {
       // Parse German date format (DD.MM.YYYY) to JavaScript Date
       const [day, month, year] = dateStr.split('.');
       
-      // Validate date components
+      // Validate date components exist and are numeric
       const dayNum = parseInt(day, 10);
       const monthNum = parseInt(month, 10);
       const yearNum = parseInt(year, 10);
       
       if (!dayNum || !monthNum || !yearNum || 
-          dayNum < 1 || dayNum > 31 || 
           monthNum < 1 || monthNum > 12 || 
           yearNum < 1900 || yearNum > 2100) {
         console.warn(`⚠ Invalid date for ${name}: ${dateStr}`);
@@ -49,7 +48,7 @@ function parseCSV(filePath) {
       
       const date = new Date(yearNum, monthNum - 1, dayNum);
       
-      // Check if the date is valid (JavaScript Date can roll over invalid dates)
+      // Check if the date is valid (JavaScript Date can roll over invalid dates like Feb 31)
       if (isNaN(date.getTime()) || 
           date.getDate() !== dayNum || 
           date.getMonth() !== monthNum - 1 || 
