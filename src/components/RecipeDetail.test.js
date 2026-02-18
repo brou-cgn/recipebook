@@ -766,7 +766,7 @@ describe('RecipeDetail - Scroll to Top', () => {
     rolle: 'Familymember',
   };
 
-  test('scrolls to top when recipe changes', () => {
+  test('component mounts and displays content correctly when recipe changes', () => {
     const mockRecipe1 = {
       id: 'recipe-1',
       title: 'Recipe 1',
@@ -781,19 +781,6 @@ describe('RecipeDetail - Scroll to Top', () => {
       steps: ['Step 2'],
     };
 
-    // Create a mock ref with scrollTop property
-    const scrollToTopSpy = jest.fn();
-    const mockContentRef = {
-      current: {
-        scrollTop: 100,
-      }
-    };
-
-    Object.defineProperty(mockContentRef.current, 'scrollTop', {
-      set: scrollToTopSpy,
-      get: () => 0,
-    });
-
     const { rerender } = render(
       <RecipeDetail
         recipe={mockRecipe1}
@@ -804,7 +791,10 @@ describe('RecipeDetail - Scroll to Top', () => {
       />
     );
 
-    // Change recipe
+    // Verify first recipe is displayed
+    expect(screen.getByText('Recipe 1')).toBeInTheDocument();
+
+    // Change recipe (this triggers the useEffect that scrolls to top)
     rerender(
       <RecipeDetail
         recipe={mockRecipe2}
@@ -815,8 +805,10 @@ describe('RecipeDetail - Scroll to Top', () => {
       />
     );
 
-    // The effect should have run and attempted to set scrollTop to 0
-    // We can verify the title changed
+    // Verify the second recipe is now displayed
+    // The useEffect in the component sets contentRef.current.scrollTop = 0
+    // when initialRecipe changes
     expect(screen.getByText('Recipe 2')).toBeInTheDocument();
+    expect(screen.queryByText('Recipe 1')).not.toBeInTheDocument();
   });
 });
