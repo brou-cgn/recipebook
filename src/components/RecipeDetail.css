@@ -711,42 +711,52 @@
 /* Cooking mode specific styles */
 .recipe-detail-content.cooking-mode-active {
   padding: 0;
-  margin-top: 60px; /* Space for cooking mode indicator */
+  margin-top: 0;
 }
 
 .cooking-mode-serving-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-  color: white;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 0.5rem;
+  background: #f9f9f9;
+  padding: 0.5rem;
+  border-radius: 8px;
+  margin: 1rem;
 }
 
 .cooking-mode-serving-control .serving-display {
-  font-size: 1.25rem;
-  font-weight: 700;
-  min-width: 150px;
-  color: white;
+  min-width: 100px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
 }
 
 .cooking-mode-serving-control .serving-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #4CAF50;
-  width: 40px;
-  height: 40px;
-  font-size: 1.5rem;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cooking-mode-serving-control .serving-btn:hover:not(:disabled) {
-  background: white;
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: scale(1.1);
 }
 
 .cooking-mode-serving-control .serving-btn:disabled {
-  background: rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.5);
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .cooking-mode-ingredients {
@@ -770,50 +780,12 @@
   touch-action: pan-y; /* Allow vertical scrolling but enable horizontal gestures */
 }
 
-.step-navigation-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.step-nav-btn {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  font-size: 1.5rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.step-nav-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-  transform: scale(1.1);
-}
-
-.step-nav-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.step-counter {
+.cooking-mode-steps .step-counter {
   font-weight: 700;
   font-size: 1rem;
   color: #333;
-  flex: 1;
   text-align: center;
+  padding: 0.75rem 0;
 }
 
 .current-step {
@@ -842,12 +814,13 @@
 
 @media (max-width: 480px) {
   .cooking-mode-serving-control {
-    padding: 1.25rem;
+    padding: 0.5rem;
+    margin: 0.5rem;
   }
 
   .cooking-mode-serving-control .serving-display {
-    font-size: 1.1rem;
-    min-width: 130px;
+    font-size: 0.95rem;
+    min-width: 100px;
   }
 
   .cooking-mode-ingredients {
@@ -856,10 +829,6 @@
 
   .cooking-mode-steps {
     padding: 1.5rem 1rem;
-  }
-
-  .step-navigation-header {
-    padding: 0.75rem;
   }
 
   .current-step {
