@@ -34,6 +34,7 @@ jest.mock('../utils/userManagement', () => ({
     { id: 'admin-1', vorname: 'Admin', nachname: 'User', email: 'admin@example.com', isAdmin: true, role: 'admin' },
     { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false, role: 'edit' },
   ]),
+  isCurrentUserAdmin: jest.fn(() => false),
   ROLES: {
     ADMIN: 'admin',
     EDIT: 'edit',
@@ -1888,5 +1889,202 @@ describe('RecipeForm - Heading Functionality', () => {
       expect(ingredientInputs[0].value).toBe('200g Mehl');
       expect(ingredientInputs[1].value).toBe('100ml Milch');
     });
+  });
+});
+
+describe('RecipeForm - Private Checkbox', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const { isCurrentUserAdmin } = require('../utils/userManagement');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows private checkbox for admin users', async () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Wait for component to load
+    await waitFor(() => {
+      expect(screen.getByText(/Dieses Rezept als privat markieren/i)).toBeInTheDocument();
+    });
+    
+    // Check that checkbox exists
+    const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als privat markieren/i });
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox).not.toBeChecked();
+  });
+
+  test('does not show private checkbox for non-admin users', () => {
+    // Mock non-admin user
+    isCurrentUserAdmin.mockReturnValue(false);
+    
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Private checkbox should not be visible
+    expect(screen.queryByText(/Dieses Rezept als privat markieren/i)).not.toBeInTheDocument();
+  });
+
+  test('loads isPrivate value from existing recipe', async () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    const privateRecipe = {
+      id: 'test-private',
+      title: 'Private Recipe',
+      ingredients: ['Test ingredient'],
+      steps: ['Test step'],
+      portionen: 4,
+      portionUnitId: 'portion',
+      kulinarik: [],
+      speisekategorie: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      authorId: 'admin-1',
+      isPrivate: true,
+    };
+
+    render(
+      <RecipeForm
+        recipe={privateRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    await waitFor(() => {
+      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als privat markieren/i });
+      expect(checkbox).toBeChecked();
+    });
+  });
+
+  test('saves isPrivate value when submitting form', async () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Private Recipe' },
+    });
+
+    // Check the private checkbox
+    await waitFor(() => {
+      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als privat markieren/i });
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+    });
+
+    // Submit form
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Check that onSave was called with isPrivate set to true
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Private Recipe',
+        isPrivate: true,
+      })
+    );
+  });
+
+  test('defaults isPrivate to false for new recipes', () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const adminUser = {
+      id: 'admin-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      email: 'admin@example.com',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={adminUser}
+      />
+    );
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Submit form without checking the private checkbox
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Check that onSave was called with isPrivate set to false
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Recipe',
+        isPrivate: false,
+      })
+    );
   });
 });

@@ -17,6 +17,7 @@ jest.mock('../utils/userManagement', () => ({
   canDirectlyEditRecipe: () => true,
   canCreateNewVersion: () => true,
   canDeleteRecipe: () => true,
+  isCurrentUserAdmin: jest.fn(() => false),
   getUsers: () => [
     { id: 'user-1', vorname: 'Test', nachname: 'User' },
   ],
@@ -817,5 +818,177 @@ describe('RecipeDetail - Scroll to Top', () => {
     // Note: In jsdom, scrollTop is reset to 0 automatically when content changes,
     // but our useEffect explicitly sets it to 0 to ensure consistency
     expect(contentElement.scrollTop).toBe(0);
+  });
+});
+
+describe('RecipeDetail - Private Badge', () => {
+  const { isCurrentUserAdmin } = require('../utils/userManagement');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows private badge for admin when recipe is private', () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const privateRecipe = {
+      id: 'recipe-1',
+      title: 'Private Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      portionUnitId: 'portion',
+      ingredients: ['Test ingredient'],
+      steps: ['Test step'],
+      kulinarik: ['Italian'],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      isPrivate: true,
+    };
+
+    const adminUser = {
+      id: 'user-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeDetail
+        recipe={privateRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={adminUser}
+      />
+    );
+
+    // Private badge should be visible
+    expect(screen.getByText(/🔒 Privat/i)).toBeInTheDocument();
+  });
+
+  test('does not show private badge for non-admin users even if recipe is private', () => {
+    // Mock non-admin user
+    isCurrentUserAdmin.mockReturnValue(false);
+    
+    const privateRecipe = {
+      id: 'recipe-1',
+      title: 'Private Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      portionUnitId: 'portion',
+      ingredients: ['Test ingredient'],
+      steps: ['Test step'],
+      kulinarik: ['Italian'],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      isPrivate: true,
+    };
+
+    const regularUser = {
+      id: 'user-2',
+      vorname: 'Regular',
+      nachname: 'User',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeDetail
+        recipe={privateRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={regularUser}
+      />
+    );
+
+    // Private badge should not be visible
+    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
+  });
+
+  test('does not show private badge when recipe is not private', () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const publicRecipe = {
+      id: 'recipe-1',
+      title: 'Public Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      portionUnitId: 'portion',
+      ingredients: ['Test ingredient'],
+      steps: ['Test step'],
+      kulinarik: ['Italian'],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      isPrivate: false,
+    };
+
+    const adminUser = {
+      id: 'user-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeDetail
+        recipe={publicRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={adminUser}
+      />
+    );
+
+    // Private badge should not be visible
+    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
+  });
+
+  test('does not show private badge when isPrivate is undefined', () => {
+    // Mock admin user
+    isCurrentUserAdmin.mockReturnValue(true);
+    
+    const recipeWithoutPrivateFlag = {
+      id: 'recipe-1',
+      title: 'Recipe Without Private Flag',
+      authorId: 'user-1',
+      portionen: 4,
+      portionUnitId: 'portion',
+      ingredients: ['Test ingredient'],
+      steps: ['Test step'],
+      kulinarik: ['Italian'],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      // No isPrivate field
+    };
+
+    const adminUser = {
+      id: 'user-1',
+      vorname: 'Admin',
+      nachname: 'User',
+      isAdmin: true,
+      role: 'admin',
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithoutPrivateFlag}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={adminUser}
+      />
+    );
+
+    // Private badge should not be visible
+    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
   });
 });
