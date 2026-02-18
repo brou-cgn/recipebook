@@ -20,10 +20,14 @@ jest.mock('../firebase', () => ({
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn(() => ({})),
   getDoc: jest.fn(),
-  updateDoc: jest.fn()
+  updateDoc: jest.fn(),
+  collection: jest.fn(() => ({})),
+  getDocs: jest.fn(),
+  setDoc: jest.fn(),
+  deleteDoc: jest.fn()
 }));
 
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 
 describe('categoryImages', () => {
   beforeEach(() => {
@@ -31,43 +35,86 @@ describe('categoryImages', () => {
     jest.clearAllMocks();
     _resetMigrationFlag();
     
-    // Default mock: return empty settings document
+    // Default mock: return empty collection
+    getDocs.mockResolvedValue({
+      empty: true,
+      forEach: jest.fn()
+    });
+    
+    // Default mock: settings document doesn't have categoryImages
     getDoc.mockResolvedValue({
       exists: () => true,
-      data: () => ({ categoryImages: [] })
+      data: () => ({})
     });
   });
 
   describe('getCategoryImages', () => {
-    test('returns empty array when no images stored in Firestore', async () => {
+    test('returns empty array when no images stored in collection', async () => {
       expect(await getCategoryImages()).toEqual([]);
     });
 
-    test('returns stored images from Firestore', async () => {
+    test('returns stored images from collection', async () => {
       const images = [
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
+      
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
+      });
+      
+      expect(await getCategoryImages()).toEqual(images);
+    });
+
+    test('migrates from settings/app document when collection is empty', async () => {
+      const images = [
+        { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
+      ];
+      
+      // Empty collection
+      getDocs.mockResolvedValue({
+        empty: true,
+        forEach: jest.fn()
+      });
+      
+      // Settings document has categoryImages
       getDoc.mockResolvedValue({
         exists: () => true,
         data: () => ({ categoryImages: images })
       });
-      expect(await getCategoryImages()).toEqual(images);
+      
+      const result = await getCategoryImages();
+      expect(result).toEqual(images);
+      expect(setDoc).toHaveBeenCalled();
+      expect(updateDoc).toHaveBeenCalledWith({}, { categoryImages: [] });
     });
 
-    test('migrates from localStorage when Firestore is empty', async () => {
+    test('migrates from localStorage when collection and settings are empty', async () => {
       const images = [
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       localStorage.setItem('categoryImages', JSON.stringify(images));
       
+      // Empty collection
+      getDocs.mockResolvedValue({
+        empty: true,
+        forEach: jest.fn()
+      });
+      
+      // Settings document is empty
       getDoc.mockResolvedValue({
         exists: () => true,
-        data: () => ({ categoryImages: [] })
+        data: () => ({})
       });
       
       const result = await getCategoryImages();
       expect(result).toEqual(images);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(setDoc).toHaveBeenCalled();
       expect(localStorage.getItem('categoryImages')).toBeNull();
     });
 
@@ -77,34 +124,35 @@ describe('categoryImages', () => {
       ];
       localStorage.setItem('categoryImages', JSON.stringify(images));
       
-      getDoc.mockRejectedValue(new Error('Firestore error'));
+      getDocs.mockRejectedValue(new Error('Firestore error'));
       
       expect(await getCategoryImages()).toEqual(images);
     });
 
     test('handles corrupted localStorage data gracefully', async () => {
       localStorage.setItem('categoryImages', 'invalid json');
-      getDoc.mockRejectedValue(new Error('Firestore error'));
+      getDocs.mockRejectedValue(new Error('Firestore error'));
       expect(await getCategoryImages()).toEqual([]);
     });
   });
 
   describe('saveCategoryImages', () => {
-    test('saves images to Firestore', async () => {
+    test('saves images to collection', async () => {
       const images = [
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
-      const mockDocRef = { id: 'app' };
-      doc.mockReturnValue(mockDocRef);
       
       await saveCategoryImages(images);
-      expect(updateDoc).toHaveBeenCalledWith(mockDocRef, { categoryImages: images });
+      expect(setDoc).toHaveBeenCalledWith({}, {
+        image: images[0].image,
+        categories: images[0].categories
+      });
     });
 
     test('throws German error message on resource-exhausted error', async () => {
       const error = new Error('Resource exhausted');
       error.code = 'resource-exhausted';
-      updateDoc.mockRejectedValue(error);
+      setDoc.mockRejectedValue(error);
 
       const images = [
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
@@ -117,7 +165,7 @@ describe('categoryImages', () => {
 
     test('re-throws other storage errors', async () => {
       const testError = new Error('Some other error');
-      updateDoc.mockRejectedValue(testError);
+      setDoc.mockRejectedValue(testError);
 
       const images = [
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
@@ -137,34 +185,49 @@ describe('categoryImages', () => {
       });
       expect(image.id).toBeDefined();
       
-      expect(updateDoc).toHaveBeenCalled();
+      expect(setDoc).toHaveBeenCalledWith({}, {
+        image: 'data:image/png;base64,abc',
+        categories: ['Appetizer', 'Dessert']
+      });
     });
 
     test('adds image with no categories', async () => {
       const image = await addCategoryImage('data:image/png;base64,xyz');
       
       expect(image.categories).toEqual([]);
+      expect(setDoc).toHaveBeenCalled();
     });
   });
 
   describe('updateCategoryImage', () => {
     test('updates existing image', async () => {
-      const image = await addCategoryImage('data:image/png;base64,abc', ['Appetizer']);
+      const imageId = 'test-id-123';
       
+      // Mock getDoc to return existing image
       getDoc.mockResolvedValue({
         exists: () => true,
-        data: () => ({ categoryImages: [image] })
+        data: () => ({ 
+          image: 'data:image/png;base64,abc',
+          categories: ['Appetizer'] 
+        })
       });
       
-      const result = await updateCategoryImage(image.id, { 
+      const result = await updateCategoryImage(imageId, { 
         categories: ['Main Course', 'Dessert'] 
       });
       
       expect(result).toBe(true);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(setDoc).toHaveBeenCalledWith({}, {
+        image: 'data:image/png;base64,abc',
+        categories: ['Main Course', 'Dessert']
+      });
     });
 
     test('returns false for non-existent image', async () => {
+      getDoc.mockResolvedValue({
+        exists: () => false
+      });
+      
       const result = await updateCategoryImage('non-existent', { categories: [] });
       expect(result).toBe(false);
     });
@@ -172,21 +235,14 @@ describe('categoryImages', () => {
 
   describe('removeCategoryImage', () => {
     test('removes existing image', async () => {
-      const image1 = await addCategoryImage('data:image/png;base64,abc', ['Appetizer']);
-      const image2 = await addCategoryImage('data:image/png;base64,def', ['Dessert']);
-      
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: [image1, image2] })
-      });
-      
-      const result = await removeCategoryImage(image1.id);
+      const result = await removeCategoryImage('test-id');
       
       expect(result).toBe(true);
-      expect(updateDoc).toHaveBeenCalled();
+      expect(deleteDoc).toHaveBeenCalled();
     });
 
-    test('returns false for non-existent image', async () => {
+    test('handles deletion errors gracefully', async () => {
+      deleteDoc.mockRejectedValue(new Error('Delete failed'));
       const result = await removeCategoryImage('non-existent');
       expect(result).toBe(false);
     });
@@ -199,9 +255,14 @@ describe('categoryImages', () => {
         { id: '2', image: 'data:image/png;base64,def', categories: ['Dessert'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await getImageForCategory('Appetizer')).toBe('data:image/png;base64,abc');
@@ -214,9 +275,14 @@ describe('categoryImages', () => {
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await getImageForCategory('Main Course')).toBeNull();
@@ -231,9 +297,14 @@ describe('categoryImages', () => {
         { id: '3', image: 'data:image/png;base64,ghi', categories: ['Dessert'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await getImageForCategories(['Main Course', 'Dessert'])).toBe('data:image/png;base64,def');
@@ -245,9 +316,14 @@ describe('categoryImages', () => {
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await getImageForCategories(['Main Course', 'Dessert'])).toBeNull();
@@ -264,9 +340,14 @@ describe('categoryImages', () => {
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer', 'Salad'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await isCategoryAssigned('Appetizer')).toBe(true);
@@ -278,9 +359,14 @@ describe('categoryImages', () => {
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await isCategoryAssigned('Main Course')).toBe(false);
@@ -291,9 +377,14 @@ describe('categoryImages', () => {
         { id: 'test-id', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       expect(await isCategoryAssigned('Appetizer', 'test-id')).toBe(false);
@@ -307,9 +398,14 @@ describe('categoryImages', () => {
         { id: 'image2', image: 'data:image/png;base64,def', categories: ['Main Course'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       const assigned = await getAlreadyAssignedCategories(
@@ -325,9 +421,14 @@ describe('categoryImages', () => {
         { id: '1', image: 'data:image/png;base64,abc', categories: ['Appetizer'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       const assigned = await getAlreadyAssignedCategories(['Dessert', 'Main Course']);
@@ -340,9 +441,14 @@ describe('categoryImages', () => {
         { id: 'test-id', image: 'data:image/png;base64,abc', categories: ['Appetizer', 'Salad'] }
       ];
       
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({ categoryImages: images })
+      const mockDocs = images.map(img => ({
+        id: img.id,
+        data: () => ({ image: img.image, categories: img.categories })
+      }));
+      
+      getDocs.mockResolvedValue({
+        empty: false,
+        forEach: (callback) => mockDocs.forEach(callback)
       });
       
       const assigned = await getAlreadyAssignedCategories(['Appetizer', 'Salad'], 'test-id');

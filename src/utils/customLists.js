@@ -94,8 +94,7 @@ export async function getSettings() {
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         faviconImage: settings.faviconImage || null,
         appLogoImage: settings.appLogoImage || null,
-        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS,
-        categoryImages: settings.categoryImages || []
+        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS
       };
       
       return settingsCache;
@@ -111,8 +110,7 @@ export async function getSettings() {
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
       appLogoImage: null,
-      buttonIcons: DEFAULT_BUTTON_ICONS,
-      categoryImages: []
+      buttonIcons: DEFAULT_BUTTON_ICONS
     };
     
     // Create the settings document
@@ -133,8 +131,7 @@ export async function getSettings() {
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
       appLogoImage: null,
-      buttonIcons: DEFAULT_BUTTON_ICONS,
-      categoryImages: []
+      buttonIcons: DEFAULT_BUTTON_ICONS
     };
   }
 }
