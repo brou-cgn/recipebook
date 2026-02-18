@@ -10,7 +10,9 @@ The CSV import feature allows users to import multiple recipes at once from a CS
 2. Click the "Import" button
 3. In the import dialog, click on "📄 CSV-Datei hochladen (Bulk-Import)"
 4. Select your CSV file
-5. All recipes will be imported automatically and marked as private
+5. Review the preview showing how many recipes were found
+6. Click "Importieren" to complete the import
+7. All recipes will be imported and marked as private
 
 ## CSV Format
 
@@ -98,12 +100,14 @@ All recipes imported via CSV are automatically marked as **private** (`isPrivate
 ## Technical Details
 
 - **File Format**: CSV (`.csv` extension)
-- **Character Encoding**: UTF-8 recommended
+- **Character Encoding**: UTF-8 recommended (UTF-8 BOM is automatically detected and removed)
 - **Delimiter Support**: Both comma (`,`) and semicolon (`;`) delimiters are supported with automatic detection
 - **Quote Handling**: Supports quoted values for fields containing delimiters
 - **Escape Sequences**: Supports `""` for literal quotes within quoted fields
 - **Maximum Fields**: 31 ingredients, 27 preparation steps
 - **Validation**: Validates file extension and MIME type before processing
+- **Step Numbering**: Automatic numbering (e.g., "1. ", "2) ", "3 - ") is automatically stripped from preparation steps during import
+- **Category Images**: If category images are configured in settings, they will be automatically applied to recipes based on their meal category
 
 ### Delimiter Detection
 

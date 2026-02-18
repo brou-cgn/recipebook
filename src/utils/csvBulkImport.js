@@ -177,7 +177,7 @@ function processListItem(value, itemType = 'ingredient') {
   if (itemType === 'step') {
     // Remove patterns like "1.", "1)", "1 -", "1 –", "1:", at the start
     // Handles both with and without space after number
-    trimmed = trimmed.replace(/^\d+\s*[\.\)\-–:]\s*/, '');
+    trimmed = trimmed.replace(/^\d+\s*[.):\-–]\s*/, '');
   }
   
   // Regular item
