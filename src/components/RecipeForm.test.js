@@ -588,9 +588,9 @@ describe('RecipeForm - Category Image Integration', () => {
     getImageForCategories.mockReset();
   });
 
-  test('uses category image as title image for new recipe without image', () => {
+  test('uses category image as title image for new recipe without image', async () => {
     const { getImageForCategories } = require('../utils/categoryImages');
-    getImageForCategories.mockReturnValue('data:image/png;base64,category-image');
+    getImageForCategories.mockResolvedValue('data:image/png;base64,category-image');
 
     const regularUser = {
       id: 'user-1',
@@ -624,22 +624,25 @@ describe('RecipeForm - Category Image Integration', () => {
     // Submit form without uploading an image
     fireEvent.click(screen.getByText('Rezept speichern'));
 
-    // Check that getImageForCategories was called with the selected category
-    expect(getImageForCategories).toHaveBeenCalledWith(['Main Course']);
+    // Wait for async operations to complete
+    await waitFor(() => {
+      // Check that getImageForCategories was called with the selected category
+      expect(getImageForCategories).toHaveBeenCalledWith(['Main Course']);
 
-    // Check that onSave was called with the category image
-    expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Test Recipe',
-        image: 'data:image/png;base64,category-image',
-        speisekategorie: ['Main Course'],
-      })
-    );
+      // Check that onSave was called with the category image
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Recipe',
+          image: 'data:image/png;base64,category-image',
+          speisekategorie: ['Main Course'],
+        })
+      );
+    });
   });
 
-  test('does not use category image when recipe already has title image', () => {
+  test('does not use category image when recipe already has title image', async () => {
     const { getImageForCategories } = require('../utils/categoryImages');
-    getImageForCategories.mockReturnValue('data:image/png;base64,category-image');
+    getImageForCategories.mockResolvedValue('data:image/png;base64,category-image');
 
     const regularUser = {
       id: 'user-1',
@@ -676,21 +679,24 @@ describe('RecipeForm - Category Image Integration', () => {
     // Submit form without changing the image
     fireEvent.click(screen.getByText('Rezept aktualisieren'));
 
-    // Category image should NOT be used - existing image should be preserved
-    expect(getImageForCategories).not.toHaveBeenCalled();
+    // Wait for async operations
+    await waitFor(() => {
+      // Category image should NOT be used - existing image should be preserved
+      expect(getImageForCategories).not.toHaveBeenCalled();
 
-    // Check that onSave was called with the existing image
-    expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'recipe-1',
-        image: 'data:image/png;base64,existing-image',
-      })
-    );
+      // Check that onSave was called with the existing image
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'recipe-1',
+          image: 'data:image/png;base64,existing-image',
+        })
+      );
+    });
   });
 
-  test('does not use category image when no categories selected', () => {
+  test('does not use category image when no categories selected', async () => {
     const { getImageForCategories } = require('../utils/categoryImages');
-    getImageForCategories.mockReturnValue(null);
+    getImageForCategories.mockResolvedValue(null);
 
     const regularUser = {
       id: 'user-1',
@@ -718,14 +724,17 @@ describe('RecipeForm - Category Image Integration', () => {
     // Submit form without selecting categories
     fireEvent.click(screen.getByText('Rezept speichern'));
 
-    // Check that onSave was called with empty image
-    expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Test Recipe',
-        image: '',
-        speisekategorie: [],
-      })
-    );
+    // Wait for async operations
+    await waitFor(() => {
+      // Check that onSave was called with empty image
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Recipe',
+          image: '',
+          speisekategorie: [],
+        })
+      );
+    });
   });
 });
 
