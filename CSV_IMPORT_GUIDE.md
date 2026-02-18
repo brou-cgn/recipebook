@@ -67,6 +67,17 @@ Spaghetti Carbonara;2024-01-15;Max Mustermann;Italienisch, Klassisch;Hauptgerich
 Pizza Margherita;2024-01-16;Anna Müller;Italienisch;Hauptgericht, Vegetarisch;2 Portionen;25;2;###Teig;300g Mehl;Hefe;Teig zubereiten;Backen
 ```
 
+**Example with German umlauts:**
+
+```csv
+Name;Portionen;Schwierigkeit;Zutat1;Zutat2;Zutat3;Zubereitungsschritt1;Zubereitungsschritt2
+Käsespätzle;4;3;500g Mehl;250g Käse;Butter;Teig kneten und Spätzle formen;Mit Käse überbacken
+Apfelstrudel;6;4;6 Äpfel;200g Mürbeteig;Zucker;Äpfel schälen und würfeln;Im Ofen backen
+Öl-Brot;2;1;300g Mehl;50ml Öl;Salz;Mehl mit Öl verkneten;Backen
+```
+
+German special characters (ä, ö, ü, ß, Ä, Ö, Ü) are fully supported and will be correctly imported regardless of the file encoding (UTF-8, Windows-1252, or ISO-8859-1).
+
 ## Field Mapping
 
 | CSV Column | Recipe Field | Type | Notes |
@@ -100,7 +111,11 @@ All recipes imported via CSV are automatically marked as **draft** (`isPrivate: 
 ## Technical Details
 
 - **File Format**: CSV (`.csv` extension)
-- **Character Encoding**: UTF-8 recommended (UTF-8 BOM is automatically detected and removed)
+- **Character Encoding**: 
+  - Automatic encoding detection for maximum compatibility
+  - Supports UTF-8, Windows-1252 (Excel default in German locale), and ISO-8859-1
+  - UTF-8 BOM is automatically detected and removed
+  - **German umlauts (ä, ö, ü, ß) are fully supported** regardless of file encoding
 - **Delimiter Support**: Both comma (`,`) and semicolon (`;`) delimiters are supported with automatic detection
 - **Quote Handling**: Supports quoted values for fields containing delimiters
 - **Escape Sequences**: Supports `""` for literal quotes within quoted fields
