@@ -110,11 +110,6 @@ function Header({
           </div>
         </div>
         <div className="header-actions">
-          {onSettingsClick && currentUser?.isAdmin && (
-            <button className="settings-btn" onClick={onSettingsClick} title="Einstellungen">
-              Einstellungen
-            </button>
-          )}
           {currentUser && currentView === 'recipes' && (
               <div className="search-container" ref={searchRef}>
                 <button 
@@ -178,6 +173,17 @@ function Header({
                       </button>
                     </div>
                   )}
+                  {onSettingsClick && currentUser?.isAdmin && (
+                    <div className="menu-section">
+                      <div className="menu-section-title">Verwaltung</div>
+                      <button className="menu-item" onClick={() => {
+                        onSettingsClick();
+                        setMenuOpen(false);
+                      }}>
+                        Einstellungen
+                      </button>
+                    </div>
+                  )}
                   <div className="menu-section">
                     <div className="menu-section-title">Benutzer</div>
                     <div className="menu-user-info">
@@ -188,14 +194,6 @@ function Header({
                         <span className="admin-badge">Admin</span>
                       )}
                     </div>
-                    {onSettingsClick && currentUser?.isAdmin && (
-                      <button className="menu-item mobile-only-item" onClick={() => {
-                        onSettingsClick();
-                        setMenuOpen(false);
-                      }}>
-                        Einstellungen
-                      </button>
-                    )}
                     {onLogout && (
                       <button className="menu-item logout-item" onClick={handleLogoutInternal}>
                         Abmelden

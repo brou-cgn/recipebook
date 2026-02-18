@@ -151,24 +151,6 @@
   opacity: 0.95;
 }
 
-.settings-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.settings-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
-  transform: translateY(-1px);
-}
 
 .user-info {
   display: flex;
@@ -244,8 +226,8 @@
 }
 
 .search-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  border: none;
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -258,8 +240,7 @@
 }
 
 .search-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
   transform: scale(1.05);
 }
 
@@ -326,8 +307,8 @@
 }
 
 .hamburger-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  border: none;
   border-radius: 8px;
   padding: 0.6rem;
   cursor: pointer;
@@ -342,8 +323,7 @@
 }
 
 .hamburger-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .hamburger-line {
@@ -460,16 +440,8 @@
   display: none;
 }
 
-.mobile-only-item {
-  display: none;
-}
-
 @media (max-width: 768px) {
   .mobile-only-section {
-    display: block;
-  }
-
-  .mobile-only-item {
     display: block;
   }
 
@@ -486,10 +458,6 @@
   }
 
   .filter-controls {
-    display: none;
-  }
-
-  .settings-btn {
     display: none;
   }
 
