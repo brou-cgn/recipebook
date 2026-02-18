@@ -761,7 +761,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </div>
               )}
               
-              {/* Draft status - only visible to admins and only when active */}
+              {/* Draft status - only visible to admins when activated */}
               {recipe.isPrivate && isCurrentUserAdmin() && (
                 <div className="metadata-item">
                   <span className="metadata-label">Status:</span>
