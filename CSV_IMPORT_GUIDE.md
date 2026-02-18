@@ -49,10 +49,20 @@ Same applies to preparation steps.
 
 ## Example CSV
 
+**Comma-delimited example:**
+
 ```csv
 Name,Erstellt am,Erstellt von,Kulinarik,Speisenkategorie,Portionen,Zubereitung,Schwierigkeit,Zutat1,Zutat2,Zutat3,Zubereitungsschritt1,Zubereitungsschritt2
 Spaghetti Carbonara,2024-01-15,Max Mustermann,"Italienisch,Klassisch",Hauptgericht,4 Portionen,30,3,400g Spaghetti,200g Speck,4 Eier,Nudeln kochen,Sauce zubereiten
 Pizza Margherita,2024-01-16,Anna Müller,Italienisch,"Hauptgericht,Vegetarisch",2 Portionen,25,2,###Teig,300g Mehl,Hefe,Teig zubereiten,Backen
+```
+
+**Semicolon-delimited example:**
+
+```csv
+Name;Erstellt am;Erstellt von;Kulinarik;Speisenkategorie;Portionen;Zubereitung;Schwierigkeit;Zutat1;Zutat2;Zutat3;Zubereitungsschritt1;Zubereitungsschritt2
+Spaghetti Carbonara;2024-01-15;Max Mustermann;Italienisch, Klassisch;Hauptgericht;4 Portionen;30;3;400g Spaghetti;200g Speck;4 Eier;Nudeln kochen;Sauce zubereiten
+Pizza Margherita;2024-01-16;Anna Müller;Italienisch;Hauptgericht, Vegetarisch;2 Portionen;25;2;###Teig;300g Mehl;Hefe;Teig zubereiten;Backen
 ```
 
 ## Field Mapping
@@ -89,10 +99,34 @@ All recipes imported via CSV are automatically marked as **private** (`isPrivate
 
 - **File Format**: CSV (`.csv` extension)
 - **Character Encoding**: UTF-8 recommended
-- **Quote Handling**: Supports quoted values for fields containing commas
+- **Delimiter Support**: Both comma (`,`) and semicolon (`;`) delimiters are supported with automatic detection
+- **Quote Handling**: Supports quoted values for fields containing delimiters
 - **Escape Sequences**: Supports `""` for literal quotes within quoted fields
 - **Maximum Fields**: 31 ingredients, 27 preparation steps
 - **Validation**: Validates file extension and MIME type before processing
+
+### Delimiter Detection
+
+The CSV parser automatically detects whether your file uses commas or semicolons as delimiters by analyzing the header row. This means you can use either format:
+
+**Comma-delimited CSV:**
+```csv
+Name,Portionen,Zutat1,Zubereitungsschritt1
+Spaghetti Carbonara,4,400g Spaghetti,Nudeln kochen
+```
+
+**Semicolon-delimited CSV:**
+```csv
+Name;Portionen;Zutat1;Zubereitungsschritt1
+Spaghetti Carbonara;4;400g Spaghetti;Nudeln kochen
+```
+
+**Note**: When using comma-separated values within fields (e.g., for Kulinarik or Speisenkategorie), commas are always used to separate multiple values, regardless of the main CSV delimiter:
+
+```csv
+Name;Kulinarik;Zutat1;Zubereitungsschritt1
+Pizza Margherita;"Italienisch, Vegetarisch";300g Mehl;Teig zubereiten
+```
 
 ## Implementation Files
 

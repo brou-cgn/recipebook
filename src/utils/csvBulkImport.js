@@ -2,6 +2,10 @@
  * CSV Bulk Import Utility
  * Handles importing multiple recipes from CSV files with specific column mappings
  * 
+ * Delimiter support:
+ * - Automatically detects comma (,) or semicolon (;) delimiters
+ * - Detection is based on analyzing the header row
+ * 
  * Supported columns:
  * - Name → Recipe title
  * - Erstellt am → Created date
