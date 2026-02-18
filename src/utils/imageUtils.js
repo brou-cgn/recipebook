@@ -75,9 +75,10 @@ export function isValidImageSource(imageStr) {
  * @param {number} maxWidth - Maximum width (default: 800)
  * @param {number} maxHeight - Maximum height (default: 600)
  * @param {number} quality - JPEG quality 0-1 (default: 0.7)
+ * @param {boolean} preserveTransparency - If true, outputs PNG to preserve transparency (default: false)
  * @returns {Promise<string>} - Compressed base64 image
  */
-export function compressImage(base64, maxWidth = 800, maxHeight = 600, quality = 0.7) {
+export function compressImage(base64, maxWidth = 800, maxHeight = 600, quality = 0.7, preserveTransparency = false) {
   return new Promise((resolve, reject) => {
     if (!base64 || !isBase64Image(base64)) {
       reject(new Error('Invalid base64 image'));
@@ -115,9 +116,68 @@ export function compressImage(base64, maxWidth = 800, maxHeight = 600, quality =
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Convert to JPEG with specified quality
-        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        // Determine output format based on transparency preservation
+        let compressedBase64;
+        // Note: PNG inputs automatically preserve transparency regardless of preserveTransparency parameter
+        // to avoid accidental quality loss. Set preserveTransparency=true to force PNG output for any input.
+        if (preserveTransparency || base64.startsWith('data:image/png')) {
+          // Use PNG to preserve transparency
+          compressedBase64 = canvas.toDataURL('image/png');
+        } else {
+          // Convert to JPEG with specified quality
+          compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        }
+        
         resolve(compressedBase64);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    img.onerror = () => {
+      reject(new Error('Failed to load image'));
+    };
+    
+    img.src = base64;
+  });
+}
+
+/**
+ * Resize an image to a specific size (for PWA icons)
+ * @param {string} base64 - Base64 encoded image string
+ * @param {number} size - Target size in pixels (width and height)
+ * @returns {Promise<string>} - Resized base64 PNG image
+ */
+export function resizeImageToSize(base64, size) {
+  return new Promise((resolve, reject) => {
+    if (!base64 || !isBase64Image(base64)) {
+      reject(new Error('Invalid base64 image'));
+      return;
+    }
+
+    const img = new Image();
+    
+    img.onload = () => {
+      try {
+        // Create canvas with exact size
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Draw image centered and scaled to fit
+        const scale = Math.min(size / img.width, size / img.height);
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+        const x = (size - scaledWidth) / 2;
+        const y = (size - scaledHeight) / 2;
+        
+        ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+        
+        // Output as PNG to preserve transparency
+        const resizedBase64 = canvas.toDataURL('image/png');
+        resolve(resizedBase64);
       } catch (error) {
         reject(error);
       }

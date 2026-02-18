@@ -89,6 +89,23 @@ export function updatePageTitle(text, slogan) {
 }
 
 /**
+ * Send settings to service worker for dynamic manifest/icon generation
+ * @param {Object} settings - App settings object
+ */
+function notifyServiceWorker(settings) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'UPDATE_APP_SETTINGS',
+      settings: {
+        faviconText: settings.faviconText,
+        headerSlogan: settings.headerSlogan,
+        appLogoImage: settings.appLogoImage
+      }
+    });
+  }
+}
+
+/**
  * Apply favicon settings from Firestore
  * @returns {Promise<void>}
  */
@@ -106,6 +123,9 @@ export async function applyFaviconSettings() {
     
     // Update manifest with custom favicon
     updateManifest(settings.faviconImage, settings.faviconText, settings.headerSlogan);
+    
+    // Notify service worker of updated settings for PWA manifest/icons
+    notifyServiceWorker(settings);
   } catch (error) {
     console.error('Error applying favicon settings:', error);
     // Apply defaults on error

@@ -21,6 +21,221 @@ clientsClaim();
 // even if you decide not to use precaching. See https://cra.link/PWA
 precacheAndRoute(self.__WB_MANIFEST);
 
+// IndexedDB helper functions for storing/retrieving app settings
+const DB_NAME = 'recipebook-settings';
+const DB_VERSION = 1;
+const STORE_NAME = 'settings';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+async function getFromIndexedDB(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(key);
+    
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveToIndexedDB(key, value) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.put(value, key);
+    
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Helper function to resize images
+async function resizeImage(base64, targetSize) {
+  const img = new Image();
+  
+  return new Promise((resolve, reject) => {
+    img.onload = async () => {
+      try {
+        const canvas = new OffscreenCanvas(targetSize, targetSize);
+        const ctx = canvas.getContext('2d');
+        
+        // Draw image centered and scaled to fit
+        const scale = Math.min(targetSize / img.width, targetSize / img.height);
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+        const x = (targetSize - scaledWidth) / 2;
+        const y = (targetSize - scaledHeight) / 2;
+        
+        ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+        
+        const blob = await canvas.convertToBlob({ type: 'image/png' });
+        resolve(blob);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = base64;
+  });
+}
+
+// Listen for messages from the main app to update settings
+self.addEventListener('message', async (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  } else if (event.data && event.data.type === 'UPDATE_APP_SETTINGS') {
+    // Store app settings in IndexedDB for service worker access
+    try {
+      await saveToIndexedDB('appSettings', event.data.settings);
+      console.log('[SW] App settings updated in IndexedDB');
+    } catch (error) {
+      console.error('[SW] Failed to save app settings:', error);
+    }
+  }
+});
+
+// Intercept manifest.json requests
+registerRoute(
+  ({ url }) => url.pathname.endsWith('/manifest.json'),
+  async ({ url }) => {
+    try {
+      // Get settings from IndexedDB
+      const settings = await getFromIndexedDB('appSettings');
+      
+      // Create dynamic manifest
+      const manifest = {
+        short_name: settings?.faviconText || 'DishBook',
+        name: settings?.faviconText 
+          ? `${settings.faviconText} - ${settings.headerSlogan || 'Unsere Besten'}`
+          : 'DishBook - Unsere Besten',
+        icons: settings?.appLogoImage ? [
+          {
+            src: settings.appLogoImage,
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/png'
+          },
+          {
+            src: '/logo192.png',
+            type: 'image/png',
+            sizes: '192x192',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/logo512.png',
+            type: 'image/png',
+            sizes: '512x512',
+            purpose: 'any maskable'
+          }
+        ] : [
+          {
+            src: 'favicon.ico',
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/x-icon'
+          },
+          {
+            src: 'logo192.png',
+            type: 'image/png',
+            sizes: '192x192',
+            purpose: 'any maskable'
+          },
+          {
+            src: 'logo512.png',
+            type: 'image/png',
+            sizes: '512x512',
+            purpose: 'any maskable'
+          }
+        ],
+        start_url: '.',
+        display: 'standalone',
+        theme_color: '#4CAF50',
+        background_color: '#ffffff',
+        description: `${settings?.faviconText || 'DishBook'} - A Progressive Web App for managing your favorite recipes`,
+        categories: ['food', 'lifestyle', 'productivity'],
+        orientation: 'portrait-primary'
+      };
+      
+      return new Response(JSON.stringify(manifest), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+    } catch (error) {
+      console.error('[SW] Error generating dynamic manifest:', error);
+      // Fallback to static manifest
+      return fetch(url);
+    }
+  }
+);
+
+// Intercept logo192.png requests
+registerRoute(
+  ({ url }) => url.pathname.endsWith('/logo192.png'),
+  async ({ url }) => {
+    try {
+      const settings = await getFromIndexedDB('appSettings');
+      
+      if (settings?.appLogoImage) {
+        const blob = await resizeImage(settings.appLogoImage, 192);
+        return new Response(blob, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[SW] Error generating logo192:', error);
+    }
+    
+    // Fallback to static logo
+    return fetch(url);
+  }
+);
+
+// Intercept logo512.png requests
+registerRoute(
+  ({ url }) => url.pathname.endsWith('/logo512.png'),
+  async ({ url }) => {
+    try {
+      const settings = await getFromIndexedDB('appSettings');
+      
+      if (settings?.appLogoImage) {
+        const blob = await resizeImage(settings.appLogoImage, 512);
+        return new Response(blob, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=86400'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[SW] Error generating logo512:', error);
+    }
+    
+    // Fallback to static logo
+    return fetch(url);
+  }
+);
+
 // Set up App Shell-style routing, so that all navigation requests
 // are fulfilled with your index.html shell. Learn more at
 // https://developers.google.com/web/fundamentals/architecture/app-shell
@@ -48,9 +263,15 @@ registerRoute(
 
 // An example runtime caching route for requests that aren't handled by the
 // precache, in this case same-origin .png requests like those from in public/
+// (excluding our dynamic logo routes which are handled above)
 registerRoute(
   // Add in any other file extensions or routing criteria as needed.
-  ({ url }) => url.origin === self.location.origin && url.pathname.endsWith('.png'), // Customize this strategy as needed, e.g., by changing to CacheFirst.
+  ({ url }) => {
+    return url.origin === self.location.origin && 
+           url.pathname.endsWith('.png') && 
+           !url.pathname.endsWith('/logo192.png') && 
+           !url.pathname.endsWith('/logo512.png');
+  },
   new StaleWhileRevalidate({
     cacheName: 'images',
     plugins: [
@@ -60,13 +281,5 @@ registerRoute(
     ],
   })
 );
-
-// This allows the web app to trigger skipWaiting via
-// registration.waiting.postMessage({type: 'SKIP_WAITING'})
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
 
 // Any other custom service worker logic can go here.

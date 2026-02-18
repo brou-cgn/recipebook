@@ -83,6 +83,18 @@ function Settings({ onBack, currentUser }) {
     updatePageTitle(faviconText);
     updateAppLogo(appLogoImage);
     
+    // Notify service worker about settings update for PWA manifest/icons
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'UPDATE_APP_SETTINGS',
+        settings: {
+          faviconText: faviconText,
+          headerSlogan: headerSlogan,
+          appLogoImage: appLogoImage
+        }
+      });
+    }
+    
     alert('Einstellungen erfolgreich gespeichert!');
   };
 
@@ -284,7 +296,9 @@ function Settings({ onBack, currentUser }) {
 
     try {
       const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressImage(base64);
+      // Use larger dimensions for PWA icons and preserve transparency for PNG
+      const isPNG = file.type === 'image/png';
+      const compressedBase64 = await compressImage(base64, 512, 512, 0.9, isPNG);
       setAppLogoImage(compressedBase64);
     } catch (error) {
       alert(error.message);
@@ -467,9 +481,13 @@ function Settings({ onBack, currentUser }) {
                   disabled={uploadingAppLogo}
                 />
                 <p className="input-hint">
+                  <strong>Empfohlen: PNG mit transparentem Hintergrund</strong> für optimale Darstellung auf allen Plattformen. 
                   Unterstützte Formate: JPEG, PNG, GIF, WebP. Maximale Größe: 5MB. 
                   Empfohlene Größe: 192x192 oder 512x512 Pixel (quadratisch).
-                  Wird verwendet für App-Header-Logo und Apple Touch Icon.
+                  Wird verwendet für App-Header-Logo, Apple Touch Icon und PWA-Installation.
+                  <br />
+                  <em>Hinweis: Bei PWA-Icons werden transparente Bereiche ggf. rund/abgerundet angezeigt. 
+                  Vermeiden Sie zu große transparente Ränder für optimale Skalierung.</em>
                 </p>
               </div>
             </div>
