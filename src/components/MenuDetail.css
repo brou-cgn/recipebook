@@ -166,13 +166,13 @@
   font-size: 1rem;
 }
 
-.menu-section {
+.menu-detail-container .menu-section {
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 2px solid #f0f0f0;
 }
 
-.menu-section:first-of-type {
+.menu-detail-container .menu-section:first-of-type {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
