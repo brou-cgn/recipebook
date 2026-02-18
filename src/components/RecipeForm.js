@@ -161,7 +161,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   );
 }
 
-function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState(4);
@@ -1015,6 +1015,7 @@ function RecipeForm({ recipe, onSave, onCancel, currentUser, isCreatingVersion =
       {showImportModal && (
         <RecipeImportModal
           onImport={handleImport}
+          onBulkImport={onBulkImport}
           onCancel={() => setShowImportModal(false)}
         />
       )}

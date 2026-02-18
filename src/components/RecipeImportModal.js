@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import './RecipeImportModal.css';
 import { importRecipe, EXAMPLE_NOTION_RECIPE } from '../utils/recipeImport';
 import { EXAMPLE_NOTION_MARKDOWN } from '../utils/notionParser';
+import { parseBulkCSV, EXAMPLE_CSV } from '../utils/csvBulkImport';
 
-function RecipeImportModal({ onImport, onCancel }) {
+function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
   const [importText, setImportText] = useState('');
   const [error, setError] = useState('');
   const [showExample, setShowExample] = useState(false);
-  const [exampleType, setExampleType] = useState('json'); // 'json' or 'markdown'
+  const [exampleType, setExampleType] = useState('json'); // 'json', 'markdown', or 'csv'
 
   const handleImport = () => {
     setError('');
@@ -25,11 +26,47 @@ function RecipeImportModal({ onImport, onCancel }) {
     }
   };
 
+  const handleCSVFileUpload = async (e) => {
+    setError('');
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file extension and MIME type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Bitte wählen Sie eine CSV-Datei aus');
+      return;
+    }
+    
+    if (file.type && file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
+      setError('Ungültiger Dateityp. Bitte wählen Sie eine CSV-Datei aus');
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const recipes = parseBulkCSV(text);
+      
+      // Use bulk import callback if available, otherwise fall back to single import
+      if (onBulkImport) {
+        onBulkImport(recipes);
+      } else {
+        // If only single import is supported, import first recipe only
+        if (recipes.length > 0) {
+          onImport(recipes[0]);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleLoadExample = (type) => {
     if (type === 'json') {
       setImportText(JSON.stringify(EXAMPLE_NOTION_RECIPE, null, 2));
-    } else {
+    } else if (type === 'markdown') {
       setImportText(EXAMPLE_NOTION_MARKDOWN);
+    } else if (type === 'csv') {
+      setImportText(EXAMPLE_CSV);
     }
     setShowExample(false);
   };
@@ -44,8 +81,30 @@ function RecipeImportModal({ onImport, onCancel }) {
 
         <div className="import-modal-content">
           <p className="import-instructions">
-            Fügen Sie Ihre Rezeptdaten ein. Unterstützte Formate: JSON, Notion Markdown, CSV
+            Fügen Sie Ihre Rezeptdaten ein oder laden Sie eine CSV-Datei hoch. 
+            Unterstützte Formate: JSON, Notion Markdown, CSV (für Bulk-Import)
           </p>
+
+          <div className="csv-upload-section">
+            <label htmlFor="csv-upload" className="csv-upload-label">
+              📄 CSV-Datei hochladen (Bulk-Import)
+            </label>
+            <input
+              id="csv-upload"
+              type="file"
+              accept=".csv"
+              onChange={handleCSVFileUpload}
+              className="csv-file-input"
+            />
+            <p className="csv-help-text">
+              CSV-Dateien können mehrere Rezepte auf einmal importieren. 
+              Alle importierten Rezepte werden automatisch als privat markiert.
+            </p>
+          </div>
+
+          <div className="text-import-divider">
+            <span>oder Text einfügen</span>
+          </div>
 
           <textarea
             className="import-textarea"
@@ -85,6 +144,12 @@ function RecipeImportModal({ onImport, onCancel }) {
                   >
                     Notion Markdown
                   </button>
+                  <button
+                    className={`example-tab ${exampleType === 'csv' ? 'active' : ''}`}
+                    onClick={() => setExampleType('csv')}
+                  >
+                    CSV
+                  </button>
                 </div>
                 
                 {exampleType === 'json' ? (
@@ -101,7 +166,7 @@ function RecipeImportModal({ onImport, onCancel }) {
                       JSON-Beispiel laden
                     </button>
                   </>
-                ) : (
+                ) : exampleType === 'markdown' ? (
                   <>
                     <h4>Beispiel-Rezept (Notion Markdown)</h4>
                     <pre className="example-json">
@@ -114,6 +179,26 @@ function RecipeImportModal({ onImport, onCancel }) {
                     >
                       Markdown-Beispiel laden
                     </button>
+                  </>
+                ) : (
+                  <>
+                    <h4>Beispiel-CSV (Bulk-Import)</h4>
+                    <pre className="example-json">
+                      {EXAMPLE_CSV}
+                    </pre>
+                    <button 
+                      type="button"
+                      className="load-example-button"
+                      onClick={() => handleLoadExample('csv')}
+                    >
+                      CSV-Beispiel laden
+                    </button>
+                    <p className="csv-format-note">
+                      <strong>CSV-Format:</strong> Unterstützte Spalten: Name, Erstellt am, Erstellt von, 
+                      Kulinarik, Speisenkategorie, Portionen, Zubereitung, Schwierigkeit, 
+                      Zutat1-31, Zubereitungsschritt1-27. 
+                      Zutaten/Schritte mit "###" am Anfang werden als Überschriften formatiert.
+                    </p>
                   </>
                 )}
               </div>

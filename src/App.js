@@ -191,6 +191,44 @@ function App() {
     }
   };
 
+  const handleBulkImportRecipes = async (recipes) => {
+    if (!currentUser) return;
+
+    try {
+      let successCount = 0;
+      const errors = [];
+
+      for (const recipe of recipes) {
+        try {
+          await addRecipeToFirestore(recipe, currentUser.id);
+          successCount++;
+        } catch (error) {
+          console.error('Error importing recipe:', recipe.title, error);
+          errors.push({ title: recipe.title, error: error.message });
+        }
+      }
+
+      setIsFormOpen(false);
+      setEditingRecipe(null);
+      setIsCreatingVersion(false);
+
+      // Show success message with details
+      if (errors.length === 0) {
+        alert(`✓ ${successCount} Rezept(e) erfolgreich importiert!`);
+      } else {
+        const failedRecipes = errors.map(e => `- ${e.title}: ${e.error}`).join('\n');
+        alert(
+          `Import abgeschlossen:\n\n` +
+          `✓ ${successCount} Rezept(e) erfolgreich importiert\n` +
+          `✗ ${errors.length} fehlgeschlagen:\n\n${failedRecipes}`
+        );
+      }
+    } catch (error) {
+      console.error('Error bulk importing recipes:', error);
+      alert('Fehler beim Importieren der Rezepte. Bitte versuchen Sie es erneut.');
+    }
+  };
+
   const handleDeleteRecipe = async (recipeId) => {
     if (!currentUser) return;
 
@@ -478,6 +516,7 @@ function App() {
           <RecipeForm
             recipe={editingRecipe}
             onSave={handleSaveRecipe}
+            onBulkImport={handleBulkImportRecipes}
             onCancel={handleCancelForm}
             currentUser={currentUser}
             isCreatingVersion={isCreatingVersion}
