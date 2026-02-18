@@ -749,7 +749,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 <div className="metadata-item">
                   <span className="metadata-label">Schwierigkeit:</span>
                   <span className="metadata-value difficulty-stars">
-                    {'⭐'.repeat(recipe.schwierigkeit)}
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <span
+                        key={level}
+                        className={`star ${recipe.schwierigkeit >= level ? 'filled' : 'empty'}`}
+                      >
+                        {recipe.schwierigkeit >= level ? '★' : '☆'}
+                      </span>
+                    ))}
                   </span>
                 </div>
               )}
