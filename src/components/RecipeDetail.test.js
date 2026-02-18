@@ -249,8 +249,14 @@ describe('RecipeDetail - Rating Stars Color', () => {
     const difficultyStars = document.querySelector('.difficulty-stars');
     expect(difficultyStars).toBeInTheDocument();
     
-    // Check that stars are displayed (3 stars for schwierigkeit: 3)
-    expect(difficultyStars.textContent).toBe('⭐⭐⭐');
+    // Check that 5 stars are displayed (3 filled ★ and 2 empty ☆ for schwierigkeit: 3)
+    const filledStars = difficultyStars.querySelectorAll('.star.filled');
+    const emptyStars = difficultyStars.querySelectorAll('.star.empty');
+    expect(filledStars.length).toBe(3);
+    expect(emptyStars.length).toBe(2);
+    
+    // Check that the stars contain the correct Unicode characters
+    expect(difficultyStars.textContent).toBe('★★★☆☆');
   });
 
   test('difficulty stars have correct CSS class for orange color', () => {

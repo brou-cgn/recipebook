@@ -491,7 +491,22 @@
 }
 
 .difficulty-stars {
-  font-size: 1.1rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.difficulty-stars .star {
+  font-size: 2rem;
+  color: #DF7A00;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.difficulty-stars .star.empty {
+  color: #ddd;
+}
+
+.difficulty-stars .star.filled {
   color: #DF7A00;
 }
 
