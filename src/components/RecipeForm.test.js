@@ -1934,13 +1934,13 @@ describe('RecipeForm - Private Checkbox', () => {
 
     // Wait for component to load
     await waitFor(() => {
-      expect(screen.getByText(/Dieses Rezept als Entwurf markieren/i)).toBeInTheDocument();
+      expect(screen.getByText(/Entwurf:/i)).toBeInTheDocument();
     });
     
-    // Check that checkbox exists
-    const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als Entwurf markieren/i });
-    expect(checkbox).toBeInTheDocument();
-    expect(checkbox).not.toBeChecked();
+    // Check that checkbox exists using aria-label
+    const draftCheckbox = screen.getByRole('checkbox', { name: /Rezept als Entwurf markieren/i });
+    expect(draftCheckbox).toBeInTheDocument();
+    expect(draftCheckbox).not.toBeChecked();
   });
 
   test('does not show private checkbox for non-admin users', () => {
@@ -1966,7 +1966,7 @@ describe('RecipeForm - Private Checkbox', () => {
     );
 
     // Private checkbox should not be visible
-    expect(screen.queryByText(/Dieses Rezept als Entwurf markieren/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Entwurf:/i)).not.toBeInTheDocument();
   });
 
   test('loads isPrivate value from existing recipe', async () => {
@@ -2007,8 +2007,8 @@ describe('RecipeForm - Private Checkbox', () => {
     );
 
     await waitFor(() => {
-      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als Entwurf markieren/i });
-      expect(checkbox).toBeChecked();
+      const draftCheckbox = screen.getByRole('checkbox', { name: /Rezept als Entwurf markieren/i });
+      expect(draftCheckbox).toBeChecked();
     });
   });
 
@@ -2039,11 +2039,11 @@ describe('RecipeForm - Private Checkbox', () => {
       target: { value: 'Test Private Recipe' },
     });
 
-    // Check the draft checkbox
+    // Check the draft checkbox using aria-label
     await waitFor(() => {
-      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als Entwurf markieren/i });
-      fireEvent.click(checkbox);
-      expect(checkbox).toBeChecked();
+      const draftCheckbox = screen.getByRole('checkbox', { name: /Rezept als Entwurf markieren/i });
+      fireEvent.click(draftCheckbox);
+      expect(draftCheckbox).toBeChecked();
     });
 
     // Submit form

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draft Checkbox Design Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: #666;
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        /* RecipeDetail (View Card) Styles */
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        
+        .metadata-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        /* Unified Draft Checkbox Styles */
+        .draft-checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .draft-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 1rem;
+            margin: 0;
+        }
+        
+        .draft-checkbox-wrapper {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .draft-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #333;
+            background: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            margin: 0;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+        
+        .draft-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .draft-checkbox:hover {
+            border-color: #000;
+            background: #000;
+        }
+        
+        /* RecipeForm (Edit Card) Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group.draft-checkbox-container {
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+        
+        .note {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 1rem;
+            margin-top: 2rem;
+            border-radius: 4px;
+        }
+        
+        .note p {
+            margin: 0;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>Entwurfsflag: Einheitliches Design</h1>
+        
+        <div class="note">
+            <p><strong>Design-Anforderung:</strong> Der Flag sollte sowohl auf der Bearbeitenkarte als auch auf der Ansichtskarte einheitlich erscheinen.</p>
+        </div>
+        
+        <h2>RecipeDetail (Ansichtskarte)</h2>
+        <p>Das Design im Kontext der Metadaten-Anzeige:</p>
+        <div class="metadata-item draft-checkbox-container">
+            <span class="metadata-label draft-label">Entwurf:</span>
+            <label class="draft-checkbox-wrapper">
+                <input type="checkbox" checked class="draft-checkbox" aria-label="Rezept als Entwurf markieren">
+            </label>
+        </div>
+        
+        <h2>RecipeForm (Bearbeitenkarte)</h2>
+        <p>Das Design im Formular-Kontext:</p>
+        <div class="form-group draft-checkbox-container">
+            <span class="draft-label">Entwurf:</span>
+            <label class="draft-checkbox-wrapper">
+                <input type="checkbox" checked class="draft-checkbox" aria-label="Rezept als Entwurf markieren">
+            </label>
+        </div>
+        
+        <h2>Vergleich: Nicht ausgewählt</h2>
+        <div class="metadata-item draft-checkbox-container">
+            <span class="metadata-label draft-label">Entwurf:</span>
+            <label class="draft-checkbox-wrapper">
+                <input type="checkbox" class="draft-checkbox" aria-label="Rezept als Entwurf markieren">
+            </label>
+        </div>
+    </div>
+</body>
+</html>
