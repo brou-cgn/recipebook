@@ -5,9 +5,10 @@
  */
 
 import { db } from '../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, setDoc, deleteDoc, deleteField } from 'firebase/firestore';
 
 const CATEGORY_IMAGES_KEY = 'categoryImages';
+const CATEGORY_IMAGES_COLLECTION = 'categoryImages';
 let idCounter = 0;
 let migrationDone = false;
 
@@ -28,7 +29,43 @@ function generateId() {
 }
 
 /**
- * Migrate category images from localStorage to Firestore
+ * Migrate category images from settings/app document to separate collection
+ * This is a one-time operation for existing users
+ * @returns {Promise<Array>} Migrated images or empty array
+ */
+async function migrateFromSettingsDoc() {
+  try {
+    const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
+    
+    if (settingsDoc.exists()) {
+      const settings = settingsDoc.data();
+      if (settings.categoryImages && Array.isArray(settings.categoryImages) && settings.categoryImages.length > 0) {
+        console.log('Migrating category images from settings/app to categoryImages collection...');
+        const images = settings.categoryImages;
+        
+        // Save each image to the collection
+        for (const image of images) {
+          await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, image.id), {
+            image: image.image,
+            categories: image.categories
+          });
+        }
+        
+        // Remove categoryImages from settings/app to free up space
+        await updateDoc(doc(db, 'settings', 'app'), { categoryImages: deleteField() });
+        
+        console.log('Migration completed successfully');
+        return images;
+      }
+    }
+  } catch (e) {
+    console.error('Error during settings migration:', e);
+  }
+  return [];
+}
+
+/**
+ * Migrate category images from localStorage to Firestore collection
  * This is a one-time operation to preserve existing data
  * @returns {Promise<Array>} Migrated images or empty array
  */
@@ -40,9 +77,16 @@ async function migrateFromLocalStorage() {
     try {
       const images = JSON.parse(stored);
       if (images && images.length > 0) {
-        console.log('Migrating category images from localStorage to Firestore...');
-        // Save to Firestore
-        await saveCategoryImages(images);
+        console.log('Migrating category images from localStorage to Firestore collection...');
+        
+        // Save each image to the collection
+        for (const image of images) {
+          await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, image.id), {
+            image: image.image,
+            categories: image.categories
+          });
+        }
+        
         // Clear from localStorage after successful migration
         localStorage.removeItem(CATEGORY_IMAGES_KEY);
         console.log('Migration completed successfully');
@@ -50,7 +94,7 @@ async function migrateFromLocalStorage() {
         return images;
       }
     } catch (e) {
-      console.error('Error during migration:', e);
+      console.error('Error during localStorage migration:', e);
     }
   }
   migrationDone = true;
@@ -58,24 +102,36 @@ async function migrateFromLocalStorage() {
 }
 
 /**
- * Get all category images from Firestore
- * Automatically migrates from localStorage if needed
+ * Get all category images from Firestore collection
+ * Automatically migrates from settings/app document or localStorage if needed
  * @returns {Promise<Array>} Array of image objects with structure: { id, image, categories }
  */
 export async function getCategoryImages() {
   try {
-    const settingsDoc = await getDoc(doc(db, 'settings', 'app'));
+    // Try to get from categoryImages collection first
+    const imagesSnapshot = await getDocs(collection(db, CATEGORY_IMAGES_COLLECTION));
     
-    if (settingsDoc.exists()) {
-      const settings = settingsDoc.data();
-      if (settings.categoryImages && Array.isArray(settings.categoryImages) && settings.categoryImages.length > 0) {
-        return settings.categoryImages;
-      }
+    if (!imagesSnapshot.empty) {
+      const images = [];
+      imagesSnapshot.forEach((doc) => {
+        images.push({
+          id: doc.id,
+          image: doc.data().image,
+          categories: doc.data().categories || []
+        });
+      });
+      return images;
     }
     
-    // Try migration from localStorage if no Firestore data exists
-    const migratedImages = await migrateFromLocalStorage();
-    return migratedImages;
+    // Try migration from settings/app document
+    const migratedFromSettings = await migrateFromSettingsDoc();
+    if (migratedFromSettings.length > 0) {
+      return migratedFromSettings;
+    }
+    
+    // Try migration from localStorage if no collection data exists
+    const migratedFromLocalStorage = await migrateFromLocalStorage();
+    return migratedFromLocalStorage;
   } catch (error) {
     console.error('Error getting category images from Firestore:', error);
     
@@ -93,14 +149,20 @@ export async function getCategoryImages() {
 }
 
 /**
- * Save category images to Firestore
+ * Save category images to Firestore collection
  * @param {Array} images - Array of image objects
  * @throws {Error} If Firestore quota is exceeded or other storage error occurs
+ * @deprecated This function is kept for backward compatibility but not recommended for direct use
  */
 export async function saveCategoryImages(images) {
   try {
-    const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { categoryImages: images });
+    // Save each image to the collection
+    for (const image of images) {
+      await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, image.id), {
+        image: image.image,
+        categories: image.categories || []
+      });
+    }
   } catch (error) {
     if (error.code === 'resource-exhausted') {
       throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.');
@@ -116,15 +178,24 @@ export async function saveCategoryImages(images) {
  * @returns {Promise<Object>} The newly created image object
  */
 export async function addCategoryImage(imageBase64, categories = []) {
-  const images = await getCategoryImages();
   const newImage = {
     id: generateId(),
     image: imageBase64,
     categories: categories
   };
-  images.push(newImage);
-  await saveCategoryImages(images);
-  return newImage;
+  
+  try {
+    await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, newImage.id), {
+      image: newImage.image,
+      categories: newImage.categories
+    });
+    return newImage;
+  } catch (error) {
+    if (error.code === 'resource-exhausted') {
+      throw new Error('Speicherplatz voll. Bitte entfernen Sie einige Kategoriebilder oder verwenden Sie kleinere Bilder.');
+    }
+    throw error;
+  }
 }
 
 /**
@@ -134,13 +205,22 @@ export async function addCategoryImage(imageBase64, categories = []) {
  * @returns {Promise<boolean>} True if successful, false otherwise
  */
 export async function updateCategoryImage(id, updates) {
-  const images = await getCategoryImages();
-  const index = images.findIndex(img => img.id === id);
-  if (index === -1) return false;
-  
-  images[index] = { ...images[index], ...updates };
-  await saveCategoryImages(images);
-  return true;
+  try {
+    const imageDoc = await getDoc(doc(db, CATEGORY_IMAGES_COLLECTION, id));
+    if (!imageDoc.exists()) return false;
+    
+    const currentData = imageDoc.data();
+    const updatedData = {
+      image: updates.image !== undefined ? updates.image : currentData.image,
+      categories: updates.categories !== undefined ? updates.categories : currentData.categories
+    };
+    
+    await setDoc(doc(db, CATEGORY_IMAGES_COLLECTION, id), updatedData);
+    return true;
+  } catch (error) {
+    console.error('Error updating category image:', error);
+    return false;
+  }
 }
 
 /**
@@ -149,12 +229,13 @@ export async function updateCategoryImage(id, updates) {
  * @returns {Promise<boolean>} True if successful, false otherwise
  */
 export async function removeCategoryImage(id) {
-  const images = await getCategoryImages();
-  const filtered = images.filter(img => img.id !== id);
-  if (filtered.length === images.length) return false;
-  
-  await saveCategoryImages(filtered);
-  return true;
+  try {
+    await deleteDoc(doc(db, CATEGORY_IMAGES_COLLECTION, id));
+    return true;
+  } catch (error) {
+    console.error('Error removing category image:', error);
+    return false;
+  }
 }
 
 /**
