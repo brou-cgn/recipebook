@@ -233,7 +233,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
             />
-            <span>Privates Menü (nur für mich sichtbar)</span>
+            <span>Entwurf Menü (nur für mich sichtbar)</span>
           </label>
         </div>
 

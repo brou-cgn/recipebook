@@ -5,6 +5,7 @@ import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, 
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
+import { updateRecipe } from '../utils/recipeFirestore';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -233,6 +234,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
       onDelete(recipe.id);
+    }
+  };
+
+  const handleToggleDraftStatus = async () => {
+    try {
+      const newStatus = !recipe.isPrivate;
+      await updateRecipe(recipe.id, { isPrivate: newStatus });
+      // Update the local recipe state to reflect the change
+      setSelectedRecipe({ ...recipe, isPrivate: newStatus });
+    } catch (error) {
+      console.error('Error updating draft status:', error);
+      alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -748,11 +761,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </div>
               )}
               
-              {/* Private badge - only visible to admins */}
+              {/* Draft status - only visible to admins and only when active */}
               {recipe.isPrivate && isCurrentUserAdmin() && (
                 <div className="metadata-item">
                   <span className="metadata-label">Status:</span>
-                  <span className="metadata-value private-badge">🔒 Privat</span>
+                  <label className="metadata-value private-badge clickable-status">
+                    <input
+                      type="checkbox"
+                      checked={recipe.isPrivate}
+                      onChange={handleToggleDraftStatus}
+                      className="status-checkbox"
+                    />
+                    <span className="status-text">Entwurf</span>
+                  </label>
                 </div>
               )}
             </div>

@@ -968,3 +968,23 @@
   gap: 0.25rem;
   box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
 }
+
+.clickable-status {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+
+.clickable-status:hover {
+  opacity: 0.9;
+}
+
+.clickable-status .status-checkbox {
+  margin: 0;
+  margin-right: 0.25rem;
+  cursor: pointer;
+}
+
+.clickable-status .status-text {
+  cursor: pointer;
+}

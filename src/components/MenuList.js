@@ -90,8 +90,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   </div>
                   {menu.isPrivate && (
                     <div className="menu-footer">
-                      <span className="private-badge" title="Privates Menü">
-                        Privat
+                      <span className="private-badge" title="Entwurf Menü">
+                        Entwurf
                       </span>
                     </div>
                   )}

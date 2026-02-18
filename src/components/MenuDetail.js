@@ -86,8 +86,8 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
           {menu.isPrivate && (
-            <span className="private-indicator" title="Privates Menü">
-              Privat
+            <span className="private-indicator" title="Entwurf Menü">
+              Entwurf
             </span>
           )}
         </div>

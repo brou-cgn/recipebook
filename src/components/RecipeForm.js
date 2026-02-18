@@ -1007,7 +1007,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </button>
         </div>
 
-        {/* Private checkbox - only visible to admins */}
+        {/* Draft checkbox - only visible to admins */}
         {isCurrentUserAdmin() && (
           <div className="form-group private-checkbox-group">
             <label className="private-checkbox-label">
@@ -1017,7 +1017,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="private-checkbox"
               />
-              <span className="private-checkbox-text">🔒 Dieses Rezept als privat markieren</span>
+              <span className="private-checkbox-text">Dieses Rezept als Entwurf markieren</span>
             </label>
             <p className="private-checkbox-hint">Hinweis: Diese Option ist nur für Administratoren sichtbar.</p>
           </div>

@@ -821,7 +821,7 @@ describe('RecipeDetail - Scroll to Top', () => {
   });
 });
 
-describe('RecipeDetail - Private Badge', () => {
+describe('RecipeDetail - Draft Badge', () => {
   const { isCurrentUserAdmin } = require('../utils/userManagement');
 
   beforeEach(() => {
@@ -865,8 +865,8 @@ describe('RecipeDetail - Private Badge', () => {
       />
     );
 
-    // Private badge should be visible
-    expect(screen.getByText(/🔒 Privat/i)).toBeInTheDocument();
+    // Draft badge should be visible
+    expect(screen.getByText(/Entwurf/i)).toBeInTheDocument();
   });
 
   test('does not show private badge for non-admin users even if recipe is private', () => {
@@ -906,8 +906,8 @@ describe('RecipeDetail - Private Badge', () => {
       />
     );
 
-    // Private badge should not be visible
-    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
+    // Draft badge should not be visible
+    expect(screen.queryByText(/Entwurf/i)).not.toBeInTheDocument();
   });
 
   test('does not show private badge when recipe is not private', () => {
@@ -947,11 +947,11 @@ describe('RecipeDetail - Private Badge', () => {
       />
     );
 
-    // Private badge should not be visible
-    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
+    // Draft badge should not be visible
+    expect(screen.queryByText(/Entwurf/i)).not.toBeInTheDocument();
   });
 
-  test('does not show private badge when isPrivate is undefined', () => {
+  test('does not show draft badge when isPrivate is undefined', () => {
     // Mock admin user
     isCurrentUserAdmin.mockReturnValue(true);
     
@@ -988,7 +988,7 @@ describe('RecipeDetail - Private Badge', () => {
       />
     );
 
-    // Private badge should not be visible
-    expect(screen.queryByText(/🔒 Privat/i)).not.toBeInTheDocument();
+    // Draft badge should not be visible
+    expect(screen.queryByText(/Entwurf/i)).not.toBeInTheDocument();
   });
 });

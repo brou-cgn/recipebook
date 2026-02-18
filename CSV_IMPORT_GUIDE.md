@@ -12,7 +12,7 @@ The CSV import feature allows users to import multiple recipes at once from a CS
 4. Select your CSV file
 5. Review the preview showing how many recipes were found
 6. Click "Importieren" to complete the import
-7. All recipes will be imported and marked as private
+7. All recipes will be imported and marked as draft
 
 ## CSV Format
 
@@ -84,7 +84,7 @@ Pizza Margherita;2024-01-16;Anna Müller;Italienisch;Hauptgericht, Vegetarisch;2
 
 ## Privacy
 
-All recipes imported via CSV are automatically marked as **private** (`isPrivate: true`). This ensures that bulk imports don't accidentally expose personal recipes.
+All recipes imported via CSV are automatically marked as **draft** (`isPrivate: true`). This ensures that bulk imports don't accidentally expose personal recipes.
 
 ## Error Handling
 

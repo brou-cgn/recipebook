@@ -1934,7 +1934,7 @@ describe('RecipeForm - Private Checkbox', () => {
 
     // Wait for component to load
     await waitFor(() => {
-      expect(screen.getByText(/Dieses Rezept als privat markieren/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dieses Rezept als Entwurf markieren/i)).toBeInTheDocument();
     });
     
     // Check that checkbox exists
@@ -1966,7 +1966,7 @@ describe('RecipeForm - Private Checkbox', () => {
     );
 
     // Private checkbox should not be visible
-    expect(screen.queryByText(/Dieses Rezept als privat markieren/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Dieses Rezept als Entwurf markieren/i)).not.toBeInTheDocument();
   });
 
   test('loads isPrivate value from existing recipe', async () => {
@@ -2007,7 +2007,7 @@ describe('RecipeForm - Private Checkbox', () => {
     );
 
     await waitFor(() => {
-      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als privat markieren/i });
+      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als Entwurf markieren/i });
       expect(checkbox).toBeChecked();
     });
   });
@@ -2039,9 +2039,9 @@ describe('RecipeForm - Private Checkbox', () => {
       target: { value: 'Test Private Recipe' },
     });
 
-    // Check the private checkbox
+    // Check the draft checkbox
     await waitFor(() => {
-      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als privat markieren/i });
+      const checkbox = screen.getByRole('checkbox', { name: /Dieses Rezept als Entwurf markieren/i });
       fireEvent.click(checkbox);
       expect(checkbox).toBeChecked();
     });
