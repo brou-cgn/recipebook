@@ -1,23 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import './FilterPage.css';
+import { getCustomLists } from '../utils/customLists';
 
-function FilterPage({ currentFilters, onApply, onCancel }) {
+function FilterPage({ currentFilters, onApply, onCancel, availableAuthors }) {
   const [showDrafts, setShowDrafts] = useState('all');
+  const [selectedCuisines, setSelectedCuisines] = useState([]);
+  const [selectedAuthors, setSelectedAuthors] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const lists = await getCustomLists();
+        setAvailableCategories(lists.mealCategories || []);
+      } catch (error) {
+        setAvailableCategories([]);
+      }
+    };
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     // Initialize filter state from current filters
     if (currentFilters) {
       setShowDrafts(currentFilters.showDrafts || 'all');
+      setSelectedCuisines(currentFilters.selectedCuisines || []);
+      setSelectedAuthors(currentFilters.selectedAuthors || []);
     }
   }, [currentFilters]);
 
+  const handleCuisineToggle = (category) => {
+    setSelectedCuisines(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleAuthorToggle = (authorId) => {
+    setSelectedAuthors(prev =>
+      prev.includes(authorId)
+        ? prev.filter(a => a !== authorId)
+        : [...prev, authorId]
+    );
+  };
+
   const handleClearFilters = () => {
     setShowDrafts('all');
+    setSelectedCuisines([]);
+    setSelectedAuthors([]);
   };
 
   const handleApply = () => {
     const filters = {
-      showDrafts: showDrafts
+      showDrafts,
+      selectedCuisines,
+      selectedAuthors
     };
     onApply(filters);
   };
@@ -64,6 +102,42 @@ function FilterPage({ currentFilters, onApply, onCancel }) {
             </label>
           </div>
         </div>
+
+        {availableCategories.length > 0 && (
+          <div className="filter-section">
+            <h3>Kulinarik</h3>
+            <div className="filter-options">
+              {availableCategories.map(category => (
+                <label key={category} className="filter-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedCuisines.includes(category)}
+                    onChange={() => handleCuisineToggle(category)}
+                  />
+                  <span>{category}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {availableAuthors && availableAuthors.length > 0 && (
+          <div className="filter-section">
+            <h3>Autor</h3>
+            <div className="filter-options">
+              {availableAuthors.map(author => (
+                <label key={author.id} className="filter-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedAuthors.includes(author.id)}
+                    onChange={() => handleAuthorToggle(author.id)}
+                  />
+                  <span>{author.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="filter-page-actions">

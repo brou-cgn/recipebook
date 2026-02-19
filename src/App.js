@@ -60,6 +60,21 @@ function matchesDraftFilter(recipe, showDrafts) {
   return true;
 }
 
+// Helper function to check if a recipe matches the cuisine (Kulinarik) filter
+function matchesCuisineFilter(recipe, selectedCuisines) {
+  if (!selectedCuisines || selectedCuisines.length === 0) return true;
+  if (Array.isArray(recipe.speisekategorie)) {
+    return selectedCuisines.some(c => recipe.speisekategorie.includes(c));
+  }
+  return selectedCuisines.includes(recipe.speisekategorie);
+}
+
+// Helper function to check if a recipe matches the author filter
+function matchesAuthorFilter(recipe, selectedAuthors) {
+  if (!selectedAuthors || selectedAuthors.length === 0) return true;
+  return selectedAuthors.includes(recipe.authorId);
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -83,7 +98,9 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
   const [recipeFilters, setRecipeFilters] = useState({
-    showDrafts: 'all'
+    showDrafts: 'all',
+    selectedCuisines: [],
+    selectedAuthors: []
   });
 
   // Set up Firebase auth state observer
@@ -563,6 +580,7 @@ function App() {
             currentFilters={recipeFilters}
             onApply={handleApplyFilters}
             onCancel={handleCancelFilterPage}
+            availableAuthors={allUsers.map(u => ({ id: u.id, name: `${u.vorname} ${u.nachname}` }))}
           />
         ) : isFormOpen ? (
           <RecipeForm
@@ -578,7 +596,9 @@ function App() {
           <RecipeList
             recipes={recipes.filter(recipe => 
               matchesCategoryFilter(recipe, categoryFilter) && 
-              matchesDraftFilter(recipe, recipeFilters.showDrafts)
+              matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
+              matchesCuisineFilter(recipe, recipeFilters.selectedCuisines) &&
+              matchesAuthorFilter(recipe, recipeFilters.selectedAuthors)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
