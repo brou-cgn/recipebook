@@ -71,7 +71,8 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
   };
 
   const renderCard = (recipe) => {
-    const displayImage = defaultImage || recipe.image;
+    const effectiveItemType = recipe.itemType || itemType;
+    const displayImage = ('_defaultImage' in recipe) ? recipe._defaultImage : (defaultImage || recipe.image);
     return (
     <div
       key={recipe.id}
@@ -86,7 +87,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
       <div className="timeline-info">
         <h3 className="timeline-title">{recipe.title}</h3>
         <div className="timeline-meta">
-          {itemType === 'menu' ? (
+          {effectiveItemType === 'menu' ? (
             <span>{recipe.ingredients?.length || 0} Rezepte</span>
           ) : (
             <>
@@ -148,15 +149,15 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                   {dayRecipes.length > 2 && <div className="timeline-stack-bg timeline-stack-bg-2" />}
                   {dayRecipes.length > 1 && <div className="timeline-stack-bg timeline-stack-bg-1" />}
                   <div className="timeline-card timeline-stack-front">
-                    {(defaultImage || primaryRecipe.image) && (
+                    {(('_defaultImage' in primaryRecipe) ? primaryRecipe._defaultImage : (defaultImage || primaryRecipe.image)) && (
                       <div className="timeline-image">
-                        <img src={defaultImage || primaryRecipe.image} alt={primaryRecipe.title} />
+                        <img src={('_defaultImage' in primaryRecipe) ? primaryRecipe._defaultImage : (defaultImage || primaryRecipe.image)} alt={primaryRecipe.title} />
                       </div>
                     )}
                     <div className="timeline-info">
                       <h3 className="timeline-title">{primaryRecipe.title}</h3>
                       <div className="timeline-meta">
-                        {itemType === 'menu' ? (
+                        {(primaryRecipe.itemType || itemType) === 'menu' ? (
                           <span>{primaryRecipe.ingredients?.length || 0} Rezepte</span>
                         ) : (
                           <>

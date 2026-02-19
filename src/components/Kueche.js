@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
-import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineRecipeDefaultImage, getTimelineMenuDefaultImage } from '../utils/customLists';
+import { getTimelineBubbleIcon, getTimelineRecipeDefaultImage, getTimelineMenuDefaultImage } from '../utils/customLists';
 
 function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser }) {
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
-  const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
   const [timelineRecipeDefaultImage, setTimelineRecipeDefaultImage] = useState(null);
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
 
   useEffect(() => {
     Promise.all([
       getTimelineBubbleIcon(),
-      getTimelineMenuBubbleIcon(),
       getTimelineRecipeDefaultImage(),
       getTimelineMenuDefaultImage(),
-    ]).then(([icon, menuIcon, recipeImg, menuImg]) => {
+    ]).then(([icon, recipeImg, menuImg]) => {
       setTimelineBubbleIcon(icon);
-      setTimelineMenuBubbleIcon(menuIcon);
       setTimelineRecipeDefaultImage(recipeImg);
       setTimelineMenuDefaultImage(menuImg);
     }).catch(() => {});
@@ -39,11 +36,19 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
     ingredients: menu.recipeIds || [],
     steps: [],
     authorId: menu.authorId || menu.createdBy,
+    itemType: 'menu',
+    _defaultImage: timelineMenuDefaultImage,
   }));
 
-  const handleSelectMenuItem = (item) => {
-    const menu = filteredMenus.find(m => m.id === item.id);
-    if (menu && onSelectMenu) onSelectMenu(menu);
+  const combinedItems = [...filteredRecipes, ...menuTimelineItems];
+
+  const handleSelectItem = (item) => {
+    if (item.itemType === 'menu') {
+      const menu = filteredMenus.find(m => m.id === item.id);
+      if (menu && onSelectMenu) onSelectMenu(menu);
+    } else {
+      if (onSelectRecipe) onSelectRecipe(item);
+    }
   };
 
   return (
@@ -52,27 +57,12 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
         <h2>Küche</h2>
       </div>
       <RecipeTimeline
-        recipes={filteredRecipes}
-        onSelectRecipe={onSelectRecipe}
+        recipes={combinedItems}
+        onSelectRecipe={handleSelectItem}
         allUsers={allUsers}
         timelineBubbleIcon={timelineBubbleIcon}
         defaultImage={timelineRecipeDefaultImage}
       />
-      {menuTimelineItems.length > 0 && (
-        <>
-          <div className="kueche-section-title">
-            <h3>Menüs</h3>
-          </div>
-          <RecipeTimeline
-            recipes={menuTimelineItems}
-            onSelectRecipe={handleSelectMenuItem}
-            allUsers={allUsers}
-            timelineBubbleIcon={timelineMenuBubbleIcon}
-            defaultImage={timelineMenuDefaultImage}
-            itemType="menu"
-          />
-        </>
-      )}
     </div>
   );
 }
