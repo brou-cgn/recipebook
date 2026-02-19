@@ -728,6 +728,22 @@
   .cooking-mode-icon {
     font-size: 1.25rem;
   }
+
+  /* Difficulty stars - ensure consistent styling on mobile */
+  .difficulty-stars {
+    gap: 0.25rem;
+  }
+
+  .difficulty-stars .star {
+    font-size: 2rem;
+  }
+
+  /* Remove hover effects on mobile/touch for difficulty stars */
+  @media (hover: none) {
+    .difficulty-stars .star:hover {
+      transform: none;
+    }
+  }
 }
 
 /* Cooking mode specific styles */
