@@ -578,6 +578,22 @@
   .form-row {
     grid-template-columns: 1fr;
   }
+
+  /* Difficulty slider - ensure consistent styling on mobile */
+  .difficulty-slider {
+    gap: 0.25rem;
+  }
+
+  .difficulty-slider .star {
+    font-size: 2rem;
+  }
+
+  /* Remove hover effects on mobile/touch for difficulty slider */
+  @media (hover: none) {
+    .difficulty-slider .star:hover {
+      transform: none;
+    }
+  }
 }
 
 /* Draft checkbox styling - admin only - unified design */
