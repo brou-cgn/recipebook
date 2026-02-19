@@ -12,6 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import PasswordChangeModal from './components/PasswordChangeModal';
 import FilterPage from './components/FilterPage';
+import Kueche from './components/Kueche';
 import { 
   loginUser, 
   logoutUser, 
@@ -508,6 +509,12 @@ function App() {
           allRecipes={recipes}
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
+        />
+      ) : currentView === 'kueche' ? (
+        <Kueche
+          recipes={recipes}
+          onSelectRecipe={handleSelectRecipe}
+          allUsers={allUsers}
         />
       ) : currentView === 'menus' ? (
         // Menu views

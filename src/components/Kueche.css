@@ -1,0 +1,16 @@
+.kueche-container {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.kueche-header {
+  margin-bottom: 1.5rem;
+}
+
+.kueche-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
