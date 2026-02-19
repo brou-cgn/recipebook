@@ -41,7 +41,6 @@
   width: 36px;
   height: 36px;
   background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-  border: 3px solid white;
   border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   z-index: 2;
