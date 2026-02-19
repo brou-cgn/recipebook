@@ -89,16 +89,15 @@
 }
 
 .filter-button {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
+  background: transparent;
+  color: #666;
   border: none;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem;
   border-radius: 25px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,13 +111,12 @@
 }
 
 .filter-button:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  color: #402C1C;
+  transform: scale(1.1);
 }
 
 .filter-button:active {
-  transform: translateY(0);
+  transform: scale(1);
 }
 
 .add-button {
@@ -274,9 +272,34 @@
   
   .category-filter-select,
   .favorites-filter-button,
-  .filter-button,
   .add-button {
     width: 100%;
+  }
+
+  /* Mobile: Show filter button as fixed circular button at bottom left */
+  .filter-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: #DF7A00;
+    color: white;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    padding: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    min-width: auto;
+  }
+
+  .filter-button:hover {
+    background: #c46900;
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .filter-button:active {
+    transform: scale(1);
   }
 }
 
