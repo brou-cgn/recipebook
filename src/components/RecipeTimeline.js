@@ -18,11 +18,12 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
 
   // Sort recipes by createdAt in reverse chronological order (newest first)
   const sortedRecipes = useMemo(() => {
-    return [...recipes].sort((a, b) => {
-      const dateA = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
-      const dateB = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
-      return dateB - dateA; // Reverse chronological order
-    });
+    const toMs = (ts) => {
+      if (!ts) return 0;
+      if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+      return new Date(ts).getTime();
+    };
+    return [...recipes].sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt));
   }, [recipes]);
 
   // Group recipes by calendar day (preserving reverse-chronological order)

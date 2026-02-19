@@ -48,6 +48,29 @@ describe('RecipeTimeline', () => {
     expect(screen.getByText('Keine Rezepte vorhanden')).toBeInTheDocument();
   });
 
+  test('sorts correctly when createdAt is an ISO date string', () => {
+    const recipesWithStringDates = [
+      { id: 's1', title: 'Old Recipe', createdAt: '2020-11-13T00:00:00Z', ingredients: [], steps: [] },
+      { id: 's2', title: 'New Recipe', createdAt: '2026-02-08T00:00:00Z', ingredients: [], steps: [] },
+      { id: 's3', title: 'Middle Recipe', createdAt: '2021-12-30T00:00:00Z', ingredients: [], steps: [] },
+    ];
+
+    render(
+      <RecipeTimeline
+        recipes={recipesWithStringDates}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+      />
+    );
+
+    const timelineCards = document.querySelectorAll('.timeline-card');
+    const titles = Array.from(timelineCards).map(card =>
+      card.querySelector('.timeline-title').textContent
+    );
+    // Newest first: 2026, 2021, 2020
+    expect(titles).toEqual(['New Recipe', 'Middle Recipe', 'Old Recipe']);
+  });
+
   test('renders recipes in reverse chronological order', () => {
     render(
       <RecipeTimeline 
