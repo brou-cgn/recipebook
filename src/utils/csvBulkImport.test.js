@@ -146,6 +146,10 @@ Test Recipe,2024-01-15,Max Mustermann,Ingredient,Step`;
 
       expect(recipes[0].createdAtStr).toBe('2024-01-15');
       expect(recipes[0].authorName).toBe('Max Mustermann');
+      expect(recipes[0].createdAt).toBeInstanceOf(Date);
+      expect(recipes[0].createdAt.getFullYear()).toBe(2024);
+      expect(recipes[0].createdAt.getMonth()).toBe(0); // January = 0
+      expect(recipes[0].createdAt.getDate()).toBe(15);
     });
 
     test('handles quoted values with commas', async () => {
@@ -276,9 +280,17 @@ Pizza Bianco al Tartufo;08.02.2026;Benjamin Rousselli;Italienische Küche;Hauptg
       expect(recipes[0].title).toBe('Babybrokkoli mit Weihnachtsbutter');
       expect(recipes[0].authorName).toBe('Benjamin Rousselli');
       expect(recipes[0].createdAtStr).toBe('27.11.2024');
+      expect(recipes[0].createdAt).toBeInstanceOf(Date);
+      expect(recipes[0].createdAt.getFullYear()).toBe(2024);
+      expect(recipes[0].createdAt.getMonth()).toBe(10); // November = 10
+      expect(recipes[0].createdAt.getDate()).toBe(27);
       expect(recipes[1].title).toBe('Pizza Bianco al Tartufo');
       expect(recipes[1].authorName).toBe('Benjamin Rousselli');
       expect(recipes[1].createdAtStr).toBe('08.02.2026');
+      expect(recipes[1].createdAt).toBeInstanceOf(Date);
+      expect(recipes[1].createdAt.getFullYear()).toBe(2026);
+      expect(recipes[1].createdAt.getMonth()).toBe(1); // February = 1
+      expect(recipes[1].createdAt.getDate()).toBe(8);
     });
 
     test('handles semicolon-delimited CSV with quoted values containing semicolons', async () => {
