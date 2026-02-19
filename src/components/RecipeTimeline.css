@@ -36,15 +36,19 @@
 
 .timeline-marker {
   position: absolute;
-  left: 21px;
+  left: 12px;
   top: 10px;
-  width: 20px;
-  height: 20px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
   border: 3px solid white;
   border-radius: 50%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .timeline-content {
@@ -139,6 +143,98 @@
   font-size: 1.1rem;
 }
 
+/* Icon inside the timeline bubble */
+.timeline-marker-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.timeline-marker-emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Stack toggle button next to the date */
+.timeline-stack-toggle {
+  background: none;
+  border: none;
+  color: #DF7A00;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.75rem;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.timeline-stack-toggle:hover {
+  color: #c46900;
+}
+
+/* Stack container */
+.timeline-stack {
+  position: relative;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-stack:hover .timeline-stack-front {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Background hint cards */
+.timeline-stack-bg {
+  position: absolute;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.timeline-stack-bg-1 {
+  top: 6px;
+  left: 5px;
+  right: -5px;
+  bottom: -6px;
+  z-index: 0;
+}
+
+.timeline-stack-bg-2 {
+  top: 12px;
+  left: 10px;
+  right: -10px;
+  bottom: -12px;
+  z-index: -1;
+}
+
+/* Front card of the stack */
+.timeline-stack-front {
+  position: relative;
+  z-index: 1;
+}
+
+/* Badge showing recipe count */
+.timeline-stack-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #DF7A00;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .recipe-timeline-container {
@@ -155,8 +251,8 @@
 
   .timeline-marker {
     left: 11px;
-    width: 18px;
-    height: 18px;
+    width: 28px;
+    height: 28px;
   }
 
   .timeline-card {
@@ -189,9 +285,9 @@
   }
 
   .timeline-marker {
-    width: 16px;
-    height: 16px;
-    left: 12px;
+    width: 24px;
+    height: 24px;
+    left: 8px;
   }
 
   .timeline-line {

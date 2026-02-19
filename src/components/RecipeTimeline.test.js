@@ -154,4 +154,110 @@ describe('RecipeTimeline', () => {
     
     expect(screen.queryByAltText('Recipe 2')).not.toBeInTheDocument();
   });
+
+  test('groups multiple recipes on the same day as a stack', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipesOnSameDay = [
+      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+    ];
+
+    render(
+      <RecipeTimeline
+        recipes={recipesOnSameDay}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+      />
+    );
+
+    // Should show only one timeline-item (one entry per day)
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    expect(timelineItems).toHaveLength(1);
+
+    // Should show the stack container and the count badge
+    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+    expect(document.querySelector('.timeline-stack-badge')).toHaveTextContent('2');
+
+    // The toggle button should show the recipe count
+    expect(screen.getByText(/2 Rezepte/)).toBeInTheDocument();
+  });
+
+  test('expands stacked recipes when toggle is clicked', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipesOnSameDay = [
+      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+    ];
+    const handleSelect = jest.fn();
+
+    render(
+      <RecipeTimeline
+        recipes={recipesOnSameDay}
+        onSelectRecipe={handleSelect}
+        allUsers={[]}
+      />
+    );
+
+    // Before expanding: stack is visible, individual cards are not
+    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+
+    // Click the toggle button to expand
+    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
+
+    // After expanding: individual cards should be visible
+    expect(screen.getByText('Morning Cake')).toBeInTheDocument();
+    expect(screen.getByText('Evening Stew')).toBeInTheDocument();
+    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
+  });
+
+  test('calls onSelectRecipe when an expanded stack card is clicked', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipe1 = { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+    const recipe2 = { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+    const handleSelect = jest.fn();
+
+    render(
+      <RecipeTimeline
+        recipes={[recipe1, recipe2]}
+        onSelectRecipe={handleSelect}
+        allUsers={[]}
+      />
+    );
+
+    // Expand the stack
+    fireEvent.click(screen.getByRole('button', { name: /Stapel ausklappen/ }));
+
+    // Click on the second recipe card
+    fireEvent.click(screen.getByText('Evening Stew').closest('.timeline-card'));
+    expect(handleSelect).toHaveBeenCalledWith(recipe2);
+  });
+
+  test('displays custom emoji icon in bubble marker', () => {
+    render(
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        timelineBubbleIcon="🍕"
+      />
+    );
+
+    expect(document.querySelector('.timeline-marker-emoji')).toHaveTextContent('🍕');
+  });
+
+  test('displays custom image icon in bubble marker', () => {
+    const iconSrc = 'data:image/png;base64,abc123';
+    render(
+      <RecipeTimeline
+        recipes={[mockRecipes[0]]}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+        timelineBubbleIcon={iconSrc}
+      />
+    );
+
+    const iconImg = document.querySelector('.timeline-marker-icon');
+    expect(iconImg).toBeInTheDocument();
+    expect(iconImg).toHaveAttribute('src', iconSrc);
+  });
 });

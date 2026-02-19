@@ -95,7 +95,8 @@ export async function getSettings() {
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         faviconImage: settings.faviconImage || null,
         appLogoImage: settings.appLogoImage || null,
-        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS
+        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS,
+        timelineBubbleIcon: settings.timelineBubbleIcon || null
       };
       
       return settingsCache;
@@ -111,7 +112,8 @@ export async function getSettings() {
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
       appLogoImage: null,
-      buttonIcons: DEFAULT_BUTTON_ICONS
+      buttonIcons: DEFAULT_BUTTON_ICONS,
+      timelineBubbleIcon: null
     };
     
     // Create the settings document
@@ -132,7 +134,8 @@ export async function getSettings() {
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
       appLogoImage: null,
-      buttonIcons: DEFAULT_BUTTON_ICONS
+      buttonIcons: DEFAULT_BUTTON_ICONS,
+      timelineBubbleIcon: null
     };
   }
 }
@@ -367,4 +370,33 @@ export async function saveButtonIcons(buttonIcons) {
 export async function resetButtonIcons() {
   await saveButtonIcons(DEFAULT_BUTTON_ICONS);
   return DEFAULT_BUTTON_ICONS;
+}
+
+/**
+ * Get the timeline bubble icon from Firestore
+ * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
+ */
+export async function getTimelineBubbleIcon() {
+  const settings = await getSettings();
+  return settings.timelineBubbleIcon || null;
+}
+
+/**
+ * Save the timeline bubble icon to Firestore
+ * @param {string|null} imageBase64 - Base64 encoded image or null to remove
+ * @returns {Promise<void>}
+ */
+export async function saveTimelineBubbleIcon(imageBase64) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { timelineBubbleIcon: imageBase64 || null });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.timelineBubbleIcon = imageBase64 || null;
+    }
+  } catch (error) {
+    console.error('Error saving timeline bubble icon:', error);
+    throw error;
+  }
 }

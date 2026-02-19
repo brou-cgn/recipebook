@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon } from '../utils/customLists';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -51,6 +51,10 @@ function Settings({ onBack, currentUser }) {
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
+  // Timeline bubble icon state
+  const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
+  const [uploadingTimelineBubbleIcon, setUploadingTimelineBubbleIcon] = useState(false);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -61,6 +65,7 @@ function Settings({ onBack, currentUser }) {
       const appLogoImg = await getAppLogoImage();
       const icons = await getButtonIcons();
       const catImages = await getCategoryImages();
+      const timelineIcon = await getTimelineBubbleIcon();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -69,6 +74,7 @@ function Settings({ onBack, currentUser }) {
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
       setButtonIcons(icons);
+      setTimelineBubbleIcon(timelineIcon);
     };
     loadSettings();
   }, []);
@@ -80,6 +86,7 @@ function Settings({ onBack, currentUser }) {
     saveFaviconText(faviconText);
     saveAppLogoImage(appLogoImage);
     saveButtonIcons(buttonIcons);
+    saveTimelineBubbleIcon(timelineBubbleIcon);
     
     // Apply favicon changes immediately
     updateFavicon(faviconImage);
@@ -338,6 +345,28 @@ function Settings({ onBack, currentUser }) {
 
   const handleRemoveButtonIconImage = (iconKey) => {
     setButtonIcons({ ...buttonIcons, [iconKey]: DEFAULT_BUTTON_ICONS[iconKey] });
+  };
+
+  // Timeline bubble icon handlers
+  const handleTimelineBubbleIconUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingTimelineBubbleIcon(true);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const compressedBase64 = await compressImage(base64);
+      setTimelineBubbleIcon(compressedBase64);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingTimelineBubbleIcon(false);
+    }
+  };
+
+  const handleRemoveTimelineBubbleIcon = () => {
+    setTimelineBubbleIcon(null);
   };
 
   return (
@@ -847,6 +876,47 @@ function Settings({ onBack, currentUser }) {
                   </div>
                   <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Zeitleisten-Bubble-Icon</h3>
+              <p className="section-description">
+                Optionales Icon, das in den orangen Bubbles der Zeitleiste angezeigt wird.
+                Unterstützte Formate: JPEG, PNG, SVG. Empfohlen: quadratisches Bild.
+              </p>
+              <div className="favicon-image-section">
+                {timelineBubbleIcon ? (
+                  <div className="favicon-preview">
+                    <img src={timelineBubbleIcon} alt="Zeitleisten-Icon" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'contain' }} />
+                    <div className="favicon-actions">
+                      <label htmlFor="timelineBubbleIconFile" className="favicon-change-btn">
+                        {uploadingTimelineBubbleIcon ? 'Hochladen...' : '🔄 Ändern'}
+                      </label>
+                      <button
+                        className="favicon-remove-btn"
+                        onClick={handleRemoveTimelineBubbleIcon}
+                        disabled={uploadingTimelineBubbleIcon}
+                      >
+                        ✕ Entfernen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="favicon-upload">
+                    <label htmlFor="timelineBubbleIconFile" className="image-upload-label">
+                      {uploadingTimelineBubbleIcon ? 'Hochladen...' : '📷 Icon hochladen'}
+                    </label>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  id="timelineBubbleIconFile"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  onChange={handleTimelineBubbleIconUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingTimelineBubbleIcon}
+                />
               </div>
             </div>
 
