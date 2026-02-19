@@ -222,4 +222,37 @@ describe('Kueche', () => {
     const img = await screen.findByAltText('Image Menu');
     expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
+
+  test('renders the info tile above the timeline with recipe and menu counts', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    expect(screen.getByText('Meine Küche')).toBeInTheDocument();
+    expect(screen.getByText('1 Rezept')).toBeInTheDocument();
+    expect(screen.getByText('1 Menü')).toBeInTheDocument();
+  });
+
+  test('info tile shows plural forms for multiple recipes and menus', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={null}
+      />
+    );
+
+    expect(screen.getByText('2 Rezepte')).toBeInTheDocument();
+    expect(screen.getByText('2 Menüs')).toBeInTheDocument();
+  });
 });

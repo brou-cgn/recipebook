@@ -59,6 +59,16 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
       <div className="kueche-header">
         <h2>Küche</h2>
       </div>
+      <div className="kueche-tile">
+        <div className="kueche-tile-content">
+          <h3>Meine Küche</h3>
+          <p className="kueche-tile-description">Übersicht über Ihre Rezepte und Menüs</p>
+          <div className="kueche-tile-meta">
+            <span>{filteredRecipes.length} {filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
+            <span>{filteredMenus.length} {filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
+          </div>
+        </div>
+      </div>
       <RecipeTimeline
         recipes={combinedItems}
         onSelectRecipe={handleSelectItem}
