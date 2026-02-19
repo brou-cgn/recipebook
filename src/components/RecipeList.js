@@ -5,9 +5,11 @@ import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersion
 import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import RecipeTimeline from './RecipeTimeline';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'timeline'
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
@@ -159,6 +161,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             >
               ★ Favoriten
             </button>
+            <button 
+              className={`view-mode-button ${viewMode === 'timeline' ? 'active' : ''}`}
+              onClick={() => setViewMode(viewMode === 'grid' ? 'timeline' : 'grid')}
+              title={viewMode === 'grid' ? 'Zeitstrahl-Ansicht' : 'Raster-Ansicht'}
+            >
+              {viewMode === 'grid' ? '📅' : '▦'}
+            </button>
           </div>
           {userCanEdit && (
             <button className="add-button" onClick={onAddRecipe}>
@@ -177,6 +186,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               : 'Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen'}
           </p>
         </div>
+      ) : viewMode === 'timeline' ? (
+        <RecipeTimeline 
+          recipes={recipeGroups.map(group => {
+            const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
+            return sortedVersions[0] || group.primaryRecipe;
+          })}
+          onSelectRecipe={(recipe) => {
+            const group = recipeGroups.find(g => g.allRecipes.some(r => r.id === recipe.id));
+            if (group) {
+              handleRecipeClick(group);
+            }
+          }}
+          allUsers={allUsers}
+        />
       ) : (
         <div className="recipe-grid">
           {recipeGroups.map(group => {

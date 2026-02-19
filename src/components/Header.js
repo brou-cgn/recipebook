@@ -166,12 +166,6 @@ function Header({
                         Rezepte
                       </button>
                       <button
-                        className={`menu-item ${currentView === 'kitchen' ? 'active' : ''}`}
-                        onClick={() => handleViewChangeInternal('kitchen')}
-                      >
-                        Küche
-                      </button>
-                      <button
                         className={`menu-item ${currentView === 'menus' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('menus')}
                       >

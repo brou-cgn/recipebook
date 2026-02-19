@@ -12,7 +12,6 @@ import Login from './components/Login';
 import Register from './components/Register';
 import PasswordChangeModal from './components/PasswordChangeModal';
 import FilterPage from './components/FilterPage';
-import Kitchen from './components/Kitchen';
 import { 
   loginUser, 
   logoutUser, 
@@ -509,18 +508,6 @@ function App() {
           allRecipes={recipes}
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
-        />
-      ) : currentView === 'kitchen' ? (
-        // Kitchen view with timeline
-        <Kitchen
-          recipes={recipes.filter(recipe => 
-            matchesCategoryFilter(recipe, categoryFilter) && 
-            matchesDraftFilter(recipe, recipeFilters.showDrafts)
-          )}
-          onSelectRecipe={handleSelectRecipe}
-          currentUser={currentUser}
-          categoryFilter={categoryFilter}
-          searchTerm={searchTerm}
         />
       ) : currentView === 'menus' ? (
         // Menu views
