@@ -20,19 +20,27 @@ import { deleteRecipeImage } from './storageUtils';
 
 /**
  * Set up real-time listener for recipes
+ * Filters private (draft) recipes to only show to admins and recipe authors
+ * @param {string} userId - Current user ID (to filter private recipes)
+ * @param {boolean} isAdmin - Whether current user is an admin
  * @param {Function} callback - Callback function that receives recipes array
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToRecipes = (callback) => {
+export const subscribeToRecipes = (userId, isAdmin, callback) => {
   const recipesRef = collection(db, 'recipes');
   
   return onSnapshot(recipesRef, (snapshot) => {
     const recipes = [];
     snapshot.forEach((doc) => {
-      recipes.push({
+      const recipe = {
         id: doc.id,
         ...doc.data()
-      });
+      };
+      
+      // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
+      if (!recipe.isPrivate || isAdmin || recipe.authorId === userId) {
+        recipes.push(recipe);
+      }
     });
     callback(recipes);
   }, (error) => {
@@ -43,18 +51,26 @@ export const subscribeToRecipes = (callback) => {
 
 /**
  * Get all recipes (one-time fetch)
+ * Filters private (draft) recipes to only show to admins and recipe authors
+ * @param {string} userId - Current user ID (to filter private recipes)
+ * @param {boolean} isAdmin - Whether current user is an admin
  * @returns {Promise<Array>} Promise resolving to array of recipes
  */
-export const getRecipes = async () => {
+export const getRecipes = async (userId, isAdmin) => {
   try {
     const recipesRef = collection(db, 'recipes');
     const snapshot = await getDocs(recipesRef);
     const recipes = [];
     snapshot.forEach((doc) => {
-      recipes.push({
+      const recipe = {
         id: doc.id,
         ...doc.data()
-      });
+      };
+      
+      // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
+      if (!recipe.isPrivate || isAdmin || recipe.authorId === userId) {
+        recipes.push(recipe);
+      }
     });
     return recipes;
   } catch (error) {
@@ -166,7 +182,8 @@ export const seedSampleRecipes = async (authorId) => {
     }
     
     // Double-check recipes collection is empty
-    const recipes = await getRecipes();
+    // Use admin access (true) to check all recipes, including private ones
+    const recipes = await getRecipes(null, true);
     if (recipes.length > 0) {
       // Recipes exist, set the flag and return
       if (settingsSnap.exists()) {

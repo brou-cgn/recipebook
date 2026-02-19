@@ -109,15 +109,19 @@ function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribe = subscribeToRecipes((recipesFromFirestore) => {
-      setRecipes(recipesFromFirestore);
-      setRecipesLoaded(true);
-      
-      // Seed sample recipes if collection is empty (only for first user)
-      if (recipesFromFirestore.length === 0 && currentUser) {
-        seedSampleRecipes(currentUser.id);
+    const unsubscribe = subscribeToRecipes(
+      currentUser.id,
+      currentUser.isAdmin || false,
+      (recipesFromFirestore) => {
+        setRecipes(recipesFromFirestore);
+        setRecipesLoaded(true);
+        
+        // Seed sample recipes if collection is empty (only for first user)
+        if (recipesFromFirestore.length === 0 && currentUser) {
+          seedSampleRecipes(currentUser.id);
+        }
       }
-    });
+    );
 
     return () => unsubscribe();
   }, [currentUser]);
