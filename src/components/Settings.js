@@ -6,6 +6,91 @@ import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  TouchSensor,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const DRAGGING_OPACITY = 0.5;
+
+function getSortableItemStyle(transform, transition, isDragging) {
+  return {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? DRAGGING_OPACITY : 1,
+  };
+}
+
+function SortableListItem({ id, label, onRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = getSortableItemStyle(transform, transition, isDragging);
+
+  return (
+    <div ref={setNodeRef} style={style} className={`list-item ${isDragging ? 'dragging' : ''}`}>
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Verschieben"
+      >
+        ⋮⋮
+      </button>
+      <span>{label}</span>
+      <button className="remove-btn" onClick={onRemove} title="Entfernen">✕</button>
+    </div>
+  );
+}
+
+function SortablePortionUnitItem({ id, unit, onRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = getSortableItemStyle(transform, transition, isDragging);
+
+  return (
+    <div ref={setNodeRef} style={style} className={`list-item ${isDragging ? 'dragging' : ''}`}>
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Verschieben"
+      >
+        ⋮⋮
+      </button>
+      <span>{unit.singular} / {unit.plural}</span>
+      <button className="remove-btn" onClick={onRemove} title="Entfernen">✕</button>
+    </div>
+  );
+}
 
 const CATEGORY_ALREADY_ASSIGNED_ERROR = 'Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
 
@@ -1083,20 +1168,15 @@ function Settings({ onBack, currentUser }) {
             />
             <button onClick={addCuisine}>Hinzufügen</button>
           </div>
-          <div className="list-items">
-            {lists.cuisineTypes.map((cuisine) => (
-              <div key={cuisine} className="list-item">
-                <span>{cuisine}</span>
-                <button
-                  className="remove-btn"
-                  onClick={() => removeCuisine(cuisine)}
-                  title="Entfernen"
-                >
-                  ✕
-                </button>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndCuisineTypes}>
+            <SortableContext items={lists.cuisineTypes} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.cuisineTypes.map((cuisine) => (
+                  <SortableListItem key={cuisine} id={cuisine} label={cuisine} onRemove={() => removeCuisine(cuisine)} />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         <div className="settings-section">
@@ -1111,20 +1191,15 @@ function Settings({ onBack, currentUser }) {
             />
             <button onClick={addCategory}>Hinzufügen</button>
           </div>
-          <div className="list-items">
-            {lists.mealCategories.map((category) => (
-              <div key={category} className="list-item">
-                <span>{category}</span>
-                <button
-                  className="remove-btn"
-                  onClick={() => removeCategory(category)}
-                  title="Entfernen"
-                >
-                  ✕
-                </button>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndMealCategories}>
+            <SortableContext items={lists.mealCategories} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.mealCategories.map((category) => (
+                  <SortableListItem key={category} id={category} label={category} onRemove={() => removeCategory(category)} />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         <div className="settings-section">
@@ -1139,20 +1214,15 @@ function Settings({ onBack, currentUser }) {
             />
             <button onClick={addUnit}>Hinzufügen</button>
           </div>
-          <div className="list-items">
-            {lists.units.map((unit) => (
-              <div key={unit} className="list-item">
-                <span>{unit}</span>
-                <button
-                  className="remove-btn"
-                  onClick={() => removeUnit(unit)}
-                  title="Entfernen"
-                >
-                  ✕
-                </button>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndUnits}>
+            <SortableContext items={lists.units} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.units.map((unit) => (
+                  <SortableListItem key={unit} id={unit} label={unit} onRemove={() => removeUnit(unit)} />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         <div className="settings-section">
@@ -1176,20 +1246,15 @@ function Settings({ onBack, currentUser }) {
             />
             <button onClick={addPortionUnit}>Hinzufügen</button>
           </div>
-          <div className="list-items">
-            {lists.portionUnits.map((unit) => (
-              <div key={unit.id} className="list-item">
-                <span>{unit.singular} / {unit.plural}</span>
-                <button
-                  className="remove-btn"
-                  onClick={() => removePortionUnit(unit.id)}
-                  title="Entfernen"
-                >
-                  ✕
-                </button>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPortionUnits}>
+            <SortableContext items={lists.portionUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.portionUnits.map((unit) => (
+                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePortionUnit(unit.id)} />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         <div className="settings-actions">
