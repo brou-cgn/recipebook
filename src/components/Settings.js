@@ -279,6 +279,72 @@ function Settings({ onBack, currentUser }) {
     });
   };
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Drag and drop handlers
+  const handleDragEndCuisineTypes = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.cuisineTypes.indexOf(active.id);
+        const newIndex = prevLists.cuisineTypes.indexOf(over.id);
+        return {
+          ...prevLists,
+          cuisineTypes: arrayMove(prevLists.cuisineTypes, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
+  const handleDragEndMealCategories = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.mealCategories.indexOf(active.id);
+        const newIndex = prevLists.mealCategories.indexOf(over.id);
+        return {
+          ...prevLists,
+          mealCategories: arrayMove(prevLists.mealCategories, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
+  const handleDragEndUnits = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.units.indexOf(active.id);
+        const newIndex = prevLists.units.indexOf(over.id);
+        return {
+          ...prevLists,
+          units: arrayMove(prevLists.units, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
+  const handleDragEndPortionUnits = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.portionUnits.findIndex(u => u.id === active.id);
+        const newIndex = prevLists.portionUnits.findIndex(u => u.id === over.id);
+        return {
+          ...prevLists,
+          portionUnits: arrayMove(prevLists.portionUnits, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
   // Category image handlers
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
