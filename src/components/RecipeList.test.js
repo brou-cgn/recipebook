@@ -20,13 +20,7 @@ jest.mock('../utils/customLists', () => ({
   }),
   DEFAULT_BUTTON_ICONS: {
     filterButton: '⚙'
-  },
-  getTimelineBubbleIcon: () => Promise.resolve(null),
-}));
-
-// Mock the category images utility
-jest.mock('../utils/categoryImages', () => ({
-  getCategoryImages: () => Promise.resolve([]),
+  }
 }));
 
 const mockRecipes = [
@@ -637,119 +631,5 @@ describe('RecipeList - Filter Button Icon', () => {
     expect(imgInButton).toBeInTheDocument();
     expect(imgInButton).toHaveAttribute('src', mockBase64);
     expect(imgInButton).toHaveAttribute('alt', 'Filter');
-  });
-});
-
-describe('RecipeList - Timeline View Mode', () => {
-  const recipesWithDates = [
-    {
-      id: '1',
-      title: 'Timeline Recipe 1',
-      ingredients: ['a', 'b'],
-      steps: ['s1'],
-      createdAt: { toDate: () => new Date('2024-03-10') },
-    },
-    {
-      id: '2',
-      title: 'Timeline Recipe 2',
-      ingredients: ['c'],
-      steps: ['s2'],
-      createdAt: { toDate: () => new Date('2024-03-05') },
-    },
-  ];
-
-  test('renders view mode toggle button', () => {
-    render(
-      <RecipeList
-        recipes={recipesWithDates}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-      />
-    );
-
-    expect(screen.getByTitle('Zeitleiste anzeigen')).toBeInTheDocument();
-  });
-
-  test('switches to timeline view when toggle is clicked', () => {
-    render(
-      <RecipeList
-        recipes={recipesWithDates}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-      />
-    );
-
-    // Initially in grid mode
-    expect(document.querySelector('.recipe-grid')).toBeInTheDocument();
-    expect(document.querySelector('.recipe-timeline-container')).not.toBeInTheDocument();
-
-    // Click the toggle to switch to timeline view
-    fireEvent.click(screen.getByTitle('Zeitleiste anzeigen'));
-
-    // Now in timeline mode
-    expect(document.querySelector('.recipe-timeline-container')).toBeInTheDocument();
-    expect(document.querySelector('.recipe-grid')).not.toBeInTheDocument();
-  });
-
-  test('timeline view shows recipe titles as timeline cards', () => {
-    render(
-      <RecipeList
-        recipes={recipesWithDates}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-      />
-    );
-
-    fireEvent.click(screen.getByTitle('Zeitleiste anzeigen'));
-
-    const timelineCards = document.querySelectorAll('.timeline-card');
-    expect(timelineCards.length).toBeGreaterThan(0);
-    expect(screen.getByText('Timeline Recipe 1')).toBeInTheDocument();
-    expect(screen.getByText('Timeline Recipe 2')).toBeInTheDocument();
-  });
-
-  test('switches back to grid view when toggle is clicked again', () => {
-    render(
-      <RecipeList
-        recipes={recipesWithDates}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-      />
-    );
-
-    // Switch to timeline
-    fireEvent.click(screen.getByTitle('Zeitleiste anzeigen'));
-    expect(document.querySelector('.recipe-timeline-container')).toBeInTheDocument();
-
-    // Switch back to grid
-    fireEvent.click(screen.getByTitle('Rasteransicht anzeigen'));
-    expect(document.querySelector('.recipe-grid')).toBeInTheDocument();
-    expect(document.querySelector('.recipe-timeline-container')).not.toBeInTheDocument();
-  });
-
-  test('calls onSelectRecipe when a timeline card is clicked', () => {
-    const handleSelect = jest.fn();
-
-    render(
-      <RecipeList
-        recipes={[recipesWithDates[0]]}
-        onSelectRecipe={handleSelect}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-      />
-    );
-
-    fireEvent.click(screen.getByTitle('Zeitleiste anzeigen'));
-
-    const card = document.querySelector('.timeline-card');
-    fireEvent.click(card);
-
-    expect(handleSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ id: '1', title: 'Timeline Recipe 1' })
-    );
   });
 });

@@ -3,10 +3,8 @@ import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon } from '../utils/customLists';
+import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import RecipeTimeline from './RecipeTimeline';
-import { getCategoryImages } from '../utils/categoryImages';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -16,9 +14,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [buttonIcons, setButtonIcons] = useState({
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
-  const [viewMode, setViewMode] = useState('grid');
-  const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
-  const [categoryImages, setCategoryImages] = useState([]);
   
   // Load all users once on mount
   useEffect(() => {
@@ -70,23 +65,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
     loadFavorites();
   }, [currentUser?.id]);
-
-  // Load timeline-specific data (icon and category images)
-  useEffect(() => {
-    const loadTimelineData = async () => {
-      try {
-        const [icon, catImages] = await Promise.all([
-          getTimelineBubbleIcon(),
-          getCategoryImages(),
-        ]);
-        setTimelineBubbleIcon(icon);
-        setCategoryImages(catImages);
-      } catch (error) {
-        console.error('Error loading timeline data:', error);
-      }
-    };
-    loadTimelineData();
-  }, []);
   
   // Generate dynamic heading based on filters
   const getHeading = () => {
@@ -181,13 +159,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             >
               ★ Favoriten
             </button>
-            <button
-              className={`view-mode-button ${viewMode === 'timeline' ? 'active' : ''}`}
-              onClick={() => setViewMode(viewMode === 'grid' ? 'timeline' : 'grid')}
-              title={viewMode === 'grid' ? 'Zeitleiste anzeigen' : 'Rasteransicht anzeigen'}
-            >
-              {viewMode === 'grid' ? '📅 Zeitleiste' : '⊞ Raster'}
-            </button>
           </div>
           {userCanEdit && (
             <button className="add-button" onClick={onAddRecipe}>
@@ -206,17 +177,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               : 'Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen'}
           </p>
         </div>
-      ) : viewMode === 'timeline' ? (
-        <RecipeTimeline
-          recipes={recipeGroups.map(group => {
-            const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
-            return sortedVersions[0] || group.primaryRecipe;
-          })}
-          onSelectRecipe={onSelectRecipe}
-          allUsers={allUsers}
-          timelineBubbleIcon={timelineBubbleIcon}
-          categoryImages={categoryImages}
-        />
       ) : (
         <div className="recipe-grid">
           {recipeGroups.map(group => {
