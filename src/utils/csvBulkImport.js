@@ -145,6 +145,34 @@ function parseCookingTime(value) {
 }
 
 /**
+ * Parse a date string in German (DD.MM.YYYY) or ISO (YYYY-MM-DD) format
+ * @param {string} dateStr - Date string to parse
+ * @returns {Date|null} - Parsed Date object or null if invalid
+ */
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+
+  const str = dateStr.trim();
+
+  // Try German format: DD.MM.YYYY
+  const germanMatch = str.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (germanMatch) {
+    const [, day, month, year] = germanMatch;
+    const date = new Date(`${year}-${month}-${day}`);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Try ISO format: YYYY-MM-DD (optionally with time component)
+  const isoMatch = str.match(/^\d{4}-\d{2}-\d{2}/);
+  if (isoMatch) {
+    const date = new Date(str);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
+}
+
+/**
  * Parse comma-separated values into array
  * @param {string} value - Comma-separated string
  * @returns {Array<string>} - Array of trimmed values
@@ -221,8 +249,8 @@ async function parseRecipeRow(headers, values, currentUserName = '', getCategory
     if (header === 'Name') {
       recipe.title = value;
     } else if (header === 'Erstellt am') {
-      // Parse date if needed - for now just store as string
-      // Could be enhanced to parse ISO dates
+      // Parse the date string and store both the parsed Date and the raw string
+      recipe.createdAt = parseDate(value);
       recipe.createdAtStr = value;
     } else if (header === 'Erstellt von') {
       recipe.authorName = value;

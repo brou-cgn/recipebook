@@ -90,7 +90,7 @@ export const addRecipe = async (recipe, authorId) => {
     const recipeData = {
       ...recipe,
       authorId,
-      createdAt: serverTimestamp(),
+      createdAt: recipe.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     
