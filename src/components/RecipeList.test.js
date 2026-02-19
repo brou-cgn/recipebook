@@ -544,3 +544,61 @@ describe('RecipeList - Favorites Filter with Versions', () => {
     expect(recipeCards.length).toBeGreaterThan(0);
   });
 });
+
+describe('RecipeList - Filter Button Icon', () => {
+  beforeEach(() => {
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+  });
+
+  test('renders emoji icon when filterButton is emoji', async () => {
+    const { getButtonIcons } = require('../utils/customLists');
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙'
+    });
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+      />
+    );
+
+    // Wait for the filter button to render
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toBeInTheDocument();
+    expect(filterButton).toHaveTextContent('⚙');
+    
+    // Ensure no img tag is rendered
+    const imgInButton = filterButton.querySelector('img');
+    expect(imgInButton).toBeNull();
+  });
+
+  test('renders image when filterButton is base64 image', async () => {
+    const mockBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: mockBase64
+    });
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+      />
+    );
+
+    // Wait for the filter button to render
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toBeInTheDocument();
+    
+    // Ensure img tag is rendered with correct src
+    const imgInButton = filterButton.querySelector('img');
+    expect(imgInButton).toBeInTheDocument();
+    expect(imgInButton).toHaveAttribute('src', mockBase64);
+    expect(imgInButton).toHaveAttribute('alt', 'Filter');
+  });
+});

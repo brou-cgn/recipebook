@@ -4,6 +4,7 @@ import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -131,7 +132,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 onClick={onOpenFilterPage}
                 title="Weitere Filter"
               >
-                {buttonIcons.filterButton}
+                {isBase64Image(buttonIcons.filterButton) ? (
+                  <img src={buttonIcons.filterButton} alt="Filter" className="button-icon-image" />
+                ) : (
+                  buttonIcons.filterButton
+                )}
               </button>
             )}
             {onCategoryFilterChange && (
