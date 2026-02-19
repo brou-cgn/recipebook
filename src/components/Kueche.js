@@ -41,7 +41,6 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
     steps: [],
     authorId: menu.authorId || menu.createdBy,
     itemType: 'menu',
-    _defaultImage: timelineMenuDefaultImage,
   }));
 
   const combinedItems = [...filteredRecipes, ...menuTimelineItems];
@@ -66,6 +65,7 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
         allUsers={allUsers}
         timelineBubbleIcon={timelineBubbleIcon}
         categoryImages={categoryImages}
+        defaultImage={timelineMenuDefaultImage}
       />
     </div>
   );

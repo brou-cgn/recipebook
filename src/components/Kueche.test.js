@@ -2,10 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Kueche from './Kueche';
 
+const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
+
 jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineMenuBubbleIcon: () => Promise.resolve(null),
-  getTimelineMenuDefaultImage: () => Promise.resolve(null),
+  getTimelineMenuDefaultImage: () => Promise.resolve(DEFAULT_MENU_IMAGE),
 }));
 
 jest.mock('../utils/categoryImages', () => ({
@@ -195,5 +197,29 @@ describe('Kueche', () => {
     );
 
     expect(screen.getByText('Created By Menu')).toBeInTheDocument();
+  });
+
+  test('menu items in the combined timeline display the default image', async () => {
+    const menu = {
+      id: 'm5',
+      name: 'Image Menu',
+      createdAt: { toDate: () => new Date('2024-02-01') },
+      recipeIds: ['1'],
+      authorId: 'user-1',
+    };
+
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[menu]}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const img = await screen.findByAltText('Image Menu');
+    expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
 });

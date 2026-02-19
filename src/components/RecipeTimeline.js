@@ -71,7 +71,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
   };
 
   const getDisplayImage = (recipe) => {
-    if (itemType === 'menu') return defaultImage;
+    if ((recipe.itemType || itemType) === 'menu') return defaultImage;
     if (!categoryImages || categoryImages.length === 0) return null;
     const categories = Array.isArray(recipe.speisekategorie)
       ? recipe.speisekategorie
