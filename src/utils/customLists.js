@@ -62,7 +62,8 @@ export const DEFAULT_BUTTON_ICONS = {
   importRecipe: '📥',
   scanImage: '📷',
   webImport: '🌐',
-  closeButton: '✕'
+  closeButton: '✕',
+  filterButton: '⚙'
 };
 
 // Cache for settings to avoid repeated Firestore reads

@@ -11,6 +11,7 @@ import MenuForm from './components/MenuForm';
 import Login from './components/Login';
 import Register from './components/Register';
 import PasswordChangeModal from './components/PasswordChangeModal';
+import FilterPage from './components/FilterPage';
 import { 
   loginUser, 
   logoutUser, 
@@ -50,6 +51,14 @@ function matchesCategoryFilter(recipe, categoryFilter) {
   return recipe.speisekategorie === categoryFilter;
 }
 
+// Helper function to check if a recipe matches the draft filter
+function matchesDraftFilter(recipe, showDrafts) {
+  if (showDrafts === 'all') return true;
+  if (showDrafts === 'yes') return recipe.isPrivate === true;
+  if (showDrafts === 'no') return !recipe.isPrivate;
+  return true;
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -71,6 +80,10 @@ function App() {
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
+  const [recipeFilters, setRecipeFilters] = useState({
+    showDrafts: 'all'
+  });
 
   // Set up Firebase auth state observer
   useEffect(() => {
@@ -421,6 +434,19 @@ function App() {
     setSearchTerm(term);
   };
 
+  const handleOpenFilterPage = () => {
+    setIsFilterPageOpen(true);
+  };
+
+  const handleApplyFilters = (filters) => {
+    setRecipeFilters(filters);
+    setIsFilterPageOpen(false);
+  };
+
+  const handleCancelFilterPage = () => {
+    setIsFilterPageOpen(false);
+  };
+
   // Show loading state while checking auth
   if (authLoading) {
     return (
@@ -516,7 +542,13 @@ function App() {
         )
       ) : (
         // Recipe views
-        isFormOpen ? (
+        isFilterPageOpen ? (
+          <FilterPage
+            currentFilters={recipeFilters}
+            onApply={handleApplyFilters}
+            onCancel={handleCancelFilterPage}
+          />
+        ) : isFormOpen ? (
           <RecipeForm
             recipe={editingRecipe}
             onSave={handleSaveRecipe}
@@ -528,13 +560,17 @@ function App() {
           />
         ) : (
           <RecipeList
-            recipes={recipes.filter(recipe => matchesCategoryFilter(recipe, categoryFilter))}
+            recipes={recipes.filter(recipe => 
+              matchesCategoryFilter(recipe, categoryFilter) && 
+              matchesDraftFilter(recipe, recipeFilters.showDrafts)
+            )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
             categoryFilter={categoryFilter}
             onCategoryFilterChange={handleCategoryFilterChange}
             currentUser={currentUser}
             searchTerm={searchTerm}
+            onOpenFilterPage={handleOpenFilterPage}
           />
         )
       )}
