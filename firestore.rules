@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Helper function to check if user is the author of the document
+    function isAuthor(authorId) {
+      return isAuthenticated() && request.auth.uid == authorId;
+    }
+    
+    // Recipes collection rules
+    match /recipes/{recipeId} {
+      // Anyone authenticated can read public recipes
+      // Only admins and authors can read private (draft) recipes
+      allow read: if isAuthenticated() && 
+                     (!resource.data.isPrivate || 
+                      isAdmin() || 
+                      isAuthor(resource.data.authorId));
+      
+      // Authenticated users can create recipes
+      allow create: if isAuthenticated();
+      
+      // Only authors and admins can update recipes
+      allow update: if isAuthenticated() && 
+                       (isAuthor(resource.data.authorId) || isAdmin());
+      
+      // Only authors and admins can delete recipes
+      allow delete: if isAuthenticated() && 
+                       (isAuthor(resource.data.authorId) || isAdmin());
+    }
+    
+    // Menus collection rules
+    match /menus/{menuId} {
+      // Anyone authenticated can read public menus
+      // Only authors and admins can read private menus
+      allow read: if isAuthenticated() && 
+                     (!resource.data.isPrivate || 
+                      isAuthor(resource.data.authorId) ||
+                      isAdmin());
+      
+      // Authenticated users can create menus
+      allow create: if isAuthenticated();
+      
+      // Only authors and admins can update menus
+      allow update: if isAuthenticated() && 
+                       (isAuthor(resource.data.authorId) || isAdmin());
+      
+      // Only authors and admins can delete menus
+      allow delete: if isAuthenticated() && 
+                       (isAuthor(resource.data.authorId) || isAdmin());
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read their own profile and admins can read all profiles
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == userId || isAdmin());
+      
+      // Users can update their own profile
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Only admins can create or delete users
+      allow create, delete: if isAdmin();
+    }
+    
+    // User favorites subcollection
+    match /users/{userId}/favorites/{favoriteId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // User menu favorites subcollection
+    match /users/{userId}/menuFavorites/{favoriteId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Settings collection (app-wide settings)
+    match /settings/{document=**} {
+      // Anyone can read settings
+      allow read: if isAuthenticated();
+      
+      // Only admins can write settings
+      allow write: if isAdmin();
+    }
+    
+    // Custom lists collection
+    match /customLists/{document=**} {
+      // Anyone can read custom lists
+      allow read: if isAuthenticated();
+      
+      // Only admins can write custom lists
+      allow write: if isAdmin();
+    }
+  }
+}
