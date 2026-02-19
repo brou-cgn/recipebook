@@ -542,7 +542,13 @@ function App() {
         )
       ) : (
         // Recipe views
-        isFormOpen ? (
+        isFilterPageOpen ? (
+          <FilterPage
+            currentFilters={recipeFilters}
+            onApply={handleApplyFilters}
+            onCancel={handleCancelFilterPage}
+          />
+        ) : isFormOpen ? (
           <RecipeForm
             recipe={editingRecipe}
             onSave={handleSaveRecipe}
@@ -567,13 +573,7 @@ function App() {
             onOpenFilterPage={handleOpenFilterPage}
           />
         )
-      ) : currentView === 'recipes' && isFilterPageOpen ? (
-        <FilterPage
-          currentFilters={recipeFilters}
-          onApply={handleApplyFilters}
-          onCancel={handleCancelFilterPage}
-        />
-      ) : null}
+      )}
       {requiresPasswordChange && currentUser && (
         <PasswordChangeModal 
           user={currentUser}

@@ -13,6 +13,9 @@ jest.mock('../utils/userManagement', () => ({
 jest.mock('../utils/customLists', () => ({
   getCustomLists: () => Promise.resolve({
     mealCategories: ['Appetizer', 'Main Course', 'Dessert']
+  }),
+  getButtonIcons: () => Promise.resolve({
+    filterButton: '⚙'
   })
 }));
 
