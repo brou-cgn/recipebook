@@ -46,7 +46,8 @@ function Settings({ onBack, currentUser }) {
     importRecipe: '📥',
     scanImage: '📷',
     webImport: '🌐',
-    closeButton: '✕'
+    closeButton: '✕',
+    filterButton: '⚙'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -784,6 +785,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.closeButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.closeButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="filterButtonIcon">Filter-Button (Rezeptübersicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.filterButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="filterButtonIcon"
+                          value={buttonIcons.filterButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, filterButton: e.target.value })}
+                          placeholder="z.B. ⚙"
+                          maxLength={10}
+                        />
+                        <label htmlFor="filterButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'filterButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="filterButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('filterButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'filterButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('filterButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, filterButton: DEFAULT_BUTTON_ICONS.filterButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.filterButton) ? (
+                        <img src={buttonIcons.filterButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.filterButton}</span>
                       )}
                     </div>
                   </div>

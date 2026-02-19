@@ -3,13 +3,16 @@ import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getCustomLists } from '../utils/customLists';
+import { getCustomLists, getButtonIcons } from '../utils/customLists';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
+  const [buttonIcons, setButtonIcons] = useState({
+    filterButton: '⚙'
+  });
   
   // Load all users once on mount
   useEffect(() => {
@@ -33,6 +36,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       }
     };
     loadCustomLists();
+  }, []);
+
+  // Load button icons on mount
+  useEffect(() => {
+    const loadButtonIcons = async () => {
+      try {
+        const icons = await getButtonIcons();
+        setButtonIcons(icons);
+      } catch (error) {
+        console.error('Error loading button icons:', error);
+        // Keep default values if loading fails
+      }
+    };
+    loadButtonIcons();
   }, []);
 
   // Load favorite IDs when user changes or recipes change
@@ -128,6 +145,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             >
               ★ Favoriten
             </button>
+            {onOpenFilterPage && (
+              <button 
+                className="filter-button"
+                onClick={onOpenFilterPage}
+                title="Weitere Filter"
+              >
+                {buttonIcons.filterButton}
+              </button>
+            )}
           </div>
           {userCanEdit && (
             <button className="add-button" onClick={onAddRecipe}>
