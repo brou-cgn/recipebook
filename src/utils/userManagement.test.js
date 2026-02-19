@@ -17,6 +17,8 @@ import {
   canDeleteRecipe,
   canDirectlyEditRecipe,
   canCreateNewVersion,
+  canEditMenu,
+  canDeleteMenu,
   canCommentOnRecipes,
   canReadRecipes,
   hasPermission,
@@ -1176,6 +1178,69 @@ describe('User Management Utilities', () => {
 
       test('should return false if user is null', () => {
         expect(canCreateNewVersion(null)).toBe(false);
+      });
+    });
+  });
+
+  describe('Menu-specific permissions', () => {
+    const adminUser = { id: 'admin-1', role: ROLES.ADMIN };
+    const editUser = { id: 'user-1', role: ROLES.EDIT };
+    const otherUser = { id: 'user-2', role: ROLES.EDIT };
+    const readUser = { id: 'user-3', role: ROLES.READ };
+    const menuByEditUser = { id: 'menu-1', name: 'Test Menu', authorId: 'user-1' };
+    const menuByOtherUser = { id: 'menu-2', name: 'Other Menu', authorId: 'other-user' };
+
+    describe('canEditMenu', () => {
+      test('should allow admin to edit any menu', () => {
+        expect(canEditMenu(adminUser, menuByEditUser)).toBe(true);
+        expect(canEditMenu(adminUser, menuByOtherUser)).toBe(true);
+      });
+
+      test('should allow author to edit their own menu', () => {
+        expect(canEditMenu(editUser, menuByEditUser)).toBe(true);
+      });
+
+      test('should not allow user to edit another user\'s menu', () => {
+        expect(canEditMenu(otherUser, menuByEditUser)).toBe(false);
+        expect(canEditMenu(editUser, menuByOtherUser)).toBe(false);
+      });
+
+      test('should not allow read-only users to edit any menu', () => {
+        expect(canEditMenu(readUser, menuByEditUser)).toBe(false);
+        expect(canEditMenu(readUser, menuByOtherUser)).toBe(false);
+      });
+
+      test('should return false if user or menu is null', () => {
+        expect(canEditMenu(null, menuByEditUser)).toBe(false);
+        expect(canEditMenu(editUser, null)).toBe(false);
+        expect(canEditMenu(null, null)).toBe(false);
+      });
+    });
+
+    describe('canDeleteMenu', () => {
+      test('should allow admin to delete any menu', () => {
+        expect(canDeleteMenu(adminUser, menuByEditUser)).toBe(true);
+        expect(canDeleteMenu(adminUser, menuByOtherUser)).toBe(true);
+      });
+
+      test('should allow author to delete their own menu', () => {
+        expect(canDeleteMenu(editUser, menuByEditUser)).toBe(true);
+      });
+
+      test('should not allow user to delete another user\'s menu', () => {
+        expect(canDeleteMenu(otherUser, menuByEditUser)).toBe(false);
+        expect(canDeleteMenu(editUser, menuByOtherUser)).toBe(false);
+      });
+
+      test('should not allow read-only users to delete any menu', () => {
+        expect(canDeleteMenu(readUser, menuByEditUser)).toBe(false);
+        expect(canDeleteMenu(readUser, menuByOtherUser)).toBe(false);
+      });
+
+      test('should return false if user or menu is null', () => {
+        expect(canDeleteMenu(null, menuByEditUser)).toBe(false);
+        expect(canDeleteMenu(editUser, null)).toBe(false);
+        expect(canDeleteMenu(null, null)).toBe(false);
       });
     });
   });

@@ -19,7 +19,9 @@ import {
   registerUser,
   loginAsGuest,
   getUsers,
-  onAuthStateChange
+  onAuthStateChange,
+  canEditMenu,
+  canDeleteMenu
 } from './utils/userManagement';
 import { 
   toggleFavorite,
@@ -354,6 +356,10 @@ function App() {
   };
 
   const handleEditMenu = (menu) => {
+    if (!canEditMenu(currentUser, menu)) {
+      alert('Sie haben keine Berechtigung, dieses Menü zu bearbeiten.');
+      return;
+    }
     setEditingMenu(menu);
     setIsMenuFormOpen(true);
     setSelectedMenu(null);
@@ -381,6 +387,12 @@ function App() {
 
   const handleDeleteMenu = async (menuId) => {
     if (!currentUser) return;
+
+    const menu = menus.find(m => m.id === menuId);
+    if (!canDeleteMenu(currentUser, menu)) {
+      alert('Sie haben keine Berechtigung, dieses Menü zu löschen.');
+      return;
+    }
 
     try {
       await deleteMenuFromFirestore(menuId);

@@ -3,6 +3,7 @@ import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { groupRecipesBySections } from '../utils/menuSections';
+import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 
 function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers }) {
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
@@ -107,12 +108,16 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
           >
             {isFavorite ? '★' : '☆'}
           </button>
-          <button className="edit-button" onClick={() => onEdit(menu)}>
-            Bearbeiten
-          </button>
-          <button className="delete-button" onClick={handleDelete}>
-            Löschen
-          </button>
+          {canEditMenu(currentUser, menu) && (
+            <button className="edit-button" onClick={() => onEdit(menu)}>
+              Bearbeiten
+            </button>
+          )}
+          {canDeleteMenu(currentUser, menu) && (
+            <button className="delete-button" onClick={handleDelete}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
 

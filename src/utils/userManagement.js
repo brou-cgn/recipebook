@@ -591,6 +591,38 @@ export const canCreateNewVersion = (user) => {
 };
 
 /**
+ * Check if user can edit a specific menu
+ * Only admins and the original author can edit a menu.
+ * @param {Object} user - User object
+ * @param {Object} menu - Menu object with authorId field
+ * @returns {boolean}
+ */
+export const canEditMenu = (user, menu) => {
+  if (!user || !menu) return false;
+  // Admins can edit any menu
+  if (user.role === ROLES.ADMIN) return true;
+  // Original author can edit their own menu
+  if (menu.authorId === user.id) return true;
+  return false;
+};
+
+/**
+ * Check if user can delete a specific menu
+ * Only admins and the original author can delete a menu.
+ * @param {Object} user - User object
+ * @param {Object} menu - Menu object with authorId field
+ * @returns {boolean}
+ */
+export const canDeleteMenu = (user, menu) => {
+  if (!user || !menu) return false;
+  // Admins can delete any menu
+  if (user.role === ROLES.ADMIN) return true;
+  // Original author can delete their own menu
+  if (menu.authorId === user.id) return true;
+  return false;
+};
+
+/**
  * Get display name for a role
  * @param {string} role - Role constant
  * @returns {string}
