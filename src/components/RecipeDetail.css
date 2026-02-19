@@ -496,7 +496,7 @@
 }
 
 .difficulty-stars .star {
-  font-size: 2rem;
+  font-size: 1.25rem;
   color: #DF7A00;
   transition: all 0.2s ease;
   user-select: none;
@@ -735,7 +735,7 @@
   }
 
   .difficulty-stars .star {
-    font-size: 2rem;
+    font-size: 1.25rem;
   }
 
   /* Remove hover effects on mobile/touch for difficulty stars */

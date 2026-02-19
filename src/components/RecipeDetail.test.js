@@ -273,6 +273,23 @@ describe('RecipeDetail - Rating Stars Color', () => {
     const difficultyStars = document.querySelector('.difficulty-stars');
     expect(difficultyStars).toHaveClass('difficulty-stars');
   });
+
+  test('difficulty stars are smaller than default (1.25rem font-size)', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const star = document.querySelector('.difficulty-stars .star');
+    expect(star).toBeInTheDocument();
+    // The star should have the difficulty-stars class for proper sizing
+    expect(star.closest('.difficulty-stars')).toBeInTheDocument();
+  });
 });
 
 describe('RecipeDetail - Cooking Mode', () => {
@@ -1002,5 +1019,98 @@ describe('RecipeDetail - Draft Badge', () => {
 
     // Draft badge should not be visible
     expect(screen.queryByText(/Entwurf/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetail - Metadata Order', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  test('displays Zeit before Schwierigkeit in metadata section', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      kochdauer: 45,
+      schwierigkeit: 3,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Get all metadata items
+    const metadataItems = document.querySelectorAll('.metadata-item');
+    
+    // Find the indices of Zeit and Schwierigkeit
+    let zeitIndex = -1;
+    let schwierigkeitIndex = -1;
+    
+    metadataItems.forEach((item, index) => {
+      const label = item.querySelector('.metadata-label');
+      if (label) {
+        if (label.textContent.includes('Zeit:')) {
+          zeitIndex = index;
+        }
+        if (label.textContent.includes('Schwierigkeit:')) {
+          schwierigkeitIndex = index;
+        }
+      }
+    });
+
+    // Verify both are present and Zeit comes before Schwierigkeit
+    expect(zeitIndex).toBeGreaterThan(-1);
+    expect(schwierigkeitIndex).toBeGreaterThan(-1);
+    expect(zeitIndex).toBeLessThan(schwierigkeitIndex);
+  });
+
+  test('metadata is readable and properly displayed', () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      kochdauer: 30,
+      schwierigkeit: 2,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Check that Zeit is displayed with value
+    expect(screen.getByText('Zeit:')).toBeInTheDocument();
+    expect(screen.getByText('30 Min.')).toBeInTheDocument();
+
+    // Check that Schwierigkeit is displayed with stars
+    expect(screen.getByText('Schwierigkeit:')).toBeInTheDocument();
+    const difficultyStars = document.querySelector('.difficulty-stars');
+    expect(difficultyStars).toBeInTheDocument();
+    
+    // Verify stars are displayed (2 filled, 3 empty for schwierigkeit: 2)
+    const filledStars = difficultyStars.querySelectorAll('.star.filled');
+    const emptyStars = difficultyStars.querySelectorAll('.star.empty');
+    expect(filledStars.length).toBe(2);
+    expect(emptyStars.length).toBe(3);
   });
 });

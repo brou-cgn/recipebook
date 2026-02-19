@@ -745,6 +745,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 </div>
               )}
               
+              {recipe.kochdauer && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Zeit:</span>
+                  <span className="metadata-value">{recipe.kochdauer} Min.</span>
+                </div>
+              )}
+              
               {recipe.schwierigkeit && (
                 <div className="metadata-item">
                   <span className="metadata-label">Schwierigkeit:</span>
@@ -758,13 +765,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       </span>
                     ))}
                   </span>
-                </div>
-              )}
-              
-              {recipe.kochdauer && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Zeit:</span>
-                  <span className="metadata-value">{recipe.kochdauer} Min.</span>
                 </div>
               )}
               
