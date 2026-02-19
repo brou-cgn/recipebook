@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import FilterPage from './FilterPage';
 
 // Mock the custom lists utility
@@ -28,6 +29,7 @@ describe('FilterPage', () => {
         currentFilters={{ showDrafts: 'all' }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
+        isAdmin={true}
       />
     );
 
@@ -40,17 +42,31 @@ describe('FilterPage', () => {
     expect(screen.getByText('Anwenden')).toBeInTheDocument();
   });
 
+  test('does not render Rezept-Status filter for non-admins', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={false}
+      />
+    );
+
+    expect(screen.queryByText('Rezept-Status')).not.toBeInTheDocument();
+  });
+
   test('initializes with current filter values', () => {
     render(
       <FilterPage
         currentFilters={{ showDrafts: 'yes' }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
+        isAdmin={true}
       />
     );
 
-    const yesRadio = screen.getByDisplayValue('yes');
-    expect(yesRadio).toBeChecked();
+    const select = screen.getByDisplayValue('Nur Entwürfe');
+    expect(select.value).toBe('yes');
   });
 
   test('allows selecting different draft filter options', () => {
@@ -59,12 +75,13 @@ describe('FilterPage', () => {
         currentFilters={{ showDrafts: 'all' }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
+        isAdmin={true}
       />
     );
 
-    const noRadio = screen.getByDisplayValue('no');
-    fireEvent.click(noRadio);
-    expect(noRadio).toBeChecked();
+    const select = screen.getByDisplayValue('Alle Rezepte');
+    fireEvent.change(select, { target: { value: 'no' } });
+    expect(select.value).toBe('no');
   });
 
   test('clears filters when "Filter löschen" is clicked', () => {
@@ -73,14 +90,15 @@ describe('FilterPage', () => {
         currentFilters={{ showDrafts: 'yes' }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
+        isAdmin={true}
       />
     );
 
     const clearButton = screen.getByText('Filter löschen');
     fireEvent.click(clearButton);
 
-    const allRadio = screen.getByDisplayValue('all');
-    expect(allRadio).toBeChecked();
+    const select = screen.getByDisplayValue('Alle Rezepte');
+    expect(select.value).toBe('all');
   });
 
   test('calls onApply with selected filters when "Anwenden" is clicked', () => {
@@ -89,12 +107,12 @@ describe('FilterPage', () => {
         currentFilters={{ showDrafts: 'all' }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
+        isAdmin={true}
       />
     );
 
-    // Select "Nur Entwürfe"
-    const yesRadio = screen.getByDisplayValue('yes');
-    fireEvent.click(yesRadio);
+    const select = screen.getByDisplayValue('Alle Rezepte');
+    fireEvent.change(select, { target: { value: 'yes' } });
 
     // Click apply button
     const applyButton = screen.getByText('Anwenden');
@@ -156,11 +174,8 @@ describe('FilterPage', () => {
       expect(screen.getByText('Hauptspeise')).toBeInTheDocument();
     });
 
-    // Click the checkbox for Hauptspeise
-    const hauptspeiseLabel = screen.getByText('Hauptspeise');
-    const checkbox = hauptspeiseLabel.previousSibling;
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
+    const select = screen.getByRole('listbox', { name: /kulinarik/i });
+    await userEvent.selectOptions(select, ['Hauptspeise']);
 
     // Apply filters
     fireEvent.click(screen.getByText('Anwenden'));
@@ -185,9 +200,9 @@ describe('FilterPage', () => {
       expect(screen.getByText('Dessert')).toBeInTheDocument();
     });
 
-    const dessertLabel = screen.getByText('Dessert');
-    const checkbox = dessertLabel.previousSibling;
-    expect(checkbox).toBeChecked();
+    const select = screen.getByRole('listbox', { name: /kulinarik/i });
+    const dessertOption = Array.from(select.options).find(o => o.value === 'Dessert');
+    expect(dessertOption.selected).toBe(true);
   });
 
   test('renders author (Autor) filter section when authors are provided', () => {
@@ -217,7 +232,7 @@ describe('FilterPage', () => {
     expect(screen.queryByText('Autor')).not.toBeInTheDocument();
   });
 
-  test('toggles author selection and includes it in applied filters', () => {
+  test('toggles author selection and includes it in applied filters', async () => {
     render(
       <FilterPage
         currentFilters={{ showDrafts: 'all' }}
@@ -227,10 +242,8 @@ describe('FilterPage', () => {
       />
     );
 
-    const annaLabel = screen.getByText('Anna Müller');
-    const checkbox = annaLabel.previousSibling;
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
+    const select = screen.getByRole('listbox', { name: /autor/i });
+    await userEvent.selectOptions(select, ['user-1']);
 
     fireEvent.click(screen.getByText('Anwenden'));
 
@@ -251,9 +264,9 @@ describe('FilterPage', () => {
       />
     );
 
-    const benLabel = screen.getByText('Ben Schmidt');
-    const checkbox = benLabel.previousSibling;
-    expect(checkbox).toBeChecked();
+    const select = screen.getByRole('listbox', { name: /autor/i });
+    const benOption = Array.from(select.options).find(o => o.value === 'user-2');
+    expect(benOption.selected).toBe(true);
   });
 
   test('clears cuisine and author selections when "Filter löschen" is clicked', async () => {
@@ -263,6 +276,7 @@ describe('FilterPage', () => {
         onApply={mockOnApply}
         onCancel={mockOnCancel}
         availableAuthors={mockAuthors}
+        isAdmin={true}
       />
     );
 
@@ -273,11 +287,13 @@ describe('FilterPage', () => {
     fireEvent.click(screen.getByText('Filter löschen'));
 
     // Draft filter reset
-    expect(screen.getByDisplayValue('all')).toBeChecked();
+    const statusSelect = screen.getByDisplayValue('Alle Rezepte');
+    expect(statusSelect.value).toBe('all');
 
-    // Author checkbox unchecked
-    const annaLabel = screen.getByText('Anna Müller');
-    expect(annaLabel.previousSibling).not.toBeChecked();
+    // Author select has no selection
+    const authorSelect = screen.getByRole('listbox', { name: /autor/i });
+    const anySelected = Array.from(authorSelect.options).some(o => o.selected);
+    expect(anySelected).toBe(false);
 
     // Apply and verify all empty
     fireEvent.click(screen.getByText('Anwenden'));

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './FilterPage.css';
 import { getCustomLists } from '../utils/customLists';
 
-function FilterPage({ currentFilters, onApply, onCancel, availableAuthors }) {
+function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdmin }) {
   const [showDrafts, setShowDrafts] = useState('all');
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
@@ -29,20 +29,14 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors }) {
     }
   }, [currentFilters]);
 
-  const handleCuisineToggle = (category) => {
-    setSelectedCuisines(prev =>
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+  const handleCuisineChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value);
+    setSelectedCuisines(selected);
   };
 
-  const handleAuthorToggle = (authorId) => {
-    setSelectedAuthors(prev =>
-      prev.includes(authorId)
-        ? prev.filter(a => a !== authorId)
-        : [...prev, authorId]
-    );
+  const handleAuthorChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value);
+    setSelectedAuthors(selected);
   };
 
   const handleClearFilters = () => {
@@ -67,75 +61,52 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors }) {
       </div>
 
       <div className="filter-page-content">
-        <div className="filter-section">
-          <h3>Rezept-Status</h3>
-          <div className="filter-options">
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="showDrafts"
-                value="all"
-                checked={showDrafts === 'all'}
-                onChange={(e) => setShowDrafts(e.target.value)}
-              />
-              <span>Alle Rezepte</span>
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="showDrafts"
-                value="yes"
-                checked={showDrafts === 'yes'}
-                onChange={(e) => setShowDrafts(e.target.value)}
-              />
-              <span>Nur Entwürfe</span>
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="showDrafts"
-                value="no"
-                checked={showDrafts === 'no'}
-                onChange={(e) => setShowDrafts(e.target.value)}
-              />
-              <span>Keine Entwürfe</span>
-            </label>
-          </div>
-        </div>
-
         {availableCategories.length > 0 && (
           <div className="filter-section">
             <h3>Kulinarik</h3>
-            <div className="filter-options">
+            <select
+              multiple
+              value={selectedCuisines}
+              onChange={handleCuisineChange}
+              className="filter-select"
+              aria-label="Kulinarik"
+            >
               {availableCategories.map(category => (
-                <label key={category} className="filter-option">
-                  <input
-                    type="checkbox"
-                    checked={selectedCuisines.includes(category)}
-                    onChange={() => handleCuisineToggle(category)}
-                  />
-                  <span>{category}</span>
-                </label>
+                <option key={category} value={category}>{category}</option>
               ))}
-            </div>
+            </select>
           </div>
         )}
 
         {availableAuthors && availableAuthors.length > 0 && (
           <div className="filter-section">
             <h3>Autor</h3>
-            <div className="filter-options">
+            <select
+              multiple
+              value={selectedAuthors}
+              onChange={handleAuthorChange}
+              className="filter-select"
+              aria-label="Autor"
+            >
               {availableAuthors.map(author => (
-                <label key={author.id} className="filter-option">
-                  <input
-                    type="checkbox"
-                    checked={selectedAuthors.includes(author.id)}
-                    onChange={() => handleAuthorToggle(author.id)}
-                  />
-                  <span>{author.name}</span>
-                </label>
+                <option key={author.id} value={author.id}>{author.name}</option>
               ))}
-            </div>
+            </select>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="filter-section">
+            <h3>Rezept-Status</h3>
+            <select
+              value={showDrafts}
+              onChange={(e) => setShowDrafts(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">Alle Rezepte</option>
+              <option value="yes">Nur Entwürfe</option>
+              <option value="no">Keine Entwürfe</option>
+            </select>
           </div>
         )}
       </div>

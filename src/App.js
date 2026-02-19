@@ -581,6 +581,7 @@ function App() {
             onApply={handleApplyFilters}
             onCancel={handleCancelFilterPage}
             availableAuthors={allUsers.map(u => ({ id: u.id, name: `${u.vorname} ${u.nachname}` }))}
+            isAdmin={currentUser?.isAdmin || false}
           />
         ) : isFormOpen ? (
           <RecipeForm
