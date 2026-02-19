@@ -218,6 +218,7 @@ function UserManagement({ onBack, currentUser }) {
                   <th>Berechtigung</th>
                   <th>Fotoscan</th>
                   <th>Webimport</th>
+                  <th>Rezepte</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -251,6 +252,7 @@ function UserManagement({ onBack, currentUser }) {
                         {user.webimport ? '✓' : '✗'}
                       </button>
                     </td>
+                    <td>{user.recipe_count ?? 0}</td>
                     <td>
                       <div className="action-buttons">
                         <button 

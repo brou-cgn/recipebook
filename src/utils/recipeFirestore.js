@@ -13,7 +13,8 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 import { deleteRecipeImage } from './storageUtils';
@@ -98,7 +99,12 @@ export const addRecipe = async (recipe, authorId) => {
     const cleanedData = removeUndefinedFields(recipeData);
     
     const docRef = await addDoc(collection(db, 'recipes'), cleanedData);
-    
+
+    // Increment recipe_count for the author
+    if (authorId) {
+      await updateDoc(doc(db, 'users', authorId), { recipe_count: increment(1) });
+    }
+
     return {
       id: docRef.id,
       ...cleanedData
@@ -151,12 +157,56 @@ export const deleteRecipe = async (recipeId) => {
       if (recipeData.image) {
         await deleteRecipeImage(recipeData.image);
       }
+
+      // Decrement recipe_count for the author
+      if (recipeData.authorId) {
+        await updateDoc(doc(db, 'users', recipeData.authorId), { recipe_count: increment(-1) });
+      }
     }
     
     // Delete the recipe document
     await deleteDoc(recipeRef);
   } catch (error) {
     console.error('Error deleting recipe:', error);
+    throw error;
+  }
+};
+
+/**
+ * Initialize recipe_count field for all users based on existing recipes.
+ * Counts recipes per authorId and sets the recipe_count field on each user document.
+ * Safe to run multiple times as it sets (not increments) the count.
+ * @returns {Promise<void>}
+ */
+export const initializeRecipeCounts = async () => {
+  try {
+    // Fetch all recipes
+    const recipesRef = collection(db, 'recipes');
+    const recipesSnap = await getDocs(recipesRef);
+
+    // Count recipes per author
+    const countsByAuthor = {};
+    recipesSnap.forEach((recipeDoc) => {
+      const { authorId } = recipeDoc.data();
+      if (authorId) {
+        countsByAuthor[authorId] = (countsByAuthor[authorId] || 0) + 1;
+      }
+    });
+
+    // Fetch all users
+    const usersRef = collection(db, 'users');
+    const usersSnap = await getDocs(usersRef);
+
+    // Update recipe_count for each user
+    const updates = [];
+    usersSnap.forEach((userDoc) => {
+      const count = countsByAuthor[userDoc.id] || 0;
+      updates.push(updateDoc(doc(db, 'users', userDoc.id), { recipe_count: count }));
+    });
+
+    await Promise.all(updates);
+  } catch (error) {
+    console.error('Error initializing recipe counts:', error);
     throw error;
   }
 };
