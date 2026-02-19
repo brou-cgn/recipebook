@@ -196,6 +196,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
   // Private checkbox state - only visible to admins
   const [isPrivate, setIsPrivate] = useState(false);
+  // Created at date - editable field
+  const [createdAt, setCreatedAt] = useState('');
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
@@ -256,6 +258,28 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setSteps(recipe.steps?.length > 0 ? normalizeSteps(recipe.steps) : [{ type: 'step', text: '' }]);
       setIsPrivate(recipe.isPrivate || false);
       
+      // Set createdAt - convert to YYYY-MM-DD format for date input
+      if (isCreatingVersion) {
+        // Creating a version - use current date
+        setCreatedAt(new Date().toISOString().split('T')[0]);
+      } else if (recipe.createdAt) {
+        // Editing existing recipe - convert createdAt to date string
+        let date;
+        if (recipe.createdAt?.toDate) {
+          date = recipe.createdAt.toDate();
+        } else if (typeof recipe.createdAt === 'string') {
+          date = new Date(recipe.createdAt);
+        } else if (recipe.createdAt instanceof Date) {
+          date = recipe.createdAt;
+        } else {
+          date = new Date();
+        }
+        setCreatedAt(date.toISOString().split('T')[0]);
+      } else {
+        // No createdAt - use current date
+        setCreatedAt(new Date().toISOString().split('T')[0]);
+      }
+      
       // If creating a version, set current user as author and track parent
       if (isCreatingVersion) {
         setAuthorId(currentUser?.id || '');
@@ -265,10 +289,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         setParentRecipeId(recipe.parentRecipeId || '');
       }
     } else {
-      // New recipe - set current user as author
+      // New recipe - set current user as author and current date
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
       setIsPrivate(false);
+      setCreatedAt(new Date().toISOString().split('T')[0]);
     }
   }, [recipe, currentUser, isCreatingVersion]);
 
@@ -540,7 +565,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       authorId: authorId,
       parentRecipeId: parentRecipeId || null,
       isPrivate: isPrivate,
-      createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
+      createdAt: createdAt ? new Date(createdAt).toISOString() : new Date().toISOString(),
       versionCreatedFrom: isCreatingVersion ? recipe?.title : null
     };
 
@@ -812,6 +837,16 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
             />
           )}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="createdAt">Erstellt am</label>
+          <input
+            type="date"
+            id="createdAt"
+            value={createdAt}
+            onChange={(e) => setCreatedAt(e.target.value)}
+          />
         </div>
 
         <div className="form-row">

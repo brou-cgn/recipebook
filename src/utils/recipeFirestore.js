@@ -90,7 +90,8 @@ export const addRecipe = async (recipe, authorId) => {
     const recipeData = {
       ...recipe,
       authorId,
-      createdAt: serverTimestamp(),
+      // Use recipe.createdAt if provided (user-edited), otherwise use server timestamp
+      createdAt: recipe.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     

@@ -340,6 +340,167 @@ describe('RecipeForm - Author Field', () => {
   });
 });
 
+describe('RecipeForm - CreatedAt Field', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows createdAt field with current date for new recipe', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Check that createdAt field exists
+    const createdAtField = screen.getByLabelText('Erstellt am');
+    expect(createdAtField).toBeInTheDocument();
+    expect(createdAtField.type).toBe('date');
+    
+    // Should have today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    expect(createdAtField.value).toBe(today);
+  });
+
+  test('loads existing createdAt date when editing recipe', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      createdAt: '2024-01-15T10:30:00.000Z',
+      portionen: 4,
+      kulinarik: ['Italian'],
+      speisekategorie: ['Main Course'],
+      ingredients: ['Pasta'],
+      steps: ['Cook pasta'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Check that createdAt field shows the existing date
+    const createdAtField = screen.getByLabelText('Erstellt am');
+    expect(createdAtField.value).toBe('2024-01-15');
+  });
+
+  test('allows user to edit createdAt date', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    // Change createdAt date
+    const createdAtField = screen.getByLabelText('Erstellt am');
+    fireEvent.change(createdAtField, { target: { value: '2023-12-25' } });
+
+    // Submit form
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    // Check that onSave was called with the edited createdAt
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Test Recipe',
+        createdAt: '2023-12-25T00:00:00.000Z',
+      })
+    );
+  });
+
+  test('preserves edited createdAt when updating existing recipe', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      createdAt: '2024-01-15T10:30:00.000Z',
+      portionen: 4,
+      kulinarik: ['Italian'],
+      speisekategorie: ['Main Course'],
+      ingredients: ['Pasta'],
+      steps: ['Cook pasta'],
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Change createdAt date
+    const createdAtField = screen.getByLabelText('Erstellt am');
+    fireEvent.change(createdAtField, { target: { value: '2024-02-01' } });
+
+    // Submit form
+    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+
+    // Check that onSave was called with the edited createdAt
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'recipe-1',
+        createdAt: '2024-02-01T00:00:00.000Z',
+      })
+    );
+  });
+});
+
 describe('RecipeForm - Multi-Select Fields', () => {
   const mockOnSave = jest.fn();
   const mockOnCancel = jest.fn();
