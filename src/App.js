@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
@@ -32,7 +32,8 @@ import {
   addRecipe as addRecipeToFirestore,
   updateRecipe as updateRecipeInFirestore,
   deleteRecipe as deleteRecipeFromFirestore,
-  seedSampleRecipes
+  seedSampleRecipes,
+  initializeRecipeCounts
 } from './utils/recipeFirestore';
 import {
   subscribeToMenus,
@@ -102,6 +103,7 @@ function App() {
     selectedCuisines: [],
     selectedAuthors: []
   });
+  const recipeCountsInitialized = useRef(false);
 
   // Set up Firebase auth state observer
   useEffect(() => {
@@ -163,6 +165,17 @@ function App() {
       migrateGlobalFavorites(currentUser.id, recipes);
     }
   }, [currentUser, recipesLoaded, recipes]);
+
+  // Initialize recipe counts for all users once after recipes are loaded
+  useEffect(() => {
+    if (currentUser && recipesLoaded && !recipeCountsInitialized.current) {
+      recipeCountsInitialized.current = true;
+      initializeRecipeCounts().catch((err) => {
+        console.error('Error initializing recipe counts:', err);
+        recipeCountsInitialized.current = false;
+      });
+    }
+  }, [currentUser, recipesLoaded]);
 
   // Set up real-time listener for menus from Firestore
   useEffect(() => {
