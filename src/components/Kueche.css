@@ -15,6 +15,45 @@
   color: #1a1a1a;
 }
 
+.kueche-tile {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #402C1C;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.kueche-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.kueche-tile-content {
+  padding: 1.5rem;
+}
+
+.kueche-tile-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.kueche-tile-description {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.kueche-tile-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
 .kueche-section-title {
   margin: 2rem 0 0.5rem;
   padding-left: 1rem;
