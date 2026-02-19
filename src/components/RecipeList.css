@@ -105,6 +105,12 @@
   min-width: 50px;
 }
 
+.filter-button .button-icon-image {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 .filter-button:hover {
   background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   transform: translateY(-2px);
