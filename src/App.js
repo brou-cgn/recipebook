@@ -526,6 +526,7 @@ function App() {
             onSave={handleSaveMenu}
             onCancel={handleCancelMenuForm}
             currentUser={currentUser}
+            allUsers={allUsers}
           />
         ) : selectedMenu ? (
           <MenuDetail
@@ -537,6 +538,7 @@ function App() {
             onSelectRecipe={handleSelectRecipe}
             onToggleMenuFavorite={handleToggleMenuFavorite}
             currentUser={currentUser}
+            allUsers={allUsers}
           />
         ) : (
           <MenuList
@@ -546,6 +548,7 @@ function App() {
             onAddMenu={handleAddMenu}
             onToggleMenuFavorite={handleToggleMenuFavorite}
             currentUser={currentUser}
+            allUsers={allUsers}
           />
         )
       ) : (

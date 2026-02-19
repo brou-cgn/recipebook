@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './MenuList.css';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
 
-function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser }) {
+function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
 
@@ -21,6 +21,39 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
 
   const getRecipeCount = (menu) => {
     return menu.recipeIds?.length || 0;
+  };
+
+  const getAuthorName = (menu) => {
+    if (!menu.authorId || !allUsers || allUsers.length === 0) return null;
+    const author = allUsers.find(u => u.id === menu.authorId);
+    if (!author) return null;
+    return `${author.vorname} ${author.nachname}`;
+  };
+
+  const getMenuDate = (menu) => {
+    if (menu.menuDate) {
+      try {
+        return new Date(menu.menuDate).toLocaleDateString('de-DE');
+      } catch (e) {
+        return null;
+      }
+    }
+    if (menu.createdAt) {
+      try {
+        let date;
+        if (menu.createdAt?.toDate) {
+          date = menu.createdAt.toDate();
+        } else if (typeof menu.createdAt === 'string') {
+          date = new Date(menu.createdAt);
+        } else if (menu.createdAt instanceof Date) {
+          date = menu.createdAt;
+        }
+        return date ? date.toLocaleDateString('de-DE') : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   };
 
   // Filter menus based on privacy and favorites
@@ -87,6 +120,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   )}
                   <div className="menu-meta">
                     <span>{getRecipeCount(menu)} Rezepte</span>
+                    {getMenuDate(menu) && <span>{getMenuDate(menu)}</span>}
+                    {getAuthorName(menu) && <span>{getAuthorName(menu)}</span>}
                   </div>
                   {menu.isPrivate && (
                     <div className="menu-footer">

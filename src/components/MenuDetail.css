@@ -141,6 +141,21 @@
   line-height: 1.6;
 }
 
+.menu-author-date {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.menu-date,
+.menu-author {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .menu-stats {
   display: flex;
   gap: 2rem;

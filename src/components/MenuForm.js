@@ -8,6 +8,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [menuDate, setMenuDate] = useState('');
   const [sections, setSections] = useState([]);
   const [availableSections, setAvailableSections] = useState([]);
   const [newSectionName, setNewSectionName] = useState('');
@@ -36,6 +37,26 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       setName(menu.name || '');
       setDescription(menu.description || '');
       setIsPrivate(menu.isPrivate || false);
+      // Initialize menuDate: use existing menuDate, or fall back to createdAt, or today
+      if (menu.menuDate) {
+        setMenuDate(menu.menuDate);
+      } else if (menu.createdAt) {
+        let date;
+        if (menu.createdAt?.toDate) {
+          date = menu.createdAt.toDate();
+        } else if (typeof menu.createdAt === 'string') {
+          date = new Date(menu.createdAt);
+        } else if (menu.createdAt instanceof Date) {
+          date = menu.createdAt;
+        }
+        if (date) {
+          setMenuDate(date.toISOString().slice(0, 10));
+        } else {
+          setMenuDate(new Date().toISOString().slice(0, 10));
+        }
+      } else {
+        setMenuDate(new Date().toISOString().slice(0, 10));
+      }
       
       // Load existing sections or create a default one
       if (menu.sections && menu.sections.length > 0) {
@@ -51,6 +72,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     } else {
       // New menu - create default section
       setSections([createMenuSection('Hauptspeise', [])]);
+      setMenuDate(new Date().toISOString().slice(0, 10));
     }
   }, [menu]);
 
@@ -151,6 +173,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       name: name.trim(),
       description: description.trim(),
       isPrivate: isPrivate,
+      menuDate: menuDate,
       createdBy: menu?.createdBy || currentUser?.id,
       sections: sections,
       recipeIds: allRecipeIds // Keep for backward compatibility
@@ -223,6 +246,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Beschreiben Sie dieses Menü..."
             rows="3"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="menuDate">Datum</label>
+          <input
+            type="date"
+            id="menuDate"
+            value={menuDate}
+            onChange={(e) => setMenuDate(e.target.value)}
           />
         </div>
 

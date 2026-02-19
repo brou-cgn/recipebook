@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { groupRecipesBySections } from '../utils/menuSections';
 
-function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser }) {
+function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers }) {
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
 
@@ -25,6 +25,40 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  const authorName = useMemo(() => {
+    if (!menu.authorId || !allUsers || allUsers.length === 0) return null;
+    const author = allUsers.find(u => u.id === menu.authorId);
+    if (!author) return null;
+    return `${author.vorname} ${author.nachname}`;
+  }, [menu.authorId, allUsers]);
+
+  const formattedMenuDate = useMemo(() => {
+    if (menu.menuDate) {
+      try {
+        return new Date(menu.menuDate).toLocaleDateString('de-DE');
+      } catch (e) {
+        return null;
+      }
+    }
+    if (menu.createdAt) {
+      try {
+        let date;
+        if (menu.createdAt?.toDate) {
+          date = menu.createdAt.toDate();
+        } else if (typeof menu.createdAt === 'string') {
+          date = new Date(menu.createdAt);
+        } else if (menu.createdAt instanceof Date) {
+          date = menu.createdAt;
+        }
+        return date ? date.toLocaleDateString('de-DE') : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, [menu.menuDate, menu.createdAt]);
+
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
       onDelete(menu.id);
@@ -94,6 +128,13 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
         
         {menu.description && (
           <p className="menu-description">{menu.description}</p>
+        )}
+
+        {(formattedMenuDate || authorName) && (
+          <div className="menu-author-date">
+            {formattedMenuDate && <span className="menu-date">📅 {formattedMenuDate}</span>}
+            {authorName && <span className="menu-author">👤 {authorName}</span>}
+          </div>
         )}
 
         <div className="menu-stats">
