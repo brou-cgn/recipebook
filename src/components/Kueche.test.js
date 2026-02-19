@@ -94,10 +94,10 @@ describe('Kueche', () => {
     expect(screen.queryByText('Other Menu')).not.toBeInTheDocument();
   });
 
-  test('shows menus section heading when menus exist for current user', () => {
+  test('menus appear in the combined timeline alongside recipes', () => {
     render(
       <Kueche
-        recipes={[]}
+        recipes={mockRecipes}
         menus={mockMenus}
         onSelectRecipe={() => {}}
         onSelectMenu={() => {}}
@@ -106,10 +106,11 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.getByText('Menüs')).toBeInTheDocument();
+    expect(screen.getByText('My Recipe')).toBeInTheDocument();
+    expect(screen.getByText('My Menu')).toBeInTheDocument();
   });
 
-  test('does not show menus section when no menus match current user', () => {
+  test('does not show menus belonging to other users in the timeline', () => {
     render(
       <Kueche
         recipes={mockRecipes}
@@ -121,7 +122,8 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.queryByText('Menüs')).not.toBeInTheDocument();
+    expect(screen.queryByText('My Menu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Menu')).not.toBeInTheDocument();
   });
 
   test('calls onSelectMenu when a menu card is clicked', () => {
