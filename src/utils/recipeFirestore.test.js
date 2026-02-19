@@ -11,17 +11,23 @@ jest.mock('../firebase', () => ({
 // Mock Firestore functions
 const mockOnSnapshot = jest.fn();
 const mockGetDocs = jest.fn();
+const mockUpdateDoc = jest.fn();
+const mockAddDoc = jest.fn();
+const mockGetDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
+const mockIncrement = jest.fn((val) => ({ __increment: val }));
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   onSnapshot: (...args) => mockOnSnapshot(...args),
   getDocs: (...args) => mockGetDocs(...args),
   doc: jest.fn(),
-  addDoc: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  getDoc: jest.fn(),
-  serverTimestamp: jest.fn(() => 'mock-timestamp')
+  addDoc: (...args) => mockAddDoc(...args),
+  updateDoc: (...args) => mockUpdateDoc(...args),
+  deleteDoc: (...args) => mockDeleteDoc(...args),
+  getDoc: (...args) => mockGetDoc(...args),
+  serverTimestamp: jest.fn(() => 'mock-timestamp'),
+  increment: (...args) => mockIncrement(...args)
 }));
 
 // Mock Storage Utils
@@ -34,7 +40,10 @@ jest.mock('./firestoreUtils', () => ({
   removeUndefinedFields: jest.fn((obj) => obj)
 }));
 
-import { subscribeToRecipes, getRecipes } from './recipeFirestore';
+import { subscribeToRecipes, getRecipes, addRecipe, deleteRecipe, initializeRecipeCounts } from './recipeFirestore';
+
+// Reference to the mocked doc function (set up implementation in beforeEach)
+const { doc: mockDoc } = jest.requireMock('firebase/firestore');
 
 // Helper to create mock snapshot
 const createMockSnapshot = (recipes) => ({
@@ -216,6 +225,120 @@ describe('Recipe Firestore - Draft Recipe Filtering', () => {
       expect(recipes).toEqual([]);
       expect(consoleSpy).toHaveBeenCalledWith('Error getting recipes:', expect.any(Error));
       
+      consoleSpy.mockRestore();
+    });
+  });
+});
+
+describe('Recipe Firestore - Recipe Count', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDoc.mockImplementation((_db, ...path) => path.join('/'));
+    mockIncrement.mockImplementation((val) => ({ __increment: val }));
+    mockUpdateDoc.mockResolvedValue(undefined);
+    mockAddDoc.mockResolvedValue({ id: 'new-recipe-id' });
+    mockGetDoc.mockResolvedValue({ exists: () => false });
+    mockDeleteDoc.mockResolvedValue(undefined);
+  });
+
+  describe('addRecipe', () => {
+    it('should increment recipe_count for the author after adding a recipe', async () => {
+      await addRecipe({ title: 'Test Recipe' }, 'user1');
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        'users/user1',
+        { recipe_count: { __increment: 1 } }
+      );
+    });
+
+    it('should not update recipe_count when no authorId is provided', async () => {
+      await addRecipe({ title: 'Test Recipe' }, null);
+
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteRecipe', () => {
+    it('should decrement recipe_count for the author after deleting a recipe', async () => {
+      mockGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ title: 'Test Recipe', authorId: 'user1' })
+      });
+
+      await deleteRecipe('recipe1');
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        'users/user1',
+        { recipe_count: { __increment: -1 } }
+      );
+      expect(mockDeleteDoc).toHaveBeenCalledWith('recipes/recipe1');
+    });
+
+    it('should not update recipe_count when recipe has no authorId', async () => {
+      mockGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ title: 'Test Recipe' })
+      });
+
+      await deleteRecipe('recipe1');
+
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+      expect(mockDeleteDoc).toHaveBeenCalled();
+    });
+
+    it('should still delete recipe document when recipe does not exist', async () => {
+      mockGetDoc.mockResolvedValue({ exists: () => false });
+
+      await deleteRecipe('recipe1');
+
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+      expect(mockDeleteDoc).toHaveBeenCalledWith('recipes/recipe1');
+    });
+  });
+
+  describe('initializeRecipeCounts', () => {
+    it('should set recipe_count for each user based on existing recipes', async () => {
+      const mockRecipes = [
+        { id: 'r1', authorId: 'user1' },
+        { id: 'r2', authorId: 'user1' },
+        { id: 'r3', authorId: 'user2' }
+      ];
+      const mockUsers = [
+        { id: 'user1' },
+        { id: 'user2' },
+        { id: 'user3' }
+      ];
+
+      mockGetDocs
+        .mockResolvedValueOnce(createMockSnapshot(mockRecipes))
+        .mockResolvedValueOnce(createMockSnapshot(mockUsers));
+
+      await initializeRecipeCounts();
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith('users/user1', { recipe_count: 2 });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('users/user2', { recipe_count: 1 });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('users/user3', { recipe_count: 0 });
+    });
+
+    it('should set recipe_count to 0 for users with no recipes', async () => {
+      const mockRecipes = [];
+      const mockUsers = [{ id: 'user1' }];
+
+      mockGetDocs
+        .mockResolvedValueOnce(createMockSnapshot(mockRecipes))
+        .mockResolvedValueOnce(createMockSnapshot(mockUsers));
+
+      await initializeRecipeCounts();
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith('users/user1', { recipe_count: 0 });
+    });
+
+    it('should throw on Firestore error', async () => {
+      mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      await expect(initializeRecipeCounts()).rejects.toThrow('Firestore error');
+
       consoleSpy.mockRestore();
     });
   });
