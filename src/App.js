@@ -515,6 +515,7 @@ function App() {
           recipes={recipes}
           onSelectRecipe={handleSelectRecipe}
           allUsers={allUsers}
+          currentUser={currentUser}
         />
       ) : currentView === 'menus' ? (
         // Menu views
