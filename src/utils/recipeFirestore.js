@@ -119,9 +119,10 @@ export const addRecipe = async (recipe, authorId) => {
  * Update an existing recipe in Firestore
  * @param {string} recipeId - ID of the recipe to update
  * @param {Object} updates - Object containing fields to update
+ * @param {string} [previousAuthorId] - The author ID before the update (to detect author changes)
  * @returns {Promise<void>}
  */
-export const updateRecipe = async (recipeId, updates) => {
+export const updateRecipe = async (recipeId, updates, previousAuthorId) => {
   try {
     const recipeRef = doc(db, 'recipes', recipeId);
     const updateData = {
@@ -133,6 +134,18 @@ export const updateRecipe = async (recipeId, updates) => {
     const cleanedData = removeUndefinedFields(updateData);
     
     await updateDoc(recipeRef, cleanedData);
+
+    // Handle author change: update recipe counts if author changed
+    const newAuthorId = updates.authorId;
+    if (previousAuthorId && newAuthorId && previousAuthorId !== newAuthorId) {
+      try {
+        await updateDoc(doc(db, 'users', previousAuthorId), { recipe_count: increment(-1) });
+        await updateDoc(doc(db, 'users', newAuthorId), { recipe_count: increment(1) });
+      } catch (countError) {
+        console.error('Error updating recipe counts after author change:', countError);
+        throw countError;
+      }
+    }
   } catch (error) {
     console.error('Error updating recipe:', error);
     throw error;

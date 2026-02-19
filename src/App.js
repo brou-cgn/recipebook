@@ -225,7 +225,7 @@ function App() {
       if (editingRecipe && !isCreatingVersion) {
         // Update existing recipe (direct edit)
         const { id, ...updates } = recipe;
-        await updateRecipeInFirestore(id, updates);
+        await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
       } else {
         // Add new recipe or new version
         await addRecipeToFirestore(recipe, currentUser.id);

@@ -40,7 +40,7 @@ jest.mock('./firestoreUtils', () => ({
   removeUndefinedFields: jest.fn((obj) => obj)
 }));
 
-import { subscribeToRecipes, getRecipes, addRecipe, deleteRecipe, initializeRecipeCounts } from './recipeFirestore';
+import { subscribeToRecipes, getRecipes, addRecipe, updateRecipe, deleteRecipe, initializeRecipeCounts } from './recipeFirestore';
 
 // Reference to the mocked doc function (set up implementation in beforeEach)
 const { doc: mockDoc } = jest.requireMock('firebase/firestore');
@@ -340,6 +340,44 @@ describe('Recipe Firestore - Recipe Count', () => {
       await expect(initializeRecipeCounts()).rejects.toThrow('Firestore error');
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('updateRecipe', () => {
+    it('should update recipe counts when author changes', async () => {
+      await updateRecipe('recipe1', { title: 'Test', authorId: 'user2' }, 'user1');
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(3);
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        'users/user1',
+        { recipe_count: { __increment: -1 } }
+      );
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        'users/user2',
+        { recipe_count: { __increment: 1 } }
+      );
+    });
+
+    it('should not update recipe counts when author has not changed', async () => {
+      await updateRecipe('recipe1', { title: 'Test', authorId: 'user1' }, 'user1');
+
+      // Only the recipe document itself should be updated (no user count updates)
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockUpdateDoc).not.toHaveBeenCalledWith('users/user1', expect.anything());
+    });
+
+    it('should not update recipe counts when no previousAuthorId is provided', async () => {
+      await updateRecipe('recipe1', { title: 'Test', authorId: 'user2' });
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockUpdateDoc).not.toHaveBeenCalledWith('users/user2', expect.anything());
+    });
+
+    it('should not update recipe counts when new authorId is missing from updates', async () => {
+      await updateRecipe('recipe1', { title: 'Test' }, 'user1');
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockUpdateDoc).not.toHaveBeenCalledWith('users/user1', expect.anything());
     });
   });
 });
