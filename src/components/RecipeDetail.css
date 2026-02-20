@@ -530,7 +530,7 @@
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   margin-bottom: 1rem;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -538,7 +538,7 @@
 
 .serving-control {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   background: #f9f9f9;
   padding: 0.5rem;
