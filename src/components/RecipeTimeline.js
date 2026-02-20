@@ -184,6 +184,26 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     {dayRecipes.length}
                   </div>
                 </div>
+              ) : hasMultiple ? (
+                // Expanded stack with gutter for collapse-by-click-beside
+                <div className="timeline-cards-row">
+                  <div className="timeline-cards">
+                    {dayRecipes.map((recipe) => renderCard(recipe))}
+                  </div>
+                  <div
+                    className="timeline-gutter"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Stapel einklappen"
+                    onClick={() => toggleExpand(dateKey)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleExpand(dateKey);
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 // Individual cards (single recipe or expanded stack)
                 <>
@@ -192,6 +212,8 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     <div className="timeline-gutter" onClick={() => toggleExpand(dateKey)} />
                   )}
                 </>
+                // Single recipe
+                dayRecipes.map((recipe) => renderCard(recipe))
               )}
             </div>
           </div>

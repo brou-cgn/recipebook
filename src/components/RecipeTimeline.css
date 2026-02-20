@@ -51,13 +51,36 @@
   overflow: hidden;
 }
 
-.timeline-item.expanded,
-.timeline-item.expanded .timeline-content {
-  cursor: pointer;
+.timeline-item.expanded {
+  /* expanded state indicator */
 }
 
 .timeline-content {
   position: relative;
+}
+
+.timeline-cards-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.timeline-cards {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.timeline-gutter {
+  flex: 0 0 32px;
+  min-width: 24px;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+@media (max-width: 768px) {
+  .timeline-gutter {
+    flex: 0 0 16px;
+    min-width: 12px;
+  }
 }
 
 .timeline-date {

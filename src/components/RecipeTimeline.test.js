@@ -481,6 +481,7 @@ describe('RecipeTimeline', () => {
     expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
 
     // Click on the gutter to collapse
+    // Click the gutter to collapse
     fireEvent.click(document.querySelector('.timeline-gutter'));
     expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
   });
@@ -532,7 +533,7 @@ describe('RecipeTimeline', () => {
     expect(document.querySelector('.timeline-item')).toHaveClass('expanded');
   });
 
-  test('does not collapse non-expanded stack when clicking timeline-item background', () => {
+  test('does not collapse non-expanded stack when clicking timeline-gutter (gutter not present)', () => {
     const sameDay = new Date('2024-03-05');
     const recipesOnSameDay = [
       { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
@@ -547,15 +548,9 @@ describe('RecipeTimeline', () => {
       />
     );
 
-    // Stack is not expanded initially
+    // Stack is not expanded initially - no gutter present
     expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
-
-    // Click on timeline-item background (not expanded, should do nothing)
-    const timelineItem = document.querySelector('.timeline-item');
-    fireEvent.click(timelineItem, { target: timelineItem });
-
-    // Stack should remain collapsed (visible)
-    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+    expect(document.querySelector('.timeline-gutter')).not.toBeInTheDocument();
   });
 
   test('stack toggle shows "X Menüs" label when itemType is menu', () => {
