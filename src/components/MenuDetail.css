@@ -320,11 +320,17 @@
   .action-buttons {
     flex: 1;
     width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .favorite-button {
+    flex-shrink: 0;
   }
 
   .edit-button,
   .delete-button {
     flex: 1;
+    min-width: 0;
   }
 
   .menu-detail-content {
