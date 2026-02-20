@@ -260,7 +260,7 @@
   border-radius: 25px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  animation: slideIn 0.3s ease-out;
+  animation: slideIn 0.3s ease-out forwards;
   border: 2px solid #ddd;
 }
 
@@ -278,7 +278,7 @@
 .search-input {
   border: none;
   padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
+  font-size: 1rem;
   outline: none;
   width: 250px;
   background: transparent;
@@ -475,6 +475,28 @@
 
   .search-input {
     width: 200px;
+    font-size: 1rem;
+  }
+
+  .search-input-container {
+    position: fixed;
+    top: 0.5rem;
+    right: 0.5rem;
+    left: auto;
+    transform: none;
+    animation: slideInMobile 0.2s ease-out forwards;
+    z-index: 200;
+  }
+
+  @keyframes slideInMobile {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
@@ -514,6 +536,6 @@
   .search-input {
     width: 180px;
     padding: 0.6rem 1rem;
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
 }
