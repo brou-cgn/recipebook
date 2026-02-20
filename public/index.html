@@ -41,6 +41,25 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>DishBook - Unsere Besten</title>
+    <script>
+      // iOS Safari: Reset zoom after orientation change (Landscape → Portrait)
+      // Safari retains the zoom level after auto-zooming on input focus. Temporarily
+      // setting maximum-scale=1.0 on the viewport forces Safari to reset the zoom.
+      window.addEventListener('orientationchange', function() {
+        // Wait for the orientation animation to complete before adjusting the viewport
+        var ORIENTATION_CHANGE_DELAY = 400;
+        // Brief window during which maximum-scale=1.0 is applied to trigger zoom reset
+        var ZOOM_RESET_DELAY = 300;
+        setTimeout(function() {
+          var meta = document.querySelector('meta[name="viewport"]');
+          if (meta) {
+            var prev = meta.content;
+            meta.content = prev + ', maximum-scale=1.0';
+            setTimeout(function() { meta.content = prev; }, ZOOM_RESET_DELAY);
+          }
+        }, ORIENTATION_CHANGE_DELAY);
+      });
+    </script>
   </head>
   <body>
     <noscript>Du musst JavaScript aktivieren, um diese App zu verwenden.</noscript>

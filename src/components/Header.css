@@ -278,6 +278,7 @@
 .search-input {
   border: none;
   padding: 0.75rem 1.25rem;
+  font-size: 16px;
   font-size: 1rem;
   outline: none;
   width: 250px;
@@ -536,6 +537,7 @@
   .search-input {
     width: 180px;
     padding: 0.6rem 1rem;
+    font-size: 16px;
     font-size: 1rem;
   }
 }
