@@ -243,9 +243,10 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.getByText('Meine Küche')).toBeInTheDocument();
-    expect(screen.getByText('1 Rezept')).toBeInTheDocument();
-    expect(screen.getByText('1 Menü')).toBeInTheDocument();
+    expect(screen.getByText('Mein Kochbuch')).toBeInTheDocument();
+    expect(screen.getAllByText('1')).toHaveLength(2);
+    expect(screen.getByText('Rezept')).toBeInTheDocument();
+    expect(screen.getByText('Menü')).toBeInTheDocument();
   });
 
   test('info tile shows plural forms for multiple recipes and menus', () => {
@@ -260,8 +261,9 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.getByText('2 Rezepte')).toBeInTheDocument();
-    expect(screen.getByText('2 Menüs')).toBeInTheDocument();
+    expect(screen.getAllByText('2')).toHaveLength(2);
+    expect(screen.getByText('Rezepte')).toBeInTheDocument();
+    expect(screen.getByText('Menüs')).toBeInTheDocument();
   });
 
   test('timeline is hidden by default and shown after clicking the tile', () => {

@@ -19,7 +19,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #402C1C;
+  border-left: 4px solid #DF7A00;
   margin-bottom: 1.5rem;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -36,8 +36,8 @@
 
 .kueche-tile-content h3 {
   margin: 0 0 0.5rem 0;
-  color: #333;
-  font-size: 1.25rem;
+  color: #DF7A00;
+  font-size: 1.00rem;
 }
 
 .kueche-tile-description {
@@ -50,8 +50,9 @@
 .kueche-tile-meta {
   display: flex;
   gap: 1rem;
-  font-size: 0.9rem;
-  color: #666;
+  margin-top: 36px;
+  font-size: 0.85rem;
+  color: #7B7B7B;
   font-weight: 500;
 }
 
@@ -59,6 +60,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+.kueche-tile-meta .meta-text strong {
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #000;
 }
 
 .kueche-section-title {

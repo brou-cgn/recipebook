@@ -70,14 +70,15 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
         aria-label="Toggle Meine Küche timeline"
       >
         <div className="kueche-tile-content">
-          <h3>Meine Küche</h3>
-          <p className="kueche-tile-description">Übersicht über Ihre Rezepte und Menüs</p>
+          <h3>Mein Kochbuch</h3>
           <div className="kueche-tile-meta">
             <span className="meta-text">
-              {filteredRecipes.length} {filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}
+              <strong>{filteredRecipes.length}</strong>
+              <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
             </span>
             <span className="meta-text">
-              {filteredMenus.length} {filteredMenus.length === 1 ? 'Menü' : 'Menüs'}
+              <strong>{filteredMenus.length}</strong>
+              <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
             </span>
           </div>
         </div>
