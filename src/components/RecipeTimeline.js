@@ -148,14 +148,26 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                 )}
               </div>
               {hasMultiple && !isExpanded ? (
-                // Stacked view – click anywhere on the stack to expand
-                <div
-                  className="timeline-stack"
-                  onClick={() => toggleExpand(dateKey)}
-                >
-                  {dayRecipes.length > 2 && <div className="timeline-stack-bg timeline-stack-bg-2" />}
-                  {dayRecipes.length > 1 && <div className="timeline-stack-bg timeline-stack-bg-1" />}
-                  <div className="timeline-card timeline-stack-front">
+                <div className="timeline-stack">
+                  {dayRecipes.length > 2 && (
+                    <div
+                      className="timeline-stack-bg timeline-stack-bg-2"
+                      onClick={() => toggleExpand(dateKey)}
+                    />
+                  )}
+                  {dayRecipes.length > 1 && (
+                    <div
+                      className="timeline-stack-bg timeline-stack-bg-1"
+                      onClick={() => toggleExpand(dateKey)}
+                    />
+                  )}
+                  <div
+                    className="timeline-card timeline-stack-front"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectRecipe(primaryRecipe);
+                    }}
+                  >
                     {getDisplayImage(primaryRecipe) && (
                       <div className="timeline-image">
                         <img src={getDisplayImage(primaryRecipe)} alt={primaryRecipe.title} />
@@ -168,7 +180,12 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                       )}
                     </div>
                   </div>
-                  <div className="timeline-stack-badge">{dayRecipes.length}</div>
+                  <div
+                    className="timeline-stack-badge"
+                    onClick={() => toggleExpand(dateKey)}
+                  >
+                    {dayRecipes.length}
+                  </div>
                 </div>
               ) : (
                 // Individual cards (single recipe or expanded stack)

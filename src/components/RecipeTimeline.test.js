@@ -258,6 +258,83 @@ describe('RecipeTimeline', () => {
     expect(handleSelect).toHaveBeenCalledWith(recipe2);
   });
 
+  test('calls onSelectRecipe when the front card of a stack is clicked (without expanding)', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipe1 = { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+    const recipe2 = { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] };
+    const handleSelect = jest.fn();
+
+    render(
+      <RecipeTimeline
+        recipes={[recipe1, recipe2]}
+        onSelectRecipe={handleSelect}
+        allUsers={[]}
+      />
+    );
+
+    // Stack is visible before click
+    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+
+    // Click directly on the front card
+    fireEvent.click(document.querySelector('.timeline-stack-front'));
+
+    // onSelectRecipe should have been called with the primary (first) recipe
+    expect(handleSelect).toHaveBeenCalledWith(recipe1);
+
+    // Stack should still be visible (not expanded)
+    expect(document.querySelector('.timeline-stack')).toBeInTheDocument();
+  });
+
+  test('expands the stack when the badge is clicked', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipesOnSameDay = [
+      { id: 'a', title: 'Morning Cake', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+      { id: 'b', title: 'Evening Stew', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+    ];
+
+    render(
+      <RecipeTimeline
+        recipes={recipesOnSameDay}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+      />
+    );
+
+    // Click the badge to expand
+    fireEvent.click(document.querySelector('.timeline-stack-badge'));
+
+    // Stack should be gone, individual cards visible
+    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
+    expect(screen.getByText('Morning Cake')).toBeInTheDocument();
+    expect(screen.getByText('Evening Stew')).toBeInTheDocument();
+  });
+
+  test('expands the stack when a background card is clicked', () => {
+    const sameDay = new Date('2024-03-05');
+    const recipesOnSameDay = [
+      { id: 'a', title: 'Alpha', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+      { id: 'b', title: 'Beta', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+      { id: 'c', title: 'Gamma', createdAt: { toDate: () => sameDay }, ingredients: [], steps: [] },
+    ];
+
+    render(
+      <RecipeTimeline
+        recipes={recipesOnSameDay}
+        onSelectRecipe={() => {}}
+        allUsers={[]}
+      />
+    );
+
+    // Click the first background card
+    fireEvent.click(document.querySelector('.timeline-stack-bg-1'));
+
+    // Stack should be gone, individual cards visible
+    expect(document.querySelector('.timeline-stack')).not.toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+    expect(screen.getByText('Gamma')).toBeInTheDocument();
+  });
+
   test('displays custom emoji icon in bubble marker', () => {
     render(
       <RecipeTimeline
