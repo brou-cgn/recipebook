@@ -73,8 +73,14 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
           <h3>Meine Küche</h3>
           <p className="kueche-tile-description">Übersicht über Ihre Rezepte und Menüs</p>
           <div className="kueche-tile-meta">
-            <span>{filteredRecipes.length} {filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
-            <span>{filteredMenus.length} {filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
+            <span className="meta-text">
+              <strong>{filteredRecipes.length}</strong>{' '}
+              <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
+            </span>
+            <span className="meta-text">
+              <strong>{filteredMenus.length}</strong>{' '}
+              <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
+            </span>
           </div>
         </div>
       </div>

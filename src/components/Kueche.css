@@ -55,6 +55,12 @@
   font-weight: 500;
 }
 
+.kueche-tile-meta .meta-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .kueche-section-title {
   margin: 2rem 0 0.5rem;
   padding-left: 1rem;
