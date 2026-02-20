@@ -576,6 +576,16 @@ function App() {
           currentUser={currentUser}
           allUsers={allUsers}
         />
+      ) : isMenuFormOpen ? (
+        // Menu form - shown regardless of currentView (e.g. when editing from Kueche/Timeline)
+        <MenuForm
+          menu={editingMenu}
+          recipes={recipes}
+          onSave={handleSaveMenu}
+          onCancel={handleCancelMenuForm}
+          currentUser={currentUser}
+          allUsers={allUsers}
+        />
       ) : currentView === 'kueche' ? (
         <Kueche
           recipes={recipes}
@@ -587,26 +597,15 @@ function App() {
         />
       ) : currentView === 'menus' ? (
         // Menu views
-        isMenuFormOpen ? (
-          <MenuForm
-            menu={editingMenu}
-            recipes={recipes}
-            onSave={handleSaveMenu}
-            onCancel={handleCancelMenuForm}
-            currentUser={currentUser}
-            allUsers={allUsers}
-          />
-        ) : (
-          <MenuList
-            menus={menus}
-            recipes={recipes}
-            onSelectMenu={handleSelectMenu}
-            onAddMenu={handleAddMenu}
-            onToggleMenuFavorite={handleToggleMenuFavorite}
-            currentUser={currentUser}
-            allUsers={allUsers}
-          />
-        )
+        <MenuList
+          menus={menus}
+          recipes={recipes}
+          onSelectMenu={handleSelectMenu}
+          onAddMenu={handleAddMenu}
+          onToggleMenuFavorite={handleToggleMenuFavorite}
+          currentUser={currentUser}
+          allUsers={allUsers}
+        />
       ) : (
         // Recipe views
         isFilterPageOpen ? (
