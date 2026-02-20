@@ -122,7 +122,7 @@ function getRateLimit(isAdmin, isAuthenticated) {
  * @param {string} userId - User ID (or IP for anonymous)
  * @param {boolean} isAuthenticated - Whether user is authenticated
  * @param {boolean} isAdmin - Whether user is an admin
- * @returns {Promise<boolean>} True if under limit, false if exceeded
+ * @returns {Promise<{allowed: boolean, remaining: number, limit: number}>}
  */
 async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
   const db = admin.firestore();
@@ -144,26 +144,26 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
           isAuthenticated: isAuthenticated,
           isAdmin: isAdmin,
         });
-        return true;
+        return {allowed: true, remaining: limit - 1, limit};
       }
 
       const data = doc.data();
       if (data.count >= limit) {
-        return false; // Limit exceeded
+        return {allowed: false, remaining: 0, limit};
       }
 
       // Increment counter
       transaction.update(docRef, {
         count: admin.firestore.FieldValue.increment(1),
       });
-      return true;
+      return {allowed: true, remaining: limit - data.count - 1, limit};
     });
 
     return result;
   } catch (error) {
     console.error('Rate limit check error:', error);
     // On error, allow the request (fail open)
-    return true;
+    return {allowed: true, remaining: limit, limit};
   }
 }
 
@@ -262,10 +262,13 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Gemini API error:', errorData);
-      throw new HttpsError(
-          'internal',
-          `Gemini API error: ${errorData.error?.message || response.statusText}`
-      );
+      const errorMessage = errorData.error?.message || response.statusText;
+      if (response.status === 429) {
+        throw new HttpsError('resource-exhausted', `Gemini API error: ${errorMessage}`);
+      } else if (response.status === 503 || response.status === 502) {
+        throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
+      }
+      throw new HttpsError('internal', `Gemini API error: ${errorMessage}`);
     }
 
     const data = await response.json();
@@ -330,12 +333,17 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey) {
 
     console.error('Gemini API call error:', error);
 
-    // Enhance error messages
+    // Enhance error messages based on error type
     if (error.message.includes('quota')) {
       throw new HttpsError('resource-exhausted', 'API quota exceeded. Please try again later.');
+    } else if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      throw new HttpsError('deadline-exceeded', 'Request timed out. Please try again.');
+    } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' ||
+               error.message.includes('fetch') || error.message.includes('network')) {
+      throw new HttpsError('unavailable', 'Network error. Please check your connection.');
     } else if (error.message.includes('JSON')) {
       throw new HttpsError(
-          'internal',
+          'invalid-argument',
           'Failed to parse recipe data. The image might not contain a valid recipe.'
       );
     }
@@ -380,12 +388,12 @@ exports.scanRecipeWithAI = onCall(
       console.log(`AI Scan request from user ${userId} (authenticated: ${isAuthenticated}, admin: ${isAdmin})`);
 
       // Rate limiting
-      const withinLimit = await checkRateLimit(userId, isAuthenticated, isAdmin);
-      if (!withinLimit) {
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      if (!rateLimitResult.allowed) {
         const limit = getRateLimit(isAdmin, isAuthenticated);
         throw new HttpsError(
             'resource-exhausted',
-            `Rate limit exceeded: maximum ${limit} scans per day`
+            `Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut oder nutze Standard-OCR.`
         );
       }
 
@@ -411,7 +419,11 @@ exports.scanRecipeWithAI = onCall(
       try {
         const result = await callGeminiAPI(base64Data, mimeType, language, apiKey);
         console.log(`AI Scan successful for user ${userId}`);
-        return result;
+        return {
+          ...result,
+          remainingScans: rateLimitResult.remaining,
+          dailyLimit: rateLimitResult.limit,
+        };
       } catch (error) {
         console.error(`AI Scan failed for user ${userId}:`, error);
         throw error;
@@ -486,8 +498,8 @@ exports.captureWebsiteScreenshot = onCall(
 
       // Rate limiting (only checked after Puppeteer availability)
       // This code will run once Puppeteer is installed and the error above is removed
-      const withinLimit = await checkRateLimit(userId, isAuthenticated, isAdmin);
-      if (!withinLimit) {
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      if (!rateLimitResult.allowed) {
         const limit = getRateLimit(isAdmin, isAuthenticated);
         throw new HttpsError(
             'resource-exhausted',

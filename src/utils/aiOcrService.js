@@ -15,6 +15,21 @@ import { httpsCallable } from 'firebase/functions';
  */
 
 /**
+ * Retry configuration for transient errors
+ */
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = process.env.NODE_ENV === 'test' ? [0, 0, 0] : [1000, 2000, 4000];
+const RETRYABLE_CODES = ['unavailable', 'deadline-exceeded'];
+
+/**
+ * Sleep helper for retry delays
+ * @param {number} ms - Milliseconds to wait
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Get configuration for AI OCR providers
  * Reads from environment variables dynamically
  */
@@ -134,47 +149,76 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
 
   if (onProgress) onProgress(20);
 
-  try {
-    // Call the Cloud Function
-    const scanRecipeWithAI = httpsCallable(functions, 'scanRecipeWithAI');
-    
-    if (onProgress) onProgress(30);
+  let lastError = null;
 
-    const result = await scanRecipeWithAI({
-      imageBase64: imageBase64,
-      language: lang,
-    });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Wait before retry with exponential backoff
+        await sleep(RETRY_DELAYS[attempt - 1]);
+        if (onProgress) onProgress(20 + attempt * 5);
+      }
 
-    if (onProgress) onProgress(90);
+      // Call the Cloud Function
+      const scanRecipeWithAI = httpsCallable(functions, 'scanRecipeWithAI');
 
-    const recipeData = result.data;
+      if (onProgress) onProgress(30);
 
-    if (!recipeData) {
-      throw new Error('No response from AI service');
+      const result = await scanRecipeWithAI({
+        imageBase64: imageBase64,
+        language: lang,
+      });
+
+      if (onProgress) onProgress(90);
+
+      const recipeData = result.data;
+
+      if (!recipeData) {
+        throw new Error('No response from AI service');
+      }
+
+      if (onProgress) onProgress(100);
+
+      return recipeData;
+
+    } catch (error) {
+      lastError = error;
+      console.error(`AI OCR attempt ${attempt + 1} failed:`, error);
+
+      // Only retry on transient errors
+      const errorCode = error.code;
+      if (attempt < MAX_RETRIES && RETRYABLE_CODES.includes(errorCode)) {
+        continue;
+      }
+
+      // Non-retryable error or max retries reached - translate to user-friendly message
+      break;
     }
-
-    if (onProgress) onProgress(100);
-
-    return recipeData;
-
-  } catch (error) {
-    if (onProgress) onProgress(0);
-    
-    // Enhance error messages based on Firebase error codes
-    if (error.code === 'unauthenticated') {
-      throw new Error('You must be logged in to use AI recipe scanning.');
-    } else if (error.code === 'resource-exhausted') {
-      throw new Error(error.message || 'API quota exceeded. Please try again later.');
-    } else if (error.code === 'invalid-argument') {
-      throw new Error(error.message || 'Invalid image data provided.');
-    } else if (error.code === 'failed-precondition') {
-      throw new Error('AI service not configured. Please contact administrator.');
-    } else if (error.message) {
-      throw new Error(error.message);
-    }
-    
-    throw new Error('Failed to process image with AI. Please try again.');
   }
+
+  // Handle error after all retries exhausted
+  if (onProgress) onProgress(0);
+
+  const error = lastError;
+  const errorCode = error.code;
+
+  if (errorCode === 'unauthenticated') {
+    throw new Error('Bitte melde dich an, um AI-Scan zu nutzen. You must be logged in to use AI recipe scanning.');
+  } else if (errorCode === 'resource-exhausted') {
+    throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.');
+  } else if (errorCode === 'invalid-argument') {
+    throw new Error(error.message || 'Ungültiges Bild. Bitte verwende JPEG, PNG oder WebP unter 5MB.');
+  } else if (errorCode === 'failed-precondition') {
+    throw new Error('AI-Service nicht konfiguriert. Bitte kontaktiere den Administrator.');
+  } else if (errorCode === 'unavailable') {
+    throw new Error('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+  } else if (errorCode === 'deadline-exceeded') {
+    throw new Error('Zeitüberschreitung. Bitte versuche es erneut.');
+  } else if (error.message) {
+    throw new Error(error.message);
+  }
+
+  throw new Error('KI-Bildverarbeitung fehlgeschlagen. Bitte versuche es erneut.');
 }
 
 /**

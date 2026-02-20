@@ -100,5 +100,15 @@ service cloud.firestore {
       // Only admins can write custom lists
       allow write: if isAdmin();
     }
+    
+    // AI Scan rate limiting collection (managed by Cloud Functions only)
+    match /aiScanLimits/{document=**} {
+      // Users can read their own usage records
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Only Cloud Functions (admin SDK) can write - no direct client writes
+      allow write: if false;
+    }
   }
 }

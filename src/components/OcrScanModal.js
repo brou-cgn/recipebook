@@ -21,6 +21,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [ocrMode, setOcrMode] = useState('ai'); // 'standard' or 'ai'
   const [aiResult, setAiResult] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
+  const [remainingScans, setRemainingScans] = useState(null);
+  const [aiFailed, setAiFailed] = useState(false);
+  const [lastImageForRetry, setLastImageForRetry] = useState(null);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -111,6 +114,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setScanning(true);
     setScanProgress(0);
     setError('');
+    setAiFailed(false);
 
     try {
       if (ocrMode === 'ai') {
@@ -120,6 +124,11 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
           provider: 'gemini',
           onProgress: (progress) => setScanProgress(progress)
         });
+
+        // Update remaining scans if provided by the Cloud Function
+        if (result.remainingScans !== undefined) {
+          setRemainingScans(result.remainingScans);
+        }
 
         setAiResult(result);
         setStep('ai-result');
@@ -135,6 +144,44 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
         setOcrText(result.text);
         setStep('edit');
       }
+    } catch (err) {
+      const isQuotaError = err.message && (
+        err.message.includes('Tageslimit') ||
+        err.message.includes('resource-exhausted') ||
+        err.message.includes('quota')
+      );
+      setError('OCR fehlgeschlagen: ' + err.message);
+      if (ocrMode === 'ai') {
+        setAiFailed(true);
+        setLastImageForRetry(imageToProcess);
+      }
+      if (!isQuotaError) {
+        setStep('upload');
+      }
+    } finally {
+      setScanning(false);
+      setScanProgress(0);
+    }
+  };
+
+  // Fall back to standard OCR after AI failure
+  const fallbackToStandardOcr = async () => {
+    if (!lastImageForRetry) return;
+    setOcrMode('standard');
+    setError('');
+    setAiFailed(false);
+    setScanning(true);
+    setScanProgress(0);
+    setStep('scan');
+    try {
+      const langCode = language === 'de' ? 'deu' : 'eng';
+      const result = await recognizeText(
+        lastImageForRetry,
+        langCode,
+        (progress) => setScanProgress(progress)
+      );
+      setOcrText(result.text);
+      setStep('edit');
     } catch (err) {
       setError('OCR fehlgeschlagen: ' + err.message);
       setStep('upload');
@@ -223,6 +270,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setAiResult(null);
     setOcrMode('ai');
     setValidationResult(null);
+    setAiFailed(false);
+    setLastImageForRetry(null);
   };
 
   // Handle cancel
@@ -321,6 +370,15 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                   </button>
                 </div>
               </div>
+
+              {remainingScans !== null && ocrMode === 'ai' && (
+                <div className={`scan-quota-info ${remainingScans < 5 ? 'scan-quota-warning' : ''}`}>
+                  {remainingScans < 5
+                    ? `⚠️ Noch ${remainingScans} KI-Scans heute verfügbar. Danach Standard-OCR verwenden.`
+                    : `🤖 ${remainingScans} KI-Scans heute noch verfügbar`
+                  }
+                </div>
+              )}
 
               {!cameraActive && (
                 <div className="upload-buttons">
@@ -503,6 +561,11 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
               {validationResult && validationResult.score < 50 && (
                 <button className="force-import-button" onClick={forceImport}>
                   Trotzdem übernehmen
+                </button>
+              )}
+              {aiFailed && (
+                <button className="fallback-ocr-button" onClick={fallbackToStandardOcr}>
+                  📝 Mit Standard-OCR fortfahren
                 </button>
               )}
             </div>

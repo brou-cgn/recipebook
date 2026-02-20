@@ -585,4 +585,58 @@ describe('OcrScanModal', () => {
       expect(screen.getByText(/OCR fehlgeschlagen.*API quota exceeded/i)).toBeInTheDocument();
     }, { timeout: OCR_TIMEOUT });
   });
+
+  test('shows fallback to standard OCR button when AI OCR fails', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
+
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    recognizeRecipeWithAI.mockRejectedValue(new Error('Tageslimit erreicht (20/20 Scans)'));
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Mit Standard-OCR fortfahren/i)).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+  });
+
+  test('displays remaining scans info when AI scan succeeds', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
+
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    recognizeRecipeWithAI.mockResolvedValue({
+      title: 'Test Recipe',
+      ingredients: ['Zutat'],
+      steps: ['Schritt'],
+      servings: 2,
+      remainingScans: 3,
+      dailyLimit: 20,
+    });
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Recipe')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    // Reset to upload step to see quota info
+    const editButton = screen.getByText(/Als Text bearbeiten/i);
+    fireEvent.click(editButton);
+
+    const newScanButton = screen.getByText(/Neuer Scan/i);
+    fireEvent.click(newScanButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 KI-Scans/i)).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+  });
 });

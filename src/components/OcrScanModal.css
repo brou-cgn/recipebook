@@ -616,3 +616,35 @@
 .force-import-button:hover {
   background-color: #f57c00;
 }
+
+.fallback-ocr-button {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 16px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.fallback-ocr-button:hover {
+  background-color: #1565c0;
+}
+
+.scan-quota-info {
+  margin: 8px 0 12px 0;
+  padding: 8px 12px;
+  background-color: #e8f5e9;
+  border: 1px solid #66bb6a;
+  border-radius: 4px;
+  color: #2e7d32;
+  font-size: 0.85rem;
+}
+
+.scan-quota-warning {
+  background-color: #fff8e1;
+  border-color: #ffa726;
+  color: #e65100;
+}

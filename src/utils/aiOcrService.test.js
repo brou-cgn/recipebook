@@ -221,7 +221,7 @@ describe('AI OCR Service', () => {
       const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'AI service not configured'
+        'AI-Service nicht konfiguriert'
       );
     });
 
@@ -260,6 +260,116 @@ describe('AI OCR Service', () => {
         imageBase64: imageBase64,
         language: 'en',
       });
+    });
+
+    test('retries on unavailable error and succeeds', async () => {
+      const mockCallable = jest.fn()
+        .mockRejectedValueOnce({ code: 'unavailable', message: 'Service unavailable' })
+        .mockResolvedValueOnce({
+          data: {
+            title: 'Retry Success',
+            servings: 2,
+            ingredients: [],
+            steps: [],
+            confidence: 95,
+            provider: 'gemini',
+          }
+        });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      const result = await recognizeRecipeWithGemini(imageBase64, 'de');
+
+      expect(mockCallable).toHaveBeenCalledTimes(2);
+      expect(result.title).toBe('Retry Success');
+    });
+
+    test('retries on deadline-exceeded error and eventually fails', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'deadline-exceeded',
+        message: 'Request timed out'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Zeitüberschreitung'
+      );
+      // Should have tried MAX_RETRIES + 1 times
+      expect(mockCallable).toHaveBeenCalledTimes(4);
+    });
+
+    test('does not retry on non-retryable errors', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'invalid-argument',
+        message: 'Invalid image'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Invalid image'
+      );
+      // Should only try once for non-retryable errors
+      expect(mockCallable).toHaveBeenCalledTimes(1);
+    });
+
+    test('shows German error message for unavailable error after retries', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'unavailable',
+        message: 'Network down'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Netzwerkfehler'
+      );
+    });
+
+    test('shows German error message for Tageslimit/resource-exhausted', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'resource-exhausted',
+        message: 'Tageslimit erreicht (20/20 Scans)'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Tageslimit'
+      );
+    });
+
+    test('includes remaining scans when returned from Cloud Function', async () => {
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+          remainingScans: 15,
+          dailyLimit: 20,
+        }
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      const result = await recognizeRecipeWithGemini(imageBase64, 'de');
+
+      expect(result.remainingScans).toBe(15);
+      expect(result.dailyLimit).toBe(20);
     });
   });
 
