@@ -552,15 +552,25 @@ function App() {
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
         />
+      ) : selectedMenu ? (
+        // Menu detail view - shown regardless of currentView
+        <MenuDetail
+          menu={selectedMenu}
+          recipes={recipes}
+          onBack={handleBackToMenuList}
+          onEdit={handleEditMenu}
+          onDelete={handleDeleteMenu}
+          onSelectRecipe={handleSelectRecipe}
+          onToggleMenuFavorite={handleToggleMenuFavorite}
+          currentUser={currentUser}
+          allUsers={allUsers}
+        />
       ) : currentView === 'kueche' ? (
         <Kueche
           recipes={recipes}
           menus={menus}
           onSelectRecipe={handleSelectRecipe}
-          onSelectMenu={(menu) => {
-            setSelectedMenu(menu);
-            setCurrentView('menus');
-          }}
+          onSelectMenu={handleSelectMenu}
           allUsers={allUsers}
           currentUser={currentUser}
         />
@@ -572,18 +582,6 @@ function App() {
             recipes={recipes}
             onSave={handleSaveMenu}
             onCancel={handleCancelMenuForm}
-            currentUser={currentUser}
-            allUsers={allUsers}
-          />
-        ) : selectedMenu ? (
-          <MenuDetail
-            menu={selectedMenu}
-            recipes={recipes}
-            onBack={handleBackToMenuList}
-            onEdit={handleEditMenu}
-            onDelete={handleDeleteMenu}
-            onSelectRecipe={handleSelectRecipe}
-            onToggleMenuFavorite={handleToggleMenuFavorite}
             currentUser={currentUser}
             allUsers={allUsers}
           />
