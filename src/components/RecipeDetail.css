@@ -1,4 +1,946 @@
-.section-header {
-  display: flex;
-  align-items: center;
-}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecipeBook – Rezeptdetailansicht (Mobile, Normalmodus) Preview (main)</title>
+
+  <style>
+    /* ===== Reset & Base (Preview only) ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f9f6f3;
+      color: #333;
+      line-height: 1.5;
+      padding: 1rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Simulate a mobile viewport width similar to iPhone Pro Max / small Android */
+    .preview-frame {
+      width: 430px;
+      max-width: 100%;
+    }
+
+    /*
+      ===== src/components/RecipeDetail.css (main) =====
+      Source (main @ 9750525c18a60f14abed372cc207a4e980fda246):
+      https://github.com/brou-cgn/recipebook/blob/9750525c18a60f14abed372cc207a4e980fda246/src/components/RecipeDetail.css
+
+      NOTE: This is copied for preview purposes. If you want, I can switch it to a <link>
+      approach, but that requires the CSS file to be accessible when you open this HTML.
+    */
+    .recipe-detail-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+      position: relative;
+    }
+
+    .cooking-mode-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      padding: 0.75rem 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .cooking-mode-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .cooking-mode-icon {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cooking-mode-icon-img {
+      width: 1.5rem;
+      height: 1.5rem;
+      object-fit: contain;
+    }
+
+    .cooking-mode-text {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .cooking-mode-exit {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .cooking-mode-exit:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: white;
+      transform: scale(1.1);
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+      50% { box-shadow: 0 4px 12px rgba(223, 122, 0, 0.4); }
+    }
+
+    .recipe-detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .back-button {
+      background: #f5f5f5;
+      color: #333;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .back-button:hover { background: #e0e0e0; }
+
+    .action-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .edit-button,
+    .delete-button,
+    .favorite-button,
+    .version-button {
+      background: white;
+      border: 2px solid #ddd;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .favorite-button {
+      color: #DF7A00;
+      border-color: #DF7A00;
+    }
+
+    .favorite-button:hover {
+      background: #fff3e0;
+      border-color: #DF7A00;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .favorite-button.is-favorite {
+      background: #DF7A00;
+      color: white;
+      border-color: #DF7A00;
+    }
+
+    .favorite-button.is-favorite:hover {
+      background: #DF7A00;
+      border-color: #DF7A00;
+    }
+
+    .edit-button {
+      color: #402C1C;
+      border-color: #402C1C;
+    }
+
+    .edit-button:hover {
+      background: #402C1C;
+      color: white;
+    }
+
+    .version-button {
+      color: #2196F3;
+      border-color: #2196F3;
+    }
+
+    .version-button:hover {
+      background: #2196F3;
+      color: white;
+    }
+
+    .delete-button {
+      color: #f44336;
+      border-color: #f44336;
+    }
+
+    .delete-button:hover {
+      background: #f44336;
+      color: white;
+    }
+
+    .recipe-detail-content {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .version-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #FFFFFF;
+      color: #DF7A00;
+      border: 2px solid #DF7A00;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .version-selector {
+      padding: 1rem 1.5rem;
+      background: #f9f9f9;
+      border-bottom: 2px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .version-selector label {
+      font-weight: 600;
+      color: #333;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .version-select {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .version-select:hover { border-color: #402C1C; }
+
+    .version-select:focus {
+      outline: none;
+      border-color: #402C1C;
+      box-shadow: 0 0 0 3px rgba(64, 44, 28, 0.1);
+    }
+
+    .recipe-captions {
+      padding: 0 1.5rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .version-navigation {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .version-arrow {
+      background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .version-arrow:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+      transform: scale(1.1);
+    }
+
+    .version-arrow:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .version-caption,
+    .author-caption {
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .version-caption {
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .author-date-caption {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex: 1;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .author-name { flex: 0 0 auto; }
+
+    .creation-date {
+      flex: 0 0 auto;
+      text-align: right;
+      color: #888;
+    }
+
+    .recipe-detail-image {
+      width: 100%;
+      height: 300px;
+      overflow: hidden;
+      background: #f0f0f0;
+      position: relative;
+    }
+
+    .recipe-detail-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-overlay-actions {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 1rem;
+      pointer-events: none;
+    }
+
+    .image-overlay-actions > * { pointer-events: auto; }
+
+    .overlay-cooking-mode {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #4CAF50;
+      color: #4CAF50;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .overlay-cooking-mode-static {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .overlay-cooking-mode-static:hover { transform: scale(1.1); }
+
+    .overlay-cooking-mode-static:active { transform: scale(0.95); }
+
+    .overlay-cooking-mode-icon-img {
+      width: 1.5rem;
+      height: 1.5rem;
+      object-fit: contain;
+    }
+
+    .overlay-cooking-mode:active { transform: scale(0.95); }
+
+    .overlay-cooking-mode.active {
+      background: #4CAF50;
+      color: white;
+      border-color: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+
+    .overlay-back-button {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: #333;
+      font-size: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8), 0 0 8px rgba(255, 255, 255, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .overlay-back-button:active { transform: scale(0.95); }
+
+    .close-button-icon-img {
+      width: 1.5rem;
+      height: 1.5rem;
+      object-fit: contain;
+    }
+
+    .mobile-action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 1rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .recipe-title {
+      padding: 1.5rem 1.5rem 1rem;
+      margin: 0;
+      color: #333;
+      font-size: 2rem;
+      border-bottom: none;
+    }
+
+    .recipe-metadata {
+      padding: 1rem 1.5rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .metadata-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: #f9f9f9;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .metadata-icon { font-size: 1.2rem; }
+
+    .metadata-label {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .metadata-value { color: #333; }
+
+    .cuisine-badge {
+      background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .difficulty-stars {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .difficulty-stars .star {
+      font-size: 1.25rem;
+      color: #DF7A00;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .difficulty-stars .star.empty { color: #ddd; }
+
+    .difficulty-stars .star.filled { color: #DF7A00; }
+
+    .recipe-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .recipe-section:last-child { border-bottom: none; }
+
+    .recipe-section h2 {
+      margin: 0 0 1rem 0;
+      color: #1a1a1a;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .serving-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f9f9f9;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+
+    .serving-btn {
+      background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .serving-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+      transform: scale(1.1);
+    }
+
+    .serving-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .serving-display {
+      min-width: 100px;
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+      font-size: 0.95rem;
+    }
+
+    .ingredients-list,
+    .steps-list {
+      margin: 0;
+      padding-left: 1.5rem;
+    }
+
+    .ingredients-list li,
+    .steps-list li {
+      margin-bottom: 0.75rem;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .ingredients-list li:last-child,
+    .steps-list li:last-child {
+      margin-bottom: 0;
+    }
+
+    .ingredient-heading,
+    .step-heading {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #402C1C;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      list-style: none;
+      margin-left: -1.5rem;
+      padding-left: 0;
+    }
+
+    .ingredient-heading:first-child,
+    .step-heading:first-child { margin-top: 0; }
+
+    @media (max-width: 480px) {
+      .recipe-detail-container {
+        padding-top: 0;
+        padding-left: 0;
+        padding-right: 0;
+        padding-bottom: 0;
+      }
+
+      .recipe-detail-header { display: none; }
+
+      .mobile-action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 1rem;
+      }
+
+      .mobile-action-buttons .favorite-button {
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .mobile-action-buttons .edit-button,
+      .mobile-action-buttons .version-button,
+      .mobile-action-buttons .delete-button {
+        flex: 1;
+        min-width: calc(50% - 0.375rem);
+        padding: 0.875rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      /* Remove hover effects on mobile/touch devices */
+      @media (hover: none) {
+        .overlay-cooking-mode:hover,
+        .overlay-cooking-mode.active:hover,
+        .overlay-back-button:hover,
+        .favorite-button:hover,
+        .edit-button:hover,
+        .version-button:hover {
+          transform: none;
+          box-shadow: none;
+        }
+
+        .favorite-button:hover { background: white; }
+        .favorite-button.is-favorite:hover { background: #DF7A00; }
+
+        .edit-button:hover {
+          background: white;
+          color: #402C1C;
+        }
+
+        .version-button:hover {
+          background: white;
+          color: #2196F3;
+        }
+      }
+
+      .recipe-detail-content { border-radius: 0; }
+
+      .recipe-detail-image { height: 250px; }
+
+      .recipe-title {
+        font-size: 1.5rem;
+        padding: 1rem;
+      }
+
+      .recipe-metadata { padding: 1rem 1rem 1rem; }
+
+      .recipe-section { padding: 1rem; }
+
+      .cooking-mode-indicator { padding: 0.625rem 0.75rem; }
+
+      .cooking-mode-text { font-size: 0.9rem; }
+
+      .cooking-mode-icon { font-size: 1.25rem; }
+
+      .difficulty-stars { gap: 0.25rem; }
+
+      .difficulty-stars .star { font-size: 1.25rem; }
+
+      @media (hover: none) {
+        .difficulty-stars .star:hover { transform: none; }
+      }
+    }
+
+    /* Recipe link styles */
+    .ingredient-with-link { /* Keep consistent list styling with other ingredients */ }
+
+    .recipe-link-button {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .recipe-link-button:hover {
+      background: linear-gradient(135deg, #ee5a6f 0%, #ff6b6b 100%);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .recipe-link-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 480px) {
+      .recipe-link-button {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+      }
+    }
+
+    /* Draft checkbox styling - admin only - unified design */
+    .draft-checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .draft-checkbox-wrapper {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .draft-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #333;
+      background: #333;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      margin: 0;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .draft-checkbox:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .draft-checkbox:hover {
+      border-color: #000;
+      background: #000;
+    }
+
+    /* ===== Preview-only helper ===== */
+    .preview-note {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: #666;
+      background: #fff;
+      border: 1px dashed #ddd;
+      border-radius: 10px;
+      padding: 0.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="preview-frame">
+    <div class="recipe-detail-container">
+      <!-- Mobile normal mode: header hidden via CSS @media (max-width: 480px) -->
+
+      <div class="recipe-detail-content">
+        <!-- Image block -->
+        <div class="recipe-detail-image">
+          <img
+            src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1600&q=80"
+            alt="Winterliche Ofengemüse-Bowl"
+          />
+
+          <div class="image-overlay-actions">
+            <div
+              class="overlay-cooking-mode-static"
+              role="button"
+              tabindex="0"
+              aria-label="Kochmodus aktivieren"
+              title="Kochmodus"
+              onclick="alert('Kochmodus (Preview)')"
+              onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); alert('Kochmodus (Preview)'); }"
+            >
+              <span>👨‍🍳</span>
+            </div>
+
+            <button
+              class="overlay-back-button"
+              title="Zurück"
+              onclick="alert('Zurück (Preview)')"
+              aria-label="Zurück"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile action buttons -->
+        <div class="mobile-action-buttons">
+          <button
+            class="favorite-button is-favorite"
+            title="Aus Favoriten entfernen"
+            onclick="
+              this.classList.toggle('is-favorite');
+              this.textContent = this.classList.contains('is-favorite') ? '★' : '☆';
+              this.title = this.classList.contains('is-favorite') ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen';
+            "
+          >★</button>
+
+          <button class="edit-button" onclick="alert('Bearbeiten (Preview)')">Bearbeiten</button>
+
+          <!-- userCanCreateVersion && !userCanDirectlyEdit would show this; we keep it hidden in this preview -->
+          <!-- <button class="version-button">Eigene Version erstellen</button> -->
+
+          <button class="delete-button" onclick="alert('Löschen (Preview)')">Löschen</button>
+        </div>
+
+        <h1 class="recipe-title">Winterliche Ofengemüse-Bowl</h1>
+
+        <!-- Captions: without version navigation (ohne Version) -->
+        <div class="recipe-captions">
+          <div class="author-date-caption">
+            <span class="author-name">Autor: Maria Schmidt</span>
+            <span class="creation-date">Erstellt am: 24.12.2025</span>
+          </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="recipe-metadata">
+          <div class="metadata-item">
+            <span class="metadata-label">Kulinarik:</span>
+            <span class="metadata-value cuisine-badge">Deutsch, Winter</span>
+          </div>
+
+          <div class="metadata-item">
+            <span class="metadata-label">Kategorie:</span>
+            <span class="metadata-value">Hauptspeise</span>
+          </div>
+
+          <div class="metadata-item">
+            <span class="metadata-label">Zeit:</span>
+            <span class="metadata-value">35 Min.</span>
+          </div>
+
+          <div class="metadata-item">
+            <span class="metadata-label">Schwierigkeit:</span>
+            <span class="metadata-value difficulty-stars" aria-label="Schwierigkeit 3 von 5">
+              <span class="star filled">★</span>
+              <span class="star filled">★</span>
+              <span class="star filled">★</span>
+              <span class="star empty">☆</span>
+              <span class="star empty">☆</span>
+            </span>
+          </div>
+
+          <!-- Draft checkbox: only visible for admin AND recipe.isPrivate; keep it off in this preview -->
+          <!--
+          <div class="metadata-item draft-checkbox-container">
+            <span class="metadata-label draft-label">Entwurf:</span>
+            <label class="draft-checkbox-wrapper">
+              <input type="checkbox" checked class="draft-checkbox" aria-label="Rezept als Entwurf markieren" />
+            </label>
+          </div>
+          -->
+        </div>
+
+        <!-- Ingredients -->
+        <section class="recipe-section">
+          <div class="section-header">
+            <h2>Zutaten für</h2>
+            <div class="serving-control" aria-label="Portionen einstellen">
+              <button class="serving-btn" onclick="alert('Portionen - (Preview)')">-</button>
+              <span class="serving-display">4 Portionen</span>
+              <button class="serving-btn" onclick="alert('Portionen + (Preview)')">+</button>
+            </div>
+          </div>
+
+          <ul class="ingredients-list">
+            <li>2 Karotten</li>
+            <li>1 rote Paprika</li>
+            <li>1 Zucchini</li>
+            <li>200 g Kartoffeln</li>
+            <li>2 EL Olivenöl</li>
+            <li>1 TL Paprikapulver</li>
+            <li>Salz &amp; Pfeffer</li>
+          </ul>
+        </section>
+
+        <!-- Steps -->
+        <section class="recipe-section">
+          <h2>Zubereitungsschritte</h2>
+          <ol class="steps-list">
+            <li>Ofen auf 200°C (Ober-/Unterhitze) vorheizen.</li>
+            <li>Gemüse waschen, schneiden und mit Öl &amp; Gewürzen vermengen.</li>
+            <li>Auf ein Blech geben und ca. 25–30 Minuten rösten.</li>
+            <li>Anrichten und nach Wunsch mit Kräutern toppen.</li>
+          </ol>
+        </section>
+
+      </div>
+
+      <div class="preview-note">
+        Diese Datei bildet die <strong>mobile Rezeptdetailansicht im Normalmodus</strong> anhand der aktuellen
+        Struktur aus <code>RecipeDetail.js</code> + Styles aus <code>RecipeDetail.css</code> (main) nach,
+        mit statischen Beispieldaten (ohne Versionsnavigation).
+      </div>
+    </div>
+  </div>
+</body>
+</html>
