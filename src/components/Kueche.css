@@ -31,7 +31,9 @@
 }
 
 .kueche-tile-content {
-  padding: 1.5rem;
+  position: relative;
+  padding: 10px 18px 10px;
+  display: block;
 }
 
 .kueche-tile-content h3 {
@@ -58,7 +60,7 @@
 
 .kueche-tile-meta .meta-text {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.25rem;
 }
 
