@@ -16,7 +16,7 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
     const loadButtonIcons = async () => {
       const { getButtonIcons } = require('../utils/customLists');
       const icons = await getButtonIcons();
-      setCloseButtonIcon(icons.closeButton || '✕');
+      setCloseButtonIcon(icons.menuCloseButton || '✕');
     };
     loadButtonIcons();
   }, []);
@@ -104,8 +104,6 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
     }];
   }
 
-  const totalRecipes = recipeSections.reduce((sum, section) => sum + section.recipes.length, 0);
-
   return (
     <div className="menu-detail-container">
       <div className="menu-detail-header">
@@ -157,15 +155,6 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
             {authorName && <span className="menu-author"><span className="menu-author-label">Autor:</span> {authorName}</span>}
           </div>
         )}
-
-        <div className="menu-stats">
-          <span className="stat-item">
-            <span className="stat-value">{totalRecipes} Rezepte</span>
-          </span>
-          <span className="stat-item">
-            <span className="stat-value">{recipeSections.length} Abschnitt{recipeSections.length !== 1 ? 'e' : ''}</span>
-          </span>
-        </div>
 
         {recipeSections.map((section, index) => (
           <section key={index} className="menu-section">

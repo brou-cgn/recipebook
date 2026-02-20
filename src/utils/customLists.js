@@ -63,6 +63,7 @@ export const DEFAULT_BUTTON_ICONS = {
   scanImage: '📷',
   webImport: '🌐',
   closeButton: '✕',
+  menuCloseButton: '✕',
   filterButton: '⚙'
 };
 

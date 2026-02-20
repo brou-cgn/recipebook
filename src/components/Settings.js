@@ -973,7 +973,7 @@ function Settings({ onBack, currentUser }) {
                 </div>
 
                 <div className="button-icon-item">
-                  <label htmlFor="closeButtonIcon">Schließen-Button (Rezept- und Menüdetailansicht):</label>
+                  <label htmlFor="closeButtonIcon">Schließen-Button (Rezeptdetailansicht):</label>
                   <div className="button-icon-input-group">
                     {!isBase64Image(buttonIcons.closeButton) ? (
                       <>
@@ -1023,6 +1023,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.closeButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.closeButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="menuCloseButtonIcon">Schließen-Button (Menüdetailansicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.menuCloseButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="menuCloseButtonIcon"
+                          value={buttonIcons.menuCloseButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuCloseButton: e.target.value })}
+                          placeholder="z.B. ✕"
+                          maxLength={10}
+                        />
+                        <label htmlFor="menuCloseButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'menuCloseButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="menuCloseButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('menuCloseButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'menuCloseButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('menuCloseButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, menuCloseButton: DEFAULT_BUTTON_ICONS.menuCloseButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.menuCloseButton) ? (
+                        <img src={buttonIcons.menuCloseButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.menuCloseButton}</span>
                       )}
                     </div>
                   </div>

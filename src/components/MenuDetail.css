@@ -154,8 +154,9 @@
   display: flex;
   gap: 1.5rem;
   margin-bottom: 1rem;
-  font-size: 0.95rem;
-  color: #555;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
 }
 
 .menu-date,
@@ -167,8 +168,7 @@
 
 .menu-date-label,
 .menu-author-label {
-  font-weight: 600;
-  color: #402C1C;
+  color: #555;
 }
 
 .menu-stats {
