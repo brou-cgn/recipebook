@@ -22,7 +22,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#4CAF50",
+  "theme_color": "#402C1C",
   "background_color": "#ffffff",
   "description": "DishBook - A Progressive Web App for managing your favorite recipes",
   "categories": ["food", "lifestyle", "productivity"],
