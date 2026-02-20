@@ -576,7 +576,17 @@ function App() {
         />
       ) : currentView === 'menus' ? (
         // Menu views
-        isMenuFormOpen ? (
+        isFormOpen ? (
+          <RecipeForm
+            recipe={editingRecipe}
+            onSave={handleSaveRecipe}
+            onBulkImport={handleBulkImportRecipes}
+            onCancel={handleCancelForm}
+            currentUser={currentUser}
+            isCreatingVersion={isCreatingVersion}
+            allRecipes={recipes}
+          />
+        ) : isMenuFormOpen ? (
           <MenuForm
             menu={editingMenu}
             recipes={recipes}
