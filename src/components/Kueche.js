@@ -5,6 +5,7 @@ import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaul
 import { getCategoryImages } from '../utils/categoryImages';
 
 function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser }) {
+  const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
   const [categoryImages, setCategoryImages] = useState([]);
@@ -59,7 +60,15 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
       <div className="kueche-header">
         <h2>Küche</h2>
       </div>
-      <div className="kueche-tile">
+      <div
+        className="kueche-tile"
+        onClick={() => setShowTimeline(prev => !prev)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={showTimeline}
+        aria-label="Toggle Meine Küche timeline"
+      >
         <div className="kueche-tile-content">
           <h3>Meine Küche</h3>
           <p className="kueche-tile-description">Übersicht über Ihre Rezepte und Menüs</p>
@@ -69,15 +78,17 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
           </div>
         </div>
       </div>
-      <RecipeTimeline
-        recipes={combinedItems}
-        onSelectRecipe={handleSelectItem}
-        allUsers={allUsers}
-        timelineBubbleIcon={timelineBubbleIcon}
-        timelineMenuBubbleIcon={timelineMenuBubbleIcon}
-        categoryImages={categoryImages}
-        defaultImage={timelineMenuDefaultImage}
-      />
+      {showTimeline && (
+        <RecipeTimeline
+          recipes={combinedItems}
+          onSelectRecipe={handleSelectItem}
+          allUsers={allUsers}
+          timelineBubbleIcon={timelineBubbleIcon}
+          timelineMenuBubbleIcon={timelineMenuBubbleIcon}
+          categoryImages={categoryImages}
+          defaultImage={timelineMenuDefaultImage}
+        />
+      )}
     </div>
   );
 }

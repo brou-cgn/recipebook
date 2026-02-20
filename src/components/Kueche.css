@@ -22,6 +22,7 @@
   border-left: 4px solid #402C1C;
   margin-bottom: 1.5rem;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .kueche-tile:hover {
