@@ -212,8 +212,6 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     <div className="timeline-gutter" onClick={() => toggleExpand(dateKey)} />
                   )}
                 </>
-                // Single recipe
-                dayRecipes.map((recipe) => renderCard(recipe))
               )}
             </div>
           </div>
