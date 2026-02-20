@@ -36,7 +36,7 @@
 
 .timeline-marker {
   position: absolute;
-  left: calc(72px / 2 - 3px / 2);
+  left: calc(72px / 2 - 30px / 2);
   transform: translateX(-50%);
   top: 10px;
   width: 72px;
