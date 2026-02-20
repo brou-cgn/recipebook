@@ -552,6 +552,17 @@ function App() {
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
         />
+      ) : isFormOpen ? (
+        // Recipe form - shown with priority over menu/recipe detail
+        <RecipeForm
+          recipe={editingRecipe}
+          onSave={handleSaveRecipe}
+          onBulkImport={handleBulkImportRecipes}
+          onCancel={handleCancelForm}
+          currentUser={currentUser}
+          isCreatingVersion={isCreatingVersion}
+          allRecipes={recipes}
+        />
       ) : selectedMenu ? (
         // Menu detail view - shown regardless of currentView
         <MenuDetail
@@ -576,17 +587,7 @@ function App() {
         />
       ) : currentView === 'menus' ? (
         // Menu views
-        isFormOpen ? (
-          <RecipeForm
-            recipe={editingRecipe}
-            onSave={handleSaveRecipe}
-            onBulkImport={handleBulkImportRecipes}
-            onCancel={handleCancelForm}
-            currentUser={currentUser}
-            isCreatingVersion={isCreatingVersion}
-            allRecipes={recipes}
-          />
-        ) : isMenuFormOpen ? (
+        isMenuFormOpen ? (
           <MenuForm
             menu={editingMenu}
             recipes={recipes}
@@ -615,16 +616,6 @@ function App() {
             onCancel={handleCancelFilterPage}
             availableAuthors={allUsers.filter(u => (u.recipe_count ?? 0) > 0).map(u => ({ id: u.id, name: `${u.vorname} ${u.nachname}` }))}
             isAdmin={currentUser?.isAdmin || false}
-          />
-        ) : isFormOpen ? (
-          <RecipeForm
-            recipe={editingRecipe}
-            onSave={handleSaveRecipe}
-            onBulkImport={handleBulkImportRecipes}
-            onCancel={handleCancelForm}
-            currentUser={currentUser}
-            isCreatingVersion={isCreatingVersion}
-            allRecipes={recipes}
           />
         ) : (
           <RecipeList
