@@ -66,6 +66,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.queryByText('Other Recipe')).not.toBeInTheDocument();
   });
@@ -79,6 +80,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('Other Recipe')).toBeInTheDocument();
   });
@@ -95,6 +97,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     expect(screen.getByText('My Menu')).toBeInTheDocument();
     expect(screen.queryByText('Other Menu')).not.toBeInTheDocument();
   });
@@ -111,6 +114,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('My Menu')).toBeInTheDocument();
   });
@@ -145,6 +149,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     fireEvent.click(screen.getByText('My Menu').closest('.timeline-card'));
     expect(handleSelectMenu).toHaveBeenCalledWith(mockMenus[0]);
   });
@@ -171,6 +176,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     // The timeline should show the date from menuDate (15. Juni 2024), not createdAt (01. Januar 2024)
     expect(screen.getByText('15. Juni 2024')).toBeInTheDocument();
     expect(screen.queryByText('01. Januar 2024')).not.toBeInTheDocument();
@@ -196,6 +202,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     expect(screen.getByText('Created By Menu')).toBeInTheDocument();
   });
 
@@ -219,6 +226,7 @@ describe('Kueche', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
     const img = await screen.findByAltText('Image Menu');
     expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
@@ -254,5 +262,43 @@ describe('Kueche', () => {
 
     expect(screen.getByText('2 Rezepte')).toBeInTheDocument();
     expect(screen.getByText('2 Menüs')).toBeInTheDocument();
+  });
+
+  test('timeline is hidden by default and shown after clicking the tile', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    expect(screen.queryByText('My Recipe')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    expect(screen.getByText('My Recipe')).toBeInTheDocument();
+  });
+
+  test('clicking the tile again hides the timeline', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByRole('button', { name: /Meine Küche/i });
+    fireEvent.click(tile);
+    expect(screen.getByText('My Recipe')).toBeInTheDocument();
+
+    fireEvent.click(tile);
+    expect(screen.queryByText('My Recipe')).not.toBeInTheDocument();
   });
 });
