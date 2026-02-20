@@ -556,40 +556,41 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
         {cookingMode ? (
           // Cooking mode layout
           <>
-            {/* Portion control at the top */}
-            {recipe.portionen && (
-              <div className="cooking-mode-serving-control">
-                <button 
-                  className="serving-btn"
-                  onClick={() => {
-                    const basePortions = recipe.portionen || 4;
-                    const newServings = currentServings - 1;
-                    if (newServings >= 1) {
-                      setServingMultiplier(newServings / basePortions);
-                    }
-                  }}
-                  disabled={currentServings <= 1}
-                >
-                  -
-                </button>
-                <span className="serving-display">
-                  {currentServings} {portionLabel}
-                </span>
-                <button 
-                  className="serving-btn"
-                  onClick={() => {
-                    const basePortions = recipe.portionen || 4;
-                    const newServings = currentServings + 1;
-                    setServingMultiplier(newServings / basePortions);
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            )}
-
             {/* Ingredients list */}
             <section className="cooking-mode-ingredients">
+              <div className="section-header">
+                <h2>Zutaten für</h2>
+                {recipe.portionen && (
+                  <div className="serving-control">
+                    <button 
+                      className="serving-btn"
+                      onClick={() => {
+                        const basePortions = recipe.portionen || 4;
+                        const newServings = currentServings - 1;
+                        if (newServings >= 1) {
+                          setServingMultiplier(newServings / basePortions);
+                        }
+                      }}
+                      disabled={currentServings <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="serving-display">
+                      {currentServings} {portionLabel}
+                    </span>
+                    <button 
+                      className="serving-btn"
+                      onClick={() => {
+                        const basePortions = recipe.portionen || 4;
+                        const newServings = currentServings + 1;
+                        setServingMultiplier(newServings / basePortions);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
               <ul className="ingredients-list">
                 {recipe.ingredients?.map((ingredient, index) => 
                   renderIngredient(ingredient, index)
@@ -787,7 +788,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
             <section className="recipe-section">
               <div className="section-header">
-                <h2>Zutaten ({recipe.ingredients?.length || 0})</h2>
+                <h2>Zutaten für</h2>
                 {recipe.portionen && (
                   <div className="serving-control">
                     <button 
