@@ -274,20 +274,32 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   const handleCopyShareUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(getShareUrl());
-      setShareUrlCopied(true);
-      setTimeout(() => setShareUrlCopied(false), 2000);
-    } catch {
-      // Legacy fallback for older browsers that don't support the Clipboard API
-      const input = document.createElement('input');
-      input.value = getShareUrl();
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setShareUrlCopied(true);
-      setTimeout(() => setShareUrlCopied(false), 2000);
+    const url = getShareUrl();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: recipe.title, url });
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
+      }
+    } else {
+      // Fallback for browsers without Web Share API
+      try {
+        await navigator.clipboard.writeText(url);
+        setShareUrlCopied(true);
+        setTimeout(() => setShareUrlCopied(false), 2000);
+      } catch {
+        // Legacy fallback for older browsers that don't support the Clipboard API
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        setShareUrlCopied(true);
+        setTimeout(() => setShareUrlCopied(false), 2000);
+      }
     }
   };
 
@@ -604,9 +616,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
               <button
                 className="share-copy-url-button"
                 onClick={handleCopyShareUrl}
-                title="Share-Link kopieren"
+                title="Link teilen"
               >
-                {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
+                {shareUrlCopied ? '✓ Geteilt!' : '↑ Link teilen'}
               </button>
             )}
           </div>
@@ -769,9 +781,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   <button
                     className="share-copy-url-button"
                     onClick={handleCopyShareUrl}
-                    title="Share-Link kopieren"
+                    title="Link teilen"
                   >
-                    {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
+                    {shareUrlCopied ? '✓ Geteilt!' : '↑ Link teilen'}
                   </button>
                 )}
               </div>
