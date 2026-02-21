@@ -1108,6 +1108,56 @@ describe('RecipeDetail - Share Button Visibility', () => {
 
     expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
   });
+
+  test('clicking copy link button uses navigator.share when available', async () => {
+    const originalShare = navigator.share;
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
+
+    render(
+      <RecipeDetail
+        recipe={sharedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle('Share-Link kopieren'));
+    await screen.findByTitle('Share-Link kopieren');
+    expect(shareMock).toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining('some-share-id') }));
+
+    Object.defineProperty(navigator, 'share', { value: originalShare, configurable: true });
+  });
+
+  test('clicking copy link button falls back to clipboard when navigator.share is unavailable', async () => {
+    const originalShare = navigator.share;
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    const clipboardMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: clipboardMock },
+      configurable: true,
+    });
+    const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
+
+    render(
+      <RecipeDetail
+        recipe={sharedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByTitle('Share-Link kopieren'));
+    await screen.findByText(/Kopiert!/);
+    expect(clipboardMock).toHaveBeenCalledWith(expect.stringContaining('some-share-id'));
+
+    Object.defineProperty(navigator, 'share', { value: originalShare, configurable: true });
+  });
 });
 
 describe('RecipeDetail - Metadata Order', () => {

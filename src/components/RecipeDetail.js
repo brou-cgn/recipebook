@@ -274,14 +274,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   const handleCopyShareUrl = async () => {
+    const url = getShareUrl();
+    if (navigator.share) {
+      try {
+        await navigator.share({ url, title: recipe.title });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        // Fall through to clipboard copy on other errors
+      }
+    }
     try {
-      await navigator.clipboard.writeText(getShareUrl());
+      await navigator.clipboard.writeText(url);
       setShareUrlCopied(true);
       setTimeout(() => setShareUrlCopied(false), 2000);
     } catch {
       // Legacy fallback for older browsers that don't support the Clipboard API
       const input = document.createElement('input');
-      input.value = getShareUrl();
+      input.value = url;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
