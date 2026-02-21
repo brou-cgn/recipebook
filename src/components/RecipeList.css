@@ -235,13 +235,12 @@
 
 .kulinarik-tag {
   display: inline-block;
-  background-color: #f0f4ff;
-  color: #3a5bb8;
-  border: 1px solid #c7d4f5;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
   border-radius: 12px;
   padding: 0.15rem 0.6rem;
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .recipe-footer {
