@@ -35,74 +35,60 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 /**
- * Get the recipe extraction prompt in the specified language
- * @param {string} lang - Language code ('de' or 'en')
- * @returns {string} The formatted prompt
+ * Get the recipe extraction prompt
+ * Loads from Firestore settings, falls back to default prompt
+ * @returns {Promise<string>} The formatted prompt
  */
-function getRecipeExtractionPrompt(lang = 'de') {
-  if (lang === 'de') {
-    return `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
+async function getRecipeExtractionPrompt() {
+  const db = admin.firestore();
+  try {
+    const settingsDoc = await db.collection('settings').doc('app').get();
+
+    if (settingsDoc.exists) {
+      const settings = settingsDoc.data();
+      if (settings.aiRecipePrompt) {
+        return settings.aiRecipePrompt;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading AI prompt from settings:', error);
+  }
+
+  // Fallback to default prompt
+  return `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
 
 Bitte gib das Ergebnis im folgenden JSON-Format zurück:
 {
   "titel": "Name des Rezepts",
-  "portionen": Anzahl der Portionen als Zahl,
-  "zubereitungszeit": "Zeit in Minuten als Zahl oder Text wie '30 min' oder '1 Stunde'",
-  "kochzeit": "Kochzeit in Minuten (optional)",
+  "portionen": Anzahl der Portionen als Zahl (nur die Zahl, z.B. 4),
+  "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
+  "kochzeit": Kochzeit in Minuten als Zahl (optional),
   "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
   "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
   "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
-  "tags": ["vegetarisch", "vegan", "glutenfrei", etc. - falls zutreffend],
+  "tags": ["vegetarisch", "vegan", "glutenfrei"], // nur falls explizit erwähnt
   "zutaten": [
-    "Erste Zutat mit Menge",
-    "Zweite Zutat mit Menge",
-    ...
+    "500 g Spaghetti",
+    "200 g Speck",
+    "4 Eier"
   ],
   "zubereitung": [
-    "Erster Zubereitungsschritt",
-    "Zweiter Zubereitungsschritt",
-    ...
+    "Wasser in einem großen Topf zum Kochen bringen und salzen",
+    "Spaghetti nach Packungsanweisung kochen",
+    "Speck in Würfel schneiden und in einer Pfanne knusprig braten"
   ],
   "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
 }
 
-Wichtig:
-- Extrahiere alle sichtbaren Informationen genau
-- Wenn Informationen fehlen, lasse die Felder leer oder null
-- Gib NUR das JSON zurück, keine zusätzlichen Erklärungen
-- Zahlen ohne Anführungszeichen (außer bei Zeitangaben mit Text)`;
-  } else {
-    return `Analyze this recipe image and extract all information as structured JSON.
+WICHTIGE REGELN:
+1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 EL Olivenöl", "1 Prise Salz")
+2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
+3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
+4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
+5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, EL statt Esslöffel, TL statt Teelöffel)
+6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
 
-Please return the result in the following JSON format:
-{
-  "title": "Recipe name",
-  "servings": Number of servings as a number,
-  "prepTime": "Preparation time in minutes as number or text like '30 min' or '1 hour'",
-  "cookTime": "Cooking time in minutes (optional)",
-  "difficulty": Difficulty level 1-5 (1=very easy, 5=very hard),
-  "cuisine": "Cuisine type (e.g., Italian, Asian, American)",
-  "category": "Category (e.g., Main Course, Dessert, Appetizer, Side Dish, Snack)",
-  "tags": ["vegetarian", "vegan", "gluten-free", etc. - if applicable],
-  "ingredients": [
-    "First ingredient with quantity",
-    "Second ingredient with quantity",
-    ...
-  ],
-  "steps": [
-    "First preparation step",
-    "Second preparation step",
-    ...
-  ],
-  "notes": "Additional notes or tips (optional)"
-}
-
-Important:
-- Extract all visible information accurately
-- If information is missing, leave fields empty or null
-- Return ONLY the JSON, no additional explanations
-- Numbers without quotes (except for time strings with text)`;
-  }
+Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
 }
 
 /**
@@ -225,7 +211,7 @@ function validateImageData(imageBase64) {
  * @returns {Promise<Object>} Structured recipe data
  */
 async function callGeminiAPI(base64Data, mimeType, lang, apiKey) {
-  const prompt = getRecipeExtractionPrompt(lang);
+  const prompt = await getRecipeExtractionPrompt();
 
   const requestBody = {
     contents: [

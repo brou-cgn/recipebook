@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT } from '../utils/customLists';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -149,6 +149,9 @@ function Settings({ onBack, currentUser }) {
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
   const [uploadingTimelineMenuDefaultImage, setUploadingTimelineMenuDefaultImage] = useState(false);
 
+  // AI recipe prompt state
+  const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_RECIPE_PROMPT);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -162,6 +165,7 @@ function Settings({ onBack, currentUser }) {
       const timelineIcon = await getTimelineBubbleIcon();
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
       const timelineMenuImg = await getTimelineMenuDefaultImage();
+      const aiRecipePrompt = await getAIRecipePrompt();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -173,6 +177,7 @@ function Settings({ onBack, currentUser }) {
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
       setTimelineMenuDefaultImage(timelineMenuImg);
+      setAiPrompt(aiRecipePrompt);
     };
     loadSettings();
   }, []);
@@ -607,6 +612,12 @@ function Settings({ onBack, currentUser }) {
             onClick={() => setActiveTab('users')}
           >
             Benutzerverwaltung
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'ai' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ai')}
+          >
+            KI-Einstellungen
           </button>
         </div>
       )}
@@ -1531,6 +1542,52 @@ function Settings({ onBack, currentUser }) {
           </button>
         </div>
       </>
+        ) : activeTab === 'ai' ? (
+          <>
+            <div className="settings-section">
+              <h3>KI-Rezepterkennung (Prompt)</h3>
+              <p className="prompt-help-text">
+                Dieser Prompt wird für die KI-Rezepterkennung (Fotoscan &amp; Web-Import) verwendet. Änderungen werden sofort aktiv.
+              </p>
+              <textarea
+                className="ai-prompt-textarea"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={15}
+              />
+              <div className="prompt-actions">
+                <button
+                  className="save-button"
+                  onClick={async () => {
+                    try {
+                      await saveAIRecipePrompt(aiPrompt);
+                      alert('KI-Prompt erfolgreich gespeichert!');
+                    } catch (e) {
+                      alert('Fehler beim Speichern: ' + e.message);
+                    }
+                  }}
+                >
+                  Speichern
+                </button>
+                <button
+                  className="reset-button"
+                  onClick={async () => {
+                    if (window.confirm('Möchten Sie den KI-Prompt wirklich auf den Standard zurücksetzen?')) {
+                      try {
+                        const defaultPrompt = await resetAIRecipePrompt();
+                        setAiPrompt(defaultPrompt);
+                        alert('KI-Prompt auf Standard zurückgesetzt!');
+                      } catch (e) {
+                        alert('Fehler beim Zurücksetzen: ' + e.message);
+                      }
+                    }
+                  }}
+                >
+                  Auf Standard zurücksetzen
+                </button>
+              </div>
+            </div>
+          </>
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} />
         )}
