@@ -4,7 +4,7 @@ import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
 import { getCustomLists } from '../utils/customLists';
-import { getUsers, isCurrentUserAdmin } from '../utils/userManagement';
+import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing } from '../utils/ingredientUtils';
 import { encodeRecipeLink, startsWithHash } from '../utils/recipeLinks';
@@ -196,6 +196,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
   // Private checkbox state - only visible to admins
   const [isPrivate, setIsPrivate] = useState(false);
+  // AI OCR daily limit state
+  const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
@@ -290,10 +292,17 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         webImport: icons.webImport || '🌐'
       });
     };
+    const checkAiOcrLimit = async () => {
+      if (currentUser?.id) {
+        const count = await getUserAiOcrScanCount(currentUser.id);
+        setAiOcrLimitReached(count >= 20);
+      }
+    };
     loadCustomLists();
     loadUsers();
     loadButtonIcons();
-  }, []);
+    checkAiOcrLimit();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     setImageError(false);
@@ -663,9 +672,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               <button
                 type="button"
                 className="webimport-button-header"
-                onClick={() => setShowWebImportModal(true)}
-                title="Rezept von Website importieren"
+                onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
+                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
                 aria-label="Webimport"
+                disabled={aiOcrLimitReached}
               >
                 {isBase64Image(buttonIcons.webImport) ? (
                   <img src={buttonIcons.webImport} alt="Webimport" className="button-icon-img" />
@@ -677,14 +687,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             {currentUser?.fotoscan && (
               <>
                 <label
-                  htmlFor="ocrImageUpload"
-                  className="ocr-scan-button-header"
-                  title="Rezept mit Kamera scannen"
+                  htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
+                  className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
+                  title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
                   aria-label="Rezept mit Kamera scannen"
-                  style={{ cursor: 'pointer' }}
+                  aria-disabled={aiOcrLimitReached}
+                  style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (!aiOcrLimitReached && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault();
                       document.getElementById('ocrImageUpload').click();
                     }
@@ -701,9 +712,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   id="ocrImageUpload"
                   accept="image/jpeg,image/jpg,image/png"
                   onChange={handleOcrImageUpload}
+                  disabled={aiOcrLimitReached}
                   style={{ display: 'none' }}
                 />
               </>
+            )}
+            {aiOcrLimitReached && (
+              <span className="ai-ocr-limit-info" title="KI-OCR Tageslimit erreicht (20/Tag). Import und Scan sind bis morgen deaktiviert.">
+                ⚠️ KI-OCR Limit
+              </span>
             )}
             {currentUser?.isAdmin && (
               <button

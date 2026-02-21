@@ -52,6 +52,36 @@
   background-color: #1976D2;
 }
 
+.webimport-button-header:disabled,
+.webimport-button-header[disabled] {
+  background-color: #9E9E9E;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.webimport-button-header:disabled:hover,
+.webimport-button-header[disabled]:hover {
+  background-color: #9E9E9E;
+}
+
+.ocr-scan-button-header.disabled {
+  background-color: #9E9E9E;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ai-ocr-limit-info {
+  font-size: 0.8rem;
+  color: #F57C00;
+  background-color: #FFF3E0;
+  border: 1px solid #FFB74D;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
 .version-info-banner {
   background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
   border-left: 4px solid #2196F3;

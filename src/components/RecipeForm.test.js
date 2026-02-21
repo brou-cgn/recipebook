@@ -35,6 +35,7 @@ jest.mock('../utils/userManagement', () => ({
     { id: 'user-1', vorname: 'Regular', nachname: 'User', email: 'user@example.com', isAdmin: false, role: 'edit' },
   ]),
   isCurrentUserAdmin: jest.fn(() => false),
+  getUserAiOcrScanCount: jest.fn(() => Promise.resolve(0)),
   ROLES: {
     ADMIN: 'admin',
     EDIT: 'edit',
@@ -2095,5 +2096,153 @@ describe('RecipeForm - Private Checkbox', () => {
         isPrivate: false,
       })
     );
+  });
+});
+
+describe('RecipeForm - AI OCR Limit', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const { getUserAiOcrScanCount } = require('../utils/userManagement');
+
+  const userWithPermissions = {
+    id: 'user-1',
+    vorname: 'Regular',
+    nachname: 'User',
+    email: 'user@example.com',
+    isAdmin: false,
+    role: 'edit',
+    webimport: true,
+    fotoscan: true,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('webimport and scan buttons are enabled when AI OCR count < 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(5);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const webimportBtn = screen.getByLabelText('Webimport');
+      expect(webimportBtn).not.toBeDisabled();
+    });
+  });
+
+  test('webimport button is disabled when AI OCR count >= 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(20);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const webimportBtn = screen.getByLabelText('Webimport');
+      expect(webimportBtn).toBeDisabled();
+    });
+  });
+
+  test('webimport button is disabled when AI OCR count > 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(25);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const webimportBtn = screen.getByLabelText('Webimport');
+      expect(webimportBtn).toBeDisabled();
+    });
+  });
+
+  test('limit info text is shown when AI OCR count >= 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(20);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/KI-OCR Limit/)).toBeInTheDocument();
+    });
+  });
+
+  test('limit info text is not shown when AI OCR count < 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(10);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    // Wait for effect to run
+    await waitFor(() => {
+      expect(getUserAiOcrScanCount).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText(/KI-OCR Limit/)).not.toBeInTheDocument();
+  });
+
+  test('disabled webimport button shows tooltip with limit reason', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(20);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const webimportBtn = screen.getByLabelText('Webimport');
+      expect(webimportBtn).toHaveAttribute('title', expect.stringContaining('KI-OCR Tageslimit'));
+    });
+  });
+
+  test('scan button shows disabled state when AI OCR count >= 20', async () => {
+    getUserAiOcrScanCount.mockResolvedValue(20);
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithPermissions}
+      />
+    );
+
+    await waitFor(() => {
+      const scanLabel = screen.getByLabelText('Rezept mit Kamera scannen');
+      expect(scanLabel).toHaveAttribute('aria-disabled', 'true');
+    });
   });
 });
