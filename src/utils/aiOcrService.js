@@ -6,6 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { getAIRecipePrompt } from './customLists';
 
 /**
  * Configuration for AI OCR providers
@@ -63,73 +64,21 @@ export function isAiOcrAvailable(provider = 'gemini') {
 
 /**
  * Get the recipe extraction prompt in the specified language
+ * Loads from Firestore settings, falls back to default prompt
  * @param {string} lang - Language code ('de' or 'en')
- * @returns {string} The formatted prompt
+ * @returns {Promise<string>} The formatted prompt
  */
-function getRecipeExtractionPrompt(lang = 'de') {
+async function getRecipeExtractionPrompt(lang = 'de') {
+  // Load prompt from Settings
+  const prompt = await getAIRecipePrompt();
+
+  // For future multi-language support
   if (lang === 'de') {
-    return `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
-
-Bitte gib das Ergebnis im folgenden JSON-Format zurück:
-{
-  "titel": "Name des Rezepts",
-  "portionen": Anzahl der Portionen als Zahl,
-  "zubereitungszeit": "Zeit in Minuten als Zahl oder Text wie '30 min' oder '1 Stunde'",
-  "kochzeit": "Kochzeit in Minuten (optional)",
-  "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
-  "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
-  "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
-  "tags": ["vegetarisch", "vegan", "glutenfrei", etc. - falls zutreffend],
-  "zutaten": [
-    "Erste Zutat mit Menge",
-    "Zweite Zutat mit Menge",
-    ...
-  ],
-  "zubereitung": [
-    "Erster Zubereitungsschritt",
-    "Zweiter Zubereitungsschritt",
-    ...
-  ],
-  "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
-}
-
-Wichtig:
-- Extrahiere alle sichtbaren Informationen genau
-- Wenn Informationen fehlen, lasse die Felder leer oder null
-- Gib NUR das JSON zurück, keine zusätzlichen Erklärungen
-- Zahlen ohne Anführungszeichen (außer bei Zeitangaben mit Text)`;
-  } else {
-    return `Analyze this recipe image and extract all information as structured JSON.
-
-Please return the result in the following JSON format:
-{
-  "title": "Recipe name",
-  "servings": Number of servings as a number,
-  "prepTime": "Preparation time in minutes as number or text like '30 min' or '1 hour'",
-  "cookTime": "Cooking time in minutes (optional)",
-  "difficulty": Difficulty level 1-5 (1=very easy, 5=very hard),
-  "cuisine": "Cuisine type (e.g., Italian, Asian, American)",
-  "category": "Category (e.g., Main Course, Dessert, Appetizer, Side Dish, Snack)",
-  "tags": ["vegetarian", "vegan", "gluten-free", etc. - if applicable],
-  "ingredients": [
-    "First ingredient with quantity",
-    "Second ingredient with quantity",
-    ...
-  ],
-  "steps": [
-    "First preparation step",
-    "Second preparation step",
-    ...
-  ],
-  "notes": "Additional notes or tips (optional)"
-}
-
-Important:
-- Extract all visible information accurately
-- If information is missing, leave fields empty or null
-- Return ONLY the JSON, no additional explanations
-- Numbers without quotes (except for time strings with text)`;
+    return prompt;
   }
+
+  // Fallback for other languages (not yet implemented)
+  return prompt;
 }
 
 /**

@@ -56,6 +56,72 @@ export const DEFAULT_PORTION_UNITS = [
 export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
+// Standard-Prompt für KI-Rezepterkennung (optimiert)
+export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
+
+Bitte gib das Ergebnis im folgenden JSON-Format zurück:
+{
+  "titel": "Name des Rezepts",
+  "portionen": Anzahl der Portionen als Zahl (nur die Zahl, z.B. 4),
+  "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
+  "kochzeit": Kochzeit in Minuten als Zahl (optional),
+  "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
+  "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
+  "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
+  "tags": ["vegetarisch", "vegan", "glutenfrei"], // nur falls explizit erwähnt
+  "zutaten": [
+    "500 g Spaghetti",
+    "200 g Speck",
+    "4 Eier"
+  ],
+  "zubereitung": [
+    "Wasser in einem großen Topf zum Kochen bringen und salzen",
+    "Spaghetti nach Packungsanweisung kochen",
+    "Speck in Würfel schneiden und in einer Pfanne knusprig braten"
+  ],
+  "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
+}
+
+WICHTIGE REGELN:
+1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 EL Olivenöl", "1 Prise Salz")
+2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
+3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
+4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
+5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, EL statt Esslöffel, TL statt Teelöffel)
+6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
+
+BEISPIEL GUTE EXTRAKTION:
+{
+  "titel": "Spaghetti Carbonara",
+  "portionen": 4,
+  "zubereitungszeit": 30,
+  "schwierigkeit": 2,
+  "kulinarik": "Italienisch",
+  "kategorie": "Hauptgericht",
+  "tags": [],
+  "zutaten": [
+    "400 g Spaghetti",
+    "200 g Guanciale oder Pancetta",
+    "4 Eigelb",
+    "100 g Pecorino Romano",
+    "Schwarzer Pfeffer",
+    "Salz"
+  ],
+  "zubereitung": [
+    "Reichlich Wasser in einem großen Topf zum Kochen bringen und großzügig salzen",
+    "Guanciale in kleine Würfel schneiden und bei mittlerer Hitze knusprig braten",
+    "Eigelb mit geriebenem Pecorino und viel schwarzem Pfeffer verrühren",
+    "Spaghetti nach Packungsanweisung bissfest kochen",
+    "Pasta abgießen, dabei etwas Nudelwasser auffangen",
+    "Pasta zum Guanciale geben, von der Hitze nehmen",
+    "Ei-Käse-Mischung unterrühren, mit Nudelwasser cremig machen",
+    "Sofort servieren mit extra Pecorino und Pfeffer"
+  ],
+  "notizen": "Wichtig: Die Pfanne muss von der Hitze genommen werden, bevor die Eier hinzugefügt werden, sonst stocken sie."
+}
+
+Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
+
 // Default button icons (emoji icons)
 export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '👨‍🍳',
@@ -101,7 +167,8 @@ export async function getSettings() {
         timelineBubbleIcon: settings.timelineBubbleIcon || null,
         timelineMenuBubbleIcon: settings.timelineMenuBubbleIcon || null,
         timelineRecipeDefaultImage: settings.timelineRecipeDefaultImage || null,
-        timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null
+        timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null,
+        aiRecipePrompt: settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT
       };
       
       return settingsCache;
@@ -121,7 +188,8 @@ export async function getSettings() {
       timelineBubbleIcon: null,
       timelineMenuBubbleIcon: null,
       timelineRecipeDefaultImage: null,
-      timelineMenuDefaultImage: null
+      timelineMenuDefaultImage: null,
+      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT
     };
     
     // Create the settings document
@@ -146,7 +214,8 @@ export async function getSettings() {
       timelineBubbleIcon: null,
       timelineMenuBubbleIcon: null,
       timelineRecipeDefaultImage: null,
-      timelineMenuDefaultImage: null
+      timelineMenuDefaultImage: null,
+      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT
     };
   }
 }
@@ -497,4 +566,42 @@ export async function saveTimelineMenuDefaultImage(imageBase64) {
     console.error('Error saving timeline menu default image:', error);
     throw error;
   }
+}
+
+/**
+ * Get the AI recipe extraction prompt from Firestore or return default
+ * @returns {Promise<string>} Promise resolving to AI prompt
+ */
+export async function getAIRecipePrompt() {
+  const settings = await getSettings();
+  return settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
+}
+
+/**
+ * Save the AI recipe extraction prompt to Firestore
+ * @param {string} prompt - AI recipe extraction prompt
+ * @returns {Promise<void>}
+ */
+export async function saveAIRecipePrompt(prompt) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { aiRecipePrompt: prompt || DEFAULT_AI_RECIPE_PROMPT });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.aiRecipePrompt = prompt || DEFAULT_AI_RECIPE_PROMPT;
+    }
+  } catch (error) {
+    console.error('Error saving AI recipe prompt:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reset AI recipe prompt to default
+ * @returns {Promise<string>} Promise resolving to default prompt
+ */
+export async function resetAIRecipePrompt() {
+  await saveAIRecipePrompt(DEFAULT_AI_RECIPE_PROMPT);
+  return DEFAULT_AI_RECIPE_PROMPT;
 }
