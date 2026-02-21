@@ -680,6 +680,27 @@ describe('RecipeList - Kulinarik Display', () => {
     expect(kulinarikDiv).not.toBeInTheDocument();
   });
 
+  test('displays kulinarik tag when recipe has kulinarik as string (legacy format)', () => {
+    const recipesWithStringKulinarik = [
+      {
+        id: '1',
+        title: 'Pasta Carbonara',
+        kulinarik: 'Italienisch',
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithStringKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Italienisch')).toBeInTheDocument();
+    expect(screen.getByText('Italienisch')).toHaveClass('kulinarik-tag');
+  });
+
   test('does not show ingredient or step counts', () => {
     const recipe = {
       id: '1',

@@ -204,7 +204,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   <h3>{recipe.title}</h3>
                   {recipe.kulinarik && recipe.kulinarik.length > 0 && (
                     <div className="recipe-kulinarik">
-                      {recipe.kulinarik.map((k, i) => (
+                      {(Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [recipe.kulinarik]).map((k, i) => (
                         <span key={i} className="kulinarik-tag">{k}</span>
                       ))}
                     </div>
