@@ -226,17 +226,22 @@
   text-overflow: ellipsis;
 }
 
-.recipe-meta {
+.recipe-kulinarik {
   display: flex;
-  gap: 1rem;
-  font-size: 0.9rem;
-  color: #666;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
 }
 
-.recipe-meta span {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+.kulinarik-tag {
+  display: inline-block;
+  background-color: #f0f4ff;
+  color: #3a5bb8;
+  border: 1px solid #c7d4f5;
+  border-radius: 12px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .recipe-footer {

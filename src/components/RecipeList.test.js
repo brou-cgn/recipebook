@@ -633,3 +633,70 @@ describe('RecipeList - Filter Button Icon', () => {
     expect(imgInButton).toHaveAttribute('alt', 'Filter');
   });
 });
+
+describe('RecipeList - Kulinarik Display', () => {
+  beforeEach(() => {
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+  });
+
+  test('displays kulinarik tags when recipe has kulinarik', () => {
+    const recipesWithKulinarik = [
+      {
+        id: '1',
+        title: 'Pasta Carbonara',
+        kulinarik: ['Italienisch', 'Mediterran'],
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Italienisch')).toBeInTheDocument();
+    expect(screen.getByText('Mediterran')).toBeInTheDocument();
+  });
+
+  test('does not display kulinarik section when recipe has no kulinarik', () => {
+    const recipesWithoutKulinarik = [
+      {
+        id: '1',
+        title: 'Simple Recipe',
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithoutKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    const kulinarikDiv = document.querySelector('.recipe-kulinarik');
+    expect(kulinarikDiv).not.toBeInTheDocument();
+  });
+
+  test('does not show ingredient or step counts', () => {
+    const recipe = {
+      id: '1',
+      title: 'Test',
+      ingredients: ['a', 'b', 'c'],
+      steps: ['s1', 's2'],
+    };
+
+    render(
+      <RecipeList
+        recipes={[recipe]}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    expect(screen.queryByText(/Zutaten/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Schritte/)).not.toBeInTheDocument();
+  });
+});
