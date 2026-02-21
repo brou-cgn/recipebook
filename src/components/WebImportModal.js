@@ -120,7 +120,7 @@ function WebImportModal({ onImport, onCancel }) {
           {step === 'url' && (
             <div className="url-input-section">
               <p className="web-import-instructions">
-                Geben Sie die URL einer Website mit einem Rezept ein
+                Gebe die URL deines Rezepts ein
               </p>
 
               <div className="url-input-container">
@@ -152,7 +152,7 @@ function WebImportModal({ onImport, onCancel }) {
               <p className="web-import-instructions">
                 {progress < 50 
                   ? 'Analysiere Website...' 
-                  : '🤖 Analysiere Rezept mit KI...'}
+                  : 'Analysiere Rezept...'}
               </p>
               <div className="progress-container">
                 <div className="progress-bar">
@@ -170,7 +170,7 @@ function WebImportModal({ onImport, onCancel }) {
           {step === 'result' && aiResult && (
             <div className="result-section">
               <p className="web-import-instructions">
-                KI-Analyse abgeschlossen - Überprüfen Sie die erkannten Daten
+                Analyse abgeschlossen - Überprüfe die erkannten Daten
               </p>
 
               <div className="source-url">

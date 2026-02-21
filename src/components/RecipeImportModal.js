@@ -30,7 +30,7 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
         // CSV file was selected but parsing failed
         setError('CSV-Datei konnte nicht verarbeitet werden. Bitte überprüfen Sie das Dateiformat.');
       } else {
-        setError('Bitte geben Sie Rezeptdaten ein oder wählen Sie eine CSV-Datei aus');
+        setError('Bitte wählen Sie eine CSV-Datei aus');
       }
       return;
     }
@@ -121,8 +121,7 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
 
         <div className="import-modal-content">
           <p className="import-instructions">
-            Fügen Sie Ihre Rezeptdaten ein oder laden Sie eine CSV-Datei hoch. 
-            Unterstützte Formate: JSON, Notion Markdown, CSV (für Bulk-Import)
+            Lade deine Rezeptdaten hoch (unterstützte Formate: CSV)
           </p>
 
           <div className="csv-upload-section">
@@ -145,7 +144,7 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
                   {csvRecipes.length} Rezept{csvRecipes.length !== 1 ? 'e' : ''} bereit zum Importieren
                 </p>
                 <p className="csv-preview-hint">
-                  Klicken Sie auf "Importieren", um fortzufahren
+                   Klicke auf "Importieren", um fortzufahren
                 </p>
               </div>
             ) : (
@@ -155,20 +154,6 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
               </p>
             )}
           </div>
-
-          <div className="text-import-divider">
-            <span>oder Text einfügen</span>
-          </div>
-
-          <textarea
-            className="import-textarea"
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder={`JSON:\n{\n  "title": "Rezeptname",\n  "ingredients": [...],\n  "steps": [...]\n}\n\nNotion Markdown:\n# Rezeptname\nPortionen: 4\n## Zutaten\n- Zutat 1\n## Zubereitung\n1. Schritt 1`}
-            rows="15"
-            disabled={csvRecipes && csvRecipes.length > 0}
-            aria-label={csvRecipes && csvRecipes.length > 0 ? 'Texteingabe deaktiviert, da CSV-Datei geladen' : 'Rezeptdaten als Text eingeben'}
-          />
 
           {error && (
             <div className="import-error">

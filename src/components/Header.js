@@ -105,7 +105,7 @@ function Header({
             <img src={appLogoImage} alt="Logo" className="header-logo" />
           )}
           <div className="header-title-text">
-            <h1>DishBook</h1>
+            <h1>brouBook</h1>
             <p className="tagline">{headerSlogan}</p>
           </div>
         </div>

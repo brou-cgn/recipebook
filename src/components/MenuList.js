@@ -101,8 +101,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
           <p>{showFavoritesOnly ? 'Keine favorisierten Menüs!' : 'Noch keine Menüs!'}</p>
           <p className="empty-hint">
             {showFavoritesOnly 
-              ? 'Markieren Sie Menüs als Favoriten, um sie schnell zu finden' 
-              : 'Tippen Sie auf "Menü erstellen", um Ihre Rezepte in Menüs zu organisieren'}
+              ? 'Markiere Menüs als Favorit, so findest du sie schneller.' 
+              : 'Tippe auf "Menü erstellen", um deine Rezepte in Menüs zu organisieren'}
           </p>
         </div>
       ) : (

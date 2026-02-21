@@ -174,7 +174,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           <p className="empty-hint">
             {showFavoritesOnly 
               ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
-              : 'Tippen Sie auf "Rezept hinzufügen", um Ihr erstes Rezept zu erstellen'}
+              : 'Das kannst du ändern, lege direkt ein Rezept an.'}
           </p>
         </div>
       ) : (

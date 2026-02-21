@@ -241,7 +241,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             id="menuDescription"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Beschreiben Sie dieses Menü..."
+            placeholder="Sag etwas über dein Menü."
             rows="3"
           />
         </div>
