@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './SharePage.css';
 import { getRecipeByShareId, addRecipe } from '../utils/recipeFirestore';
 import RecipeDetail from './RecipeDetail';
+import { getButtonIcons } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
   const [recipe, setRecipe] = useState(null);
@@ -10,6 +12,7 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [copyLinkIcon, setCopyLinkIcon] = useState('🔗');
 
   useEffect(() => {
     const load = async () => {
@@ -24,6 +27,14 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
     };
     load();
   }, [shareId]);
+
+  useEffect(() => {
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setCopyLinkIcon(icons.copyLink || '🔗');
+    };
+    loadIcons();
+  }, []);
 
   const handleCopyUrl = async () => {
     try {
@@ -96,7 +107,11 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
     <>
       <div className="share-page-actions-banner">
         <button className="share-copy-button" onClick={handleCopyUrl} title="Link kopieren">
-          {copySuccess ? '✓ Kopiert!' : '🔗 Link kopieren'}
+          {copySuccess ? '✓' : (
+            isBase64Image(copyLinkIcon)
+              ? <img src={copyLinkIcon} alt="Link kopieren" className="share-copy-icon-img" />
+              : <span>{copyLinkIcon}</span>
+          )}
         </button>
         {addSuccess ? (
           <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>

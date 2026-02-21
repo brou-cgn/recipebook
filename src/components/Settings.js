@@ -133,7 +133,8 @@ function Settings({ onBack, currentUser }) {
     webImport: '🌐',
     closeButton: '✕',
     menuCloseButton: '✕',
-    filterButton: '⚙'
+    filterButton: '⚙',
+    copyLink: '🔗'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -1149,6 +1150,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.filterButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.filterButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="copyLinkIcon">Link-kopieren-Button (Teilen-Seite):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.copyLink) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="copyLinkIcon"
+                          value={buttonIcons.copyLink}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, copyLink: e.target.value })}
+                          placeholder="z.B. 🔗"
+                          maxLength={10}
+                        />
+                        <label htmlFor="copyLinkIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'copyLink' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="copyLinkIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('copyLink', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'copyLink'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('copyLink')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, copyLink: DEFAULT_BUTTON_ICONS.copyLink })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.copyLink) ? (
+                        <img src={buttonIcons.copyLink} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.copyLink}</span>
                       )}
                     </div>
                   </div>
