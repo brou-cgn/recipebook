@@ -7,7 +7,6 @@ import { fuzzyFilter } from '../utils/fuzzySearch';
 function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
   const [menuDate, setMenuDate] = useState('');
   const [sections, setSections] = useState([]);
   const [availableSections, setAvailableSections] = useState([]);
@@ -36,7 +35,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     if (menu) {
       setName(menu.name || '');
       setDescription(menu.description || '');
-      setIsPrivate(menu.isPrivate || false);
       // Initialize menuDate: use existing menuDate, or fall back to createdAt, or today
       if (menu.menuDate) {
         setMenuDate(menu.menuDate);
@@ -172,7 +170,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       id: menu?.id,
       name: name.trim(),
       description: description.trim(),
-      isPrivate: isPrivate,
       menuDate: menuDate,
       createdBy: menu?.createdBy || currentUser?.id,
       sections: sections,
@@ -257,17 +254,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             value={menuDate}
             onChange={(e) => setMenuDate(e.target.value)}
           />
-        </div>
-
-        <div className="form-group checkbox-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={isPrivate}
-              onChange={(e) => setIsPrivate(e.target.checked)}
-            />
-            <span>Entwurf Menü (nur für mich sichtbar)</span>
-          </label>
         </div>
 
         <div className="form-section sections-management">

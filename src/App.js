@@ -183,7 +183,7 @@ function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribe = subscribeToMenus(currentUser.id, (menusFromFirestore) => {
+    const unsubscribe = subscribeToMenus((menusFromFirestore) => {
       setMenus(menusFromFirestore);
     });
 

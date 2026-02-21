@@ -18,26 +18,19 @@ import { removeUndefinedFields } from './firestoreUtils';
 
 /**
  * Set up real-time listener for menus
- * Filters private menus to only show those created by the current user
- * @param {string} userId - Current user ID (to filter private menus)
  * @param {Function} callback - Callback function that receives menus array
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToMenus = (userId, callback) => {
+export const subscribeToMenus = (callback) => {
   const menusRef = collection(db, 'menus');
   
   return onSnapshot(menusRef, (snapshot) => {
     const menus = [];
     snapshot.forEach((doc) => {
-      const menu = {
+      menus.push({
         id: doc.id,
         ...doc.data()
-      };
-      
-      // Include menu if it's public or if it's private and belongs to the current user
-      if (!menu.isPrivate || menu.authorId === userId) {
-        menus.push(menu);
-      }
+      });
     });
     callback(menus);
   }, (error) => {
@@ -48,24 +41,18 @@ export const subscribeToMenus = (userId, callback) => {
 
 /**
  * Get all menus (one-time fetch)
- * @param {string} userId - Current user ID (to filter private menus)
  * @returns {Promise<Array>} Promise resolving to array of menus
  */
-export const getMenus = async (userId) => {
+export const getMenus = async () => {
   try {
     const menusRef = collection(db, 'menus');
     const snapshot = await getDocs(menusRef);
     const menus = [];
     snapshot.forEach((doc) => {
-      const menu = {
+      menus.push({
         id: doc.id,
         ...doc.data()
-      };
-      
-      // Include menu if it's public or if it's private and belongs to the current user
-      if (!menu.isPrivate || menu.authorId === userId) {
-        menus.push(menu);
-      }
+      });
     });
     return menus;
   } catch (error) {

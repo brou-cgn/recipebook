@@ -131,11 +131,6 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
       <div className="menu-detail-content">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
-          {menu.isPrivate && (
-            <span className="private-indicator" title="Entwurf Menü">
-              Entwurf
-            </span>
-          )}
           <button className="close-button" onClick={onBack} title="Schließen">
             {isBase64Image(closeButtonIcon) ? (
               <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />

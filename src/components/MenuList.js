@@ -72,13 +72,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     return 0;
   };
 
-  // Filter menus based on privacy and favorites, then sort by date descending (newest first)
+  // Filter menus based on favorites, then sort by date descending (newest first)
   const filteredMenus = menus.filter(menu => {
-    // Filter out private menus that don't belong to current user
-    if (menu.isPrivate && menu.createdBy !== currentUser?.id) {
-      return false;
-    }
-    
     // Filter favorites if enabled
     if (showFavoritesOnly) {
       return favoriteIds.includes(menu.id);
@@ -141,13 +136,6 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                     {menuDate && <span>{menuDate}</span>}
                     {authorName && <span>{authorName}</span>}
                   </div>
-                  {menu.isPrivate && (
-                    <div className="menu-footer">
-                      <span className="private-badge" title="Entwurf Menü">
-                        Entwurf
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
             );
