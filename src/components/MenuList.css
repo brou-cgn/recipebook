@@ -162,16 +162,20 @@
 .menu-description {
   margin: 0 0 1rem 0;
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
 .menu-meta {
   display: flex;
   gap: 1rem;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: #666;
   font-weight: 500;
+}
+
+.menu-meta-author {
+  margin-left: auto;
 }
 
 .menu-footer {

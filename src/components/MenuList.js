@@ -19,10 +19,6 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     loadFavorites();
   }, [currentUser?.id]);
 
-  const getRecipeCount = (menu) => {
-    return menu.recipeIds?.length || 0;
-  };
-
   const getAuthorName = (menu) => {
     if (!menu.authorId || !allUsers || allUsers.length === 0) return null;
     const author = allUsers.find(u => u.id === menu.authorId);
@@ -132,9 +128,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                     <p className="menu-description">{menu.description}</p>
                   )}
                   <div className="menu-meta">
-                    <span>{getRecipeCount(menu)} Rezepte</span>
                     {menuDate && <span>{menuDate}</span>}
-                    {authorName && <span>{authorName}</span>}
+                    {authorName && <span className="menu-meta-author">{authorName}</span>}
                   </div>
                 </div>
               </div>
