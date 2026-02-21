@@ -292,15 +292,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         webImport: icons.webImport || '🌐'
       });
     };
+    loadCustomLists();
+    loadUsers();
+    loadButtonIcons();
+  }, []);
+
+  useEffect(() => {
     const checkAiOcrLimit = async () => {
       if (currentUser?.id) {
         const count = await getUserAiOcrScanCount(currentUser.id);
         setAiOcrLimitReached(count >= 20);
       }
     };
-    loadCustomLists();
-    loadUsers();
-    loadButtonIcons();
     checkAiOcrLimit();
   }, [currentUser?.id]);
 
