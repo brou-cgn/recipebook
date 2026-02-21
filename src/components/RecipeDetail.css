@@ -216,11 +216,13 @@
 
 .share-copy-url-button {
   color: #555;
-  border-color: #aaa;
+  background: transparent;
+  border: none;
 }
 
 .share-copy-url-button:hover {
-  background: #f5f5f5;
+  background: transparent;
+  border: none;
 }
 
 .recipe-detail-content {
