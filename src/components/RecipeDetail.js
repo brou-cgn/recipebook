@@ -620,7 +620,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 onClick={handleCopyShareUrl}
                 title="Link teilen"
               >
-                {shareUrlCopied ? '✓ Geteilt!' : '↑ Link teilen'}
                 {shareUrlCopied ? '✓' : (
                   isBase64Image(copyLinkButtonIcon)
                     ? <img src={copyLinkButtonIcon} alt="Link kopieren" className="button-icon-image" />
@@ -790,7 +789,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                     onClick={handleCopyShareUrl}
                     title="Link teilen"
                   >
-                    {shareUrlCopied ? '✓ Geteilt!' : '↑ Link teilen'}
                     {shareUrlCopied ? '✓' : (
                       isBase64Image(copyLinkButtonIcon)
                         ? <img src={copyLinkButtonIcon} alt="Link kopieren" className="button-icon-image" />
