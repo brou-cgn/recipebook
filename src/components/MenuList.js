@@ -28,6 +28,9 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
     const author = allUsers.find(u => u.id === menu.authorId);
     if (!author) return null;
     return author.vorname;
+  };
+
+  const getMenuDate = (menu) => {
     if (menu.menuDate) {
       try {
         return new Date(menu.menuDate).toLocaleDateString('de-DE');
