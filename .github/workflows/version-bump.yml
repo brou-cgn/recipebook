@@ -124,6 +124,16 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
+          # Skip if this version tag already exists (handles workflow re-runs)
+          if git tag -l "v$NEW_VERSION" | grep -q .; then
+            echo "⚠️  Tag v$NEW_VERSION already exists, skipping version bump"
+            git checkout -- package.json
+            if [ -f "package-lock.json" ]; then
+              git checkout -- package-lock.json
+            fi
+            exit 0
+          fi
+          
           # Commit the version change
           git add package.json
           if [ -f "package-lock.json" ]; then
