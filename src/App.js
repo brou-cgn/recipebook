@@ -13,6 +13,7 @@ import Register from './components/Register';
 import PasswordChangeModal from './components/PasswordChangeModal';
 import FilterPage from './components/FilterPage';
 import Kueche from './components/Kueche';
+import SharePage from './components/SharePage';
 import { 
   loginUser, 
   logoutUser, 
@@ -106,6 +107,23 @@ function App() {
     selectedAuthors: []
   });
   const recipeCountsInitialized = useRef(false);
+
+  // Detect share URL: #share/:shareId
+  const getShareIdFromHash = () => {
+    const hash = window.location.hash;
+    const match = hash.match(/^#share\/(.+)$/);
+    return match ? match[1] : null;
+  };
+
+  const [sharePageId, setSharePageId] = useState(() => getShareIdFromHash());
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setSharePageId(getShareIdFromHash());
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Set up Firebase auth state observer
   useEffect(() => {
@@ -498,6 +516,23 @@ function App() {
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           Laden...
         </div>
+      </div>
+    );
+  }
+
+  // If accessing a share URL, show SharePage (no login required)
+  if (sharePageId) {
+    return (
+      <div className="App">
+        <Header />
+        <SharePage
+          shareId={sharePageId}
+          currentUser={currentUser}
+          onAddToMyRecipes={() => {
+            window.location.hash = '';
+          }}
+          onLogin={() => setAuthView('login')}
+        />
       </div>
     );
   }

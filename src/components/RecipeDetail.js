@@ -5,7 +5,7 @@ import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, 
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
-import { updateRecipe } from '../utils/recipeFirestore';
+import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -18,6 +18,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
   const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [shareUrlCopied, setShareUrlCopied] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
   const stepsContainerRef = useRef(null);
@@ -246,6 +248,45 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     } catch (error) {
       console.error('Error updating draft status:', error);
       alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const getShareUrl = () => {
+    const base = window.location.href.split('#')[0];
+    return `${base}#share/${recipe.shareId}`;
+  };
+
+  const handleToggleShare = async () => {
+    setShareLoading(true);
+    try {
+      if (recipe.shareId) {
+        await disableRecipeSharing(recipe.id);
+        setSelectedRecipe({ ...recipe, shareId: undefined });
+      } else {
+        const shareId = await enableRecipeSharing(recipe.id);
+        setSelectedRecipe({ ...recipe, shareId });
+      }
+    } catch (error) {
+      console.error('Error toggling share:', error);
+      alert('Fehler beim Ändern des Share-Status. Bitte versuchen Sie es erneut.');
+    }
+    setShareLoading(false);
+  };
+
+  const handleCopyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setShareUrlCopied(true);
+      setTimeout(() => setShareUrlCopied(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = getShareUrl();
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setShareUrlCopied(true);
+      setTimeout(() => setShareUrlCopied(false), 2000);
     }
   };
 
@@ -548,6 +589,25 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 Löschen
               </button>
             )}
+            {userCanDirectlyEdit && (
+              <button
+                className={`share-button ${recipe.shareId ? 'share-active' : ''}`}
+                onClick={handleToggleShare}
+                disabled={shareLoading}
+                title={recipe.shareId ? 'Teilen deaktivieren' : 'Rezept teilen'}
+              >
+                {shareLoading ? '…' : recipe.shareId ? '🔗 Geteilt' : '↑ Teilen'}
+              </button>
+            )}
+            {userCanDirectlyEdit && recipe.shareId && (
+              <button
+                className="share-copy-url-button"
+                onClick={handleCopyShareUrl}
+                title="Share-Link kopieren"
+              >
+                {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -692,6 +752,25 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 {userCanDelete && (
                   <button className="delete-button" onClick={handleDelete}>
                     Löschen
+                  </button>
+                )}
+                {userCanDirectlyEdit && (
+                  <button
+                    className={`share-button ${recipe.shareId ? 'share-active' : ''}`}
+                    onClick={handleToggleShare}
+                    disabled={shareLoading}
+                    title={recipe.shareId ? 'Teilen deaktivieren' : 'Rezept teilen'}
+                  >
+                    {shareLoading ? '…' : recipe.shareId ? '🔗 Geteilt' : '↑ Teilen'}
+                  </button>
+                )}
+                {userCanDirectlyEdit && recipe.shareId && (
+                  <button
+                    className="share-copy-url-button"
+                    onClick={handleCopyShareUrl}
+                    title="Share-Link kopieren"
+                  >
+                    {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
                   </button>
                 )}
               </div>

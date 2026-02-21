@@ -16,6 +16,9 @@ const mockAddDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockIncrement = jest.fn((val) => ({ __increment: val }));
+const mockQuery = jest.fn((...args) => args);
+const mockWhere = jest.fn((...args) => args);
+const mockDeleteField = jest.fn(() => ({ __deleteField: true }));
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -27,7 +30,10 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: (...args) => mockDeleteDoc(...args),
   getDoc: (...args) => mockGetDoc(...args),
   serverTimestamp: jest.fn(() => 'mock-timestamp'),
-  increment: (...args) => mockIncrement(...args)
+  increment: (...args) => mockIncrement(...args),
+  query: (...args) => mockQuery(...args),
+  where: (...args) => mockWhere(...args),
+  deleteField: () => mockDeleteField()
 }));
 
 // Mock Storage Utils
@@ -40,7 +46,7 @@ jest.mock('./firestoreUtils', () => ({
   removeUndefinedFields: jest.fn((obj) => obj)
 }));
 
-import { subscribeToRecipes, getRecipes, addRecipe, updateRecipe, deleteRecipe, initializeRecipeCounts } from './recipeFirestore';
+import { subscribeToRecipes, getRecipes, addRecipe, updateRecipe, deleteRecipe, initializeRecipeCounts, getRecipeByShareId, enableRecipeSharing, disableRecipeSharing } from './recipeFirestore';
 
 // Reference to the mocked doc function (set up implementation in beforeEach)
 const { doc: mockDoc } = jest.requireMock('firebase/firestore');
@@ -378,6 +384,82 @@ describe('Recipe Firestore - Recipe Count', () => {
 
       expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
       expect(mockUpdateDoc).not.toHaveBeenCalledWith('users/user1', expect.anything());
+    });
+  });
+});
+
+describe('Recipe Firestore - Share Functionality', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDoc.mockImplementation((_db, ...path) => path.join('/'));
+    mockUpdateDoc.mockResolvedValue(undefined);
+    mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
+    // Ensure deleteField mock is set up
+    mockDeleteField.mockReturnValue({ __deleteField: true });
+  });
+
+  describe('getRecipeByShareId', () => {
+    it('should return the recipe with a matching shareId', async () => {
+      const mockRecipeDoc = {
+        id: 'recipe-shared',
+        data: () => ({ title: 'Shared Recipe', shareId: 'test-share-id' })
+      };
+      mockGetDocs.mockResolvedValue({
+        empty: false,
+        docs: [mockRecipeDoc]
+      });
+
+      const result = await getRecipeByShareId('test-share-id');
+
+      expect(result).toEqual({ id: 'recipe-shared', title: 'Shared Recipe', shareId: 'test-share-id' });
+    });
+
+    it('should return null when no recipe with given shareId exists', async () => {
+      mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
+
+      const result = await getRecipeByShareId('nonexistent-id');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on Firestore error', async () => {
+      mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const result = await getRecipeByShareId('some-id');
+
+      expect(result).toBeNull();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('enableRecipeSharing', () => {
+    beforeEach(() => {
+      // Polyfill crypto.randomUUID for the test environment
+      if (!global.crypto) global.crypto = {};
+      if (!global.crypto.randomUUID) {
+        global.crypto.randomUUID = jest.fn(() => 'mock-uuid-1234-5678-abcd-efghijklmnop');
+      }
+    });
+
+    it('should call updateDoc with a shareId and return it', async () => {
+      const shareId = await enableRecipeSharing('recipe1');
+
+      expect(typeof shareId).toBe('string');
+      expect(shareId.length).toBeGreaterThan(0);
+      expect(mockUpdateDoc).toHaveBeenCalled();
+    });
+  });
+
+  describe('disableRecipeSharing', () => {
+    it('should call updateDoc to remove the shareId field from the recipe', async () => {
+      await disableRecipeSharing('recipe1');
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        'recipes/recipe1',
+        expect.objectContaining({ shareId: expect.anything() })
+      );
+      expect(mockDeleteField).toHaveBeenCalled();
     });
   });
 });

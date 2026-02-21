@@ -14,7 +14,10 @@ import {
   deleteDoc,
   onSnapshot,
   serverTimestamp,
-  increment
+  increment,
+  query,
+  where,
+  deleteField
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 import { deleteRecipeImage } from './storageUtils';
@@ -181,6 +184,51 @@ export const deleteRecipe = async (recipeId) => {
     await deleteDoc(recipeRef);
   } catch (error) {
     console.error('Error deleting recipe:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a recipe by its shareId (public access, no authentication required)
+ * @param {string} shareId - The shareId of the recipe
+ * @returns {Promise<Object|null>} Promise resolving to the recipe or null if not found
+ */
+export const getRecipeByShareId = async (shareId) => {
+  try {
+    const recipesRef = collection(db, 'recipes');
+    const q = query(recipesRef, where('shareId', '==', shareId));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const recipeDoc = snapshot.docs[0];
+    return { id: recipeDoc.id, ...recipeDoc.data() };
+  } catch (error) {
+    console.error('Error getting recipe by shareId:', error);
+    return null;
+  }
+};
+
+/**
+ * Enable sharing for a recipe by generating a shareId
+ * @param {string} recipeId - ID of the recipe
+ * @returns {Promise<string>} Promise resolving to the generated shareId
+ */
+export const enableRecipeSharing = async (recipeId) => {
+  const shareId = crypto.randomUUID();
+  await updateRecipe(recipeId, { shareId });
+  return shareId;
+};
+
+/**
+ * Disable sharing for a recipe by removing the shareId
+ * @param {string} recipeId - ID of the recipe
+ * @returns {Promise<void>}
+ */
+export const disableRecipeSharing = async (recipeId) => {
+  try {
+    const recipeRef = doc(db, 'recipes', recipeId);
+    await updateDoc(recipeRef, { shareId: deleteField(), updatedAt: serverTimestamp() });
+  } catch (error) {
+    console.error('Error disabling recipe sharing:', error);
     throw error;
   }
 };

@@ -20,6 +20,9 @@ service cloud.firestore {
     
     // Recipes collection rules
     match /recipes/{recipeId} {
+      // Allow unauthenticated reads for recipes with a shareId (public sharing)
+      allow read: if resource.data.shareId != null && resource.data.shareId != '';
+      
       // Anyone authenticated can read public recipes
       // Only admins and authors can read private (draft) recipes
       allow read: if isAuthenticated() && 
