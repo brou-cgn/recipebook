@@ -2,17 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './SharePage.css';
 import { getRecipeByShareId, addRecipe } from '../utils/recipeFirestore';
 import RecipeDetail from './RecipeDetail';
-import { getButtonIcons } from '../utils/customLists';
-import { isBase64Image } from '../utils/imageUtils';
 
 function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
-  const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
 
   useEffect(() => {
     const load = async () => {
@@ -27,32 +23,6 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
     };
     load();
   }, [shareId]);
-
-  useEffect(() => {
-    const loadIcons = async () => {
-      const icons = await getButtonIcons();
-      setCopyLinkIcon(icons.copyLink || '📋');
-    };
-    loadIcons();
-  }, []);
-
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch {
-      // Legacy fallback for older browsers that don't support the Clipboard API
-      const input = document.createElement('input');
-      input.value = window.location.href;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
-  };
 
   const handleAddToMyRecipes = async () => {
     if (!currentUser) {
@@ -86,55 +56,33 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
 
   if (loading) {
     return (
-      <div className="share-page">
-        <div className="share-page-loading">Rezept wird geladen…</div>
+      <div className="share-page-loading">
+        Rezept wird geladen…
       </div>
     );
   }
 
   if (notFound) {
     return (
-      <div className="share-page">
-        <div className="share-page-not-found">
-          <h2>Rezept nicht gefunden</h2>
-          <p>Dieser Share-Link ist ungültig oder das Rezept wurde nicht mehr geteilt.</p>
-        </div>
+      <div className="share-page-not-found">
+        <h2>Rezept nicht gefunden</h2>
+        <p>Dieser Share-Link ist ungültig oder das Rezept wurde nicht mehr geteilt.</p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="share-page-actions-banner">
-        <button className="share-copy-button" onClick={handleCopyUrl} title="Link kopieren">
-          {copySuccess ? '✓' : (
-            isBase64Image(copyLinkIcon) ? (
-              <img src={copyLinkIcon} alt="Link kopieren" className="share-copy-icon-img" />
-            ) : (
-              copyLinkIcon
-            )
-          )}
-        </button>
-        {addSuccess ? (
-          <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
-        ) : (
-          <button
-            className="share-add-button"
-            onClick={handleAddToMyRecipes}
-            disabled={addLoading}
-          >
-            {addLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
-          </button>
-        )}
-      </div>
-      <RecipeDetail
-        recipe={recipe}
-        onBack={() => { window.location.hash = ''; }}
-        currentUser={currentUser}
-        allRecipes={[]}
-        allUsers={[]}
-      />
-    </>
+    <RecipeDetail
+      recipe={recipe}
+      onBack={() => { window.location.hash = ''; }}
+      currentUser={currentUser}
+      allRecipes={[]}
+      allUsers={[]}
+      isSharedView={true}
+      onAddToMyRecipes={handleAddToMyRecipes}
+      isAddToMyRecipesLoading={addLoading}
+      isAddToMyRecipesSuccess={addSuccess}
+    />
   );
 }
 

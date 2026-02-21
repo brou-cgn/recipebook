@@ -10,7 +10,7 @@ import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../util
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -630,6 +630,34 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 )}
               </button>
             )}
+            {isSharedView && !userCanDirectlyEdit && (
+              <button
+                className="share-copy-url-button"
+                onClick={handleCopyShareUrl}
+                title="Share-Link kopieren"
+              >
+                {shareUrlCopied ? '✓' : (
+                  isBase64Image(copyLinkIcon) ? (
+                    <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                  ) : (
+                    copyLinkIcon
+                  )
+                )}
+              </button>
+            )}
+            {onAddToMyRecipes && (
+              isAddToMyRecipesSuccess ? (
+                <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
+              ) : (
+                <button
+                  className="share-add-button"
+                  onClick={onAddToMyRecipes}
+                  disabled={isAddToMyRecipesLoading}
+                >
+                  {isAddToMyRecipesLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
+                </button>
+              )
+            )}
           </div>
         </div>
       )}
@@ -800,6 +828,34 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       )
                     )}
                   </button>
+                )}
+                {isSharedView && !userCanDirectlyEdit && (
+                  <button
+                    className="share-copy-url-button"
+                    onClick={handleCopyShareUrl}
+                    title="Share-Link kopieren"
+                  >
+                    {shareUrlCopied ? '✓' : (
+                      isBase64Image(copyLinkIcon) ? (
+                        <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                      ) : (
+                        copyLinkIcon
+                      )
+                    )}
+                  </button>
+                )}
+                {onAddToMyRecipes && (
+                  isAddToMyRecipesSuccess ? (
+                    <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
+                  ) : (
+                    <button
+                      className="share-add-button"
+                      onClick={onAddToMyRecipes}
+                      disabled={isAddToMyRecipesLoading}
+                    >
+                      {isAddToMyRecipesLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
+                    </button>
+                  )
                 )}
               </div>
             )}

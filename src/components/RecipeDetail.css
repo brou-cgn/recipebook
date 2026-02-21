@@ -232,6 +232,36 @@
   border: none;
 }
 
+.share-add-button {
+  background: white;
+  border: 2px solid #402C1C;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  color: #402C1C;
+  font-weight: 600;
+}
+
+.share-add-button:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+}
+
+.share-add-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.share-add-success {
+  color: #4caf50;
+  font-weight: 600;
+  padding: 0.6rem 0;
+  font-size: 0.9rem;
+}
+
 .recipe-detail-content {
   background: white;
   border-radius: 12px;
