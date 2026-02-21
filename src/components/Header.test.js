@@ -112,4 +112,28 @@ describe('Header - Hamburger Menu Visibility', () => {
     // Restore original environment variable
     process.env.REACT_APP_VERSION = originalVersion;
   });
+
+  test('pressing Enter in the search input blurs it (dismisses keyboard)', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onSearchChange={() => {}}
+      />
+    );
+
+    // Open search
+    const searchBtn = screen.getByLabelText('Suche');
+    fireEvent.click(searchBtn);
+
+    const searchInput = screen.getByPlaceholderText('Rezepte durchsuchen...');
+    searchInput.focus();
+    expect(document.activeElement).toBe(searchInput);
+
+    fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
+
+    expect(document.activeElement).not.toBe(searchInput);
+  });
 });

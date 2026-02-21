@@ -76,6 +76,12 @@ function Header({
     }
   };
 
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  };
+
   const handleSearchClear = () => {
     setSearchTerm('');
     if (onSearchChange) {
@@ -128,6 +134,7 @@ function Header({
                       placeholder="Rezepte durchsuchen..."
                       value={searchTerm}
                       onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
                     />
                     {searchTerm && (
                       <button 
