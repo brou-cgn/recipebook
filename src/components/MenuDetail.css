@@ -42,6 +42,7 @@
 
 .action-buttons {
   display: flex;
+  flex-direction: row;
   gap: 0.5rem;
 }
 
@@ -321,6 +322,7 @@
 @media (max-width: 480px) {
   .action-buttons {
     flex: 1;
+    flex-direction: row;
     width: 100%;
     flex-wrap: nowrap;
   }

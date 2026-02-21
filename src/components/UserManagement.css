@@ -512,7 +512,7 @@
     gap: 10px;
   }
 
-  .action-buttons {
+  .user-management-container .action-buttons {
     flex-direction: column;
     gap: 4px;
   }
