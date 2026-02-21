@@ -126,13 +126,6 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
             </button>
           )}
         </div>
-        <button className="close-button" onClick={onBack} title="Schließen">
-          {isBase64Image(closeButtonIcon) ? (
-            <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
-          ) : (
-            closeButtonIcon
-          )}
-        </button>
       </div>
 
       <div className="menu-detail-content">
@@ -143,6 +136,13 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
               Entwurf
             </span>
           )}
+          <button className="close-button" onClick={onBack} title="Schließen">
+            {isBase64Image(closeButtonIcon) ? (
+              <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
+            ) : (
+              closeButtonIcon
+            )}
+          </button>
         </div>
         
         {(formattedMenuDate || authorName) && (

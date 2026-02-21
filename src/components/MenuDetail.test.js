@@ -87,6 +87,50 @@ describe('MenuDetail - Action Buttons', () => {
   });
 });
 
+describe('MenuDetail - Close Button in Title Row', () => {
+  test('close button is inside menu-title-row', () => {
+    const { container } = render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const titleRow = container.querySelector('.menu-title-row');
+    expect(titleRow).toBeInTheDocument();
+    const closeButton = titleRow.querySelector('.close-button');
+    expect(closeButton).toBeInTheDocument();
+  });
+
+  test('close button is not inside menu-detail-header', () => {
+    const { container } = render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const header = container.querySelector('.menu-detail-header');
+    expect(header).toBeInTheDocument();
+    const closeButtonInHeader = header.querySelector('.close-button');
+    expect(closeButtonInHeader).not.toBeInTheDocument();
+  });
+});
+
 describe('MenuDetail - Metadata before Description', () => {
   test('metadata (author/date) appears before description in the DOM', () => {
     const { container } = render(
