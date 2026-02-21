@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './SharePage.css';
 import { getRecipeByShareId, addRecipe } from '../utils/recipeFirestore';
+import RecipeDetail from './RecipeDetail';
 
 function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
   const [recipe, setRecipe] = useState(null);
@@ -91,87 +92,32 @@ function SharePage({ shareId, currentUser, onAddToMyRecipes, onLogin }) {
     );
   }
 
-  const cuisineDisplay = Array.isArray(recipe.kulinarik)
-    ? recipe.kulinarik.join(', ')
-    : recipe.kulinarik;
-
-  const categoryDisplay = Array.isArray(recipe.speisekategorie)
-    ? recipe.speisekategorie.join(', ')
-    : recipe.speisekategorie;
-
   return (
-    <div className="share-page">
-      <div className="share-page-header">
-        <div className="share-page-actions">
-          <button className="share-copy-button" onClick={handleCopyUrl} title="Link kopieren">
-            {copySuccess ? '✓ Kopiert!' : '🔗 Link kopieren'}
+    <>
+      <div className="share-page-actions-banner">
+        <button className="share-copy-button" onClick={handleCopyUrl} title="Link kopieren">
+          {copySuccess ? '✓ Kopiert!' : '🔗 Link kopieren'}
+        </button>
+        {addSuccess ? (
+          <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
+        ) : (
+          <button
+            className="share-add-button"
+            onClick={handleAddToMyRecipes}
+            disabled={addLoading}
+          >
+            {addLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
           </button>
-          {addSuccess ? (
-            <span className="share-add-success">✓ Zu deinen Rezepten hinzugefügt!</span>
-          ) : (
-            <button
-              className="share-add-button"
-              onClick={handleAddToMyRecipes}
-              disabled={addLoading}
-            >
-              {addLoading ? 'Wird hinzugefügt…' : currentUser ? '+ Zu meinen Rezepten' : 'Anmelden & hinzufügen'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="share-page-content">
-        {recipe.image && (
-          <div className="share-recipe-image">
-            <img src={recipe.image} alt={recipe.title} />
-          </div>
         )}
-
-        <h1 className="share-recipe-title">{recipe.title}</h1>
-
-        <div className="share-recipe-meta">
-          {cuisineDisplay && <span className="share-meta-item">🍽 {cuisineDisplay}</span>}
-          {categoryDisplay && <span className="share-meta-item">📂 {categoryDisplay}</span>}
-          {recipe.kochdauer && <span className="share-meta-item">⏱ {recipe.kochdauer} Min.</span>}
-          {recipe.portionen && <span className="share-meta-item">👤 {recipe.portionen} Portionen</span>}
-          {recipe.schwierigkeit && (
-            <span className="share-meta-item">
-              {'★'.repeat(recipe.schwierigkeit)}{'☆'.repeat(5 - recipe.schwierigkeit)}
-            </span>
-          )}
-        </div>
-
-        <section className="share-recipe-section">
-          <h2>Zutaten</h2>
-          <ul className="share-ingredients-list">
-            {recipe.ingredients?.map((ingredient, index) => {
-              const item = typeof ingredient === 'string'
-                ? { type: 'ingredient', text: ingredient }
-                : ingredient;
-              if (item.type === 'heading') {
-                return <li key={index} className="share-ingredient-heading">{item.text}</li>;
-              }
-              return <li key={index}>{item.text}</li>;
-            }) || <li>Keine Zutaten aufgelistet</li>}
-          </ul>
-        </section>
-
-        <section className="share-recipe-section">
-          <h2>Zubereitung</h2>
-          <ol className="share-steps-list">
-            {recipe.steps?.map((step, index) => {
-              const item = typeof step === 'string'
-                ? { type: 'step', text: step }
-                : step;
-              if (item.type === 'heading') {
-                return <li key={index} className="share-step-heading">{item.text}</li>;
-              }
-              return <li key={index}>{item.text}</li>;
-            }) || <li>Keine Zubereitungsschritte aufgelistet</li>}
-          </ol>
-        </section>
       </div>
-    </div>
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => { window.location.hash = ''; }}
+        currentUser={currentUser}
+        allRecipes={[]}
+        allUsers={[]}
+      />
+    </>
   );
 }
 
