@@ -130,7 +130,8 @@ export const DEFAULT_BUTTON_ICONS = {
   webImport: '🌐',
   closeButton: '✕',
   menuCloseButton: '✕',
-  filterButton: '⚙'
+  filterButton: '⚙',
+  copyLink: '🔗'
 };
 
 // Cache for settings to avoid repeated Firestore reads
