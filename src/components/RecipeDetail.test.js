@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 
 // Mock the utility modules
@@ -1093,7 +1093,7 @@ describe('RecipeDetail - Share Button Visibility', () => {
     expect(screen.queryByTitle('Rezept teilen')).toBeNull();
   });
 
-  test('shows share link button for recipe with shareId', () => {
+  test('shows copy link button for recipe with shareId', () => {
     const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
 
     render(
@@ -1106,71 +1106,7 @@ describe('RecipeDetail - Share Button Visibility', () => {
       />
     );
 
-    expect(screen.getByTitle('Link teilen')).toBeInTheDocument();
-  });
-
-  test('calls navigator.share when share button is clicked and Web Share API is available', async () => {
-    const shareMock = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'share', {
-      value: shareMock,
-      writable: true,
-      configurable: true,
-    });
-
-    const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
-
-    render(
-      <RecipeDetail
-        recipe={sharedRecipe}
-        onBack={() => {}}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        currentUser={currentUser}
-      />
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getAllByTitle('Link teilen')[0]);
-    });
-
-    expect(shareMock).toHaveBeenCalledWith(
-      expect.objectContaining({ url: expect.stringContaining('some-share-id') })
-    );
-
-    delete navigator.share;
-  });
-
-  test('handles AbortError silently when navigator.share is cancelled', async () => {
-    const abortError = Object.assign(new Error('AbortError'), { name: 'AbortError' });
-    const shareMock = jest.fn().mockRejectedValue(abortError);
-    Object.defineProperty(navigator, 'share', {
-      value: shareMock,
-      writable: true,
-      configurable: true,
-    });
-
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
-
-    render(
-      <RecipeDetail
-        recipe={sharedRecipe}
-        onBack={() => {}}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        currentUser={currentUser}
-      />
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getAllByTitle('Link teilen')[0]);
-      await shareMock.mock.results[0].value.catch(() => {});
-    });
-
-    expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('Error sharing'));
-
-    consoleSpy.mockRestore();
-    delete navigator.share;
+    expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
   });
 });
 
