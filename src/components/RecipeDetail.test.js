@@ -45,7 +45,8 @@ jest.mock('../utils/customLists', () => ({
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
     scanImage: '📷',
-    closeButton: '✕'
+    closeButton: '✕',
+    copyLink: '📋'
   }),
 }));
 

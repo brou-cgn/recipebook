@@ -28,6 +28,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [portionUnits, setPortionUnits] = useState([]);
   const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
+  const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -37,6 +38,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       setPortionUnits(lists.portionUnits || []);
       setCookingModeIcon(icons.cookingMode || '👨‍🍳');
       setCloseButtonIcon(icons.closeButton || '✕');
+      setCopyLinkIcon(icons.copyLink || '📋');
     };
     loadSettings();
   }, []);
@@ -606,7 +608,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 onClick={handleCopyShareUrl}
                 title="Share-Link kopieren"
               >
-                {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
+                {shareUrlCopied ? '✓' : (
+                  isBase64Image(copyLinkIcon) ? (
+                    <img src={copyLinkIcon} alt="Link kopieren" className="button-icon-img" />
+                  ) : (
+                    copyLinkIcon
+                  )
+                )}
               </button>
             )}
           </div>
@@ -771,7 +779,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                     onClick={handleCopyShareUrl}
                     title="Share-Link kopieren"
                   >
-                    {shareUrlCopied ? '✓ Kopiert!' : '📋 Link kopieren'}
+                    {shareUrlCopied ? '✓' : (
+                      isBase64Image(copyLinkIcon) ? (
+                        <img src={copyLinkIcon} alt="Link kopieren" className="button-icon-img" />
+                      ) : (
+                        copyLinkIcon
+                      )
+                    )}
                   </button>
                 )}
               </div>
