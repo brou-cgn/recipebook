@@ -132,6 +132,7 @@ function Settings({ onBack, currentUser }) {
     scanImage: '📷',
     webImport: '🌐',
     closeButton: '✕',
+    menuCloseButton: '✕',
     filterButton: '⚙'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
