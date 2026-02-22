@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getAutoShareOnCreate, saveAutoShareOnCreate } from '../utils/customLists';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -153,6 +153,9 @@ function Settings({ onBack, currentUser }) {
   // AI recipe prompt state
   const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_RECIPE_PROMPT);
 
+  // Auto-share on create state
+  const [autoShareOnCreate, setAutoShareOnCreate] = useState(false);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -167,6 +170,7 @@ function Settings({ onBack, currentUser }) {
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
       const timelineMenuImg = await getTimelineMenuDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
+      const autoShare = await getAutoShareOnCreate();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -179,6 +183,7 @@ function Settings({ onBack, currentUser }) {
       setTimelineMenuBubbleIcon(timelineMenuIcon);
       setTimelineMenuDefaultImage(timelineMenuImg);
       setAiPrompt(aiRecipePrompt);
+      setAutoShareOnCreate(autoShare);
     };
     loadSettings();
   }, []);
@@ -193,6 +198,7 @@ function Settings({ onBack, currentUser }) {
     saveTimelineBubbleIcon(timelineBubbleIcon);
     saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
     saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
+    saveAutoShareOnCreate(autoShareOnCreate);
     
     // Apply favicon changes immediately
     updateFavicon(faviconImage);
@@ -1480,6 +1486,21 @@ function Settings({ onBack, currentUser }) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Teilen-Einstellungen</h3>
+              <p className="section-description">
+                Konfigurieren Sie, wie neue Rezepte geteilt werden.
+              </p>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={autoShareOnCreate}
+                  onChange={(e) => setAutoShareOnCreate(e.target.checked)}
+                />
+                <span>Automatisch Share-Link beim Erstellen eines neuen Rezepts generieren</span>
+              </label>
             </div>
 
             <div className="settings-actions">

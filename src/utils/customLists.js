@@ -169,7 +169,8 @@ export async function getSettings() {
         timelineMenuBubbleIcon: settings.timelineMenuBubbleIcon || null,
         timelineRecipeDefaultImage: settings.timelineRecipeDefaultImage || null,
         timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null,
-        aiRecipePrompt: settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT
+        aiRecipePrompt: settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT,
+        autoShareOnCreate: settings.autoShareOnCreate ?? false
       };
       
       return settingsCache;
@@ -190,7 +191,8 @@ export async function getSettings() {
       timelineMenuBubbleIcon: null,
       timelineRecipeDefaultImage: null,
       timelineMenuDefaultImage: null,
-      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT
+      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      autoShareOnCreate: false
     };
     
     // Create the settings document
@@ -216,7 +218,8 @@ export async function getSettings() {
       timelineMenuBubbleIcon: null,
       timelineRecipeDefaultImage: null,
       timelineMenuDefaultImage: null,
-      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT
+      aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      autoShareOnCreate: false
     };
   }
 }
@@ -605,4 +608,33 @@ export async function saveAIRecipePrompt(prompt) {
 export async function resetAIRecipePrompt() {
   await saveAIRecipePrompt(DEFAULT_AI_RECIPE_PROMPT);
   return DEFAULT_AI_RECIPE_PROMPT;
+}
+
+/**
+ * Get the autoShareOnCreate setting from Firestore
+ * @returns {Promise<boolean>} Promise resolving to the setting value
+ */
+export async function getAutoShareOnCreate() {
+  const settings = await getSettings();
+  return settings.autoShareOnCreate ?? false;
+}
+
+/**
+ * Save the autoShareOnCreate setting to Firestore
+ * @param {boolean} value - Whether to auto-share new recipes
+ * @returns {Promise<void>}
+ */
+export async function saveAutoShareOnCreate(value) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { autoShareOnCreate: value });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.autoShareOnCreate = value;
+    }
+  } catch (error) {
+    console.error('Error saving autoShareOnCreate setting:', error);
+    throw error;
+  }
 }
