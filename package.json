@@ -1,6 +1,6 @@
 {
   "name": "recipebook",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "private": true,
   "homepage": "https://brou-cgn.github.io/recipebook",
   "dependencies": {
