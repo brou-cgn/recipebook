@@ -3,6 +3,8 @@ import {
   parseOcrTextWithValidation,
   parseOcrTextWithClassification,
   parseOcrTextSmart,
+  extractKulinarikFromTags,
+  KULINARIK_TAG_KEYWORDS,
   EXAMPLE_OCR_TEXT_DE,
   EXAMPLE_OCR_TEXT_EN
 } from './ocrParser';
@@ -1171,6 +1173,130 @@ Bake for 20 minutes`;
       expect(result.recipe.ingredients.length).toBeGreaterThan(0);
       expect(result.recipe.steps.length).toBeGreaterThan(0);
       expect(result.validation).toBeDefined();
+    });
+  });
+
+  describe('extractKulinarikFromTags', () => {
+    test('maps vegetarisch tag to Vegetarisch', () => {
+      expect(extractKulinarikFromTags(['vegetarisch'])).toEqual(['Vegetarisch']);
+    });
+
+    test('maps vegan tag to Vegan', () => {
+      expect(extractKulinarikFromTags(['vegan'])).toEqual(['Vegan']);
+    });
+
+    test('is case-insensitive', () => {
+      expect(extractKulinarikFromTags(['Vegetarisch', 'VEGAN'])).toEqual(['Vegetarisch', 'Vegan']);
+    });
+
+    test('ignores unknown tags', () => {
+      expect(extractKulinarikFromTags(['glutenfrei', 'scharf'])).toEqual([]);
+    });
+
+    test('removes duplicates', () => {
+      expect(extractKulinarikFromTags(['vegan', 'vegan', 'Vegan'])).toEqual(['Vegan']);
+    });
+
+    test('returns empty array for empty input', () => {
+      expect(extractKulinarikFromTags([])).toEqual([]);
+    });
+
+    test('returns empty array for non-array input', () => {
+      expect(extractKulinarikFromTags(null)).toEqual([]);
+      expect(extractKulinarikFromTags(undefined)).toEqual([]);
+    });
+
+    test('handles mixed known and unknown tags', () => {
+      expect(extractKulinarikFromTags(['glutenfrei', 'vegan', 'scharf'])).toEqual(['Vegan']);
+    });
+  });
+
+  describe('parseOcrText with Tags property', () => {
+    test('adds Vegetarisch to kulinarik when Tags contains vegetarisch', () => {
+      const text = `Veggie Burger
+
+Tags: Vegetarisch
+
+Zutaten
+- 200g Gemüse
+- Brötchen
+
+Zubereitung
+1. Gemüse braten`;
+
+      const result = parseOcrText(text, 'de');
+      expect(result.kulinarik).toContain('Vegetarisch');
+    });
+
+    test('adds Vegan to kulinarik when Tags contains vegan', () => {
+      const text = `Salat
+
+Tags: Vegan
+
+Zutaten
+- Tomaten
+- Gurken
+
+Zubereitung
+1. Alles hacken`;
+
+      const result = parseOcrText(text, 'de');
+      expect(result.kulinarik).toContain('Vegan');
+    });
+
+    test('does not duplicate kulinarik entry if already present', () => {
+      const text = `Rezept
+
+Kulinarik: Vegetarisch
+Tags: Vegetarisch
+
+Zutaten
+- Zutat 1
+
+Zubereitung
+1. Schritt 1`;
+
+      const result = parseOcrText(text, 'de');
+      expect(result.kulinarik.filter(k => k === 'Vegetarisch')).toHaveLength(1);
+    });
+
+    test('merges tags with existing kulinarik', () => {
+      const text = `Rezept
+
+Kulinarik: Italienisch
+Tags: Vegetarisch
+
+Zutaten
+- Pasta
+
+Zubereitung
+1. Kochen`;
+
+      const result = parseOcrText(text, 'de');
+      expect(result.kulinarik).toContain('Italienisch');
+      expect(result.kulinarik).toContain('Vegetarisch');
+    });
+
+    test('ignores unknown tags and does not affect kulinarik', () => {
+      const text = `Rezept
+
+Tags: glutenfrei, scharf
+
+Zutaten
+- Zutat
+
+Zubereitung
+1. Schritt`;
+
+      const result = parseOcrText(text, 'de');
+      expect(result.kulinarik).toEqual([]);
+    });
+  });
+
+  describe('KULINARIK_TAG_KEYWORDS', () => {
+    test('contains vegetarisch and vegan entries', () => {
+      expect(KULINARIK_TAG_KEYWORDS).toHaveProperty('vegetarisch', 'Vegetarisch');
+      expect(KULINARIK_TAG_KEYWORDS).toHaveProperty('vegan', 'Vegan');
     });
   });
 });

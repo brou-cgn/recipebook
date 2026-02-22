@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './OcrScanModal.css';
 import { recognizeText } from '../utils/ocrService';
-import { parseOcrTextSmart } from '../utils/ocrParser';
+import { parseOcrTextSmart, extractKulinarikFromTags } from '../utils/ocrParser';
 import { getValidationSummary } from '../utils/ocrValidation';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
@@ -205,13 +205,18 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
           return numMatch ? parseInt(numMatch[0], 10) : 0;
         };
 
+        const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
+        const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
+        const kulinarikSet = new Set(kulinarikFromCuisine);
+        kulinarikFromTags.forEach(k => kulinarikSet.add(k));
+
         const recipe = {
           title: aiResult.title || '',
           ingredients: aiResult.ingredients || [],
           steps: aiResult.steps || [],
           portionen: aiResult.servings || 4,
           kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
-          kulinarik: aiResult.cuisine ? [aiResult.cuisine] : [],
+          kulinarik: [...kulinarikSet],
           schwierigkeit: aiResult.difficulty || 3,
           speisekategorie: aiResult.category || '',
         };

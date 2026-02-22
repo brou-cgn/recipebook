@@ -96,6 +96,35 @@ import { validateOcrResult } from './ocrValidation';
 import { autoClassifyText } from './ocrClassifier';
 
 /**
+ * Tags that should be automatically added as Kulinarik categories.
+ * Keys are lowercase for case-insensitive matching; values are the canonical display names.
+ * Extend this map to support additional culinary tags in the future.
+ */
+export const KULINARIK_TAG_KEYWORDS = {
+  vegetarisch: 'Vegetarisch',
+  vegan: 'Vegan',
+};
+
+/**
+ * Convert an array of tag strings to Kulinarik category names.
+ * Only tags listed in KULINARIK_TAG_KEYWORDS are returned.
+ * @param {string[]} tags - Array of tag strings
+ * @returns {string[]} - Matched Kulinarik category names (no duplicates)
+ */
+export function extractKulinarikFromTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  const seen = new Set();
+  return tags.reduce((result, tag) => {
+    const canonical = KULINARIK_TAG_KEYWORDS[tag.toLowerCase().trim()];
+    if (canonical && !seen.has(canonical)) {
+      seen.add(canonical);
+      result.push(canonical);
+    }
+    return result;
+  }, []);
+}
+
+/**
  * Parse OCR text into structured recipe data
  * @param {string} text - OCR-recognized text
  * @param {string} lang - Language code ('de' or 'en'), optional
@@ -324,6 +353,22 @@ function applyProperty(recipe, key, value) {
     const cuisines = value.split(',').map(c => c.trim()).filter(c => c);
     if (cuisines.length > 0) {
       recipe.kulinarik = cuisines;
+    }
+    return;
+  }
+
+  // Tags – add Vegetarisch/Vegan (and any future KULINARIK_TAG_KEYWORDS) to kulinarik
+  if (key === 'tags' || key === 'tag') {
+    const tagValues = value.split(',').map(t => t.trim()).filter(t => t);
+    const kulinarikFromTags = extractKulinarikFromTags(tagValues);
+    if (kulinarikFromTags.length > 0) {
+      const existing = new Set(recipe.kulinarik);
+      kulinarikFromTags.forEach(k => {
+        if (!existing.has(k)) {
+          recipe.kulinarik.push(k);
+          existing.add(k);
+        }
+      });
     }
     return;
   }

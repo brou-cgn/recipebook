@@ -14,7 +14,8 @@ jest.mock('../utils/ocrService', () => ({
 // Mock the OCR parser
 jest.mock('../utils/ocrParser', () => ({
   parseOcrText: jest.fn(),
-  parseOcrTextSmart: jest.fn()
+  parseOcrTextSmart: jest.fn(),
+  extractKulinarikFromTags: jest.requireActual('../utils/ocrParser').extractKulinarikFromTags
 }));
 
 // Mock the OCR validation
@@ -524,6 +525,81 @@ describe('OcrScanModal', () => {
       schwierigkeit: 2,
       speisekategorie: 'Dessert'
     });
+  });
+
+  test('AI result adds vegetarisch and vegan tags to kulinarik', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+
+    const mockAiResult = {
+      title: 'Veganer Salat',
+      servings: 2,
+      prepTime: '10 min',
+      difficulty: 1,
+      cuisine: 'Mediterran',
+      category: 'Salat',
+      ingredients: ['Tomaten', 'Gurken'],
+      steps: ['Gemüse hacken'],
+      tags: ['vegan', 'vegetarisch']
+    };
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Veganer Salat')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    const importButton = screen.getByText('Übernehmen');
+    fireEvent.click(importButton);
+
+    expect(mockOnImport).toHaveBeenCalledWith(expect.objectContaining({
+      kulinarik: expect.arrayContaining(['Mediterran', 'Vegan', 'Vegetarisch'])
+    }));
+  });
+
+  test('AI result does not duplicate kulinarik when tag matches cuisine', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { isAiOcrAvailable, recognizeRecipeWithAI } = require('../utils/aiOcrService');
+
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    isAiOcrAvailable.mockReturnValue(true);
+
+    const mockAiResult = {
+      title: 'Veggie Burger',
+      servings: 4,
+      prepTime: '30 min',
+      difficulty: 2,
+      cuisine: 'Vegetarisch',
+      category: 'Hauptgericht',
+      ingredients: ['Gemüse', 'Brötchen'],
+      steps: ['Gemüse braten'],
+      tags: ['vegetarisch']
+    };
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Veggie Burger')).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+
+    const importButton = screen.getByText('Übernehmen');
+    fireEvent.click(importButton);
+
+    const calledWith = mockOnImport.mock.calls[0][0];
+    expect(calledWith.kulinarik.filter(k => k === 'Vegetarisch')).toHaveLength(1);
   });
 
   test('AI result can be converted to text for editing', async () => {
