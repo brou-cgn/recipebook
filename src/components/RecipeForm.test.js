@@ -341,6 +341,41 @@ describe('RecipeForm - Author Field', () => {
   });
 });
 
+describe('RecipeForm - Difficulty Field', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Regular',
+    nachname: 'User',
+    email: 'user@example.com',
+    isAdmin: false,
+    role: 'edit',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('difficulty field has no pre-selection when adding a new recipe', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={currentUser}
+      />
+    );
+
+    const stars = document.querySelectorAll('.difficulty-slider .star');
+    expect(stars.length).toBe(5);
+    stars.forEach((star) => {
+      expect(star).toHaveClass('empty');
+      expect(star).not.toHaveClass('filled');
+    });
+  });
+});
+
 describe('RecipeForm - Multi-Select Fields', () => {
   const mockOnSave = jest.fn();
   const mockOnCancel = jest.fn();

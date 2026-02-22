@@ -167,7 +167,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [portionen, setPortionen] = useState('');
   const [portionUnitId, setPortionUnitId] = useState('portion');
   const [kulinarik, setKulinarik] = useState([]);
-  const [schwierigkeit, setSchwierigkeit] = useState(3);
+  const [schwierigkeit, setSchwierigkeit] = useState(0);
   const [kochdauer, setKochdauer] = useState('');
   const [speisekategorie, setSpeisekategorie] = useState([]);
   const [ingredients, setIngredients] = useState([{ type: 'ingredient', text: '' }]);
