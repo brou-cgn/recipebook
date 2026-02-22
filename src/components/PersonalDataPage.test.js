@@ -29,11 +29,11 @@ describe('PersonalDataPage', () => {
     expect(screen.getByDisplayValue('john@example.com')).toBeInTheDocument();
   });
 
-  test('calls onBack when back button is clicked', () => {
+  test('calls onBack when cancel button is clicked', () => {
     const onBack = jest.fn();
     render(<PersonalDataPage currentUser={mockUser} onBack={onBack} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Abbrechen/i }));
     expect(onBack).toHaveBeenCalled();
   });
 

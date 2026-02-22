@@ -39,9 +39,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
   return (
     <div className="personal-data-page">
       <div className="personal-data-header">
-        <button className="personal-data-back-btn" onClick={onBack} aria-label="Zurück">
-          ← Zurück
-        </button>
         <h2>Persönliche Daten</h2>
       </div>
       <form className="personal-data-form" onSubmit={handleSubmit}>
@@ -91,6 +88,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
           </div>
         )}
         <div className="personal-data-actions">
+          <button type="button" className="personal-data-cancel-btn" onClick={onBack}>
+            Abbrechen
+          </button>
           <button type="submit" className="personal-data-save-btn" disabled={saving}>
             {saving ? 'Wird gespeichert…' : 'Speichern'}
           </button>
