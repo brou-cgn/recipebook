@@ -208,21 +208,26 @@ function validateImageData(imageBase64) {
 async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, mealCategories) {
   let prompt = await getRecipeExtractionPrompt();
 
-  // Append dynamic list constraints when the frontend passes configured lists
-  const hasCuisineTypes = Array.isArray(cuisineTypes) && cuisineTypes.length > 0;
-  const hasMealCategories = Array.isArray(mealCategories) && mealCategories.length > 0;
-  if (hasCuisineTypes || hasMealCategories) {
-    const lines = ['\n\nWICHTIG: Wähle für "kulinarik" und "kategorie" NUR Werte aus diesen Listen:'];
-    if (hasCuisineTypes) {
-      lines.push(`- Kulinarik: ${cuisineTypes.join(', ')}`);
-    }
-    if (hasMealCategories) {
-      lines.push(`- Kategorie: ${mealCategories.join(', ')}`);
-    }
-    prompt = prompt + lines.join('\n');
+  // Replace placeholders with actual configured lists
+  if (Array.isArray(cuisineTypes) && cuisineTypes.length > 0) {
+    const cuisineList = cuisineTypes.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replace('{{CUISINE_TYPES}}', cuisineList);
+  } else {
+    // Fallback to default lists if not provided
+    prompt = prompt.replace('{{CUISINE_TYPES}}', '- Italian\n- Thai\n- Chinese\n- Japanese\n- Indian\n- Mexican\n- French\n- German\n- American\n- Mediterranean');
   }
 
-  console.log(`Using AI prompt (first 100 chars): ${prompt.substring(0, 100)}...`);
+  if (Array.isArray(mealCategories) && mealCategories.length > 0) {
+    const categoryList = mealCategories.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replace('{{MEAL_CATEGORIES}}', categoryList);
+  } else {
+    // Fallback to default lists if not provided
+    prompt = prompt.replace('{{MEAL_CATEGORIES}}', '- Appetizer\n- Main Course\n- Dessert\n- Soup\n- Salad\n- Snack\n- Beverage\n- Side Dish');
+  }
+
+  console.log(`Using AI prompt with replaced placeholders`);
+  console.log(`Cuisine types: ${cuisineTypes?.length || 0} items`);
+  console.log(`Meal categories: ${mealCategories?.length || 0} items`);
 
   const requestBody = {
     contents: [

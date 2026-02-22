@@ -127,6 +127,25 @@ The function returns these error codes:
 - `failed-precondition` - API key not configured
 - `internal` - Gemini API error
 
+## Placeholder System
+
+The AI prompt stored in Firestore supports two placeholders that are replaced at runtime before the prompt is sent to Gemini:
+
+- `{{CUISINE_TYPES}}` – replaced with the configured cuisine types (one per line, prefixed with `- `)
+- `{{MEAL_CATEGORIES}}` – replaced with the configured meal categories (one per line, prefixed with `- `)
+
+This ensures the dynamic lists appear **inline** in the prompt where Gemini can clearly see them, rather than being appended at the end.
+
+If no lists are passed by the client (e.g. when `getCustomLists` fails), sensible default lists are used as a fallback so the function always produces valid output.
+
+The Cloud Function logs the number of items used for each placeholder:
+
+```
+Using AI prompt with replaced placeholders
+Cuisine types: 10 items
+Meal categories: 8 items
+```
+
 ## Testing
 
 The function is automatically tested by the frontend tests in `src/utils/aiOcrService.test.js`.

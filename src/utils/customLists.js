@@ -57,18 +57,30 @@ export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
 // Standard-Prompt für KI-Rezepterkennung (optimiert)
-export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
+export const DEFAULT_AI_RECIPE_PROMPT = `Du bist ein Experte für die Extraktion von Rezept-Daten aus Bildern.
 
-Bitte gib das Ergebnis im folgenden JSON-Format zurück:
+Extrahiere das Rezept aus diesem Bild und gib mir ein **strukturiertes JSON-Objekt** zurück.
+
+**WICHTIG:** Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
+
+**Verfügbare Kulinarik-Typen:**
+{{CUISINE_TYPES}}
+
+**Verfügbare Speisekategorien:**
+{{MEAL_CATEGORIES}}
+
+Falls keine passende Kategorie existiert, wähle die nächstliegende oder lasse das Feld leer.
+
+**JSON-Format:**
 {
   "titel": "Name des Rezepts",
-  "portionen": Anzahl der Portionen als Zahl (nur die Zahl, z.B. 4),
-  "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
-  "kochzeit": Kochzeit in Minuten als Zahl (optional),
-  "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
-  "kulinarik": "Kulinarische Herkunft (z.B. Italienisch, Asiatisch, Deutsch)",
-  "kategorie": "Kategorie (z.B. Hauptgericht, Dessert, Vorspeise, Beilage, Snack)",
-  "tags": ["vegetarisch", "vegan", "glutenfrei"], // nur falls explizit erwähnt
+  "portionen": 4,
+  "zubereitungszeit": 15,
+  "kochzeit": 30,
+  "schwierigkeit": 3,
+  "kulinarik": "eines der obigen Kulinarik-Typen",
+  "kategorie": "eine der obigen Speisekategorien",
+  "tags": ["vegetarisch", "vegan", "glutenfrei"],
   "zutaten": [
     "500 g Spaghetti",
     "200 g Speck",
@@ -79,48 +91,17 @@ Bitte gib das Ergebnis im folgenden JSON-Format zurück:
     "Spaghetti nach Packungsanweisung kochen",
     "Speck in Würfel schneiden und in einer Pfanne knusprig braten"
   ],
-  "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
+  "notizen": "Optional: Besondere Hinweise"
 }
 
-WICHTIGE REGELN:
-1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 EL Olivenöl", "1 Prise Salz")
-2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
-3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
-4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
-5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, EL statt Esslöffel, TL statt Teelöffel)
-6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
-
-BEISPIEL GUTE EXTRAKTION:
-{
-  "titel": "Spaghetti Carbonara",
-  "portionen": 4,
-  "zubereitungszeit": 30,
-  "schwierigkeit": 2,
-  "kulinarik": "Italienisch",
-  "kategorie": "Hauptgericht",
-  "tags": [],
-  "zutaten": [
-    "400 g Spaghetti",
-    "200 g Guanciale oder Pancetta",
-    "4 Eigelb",
-    "100 g Pecorino Romano",
-    "Schwarzer Pfeffer",
-    "Salz"
-  ],
-  "zubereitung": [
-    "Reichlich Wasser in einem großen Topf zum Kochen bringen und großzügig salzen",
-    "Guanciale in kleine Würfel schneiden und bei mittlerer Hitze knusprig braten",
-    "Eigelb mit geriebenem Pecorino und viel schwarzem Pfeffer verrühren",
-    "Spaghetti nach Packungsanweisung bissfest kochen",
-    "Pasta abgießen, dabei etwas Nudelwasser auffangen",
-    "Pasta zum Guanciale geben, von der Hitze nehmen",
-    "Ei-Käse-Mischung unterrühren, mit Nudelwasser cremig machen",
-    "Sofort servieren mit extra Pecorino und Pfeffer"
-  ],
-  "notizen": "Wichtig: Die Pfanne muss von der Hitze genommen werden, bevor die Eier hinzugefügt werden, sonst stocken sie."
-}
-
-Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Schema.`;
+**Zusätzliche Regeln:**
+- Extrahiere ALLE Zutaten mit Menge und Einheit (z.B. "500 g Mehl", "2 EL Öl")
+- Nummeriere die Zubereitungsschritte NICHT (liste sie einfach auf)
+- "schwierigkeit" ist eine Zahl von 1-5 (1=sehr einfach, 5=sehr schwer)
+- Zeiten in Minuten als Zahl angeben
+- Wenn Informationen fehlen, lasse Felder leer statt zu raten
+- Gib NUR gültiges JSON zurück, OHNE Markdown-Formatierung (keine \`\`\`json)
+- Tags nur hinzufügen, wenn explizit im Rezept erwähnt`;
 
 // Default button icons (emoji icons)
 export const DEFAULT_BUTTON_ICONS = {
