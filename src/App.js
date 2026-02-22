@@ -39,7 +39,6 @@ import {
   initializeRecipeCounts,
   enableRecipeSharing
 } from './utils/recipeFirestore';
-import { getAutoShareOnCreate } from './utils/customLists';
 import {
   subscribeToMenus,
   addMenu as addMenuToFirestore,
@@ -252,35 +251,18 @@ function App() {
         // Add new recipe or new version
         const savedRecipe = await addRecipeToFirestore(recipe, currentUser.id);
 
-        // Auto-share the new recipe if the setting is enabled
-        const autoShare = await getAutoShareOnCreate();
-        if (autoShare && savedRecipe && savedRecipe.id) {
+        // Auto-share the new recipe to generate the share link immediately
+        let savedRecipeWithShare = savedRecipe;
+        if (savedRecipe && savedRecipe.id) {
           try {
             const shareId = await enableRecipeSharing(savedRecipe.id);
-            const base = window.location.href.split('#')[0];
-            const shareUrl = `${base}#share/${shareId}`;
-            const copiedMessage = `✓ Rezept gespeichert!\nShare-Link wurde in die Zwischenablage kopiert.`;
-            if (navigator.share) {
-              try {
-                await navigator.share({ url: shareUrl, title: recipe.title });
-              } catch (err) {
-                if (err.name !== 'AbortError') {
-                  await navigator.clipboard.writeText(shareUrl);
-                  alert(copiedMessage);
-                }
-              }
-            } else {
-              try {
-                await navigator.clipboard.writeText(shareUrl);
-                alert(copiedMessage);
-              } catch {
-                alert(`✓ Rezept gespeichert!\n\nShare-Link:\n${shareUrl}`);
-              }
-            }
+            savedRecipeWithShare = { ...savedRecipe, shareId };
           } catch (shareError) {
             console.error('Error generating share link:', shareError);
           }
         }
+
+        setSelectedRecipe(savedRecipeWithShare);
       }
       setIsFormOpen(false);
       setEditingRecipe(null);
