@@ -231,6 +231,37 @@ describe('Kueche', () => {
     expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
 
+  test('renders the Chefkoch tile with the current user full name', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe' }}
+      />
+    );
+
+    expect(screen.getByText('Chefkoch')).toBeInTheDocument();
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+
+  test('renders the Chefkoch tile without name when currentUser is not provided', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+      />
+    );
+
+    expect(screen.getByText('Chefkoch')).toBeInTheDocument();
+    expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+  });
+
   test('renders the info tile above the timeline with recipe and menu counts', () => {
     render(
       <Kueche

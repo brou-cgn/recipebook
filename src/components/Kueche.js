@@ -55,10 +55,24 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
     }
   };
 
+  const chefkochName = currentUser
+    ? [currentUser.vorname, currentUser.nachname].filter(Boolean).join(' ')
+    : null;
+
   return (
     <div className="kueche-container">
       <div className="kueche-header">
         <h2>Küche</h2>
+      </div>
+      <div className="kueche-tile">
+        <div className="kueche-tile-content">
+          <h3>Chefkoch</h3>
+          {chefkochName && (
+            <div className="kueche-tile-meta">
+              <span className="meta-text">{chefkochName}</span>
+            </div>
+          )}
+        </div>
       </div>
       <div
         className="kueche-tile"
