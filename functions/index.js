@@ -208,21 +208,29 @@ function validateImageData(imageBase64) {
 async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, mealCategories) {
   let prompt = await getRecipeExtractionPrompt();
 
+  // Warn if expected placeholders are missing from the prompt
+  if (!prompt.includes('{{CUISINE_TYPES}}')) {
+    console.warn('WARNING: {{CUISINE_TYPES}} placeholder was not found in prompt!');
+  }
+  if (!prompt.includes('{{MEAL_CATEGORIES}}')) {
+    console.warn('WARNING: {{MEAL_CATEGORIES}} placeholder was not found in prompt!');
+  }
+
   // Replace placeholders with actual configured lists
   if (Array.isArray(cuisineTypes) && cuisineTypes.length > 0) {
     const cuisineList = cuisineTypes.map((c) => `- ${c}`).join('\n');
-    prompt = prompt.replace('{{CUISINE_TYPES}}', cuisineList);
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', cuisineList);
   } else {
     // Fallback to default lists if not provided
-    prompt = prompt.replace('{{CUISINE_TYPES}}', '- Italian\n- Thai\n- Chinese\n- Japanese\n- Indian\n- Mexican\n- French\n- German\n- American\n- Mediterranean');
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', '- Italian\n- Thai\n- Chinese\n- Japanese\n- Indian\n- Mexican\n- French\n- German\n- American\n- Mediterranean');
   }
 
   if (Array.isArray(mealCategories) && mealCategories.length > 0) {
     const categoryList = mealCategories.map((c) => `- ${c}`).join('\n');
-    prompt = prompt.replace('{{MEAL_CATEGORIES}}', categoryList);
+    prompt = prompt.replaceAll('{{MEAL_CATEGORIES}}', categoryList);
   } else {
     // Fallback to default lists if not provided
-    prompt = prompt.replace('{{MEAL_CATEGORIES}}', '- Appetizer\n- Main Course\n- Dessert\n- Soup\n- Salad\n- Snack\n- Beverage\n- Side Dish');
+    prompt = prompt.replaceAll('{{MEAL_CATEGORIES}}', '- Appetizer\n- Main Course\n- Dessert\n- Soup\n- Salad\n- Snack\n- Beverage\n- Side Dish');
   }
 
   console.log(`Using AI prompt with replaced placeholders`);
