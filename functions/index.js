@@ -201,10 +201,26 @@ function validateImageData(imageBase64) {
  * @param {string} mimeType - Image MIME type
  * @param {string} lang - Language code
  * @param {string} apiKey - Gemini API key
+ * @param {string[]|undefined} cuisineTypes - Configured cuisine types
+ * @param {string[]|undefined} mealCategories - Configured meal categories
  * @returns {Promise<Object>} Structured recipe data
  */
-async function callGeminiAPI(base64Data, mimeType, lang, apiKey) {
-  const prompt = await getRecipeExtractionPrompt();
+async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, mealCategories) {
+  let prompt = await getRecipeExtractionPrompt();
+
+  // Append dynamic list constraints when the frontend passes configured lists
+  const hasCuisineTypes = Array.isArray(cuisineTypes) && cuisineTypes.length > 0;
+  const hasMealCategories = Array.isArray(mealCategories) && mealCategories.length > 0;
+  if (hasCuisineTypes || hasMealCategories) {
+    const lines = ['\n\nWICHTIG: Wähle für "kulinarik" und "kategorie" NUR Werte aus diesen Listen:'];
+    if (hasCuisineTypes) {
+      lines.push(`- Kulinarik: ${cuisineTypes.join(', ')}`);
+    }
+    if (hasMealCategories) {
+      lines.push(`- Kategorie: ${mealCategories.join(', ')}`);
+    }
+    prompt = prompt + lines.join('\n');
+  }
 
   console.log(`Using AI prompt (first 100 chars): ${prompt.substring(0, 100)}...`);
 
@@ -352,7 +368,7 @@ exports.scanRecipeWithAI = onCall(
       timeoutSeconds: 60,
     },
     async (request) => {
-      const {imageBase64, language = 'de'} = request.data;
+      const {imageBase64, language = 'de', cuisineTypes, mealCategories} = request.data;
 
       // Authentication check
       const auth = request.auth;
@@ -399,7 +415,7 @@ exports.scanRecipeWithAI = onCall(
 
       // Call Gemini API
       try {
-        const result = await callGeminiAPI(base64Data, mimeType, language, apiKey);
+        const result = await callGeminiAPI(base64Data, mimeType, language, apiKey, cuisineTypes, mealCategories);
         console.log(`AI Scan successful for user ${userId}`);
         return {
           ...result,

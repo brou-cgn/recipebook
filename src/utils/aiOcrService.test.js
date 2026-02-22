@@ -19,7 +19,14 @@ jest.mock('firebase/functions', () => ({
   httpsCallable: jest.fn(),
 }));
 
+// Mock customLists to provide cuisine types and meal categories
+jest.mock('./customLists', () => ({
+  getCustomLists: jest.fn(),
+  getAIRecipePrompt: jest.fn(),
+}));
+
 import { httpsCallable } from 'firebase/functions';
+import { getCustomLists } from './customLists';
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -28,6 +35,13 @@ beforeEach(() => {
   jest.resetModules();
   process.env = { ...originalEnv };
   jest.clearAllMocks();
+  // Set up default mock implementation for getCustomLists
+  getCustomLists.mockResolvedValue({
+    cuisineTypes: ['Italian', 'German', 'Asian'],
+    mealCategories: ['Main Course', 'Dessert', 'Soup'],
+    units: [],
+    portionUnits: [],
+  });
 });
 
 afterEach(() => {
@@ -118,6 +132,8 @@ describe('AI OCR Service', () => {
       expect(mockCallable).toHaveBeenCalledWith({
         imageBase64: imageBase64,
         language: 'de',
+        cuisineTypes: ['Italian', 'German', 'Asian'],
+        mealCategories: ['Main Course', 'Dessert', 'Soup'],
       });
       
       expect(result).toHaveProperty('title', 'Spaghetti Carbonara');
@@ -259,6 +275,8 @@ describe('AI OCR Service', () => {
       expect(mockCallable).toHaveBeenCalledWith({
         imageBase64: imageBase64,
         language: 'en',
+        cuisineTypes: ['Italian', 'German', 'Asian'],
+        mealCategories: ['Main Course', 'Dessert', 'Soup'],
       });
     });
 
@@ -371,6 +389,36 @@ describe('AI OCR Service', () => {
       expect(result.remainingScans).toBe(15);
       expect(result.dailyLimit).toBe(20);
     });
+
+    test('calls Cloud Function successfully even when getCustomLists fails', async () => {
+      getCustomLists.mockRejectedValueOnce(new Error('Firestore unavailable'));
+
+      const mockCallable = jest.fn().mockResolvedValue({
+        data: {
+          title: 'Test',
+          servings: 1,
+          ingredients: [],
+          steps: [],
+          confidence: 95,
+          provider: 'gemini',
+        }
+      });
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+      const result = await recognizeRecipeWithGemini(imageBase64, 'de');
+
+      // Should still succeed, calling the function without cuisine/category lists
+      expect(result.title).toBe('Test');
+      expect(mockCallable).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageBase64: imageBase64,
+          language: 'de',
+          cuisineTypes: undefined,
+          mealCategories: undefined,
+        })
+      );
+    });
   });
 
   describe('recognizeRecipeWithAI', () => {
@@ -464,6 +512,8 @@ describe('AI OCR Service', () => {
       expect(mockCallable).toHaveBeenCalledWith({
         imageBase64: imageBase64,
         language: 'en',
+        cuisineTypes: ['Italian', 'German', 'Asian'],
+        mealCategories: ['Main Course', 'Dessert', 'Soup'],
       });
     });
   });
