@@ -134,7 +134,24 @@ export async function getSettings() {
     
     if (settingsDoc.exists()) {
       const settings = settingsDoc.data();
-      
+
+      let aiRecipePrompt = settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
+
+      // Migration: if the stored prompt is missing required placeholders, reset to default
+      if (
+        !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
+        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}')
+      ) {
+        console.warn(
+          'AI prompt in Firestore is missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT'
+        );
+        aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
+        // Asynchronously update Firestore (fire-and-forget, does not block getSettings)
+        updateDoc(doc(db, 'settings', 'app'), { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }).catch(
+          (err) => console.error('Failed to migrate aiRecipePrompt in Firestore:', err)
+        );
+      }
+
       // Ensure all fields exist for backward compatibility
       settingsCache = {
         cuisineTypes: settings.cuisineTypes || DEFAULT_CUISINE_TYPES,
@@ -150,7 +167,7 @@ export async function getSettings() {
         timelineMenuBubbleIcon: settings.timelineMenuBubbleIcon || null,
         timelineRecipeDefaultImage: settings.timelineRecipeDefaultImage || null,
         timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null,
-        aiRecipePrompt: settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT,
+        aiRecipePrompt,
         autoShareOnCreate: settings.autoShareOnCreate ?? false
       };
       
