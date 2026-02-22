@@ -35,6 +35,55 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 /**
+ * Default AI recipe extraction prompt (must stay in sync with src/utils/customLists.js)
+ */
+const DEFAULT_AI_RECIPE_PROMPT = `Du bist ein Experte für die Extraktion von Rezept-Daten aus Bildern.
+
+Extrahiere das Rezept aus diesem Bild und gib mir ein **strukturiertes JSON-Objekt** zurück.
+
+**WICHTIG:** Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
+
+**Verfügbare Kulinarik-Typen:**
+{{CUISINE_TYPES}}
+
+**Verfügbare Speisekategorien:**
+{{MEAL_CATEGORIES}}
+
+Falls keine passende Kategorie existiert, wähle die nächstliegende oder lasse das Feld leer.
+
+**JSON-Format:**
+{
+  "titel": "Name des Rezepts",
+  "portionen": 4,
+  "zubereitungszeit": 15,
+  "kochzeit": 30,
+  "schwierigkeit": 3,
+  "kulinarik": "eines der obigen Kulinarik-Typen",
+  "kategorie": "eine der obigen Speisekategorien",
+  "tags": ["vegetarisch", "vegan", "glutenfrei"],
+  "zutaten": [
+    "500 g Spaghetti",
+    "200 g Speck",
+    "4 Eier"
+  ],
+  "zubereitung": [
+    "Wasser in einem großen Topf zum Kochen bringen und salzen",
+    "Spaghetti nach Packungsanweisung kochen",
+    "Speck in Würfel schneiden und in einer Pfanne knusprig braten"
+  ],
+  "notizen": "Optional: Besondere Hinweise"
+}
+
+**Zusätzliche Regeln:**
+- Extrahiere ALLE Zutaten mit Menge und Einheit (z.B. "500 g Mehl", "2 EL Öl")
+- Nummeriere die Zubereitungsschritte NICHT (liste sie einfach auf)
+- "schwierigkeit" ist eine Zahl von 1-5 (1=sehr einfach, 5=sehr schwer)
+- Zeiten in Minuten als Zahl angeben
+- Wenn Informationen fehlen, lasse Felder leer statt zu raten
+- Gib NUR gültiges JSON zurück, OHNE Markdown-Formatierung (keine \`\`\`json)
+- Tags nur hinzufügen, wenn explizit im Rezept erwähnt`;
+
+/**
  * Get the recipe extraction prompt
  * Loads from Firestore settings, throws an error if not configured
  * @returns {Promise<string>} The formatted prompt
@@ -63,10 +112,23 @@ async function getRecipeExtractionPrompt() {
       );
     }
 
-    console.log('Successfully loaded AI prompt from Firestore settings');
-    console.log(`Prompt length: ${settings.aiRecipePrompt.length} characters`);
+    let aiRecipePrompt = settings.aiRecipePrompt;
 
-    return settings.aiRecipePrompt;
+    // Migration: if the stored prompt is missing required placeholders, reset to default
+    if (
+      !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
+      !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}')
+    ) {
+      console.warn('AI prompt in Firestore is missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT');
+      aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
+      await db.collection('settings').doc('app').update({aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT});
+      console.log('Successfully migrated aiRecipePrompt in Firestore to default version');
+    }
+
+    console.log('Successfully loaded AI prompt from Firestore settings');
+    console.log(`Prompt length: ${aiRecipePrompt.length} characters`);
+
+    return aiRecipePrompt;
   } catch (error) {
     // If it's already an HttpsError, rethrow it
     if (error instanceof HttpsError) {
