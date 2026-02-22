@@ -657,6 +657,7 @@ function App() {
           onSelectMenu={handleSelectMenu}
           allUsers={allUsers}
           currentUser={currentUser}
+          onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
       ) : currentView === 'menus' ? (
         // Menu views

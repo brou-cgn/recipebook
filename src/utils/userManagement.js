@@ -703,6 +703,49 @@ export const updateUserName = async (userId, vorname, nachname) => {
 };
 
 /**
+ * Update personal profile data (vorname, nachname, email, signatureSatz) for the current user
+ * @param {string} userId - ID of user to update
+ * @param {Object} profileData - Profile fields to update { vorname, nachname, email, signatureSatz }
+ * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
+ */
+export const updateUserProfile = async (userId, profileData) => {
+  const { vorname, nachname, email, signatureSatz } = profileData;
+
+  if (!vorname || !nachname || !email) {
+    return {
+      success: false,
+      message: 'Vorname, Nachname und E-Mail dürfen nicht leer sein.'
+    };
+  }
+
+  try {
+    const updates = {
+      vorname,
+      nachname,
+      email: email.toLowerCase().trim(),
+      signatureSatz: signatureSatz || ''
+    };
+
+    await updateDoc(doc(db, 'users', userId), updates);
+
+    if (currentUserCache && currentUserCache.id === userId) {
+      currentUserCache = { ...currentUserCache, ...updates };
+    }
+
+    return {
+      success: true,
+      message: 'Profil erfolgreich aktualisiert.'
+    };
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return {
+      success: false,
+      message: 'Fehler beim Aktualisieren des Profils.'
+    };
+  }
+};
+
+/**
  * Set a temporary password for a user
  * NOTE: Due to Firebase client SDK limitations, this function only sets the requiresPasswordChange flag.
  * Actual password reset must be done through Firebase password reset email or implemented via Firebase Admin SDK.

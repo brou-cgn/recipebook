@@ -2281,3 +2281,120 @@ describe('RecipeForm - AI OCR Limit', () => {
     });
   });
 });
+
+describe('RecipeForm - Signature Sentence', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('appends signature sentence as last step for new recipe', () => {
+    const userWithSignature = {
+      id: 'user-1',
+      vorname: 'John',
+      nachname: 'Doe',
+      email: 'john@example.com',
+      isAdmin: false,
+      role: 'edit',
+      signatureSatz: 'Guten Appetit!',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithSignature}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
+    fireEvent.change(stepInputs[0], { target: { value: 'Erster Schritt' } });
+
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: ['Erster Schritt', 'Guten Appetit!'],
+      })
+    );
+  });
+
+  test('does not append signature sentence when editing existing recipe', () => {
+    const userWithSignature = {
+      id: 'user-1',
+      vorname: 'John',
+      nachname: 'Doe',
+      email: 'john@example.com',
+      isAdmin: false,
+      role: 'edit',
+      signatureSatz: 'Guten Appetit!',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      ingredients: ['Zutat 1'],
+      steps: ['Bestehender Schritt'],
+      authorId: 'user-1',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithSignature}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: ['Bestehender Schritt'],
+      })
+    );
+  });
+
+  test('does not append signature sentence when user has no signatureSatz', () => {
+    const userWithoutSignature = {
+      id: 'user-1',
+      vorname: 'John',
+      nachname: 'Doe',
+      email: 'john@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={userWithoutSignature}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+
+    const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
+    fireEvent.change(stepInputs[0], { target: { value: 'Only Step' } });
+
+    fireEvent.click(screen.getByText('Rezept speichern'));
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        steps: ['Only Step'],
+      })
+    );
+  });
+});

@@ -533,6 +533,13 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
     // Same for steps
     const filteredSteps = steps.filter(s => s.text.trim() !== '');
+
+    // Append signature sentence as last step for new recipes (not edits/versions)
+    const signatureSatz = !recipe && !isCreatingVersion ? currentUser?.signatureSatz?.trim() : '';
+    if (signatureSatz) {
+      filteredSteps.push({ type: 'step', text: signatureSatz });
+    }
+
     const hasStepHeadings = filteredSteps.some(item => item.type === 'heading');
     const stepsToSave = hasStepHeadings 
       ? filteredSteps 

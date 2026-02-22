@@ -1,0 +1,107 @@
+.personal-data-page {
+  padding: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.personal-data-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.personal-data-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.personal-data-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #1a1a1a;
+  padding: 0.25rem 0.5rem;
+}
+
+.personal-data-back-btn:hover {
+  opacity: 0.7;
+}
+
+.personal-data-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.personal-data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.personal-data-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.personal-data-field input,
+.personal-data-field textarea {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.personal-data-field input:focus,
+.personal-data-field textarea:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.personal-data-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.personal-data-message.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.personal-data-message.error {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.personal-data-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.personal-data-save-btn {
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.personal-data-save-btn:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.personal-data-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
