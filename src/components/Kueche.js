@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
+import PersonalDataPage from './PersonalDataPage';
 import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 
-function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser }) {
+function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
   const [categoryImages, setCategoryImages] = useState([]);
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
+  const [showPersonalData, setShowPersonalData] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -61,52 +63,72 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
 
   return (
     <div className="kueche-container">
-      <div className="kueche-header">
-        <h2>Küche</h2>
-      </div>
-      <div className="kueche-tile">
-        <div className="kueche-tile-content">
-          <h3>Chefkoch</h3>
-          {chefkochName && (
-            <div className="kueche-tile-meta">
-              <span className="meta-text">{chefkochName}</span>
-            </div>
-          )}
-        </div>
-      </div>
-      <div
-        className="kueche-tile"
-        onClick={() => setShowTimeline(prev => !prev)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
-        role="button"
-        tabIndex={0}
-        aria-expanded={showTimeline}
-        aria-label="Toggle Meine Küche timeline"
-      >
-        <div className="kueche-tile-content">
-          <h3>Mein Kochbuch</h3>
-          <div className="kueche-tile-meta">
-            <span className="meta-text">
-              <strong>{filteredRecipes.length}</strong>
-              <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
-            </span>
-            <span className="meta-text">
-              <strong>{filteredMenus.length}</strong>
-              <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-      {showTimeline && (
-        <RecipeTimeline
-          recipes={combinedItems}
-          onSelectRecipe={handleSelectItem}
-          allUsers={allUsers}
-          timelineBubbleIcon={timelineBubbleIcon}
-          timelineMenuBubbleIcon={timelineMenuBubbleIcon}
-          categoryImages={categoryImages}
-          defaultImage={timelineMenuDefaultImage}
+      {showPersonalData ? (
+        <PersonalDataPage
+          currentUser={currentUser}
+          onBack={() => setShowPersonalData(false)}
+          onProfileUpdated={(updatedUser) => {
+            setShowPersonalData(false);
+            if (onProfileUpdated) onProfileUpdated(updatedUser);
+          }}
         />
+      ) : (
+        <>
+          <div className="kueche-header">
+            <h2>Küche</h2>
+          </div>
+          <div
+            className="kueche-tile kueche-tile--chefkoch"
+            onClick={() => setShowPersonalData(true)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowPersonalData(true); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Chefkoch persönliche Daten öffnen"
+          >
+            <div className="kueche-tile-content">
+              <h3>Chefkoch</h3>
+              {chefkochName && (
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">{chefkochName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div
+            className="kueche-tile"
+            onClick={() => setShowTimeline(prev => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={showTimeline}
+            aria-label="Toggle Meine Küche timeline"
+          >
+            <div className="kueche-tile-content">
+              <h3>Mein Kochbuch</h3>
+              <div className="kueche-tile-meta">
+                <span className="meta-text">
+                  <strong>{filteredRecipes.length}</strong>
+                  <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
+                </span>
+                <span className="meta-text">
+                  <strong>{filteredMenus.length}</strong>
+                  <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          {showTimeline && (
+            <RecipeTimeline
+              recipes={combinedItems}
+              onSelectRecipe={handleSelectItem}
+              allUsers={allUsers}
+              timelineBubbleIcon={timelineBubbleIcon}
+              timelineMenuBubbleIcon={timelineMenuBubbleIcon}
+              categoryImages={categoryImages}
+              defaultImage={timelineMenuDefaultImage}
+            />
+          )}
+        </>
       )}
     </div>
   );

@@ -14,6 +14,10 @@ jest.mock('../utils/categoryImages', () => ({
   getCategoryImages: () => Promise.resolve([]),
 }));
 
+jest.mock('../utils/userManagement', () => ({
+  updateUserProfile: jest.fn(() => Promise.resolve({ success: true, message: 'Profil erfolgreich aktualisiert.' })),
+}));
+
 describe('Kueche', () => {
   const mockRecipes = [
     {
@@ -260,6 +264,55 @@ describe('Kueche', () => {
 
     expect(screen.getByText('Chefkoch')).toBeInTheDocument();
     expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+  });
+
+  test('Chefkoch tile has the kueche-tile--chefkoch CSS class', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe' }}
+      />
+    );
+
+    const chefkochTile = screen.getByRole('button', { name: /Chefkoch persönliche Daten/i });
+    expect(chefkochTile).toHaveClass('kueche-tile--chefkoch');
+  });
+
+  test('clicking Chefkoch tile shows the PersonalDataPage', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe', email: 'john@example.com' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    expect(screen.getByText('Persönliche Daten')).toBeInTheDocument();
+  });
+
+  test('PersonalDataPage back button returns to Kueche', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', vorname: 'John', nachname: 'Doe', email: 'john@example.com' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
+    expect(screen.getByText('Persönliche Daten')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.getByText('Chefkoch')).toBeInTheDocument();
+    expect(screen.queryByText('Persönliche Daten')).not.toBeInTheDocument();
   });
 
   test('renders the info tile above the timeline with recipe and menu counts', () => {

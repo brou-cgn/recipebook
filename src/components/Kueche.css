@@ -25,6 +25,10 @@
   cursor: pointer;
 }
 
+.kueche-tile.kueche-tile--chefkoch {
+  border-left-color: #1A1A1A;
+}
+
 .kueche-tile:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -40,6 +44,10 @@
   margin: 0 0 0.5rem 0;
   color: #DF7A00;
   font-size: 1.00rem;
+}
+
+.kueche-tile--chefkoch .kueche-tile-content h3 {
+  color: #1A1A1A;
 }
 
 .kueche-tile-description {
