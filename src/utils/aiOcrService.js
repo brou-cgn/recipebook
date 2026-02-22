@@ -6,7 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { getAIRecipePrompt } from './customLists';
+import { getAIRecipePrompt, getCustomLists } from './customLists';
 
 /**
  * Configuration for AI OCR providers
@@ -98,6 +98,18 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
 
   if (onProgress) onProgress(20);
 
+  // Load configured cuisine types and meal categories to pass to the Cloud Function
+  let cuisineTypes;
+  let mealCategories;
+  try {
+    const lists = await getCustomLists();
+    cuisineTypes = lists.cuisineTypes;
+    mealCategories = lists.mealCategories;
+  } catch (e) {
+    // Fallback: omit lists so the Cloud Function uses the base prompt unchanged
+    console.warn('Failed to load custom lists for AI prompt, using base prompt:', e);
+  }
+
   let lastError = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -116,6 +128,8 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
       const result = await scanRecipeWithAI({
         imageBase64: imageBase64,
         language: lang,
+        cuisineTypes,
+        mealCategories,
       });
 
       if (onProgress) onProgress(90);
