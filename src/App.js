@@ -528,10 +528,6 @@ function App() {
         <SharePage
           shareId={sharePageId}
           currentUser={currentUser}
-          onAddToMyRecipes={() => {
-            window.location.hash = '';
-          }}
-          onLogin={() => setAuthView('login')}
         />
       </div>
     );
