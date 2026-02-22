@@ -213,10 +213,10 @@ export async function getCustomLists() {
   const settings = await getSettings();
   
   return {
-    cuisineTypes: settings.cuisineTypes,
-    mealCategories: settings.mealCategories,
-    units: settings.units,
-    portionUnits: settings.portionUnits
+    cuisineTypes: settings.cuisineTypes ?? DEFAULT_CUISINE_TYPES,
+    mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
+    units: settings.units ?? DEFAULT_UNITS,
+    portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS
   };
 }
 
