@@ -529,7 +529,7 @@ describe('Kueche', () => {
     expect(within(tile).getByText('private Listen')).toBeInTheDocument();
   });
 
-  test('Mise en Place tile only counts groups owned by current user', () => {
+  test('Mise en Place tile counts groups owned by current user', () => {
     render(
       <Kueche
         recipes={[]}
@@ -544,6 +544,48 @@ describe('Kueche', () => {
     const tile = screen.getByTestId('mise-en-place-tile');
     expect(within(tile).getByText('1')).toBeInTheDocument();
     expect(within(tile).getByText('private Liste')).toBeInTheDocument();
+  });
+
+  test('Mise en Place tile counts groups where current user is a member but not owner', () => {
+    const groupsWithMember = [
+      { id: 'g1', type: 'private', ownerId: 'user-2', name: 'Other List', memberIds: ['user-1'] },
+      { id: 'g2', type: 'private', ownerId: 'user-2', name: 'Another List', memberIds: [] },
+    ];
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        groups={groupsWithMember}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('1')).toBeInTheDocument();
+    expect(within(tile).getByText('private Liste')).toBeInTheDocument();
+  });
+
+  test('Mise en Place tile counts both owned and member groups', () => {
+    const mixedGroups = [
+      { id: 'g1', type: 'private', ownerId: 'user-1', name: 'My List', memberIds: [] },
+      { id: 'g2', type: 'private', ownerId: 'user-2', name: 'Other List', memberIds: ['user-1'] },
+    ];
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        groups={mixedGroups}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('2')).toBeInTheDocument();
+    expect(within(tile).getByText('private Listen')).toBeInTheDocument();
   });
 
   test('Meine Mise en Place tile appears before Mein Kochbuch tile', () => {

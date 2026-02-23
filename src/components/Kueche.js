@@ -85,7 +85,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
     : menus;
 
   const privateListCount = currentUser
-    ? groups.filter(g => g.type === 'private' && g.ownerId === currentUser.id).length
+    ? groups.filter(g => g.type === 'private' && (g.ownerId === currentUser.id || (g.memberIds && g.memberIds.includes(currentUser.id)))).length
     : 0;
 
   // Transform menus into the shape expected by RecipeTimeline
