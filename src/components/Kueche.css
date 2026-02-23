@@ -96,7 +96,8 @@
 }
 
 .kueche-tile--chefkoch .kueche-tile-meta .meta-text,
-.kueche-tile--meinkochbuch .kueche-tile-meta .meta-text {
+.kueche-tile--meinkochbuch .kueche-tile-meta .meta-text,
+.kueche-tile--mise-en-place .kueche-tile-meta .meta-text {
   margin-bottom: 6px;
 }
 
