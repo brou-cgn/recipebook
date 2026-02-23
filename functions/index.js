@@ -63,7 +63,7 @@ Bitte gib das Ergebnis im folgenden JSON-Format zurück:
 }
 
 WICHTIGE REGELN:
-1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 EL Olivenöl", "1 Prise Salz")
+1. Mengenangaben: Verwende immer das Format "Zahl Einheit Zutat" (z.B. "500 g Mehl", "2 Esslöffel Olivenöl", "1 Prise Salz")
 2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
 3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
 4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
@@ -72,10 +72,12 @@ WICHTIGE REGELN:
 7. Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
 **Verfügbare Kulinarik-Typen:**
 {{CUISINE_TYPES}}
+Wenn kein Fleisch oder Fisch enthalten ist, setze zusätzlich **immer** "Vegetarisch".
+Wenn keine tierischen Produkte enthalten sind (z.B. Butter, Fleisch, Fisch, Eier usw.), setze zusätzlich **immer** "Vegan".
 **Verfügbare Speisekategorien:**
 {{MEAL_CATEGORIES}}
 Wenn das Rezept zu keiner dieser Kategorien passt, wähle die nächstliegende oder lasse das Feld leer. Mehrfachauswahlen sind möglich
-8. Wenn kein Fleisch oder Fisch enthalten ist, setze das Kulinarik-Tag „Vegetarisch", wenn keine tierischen Produkte enthalten sind (z.B. Butter, Fleisch, Fisch Eier usw.) setze zusätzlich das Kulinarik-Tag „Vegan".
+8. Zubereitung: Das Feld "zubereitung" MUSS immer ein JSON-Array von Strings sein. Schreibe jeden einzelnen Schritt als separaten String in das Array. Fasse NIEMALS mehrere Schritte in einem einzigen String zusammen. Mindestens 1 Schritt muss vorhanden sein, wenn Zubereitungsinformationen erkennbar sind.
 
 BEISPIEL GUTE EXTRAKTION:
 {
@@ -347,7 +349,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -648,6 +650,5 @@ exports.captureWebsiteScreenshot = onCall(
         
         throw new HttpsError('internal', 'Failed to capture screenshot: ' + error.message);
       }
-      */
     }
 );
