@@ -387,4 +387,85 @@ describe('Kueche', () => {
     fireEvent.click(tile);
     expect(screen.queryByText('My Recipe')).not.toBeInTheDocument();
   });
+
+  test('renders the bar chart in the Mein Kochbuch tile', () => {
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={mockMenus}
+        onSelectRecipe={() => {}}
+        onSelectMenu={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const chart = screen.getByTestId('recipe-bar-chart');
+    expect(chart).toBeInTheDocument();
+    expect(chart.children).toHaveLength(6);
+  });
+
+  test('current month bar has the --current CSS class', () => {
+    const now = new Date();
+    const recipeThisMonth = {
+      id: '3',
+      title: 'New Recipe',
+      createdAt: { toDate: () => new Date(now.getFullYear(), now.getMonth(), 5) },
+      ingredients: [],
+      steps: [],
+      authorId: 'user-1',
+    };
+
+    render(
+      <Kueche
+        recipes={[recipeThisMonth]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const chart = screen.getByTestId('recipe-bar-chart');
+    const bars = Array.from(chart.children);
+    expect(bars[5]).toHaveClass('kueche-bar-chart__bar--current');
+    bars.slice(0, 5).forEach(bar => {
+      expect(bar).not.toHaveClass('kueche-bar-chart__bar--current');
+    });
+  });
+
+  test('bar chart only counts recipes belonging to the current user', () => {
+    const now = new Date();
+    const userRecipe = {
+      id: '3',
+      title: 'My Current Recipe',
+      createdAt: { toDate: () => new Date(now.getFullYear(), now.getMonth(), 5) },
+      ingredients: [],
+      steps: [],
+      authorId: 'user-1',
+    };
+    const otherRecipe = {
+      id: '4',
+      title: 'Other Current Recipe',
+      createdAt: { toDate: () => new Date(now.getFullYear(), now.getMonth(), 6) },
+      ingredients: [],
+      steps: [],
+      authorId: 'user-2',
+    };
+
+    render(
+      <Kueche
+        recipes={[userRecipe, otherRecipe]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const chart = screen.getByTestId('recipe-bar-chart');
+    const currentBar = Array.from(chart.children)[5];
+    // Current month bar should be at 100% height (1 recipe = max)
+    expect(currentBar.style.height).toBe('100%');
+  });
 });

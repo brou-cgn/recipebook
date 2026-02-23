@@ -89,3 +89,24 @@
   font-weight: 600;
   color: #1a1a1a;
 }
+
+.kueche-bar-chart {
+  position: absolute;
+  right: 18px;
+  bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 52px;
+}
+
+.kueche-bar-chart__bar {
+  width: 9px;
+  border-radius: 3px 3px 0 0;
+  background-color: #E0E0E0;
+  min-height: 8px;
+}
+
+.kueche-bar-chart__bar--current {
+  background-color: #DF7A00;
+}

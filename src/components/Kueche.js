@@ -5,6 +5,55 @@ import PersonalDataPage from './PersonalDataPage';
 import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 
+function getLastSixMonthsRecipeCounts(recipes) {
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth(), count: 0 });
+  }
+  recipes.forEach(recipe => {
+    let date;
+    if (recipe.createdAt && typeof recipe.createdAt.toDate === 'function') {
+      date = recipe.createdAt.toDate();
+    } else if (recipe.createdAt instanceof Date) {
+      date = recipe.createdAt;
+    } else if (recipe.createdAt) {
+      date = new Date(recipe.createdAt);
+    }
+    if (!date || isNaN(date.getTime())) return;
+    const entry = months.find(m => m.year === date.getFullYear() && m.month === date.getMonth());
+    if (entry) entry.count++;
+  });
+  return months;
+}
+
+const MIN_BAR_HEIGHT_PERCENT = 16;
+
+function RecipeBarChart({ recipes }) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const monthlyData = getLastSixMonthsRecipeCounts(recipes);
+  const maxCount = Math.max(...monthlyData.map(m => m.count), 1);
+
+  return (
+    <div className="kueche-bar-chart" data-testid="recipe-bar-chart" aria-hidden="true">
+      {monthlyData.map((m, i) => {
+        const isCurrentMonth = m.year === currentYear && m.month === currentMonth;
+        const heightPercent = Math.max(MIN_BAR_HEIGHT_PERCENT, Math.round((m.count / maxCount) * 100));
+        return (
+          <div
+            key={i}
+            className={`kueche-bar-chart__bar${isCurrentMonth ? ' kueche-bar-chart__bar--current' : ''}`}
+            style={{ height: `${heightPercent}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -115,6 +164,7 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
                   <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
                 </span>
               </div>
+              <RecipeBarChart recipes={filteredRecipes} />
             </div>
           </div>
           {showTimeline && (
