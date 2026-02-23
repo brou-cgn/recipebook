@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './App.css';
 import RecipeList from './components/RecipeList';
 import RecipeDetail from './components/RecipeDetail';
@@ -102,6 +102,7 @@ function App() {
   const [editingMenu, setEditingMenu] = useState(null);
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [activeGroupId, setActiveGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -118,6 +119,9 @@ function App() {
     selectedAuthors: []
   });
   const recipeCountsInitialized = useRef(false);
+
+  // IDs of groups the current user belongs to – used to filter group-scoped recipes
+  const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
   // Detect share URL: #share/:shareId
   const getShareIdFromHash = () => {
@@ -169,7 +173,8 @@ function App() {
     loadFavicon();
   }, []);
 
-  // Set up real-time listener for recipes from Firestore
+  // Set up real-time listener for recipes from Firestore.
+  // Re-subscribes when userGroupIds changes so group-scoped recipe visibility stays current.
   useEffect(() => {
     if (!currentUser) return;
 
@@ -184,11 +189,12 @@ function App() {
         if (recipesFromFirestore.length === 0 && currentUser) {
           seedSampleRecipes(currentUser.id);
         }
-      }
+      },
+      userGroupIds
     );
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, userGroupIds]);
 
   // Migrate old global favorites to user-specific favorites (one-time migration)
   useEffect(() => {
@@ -240,13 +246,15 @@ function App() {
     // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
   };
 
-  const handleAddRecipe = () => {
+  const handleAddRecipe = (groupId = null) => {
+    setActiveGroupId(groupId);
     setEditingRecipe(null);
     setIsCreatingVersion(false);
     setIsFormOpen(true);
   };
 
   const handleEditRecipe = (recipe) => {
+    setActiveGroupId(null);
     setEditingRecipe(recipe);
     setIsCreatingVersion(false);
     setIsFormOpen(true);
@@ -269,8 +277,9 @@ function App() {
         const { id, ...updates } = recipe;
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
       } else {
-        // Add new recipe or new version
-        const savedRecipe = await addRecipeToFirestore(recipe, currentUser.id);
+        // Add new recipe or new version; attach groupId if created from within a group
+        const recipeWithGroup = activeGroupId ? { ...recipe, groupId: activeGroupId } : recipe;
+        const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
         // Auto-share the new recipe to generate the share link immediately
         let savedRecipeWithShare = savedRecipe;
@@ -288,6 +297,7 @@ function App() {
       setIsFormOpen(false);
       setEditingRecipe(null);
       setIsCreatingVersion(false);
+      setActiveGroupId(null);
     } catch (error) {
       console.error('Error saving recipe:', error);
       alert('Fehler beim Speichern des Rezepts. Bitte versuchen Sie es erneut.');
@@ -348,6 +358,7 @@ function App() {
     setIsFormOpen(false);
     setEditingRecipe(null);
     setIsCreatingVersion(false);
+    setActiveGroupId(null);
   };
 
   const handleOpenSettings = () => {
@@ -711,6 +722,7 @@ function App() {
             onBack={handleBackToGroupList}
             onUpdateGroup={handleUpdateGroup}
             onDeleteGroup={handleDeleteGroup}
+            onAddRecipe={handleAddRecipe}
           />
         ) : (
           <GroupList

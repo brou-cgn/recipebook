@@ -171,6 +171,61 @@ describe('Recipe Firestore - Draft Recipe Filtering', () => {
         done();
       });
     });
+
+    it('should hide group recipes from users not in the group', (done) => {
+      const mockRecipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
+        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+      ];
+
+      mockOnSnapshot.mockImplementation((ref, successCallback) => {
+        successCallback(createMockSnapshot(mockRecipes));
+        return jest.fn();
+      });
+
+      // user1 is NOT in group1
+      subscribeToRecipes('user1', false, (recipes) => {
+        expect(recipes).toHaveLength(1);
+        expect(recipes[0].id).toBe('1');
+        done();
+      }, []);
+    });
+
+    it('should show group recipes to users who are members of the group', (done) => {
+      const mockRecipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
+        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+      ];
+
+      mockOnSnapshot.mockImplementation((ref, successCallback) => {
+        successCallback(createMockSnapshot(mockRecipes));
+        return jest.fn();
+      });
+
+      // user1 IS in group1
+      subscribeToRecipes('user1', false, (recipes) => {
+        expect(recipes).toHaveLength(2);
+        done();
+      }, ['group1']);
+    });
+
+    it('should show all group recipes to admin users regardless of membership', (done) => {
+      const mockRecipes = [
+        { id: '1', title: 'Public Recipe', isPrivate: false, authorId: 'user2' },
+        { id: '2', title: 'Group Recipe', isPrivate: false, groupId: 'group1', authorId: 'user2' }
+      ];
+
+      mockOnSnapshot.mockImplementation((ref, successCallback) => {
+        successCallback(createMockSnapshot(mockRecipes));
+        return jest.fn();
+      });
+
+      // admin user not in any group
+      subscribeToRecipes('admin', true, (recipes) => {
+        expect(recipes).toHaveLength(2);
+        done();
+      }, []);
+    });
   });
 
   describe('getRecipes', () => {
