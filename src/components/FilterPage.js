@@ -13,7 +13,7 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
     const loadCategories = async () => {
       try {
         const lists = await getCustomLists();
-        setAvailableCategories(lists.cuisineTypes || []);
+        setAvailableCategories(lists.mealCategories || []);
       } catch (error) {
         setAvailableCategories([]);
       }

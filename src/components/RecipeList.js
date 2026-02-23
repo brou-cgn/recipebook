@@ -150,7 +150,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 title="Nach Kategorie filtern"
               >
                 <option value="">Alle Kategorien</option>
-                {customLists.cuisineTypes.map((category) => (
+                {customLists.mealCategories.map((category) => (
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>

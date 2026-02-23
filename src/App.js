@@ -58,11 +58,11 @@ import {
 function matchesCategoryFilter(recipe, categoryFilter) {
   if (!categoryFilter) return true;
   
-  // Handle both array and string formats for kulinarik
-  if (Array.isArray(recipe.kulinarik)) {
-    return recipe.kulinarik.includes(categoryFilter);
+  // Handle both array and string formats for speisekategorie
+  if (Array.isArray(recipe.speisekategorie)) {
+    return recipe.speisekategorie.includes(categoryFilter);
   }
-  return recipe.kulinarik === categoryFilter;
+  return recipe.speisekategorie === categoryFilter;
 }
 
 // Helper function to check if a recipe matches the draft filter
@@ -76,10 +76,10 @@ function matchesDraftFilter(recipe, showDrafts) {
 // Helper function to check if a recipe matches the cuisine (Kulinarik) filter
 function matchesCuisineFilter(recipe, selectedCuisines) {
   if (!selectedCuisines || selectedCuisines.length === 0) return true;
-  if (Array.isArray(recipe.kulinarik)) {
-    return selectedCuisines.some(c => recipe.kulinarik.includes(c));
+  if (Array.isArray(recipe.speisekategorie)) {
+    return selectedCuisines.some(c => recipe.speisekategorie.includes(c));
   }
-  return selectedCuisines.includes(recipe.kulinarik);
+  return selectedCuisines.includes(recipe.speisekategorie);
 }
 
 // Helper function to check if a recipe matches the author filter
