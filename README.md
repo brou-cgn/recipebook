@@ -121,6 +121,9 @@ This application is automatically deployed to GitHub Pages when changes are push
 **⚠️ WICHTIG:** Für das Deployment müssen Firebase Secrets als GitHub Actions Secrets konfiguriert werden.  
 👉 **[GitHub Secrets Setup Anleitung](GITHUB_SECRETS_SETUP.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
 
+### ❓ FAQ:
+- **[FAQ.md](FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen)
+
 ### 📚 Zugriffsanleitungen:
 - **[ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)
 - **[ZUGRIFF_ANLEITUNG.md](ZUGRIFF_ANLEITUNG.md)** - 📖 **Benutzer-Anleitung**: Wie Sie auf das System zugreifen (für Nicht-Techniker)
