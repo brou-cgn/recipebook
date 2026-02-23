@@ -182,7 +182,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
             role="button"
             tabIndex={0}
-            aria-label="Meine Mise en Place – Berechtigungsgruppen öffnen"
+            aria-label="Meine Mise en Place – Gruppen öffnen"
           >
             <div className="kueche-tile-content">
               <h3>Meine Mise en Place</h3>
