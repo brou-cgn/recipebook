@@ -130,6 +130,47 @@ describe('RecipeList - Dynamic Heading', () => {
     
     expect(screen.getByText('Meine Appetizer')).toBeInTheDocument();
   });
+
+  test('shows private list name as heading when activePrivateListName is provided', () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        activePrivateListName="Familie"
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Familie');
+  });
+
+  test('private list name takes precedence over category filter in heading', () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter="Appetizer"
+        activePrivateListName="Freunde"
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Freunde');
+  });
+
+  test('shows default heading when activePrivateListName is not provided', () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+      />
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Rezepte');
+  });
 });
 
 describe('RecipeList - Version Display Order', () => {

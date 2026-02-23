@@ -130,6 +130,12 @@ function App() {
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
+  // Name of the currently selected private list filter (if any)
+  const activePrivateListName = useMemo(() => {
+    if (!recipeFilters.selectedGroup) return undefined;
+    return groups.find(g => g.id === recipeFilters.selectedGroup)?.name;
+  }, [groups, recipeFilters.selectedGroup]);
+
   // Detect share URL: #share/:shareId
   const getShareIdFromHash = () => {
     const hash = window.location.hash;
@@ -779,6 +785,7 @@ function App() {
             currentUser={currentUser}
             searchTerm={searchTerm}
             onOpenFilterPage={handleOpenFilterPage}
+            activePrivateListName={activePrivateListName}
           />
         )
       )}
