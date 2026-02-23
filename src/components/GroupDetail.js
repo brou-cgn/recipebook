@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './GroupDetail.css';
 
 /**
- * Displays details of a single group including members.
+ * Displays details of a single group including members and associated recipes.
  * Owners can add/remove members and delete the group.
  * Members (and owners) can add recipes scoped to the group.
  *
@@ -14,8 +14,10 @@ import './GroupDetail.css';
  * @param {Function} props.onUpdateGroup - Called with (groupId, updates) to persist changes
  * @param {Function} props.onDeleteGroup - Called with groupId to delete the group
  * @param {Function} [props.onAddRecipe] - Called with groupId to open the recipe form
+ * @param {Array}  [props.recipes] - All recipes (filtered to this group's recipes)
+ * @param {Function} [props.onSelectRecipe] - Called with a recipe when a tile is clicked
  */
-function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe }) {
+function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe }) {
   const [saving, setSaving] = useState(false);
 
   if (!group) return null;
@@ -23,6 +25,8 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const isOwner = group.ownerId === currentUser?.id;
   const isPublic = group.type === 'public';
   const isMember = (group.memberIds || []).includes(currentUser?.id);
+
+  const groupRecipes = recipes || [];
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -108,6 +112,39 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
               </li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="group-detail-section group-recipes-section">
+        <h3>Rezepte ({groupRecipes.length})</h3>
+        {groupRecipes.length === 0 ? (
+          <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
+        ) : (
+          <div className="group-recipe-grid">
+            {groupRecipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                className="group-recipe-card"
+                onClick={() => onSelectRecipe && onSelectRecipe(recipe)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onSelectRecipe && onSelectRecipe(recipe)}
+                aria-label={recipe.title}
+              >
+                {recipe.image && (
+                  <div className="group-recipe-card-image">
+                    <img src={recipe.image} alt={recipe.title} />
+                  </div>
+                )}
+                <div className="group-recipe-card-content">
+                  <h4>{recipe.title}</h4>
+                  {recipe.description && (
+                    <p className="group-recipe-card-description">{recipe.description}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

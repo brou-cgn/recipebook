@@ -136,6 +136,12 @@ function App() {
     return groups.find(g => g.id === recipeFilters.selectedGroup)?.name;
   }, [groups, recipeFilters.selectedGroup]);
 
+  // Recipes belonging to the currently selected group
+  const selectedGroupRecipes = useMemo(
+    () => recipes.filter((r) => r.groupId === selectedGroup?.id),
+    [recipes, selectedGroup?.id]
+  );
+
   // Detect share URL: #share/:shareId
   const getShareIdFromHash = () => {
     const hash = window.location.hash;
@@ -737,6 +743,8 @@ function App() {
             onUpdateGroup={handleUpdateGroup}
             onDeleteGroup={handleDeleteGroup}
             onAddRecipe={handleAddRecipe}
+            recipes={selectedGroupRecipes}
+            onSelectRecipe={handleSelectRecipe}
           />
         ) : (
           <GroupList
