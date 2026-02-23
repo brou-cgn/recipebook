@@ -171,7 +171,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             </div>
           </div>
           <div
-            className="kueche-tile"
+            className="kueche-tile kueche-tile--meinkochbuch"
             onClick={() => setShowTimeline(prev => !prev)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
             role="button"
