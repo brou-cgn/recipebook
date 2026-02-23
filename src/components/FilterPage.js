@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import './FilterPage.css';
 import { getCustomLists } from '../utils/customLists';
 
-function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdmin }) {
+function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdmin, privateGroups }) {
   const [showDrafts, setShowDrafts] = useState('all');
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState('');
   const [availableCategories, setAvailableCategories] = useState([]);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
       setShowDrafts(currentFilters.showDrafts || 'all');
       setSelectedCuisines(currentFilters.selectedCuisines || []);
       setSelectedAuthors(currentFilters.selectedAuthors || []);
+      setSelectedGroup(currentFilters.selectedGroup || '');
     }
   }, [currentFilters]);
 
@@ -43,13 +45,15 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
     setShowDrafts('all');
     setSelectedCuisines([]);
     setSelectedAuthors([]);
+    setSelectedGroup('');
   };
 
   const handleApply = () => {
     const filters = {
       showDrafts,
       selectedCuisines,
-      selectedAuthors
+      selectedAuthors,
+      selectedGroup
     };
     onApply(filters);
   };
@@ -61,6 +65,23 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
       </div>
 
       <div className="filter-page-content">
+        {privateGroups && privateGroups.length > 0 && (
+          <div className="filter-section">
+            <h3>Private Liste</h3>
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="filter-select"
+              aria-label="Private Liste"
+            >
+              <option value="">Alle Listen</option>
+              {privateGroups.map(group => (
+                <option key={group.id} value={group.id}>{group.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {availableCategories.length > 0 && (
           <div className="filter-section">
             <h3>Kulinarik</h3>

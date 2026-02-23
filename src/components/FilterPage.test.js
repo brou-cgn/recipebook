@@ -121,7 +121,8 @@ describe('FilterPage', () => {
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'yes',
       selectedCuisines: [],
-      selectedAuthors: []
+      selectedAuthors: [],
+      selectedGroup: ''
     });
   });
 
@@ -140,7 +141,8 @@ describe('FilterPage', () => {
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'all',
       selectedCuisines: [],
-      selectedAuthors: []
+      selectedAuthors: [],
+      selectedGroup: ''
     });
   });
 
@@ -183,7 +185,8 @@ describe('FilterPage', () => {
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'all',
       selectedCuisines: ['Hauptspeise'],
-      selectedAuthors: []
+      selectedAuthors: [],
+      selectedGroup: ''
     });
   });
 
@@ -250,7 +253,8 @@ describe('FilterPage', () => {
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'all',
       selectedCuisines: [],
-      selectedAuthors: ['user-1']
+      selectedAuthors: ['user-1'],
+      selectedGroup: ''
     });
   });
 
@@ -300,7 +304,128 @@ describe('FilterPage', () => {
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'all',
       selectedCuisines: [],
-      selectedAuthors: []
+      selectedAuthors: [],
+      selectedGroup: ''
     });
+  });
+
+  test('renders private group (Private Liste) filter when privateGroups are provided', () => {
+    const privateGroups = [
+      { id: 'group-1', name: 'Familie', type: 'private' },
+      { id: 'group-2', name: 'Freunde', type: 'private' }
+    ];
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        privateGroups={privateGroups}
+      />
+    );
+
+    expect(screen.getByText('Private Liste')).toBeInTheDocument();
+    expect(screen.getByText('Alle Listen')).toBeInTheDocument();
+    expect(screen.getByText('Familie')).toBeInTheDocument();
+    expect(screen.getByText('Freunde')).toBeInTheDocument();
+  });
+
+  test('does not render Private Liste filter when no privateGroups are provided', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+      />
+    );
+
+    expect(screen.queryByText('Private Liste')).not.toBeInTheDocument();
+  });
+
+  test('Private Liste filter is placed at the top of the filter page', async () => {
+    const privateGroups = [{ id: 'group-1', name: 'Familie', type: 'private' }];
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        privateGroups={privateGroups}
+        isAdmin={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Kulinarik')).toBeInTheDocument();
+    });
+
+    const sections = screen.getAllByRole('heading', { level: 3 });
+    expect(sections[0].textContent).toBe('Private Liste');
+  });
+
+  test('selecting a private group includes it in applied filters', () => {
+    const privateGroups = [
+      { id: 'group-1', name: 'Familie', type: 'private' },
+      { id: 'group-2', name: 'Freunde', type: 'private' }
+    ];
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        privateGroups={privateGroups}
+      />
+    );
+
+    const select = screen.getByRole('combobox', { name: /private liste/i });
+    fireEvent.change(select, { target: { value: 'group-1' } });
+
+    fireEvent.click(screen.getByText('Anwenden'));
+
+    expect(mockOnApply).toHaveBeenCalledWith({
+      showDrafts: 'all',
+      selectedCuisines: [],
+      selectedAuthors: [],
+      selectedGroup: 'group-1'
+    });
+  });
+
+  test('initializes selectedGroup from currentFilters', () => {
+    const privateGroups = [
+      { id: 'group-1', name: 'Familie', type: 'private' }
+    ];
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all', selectedGroup: 'group-1' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        privateGroups={privateGroups}
+      />
+    );
+
+    const select = screen.getByRole('combobox', { name: /private liste/i });
+    expect(select.value).toBe('group-1');
+  });
+
+  test('clears selectedGroup when "Filter löschen" is clicked', () => {
+    const privateGroups = [
+      { id: 'group-1', name: 'Familie', type: 'private' }
+    ];
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all', selectedGroup: 'group-1' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        privateGroups={privateGroups}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Filter löschen'));
+
+    const select = screen.getByRole('combobox', { name: /private liste/i });
+    expect(select.value).toBe('');
   });
 });
