@@ -551,7 +551,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   return (
-    <div className="recipe-detail-container">
+    <div className={`recipe-detail-container${cookingMode ? ' cooking-mode-container' : ''}`}>
       {cookingMode && (
         <div className="cooking-mode-indicator">
           <div className="cooking-mode-content">
