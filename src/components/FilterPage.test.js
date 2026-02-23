@@ -176,8 +176,8 @@ describe('FilterPage', () => {
       expect(screen.getByText('Hauptspeise')).toBeInTheDocument();
     });
 
-    const select = screen.getByRole('listbox', { name: /kulinarik/i });
-    await userEvent.selectOptions(select, ['Hauptspeise']);
+    const checkbox = screen.getByRole('checkbox', { name: 'Hauptspeise' });
+    fireEvent.click(checkbox);
 
     // Apply filters
     fireEvent.click(screen.getByText('Anwenden'));
@@ -203,9 +203,8 @@ describe('FilterPage', () => {
       expect(screen.getByText('Dessert')).toBeInTheDocument();
     });
 
-    const select = screen.getByRole('listbox', { name: /kulinarik/i });
-    const dessertOption = Array.from(select.options).find(o => o.value === 'Dessert');
-    expect(dessertOption.selected).toBe(true);
+    const checkbox = screen.getByRole('checkbox', { name: 'Dessert' });
+    expect(checkbox.checked).toBe(true);
   });
 
   test('renders author (Autor) filter section when authors are provided', () => {
@@ -245,8 +244,8 @@ describe('FilterPage', () => {
       />
     );
 
-    const select = screen.getByRole('listbox', { name: /autor/i });
-    await userEvent.selectOptions(select, ['user-1']);
+    const checkbox = screen.getByRole('checkbox', { name: 'Anna Müller' });
+    fireEvent.click(checkbox);
 
     fireEvent.click(screen.getByText('Anwenden'));
 
@@ -268,9 +267,8 @@ describe('FilterPage', () => {
       />
     );
 
-    const select = screen.getByRole('listbox', { name: /autor/i });
-    const benOption = Array.from(select.options).find(o => o.value === 'user-2');
-    expect(benOption.selected).toBe(true);
+    const checkbox = screen.getByRole('checkbox', { name: 'Ben Schmidt' });
+    expect(checkbox.checked).toBe(true);
   });
 
   test('clears cuisine and author selections when "Filter löschen" is clicked', async () => {
@@ -294,10 +292,9 @@ describe('FilterPage', () => {
     const statusSelect = screen.getByDisplayValue('Alle Rezepte');
     expect(statusSelect.value).toBe('all');
 
-    // Author select has no selection
-    const authorSelect = screen.getByRole('listbox', { name: /autor/i });
-    const anySelected = Array.from(authorSelect.options).some(o => o.selected);
-    expect(anySelected).toBe(false);
+    // Author checkbox has no selection
+    const authorCheckbox = screen.getByRole('checkbox', { name: 'Anna Müller' });
+    expect(authorCheckbox.checked).toBe(false);
 
     // Apply and verify all empty
     fireEvent.click(screen.getByText('Anwenden'));

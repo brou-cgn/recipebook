@@ -1,39 +1,42 @@
 .filter-page {
   max-width: 600px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.75rem;
   min-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
 }
 
 .filter-page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .filter-page-header h2 {
   margin: 0;
   color: #333;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 .filter-page-content {
   flex: 1;
-  padding-bottom: 1rem;
+  padding-bottom: 0.75rem;
 }
 
 .filter-section {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  margin-bottom: 0.75rem;
 }
 
 .filter-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.6rem 0;
   color: #402C1C;
-  font-size: 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .filter-options {
@@ -71,8 +74,8 @@
 
 .filter-page-actions {
   display: flex;
-  gap: 1rem;
-  padding: 1.5rem 0;
+  gap: 0.75rem;
+  padding: 1rem 0;
   border-top: 1px solid #e0e0e0;
   margin-top: auto;
 }
@@ -80,10 +83,10 @@
 .filter-clear-button,
 .filter-apply-button {
   flex: 1;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 25px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -145,19 +148,38 @@ select.filter-select:not([multiple]) {
   padding-right: 2.5rem;
 }
 
-select.filter-select[multiple] {
-  padding: 0.5rem;
-  min-height: 6rem;
+.filter-checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
-select.filter-select[multiple] option {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
+.filter-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: #f5f5f5;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  color: #333;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  user-select: none;
 }
 
-select.filter-select[multiple] option:checked {
-  background-color: #402C1C;
-  color: white;
+.filter-checkbox-label:hover {
+  background: #ece5de;
+  border-color: #402C1C;
+}
+
+.filter-checkbox-label input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  accent-color: #402C1C;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 @media (max-width: 480px) {

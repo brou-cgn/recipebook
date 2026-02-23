@@ -31,14 +31,16 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
     }
   }, [currentFilters]);
 
-  const handleCuisineChange = (e) => {
-    const selected = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedCuisines(selected);
+  const handleCuisineToggle = (category) => {
+    setSelectedCuisines(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
   };
 
-  const handleAuthorChange = (e) => {
-    const selected = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedAuthors(selected);
+  const handleAuthorToggle = (authorId) => {
+    setSelectedAuthors(prev =>
+      prev.includes(authorId) ? prev.filter(a => a !== authorId) : [...prev, authorId]
+    );
   };
 
   const handleClearFilters = () => {
@@ -85,34 +87,38 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
         {availableCategories.length > 0 && (
           <div className="filter-section">
             <h3>Kulinarik</h3>
-            <select
-              multiple
-              value={selectedCuisines}
-              onChange={handleCuisineChange}
-              className="filter-select"
-              aria-label="Kulinarik"
-            >
+            <div className="filter-checkbox-grid">
               {availableCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
+                <label key={category} className="filter-checkbox-label">
+                  <input
+                    type="checkbox"
+                    value={category}
+                    checked={selectedCuisines.includes(category)}
+                    onChange={() => handleCuisineToggle(category)}
+                  />
+                  {category}
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
         {availableAuthors && availableAuthors.length > 0 && (
           <div className="filter-section">
             <h3>Autor</h3>
-            <select
-              multiple
-              value={selectedAuthors}
-              onChange={handleAuthorChange}
-              className="filter-select"
-              aria-label="Autor"
-            >
+            <div className="filter-checkbox-grid">
               {availableAuthors.map(author => (
-                <option key={author.id} value={author.id}>{author.name}</option>
+                <label key={author.id} className="filter-checkbox-label">
+                  <input
+                    type="checkbox"
+                    value={author.id}
+                    checked={selectedAuthors.includes(author.id)}
+                    onChange={() => handleAuthorToggle(author.id)}
+                  />
+                  {author.name}
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
