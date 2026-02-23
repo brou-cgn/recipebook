@@ -7,7 +7,7 @@ import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
 function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
-  const [step, setStep] = useState(initialImage ? 'scan' : 'upload'); // 'upload', 'scan', 'edit', 'ai-result'
+  const [step, setStep] = useState(initialImage ? 'scan' : 'upload'); // 'upload', 'scan', 'edit', 'ai-result', 'batch-processing'
   // imageBase64 tracks the current image but OCR functions receive it directly as parameter
   // This state is maintained for potential future features (e.g., image preview, retry)
   // eslint-disable-next-line no-unused-vars
@@ -24,6 +24,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [remainingScans, setRemainingScans] = useState(null);
   const [aiFailed, setAiFailed] = useState(false);
   const [lastImageForRetry, setLastImageForRetry] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [allOcrResults, setAllOcrResults] = useState([]);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -54,6 +57,181 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  // Handle multi-file upload (batch mode)
+  const handleMultiFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    if (files.length === 1) {
+      handleFileUpload(e);
+      return;
+    }
+
+    setError('');
+    setUploadedImages(files);
+    setCurrentImageIndex(0);
+    setAllOcrResults([]);
+    setStep('batch-processing');
+    await processBatchImages(files);
+  };
+
+  // Process multiple images sequentially
+  const processBatchImages = async (files) => {
+    const results = [];
+
+    for (let i = 0; i < files.length; i++) {
+      setCurrentImageIndex(i);
+      setScanProgress(0);
+
+      try {
+        const base64 = await fileToBase64(files[i]);
+
+        if (ocrMode === 'ai') {
+          const result = await recognizeRecipeWithAI(base64, {
+            language,
+            provider: 'gemini',
+            onProgress: (progress) => setScanProgress(progress)
+          });
+          results.push(result);
+        } else {
+          const langCode = language === 'de' ? 'deu' : 'eng';
+          const result = await recognizeText(base64, langCode,
+            (progress) => setScanProgress(progress)
+          );
+          results.push({ text: result.text });
+        }
+      } catch (err) {
+        console.error(`Error processing image ${i + 1}:`, err);
+        results.push({ error: err.message });
+      }
+    }
+
+    setAllOcrResults(results);
+
+    try {
+      const merged = mergeOcrResults(results, ocrMode);
+
+      if (ocrMode === 'ai') {
+        setAiResult(merged);
+        setStep('ai-result');
+      } else {
+        setOcrText(merged.text);
+        setStep('edit');
+      }
+    } catch (err) {
+      setError(err.message);
+      setStep('upload');
+    }
+  };
+
+  // Combine multiple OCR results into one recipe
+  const mergeOcrResults = (results, mode) => {
+    if (mode === 'ai') {
+      return mergeAiResults(results);
+    } else {
+      return mergeTextResults(results);
+    }
+  };
+
+  const mergeAiResults = (results) => {
+    const validResults = results.filter(r => !r.error);
+
+    if (validResults.length === 0) {
+      throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
+    }
+
+    const merged = { ...validResults[0] };
+
+    const allIngredients = validResults.flatMap(r => r.ingredients || []);
+    merged.ingredients = removeDuplicates(allIngredients);
+
+    const allSteps = validResults.flatMap(r => r.steps || []);
+    merged.steps = removeDuplicates(allSteps);
+
+    const allTags = validResults.flatMap(r => r.tags || []);
+    merged.tags = [...new Set(allTags)];
+
+    const allNotes = validResults
+      .map(r => r.notes)
+      .filter(n => n && n.trim())
+      .join('\n\n');
+    merged.notes = allNotes || merged.notes;
+
+    merged.servings = merged.servings || validResults.find(r => r.servings)?.servings;
+    merged.prepTime = merged.prepTime || validResults.find(r => r.prepTime)?.prepTime;
+    merged.cookTime = merged.cookTime || validResults.find(r => r.cookTime)?.cookTime;
+    merged.difficulty = merged.difficulty || validResults.find(r => r.difficulty)?.difficulty;
+    merged.cuisine = merged.cuisine || validResults.find(r => r.cuisine)?.cuisine;
+    merged.category = merged.category || validResults.find(r => r.category)?.category;
+
+    return merged;
+  };
+
+  const mergeTextResults = (results) => {
+    const validResults = results.filter(r => !r.error && r.text);
+
+    if (validResults.length === 0) {
+      throw new Error('Keine gültigen OCR-Ergebnisse gefunden');
+    }
+
+    const combinedText = validResults
+      .map((r, i) => `--- Bild ${i + 1} ---\n${r.text}`)
+      .join('\n\n');
+
+    return { text: combinedText };
+  };
+
+  // Remove duplicate strings using Levenshtein similarity
+  const removeDuplicates = (items) => {
+    if (!items || items.length === 0) return [];
+
+    const unique = [];
+
+    for (const item of items) {
+      const normalized = item.toLowerCase().trim();
+      const isDuplicate = unique.some(existing =>
+        stringSimilarity(existing.toLowerCase().trim(), normalized) > 0.8
+      );
+
+      if (!isDuplicate) {
+        unique.push(item);
+      }
+    }
+
+    return unique;
+  };
+
+  const stringSimilarity = (s1, s2) => {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+
+    if (longer.length === 0) return 1.0;
+
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  const levenshteinDistance = (s1, s2) => {
+    const costs = [];
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i === 0) {
+          costs[j] = j;
+        } else if (j > 0) {
+          let newValue = costs[j - 1];
+          if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+          }
+          costs[j - 1] = lastValue;
+          lastValue = newValue;
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue;
+    }
+    return costs[s2.length];
   };
 
   // Start camera
@@ -281,6 +459,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setValidationResult(null);
     setAiFailed(false);
     setLastImageForRetry(null);
+    setUploadedImages([]);
+    setCurrentImageIndex(0);
+    setAllOcrResults([]);
   };
 
   // Handle cancel
@@ -395,13 +576,14 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                     📷 Kamera starten
                   </button>
                   <label htmlFor="imageUpload" className="upload-button">
-                    📁 Bild hochladen
+                    📁 Bild(er) hochladen
                   </label>
                   <input
                     type="file"
                     id="imageUpload"
                     accept="image/jpeg,image/jpg,image/png"
-                    onChange={handleFileUpload}
+                    multiple
+                    onChange={handleMultiFileUpload}
                     style={{ display: 'none' }}
                   />
                 </div>
@@ -448,9 +630,49 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
             </div>
           )}
 
+          {/* Batch Processing Step */}
+          {step === 'batch-processing' && (
+            <div className="batch-processing-section">
+              <p className="ocr-instructions">
+                Verarbeite {uploadedImages.length} Bilder...
+              </p>
+
+              <div className="batch-progress">
+                <div className="batch-image-progress">
+                  Bild {currentImageIndex + 1} von {uploadedImages.length}
+                </div>
+
+                <div className="progress-container">
+                  <div className="progress-bar">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${scanProgress}%` }}
+                    />
+                  </div>
+                  <p className="progress-text">{scanProgress}%</p>
+                </div>
+
+                <div className="processed-images">
+                  {uploadedImages.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`image-indicator ${
+                        index < currentImageIndex ? 'completed' :
+                        index === currentImageIndex ? 'processing' :
+                        'pending'
+                      }`}
+                    >
+                      {index < currentImageIndex ? '✓' : index === currentImageIndex ? '⏳' : '○'}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* AI Result Step */}
           {step === 'ai-result' && aiResult && (
-            <div className="ai-result-section">
+            <div className={`ai-result-section${allOcrResults.length > 1 ? ' merged' : ''}`}>
               <p className="ocr-instructions">
                 KI-Analyse abgeschlossen - Überprüfen Sie die erkannten Daten
               </p>
