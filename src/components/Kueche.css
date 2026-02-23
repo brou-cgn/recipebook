@@ -29,6 +29,14 @@
   border-left-color: #1A1A1A;
 }
 
+.kueche-tile.kueche-tile--mise-en-place {
+  border-left-color: #2E86AB;
+}
+
+.kueche-tile--mise-en-place .kueche-tile-content h3 {
+  color: #2E86AB;
+}
+
 .kueche-tile:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
