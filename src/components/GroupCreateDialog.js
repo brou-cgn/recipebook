@@ -28,7 +28,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
     e.preventDefault();
     setError('');
     if (!name.trim()) {
-      setError('Bitte gib einen Gruppennamen ein.');
+      setError('Bitte gib einen Listennamen ein.');
       return;
     }
     setSaving(true);
@@ -37,22 +37,22 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
       const memberIds = [currentUser.id, ...selectedMemberIds];
       await onSave({ name: name.trim(), memberIds, memberRoles: {} });
     } catch (err) {
-      setError('Fehler beim Erstellen der Gruppe. Bitte erneut versuchen.');
+      setError('Fehler beim Erstellen der Liste. Bitte erneut versuchen.');
       setSaving(false);
     }
   };
 
   return (
-    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label="Gruppe erstellen">
+    <div className="group-dialog-overlay" role="dialog" aria-modal="true" aria-label="Liste erstellen">
       <div className="group-dialog">
         <div className="group-dialog-header">
-          <h2>Neue Gruppe erstellen</h2>
+          <h2>Neue Liste erstellen</h2>
           <button className="group-dialog-close" onClick={onCancel} aria-label="Schließen">✕</button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="group-dialog-field">
-            <label htmlFor="group-name">Gruppenname *</label>
+            <label htmlFor="group-name">Listenname *</label>
             <input
               id="group-name"
               type="text"
@@ -91,7 +91,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
               Abbrechen
             </button>
             <button type="submit" className="group-btn-primary" disabled={saving}>
-              {saving ? 'Erstellen...' : 'Gruppe erstellen'}
+              {saving ? 'Erstellen...' : 'Liste erstellen'}
             </button>
           </div>
         </form>

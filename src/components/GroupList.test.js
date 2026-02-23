@@ -33,7 +33,7 @@ describe('GroupList', () => {
         onCreateGroup={jest.fn()}
       />
     );
-    expect(screen.getByText('Gruppen')).toBeInTheDocument();
+    expect(screen.getByText('Meine Listen')).toBeInTheDocument();
   });
 
   it('shows empty state when there are no private groups', () => {
@@ -46,7 +46,7 @@ describe('GroupList', () => {
         onCreateGroup={jest.fn()}
       />
     );
-    expect(screen.getByText('Noch keine privaten Gruppen!')).toBeInTheDocument();
+    expect(screen.getByText('Noch keine privaten Listen!')).toBeInTheDocument();
   });
 
   it('renders private group cards', () => {
@@ -104,7 +104,7 @@ describe('GroupList', () => {
         onCreateGroup={jest.fn()}
       />
     );
-    fireEvent.click(screen.getByText('+ Gruppe erstellen'));
+    fireEvent.click(screen.getByText('+ Liste erstellen'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

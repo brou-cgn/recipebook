@@ -34,9 +34,9 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   return (
     <div className="group-list-container">
       <div className="group-list-header">
-        <h2>Gruppen</h2>
+        <h2>Meine Listen</h2>
         <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
-          + Gruppe erstellen
+          + Liste erstellen
         </button>
       </div>
 
@@ -59,12 +59,11 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
       )}
 
       <div className="group-section">
-        <h3 className="group-section-title">Meine Gruppen</h3>
         {privateGroups.length === 0 ? (
           <div className="empty-state">
-            <p>Noch keine privaten Gruppen!</p>
+            <p>Noch keine privaten Listen!</p>
             <p className="empty-hint">
-              Tippe auf „Gruppe erstellen", um Gruppen anzulegen.
+              Tippe auf „Liste erstellen", um Listen anzulegen.
             </p>
           </div>
         ) : (
