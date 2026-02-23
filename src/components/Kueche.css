@@ -95,6 +95,11 @@
   color: #000;
 }
 
+.kueche-tile--chefkoch .kueche-tile-meta .meta-text,
+.kueche-tile--meinkochbuch .kueche-tile-meta .meta-text {
+  margin-bottom: 6px;
+}
+
 .kueche-section-title {
   margin: 2rem 0 0.5rem;
   padding-left: 1rem;
