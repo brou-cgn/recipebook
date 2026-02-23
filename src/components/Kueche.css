@@ -128,6 +128,7 @@
   border-radius: 3px 3px 0 0;
   background-color: #E0E0E0;
   min-height: 8px;
+  margin-bottom: 6px;
 }
 
 .kueche-bar-chart__bar--current {
