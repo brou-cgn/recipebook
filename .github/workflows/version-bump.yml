@@ -149,8 +149,15 @@ jobs:
       
       - name: Push changes
         run: |
-          git push origin HEAD:${{ github.ref_name }}
-          git push origin --tags
+          for i in 1 2 3; do
+            git pull --rebase origin ${{ github.ref_name }} && \
+            git push origin HEAD:${{ github.ref_name }} && \
+            git push origin --tags && exit 0
+            echo "Retry $i failed, waiting..."
+            sleep 5
+          done
+          echo "All retries failed, push unsuccessful."
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
