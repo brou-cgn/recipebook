@@ -112,6 +112,7 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   }
 
   let lastError = null;
+  let progressInterval = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -124,7 +125,14 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
       // Call the Cloud Function
       const scanRecipeWithAI = httpsCallable(functions, 'scanRecipeWithAI');
 
-      if (onProgress) onProgress(30);
+      let simulatedProgress = 30;
+      if (onProgress) {
+        onProgress(30);
+        progressInterval = setInterval(() => {
+          simulatedProgress = Math.min(85, simulatedProgress + 1);
+          onProgress(simulatedProgress);
+        }, 300);
+      }
 
       console.log('DEBUG sending to CF - cuisineTypes:', cuisineTypes);
       console.log('DEBUG sending to CF - mealCategories:', mealCategories);
@@ -136,6 +144,8 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
         mealCategories,
       });
 
+      clearInterval(progressInterval);
+      progressInterval = null;
       if (onProgress) onProgress(90);
 
       const recipeData = result.data;
@@ -149,6 +159,8 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
       return recipeData;
 
     } catch (error) {
+      clearInterval(progressInterval);
+      progressInterval = null;
       lastError = error;
       console.error(`AI OCR attempt ${attempt + 1} failed:`, error);
 
