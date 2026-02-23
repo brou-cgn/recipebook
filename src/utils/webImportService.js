@@ -27,16 +27,27 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
 
   if (onProgress) onProgress(10);
 
+  let progressInterval = null;
+
   try {
     // Call the Cloud Function to capture screenshot
     const captureScreenshot = httpsCallable(functions, 'captureWebsiteScreenshot');
     
-    if (onProgress) onProgress(30);
+    let simulatedProgress = 30;
+    if (onProgress) {
+      onProgress(30);
+      progressInterval = setInterval(() => {
+        simulatedProgress = Math.min(85, simulatedProgress + 1);
+        onProgress(simulatedProgress);
+      }, 300);
+    }
 
     const result = await captureScreenshot({
       url: url,
     });
 
+    clearInterval(progressInterval);
+    progressInterval = null;
     if (onProgress) onProgress(90);
 
     const screenshotData = result.data;
@@ -50,6 +61,7 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
     return screenshotData.screenshot;
 
   } catch (error) {
+    clearInterval(progressInterval);
     if (onProgress) onProgress(0);
     
     // Enhance error messages based on Firebase error codes
