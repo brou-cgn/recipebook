@@ -12,6 +12,17 @@ root.render(
   </React.StrictMode>
 );
 
+serviceWorkerRegistration.register({
+  onUpdate: (registration) => {
+    if (registration && registration.waiting) {
+      // Neuen Service Worker sofort aktivieren
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    // Seite neu laden, damit die neue Version aktiv wird
+    window.location.reload();
+  },
+});
+
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://cra.link/PWA
