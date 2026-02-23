@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Header.css';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
+import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
 
 function Header({ 
@@ -20,6 +21,9 @@ function Header({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [faqs, setFaqs] = useState([]);
+  const [faqModalOpen, setFaqModalOpen] = useState(false);
+  const [expandedFaqId, setExpandedFaqId] = useState(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
   
@@ -32,6 +36,17 @@ function Header({
     };
     loadHeaderData();
   }, []);
+
+  // Subscribe to FAQs for live display in the menu
+  useEffect(() => {
+    if (!currentUser) return;
+    const unsubscribe = subscribeToFaqs((faqList) => {
+      setFaqs(faqList);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -104,6 +119,7 @@ function Header({
   };
   
   return (
+    <>
     <header className={`header ${!visible ? 'header-hidden' : ''}`}> 
       <div className="header-content">
         <div className="header-title">
@@ -186,6 +202,21 @@ function Header({
                       </button>
                     </div>
                   )}
+                  {faqs.length > 0 && (
+                    <div className="menu-section">
+                      <div className="menu-section-title">Hilfe</div>
+                      <button
+                        className="menu-item"
+                        onClick={() => {
+                          setFaqModalOpen(true);
+                          setExpandedFaqId(null);
+                          setMenuOpen(false);
+                        }}
+                      >
+                        ❓ FAQ
+                      </button>
+                    </div>
+                  )}
                   {onSettingsClick && currentUser?.isAdmin && (
                     <div className="menu-section">
                       <div className="menu-section-title">Verwaltung</div>
@@ -223,6 +254,54 @@ function Header({
         </div>
       </div>
     </header>
+
+      {faqModalOpen && (
+        <div className="faq-modal-overlay" onClick={() => setFaqModalOpen(false)}>
+          <div className="faq-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="faq-modal-header">
+              <h2 className="faq-modal-title">❓ Häufige Fragen (FAQ)</h2>
+              <button
+                className="faq-modal-close"
+                onClick={() => setFaqModalOpen(false)}
+                aria-label="FAQ schließen"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="faq-modal-body">
+              {faqs.map((faq) => (
+                <div key={faq.id} className="faq-item">
+                  <button
+                    className="faq-question-btn"
+                    onClick={() => setExpandedFaqId(expandedFaqId === faq.id ? null : faq.id)}
+                    aria-expanded={expandedFaqId === faq.id}
+                  >
+                    <span className="faq-question-text">{faq.title}</span>
+                    <span className="faq-question-arrow">
+                      {expandedFaqId === faq.id ? '▲' : '▼'}
+                    </span>
+                  </button>
+                  {expandedFaqId === faq.id && (
+                    <div className="faq-answer">
+                      {faq.description && (
+                        <p className="faq-answer-text">{faq.description}</p>
+                      )}
+                      {faq.screenshot && (
+                        <img
+                          src={faq.screenshot}
+                          alt="Screenshot"
+                          className="faq-answer-screenshot"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

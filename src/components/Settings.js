@@ -6,6 +6,7 @@ import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
+import { addFaq, updateFaq, deleteFaq, subscribeToFaqs } from '../utils/faqFirestore';
 import {
   DndContext,
   closestCenter,
@@ -153,6 +154,13 @@ function Settings({ onBack, currentUser }) {
   // AI recipe prompt state
   const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_RECIPE_PROMPT);
 
+  // FAQ state
+  const [faqs, setFaqs] = useState([]);
+  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null });
+  const [editingFaqId, setEditingFaqId] = useState(null);
+  const [uploadingFaqScreenshot, setUploadingFaqScreenshot] = useState(false);
+  const [savingFaq, setSavingFaq] = useState(false);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -182,6 +190,85 @@ function Settings({ onBack, currentUser }) {
     };
     loadSettings();
   }, []);
+
+  // Subscribe to FAQs for real-time updates
+  useEffect(() => {
+    const unsubscribe = subscribeToFaqs((faqList) => {
+      setFaqs(faqList);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // FAQ handlers
+  const handleFaqScreenshotUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingFaqScreenshot(true);
+    try {
+      const base64 = await fileToBase64(file);
+      const compressed = await compressImage(base64, 800, 600, 0.8);
+      setFaqForm(prev => ({ ...prev, screenshot: compressed }));
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingFaqScreenshot(false);
+    }
+  };
+
+  const handleSaveFaq = async () => {
+    if (!faqForm.title.trim()) {
+      alert('Bitte gib einen Titel für die FAQ ein.');
+      return;
+    }
+    setSavingFaq(true);
+    try {
+      if (editingFaqId) {
+        await updateFaq(editingFaqId, {
+          title: faqForm.title.trim(),
+          description: faqForm.description.trim(),
+          screenshot: faqForm.screenshot || null
+        });
+      } else {
+        await addFaq({
+          title: faqForm.title.trim(),
+          description: faqForm.description.trim(),
+          screenshot: faqForm.screenshot || null,
+          order: faqs.length
+        });
+      }
+      setFaqForm({ title: '', description: '', screenshot: null });
+      setEditingFaqId(null);
+    } catch (error) {
+      alert('Fehler beim Speichern der FAQ: ' + error.message);
+    } finally {
+      setSavingFaq(false);
+    }
+  };
+
+  const handleEditFaq = (faq) => {
+    setEditingFaqId(faq.id);
+    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null });
+  };
+
+  const handleDeleteFaq = async (faqId) => {
+    if (!window.confirm('Möchtest du diese FAQ wirklich löschen?')) return;
+    try {
+      await deleteFaq(faqId);
+      if (editingFaqId === faqId) {
+        setEditingFaqId(null);
+        setFaqForm({ title: '', description: '', screenshot: null });
+      }
+    } catch (error) {
+      alert('Fehler beim Löschen der FAQ: ' + error.message);
+    }
+  };
+
+  const handleCancelFaqEdit = () => {
+    setEditingFaqId(null);
+    setFaqForm({ title: '', description: '', screenshot: null });
+  };
 
   const handleSave = () => {
     saveCustomLists(lists);
@@ -619,6 +706,12 @@ function Settings({ onBack, currentUser }) {
             onClick={() => setActiveTab('ai')}
           >
             KI-Einstellungen
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
+            onClick={() => setActiveTab('faq')}
+          >
+            FAQ
           </button>
         </div>
       )}
@@ -1644,6 +1737,115 @@ function Settings({ onBack, currentUser }) {
                   Auf Standard zurücksetzen
                 </button>
               </div>
+            </div>
+          </>
+        ) : activeTab === 'faq' ? (
+          <>
+            <div className="settings-section">
+              <h3>FAQ-Einträge</h3>
+              <p className="section-description">
+                Hier kannst du häufig gestellte Fragen (FAQs) anlegen und pflegen. Die FAQs werden im Menü für alle Nutzer sichtbar angezeigt.
+              </p>
+
+              {/* FAQ form */}
+              <div className="faq-form">
+                <h4>{editingFaqId ? 'FAQ bearbeiten' : 'Neue FAQ hinzufügen'}</h4>
+                <div className="list-input">
+                  <input
+                    type="text"
+                    placeholder="Titel (z.B. Wie lege ich ein neues Rezept an?)"
+                    value={faqForm.title}
+                    onChange={(e) => setFaqForm(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+                <div className="list-input">
+                  <textarea
+                    className="faq-description-input"
+                    placeholder="Beschreibung – locker und verständlich formuliert (z.B. Klick auf das große Plus rechts unten und fülle die Felder aus. Fertig!)"
+                    value={faqForm.description}
+                    rows={4}
+                    onChange={(e) => setFaqForm(prev => ({ ...prev, description: e.target.value }))}
+                  />
+                </div>
+                <div className="faq-screenshot-section">
+                  <label>Screenshot (optional):</label>
+                  {faqForm.screenshot ? (
+                    <div className="faq-screenshot-preview">
+                      <img src={faqForm.screenshot} alt="Screenshot" className="faq-screenshot-img" />
+                      <button
+                        type="button"
+                        className="favicon-remove-btn"
+                        onClick={() => setFaqForm(prev => ({ ...prev, screenshot: null }))}
+                      >
+                        ✕ Entfernen
+                      </button>
+                    </div>
+                  ) : (
+                    <label htmlFor="faqScreenshotFile" className="image-upload-label">
+                      {uploadingFaqScreenshot ? 'Hochladen...' : '📷 Screenshot hochladen'}
+                    </label>
+                  )}
+                  <input
+                    type="file"
+                    id="faqScreenshotFile"
+                    accept="image/*"
+                    onChange={handleFaqScreenshotUpload}
+                    style={{ display: 'none' }}
+                    disabled={uploadingFaqScreenshot}
+                  />
+                </div>
+                <div className="faq-form-actions">
+                  <button
+                    className="save-button"
+                    onClick={handleSaveFaq}
+                    disabled={savingFaq}
+                  >
+                    {savingFaq ? 'Speichern...' : editingFaqId ? 'FAQ aktualisieren' : 'FAQ hinzufügen'}
+                  </button>
+                  {editingFaqId && (
+                    <button className="reset-button" onClick={handleCancelFaqEdit}>
+                      Abbrechen
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* FAQ list */}
+              {faqs.length === 0 ? (
+                <p className="section-description">Noch keine FAQs vorhanden. Füge oben die erste FAQ hinzu!</p>
+              ) : (
+                <div className="faq-list">
+                  {faqs.map((faq) => (
+                    <div key={faq.id} className="faq-list-item">
+                      <div className="faq-list-item-header">
+                        <strong className="faq-list-item-title">{faq.title}</strong>
+                        <div className="faq-list-item-actions">
+                          <button
+                            className="faq-edit-btn"
+                            onClick={() => handleEditFaq(faq)}
+                            title="Bearbeiten"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="faq-delete-btn"
+                            onClick={() => handleDeleteFaq(faq.id)}
+                            title="Löschen"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                      {faq.description && (
+                        <p className="faq-list-item-description">{faq.description}</p>
+                      )}
+                      {faq.screenshot && (
+                        <img src={faq.screenshot} alt="Screenshot" className="faq-list-screenshot" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         ) : (
