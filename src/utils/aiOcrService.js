@@ -6,7 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { getAIRecipePrompt, getCustomLists } from './customLists';
+import { getAIRecipePrompt, getCustomLists, clearSettingsCache } from './customLists';
 
 /**
  * Configuration for AI OCR providers
@@ -102,6 +102,7 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   let cuisineTypes;
   let mealCategories;
   try {
+    clearSettingsCache();
     const lists = await getCustomLists();
     cuisineTypes = lists.cuisineTypes;
     mealCategories = lists.mealCategories;
@@ -125,6 +126,9 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
 
       if (onProgress) onProgress(30);
 
+      console.log('DEBUG sending to CF - cuisineTypes:', cuisineTypes);
+      console.log('DEBUG sending to CF - mealCategories:', mealCategories);
+      
       const result = await scanRecipeWithAI({
         imageBase64: imageBase64,
         language: lang,

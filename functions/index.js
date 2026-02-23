@@ -390,7 +390,10 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     }
 
     const recipeData = JSON.parse(jsonText);
-
+    // DEBUG - kann danach wieder entfernt werden
+    console.log('DEBUG zubereitung:', JSON.stringify(recipeData.zubereitung));
+    console.log('DEBUG alle Keys:', Object.keys(recipeData));
+    
     // Normalize the data structure based on language
     if (lang === 'de') {
       return {

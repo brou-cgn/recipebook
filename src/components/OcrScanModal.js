@@ -117,6 +117,10 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setAiFailed(false);
 
     try {
+
+    console.log('DEBUG performOcr called, ocrMode:', ocrMode);
+    console.log('DEBUG performOcr called, imageToProcess length:', imageToProcess?.length);
+	
       if (ocrMode === 'ai') {
         // AI OCR using Gemini Vision
         const result = await recognizeRecipeWithAI(imageToProcess, {
