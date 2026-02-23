@@ -154,17 +154,19 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
           >
             <div className="kueche-tile-content">
               <h3>Mein Kochbuch</h3>
-              <div className="kueche-tile-meta">
-                <span className="meta-text">
-                  <strong>{filteredRecipes.length}</strong>
-                  <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
-                </span>
-                <span className="meta-text">
-                  <strong>{filteredMenus.length}</strong>
-                  <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
-                </span>
+              <div className="kueche-tile-bottom">
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">
+                    <strong>{filteredRecipes.length}</strong>
+                    <span>{filteredRecipes.length === 1 ? 'Rezept' : 'Rezepte'}</span>
+                  </span>
+                  <span className="meta-text">
+                    <strong>{filteredMenus.length}</strong>
+                    <span>{filteredMenus.length === 1 ? 'Menü' : 'Menüs'}</span>
+                  </span>
+                </div>
+                <RecipeBarChart recipes={filteredRecipes} />
               </div>
-              <RecipeBarChart recipes={filteredRecipes} />
             </div>
           </div>
           {showTimeline && (
