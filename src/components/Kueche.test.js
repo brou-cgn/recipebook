@@ -545,4 +545,20 @@ describe('Kueche', () => {
     expect(within(tile).getByText('1')).toBeInTheDocument();
     expect(within(tile).getByText('private Liste')).toBeInTheDocument();
   });
+
+  test('Meine Mise en Place tile appears before Mein Kochbuch tile', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const miseEnPlace = screen.getByTestId('mise-en-place-tile');
+    const kochbuchTile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
+    expect(miseEnPlace.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });
