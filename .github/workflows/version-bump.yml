@@ -1,14 +1,10 @@
 name: Auto Version Bump
 
 on:
-  workflow_call:
-    outputs:
-      version:
-        description: "The new version number"
-        value: ${{ jobs.bump-version.outputs.version }}
-      bump_type:
-        description: "The type of version bump (major, minor, patch)"
-        value: ${{ jobs.bump-version.outputs.bump_type }}
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
