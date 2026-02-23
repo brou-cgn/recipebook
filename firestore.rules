@@ -18,14 +18,26 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == authorId;
     }
     
+    // Helper function to check if user is a member of the recipe's group
+    function isGroupMember(groupId) {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
+    }
+
     // Recipes collection rules
     match /recipes/{recipeId} {
       // Allow unauthenticated reads for recipes with a shareId (public sharing)
       allow read: if resource.data.shareId != null && resource.data.shareId != '';
       
-      // Anyone authenticated can read public recipes
-      // Only admins and authors can read private (draft) recipes
+      // Group recipes: only accessible to group members (and admins)
+      allow read: if isAuthenticated() &&
+                     resource.data.groupId != null &&
+                     (isAdmin() || isGroupMember(resource.data.groupId));
+
+      // Anyone authenticated can read public (non-group) recipes
+      // Only admins and authors can read private (draft) non-group recipes
       allow read: if isAuthenticated() && 
+                     resource.data.groupId == null &&
                      (!resource.data.isPrivate || 
                       isAdmin() || 
                       isAuthor(resource.data.authorId));

@@ -24,13 +24,15 @@ import { deleteRecipeImage } from './storageUtils';
 
 /**
  * Set up real-time listener for recipes
- * Filters private (draft) recipes to only show to admins and recipe authors
+ * Filters private (draft) recipes to only show to admins and recipe authors.
+ * Filters group recipes to only show to members of that group.
  * @param {string} userId - Current user ID (to filter private recipes)
  * @param {boolean} isAdmin - Whether current user is an admin
  * @param {Function} callback - Callback function that receives recipes array
+ * @param {string[]} [userGroupIds=[]] - IDs of groups the current user belongs to
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToRecipes = (userId, isAdmin, callback) => {
+export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = []) => {
   const recipesRef = collection(db, 'recipes');
   
   return onSnapshot(recipesRef, (snapshot) => {
@@ -41,6 +43,13 @@ export const subscribeToRecipes = (userId, isAdmin, callback) => {
         ...doc.data()
       };
       
+      // Group recipes are only visible to group members (and admins)
+      if (recipe.groupId) {
+        if (!isAdmin && !userGroupIds.includes(recipe.groupId)) {
+          return;
+        }
+      }
+
       // Include recipe if it's public OR if it's private and (user is admin OR recipe author)
       if (!recipe.isPrivate || isAdmin || recipe.authorId === userId) {
         recipes.push(recipe);
