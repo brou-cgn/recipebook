@@ -700,6 +700,7 @@ function App() {
           allUsers={allUsers}
           currentUser={currentUser}
           onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
+          onViewChange={handleViewChange}
         />
       ) : currentView === 'groups' ? (
         selectedGroup ? (

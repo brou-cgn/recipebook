@@ -54,7 +54,7 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
-function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated }) {
+function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -104,6 +104,10 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
     } else {
       if (onSelectRecipe) onSelectRecipe(item);
     }
+  };
+
+  const handleMiseEnPlaceClick = () => {
+    if (onViewChange) onViewChange('groups');
   };
 
   const chefkochName = currentUser
@@ -165,6 +169,18 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
                 </span>
               </div>
               <RecipeBarChart recipes={filteredRecipes} />
+            </div>
+          </div>
+          <div
+            className="kueche-tile kueche-tile--mise-en-place"
+            onClick={handleMiseEnPlaceClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Meine Mise en Place – Berechtigungsgruppen öffnen"
+          >
+            <div className="kueche-tile-content">
+              <h3>Meine Mise en Place</h3>
             </div>
           </div>
           {showTimeline && (
