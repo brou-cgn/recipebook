@@ -88,6 +88,12 @@ function matchesAuthorFilter(recipe, selectedAuthors) {
   return selectedAuthors.includes(recipe.authorId);
 }
 
+// Helper function to check if a recipe matches the private group filter
+function matchesGroupFilter(recipe, selectedGroup) {
+  if (!selectedGroup) return true;
+  return recipe.groupId === selectedGroup;
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -116,7 +122,8 @@ function App() {
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
-    selectedAuthors: []
+    selectedAuthors: [],
+    selectedGroup: ''
   });
   const recipeCountsInitialized = useRef(false);
 
@@ -754,6 +761,7 @@ function App() {
             onCancel={handleCancelFilterPage}
             availableAuthors={allUsers.filter(u => (u.recipe_count ?? 0) > 0).map(u => ({ id: u.id, name: u.vorname }))}
             isAdmin={currentUser?.isAdmin || false}
+            privateGroups={groups.filter(g => g.type === 'private')}
           />
         ) : (
           <RecipeList
@@ -761,7 +769,8 @@ function App() {
               matchesCategoryFilter(recipe, categoryFilter) && 
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines) &&
-              matchesAuthorFilter(recipe, recipeFilters.selectedAuthors)
+              matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
+              matchesGroupFilter(recipe, recipeFilters.selectedGroup)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
