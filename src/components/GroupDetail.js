@@ -4,6 +4,7 @@ import './GroupDetail.css';
 /**
  * Displays details of a single group including members.
  * Owners can add/remove members and delete the group.
+ * Members (and owners) can add recipes scoped to the group.
  *
  * @param {Object} props
  * @param {Object} props.group - The group object
@@ -12,14 +13,16 @@ import './GroupDetail.css';
  * @param {Function} props.onBack - Navigate back to GroupList
  * @param {Function} props.onUpdateGroup - Called with (groupId, updates) to persist changes
  * @param {Function} props.onDeleteGroup - Called with groupId to delete the group
+ * @param {Function} [props.onAddRecipe] - Called with groupId to open the recipe form
  */
-function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup }) {
+function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe }) {
   const [saving, setSaving] = useState(false);
 
   if (!group) return null;
 
   const isOwner = group.ownerId === currentUser?.id;
   const isPublic = group.type === 'public';
+  const isMember = (group.memberIds || []).includes(currentUser?.id);
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -65,6 +68,15 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             aria-label="Gruppe löschen"
           >
             Gruppe löschen
+          </button>
+        )}
+        {onAddRecipe && (isOwner || isMember) && (
+          <button
+            className="group-add-recipe-btn"
+            onClick={() => onAddRecipe(group.id)}
+            aria-label="Rezept hinzufügen"
+          >
+            + Rezept hinzufügen
           </button>
         )}
       </div>

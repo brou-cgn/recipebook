@@ -82,6 +82,23 @@
   cursor: not-allowed;
 }
 
+.group-add-recipe-btn {
+  background: #402C1C;
+  color: white;
+  border: none;
+  padding: 0.55rem 1.1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.group-add-recipe-btn:hover {
+  background: #5a3e28;
+  transform: translateY(-1px);
+}
+
 .group-detail-section {
   background: white;
   border-radius: 12px;
