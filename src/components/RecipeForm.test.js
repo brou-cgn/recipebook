@@ -2208,7 +2208,7 @@ describe('RecipeForm - AI OCR Limit', () => {
     });
   });
 
-  test('limit info text is shown when AI OCR count >= 20', async () => {
+  test('limit info text is not shown when AI OCR count >= 20', async () => {
     getUserAiOcrScanCount.mockResolvedValue(20);
 
     render(
@@ -2220,24 +2220,6 @@ describe('RecipeForm - AI OCR Limit', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText(/KI-OCR Limit/)).toBeInTheDocument();
-    });
-  });
-
-  test('limit info text is not shown when AI OCR count < 20', async () => {
-    getUserAiOcrScanCount.mockResolvedValue(10);
-
-    render(
-      <RecipeForm
-        recipe={null}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-        currentUser={userWithPermissions}
-      />
-    );
-
-    // Wait for effect to run
     await waitFor(() => {
       expect(getUserAiOcrScanCount).toHaveBeenCalled();
     });

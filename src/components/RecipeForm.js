@@ -727,11 +727,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 />
               </>
             )}
-            {aiOcrLimitReached && (
-              <span className="ai-ocr-limit-info" title="KI-OCR Tageslimit erreicht (20/Tag). Import und Scan sind bis morgen deaktiviert.">
-                ⚠️ KI-OCR Limit
-              </span>
-            )}
             {currentUser?.isAdmin && (
               <button
                 type="button"
