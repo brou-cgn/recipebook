@@ -34,7 +34,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   return (
     <div className="group-list-container">
       <div className="group-list-header">
-        <h2>Berechtigungsgruppen</h2>
+        <h2>Gruppen</h2>
         <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
           + Gruppe erstellen
         </button>
@@ -64,7 +64,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
           <div className="empty-state">
             <p>Noch keine privaten Gruppen!</p>
             <p className="empty-hint">
-              Tippe auf „Gruppe erstellen", um Berechtigungsgruppen anzulegen.
+              Tippe auf „Gruppe erstellen", um Gruppen anzulegen.
             </p>
           </div>
         ) : (

@@ -33,7 +33,7 @@ describe('GroupList', () => {
         onCreateGroup={jest.fn()}
       />
     );
-    expect(screen.getByText('Berechtigungsgruppen')).toBeInTheDocument();
+    expect(screen.getByText('Gruppen')).toBeInTheDocument();
   });
 
   it('shows empty state when there are no private groups', () => {
