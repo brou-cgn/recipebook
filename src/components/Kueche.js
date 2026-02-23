@@ -54,7 +54,7 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
-function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange }) {
+function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -83,6 +83,10 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
   const filteredMenus = currentUser
     ? menus.filter(m => (m.authorId || m.createdBy) === currentUser.id)
     : menus;
+
+  const privateListCount = currentUser
+    ? groups.filter(g => g.type === 'private' && g.ownerId === currentUser.id).length
+    : 0;
 
   // Transform menus into the shape expected by RecipeTimeline
   const menuTimelineItems = filteredMenus.map(menu => ({
@@ -173,6 +177,7 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
           </div>
           <div
             className="kueche-tile kueche-tile--mise-en-place"
+            data-testid="mise-en-place-tile"
             onClick={handleMiseEnPlaceClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
             role="button"
@@ -181,6 +186,12 @@ function Kueche({ recipes, menus = [], onSelectRecipe, onSelectMenu, allUsers, c
           >
             <div className="kueche-tile-content">
               <h3>Meine Mise en Place</h3>
+              <div className="kueche-tile-meta">
+                <span className="meta-text">
+                  <strong>{privateListCount}</strong>
+                  <span>{privateListCount === 1 ? 'private Liste' : 'private Listen'}</span>
+                </span>
+              </div>
             </div>
           </div>
           {showTimeline && (
