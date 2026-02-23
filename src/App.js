@@ -14,6 +14,8 @@ import PasswordChangeModal from './components/PasswordChangeModal';
 import FilterPage from './components/FilterPage';
 import Kueche from './components/Kueche';
 import SharePage from './components/SharePage';
+import GroupList from './components/GroupList';
+import GroupDetail from './components/GroupDetail';
 import { 
   loginUser, 
   logoutUser, 
@@ -45,6 +47,12 @@ import {
   updateMenu as updateMenuInFirestore,
   deleteMenu as deleteMenuFromFirestore
 } from './utils/menuFirestore';
+import {
+  subscribeToGroups,
+  addGroup as addGroupToFirestore,
+  updateGroup as updateGroupInFirestore,
+  deleteGroup as deleteGroupFromFirestore
+} from './utils/groupFirestore';
 
 // Helper function to check if a recipe matches the category filter
 function matchesCategoryFilter(recipe, categoryFilter) {
@@ -92,6 +100,8 @@ function App() {
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -204,6 +214,17 @@ function App() {
 
     const unsubscribe = subscribeToMenus((menusFromFirestore) => {
       setMenus(menusFromFirestore);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Set up real-time listener for groups from Firestore
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = subscribeToGroups(currentUser.id, (groupsFromFirestore) => {
+      setGroups(groupsFromFirestore);
     });
 
     return () => unsubscribe();
@@ -362,6 +383,7 @@ function App() {
     setCurrentView(view);
     setSelectedRecipe(null);
     setSelectedMenu(null);
+    setSelectedGroup(null);
     setIsFormOpen(false);
     setIsMenuFormOpen(false);
     setIsSettingsOpen(false);
@@ -456,6 +478,44 @@ function App() {
       }
     } catch (error) {
       console.error('Error toggling menu favorite:', error);
+    }
+  };
+
+  // Group handlers
+  const handleSelectGroup = (group) => {
+    setSelectedGroup(group);
+  };
+
+  const handleBackToGroupList = () => {
+    setSelectedGroup(null);
+  };
+
+  const handleCreateGroup = async (groupData) => {
+    if (!currentUser) return;
+    try {
+      await addGroupToFirestore(groupData, currentUser.id);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      alert('Fehler beim Erstellen der Gruppe. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const handleUpdateGroup = async (groupId, updates) => {
+    try {
+      await updateGroupInFirestore(groupId, updates);
+    } catch (error) {
+      console.error('Error updating group:', error);
+      alert('Fehler beim Aktualisieren der Gruppe. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId) => {
+    try {
+      await deleteGroupFromFirestore(groupId);
+      setSelectedGroup(null);
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      alert('Fehler beim Löschen der Gruppe. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -641,6 +701,25 @@ function App() {
           currentUser={currentUser}
           onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
         />
+      ) : currentView === 'groups' ? (
+        selectedGroup ? (
+          <GroupDetail
+            group={selectedGroup}
+            allUsers={allUsers}
+            currentUser={currentUser}
+            onBack={handleBackToGroupList}
+            onUpdateGroup={handleUpdateGroup}
+            onDeleteGroup={handleDeleteGroup}
+          />
+        ) : (
+          <GroupList
+            groups={groups}
+            allUsers={allUsers}
+            currentUser={currentUser}
+            onSelectGroup={handleSelectGroup}
+            onCreateGroup={handleCreateGroup}
+          />
+        )
       ) : currentView === 'menus' ? (
         // Menu views
         <MenuList
