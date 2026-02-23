@@ -152,6 +152,25 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             </div>
           </div>
           <div
+            className="kueche-tile kueche-tile--mise-en-place"
+            data-testid="mise-en-place-tile"
+            onClick={handleMiseEnPlaceClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Meine Mise en Place – Berechtigungsgruppen öffnen"
+          >
+            <div className="kueche-tile-content">
+              <h3>Meine Mise en Place</h3>
+              <div className="kueche-tile-meta">
+                <span className="meta-text">
+                  <strong>{privateListCount}</strong>
+                  <span>{privateListCount === 1 ? 'private Liste' : 'private Listen'}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
             className="kueche-tile"
             onClick={() => setShowTimeline(prev => !prev)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowTimeline(prev => !prev); } }}
@@ -173,25 +192,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
                 </span>
               </div>
               <RecipeBarChart recipes={filteredRecipes} />
-            </div>
-          </div>
-          <div
-            className="kueche-tile kueche-tile--mise-en-place"
-            data-testid="mise-en-place-tile"
-            onClick={handleMiseEnPlaceClick}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMiseEnPlaceClick(); } }}
-            role="button"
-            tabIndex={0}
-            aria-label="Meine Mise en Place – Berechtigungsgruppen öffnen"
-          >
-            <div className="kueche-tile-content">
-              <h3>Meine Mise en Place</h3>
-              <div className="kueche-tile-meta">
-                <span className="meta-text">
-                  <strong>{privateListCount}</strong>
-                  <span>{privateListCount === 1 ? 'private Liste' : 'private Listen'}</span>
-                </span>
-              </div>
             </div>
           </div>
           {showTimeline && (
