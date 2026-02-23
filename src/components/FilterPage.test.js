@@ -6,7 +6,7 @@ import FilterPage from './FilterPage';
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
   getCustomLists: () => Promise.resolve({
-    mealCategories: ['Vorspeise', 'Hauptspeise', 'Dessert']
+    cuisineTypes: ['Vorspeise', 'Hauptspeise', 'Dessert']
   })
 }));
 
