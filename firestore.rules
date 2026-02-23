@@ -104,6 +104,31 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Groups collection rules
+    match /groups/{groupId} {
+      // Authenticated users can read public groups or groups they are a member/owner of
+      allow read: if isAuthenticated() && (
+        resource.data.type == 'public' ||
+        resource.data.ownerId == request.auth.uid ||
+        request.auth.uid in resource.data.memberIds
+      );
+
+      // Authenticated users can create private groups
+      allow create: if isAuthenticated() &&
+        request.resource.data.type == 'private' &&
+        request.resource.data.ownerId == request.auth.uid;
+
+      // Only the owner (or admin) can update a private group
+      allow update: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid || isAdmin()
+      );
+
+      // Only the owner (or admin) can delete a group
+      allow delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid || isAdmin()
+      );
+    }
+
     // AI Scan rate limiting collection (managed by Cloud Functions only)
     match /aiScanLimits/{document=**} {
       // Users can read their own usage records

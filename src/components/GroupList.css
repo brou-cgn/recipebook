@@ -1,0 +1,165 @@
+.group-list-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.group-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.group-list-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.add-group-button {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-group-button:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.group-section {
+  margin-bottom: 2rem;
+}
+
+.group-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.group-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 4px solid #402C1C;
+}
+
+.group-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
+}
+
+.group-card-public {
+  border-left-color: #2e7d32;
+}
+
+.group-card-content {
+  padding: 1.25rem 1.5rem;
+}
+
+.group-card-content h3 {
+  margin: 0.4rem 0 0.6rem;
+  color: #333;
+  font-size: 1.15rem;
+}
+
+.group-type-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.group-type-indicator.public {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.group-type-indicator.private {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.group-card-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: #666;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.group-card-owner {
+  margin-left: auto;
+}
+
+.group-card-hint {
+  font-size: 0.82rem;
+  color: #888;
+  margin: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #666;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  font-size: 1.05rem;
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .group-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .group-list-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .group-list-header h2 {
+    text-align: center;
+  }
+
+  .add-group-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .group-grid {
+    grid-template-columns: 1fr;
+  }
+}

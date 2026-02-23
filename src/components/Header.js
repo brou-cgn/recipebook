@@ -184,6 +184,12 @@ function Header({
                       >
                         Küche
                       </button>
+                      <button
+                        className={`menu-item ${currentView === 'groups' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('groups')}
+                      >
+                        Gruppen
+                      </button>
                     </div>
                   )}
                   {onSettingsClick && currentUser?.isAdmin && (
