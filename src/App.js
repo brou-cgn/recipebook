@@ -695,6 +695,7 @@ function App() {
         <Kueche
           recipes={recipes}
           menus={menus}
+          groups={groups}
           onSelectRecipe={handleSelectRecipe}
           onSelectMenu={handleSelectMenu}
           allUsers={allUsers}

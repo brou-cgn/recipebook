@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Kueche from './Kueche';
 
 const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
@@ -467,5 +467,82 @@ describe('Kueche', () => {
     const currentBar = Array.from(chart.children)[5];
     // Current month bar should be at 100% height (1 recipe = max)
     expect(currentBar.style.height).toBe('100%');
+  });
+
+  const mockGroups = [
+    { id: 'g1', type: 'private', ownerId: 'user-1', name: 'My List', memberIds: [] },
+    { id: 'g2', type: 'private', ownerId: 'user-2', name: 'Other List', memberIds: [] },
+    { id: 'g3', type: 'public', ownerId: null, name: 'Public', memberIds: [] },
+  ];
+
+  test('Mise en Place tile shows private list count for current user', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        groups={mockGroups}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('1')).toBeInTheDocument();
+    expect(within(tile).getByText('private Liste')).toBeInTheDocument();
+  });
+
+  test('Mise en Place tile shows plural for multiple private lists', () => {
+    const multipleGroups = [
+      { id: 'g1', type: 'private', ownerId: 'user-1', name: 'List 1', memberIds: [] },
+      { id: 'g2', type: 'private', ownerId: 'user-1', name: 'List 2', memberIds: [] },
+    ];
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        groups={multipleGroups}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('2')).toBeInTheDocument();
+    expect(within(tile).getByText('private Listen')).toBeInTheDocument();
+  });
+
+  test('Mise en Place tile shows 0 private Listen when no groups provided', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('0')).toBeInTheDocument();
+    expect(within(tile).getByText('private Listen')).toBeInTheDocument();
+  });
+
+  test('Mise en Place tile only counts groups owned by current user', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        groups={mockGroups}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-2' }}
+      />
+    );
+
+    const tile = screen.getByTestId('mise-en-place-tile');
+    expect(within(tile).getByText('1')).toBeInTheDocument();
+    expect(within(tile).getByText('private Liste')).toBeInTheDocument();
   });
 });
