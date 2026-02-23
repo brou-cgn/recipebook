@@ -60,7 +60,6 @@
 .kueche-tile-meta {
   display: flex;
   gap: 1rem;
-  margin-top: 36px;
   font-size: 0.85rem;
   color: #7B7B7B;
   font-weight: 500;
@@ -90,14 +89,19 @@
   color: #1a1a1a;
 }
 
+.kueche-tile-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 36px;
+}
+
 .kueche-bar-chart {
-  position: absolute;
-  right: 18px;
-  bottom: 10px;
   display: flex;
   align-items: flex-end;
   gap: 4px;
   height: 52px;
+  flex-shrink: 0;
 }
 
 .kueche-bar-chart__bar {
