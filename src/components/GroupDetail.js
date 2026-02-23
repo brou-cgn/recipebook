@@ -48,7 +48,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`Gruppe "${group.name}" wirklich löschen?`)) return;
+    if (!window.confirm(`Liste "${group.name}" wirklich löschen?`)) return;
     await onDeleteGroup(group.id);
   };
 
@@ -69,9 +69,9 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             className="group-delete-btn"
             onClick={handleDelete}
             disabled={saving}
-            aria-label="Gruppe löschen"
+            aria-label="Liste löschen"
           >
-            Gruppe löschen
+            Liste löschen
           </button>
         )}
         {onAddRecipe && (isOwner || isMember) && (

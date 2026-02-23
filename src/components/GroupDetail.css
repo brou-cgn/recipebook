@@ -60,21 +60,23 @@
 }
 
 .group-delete-btn {
-  background: #c0392b;
-  color: white;
-  border: none;
-  padding: 0.55rem 1.1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  background: white;
+  color: #f44336;
+  border: 2px solid #f44336;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: all 0.3s ease;
   margin-left: auto;
 }
 
 .group-delete-btn:hover:not(:disabled) {
-  background: #a93226;
-  transform: translateY(-1px);
+  background: #FFEBEE;
+  border-color: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .group-delete-btn:disabled {
