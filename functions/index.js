@@ -772,9 +772,14 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       let foundCount = 0;
 
       for (const ingredient of ingredients) {
-        const parsed = parseIngredientForNutrition(ingredient);
+        // Skip heading items (e.g. { type: 'heading', text: '...' })
+        if (ingredient && typeof ingredient === 'object' && ingredient.type === 'heading') {
+          continue;
+        }
+        const ingredientStr = (ingredient && typeof ingredient === 'object') ? ingredient.text : ingredient;
+        const parsed = parseIngredientForNutrition(ingredientStr);
         if (!parsed) {
-          details.push({ingredient, found: false, error: 'Konnte nicht geparst werden'});
+          details.push({ingredient: ingredientStr, found: false, error: 'Konnte nicht geparst werden'});
           continue;
         }
 
@@ -794,14 +799,14 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           });
 
           if (!response.ok) {
-            details.push({ingredient, name, found: false, error: `HTTP ${response.status}`});
+            details.push({ingredient: ingredientStr, name, found: false, error: `HTTP ${response.status}`});
             continue;
           }
 
           const data = await response.json();
 
           if (!data.products || data.products.length === 0) {
-            details.push({ingredient, name, found: false, error: 'Nicht gefunden'});
+            details.push({ingredient: ingredientStr, name, found: false, error: 'Nicht gefunden'});
             continue;
           }
 
@@ -812,7 +817,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           );
           if (!productWithData) {
             console.warn(`No energy data found for "${name}" in OpenFoodFacts results`);
-            details.push({ingredient, name, found: false, error: 'Keine Nährwertdaten verfügbar'});
+            details.push({ingredient: ingredientStr, name, found: false, error: 'Keine Nährwertdaten verfügbar'});
             continue;
           }
           const product = productWithData;
@@ -829,7 +834,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           totals.salz += (n['salt_100g'] ?? n.salt ?? 0) * scale;
 
           details.push({
-            ingredient,
+            ingredient: ingredientStr,
             name,
             found: true,
             product: product.product_name || name,
@@ -838,7 +843,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           foundCount++;
         } catch (err) {
           console.error(`OpenFoodFacts lookup failed for "${name}":`, err.message);
-          details.push({ingredient, name, found: false, error: err.message});
+          details.push({ingredient: ingredientStr, name, found: false, error: err.message});
         }
       }
 

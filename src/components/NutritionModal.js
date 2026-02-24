@@ -80,7 +80,10 @@ function NutritionModal({ recipe, onClose, onSave }) {
   };
 
   const handleAutoCalculate = async () => {
-    const ingredients = recipe.zutaten || recipe.ingredients || [];
+    const rawIngredients = recipe.zutaten || recipe.ingredients || [];
+    const ingredients = rawIngredients
+      .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
+      .map(item => typeof item === 'string' ? item : item.text);
     if (ingredients.length === 0) {
       setAutoCalcResult({ error: 'Keine Zutaten im Rezept gefunden.' });
       return;
