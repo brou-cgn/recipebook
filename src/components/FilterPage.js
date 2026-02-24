@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './FilterPage.css';
 import { getCustomLists } from '../utils/customLists';
 
@@ -14,6 +14,7 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
     author: true,
     status: true
   });
+  const closeButtonRef = useRef(null);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -40,6 +41,24 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
       setSelectedGroup(currentFilters.selectedGroup || '');
     }
   }, [currentFilters]);
+
+  // Focus close button when modal opens
+  useEffect(() => {
+    if (closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, []);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const handleCuisineToggle = (category) => {
     setSelectedCuisines(prev =>
@@ -71,12 +90,27 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
   };
 
   return (
-    <div className="filter-page">
-      <div className="filter-page-header">
-        <h2>Filter</h2>
-      </div>
+    <div className="filter-modal-overlay" onClick={onCancel}>
+      <div
+        className="filter-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="filter-modal-header">
+          <h2 className="filter-modal-title">Filter</h2>
+          <button
+            ref={closeButtonRef}
+            className="filter-modal-close"
+            onClick={onCancel}
+            aria-label="Filter schließen"
+          >
+            ✕
+          </button>
+        </div>
 
-      <div className="filter-page-content">
+        <div className="filter-modal-body">
         {privateGroups && privateGroups.length > 0 && (
           <div className="filter-section">
             <button
@@ -202,21 +236,22 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
             )}
           </div>
         )}
-      </div>
+        </div>
 
-      <div className="filter-page-actions">
-        <button 
-          className="filter-clear-button"
-          onClick={handleClearFilters}
-        >
-          Filter löschen
-        </button>
-        <button 
-          className="filter-apply-button"
-          onClick={handleApply}
-        >
-          Anwenden
-        </button>
+        <div className="filter-modal-footer">
+          <button 
+            className="filter-clear-button"
+            onClick={handleClearFilters}
+          >
+            Filter löschen
+          </button>
+          <button 
+            className="filter-apply-button"
+            onClick={handleApply}
+          >
+            Anwenden
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -768,16 +768,17 @@ function App() {
         />
       ) : (
         // Recipe views
-        isFilterPageOpen ? (
-          <FilterPage
-            currentFilters={recipeFilters}
-            onApply={handleApplyFilters}
-            onCancel={handleCancelFilterPage}
-            availableAuthors={allUsers.filter(u => (u.recipe_count ?? 0) > 0).map(u => ({ id: u.id, name: u.vorname }))}
-            isAdmin={currentUser?.isAdmin || false}
-            privateGroups={groups.filter(g => g.type === 'private')}
-          />
-        ) : (
+        <>
+          {isFilterPageOpen && (
+            <FilterPage
+              currentFilters={recipeFilters}
+              onApply={handleApplyFilters}
+              onCancel={handleCancelFilterPage}
+              availableAuthors={allUsers.filter(u => (u.recipe_count ?? 0) > 0).map(u => ({ id: u.id, name: u.vorname }))}
+              isAdmin={currentUser?.isAdmin || false}
+              privateGroups={groups.filter(g => g.type === 'private')}
+            />
+          )}
           <RecipeList
             recipes={recipes.filter(recipe => 
               matchesCategoryFilter(recipe, categoryFilter) && 
@@ -795,7 +796,7 @@ function App() {
             onOpenFilterPage={handleOpenFilterPage}
             activePrivateListName={activePrivateListName}
           />
-        )
+        </>
       )}
       {requiresPasswordChange && currentUser && (
         <PasswordChangeModal 
