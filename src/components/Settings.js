@@ -303,7 +303,7 @@ function Settings({ onBack, currentUser }) {
     if (!window.confirm('Möchtest du alle FAQ-Einträge aus der FAQ.md importieren? Bereits vorhandene Einträge bleiben erhalten.')) return;
     setImportingFaq(true);
     try {
-      const response = await fetch(process.env.PUBLIC_URL + '/FAQ.md');
+      const response = await fetch(process.env.PUBLIC_URL + '/FAQ.md', { cache: 'no-cache' });
       if (!response.ok) throw new Error('FAQ.md konnte nicht geladen werden.');
       const text = await response.text();
       const count = await importFaqsFromMarkdown(text, faqs);
