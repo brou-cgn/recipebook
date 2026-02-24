@@ -1194,6 +1194,37 @@
   background: white;
 }
 
+.faq-admin-only-section {
+  margin: 0.5rem 0;
+}
+
+.faq-admin-only-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.faq-admin-only-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.faq-admin-badge {
+  font-size: 0.75rem;
+  color: #b35900;
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .faq-indent-toolbar {
   display: flex;
   align-items: center;

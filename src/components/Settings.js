@@ -170,7 +170,7 @@ function Settings({ onBack, currentUser }) {
 
   // FAQ state
   const [faqs, setFaqs] = useState([]);
-  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null, level: 1 });
+  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
   const [editingFaqId, setEditingFaqId] = useState(null);
   const [uploadingFaqScreenshot, setUploadingFaqScreenshot] = useState(false);
   const [savingFaq, setSavingFaq] = useState(false);
@@ -245,7 +245,8 @@ function Settings({ onBack, currentUser }) {
           title: faqForm.title.trim(),
           description: faqForm.description.trim(),
           screenshot: faqForm.screenshot || null,
-          level: faqForm.level ?? 1
+          level: faqForm.level ?? 1,
+          adminOnly: faqForm.adminOnly ?? false
         });
       } else {
         await addFaq({
@@ -253,10 +254,11 @@ function Settings({ onBack, currentUser }) {
           description: faqForm.description.trim(),
           screenshot: faqForm.screenshot || null,
           level: faqForm.level ?? 1,
+          adminOnly: faqForm.adminOnly ?? false,
           order: faqs.length
         });
       }
-      setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
+      setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
       setEditingFaqId(null);
     } catch (error) {
       alert('Fehler beim Speichern des Kochschule-Eintrags: ' + error.message);
@@ -267,7 +269,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleEditFaq = (faq) => {
     setEditingFaqId(faq.id);
-    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1 });
+    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1, adminOnly: faq.adminOnly ?? false });
   };
 
   const handleDeleteFaq = async (faqId) => {
@@ -276,7 +278,7 @@ function Settings({ onBack, currentUser }) {
       await deleteFaq(faqId);
       if (editingFaqId === faqId) {
         setEditingFaqId(null);
-        setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
+        setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
       }
       setFaqSelectedIds(prev => prev.filter(id => id !== faqId));
     } catch (error) {
@@ -286,7 +288,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleCancelFaqEdit = () => {
     setEditingFaqId(null);
-    setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
+    setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
   };
 
   const handleFaqIndent = async (delta) => {
@@ -1789,7 +1791,7 @@ function Settings({ onBack, currentUser }) {
             <div className="settings-section">
               <h3>Kochschule-Einträge</h3>
               <p className="section-description">
-                Hier kannst du Kochschule-Einträge anlegen und pflegen. Die Einträge werden im Menü für alle Nutzer sichtbar angezeigt.
+                Hier kannst du Kochschule-Einträge anlegen und pflegen. Einträge können optional als „nur für Administratoren sichtbar" markiert werden.
               </p>
 
               {/* FAQ Import aus FAQ.md */}
@@ -1838,6 +1840,16 @@ function Settings({ onBack, currentUser }) {
                     <option value={1}>1 – Frage/Antwort</option>
                     <option value={2}>2 – Eingerückt</option>
                   </select>
+                </div>
+                <div className="faq-admin-only-section">
+                  <label className="faq-admin-only-label">
+                    <input
+                      type="checkbox"
+                      checked={faqForm.adminOnly ?? false}
+                      onChange={(e) => setFaqForm(prev => ({ ...prev, adminOnly: e.target.checked }))}
+                    />
+                    Nur für Administratoren sichtbar
+                  </label>
                 </div>
                 <div className="faq-screenshot-section">
                   <label>Screenshot (optional):</label>
@@ -1930,6 +1942,9 @@ function Settings({ onBack, currentUser }) {
                             />
                             <strong className="faq-list-item-title">{renderBoldText(faq.title)}</strong>
                             <span className="faq-list-item-level">Ebene {faq.level ?? 1}</span>
+                            {faq.adminOnly && (
+                              <span className="faq-admin-badge" title="Nur für Administratoren sichtbar">🔒 Admin</span>
+                            )}
                             <div className="faq-list-item-actions">
                               <button
                                 className="faq-edit-btn"
