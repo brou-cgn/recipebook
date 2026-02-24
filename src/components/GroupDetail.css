@@ -2,6 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 1rem;
+  position: relative;
 }
 
 .group-detail-header {
@@ -10,21 +11,38 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
+  padding-right: 2.5rem;
 }
 
-.group-back-btn {
+.group-back-icon-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   background: none;
   border: none;
   color: #402C1C;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   cursor: pointer;
-  padding: 0.4rem 0;
-  transition: opacity 0.2s;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: opacity 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 1;
 }
 
-.group-back-btn:hover {
+.group-back-icon-btn:hover {
   opacity: 0.7;
+  background: rgba(64, 44, 28, 0.08);
+}
+
+.group-back-icon-img {
+  width: 1.1rem;
+  height: 1.1rem;
+  object-fit: contain;
 }
 
 .group-detail-title {
@@ -69,7 +87,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-left: auto;
+}
+
+.group-recipes-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .group-delete-btn:hover:not(:disabled) {
