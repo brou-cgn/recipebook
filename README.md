@@ -122,7 +122,7 @@ This application is automatically deployed to GitHub Pages when changes are push
 👉 **[GitHub Secrets Setup Anleitung](GITHUB_SECRETS_SETUP.md)** - Schritt-für-Schritt Anleitung zur Behebung der leeren Seite
 
 ### ❓ FAQ:
-- **[FAQ.md](FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen)
+- **[FAQ.md](FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen, Kochmodus)
 
 ### 📚 Zugriffsanleitungen:
 - **[ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)

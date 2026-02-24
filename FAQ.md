@@ -284,4 +284,32 @@ Nur du (als Inhaberin/Inhaber) und die von dir hinzugefügten Mitglieder können
 
 ---
 
+## 10. Kochmodus
+<!-- id: faq-047 -->
+
+### Was ist der Kochmodus?
+<!-- id: faq-048 -->
+
+Der Kochmodus ist eine spezielle Ansicht in der Rezeptdetailseite, die das Kochen nach einem Rezept erleichtert. Er zeigt Zutaten und Zubereitungsschritte in einer übersichtlichen, schrittweisen Darstellung – optimiert für die Nutzung direkt am Herd.
+
+### Welche Vorteile bietet der Kochmodus?
+<!-- id: faq-049 -->
+
+- **Schritt-für-Schritt-Ansicht**: Die Zubereitungsschritte werden einzeln und groß dargestellt, sodass du beim Kochen immer weißt, was als Nächstes zu tun ist.
+- **Bildschirm bleibt an**: Dank der Wake-Lock-Funktion wird der Bildschirm während des Kochmodus nicht automatisch gesperrt oder gedimmt – praktisch beim Kochen mit nassen Händen.
+- **Einfache Navigation**: Du kannst zwischen den Schritten mit den Pfeiltasten der Tastatur oder per Wischen (auf Mobilgeräten) navigieren.
+- **Zutatenübersicht**: Alle Zutaten bleiben sichtbar, damit du während des Kochens nichts vergisst.
+
+### Wie aktiviere ich den Kochmodus?
+<!-- id: faq-050 -->
+
+Öffne ein Rezept in der Detailansicht und tippe auf das **👨‍🍳-Icon**, das über dem Rezeptbild eingeblendet wird. Eine grüne Leiste am oberen Bildschirmrand zeigt an, dass der Kochmodus aktiv ist.
+
+### Wie beende ich den Kochmodus?
+<!-- id: faq-051 -->
+
+Tippe auf das **✕** in der grünen Leiste am oberen Bildschirmrand, um den Kochmodus zu beenden und zur normalen Rezeptansicht zurückzukehren.
+
+---
+
 *Bei weiteren Fragen wende dich an die Administratorin oder den Administrator der App.*
