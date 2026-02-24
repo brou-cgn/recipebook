@@ -329,3 +329,77 @@
 .nutrition-autocalc-detail-reason {
   color: #999;
 }
+
+/* Step-by-step calculation progress */
+.nutrition-calc-progress {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: #f8f4f0;
+  border: 1px solid #e0d5cb;
+  border-radius: 8px;
+}
+
+.nutrition-calc-progress-header {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.nutrition-calc-progress-bar-track {
+  height: 6px;
+  background: #e0d5cb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.nutrition-calc-progress-bar-fill {
+  height: 100%;
+  background: #402C1C;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.nutrition-calc-current {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.8rem;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Not-included ingredients section */
+.nutrition-not-included {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  background: #fff8f0;
+  border: 1px solid #ffe0b2;
+  border-radius: 8px;
+}
+
+.nutrition-not-included-title {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e65100;
+}
+
+.nutrition-not-included-list {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  list-style: disc;
+  font-size: 0.8rem;
+  color: #e65100;
+}
+
+.nutrition-not-included-item {
+  margin: 0.15rem 0;
+}
+
+.nutrition-not-included-name {
+  font-weight: 600;
+}
+
+.nutrition-not-included-reason {
+  color: #999;
+}
