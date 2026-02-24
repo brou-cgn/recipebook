@@ -163,7 +163,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               ★ Favoriten
             </button>
           </div>
-          {userCanEdit && activePrivateListName ? (
+          {userCanEdit && activePrivateListId ? (
             <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>
               + Privates Rezept hinzufügen
             </button>
