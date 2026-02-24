@@ -112,24 +112,27 @@ export const updateFaq = async (faqId, updates) => {
 };
 
 /**
- * Import FAQs from parsed Markdown content
+ * Import FAQs from parsed Markdown content.
+ * Entries with a matching sourceId in existingFaqs are updated; others are created.
  * @param {string} markdownContent - The Markdown string to parse
- * @param {number} currentFaqCount - Current number of FAQs (used as base order index)
- * @returns {Promise<number>} Number of entries imported
+ * @param {Array} existingFaqs - Currently stored FAQs (used for deduplication by sourceId)
+ * @returns {Promise<number>} Total number of entries processed (created + updated)
  */
-export const importFaqsFromMarkdown = async (markdownContent, currentFaqCount = 0) => {
+export const importFaqsFromMarkdown = async (markdownContent, existingFaqs = []) => {
   const lines = markdownContent.split('\n');
   const entries = [];
   let currentTitle = null;
   let currentLevel = 1;
   let currentDescLines = [];
+  let currentId = null;
 
   const flush = () => {
     if (currentTitle) {
       const description = currentDescLines.join('\n').trim();
-      entries.push({ title: currentTitle, description, level: currentLevel });
+      entries.push({ title: currentTitle, description, level: currentLevel, sourceId: currentId });
       currentTitle = null;
       currentDescLines = [];
+      currentId = null;
     }
   };
 
@@ -138,28 +141,54 @@ export const importFaqsFromMarkdown = async (markdownContent, currentFaqCount = 
       flush();
       currentTitle = line.replace(/^##\s+/, '');
       currentLevel = 0;
+      currentId = null;
     } else if (line.startsWith('### ')) {
       flush();
       currentTitle = line.replace(/^###\s+/, '');
       currentLevel = 1;
+      currentId = null;
     } else if (currentTitle !== null) {
       if (line.startsWith('#') || line.startsWith('---')) {
         flush();
       } else {
-        currentDescLines.push(line);
+        const idMatch = line.match(/^<!--\s*id:\s*(\S+)\s*-->$/);
+        if (idMatch) {
+          currentId = idMatch[1];
+        } else {
+          currentDescLines.push(line);
+        }
       }
     }
   }
   flush();
 
+  const currentFaqCount = existingFaqs.length;
+  let newEntryIndex = 0;
+
   for (let i = 0; i < entries.length; i++) {
-    await addFaq({
-      title: entries[i].title,
-      description: entries[i].description,
-      level: entries[i].level,
-      screenshot: null,
-      order: currentFaqCount + i
-    });
+    const entry = entries[i];
+    const existingFaq = entry.sourceId
+      ? existingFaqs.find(f => f.sourceId === entry.sourceId)
+      : null;
+
+    if (existingFaq) {
+      await updateFaq(existingFaq.id, {
+        title: entry.title,
+        description: entry.description,
+        level: entry.level,
+        sourceId: entry.sourceId
+      });
+    } else {
+      await addFaq({
+        title: entry.title,
+        description: entry.description,
+        level: entry.level,
+        screenshot: null,
+        order: currentFaqCount + newEntryIndex,
+        ...(entry.sourceId ? { sourceId: entry.sourceId } : {})
+      });
+      newEntryIndex++;
+    }
   }
 
   return entries.length;

@@ -306,7 +306,7 @@ function Settings({ onBack, currentUser }) {
       const response = await fetch(process.env.PUBLIC_URL + '/FAQ.md');
       if (!response.ok) throw new Error('FAQ.md konnte nicht geladen werden.');
       const text = await response.text();
-      const count = await importFaqsFromMarkdown(text, faqs.length);
+      const count = await importFaqsFromMarkdown(text, faqs);
       alert(`${count} FAQ-Einträge erfolgreich importiert.`);
     } catch (error) {
       alert('Fehler beim Import: ' + error.message);
