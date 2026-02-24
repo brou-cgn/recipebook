@@ -62,6 +62,8 @@ function Header({
     };
   }, [currentUser]);
 
+  const visibleFaqs = faqs.filter(faq => !faq.adminOnly || currentUser?.isAdmin);
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -216,7 +218,7 @@ function Header({
                       </button>
                     </div>
                   )}
-                  {faqs.length > 0 && (
+                  {visibleFaqs.length > 0 && (
                     <div className="menu-section">
                       <div className="menu-section-title">Hilfe</div>
                       <button
@@ -283,7 +285,7 @@ function Header({
               </button>
             </div>
             <div className="faq-modal-body">
-              {faqs.map((faq) => (
+              {visibleFaqs.map((faq) => (
                 faq.level === 0 ? (
                   <div key={faq.id} className="faq-section-heading">
                     {renderBoldText(faq.title)}
