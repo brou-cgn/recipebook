@@ -222,6 +222,19 @@ function App() {
     }
   }, [currentUser, recipesLoaded, recipes]);
 
+  // Keep selectedRecipe in sync with Firestore updates (e.g. background nutrition calculation)
+  // selectedRecipe is intentionally omitted from deps to avoid infinite loops:
+  // the effect reads selectedRecipe only to compare IDs and is driven by recipes changes.
+  useEffect(() => {
+    if (selectedRecipe) {
+      const updated = recipes.find(r => r.id === selectedRecipe.id);
+      if (updated) {
+        setSelectedRecipe(updated);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipes]);
+
   // Initialize recipe counts for all users once after recipes are loaded
   useEffect(() => {
     if (currentUser && recipesLoaded && !recipeCountsInitialized.current) {
