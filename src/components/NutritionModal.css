@@ -270,3 +270,23 @@
 .nutrition-autocalc-source a {
   color: #666;
 }
+
+.nutrition-autocalc-details {
+  margin: 0.4rem 0 0 0;
+  padding: 0 0 0 1.1rem;
+  list-style: disc;
+  font-size: 0.8rem;
+  color: #e65100;
+}
+
+.nutrition-autocalc-detail-item {
+  margin: 0.15rem 0;
+}
+
+.nutrition-autocalc-detail-name {
+  font-weight: 600;
+}
+
+.nutrition-autocalc-detail-reason {
+  color: #999;
+}

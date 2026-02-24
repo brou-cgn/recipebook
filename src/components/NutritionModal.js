@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import './NutritionModal.css';
 
 function NutritionModal({ recipe, onClose, onSave }) {
@@ -97,7 +98,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
         ingredients,
         portionen: recipe.portionen || 1,
       });
-      const { naehrwerte, foundCount, totalCount } = result.data;
+      const { naehrwerte, foundCount, totalCount, details } = result.data;
 
       if (naehrwerte.kalorien != null) setKalorien(String(naehrwerte.kalorien));
       if (naehrwerte.protein != null) setProtein(String(naehrwerte.protein));
@@ -107,12 +108,10 @@ function NutritionModal({ recipe, onClose, onSave }) {
       if (naehrwerte.ballaststoffe != null) setBallaststoffe(String(naehrwerte.ballaststoffe));
       if (naehrwerte.salz != null) setSalz(String(naehrwerte.salz));
 
-      setAutoCalcResult({ foundCount, totalCount });
+      setAutoCalcResult({ foundCount, totalCount, details: details || [] });
     } catch (err) {
       console.error('Auto-calculation failed:', err);
-      setAutoCalcResult({
-        error: err.message || 'Automatische Berechnung fehlgeschlagen. Bitte manuell eintragen.',
-      });
+      setAutoCalcResult({ error: mapNutritionCalcError(err) });
     } finally {
       setAutoCalcLoading(false);
     }
@@ -259,11 +258,25 @@ function NutritionModal({ recipe, onClose, onSave }) {
               {autoCalcLoading ? 'Berechne…' : '🔍 Automatisch berechnen (OpenFoodFacts)'}
             </button>
             {autoCalcResult && !autoCalcResult.error && (
-              <p className="nutrition-autocalc-info">
-                {autoCalcResult.foundCount} von {autoCalcResult.totalCount} Zutaten gefunden.
-                {autoCalcResult.foundCount < autoCalcResult.totalCount &&
-                  ' Fehlende Werte bitte manuell ergänzen.'}
-              </p>
+              <>
+                <p className="nutrition-autocalc-info">
+                  {autoCalcResult.foundCount} von {autoCalcResult.totalCount} Zutaten gefunden.
+                  {autoCalcResult.foundCount < autoCalcResult.totalCount &&
+                    ' Fehlende Werte bitte manuell ergänzen.'}
+                </p>
+                {autoCalcResult.details && autoCalcResult.details.filter(d => !d.found).length > 0 && (
+                  <ul className="nutrition-autocalc-details">
+                    {autoCalcResult.details.filter(d => !d.found).map((d, i) => (
+                      <li key={i} className="nutrition-autocalc-detail-item">
+                        <span className="nutrition-autocalc-detail-name">{d.ingredient}</span>
+                        {d.error && (
+                          <span className="nutrition-autocalc-detail-reason">: {d.error}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
             {autoCalcResult && autoCalcResult.error && (
               <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
