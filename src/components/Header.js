@@ -213,7 +213,7 @@ function Header({
                           setMenuOpen(false);
                         }}
                       >
-                        ❓ FAQ
+                        Kochschule
                       </button>
                     </div>
                   )}
@@ -259,11 +259,11 @@ function Header({
         <div className="faq-modal-overlay" onClick={() => setFaqModalOpen(false)}>
           <div className="faq-modal" onClick={(e) => e.stopPropagation()}>
             <div className="faq-modal-header">
-              <h2 className="faq-modal-title">❓ Häufige Fragen (FAQ)</h2>
+              <h2 className="faq-modal-title">Kochschule</h2>
               <button
                 className="faq-modal-close"
                 onClick={() => setFaqModalOpen(false)}
-                aria-label="FAQ schließen"
+                aria-label="Kochschule schließen"
               >
                 ✕
               </button>

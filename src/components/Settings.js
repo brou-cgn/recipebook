@@ -219,7 +219,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleSaveFaq = async () => {
     if (!faqForm.title.trim()) {
-      alert('Bitte gib einen Titel für die FAQ ein.');
+      alert('Bitte gib einen Titel für den Kochschule-Eintrag ein.');
       return;
     }
     setSavingFaq(true);
@@ -241,7 +241,7 @@ function Settings({ onBack, currentUser }) {
       setFaqForm({ title: '', description: '', screenshot: null });
       setEditingFaqId(null);
     } catch (error) {
-      alert('Fehler beim Speichern der FAQ: ' + error.message);
+      alert('Fehler beim Speichern des Kochschule-Eintrags: ' + error.message);
     } finally {
       setSavingFaq(false);
     }
@@ -253,7 +253,7 @@ function Settings({ onBack, currentUser }) {
   };
 
   const handleDeleteFaq = async (faqId) => {
-    if (!window.confirm('Möchtest du diese FAQ wirklich löschen?')) return;
+    if (!window.confirm('Möchtest du diesen Kochschule-Eintrag wirklich löschen?')) return;
     try {
       await deleteFaq(faqId);
       if (editingFaqId === faqId) {
@@ -261,7 +261,7 @@ function Settings({ onBack, currentUser }) {
         setFaqForm({ title: '', description: '', screenshot: null });
       }
     } catch (error) {
-      alert('Fehler beim Löschen der FAQ: ' + error.message);
+      alert('Fehler beim Löschen des Kochschule-Eintrags: ' + error.message);
     }
   };
 
@@ -711,7 +711,7 @@ function Settings({ onBack, currentUser }) {
             className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
             onClick={() => setActiveTab('faq')}
           >
-            FAQ
+            Kochschule
           </button>
         </div>
       )}
@@ -1742,14 +1742,14 @@ function Settings({ onBack, currentUser }) {
         ) : activeTab === 'faq' ? (
           <>
             <div className="settings-section">
-              <h3>FAQ-Einträge</h3>
+              <h3>Kochschule-Einträge</h3>
               <p className="section-description">
-                Hier kannst du häufig gestellte Fragen (FAQs) anlegen und pflegen. Die FAQs werden im Menü für alle Nutzer sichtbar angezeigt.
+                Hier kannst du Kochschule-Einträge anlegen und pflegen. Die Einträge werden im Menü für alle Nutzer sichtbar angezeigt.
               </p>
 
               {/* FAQ form */}
               <div className="faq-form">
-                <h4>{editingFaqId ? 'FAQ bearbeiten' : 'Neue FAQ hinzufügen'}</h4>
+                <h4>{editingFaqId ? 'Kochschule-Eintrag bearbeiten' : 'Neuen Kochschule-Eintrag hinzufügen'}</h4>
                 <div className="list-input">
                   <input
                     type="text"
@@ -1800,7 +1800,7 @@ function Settings({ onBack, currentUser }) {
                     onClick={handleSaveFaq}
                     disabled={savingFaq}
                   >
-                    {savingFaq ? 'Speichern...' : editingFaqId ? 'FAQ aktualisieren' : 'FAQ hinzufügen'}
+                    {savingFaq ? 'Speichern...' : editingFaqId ? 'Kochschule-Eintrag aktualisieren' : 'Kochschule-Eintrag hinzufügen'}
                   </button>
                   {editingFaqId && (
                     <button className="reset-button" onClick={handleCancelFaqEdit}>
@@ -1812,7 +1812,7 @@ function Settings({ onBack, currentUser }) {
 
               {/* FAQ list */}
               {faqs.length === 0 ? (
-                <p className="section-description">Noch keine FAQs vorhanden. Füge oben die erste FAQ hinzu!</p>
+                <p className="section-description">Noch keine Kochschule-Einträge vorhanden. Füge oben den ersten Eintrag hinzu!</p>
               ) : (
                 <div className="faq-list">
                   {faqs.map((faq) => (
