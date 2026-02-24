@@ -986,9 +986,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                     {recipe.naehrwerte?.kalorien != null && (
                       <span className="nutrition-kcal-badge">{recipe.naehrwerte.kalorien} kcal</span>
                     )}
-                    <span className="nutrition-label">
-                      {recipe.naehrwerte?.kalorien != null ? 'Nährwerte' : 'Nährwerte berechnen'}
-                    </span>
                   </button>
                 </div>
               )}
