@@ -140,7 +140,9 @@ export const DEFAULT_BUTTON_ICONS = {
   closeButton: '✕',
   menuCloseButton: '✕',
   filterButton: '⚙',
-  copyLink: '📋'
+  copyLink: '📋',
+  nutritionEmpty: '➕',
+  nutritionFilled: '🥦'
 };
 
 // Cache for settings to avoid repeated Firestore reads
@@ -190,7 +192,7 @@ export async function getSettings() {
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         faviconImage: settings.faviconImage || null,
         appLogoImage: settings.appLogoImage || null,
-        buttonIcons: settings.buttonIcons || DEFAULT_BUTTON_ICONS,
+        buttonIcons: { ...DEFAULT_BUTTON_ICONS, ...(settings.buttonIcons || {}) },
         timelineBubbleIcon: settings.timelineBubbleIcon || null,
         timelineMenuBubbleIcon: settings.timelineMenuBubbleIcon || null,
         timelineRecipeDefaultImage: settings.timelineRecipeDefaultImage || null,

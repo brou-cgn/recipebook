@@ -6,6 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
+import NutritionModal from './NutritionModal';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -29,6 +30,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
   const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
+  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
+  const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
+  const [showNutritionModal, setShowNutritionModal] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -39,6 +43,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       setCookingModeIcon(icons.cookingMode || '👨‍🍳');
       setCloseButtonIcon(icons.closeButton || '✕');
       setCopyLinkIcon(icons.copyLink || '📋');
+      setNutritionEmptyIcon(icons.nutritionEmpty || '➕');
+      setNutritionFilledIcon(icons.nutritionFilled || '🥦');
     };
     loadSettings();
   }, []);
@@ -251,6 +257,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       console.error('Error updating draft status:', error);
       alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es erneut.');
     }
+  };
+
+  const handleSaveNutrition = async (naehrwerte) => {
+    await updateRecipe(recipe.id, { naehrwerte });
+    setSelectedRecipe({ ...recipe, naehrwerte });
   };
 
   const getShareUrl = () => {
@@ -947,6 +958,40 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   </label>
                 </div>
               )}
+
+              {/* Nutrition icon - always visible, two states */}
+              {!isSharedView && (
+                <div className="metadata-item">
+                  <button
+                    className="nutrition-metadata-btn"
+                    onClick={() => setShowNutritionModal(true)}
+                    title={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    aria-label={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                  >
+                    <span className="nutrition-icon">
+                      {recipe.naehrwerte?.kalorien != null ? (
+                        isBase64Image(nutritionFilledIcon) ? (
+                          <img src={nutritionFilledIcon} alt="Nährwerte" />
+                        ) : (
+                          nutritionFilledIcon
+                        )
+                      ) : (
+                        isBase64Image(nutritionEmptyIcon) ? (
+                          <img src={nutritionEmptyIcon} alt="Nährwerte hinzufügen" />
+                        ) : (
+                          nutritionEmptyIcon
+                        )
+                      )}
+                    </span>
+                    {recipe.naehrwerte?.kalorien != null && (
+                      <span className="nutrition-kcal-badge">{recipe.naehrwerte.kalorien} kcal</span>
+                    )}
+                    <span className="nutrition-label">
+                      {recipe.naehrwerte?.kalorien != null ? 'Nährwerte' : 'Nährwerte berechnen'}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
 
             <section className="recipe-section">
@@ -1012,6 +1057,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
           </>
         )}
       </div>
+
+      {showNutritionModal && (
+        <NutritionModal
+          recipe={recipe}
+          onClose={() => setShowNutritionModal(false)}
+          onSave={handleSaveNutrition}
+        />
+      )}
     </div>
   );
 }
