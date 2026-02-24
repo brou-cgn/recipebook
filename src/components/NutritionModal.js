@@ -111,7 +111,9 @@ function NutritionModal({ recipe, onClose, onSave }) {
       setAutoCalcResult({ foundCount, totalCount, details: details || [] });
     } catch (err) {
       console.error('Auto-calculation failed:', err);
-      setAutoCalcResult({ error: mapNutritionCalcError(err) });
+      // Preserve any partial results returned alongside the error
+      const partial = err.details?.partial || null;
+      setAutoCalcResult({ error: mapNutritionCalcError(err), partial });
     } finally {
       setAutoCalcLoading(false);
     }
@@ -279,7 +281,21 @@ function NutritionModal({ recipe, onClose, onSave }) {
               </>
             )}
             {autoCalcResult && autoCalcResult.error && (
-              <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
+              <div className="nutrition-autocalc-error-box">
+                <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
+                {autoCalcResult.partial && autoCalcResult.partial.foundCount > 0 && (
+                  <p className="nutrition-autocalc-info">
+                    {autoCalcResult.partial.foundCount} von {autoCalcResult.partial.totalCount} Zutaten konnten geladen werden.
+                  </p>
+                )}
+                <button
+                  className="nutrition-autocalc-retry-button"
+                  onClick={handleAutoCalculate}
+                  disabled={autoCalcLoading}
+                >
+                  🔄 Erneut versuchen
+                </button>
+              </div>
             )}
             <p className="nutrition-autocalc-source">
               Quelle:{' '}

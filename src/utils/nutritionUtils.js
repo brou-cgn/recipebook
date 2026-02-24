@@ -4,18 +4,28 @@
  * @returns {string} A descriptive German error message.
  */
 export function mapNutritionCalcError(err) {
+  // Network/connectivity errors – check message before the code switch
+  const msg = err.message || '';
+  const isNetworkError =
+    err.code === 'functions/unavailable' ||
+    msg.toLowerCase().includes('network') ||
+    msg.toLowerCase().includes('failed to fetch') ||
+    msg.toLowerCase().includes('fetch failed') ||
+    msg.toLowerCase().includes('networkerror');
+  if (isNetworkError) {
+    return 'Netzwerkfehler. Bitte Internetverbindung prüfen und erneut versuchen.';
+  }
+
   switch (err.code) {
     case 'functions/unauthenticated':
       return 'Sie müssen angemeldet sein, um Nährwerte zu berechnen.';
-    case 'functions/unavailable':
-      return 'Der Berechnungsservice ist momentan nicht verfügbar. Bitte versuchen Sie es später erneut.';
     case 'functions/deadline-exceeded':
       return 'Die Berechnung hat zu lange gedauert. Bitte versuchen Sie es erneut.';
     case 'functions/resource-exhausted':
       return 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.';
     case 'functions/internal':
-      return 'Interner Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es später erneut.';
+      return 'Fehler beim Abrufen der Nährwertdaten. Bitte versuchen Sie es erneut.';
     default:
-      return err.message || 'Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.';
+      return msg || 'Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.';
   }
 }

@@ -713,6 +713,35 @@ function parseIngredientForNutrition(ingredientStr) {
 }
 
 /**
+ * Fetch a URL with automatic retry and exponential backoff.
+ *
+ * @param {string} url - The URL to fetch.
+ * @param {object} options - Fetch options (headers, etc.).
+ * @param {number} maxAttempts - Maximum number of attempts (default 3).
+ * @returns {Promise<Response>} The successful fetch response.
+ */
+async function fetchWithRetry(url, options, maxAttempts = 3) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      // Only retry on server-side 5xx errors, not client errors
+      if (response.status >= 500 && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+        continue;
+      }
+      return response;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * Cloud Function: Calculate Nutrition from OpenFoodFacts
  *
  * Acts as a server-side proxy for the OpenFoodFacts API so the browser
@@ -731,7 +760,7 @@ function parseIngredientForNutrition(ingredientStr) {
 exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
       maxInstances: 5,
-      timeoutSeconds: 60,
+      timeoutSeconds: 120,
     },
     async (request) => {
       // Authentication check
@@ -792,7 +821,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             `&json=1&page_size=3` +
             `&fields=product_name,nutriments`;
 
-          const response = await fetch(searchUrl, {
+          const response = await fetchWithRetry(searchUrl, {
             headers: {
               'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
             },
@@ -842,7 +871,9 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           });
           foundCount++;
         } catch (err) {
-          console.error(`OpenFoodFacts lookup failed for "${name}":`, err.message);
+          const isNetworkError = err.name === 'TypeError' || err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED';
+          const errorType = isNetworkError ? 'Netzwerkfehler' : 'API-Fehler';
+          console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
           details.push({ingredient: ingredientStr, name, found: false, error: err.message});
         }
       }

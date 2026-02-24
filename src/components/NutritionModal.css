@@ -261,6 +261,45 @@
   color: #c62828;
 }
 
+.nutrition-autocalc-error-box {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  background: #fff5f5;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+}
+
+.nutrition-autocalc-error-box .nutrition-autocalc-error {
+  margin: 0;
+}
+
+.nutrition-autocalc-error-box .nutrition-autocalc-info {
+  margin: 0.35rem 0 0 0;
+}
+
+.nutrition-autocalc-retry-button {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border: 1.5px solid #c62828;
+  background: white;
+  color: #c62828;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nutrition-autocalc-retry-button:hover:not(:disabled) {
+  background: #c62828;
+  color: white;
+}
+
+.nutrition-autocalc-retry-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .nutrition-autocalc-source {
   margin: 0.4rem 0 0 0;
   font-size: 0.78rem;
