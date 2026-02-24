@@ -15,6 +15,50 @@ A secure proxy for Google Gemini Vision API that provides AI-powered recipe reco
 - ✅ Error handling: User-friendly error messages
 - ✅ Secure: API key stored as Firebase secret
 
+### calculateNutritionFromOpenFoodFacts
+
+A server-side proxy for the [OpenFoodFacts](https://world.openfoodfacts.org/) API that
+calculates per-portion nutritional values for all ingredients in a recipe.
+
+**Features:**
+- ✅ Authentication: Only logged-in users can access
+- ✅ No API key required – OpenFoodFacts is an open database
+- ✅ Parses ingredient strings (e.g. "500 g Mehl", "2 EL Olivenöl", "4 Eier")
+- ✅ Returns kalorien, protein, fett, kohlenhydrate, zucker (davon Zucker), ballaststoffe, salz per portion
+- ✅ Partial results + per-ingredient feedback when some items are not found
+- ✅ Fallback: user can always edit values manually
+
+**Input:**
+```json
+{
+  "ingredients": ["500 g Spaghetti", "200 g Guanciale", "4 Eigelb"],
+  "portionen": 4
+}
+```
+
+**Output:**
+```json
+{
+  "naehrwerte": {
+    "kalorien": 520,
+    "protein": 22.5,
+    "fett": 18.3,
+    "kohlenhydrate": 68.1,
+    "zucker": 2.4,
+    "ballaststoffe": 3.1,
+    "salz": 1.2
+  },
+  "details": [
+    { "ingredient": "500 g Spaghetti", "name": "Spaghetti", "found": true, "product": "Spaghetti n°5", "amountG": 500 },
+    { "ingredient": "4 Eigelb", "name": "Eigelb", "found": false, "error": "Nicht gefunden" }
+  ],
+  "foundCount": 2,
+  "totalCount": 3
+}
+```
+
+**Data source:** [OpenFoodFacts](https://world.openfoodfacts.org/) – Open Database License (ODbL)
+
 ## Setup
 
 ### 1. Install Dependencies

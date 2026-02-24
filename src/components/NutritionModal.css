@@ -212,3 +212,61 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Indented sub-field (e.g. "davon Zucker") */
+.nutrition-field--indented label::before {
+  content: '↳ ';
+  color: #aaa;
+}
+
+/* Auto-calculate section */
+.nutrition-autocalc {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.nutrition-autocalc-button {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border: 1.5px solid #402C1C;
+  background: white;
+  color: #402C1C;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nutrition-autocalc-button:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+}
+
+.nutrition-autocalc-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nutrition-autocalc-info {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.82rem;
+  color: #2e7d32;
+}
+
+.nutrition-autocalc-error {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.82rem;
+  color: #c62828;
+}
+
+.nutrition-autocalc-source {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.78rem;
+  color: #999;
+}
+
+.nutrition-autocalc-source a {
+  color: #666;
+}

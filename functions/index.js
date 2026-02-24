@@ -655,3 +655,207 @@ exports.captureWebsiteScreenshot = onCall(
       }
     }
 );
+
+/**
+ * Parse an ingredient string and return the estimated weight in grams and
+ * a clean search name for the OpenFoodFacts API.
+ *
+ * Handles formats like:
+ *   "500 g Mehl", "2 EL Olivenöl", "4 Eier", "1 Prise Salz", "200ml Milch"
+ *
+ * @param {string} ingredientStr - Raw ingredient string
+ * @returns {{amountG: number, name: string}|null}
+ */
+function parseIngredientForNutrition(ingredientStr) {
+  if (!ingredientStr || typeof ingredientStr !== 'string') return null;
+
+  const str = ingredientStr.trim();
+  if (!str) return null;
+
+  // Conversion factors to grams (approximate)
+  const UNIT_GRAMS = {
+    g: 1, kg: 1000, mg: 0.001,
+    ml: 1, l: 1000, dl: 100, cl: 10,
+    EL: 15, el: 15, Esslöffel: 15, esslöffel: 15,
+    TL: 5, tl: 5, Teelöffel: 5, teelöffel: 5,
+    Prise: 1, prise: 1, Prisen: 1, prisen: 1,
+    Tasse: 240, tasse: 240, Tassen: 240, tassen: 240,
+    Bund: 30, bund: 30,
+  };
+
+  // Match: number (int or decimal) + optional unit + ingredient name
+  // e.g. "500 g Mehl", "200ml Milch", "2 EL Öl", "4 Eier"
+  const match = str.match(
+      /^([\d.,]+)\s*([a-zA-ZäöüÄÖÜß]+)?\.?\s+(.+)/
+  );
+
+  if (match) {
+    const amount = parseFloat(match[1].replace(',', '.'));
+    const potentialUnit = match[2] || '';
+    const rest = match[3].trim();
+
+    if (potentialUnit && Object.hasOwn(UNIT_GRAMS, potentialUnit)) {
+      const amountG = isNaN(amount) ? 100 : amount * UNIT_GRAMS[potentialUnit];
+      return {amountG: Math.max(amountG, 1), name: rest};
+    } else if (potentialUnit) {
+      // Unknown unit – treat everything after the number as the ingredient name
+      const name = `${potentialUnit} ${rest}`.trim();
+      return {amountG: 100, name};
+    } else {
+      // No unit: treat as a count (e.g. "4 Eier") – rough 60 g per piece
+      const amountG = isNaN(amount) ? 60 : amount * 60;
+      return {amountG: Math.max(amountG, 10), name: rest};
+    }
+  }
+
+  // No leading number – assume a small condiment/spice (~5 g)
+  return {amountG: 5, name: str};
+}
+
+/**
+ * Cloud Function: Calculate Nutrition from OpenFoodFacts
+ *
+ * Acts as a server-side proxy for the OpenFoodFacts API so the browser
+ * never has to make cross-origin requests directly.
+ *
+ * Input data:
+ * - ingredients: string[]  – array of ingredient strings from the recipe
+ * - portionen: number      – number of servings to divide the total by
+ *
+ * Returns:
+ * - naehrwerte: { kalorien, protein, fett, kohlenhydrate, zucker, ballaststoffe, salz }
+ *   all values are per portion, rounded to 1 decimal (kalorien is an integer)
+ * - details: array with per-ingredient lookup results (for UI feedback)
+ * - foundCount / totalCount
+ */
+exports.calculateNutritionFromOpenFoodFacts = onCall(
+    {
+      maxInstances: 5,
+      timeoutSeconds: 60,
+    },
+    async (request) => {
+      // Authentication check
+      if (!request.auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to calculate nutrition'
+        );
+      }
+
+      const {ingredients, portionen = 1} = request.data;
+
+      // Input validation
+      if (!Array.isArray(ingredients) || ingredients.length === 0) {
+        throw new HttpsError(
+            'invalid-argument',
+            'ingredients must be a non-empty array of strings'
+        );
+      }
+      if (typeof portionen !== 'number' || portionen < 1) {
+        throw new HttpsError(
+            'invalid-argument',
+            'portionen must be a positive number'
+        );
+      }
+
+      const totals = {
+        kalorien: 0,
+        protein: 0,
+        fett: 0,
+        kohlenhydrate: 0,
+        zucker: 0,
+        ballaststoffe: 0,
+        salz: 0,
+      };
+
+      const details = [];
+      let foundCount = 0;
+
+      for (const ingredient of ingredients) {
+        const parsed = parseIngredientForNutrition(ingredient);
+        if (!parsed) {
+          details.push({ingredient, found: false, error: 'Konnte nicht geparst werden'});
+          continue;
+        }
+
+        const {amountG, name} = parsed;
+
+        try {
+          const searchUrl =
+            `https://world.openfoodfacts.org/cgi/search.pl` +
+            `?search_terms=${encodeURIComponent(name)}` +
+            `&json=1&page_size=3` +
+            `&fields=product_name,nutriments`;
+
+          const response = await fetch(searchUrl, {
+            headers: {
+              'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
+            },
+          });
+
+          if (!response.ok) {
+            details.push({ingredient, name, found: false, error: `HTTP ${response.status}`});
+            continue;
+          }
+
+          const data = await response.json();
+
+          if (!data.products || data.products.length === 0) {
+            details.push({ingredient, name, found: false, error: 'Nicht gefunden'});
+            continue;
+          }
+
+          // Prefer the first product with usable energy data; fall back to the first result.
+          // If neither has nutriments, mark as not found to avoid adding zero values.
+          const productWithData = data.products.find(
+              (p) => p.nutriments && p.nutriments['energy-kcal_100g'] != null
+          );
+          if (!productWithData) {
+            console.warn(`No energy data found for "${name}" in OpenFoodFacts results`);
+            details.push({ingredient, name, found: false, error: 'Keine Nährwertdaten verfügbar'});
+            continue;
+          }
+          const product = productWithData;
+
+          const n = product.nutriments || {};
+          const scale = amountG / 100;
+
+          totals.kalorien += (n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0) * scale;
+          totals.protein += (n['proteins_100g'] ?? n.proteins ?? 0) * scale;
+          totals.fett += (n['fat_100g'] ?? n.fat ?? 0) * scale;
+          totals.kohlenhydrate += (n['carbohydrates_100g'] ?? n.carbohydrates ?? 0) * scale;
+          totals.zucker += (n['sugars_100g'] ?? n.sugars ?? 0) * scale;
+          totals.ballaststoffe += (n['fiber_100g'] ?? n.fiber ?? 0) * scale;
+          totals.salz += (n['salt_100g'] ?? n.salt ?? 0) * scale;
+
+          details.push({
+            ingredient,
+            name,
+            found: true,
+            product: product.product_name || name,
+            amountG,
+          });
+          foundCount++;
+        } catch (err) {
+          console.error(`OpenFoodFacts lookup failed for "${name}":`, err.message);
+          details.push({ingredient, name, found: false, error: err.message});
+        }
+      }
+
+      // Divide totals by number of portions and round sensibly
+      const naehrwerte = {};
+      for (const [key, value] of Object.entries(totals)) {
+        const perPortion = value / portionen;
+        naehrwerte[key] = key === 'kalorien'
+          ? Math.round(perPortion)
+          : Math.round(perPortion * 10) / 10;
+      }
+
+      console.log(
+          `Nutrition calculated for user ${request.auth.uid}: ` +
+          `${foundCount}/${ingredients.length} ingredients found`
+      );
+
+      return {naehrwerte, details, foundCount, totalCount: ingredients.length};
+    }
+);

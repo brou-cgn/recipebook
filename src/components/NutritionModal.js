@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import './NutritionModal.css';
 
 function NutritionModal({ recipe, onClose, onSave }) {
@@ -6,7 +8,12 @@ function NutritionModal({ recipe, onClose, onSave }) {
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
   const [kohlenhydrate, setKohlenhydrate] = useState('');
+  const [zucker, setZucker] = useState('');
+  const [ballaststoffe, setBallaststoffe] = useState('');
+  const [salz, setSalz] = useState('');
   const [saving, setSaving] = useState(false);
+  const [autoCalcLoading, setAutoCalcLoading] = useState(false);
+  const [autoCalcResult, setAutoCalcResult] = useState(null);
   const closeButtonRef = useRef(null);
 
   // Initialise fields from existing recipe data
@@ -16,6 +23,9 @@ function NutritionModal({ recipe, onClose, onSave }) {
     setProtein(n.protein != null ? String(n.protein) : '');
     setFett(n.fett != null ? String(n.fett) : '');
     setKohlenhydrate(n.kohlenhydrate != null ? String(n.kohlenhydrate) : '');
+    setZucker(n.zucker != null ? String(n.zucker) : '');
+    setBallaststoffe(n.ballaststoffe != null ? String(n.ballaststoffe) : '');
+    setSalz(n.salz != null ? String(n.salz) : '');
   }, [recipe]);
 
   // Focus close button when modal opens
@@ -46,7 +56,10 @@ function NutritionModal({ recipe, onClose, onSave }) {
       kalorien: parsePositiveNumber(kalorien),
       protein: parsePositiveNumber(protein),
       fett: parsePositiveNumber(fett),
-      kohlenhydrate: parsePositiveNumber(kohlenhydrate)
+      kohlenhydrate: parsePositiveNumber(kohlenhydrate),
+      zucker: parsePositiveNumber(zucker),
+      ballaststoffe: parsePositiveNumber(ballaststoffe),
+      salz: parsePositiveNumber(salz),
     };
 
     // Remove null fields so we don't store empty values
@@ -66,8 +79,45 @@ function NutritionModal({ recipe, onClose, onSave }) {
     }
   };
 
+  const handleAutoCalculate = async () => {
+    const ingredients = recipe.zutaten || recipe.ingredients || [];
+    if (ingredients.length === 0) {
+      setAutoCalcResult({ error: 'Keine Zutaten im Rezept gefunden.' });
+      return;
+    }
+
+    setAutoCalcLoading(true);
+    setAutoCalcResult(null);
+    try {
+      const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+      const result = await calculateNutrition({
+        ingredients,
+        portionen: recipe.portionen || 1,
+      });
+      const { naehrwerte, foundCount, totalCount } = result.data;
+
+      if (naehrwerte.kalorien != null) setKalorien(String(naehrwerte.kalorien));
+      if (naehrwerte.protein != null) setProtein(String(naehrwerte.protein));
+      if (naehrwerte.fett != null) setFett(String(naehrwerte.fett));
+      if (naehrwerte.kohlenhydrate != null) setKohlenhydrate(String(naehrwerte.kohlenhydrate));
+      if (naehrwerte.zucker != null) setZucker(String(naehrwerte.zucker));
+      if (naehrwerte.ballaststoffe != null) setBallaststoffe(String(naehrwerte.ballaststoffe));
+      if (naehrwerte.salz != null) setSalz(String(naehrwerte.salz));
+
+      setAutoCalcResult({ foundCount, totalCount });
+    } catch (err) {
+      console.error('Auto-calculation failed:', err);
+      setAutoCalcResult({
+        error: err.message || 'Automatische Berechnung fehlgeschlagen. Bitte manuell eintragen.',
+      });
+    } finally {
+      setAutoCalcLoading(false);
+    }
+  };
+
   const hasValues =
-    kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '';
+    kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
+    zucker !== '' || ballaststoffe !== '' || salz !== '';
 
   return (
     <div className="nutrition-modal-overlay" onClick={onClose}>
@@ -152,6 +202,80 @@ function NutritionModal({ recipe, onClose, onSave }) {
                 className="nutrition-input"
               />
             </div>
+
+            <div className="nutrition-field nutrition-field--indented">
+              <label htmlFor="nutrition-zucker">davon Zucker (g)</label>
+              <input
+                id="nutrition-zucker"
+                type="number"
+                min="0"
+                step="0.1"
+                value={zucker}
+                onChange={(e) => setZucker(e.target.value)}
+                placeholder="z.B. 5"
+                className="nutrition-input"
+              />
+            </div>
+
+            <div className="nutrition-field">
+              <label htmlFor="nutrition-ballaststoffe">Ballaststoffe (g)</label>
+              <input
+                id="nutrition-ballaststoffe"
+                type="number"
+                min="0"
+                step="0.1"
+                value={ballaststoffe}
+                onChange={(e) => setBallaststoffe(e.target.value)}
+                placeholder="z.B. 3"
+                className="nutrition-input"
+              />
+            </div>
+
+            <div className="nutrition-field">
+              <label htmlFor="nutrition-salz">Salz (g)</label>
+              <input
+                id="nutrition-salz"
+                type="number"
+                min="0"
+                step="0.01"
+                value={salz}
+                onChange={(e) => setSalz(e.target.value)}
+                placeholder="z.B. 0.8"
+                className="nutrition-input"
+              />
+            </div>
+          </div>
+
+          <div className="nutrition-autocalc">
+            <button
+              className="nutrition-autocalc-button"
+              onClick={handleAutoCalculate}
+              disabled={autoCalcLoading}
+              title="Nährwerte automatisch aus OpenFoodFacts berechnen"
+            >
+              {autoCalcLoading ? 'Berechne…' : '🔍 Automatisch berechnen (OpenFoodFacts)'}
+            </button>
+            {autoCalcResult && !autoCalcResult.error && (
+              <p className="nutrition-autocalc-info">
+                {autoCalcResult.foundCount} von {autoCalcResult.totalCount} Zutaten gefunden.
+                {autoCalcResult.foundCount < autoCalcResult.totalCount &&
+                  ' Fehlende Werte bitte manuell ergänzen.'}
+              </p>
+            )}
+            {autoCalcResult && autoCalcResult.error && (
+              <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
+            )}
+            <p className="nutrition-autocalc-source">
+              Quelle:{' '}
+              <a
+                href="https://world.openfoodfacts.org"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenFoodFacts
+              </a>{' '}
+              (Open Database License)
+            </p>
           </div>
         </div>
 

@@ -367,6 +367,38 @@ See [AI OCR Analysis](AI_OCR_PLATTFORMEN_ANALYSE.md) for details and [Integratio
 - Ensure good internet connection for initial language data download
 - After first use, works offline in PWA mode
 
+## Nährwerte & OpenFoodFacts
+
+RecipeBook can automatically calculate nutritional values for recipes using the
+[OpenFoodFacts](https://world.openfoodfacts.org/) open food database.
+
+### Supported Nutrients (per portion)
+
+| Field | Description |
+|---|---|
+| Kalorien (kcal) | Energy |
+| Protein (g) | Protein |
+| Fett (g) | Total fat |
+| Kohlenhydrate (g) | Total carbohydrates |
+| davon Zucker (g) | of which sugars |
+| Ballaststoffe (g) | Dietary fibre |
+| Salz (g) | Salt |
+
+### How to Use
+
+1. Open any recipe and click the **Nährwerte** button in the metadata bar.
+2. Click **🔍 Automatisch berechnen (OpenFoodFacts)** to look up each ingredient.
+3. The fields are filled automatically. Review and correct any values manually.
+4. Click **Speichern** to save the nutritional data to the recipe.
+
+### Notes
+
+- No API key is required – OpenFoodFacts is a free, open database.
+- Calculations are approximate and depend on whether each ingredient is found in the database.
+- Values are computed server-side via a Firebase Cloud Function to avoid CORS issues.
+- Data source: **OpenFoodFacts** (https://world.openfoodfacts.org), licensed under
+  [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
+
 ## PWA Features
 
 ### Installation
