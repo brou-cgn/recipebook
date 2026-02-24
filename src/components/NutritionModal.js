@@ -46,7 +46,16 @@ function NutritionModal({ recipe, onClose, onSave }) {
   const [salz, setSalz] = useState('');
   const [saving, setSaving] = useState(false);
   const [autoCalcLoading, setAutoCalcLoading] = useState(false);
-  const [autoCalcResult, setAutoCalcResult] = useState(() => loadStoredCalcResult(recipe?.id));
+  const [autoCalcResult, setAutoCalcResult] = useState(() => {
+    const stored = loadStoredCalcResult(recipe?.id);
+    if (stored) return stored;
+    const fc = recipe?.naehrwerte?.calcFoundCount;
+    const tc = recipe?.naehrwerte?.calcTotalCount;
+    if (fc != null && tc != null) {
+      return { foundCount: fc, totalCount: tc, notIncluded: recipe?.naehrwerte?.calcNotIncluded || [] };
+    }
+    return null;
+  });
   const [calcProgress, setCalcProgress] = useState(null);
   const closeButtonRef = useRef(null);
 
@@ -169,6 +178,22 @@ function NutritionModal({ recipe, onClose, onSave }) {
     const result = { foundCount, totalCount: ingredients.length, notIncluded };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
+
+    // Persist totals and per-ingredient errors to Firestore automatically
+    const finalNaehrwerte = {
+      ...totals,
+      calcPending: false,
+      calcError: null,
+      calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
+      calcFoundCount: foundCount,
+      calcTotalCount: ingredients.length,
+    };
+    try {
+      await onSave(finalNaehrwerte);
+    } catch (saveErr) {
+      console.error('Could not auto-save nutrition data:', saveErr);
+      setAutoCalcResult(prev => prev ? { ...prev, saveError: true } : null);
+    }
   };
 
   const hasValues =
@@ -365,6 +390,11 @@ function NutritionModal({ recipe, onClose, onSave }) {
                       ))}
                     </ul>
                   </div>
+                )}
+                {autoCalcResult.saveError && (
+                  <p className="nutrition-autocalc-error">
+                    Speichern fehlgeschlagen. Bitte manuell speichern.
+                  </p>
                 )}
               </>
             )}

@@ -283,28 +283,47 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
     }
     setSelectedRecipe(prev => ({ ...prev, naehrwerte: pending }));
 
+    const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+    const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
+    const notIncluded = [];
+
+    for (let i = 0; i < ingredients.length; i++) {
+      const ingredient = ingredients[i];
+      try {
+        const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
+        const { naehrwerte: n, details } = result.data;
+        const detail = details && details[0];
+        if (detail && detail.found) {
+          Object.keys(totals).forEach(key => {
+            totals[key] += n[key] || 0;
+          });
+        } else {
+          notIncluded.push({ ingredient, error: detail?.error || 'Nicht gefunden' });
+        }
+      } catch (err) {
+        console.error(`Auto-calculation failed for "${ingredient}":`, err);
+        notIncluded.push({ ingredient, error: mapNutritionCalcError(err) });
+      }
+    }
+
+    const final = {
+      ...totals,
+      calcPending: false,
+      calcError: null,
+      calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
+      calcFoundCount: ingredients.length - notIncluded.length,
+      calcTotalCount: ingredients.length,
+    };
     try {
-      const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
-      // Pass portionen: 1 so the function returns totals for the whole recipe
-      const result = await calculateNutrition({
-        ingredients,
-        portionen: 1,
-      });
-      const { naehrwerte } = result.data;
-      const final = { ...naehrwerte, calcPending: false, calcError: null };
       await updateRecipe(recipe.id, { naehrwerte: final });
       setSelectedRecipe(prev => ({ ...prev, naehrwerte: final }));
     } catch (err) {
-      console.error('Auto-calculation failed:', err);
-      const errorMsg = mapNutritionCalcError(err);
-      const errState = { ...(recipe.naehrwerte || {}), calcPending: false, calcError: errorMsg };
-      await updateRecipe(recipe.id, { naehrwerte: errState });
-      setSelectedRecipe(prev => ({ ...prev, naehrwerte: errState }));
+      console.error('Could not persist nutrition data:', err);
     }
   };
 
   const handleNutritionButtonClick = () => {
-    if (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError) {
+    if (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded) {
       setShowNutritionModal(true);
     } else if (!recipe.naehrwerte?.calcPending) {
       handleAutoCalculateAndSave();
@@ -1013,11 +1032,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                     className="nutrition-metadata-btn"
                     onClick={handleNutritionButtonClick}
                     disabled={recipe.naehrwerte?.calcPending}
-                    title={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
-                    aria-label={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    title={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    aria-label={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
                   >
                     <span className="nutrition-icon">
-                      {recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? (
+                      {recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? (
                         isBase64Image(nutritionFilledIcon) ? (
                           <img src={nutritionFilledIcon} alt="Nährwerte" />
                         ) : (
@@ -1035,7 +1054,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4))} kcal</span>
                     )}
                     <span className="nutrition-label">
-                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? null : 'Nährwerte berechnen')}
+                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? null : 'Nährwerte berechnen')}
                     </span>
                   </button>
                 </div>
