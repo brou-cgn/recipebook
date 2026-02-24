@@ -811,6 +811,7 @@ function App() {
             searchTerm={searchTerm}
             onOpenFilterPage={handleOpenFilterPage}
             activePrivateListName={activePrivateListName}
+            activePrivateListId={recipeFilters.selectedGroup || null}
           />
         </>
       )}

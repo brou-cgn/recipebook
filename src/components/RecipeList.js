@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -163,7 +163,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               ★ Favoriten
             </button>
           </div>
-          {userCanEdit && (
+          {userCanEdit && activePrivateListName ? (
+            <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>
+              + Privates Rezept hinzufügen
+            </button>
+          ) : userCanEdit && (
             <button className="add-button" onClick={onAddRecipe}>
               + Rezept hinzufügen
             </button>
