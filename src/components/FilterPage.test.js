@@ -6,7 +6,7 @@ import FilterPage from './FilterPage';
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
   getCustomLists: () => Promise.resolve({
-    mealCategories: ['Vorspeise', 'Hauptspeise', 'Dessert']
+    cuisineTypes: ['Italienisch', 'Asiatisch', 'Deutsch']
   })
 }));
 
@@ -157,9 +157,9 @@ describe('FilterPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Kulinarik')).toBeInTheDocument();
-      expect(screen.getByText('Vorspeise')).toBeInTheDocument();
-      expect(screen.getByText('Hauptspeise')).toBeInTheDocument();
-      expect(screen.getByText('Dessert')).toBeInTheDocument();
+      expect(screen.getByText('Italienisch')).toBeInTheDocument();
+      expect(screen.getByText('Asiatisch')).toBeInTheDocument();
+      expect(screen.getByText('Deutsch')).toBeInTheDocument();
     });
   });
 
@@ -173,10 +173,10 @@ describe('FilterPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Hauptspeise')).toBeInTheDocument();
+      expect(screen.getByText('Asiatisch')).toBeInTheDocument();
     });
 
-    const checkbox = screen.getByRole('checkbox', { name: 'Hauptspeise' });
+    const checkbox = screen.getByRole('checkbox', { name: 'Asiatisch' });
     fireEvent.click(checkbox);
 
     // Apply filters
@@ -184,7 +184,7 @@ describe('FilterPage', () => {
 
     expect(mockOnApply).toHaveBeenCalledWith({
       showDrafts: 'all',
-      selectedCuisines: ['Hauptspeise'],
+      selectedCuisines: ['Asiatisch'],
       selectedAuthors: [],
       selectedGroup: ''
     });
@@ -193,17 +193,17 @@ describe('FilterPage', () => {
   test('initializes selectedCuisines from currentFilters', async () => {
     render(
       <FilterPage
-        currentFilters={{ showDrafts: 'all', selectedCuisines: ['Dessert'], selectedAuthors: [] }}
+        currentFilters={{ showDrafts: 'all', selectedCuisines: ['Deutsch'], selectedAuthors: [] }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
       />
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Dessert')).toBeInTheDocument();
+      expect(screen.getByText('Deutsch')).toBeInTheDocument();
     });
 
-    const checkbox = screen.getByRole('checkbox', { name: 'Dessert' });
+    const checkbox = screen.getByRole('checkbox', { name: 'Deutsch' });
     expect(checkbox.checked).toBe(true);
   });
 
@@ -274,7 +274,7 @@ describe('FilterPage', () => {
   test('clears cuisine and author selections when "Filter löschen" is clicked', async () => {
     render(
       <FilterPage
-        currentFilters={{ showDrafts: 'yes', selectedCuisines: ['Vorspeise'], selectedAuthors: ['user-1'] }}
+        currentFilters={{ showDrafts: 'yes', selectedCuisines: ['Italienisch'], selectedAuthors: ['user-1'] }}
         onApply={mockOnApply}
         onCancel={mockOnCancel}
         availableAuthors={mockAuthors}
@@ -283,7 +283,7 @@ describe('FilterPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Vorspeise')).toBeInTheDocument();
+      expect(screen.getByText('Italienisch')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByText('Filter löschen'));
