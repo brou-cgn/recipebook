@@ -6,6 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
+import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -282,7 +283,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       await handleSaveNutrition(naehrwerte);
     } catch (err) {
       console.error('Auto-calculation failed:', err);
-      alert('Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.');
+      alert(mapNutritionCalcError(err));
     } finally {
       setNutritionCalcLoading(false);
     }
