@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { mapNutritionCalcError } from '../utils/nutritionUtils';
+import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals } from '../utils/nutritionUtils';
 import './NutritionModal.css';
 
 function NutritionModal({ recipe, onClose, onSave }) {
@@ -18,9 +18,9 @@ function NutritionModal({ recipe, onClose, onSave }) {
   const [calcProgress, setCalcProgress] = useState(null);
   const closeButtonRef = useRef(null);
 
-  // Initialise fields from existing recipe data
+  // Initialise fields from existing recipe data (stored as totals; display per portion)
   useEffect(() => {
-    const n = recipe.naehrwerte || {};
+    const n = naehrwertePerPortion(recipe.naehrwerte, recipe.portionen);
     setKalorien(n.kalorien != null ? String(n.kalorien) : '');
     setProtein(n.protein != null ? String(n.protein) : '');
     setFett(n.fett != null ? String(n.fett) : '');
@@ -54,7 +54,9 @@ function NutritionModal({ recipe, onClose, onSave }) {
   };
 
   const handleSave = async () => {
-    const naehrwerte = {
+    const portionen = recipe.portionen || 1;
+    // Form fields hold per-portion values; multiply back to store totals
+    const perPortion = {
       kalorien: parsePositiveNumber(kalorien),
       protein: parsePositiveNumber(protein),
       fett: parsePositiveNumber(fett),
@@ -63,11 +65,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
       ballaststoffe: parsePositiveNumber(ballaststoffe),
       salz: parsePositiveNumber(salz),
     };
-
-    // Remove null fields so we don't store empty values
-    Object.keys(naehrwerte).forEach((key) => {
-      if (naehrwerte[key] === null) delete naehrwerte[key];
-    });
+    const naehrwerte = naehrwerteToTotals(perPortion, portionen);
 
     setSaving(true);
     try {
@@ -122,23 +120,16 @@ function NutritionModal({ recipe, onClose, onSave }) {
       }
     }
 
-    // Divide totals by portionen and round
+    // Set per-portion display values in form fields (totals ÷ portionen)
     const portionen = recipe.portionen || 1;
-    const naehrwerte = {};
-    Object.entries(totals).forEach(([key, value]) => {
-      const perPortion = value / portionen;
-      naehrwerte[key] = key === 'kalorien'
-        ? Math.round(perPortion)
-        : Math.round(perPortion * 10) / 10;
-    });
-
-    if (naehrwerte.kalorien != null) setKalorien(String(naehrwerte.kalorien));
-    if (naehrwerte.protein != null) setProtein(String(naehrwerte.protein));
-    if (naehrwerte.fett != null) setFett(String(naehrwerte.fett));
-    if (naehrwerte.kohlenhydrate != null) setKohlenhydrate(String(naehrwerte.kohlenhydrate));
-    if (naehrwerte.zucker != null) setZucker(String(naehrwerte.zucker));
-    if (naehrwerte.ballaststoffe != null) setBallaststoffe(String(naehrwerte.ballaststoffe));
-    if (naehrwerte.salz != null) setSalz(String(naehrwerte.salz));
+    const perPortion = naehrwertePerPortion(totals, portionen);
+    setKalorien(perPortion.kalorien != null ? String(perPortion.kalorien) : '');
+    setProtein(perPortion.protein != null ? String(perPortion.protein) : '');
+    setFett(perPortion.fett != null ? String(perPortion.fett) : '');
+    setKohlenhydrate(perPortion.kohlenhydrate != null ? String(perPortion.kohlenhydrate) : '');
+    setZucker(perPortion.zucker != null ? String(perPortion.zucker) : '');
+    setBallaststoffe(perPortion.ballaststoffe != null ? String(perPortion.ballaststoffe) : '');
+    setSalz(perPortion.salz != null ? String(perPortion.salz) : '');
 
     setCalcProgress(null);
     setAutoCalcLoading(false);
@@ -285,6 +276,23 @@ function NutritionModal({ recipe, onClose, onSave }) {
             >
               {autoCalcLoading ? 'Berechne…' : '🔍 Automatisch berechnen (OpenFoodFacts)'}
             </button>
+            {!autoCalcLoading && recipe.naehrwerte?.calcPending && (
+              <div className="nutrition-calc-progress">
+                <span>Hintergrundberechnung läuft…</span>
+              </div>
+            )}
+            {!autoCalcLoading && !autoCalcResult && recipe.naehrwerte?.calcError && (
+              <div className="nutrition-autocalc-error-box">
+                <p className="nutrition-autocalc-error">{recipe.naehrwerte.calcError}</p>
+                <button
+                  className="nutrition-autocalc-retry-button"
+                  onClick={handleAutoCalculate}
+                  disabled={autoCalcLoading}
+                >
+                  🔄 Erneut versuchen
+                </button>
+              </div>
+            )}
             {autoCalcLoading && calcProgress && (
               <div className="nutrition-calc-progress">
                 <div className="nutrition-calc-progress-header">

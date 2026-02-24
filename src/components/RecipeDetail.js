@@ -36,7 +36,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
-  const [nutritionCalcLoading, setNutritionCalcLoading] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -275,27 +274,39 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
       .map(item => typeof item === 'string' ? item : item.text);
     if (ingredients.length === 0) return;
 
-    setNutritionCalcLoading(true);
+    // Persist a pending state so the loading indicator survives navigation
+    const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcError: null };
+    try {
+      await updateRecipe(recipe.id, { naehrwerte: pending });
+    } catch (persistErr) {
+      console.error('Could not persist calcPending state:', persistErr);
+    }
+    setSelectedRecipe(prev => ({ ...prev, naehrwerte: pending }));
+
     try {
       const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+      // Pass portionen: 1 so the function returns totals for the whole recipe
       const result = await calculateNutrition({
         ingredients,
-        portionen: recipe.portionen || 1,
+        portionen: 1,
       });
       const { naehrwerte } = result.data;
-      await handleSaveNutrition(naehrwerte);
+      const final = { ...naehrwerte, calcPending: false, calcError: null };
+      await updateRecipe(recipe.id, { naehrwerte: final });
+      setSelectedRecipe(prev => ({ ...prev, naehrwerte: final }));
     } catch (err) {
       console.error('Auto-calculation failed:', err);
-      alert(mapNutritionCalcError(err));
-    } finally {
-      setNutritionCalcLoading(false);
+      const errorMsg = mapNutritionCalcError(err);
+      const errState = { ...(recipe.naehrwerte || {}), calcPending: false, calcError: errorMsg };
+      await updateRecipe(recipe.id, { naehrwerte: errState });
+      setSelectedRecipe(prev => ({ ...prev, naehrwerte: errState }));
     }
   };
 
   const handleNutritionButtonClick = () => {
-    if (recipe.naehrwerte?.kalorien != null) {
+    if (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError) {
       setShowNutritionModal(true);
-    } else {
+    } else if (!recipe.naehrwerte?.calcPending) {
       handleAutoCalculateAndSave();
     }
   };
@@ -1001,12 +1012,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                   <button
                     className="nutrition-metadata-btn"
                     onClick={handleNutritionButtonClick}
-                    disabled={nutritionCalcLoading}
-                    title={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
-                    aria-label={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    disabled={recipe.naehrwerte?.calcPending}
+                    title={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    aria-label={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
                   >
                     <span className="nutrition-icon">
-                      {recipe.naehrwerte?.kalorien != null ? (
+                      {recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? (
                         isBase64Image(nutritionFilledIcon) ? (
                           <img src={nutritionFilledIcon} alt="Nährwerte" />
                         ) : (
@@ -1021,10 +1032,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       )}
                     </span>
                     {recipe.naehrwerte?.kalorien != null && (
-                      <span className="nutrition-kcal-badge">{recipe.naehrwerte.kalorien} kcal</span>
+                      <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / currentServings)} kcal</span>
                     )}
                     <span className="nutrition-label">
-                      {nutritionCalcLoading ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null ? null : 'Nährwerte berechnen')}
+                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? null : 'Nährwerte berechnen')}
                     </span>
                   </button>
                 </div>

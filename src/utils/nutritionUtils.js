@@ -29,3 +29,46 @@ export function mapNutritionCalcError(err) {
       return msg || 'Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.';
   }
 }
+
+/**
+ * Converts stored nutrition totals (whole recipe) to per-portion display values.
+ * @param {Object} naehrwerte - Stored totals object.
+ * @param {number} portionen - Number of portions.
+ * @returns {Object} Per-portion values rounded for display.
+ */
+export function naehrwertePerPortion(naehrwerte, portionen) {
+  const p = portionen || 1;
+  const n = naehrwerte || {};
+  const result = {};
+  if (n.kalorien != null) result.kalorien = Math.round(n.kalorien / p);
+  if (n.protein != null) result.protein = Math.round(n.protein / p * 10) / 10;
+  if (n.fett != null) result.fett = Math.round(n.fett / p * 10) / 10;
+  if (n.kohlenhydrate != null) result.kohlenhydrate = Math.round(n.kohlenhydrate / p * 10) / 10;
+  if (n.zucker != null) result.zucker = Math.round(n.zucker / p * 10) / 10;
+  if (n.ballaststoffe != null) result.ballaststoffe = Math.round(n.ballaststoffe / p * 10) / 10;
+  if (n.salz != null) result.salz = Math.round(n.salz / p * 100) / 100;
+  return result;
+}
+
+/**
+ * Converts per-portion display values to totals for storage.
+ * @param {Object} perPortion - Per-portion values.
+ * @param {number} portionen - Number of portions.
+ * @returns {Object} Total values rounded for storage.
+ */
+export function naehrwerteToTotals(perPortion, portionen) {
+  const p = portionen || 1;
+  const result = {};
+  Object.entries(perPortion).forEach(([key, value]) => {
+    if (value != null) {
+      if (key === 'kalorien') {
+        result[key] = Math.round(value * p);
+      } else if (key === 'salz') {
+        result[key] = Math.round(value * p * 100) / 100;
+      } else {
+        result[key] = Math.round(value * p * 10) / 10;
+      }
+    }
+  });
+  return result;
+}
