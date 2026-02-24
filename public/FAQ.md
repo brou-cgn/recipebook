@@ -5,32 +5,40 @@ Häufig gestellte Fragen zur Nutzung der RecipeBook-App.
 ---
 
 ## 1. Rezeptübersicht und Filter
+<!-- id: faq-001 -->
 
 ### Was sehe ich auf der Startseite?
+<!-- id: faq-002 -->
 
 Die Startseite zeigt alle gespeicherten Rezepte als Kachelübersicht. Jede Kachel enthält das Rezeptbild (falls vorhanden), den Titel, zugehörige Küchentags, die Anzahl vorhandener Versionen sowie den Namen der Autorin oder des Autors.
 
 ### Wie kann ich Rezepte suchen?
+<!-- id: faq-003 -->
 
 Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ein – die Liste filtert sich sofort nach passenden Rezepttiteln.
 
 ### Wie filtere ich nach Kategorie?
+<!-- id: faq-004 -->
 
 Neben dem Suchfeld gibt es ein Dropdown-Menü mit Mahlzeitkategorien (z. B. Frühstück, Mittagessen, Abendessen). Wähle eine Kategorie aus, um nur Rezepte dieser Art anzuzeigen. Mit „Alle" werden wieder alle Rezepte angezeigt.
 
 ### Wie zeige ich nur meine Lieblingsrezepte an?
+<!-- id: faq-005 -->
 
 Klicke auf den **★-Button** in der Filterleiste, um ausschließlich als Favorit markierte Rezepte anzuzeigen. Erneutes Klicken hebt den Filter wieder auf.
 
 ### Wie füge ich ein neues Rezept hinzu?
+<!-- id: faq-006 -->
 
 Klicke auf den Button **„+ Rezept hinzufügen"** in der Übersicht. Dieser Button ist nur sichtbar, wenn du über Bearbeitungsrechte verfügst.
 
 ---
 
 ## 2. Rezept erstellen
+<!-- id: faq-007 -->
 
 ### Wie erstelle ich ein neues Rezept manuell?
+<!-- id: faq-008 -->
 
 1. Klicke auf **„+ Rezept hinzufügen"** in der Rezeptübersicht.
 2. Fülle das Formular aus:
@@ -43,26 +51,32 @@ Klicke auf den Button **„+ Rezept hinzufügen"** in der Übersicht. Dieser But
 3. Klicke auf **„Speichern"**, um das Rezept zu sichern.
 
 ### Kann ich ein Rezept auch als Entwurf speichern?
+<!-- id: faq-009 -->
 
 Ja. Beim Erstellen oder Bearbeiten eines Rezepts kannst du es als Entwurf speichern. Entwürfe erscheinen in der Rezeptübersicht, sind aber als solche gekennzeichnet und noch nicht vollständig veröffentlicht.
 
 ### Wie bearbeite ich ein bestehendes Rezept?
+<!-- id: faq-010 -->
 
 Öffne das Rezept per Klick auf die Kachel und klicke dann auf den **„Bearbeiten"**-Button. Nach den Änderungen speicherst du das Rezept erneut.
 
 ### Wie lösche ich ein Rezept?
+<!-- id: faq-011 -->
 
 Öffne das Rezept und klicke auf den **„Löschen"**-Button. Bestätige die Sicherheitsabfrage. Hinweis: Das Löschen von Rezepten ist nur Administratorinnen und Administratoren möglich.
 
 ---
 
 ## 3. Rezept erstellen – Foto Scan
+<!-- id: faq-012 -->
 
 ### Was ist der Foto-Scan?
+<!-- id: faq-013 -->
 
 Mit dem Foto-Scan (OCR-Import) kannst du ein Rezept aus einem Kochbuch, einer Zeitschrift oder einer handgeschriebenen Karte fotografieren und automatisch in die App importieren. Die App erkennt Text und strukturiert ihn als Rezept.
 
 ### Wie verwende ich den Foto-Scan?
+<!-- id: faq-014 -->
 
 1. Öffne das Rezeptformular (über **„+ Rezept hinzufügen"**).
 2. Klicke auf den Button **„📸 Rezept scannen"**.
@@ -74,10 +88,12 @@ Mit dem Foto-Scan (OCR-Import) kannst du ein Rezept aus einem Kochbuch, einer Ze
 8. Prüfe alle Felder und speichere das Rezept.
 
 ### Welche Bildformate werden unterstützt?
+<!-- id: faq-015 -->
 
 JPG und PNG werden unterstützt. Stelle sicher, dass das Bild gut beleuchtet, scharf und ohne starke Schatten oder Reflexionen ist.
 
 ### Was tue ich, wenn der Scan ungenau ist?
+<!-- id: faq-016 -->
 
 - Prüfe Helligkeit und Schärfe des Bildes.
 - Wähle die korrekte Sprache aus.
@@ -85,18 +101,22 @@ JPG und PNG werden unterstützt. Stelle sicher, dass das Bild gut beleuchtet, sc
 - Nutze bei Bedarf die KI-gestützte Erkennung (Gemini AI), falls diese konfiguriert ist – sie liefert deutlich bessere Ergebnisse als die Standard-Erkennung.
 
 ### Kann ich mehrere Bilder auf einmal scannen?
+<!-- id: faq-017 -->
 
 Ja, du kannst mehrere Bilder hintereinander hinzufügen. Die erkannten Texte werden zusammengeführt und als ein Rezept importiert.
 
 ---
 
 ## 4. Rezept erstellen – Website importieren
+<!-- id: faq-018 -->
 
 ### Was ist der Website-Import?
+<!-- id: faq-019 -->
 
 Mit dem Website-Import kannst du ein Rezept direkt von einer Website übernehmen. Gib einfach die URL der Rezeptseite ein – die App lädt die Seite, macht einen Screenshot und extrahiert automatisch Titel, Zutaten, Zubereitungsschritte und weitere Metadaten.
 
 ### Wie verwende ich den Website-Import?
+<!-- id: faq-020 -->
 
 1. Öffne das Rezeptformular (über **„+ Rezept hinzufügen"**).
 2. Klicke auf den Button **„🌐 Von Website importieren"** (o. Ä.).
@@ -107,38 +127,47 @@ Mit dem Website-Import kannst du ein Rezept direkt von einer Website übernehmen
 7. Passe die Daten bei Bedarf an und speichere das Rezept.
 
 ### Welche Websites funktionieren mit dem Import?
+<!-- id: faq-021 -->
 
 Die meisten gängigen Rezeptwebsites funktionieren, da die KI den visuellen Inhalt der Seite auswertet. Für beste Ergebnisse empfehlen sich Seiten mit klar strukturierten Rezepten.
 
 ### Was passiert, wenn der Import fehlschlägt?
+<!-- id: faq-022 -->
 
 Prüfe, ob die URL korrekt und erreichbar ist. Manche Websites blockieren automatische Zugriffe. In diesem Fall kannst du das Rezept manuell eingeben oder den Foto-Scan verwenden.
 
 ---
 
 ## 5. Menüübersicht
+<!-- id: faq-023 -->
 
 ### Was ist die Menüübersicht?
+<!-- id: faq-024 -->
 
 Die Menüübersicht zeigt alle erstellten Menüs. Ein Menü ist eine Sammlung von Rezepten, die zu einer Mahlzeit oder einem Anlass zusammengestellt wurden (z. B. ein Drei-Gänge-Menü für ein Dinner).
 
 ### Wie gelange ich zur Menüübersicht?
+<!-- id: faq-025 -->
 
 Navigiere über das Hauptmenü der App zum Bereich **„Menüs"**. Dort siehst du alle Menüs als Kacheln mit Name, Beschreibung, Datum und Autorin / Autor.
 
 ### Kann ich Menüs nach Favoriten filtern?
+<!-- id: faq-026 -->
 
 Ja. Klicke auf den **★-Button** in der Filterleiste, um nur als Favorit markierte Menüs anzuzeigen.
 
 ### Wie öffne ich ein Menü?
+<!-- id: faq-027 -->
 
 Klicke auf die Menükachel, um die Detailansicht zu öffnen. Dort siehst du alle zugehörigen Gänge und Rezepte.
 
 ---
 
 ## 6. Menü erstellen
+<!-- id: faq-028 -->
 
 ### Wie erstelle ich ein neues Menü?
+<!-- id: faq-029 -->
 
 1. Klicke in der Menüübersicht auf **„+ Menü erstellen"**.
 2. Gib einen **Namen** (Pflichtfeld) und optional eine **Beschreibung** ein.
@@ -151,22 +180,27 @@ Klicke auf die Menükachel, um die Detailansicht zu öffnen. Dort siehst du alle
 6. Klicke auf **„Speichern"**.
 
 ### Wie viele Gänge kann ein Menü haben?
+<!-- id: faq-030 -->
 
 Mindestens ein Abschnitt ist erforderlich; die Anzahl der Abschnitte ist nicht begrenzt.
 
 ### Wie bearbeite ich ein vorhandenes Menü?
+<!-- id: faq-031 -->
 
 Öffne das Menü über die Menüübersicht und klicke auf den **„Bearbeiten"**-Button. Passe Name, Datum, Abschnitte oder Rezepte an und speichere die Änderungen.
 
 ---
 
 ## 7. Küchenseite
+<!-- id: faq-032 -->
 
 ### Was ist die Küchenseite?
+<!-- id: faq-033 -->
 
 Die Küchenseite ist dein persönliches Dashboard. Sie gibt dir einen schnellen Überblick über dein Profil, deine privaten Listen und deine Kochaktivität.
 
 ### Was enthält die Küchenseite?
+<!-- id: faq-034 -->
 
 Die Küchenseite besteht aus drei Bereichen:
 
@@ -177,14 +211,17 @@ Die Küchenseite besteht aus drei Bereichen:
 3. **Mein Kochbuch**: Zeigt eine Übersicht über deine erstellten Rezepte und Menüs, inklusive eines Balkendiagramms zur Aktivität der letzten 6 Monate sowie eine aufklappbare Zeitleiste aller Einträge.
 
 ### Wie gelange ich zur Küchenseite?
+<!-- id: faq-035 -->
 
 Navigiere über das Hauptmenü der App zum Bereich **„Küche"** (oder das Küchen-Icon).
 
 ---
 
 ## 8. Profil anpassen
+<!-- id: faq-036 -->
 
 ### Wie ändere ich meine persönlichen Daten?
+<!-- id: faq-037 -->
 
 1. Öffne die **Küchenseite** und klicke auf die **„Chefkoch"**-Kachel, oder navigiere direkt zu den persönlichen Einstellungen.
 2. Passe folgende Informationen an:
@@ -194,10 +231,12 @@ Navigiere über das Hauptmenü der App zum Bereich **„Küche"** (oder das Küc
 3. Speichere die Änderungen.
 
 ### Wie ändere ich mein Passwort?
+<!-- id: faq-038 -->
 
 Navigiere zu den Profileinstellungen und klicke auf **„Passwort ändern"**. Gib dein aktuelles Passwort und das neue Passwort (inklusive Bestätigung) ein und bestätige.
 
 ### Kann ich die App-Einstellungen (Titel, Design) anpassen?
+<!-- id: faq-039 -->
 
 Ja – allerdings nur als Administratorin oder Administrator. Navigiere über das Hauptmenü zu **„Einstellungen"**. Dort kannst du:
 - Den **Seitentitel** und den **Header-Slogan** anpassen.
@@ -209,30 +248,37 @@ Ja – allerdings nur als Administratorin oder Administrator. Navigiere über da
 ---
 
 ## 9. Private Listen
+<!-- id: faq-040 -->
 
 ### Was sind private Listen?
+<!-- id: faq-041 -->
 
 Private Listen (auch „Gruppen" genannt) ermöglichen es dir, Rezepte mit bestimmten Personen zu teilen oder eigene Sammlungen zu organisieren. Du kannst eine Liste erstellen, Mitglieder einladen und Rezepte hinzufügen, die nur für die Mitglieder dieser Liste sichtbar sind.
 
 ### Wie erstelle ich eine private Liste?
+<!-- id: faq-042 -->
 
 1. Öffne die **Küchenseite** und klicke auf **„Meine Mise en Place"**, oder navigiere direkt zu den Gruppen.
 2. Klicke auf **„+ Liste erstellen"**.
 3. Gib einen Namen für die Liste ein und bestätige.
 
 ### Wie füge ich Mitglieder zu einer Liste hinzu?
+<!-- id: faq-043 -->
 
 Öffne die gewünschte Liste und nutze die Funktion zum Hinzufügen von Mitgliedern. Nur Inhaberinnen und Inhaber der Liste können Mitglieder verwalten.
 
 ### Wie füge ich Rezepte zu einer Liste hinzu?
+<!-- id: faq-044 -->
 
 Öffne die Liste und nutze die Rezeptsuche innerhalb der Gruppendetailansicht, um Rezepte hinzuzufügen. Mitglieder und Inhaberinnen/Inhaber können Rezepte hinzufügen.
 
 ### Kann ich eine Liste löschen?
+<!-- id: faq-045 -->
 
 Ja, aber nur als Inhaberin oder Inhaber einer privaten Liste. Öffne die Liste und klicke auf **„Löschen"**. Bestätige die Sicherheitsabfrage. Hinweis: Die allgemeine, systemseitig vorgegebene Gruppe kann nicht gelöscht werden.
 
 ### Wer kann meine private Liste sehen?
+<!-- id: faq-046 -->
 
 Nur du (als Inhaberin/Inhaber) und die von dir hinzugefügten Mitglieder können die Inhalte einer privaten Liste sehen.
 
