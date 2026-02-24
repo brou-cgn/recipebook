@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './GroupDetail.css';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * Displays details of a single group including members and associated recipes.
@@ -19,6 +21,15 @@ import './GroupDetail.css';
  */
 function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe }) {
   const [saving, setSaving] = useState(false);
+  const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+
+  useEffect(() => {
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setBackIcon(icons.privateListBack || DEFAULT_BUTTON_ICONS.privateListBack);
+    };
+    loadIcons();
+  }, []);
 
   if (!group) return null;
 
@@ -54,33 +65,27 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
 
   return (
     <div className="group-detail-container">
+      <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
+        {isBase64Image(backIcon) ? (
+          <img src={backIcon} alt="Zurück" className="group-back-icon-img" />
+        ) : (
+          <span>{backIcon}</span>
+        )}
+      </button>
       <div className="group-detail-header">
-        <button className="group-back-btn" onClick={onBack} aria-label="Zurück">
-          ← Zurück
-        </button>
         <div className="group-detail-title">
           <h2>{group.name}</h2>
           <span className={`group-type-badge ${isPublic ? 'public' : 'private'}`}>
             {isPublic ? 'Öffentlich' : 'Privat'}
           </span>
         </div>
-        {isOwner && !isPublic && (
-          <button
-            className="group-delete-btn"
-            onClick={handleDelete}
-            disabled={saving}
-            aria-label="Liste löschen"
-          >
-            Liste löschen
-          </button>
-        )}
         {onAddRecipe && (isOwner || isMember) && (
           <button
             className="group-add-recipe-btn"
             onClick={() => onAddRecipe(group.id)}
-            aria-label="Rezept hinzufügen"
+            aria-label={isPublic ? 'Rezept hinzufügen' : 'privates Rezept hinzufügen'}
           >
-            + Rezept hinzufügen
+            {isPublic ? '+ Rezept hinzufügen' : '+ privates Rezept hinzufügen'}
           </button>
         )}
       </div>
@@ -147,6 +152,18 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           </div>
         )}
       </div>
+      {isOwner && !isPublic && (
+        <div className="group-recipes-footer">
+          <button
+            className="group-delete-btn"
+            onClick={handleDelete}
+            disabled={saving}
+            aria-label="Liste löschen"
+          >
+            Liste löschen
+          </button>
+        </div>
+      )}
     </div>
   );
 }

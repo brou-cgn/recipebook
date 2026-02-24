@@ -142,7 +142,8 @@ export const DEFAULT_BUTTON_ICONS = {
   filterButton: '⚙',
   copyLink: '📋',
   nutritionEmpty: '➕',
-  nutritionFilled: '🥦'
+  nutritionFilled: '🥦',
+  privateListBack: '✕'
 };
 
 // Cache for settings to avoid repeated Firestore reads

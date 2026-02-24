@@ -151,7 +151,8 @@ function Settings({ onBack, currentUser }) {
     filterButton: '⚙',
     copyLink: '📋',
     nutritionEmpty: '➕',
-    nutritionFilled: '🥦'
+    nutritionFilled: '🥦',
+    privateListBack: '✕'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -1463,6 +1464,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.nutritionFilled} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.nutritionFilled}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="privateListBackIcon">Zurück-Icon (Private Liste, oben rechts):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.privateListBack) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="privateListBackIcon"
+                          value={buttonIcons.privateListBack}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, privateListBack: e.target.value })}
+                          placeholder="z.B. ✕"
+                          maxLength={10}
+                        />
+                        <label htmlFor="privateListBackIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'privateListBack' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="privateListBackIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('privateListBack', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'privateListBack'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('privateListBack')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, privateListBack: DEFAULT_BUTTON_ICONS.privateListBack })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.privateListBack) ? (
+                        <img src={buttonIcons.privateListBack} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.privateListBack}</span>
                       )}
                     </div>
                   </div>
