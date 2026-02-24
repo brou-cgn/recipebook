@@ -15,6 +15,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
   const [saving, setSaving] = useState(false);
   const [autoCalcLoading, setAutoCalcLoading] = useState(false);
   const [autoCalcResult, setAutoCalcResult] = useState(null);
+  const [calcProgress, setCalcProgress] = useState(null);
   const closeButtonRef = useRef(null);
 
   // Initialise fields from existing recipe data
@@ -92,31 +93,56 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
-    try {
-      const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
-      const result = await calculateNutrition({
-        ingredients,
-        portionen: recipe.portionen || 1,
-      });
-      const { naehrwerte, foundCount, totalCount, details } = result.data;
+    setCalcProgress({ done: 0, total: ingredients.length, current: ingredients[0] || '' });
 
-      if (naehrwerte.kalorien != null) setKalorien(String(naehrwerte.kalorien));
-      if (naehrwerte.protein != null) setProtein(String(naehrwerte.protein));
-      if (naehrwerte.fett != null) setFett(String(naehrwerte.fett));
-      if (naehrwerte.kohlenhydrate != null) setKohlenhydrate(String(naehrwerte.kohlenhydrate));
-      if (naehrwerte.zucker != null) setZucker(String(naehrwerte.zucker));
-      if (naehrwerte.ballaststoffe != null) setBallaststoffe(String(naehrwerte.ballaststoffe));
-      if (naehrwerte.salz != null) setSalz(String(naehrwerte.salz));
+    const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+    const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
+    const notIncluded = [];
+    let foundCount = 0;
 
-      setAutoCalcResult({ foundCount, totalCount, details: details || [] });
-    } catch (err) {
-      console.error('Auto-calculation failed:', err);
-      // Preserve any partial results returned alongside the error
-      const partial = err.details?.partial || null;
-      setAutoCalcResult({ error: mapNutritionCalcError(err), partial });
-    } finally {
-      setAutoCalcLoading(false);
+    for (let i = 0; i < ingredients.length; i++) {
+      const ingredient = ingredients[i];
+      setCalcProgress({ done: i, total: ingredients.length, current: ingredient });
+
+      try {
+        const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
+        const { naehrwerte: n, details } = result.data;
+        const detail = details && details[0];
+        if (detail && detail.found) {
+          Object.keys(totals).forEach(key => {
+            totals[key] += n[key] || 0;
+          });
+          foundCount++;
+        } else {
+          notIncluded.push({ ingredient, error: detail?.error || 'Nicht gefunden' });
+        }
+      } catch (err) {
+        console.error(`Auto-calculation failed for "${ingredient}":`, err);
+        notIncluded.push({ ingredient, error: mapNutritionCalcError(err) });
+      }
     }
+
+    // Divide totals by portionen and round
+    const portionen = recipe.portionen || 1;
+    const naehrwerte = {};
+    Object.entries(totals).forEach(([key, value]) => {
+      const perPortion = value / portionen;
+      naehrwerte[key] = key === 'kalorien'
+        ? Math.round(perPortion)
+        : Math.round(perPortion * 10) / 10;
+    });
+
+    if (naehrwerte.kalorien != null) setKalorien(String(naehrwerte.kalorien));
+    if (naehrwerte.protein != null) setProtein(String(naehrwerte.protein));
+    if (naehrwerte.fett != null) setFett(String(naehrwerte.fett));
+    if (naehrwerte.kohlenhydrate != null) setKohlenhydrate(String(naehrwerte.kohlenhydrate));
+    if (naehrwerte.zucker != null) setZucker(String(naehrwerte.zucker));
+    if (naehrwerte.ballaststoffe != null) setBallaststoffe(String(naehrwerte.ballaststoffe));
+    if (naehrwerte.salz != null) setSalz(String(naehrwerte.salz));
+
+    setCalcProgress(null);
+    setAutoCalcLoading(false);
+    setAutoCalcResult({ foundCount, totalCount: ingredients.length, notIncluded });
   };
 
   const hasValues =
@@ -259,6 +285,22 @@ function NutritionModal({ recipe, onClose, onSave }) {
             >
               {autoCalcLoading ? 'Berechne…' : '🔍 Automatisch berechnen (OpenFoodFacts)'}
             </button>
+            {autoCalcLoading && calcProgress && (
+              <div className="nutrition-calc-progress">
+                <div className="nutrition-calc-progress-header">
+                  <span>{calcProgress.done} von {calcProgress.total} Zutaten überprüft</span>
+                </div>
+                <div className="nutrition-calc-progress-bar-track">
+                  <div
+                    className="nutrition-calc-progress-bar-fill"
+                    style={{ width: `${calcProgress.total > 0 ? (calcProgress.done / calcProgress.total) * 100 : 0}%` }}
+                  />
+                </div>
+                {calcProgress.current && (
+                  <p className="nutrition-calc-current">Überprüfe: {calcProgress.current}</p>
+                )}
+              </div>
+            )}
             {autoCalcResult && !autoCalcResult.error && (
               <>
                 <p className="nutrition-autocalc-info">
@@ -266,28 +308,26 @@ function NutritionModal({ recipe, onClose, onSave }) {
                   {autoCalcResult.foundCount < autoCalcResult.totalCount &&
                     ' Fehlende Werte bitte manuell ergänzen.'}
                 </p>
-                {autoCalcResult.details && autoCalcResult.details.filter(d => !d.found).length > 0 && (
-                  <ul className="nutrition-autocalc-details">
-                    {autoCalcResult.details.filter(d => !d.found).map((d, i) => (
-                      <li key={i} className="nutrition-autocalc-detail-item">
-                        <span className="nutrition-autocalc-detail-name">{d.ingredient}</span>
-                        {d.error && (
-                          <span className="nutrition-autocalc-detail-reason">: {d.error}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                {autoCalcResult.notIncluded && autoCalcResult.notIncluded.length > 0 && (
+                  <div className="nutrition-not-included">
+                    <p className="nutrition-not-included-title">Nicht einkalkulierte Zutaten:</p>
+                    <ul className="nutrition-not-included-list">
+                      {autoCalcResult.notIncluded.map((item, i) => (
+                        <li key={i} className="nutrition-not-included-item">
+                          <span className="nutrition-not-included-name">{item.ingredient}</span>
+                          {item.error && (
+                            <span className="nutrition-not-included-reason">: {item.error}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </>
             )}
             {autoCalcResult && autoCalcResult.error && (
               <div className="nutrition-autocalc-error-box">
                 <p className="nutrition-autocalc-error">{autoCalcResult.error}</p>
-                {autoCalcResult.partial && autoCalcResult.partial.foundCount > 0 && (
-                  <p className="nutrition-autocalc-info">
-                    {autoCalcResult.partial.foundCount} von {autoCalcResult.partial.totalCount} Zutaten konnten geladen werden.
-                  </p>
-                )}
                 <button
                   className="nutrition-autocalc-retry-button"
                   onClick={handleAutoCalculate}
