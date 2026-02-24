@@ -149,7 +149,9 @@ function Settings({ onBack, currentUser }) {
     closeButton: '✕',
     menuCloseButton: '✕',
     filterButton: '⚙',
-    copyLink: '📋'
+    copyLink: '📋',
+    nutritionEmpty: '➕',
+    nutritionFilled: '🥦'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -198,7 +200,7 @@ function Settings({ onBack, currentUser }) {
       setFaviconImage(faviconImg);
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
-      setButtonIcons(icons);
+      setButtonIcons({ ...DEFAULT_BUTTON_ICONS, ...icons });
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
       setTimelineMenuDefaultImage(timelineMenuImg);
@@ -1347,6 +1349,120 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.copyLink} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.copyLink}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="nutritionEmptyIcon">Nährwert-Icon (leer, keine Werte gespeichert):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.nutritionEmpty) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="nutritionEmptyIcon"
+                          value={buttonIcons.nutritionEmpty}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, nutritionEmpty: e.target.value })}
+                          placeholder="z.B. ➕"
+                          maxLength={10}
+                        />
+                        <label htmlFor="nutritionEmptyIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'nutritionEmpty' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="nutritionEmptyIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('nutritionEmpty', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'nutritionEmpty'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('nutritionEmpty')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, nutritionEmpty: DEFAULT_BUTTON_ICONS.nutritionEmpty })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.nutritionEmpty) ? (
+                        <img src={buttonIcons.nutritionEmpty} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.nutritionEmpty}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="nutritionFilledIcon">Nährwert-Icon (gefüllt, Werte gespeichert):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.nutritionFilled) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="nutritionFilledIcon"
+                          value={buttonIcons.nutritionFilled}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, nutritionFilled: e.target.value })}
+                          placeholder="z.B. 🥦"
+                          maxLength={10}
+                        />
+                        <label htmlFor="nutritionFilledIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'nutritionFilled' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="nutritionFilledIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('nutritionFilled', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'nutritionFilled'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('nutritionFilled')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, nutritionFilled: DEFAULT_BUTTON_ICONS.nutritionFilled })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.nutritionFilled) ? (
+                        <img src={buttonIcons.nutritionFilled} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.nutritionFilled}</span>
                       )}
                     </div>
                   </div>
