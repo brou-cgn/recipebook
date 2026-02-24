@@ -6,6 +6,8 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
+import { functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 
 // Mobile breakpoint constant
@@ -33,6 +35,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
+  const [nutritionCalcLoading, setNutritionCalcLoading] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -262,6 +265,35 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const handleSaveNutrition = async (naehrwerte) => {
     await updateRecipe(recipe.id, { naehrwerte });
     setSelectedRecipe({ ...recipe, naehrwerte });
+  };
+
+  const handleAutoCalculateAndSave = async () => {
+    const ingredients = recipe.zutaten || recipe.ingredients || [];
+    if (ingredients.length === 0) return;
+
+    setNutritionCalcLoading(true);
+    try {
+      const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+      const result = await calculateNutrition({
+        ingredients,
+        portionen: recipe.portionen || 1,
+      });
+      const { naehrwerte } = result.data;
+      await handleSaveNutrition(naehrwerte);
+    } catch (err) {
+      console.error('Auto-calculation failed:', err);
+      alert('Fehler beim Berechnen der Nährwerte. Bitte versuchen Sie es erneut.');
+    } finally {
+      setNutritionCalcLoading(false);
+    }
+  };
+
+  const handleNutritionButtonClick = () => {
+    if (recipe.naehrwerte?.kalorien != null) {
+      setShowNutritionModal(true);
+    } else {
+      handleAutoCalculateAndSave();
+    }
   };
 
   const getShareUrl = () => {
@@ -964,7 +996,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 <div className="metadata-item">
                   <button
                     className="nutrition-metadata-btn"
-                    onClick={() => setShowNutritionModal(true)}
+                    onClick={handleNutritionButtonClick}
+                    disabled={nutritionCalcLoading}
                     title={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
                     aria-label={recipe.naehrwerte?.kalorien != null ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
                   >
@@ -987,7 +1020,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       <span className="nutrition-kcal-badge">{recipe.naehrwerte.kalorien} kcal</span>
                     )}
                     <span className="nutrition-label">
-                      {recipe.naehrwerte?.kalorien != null ? 'Nährwerte' : 'Nährwerte berechnen'}
+                      {nutritionCalcLoading ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null ? 'Nährwerte' : 'Nährwerte berechnen')}
                     </span>
                   </button>
                 </div>
