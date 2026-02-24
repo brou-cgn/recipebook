@@ -112,6 +112,53 @@ export const updateFaq = async (faqId, updates) => {
 };
 
 /**
+ * Import FAQs from parsed Markdown content
+ * @param {string} markdownContent - The Markdown string to parse
+ * @param {number} currentFaqCount - Current number of FAQs (used as base order index)
+ * @returns {Promise<number>} Number of entries imported
+ */
+export const importFaqsFromMarkdown = async (markdownContent, currentFaqCount = 0) => {
+  const lines = markdownContent.split('\n');
+  const entries = [];
+  let currentTitle = null;
+  let currentDescLines = [];
+
+  const flush = () => {
+    if (currentTitle) {
+      const description = currentDescLines.join('\n').trim();
+      entries.push({ title: currentTitle, description });
+      currentTitle = null;
+      currentDescLines = [];
+    }
+  };
+
+  for (const line of lines) {
+    if (line.startsWith('### ')) {
+      flush();
+      currentTitle = line.replace(/^###\s+/, '');
+    } else if (currentTitle !== null) {
+      if (line.startsWith('#') || line.startsWith('---')) {
+        flush();
+      } else {
+        currentDescLines.push(line);
+      }
+    }
+  }
+  flush();
+
+  for (let i = 0; i < entries.length; i++) {
+    await addFaq({
+      title: entries[i].title,
+      description: entries[i].description,
+      screenshot: null,
+      order: currentFaqCount + i
+    });
+  }
+
+  return entries.length;
+};
+
+/**
  * Delete a FAQ from Firestore
  * @param {string} faqId - ID of the FAQ to delete
  * @returns {Promise<void>}
