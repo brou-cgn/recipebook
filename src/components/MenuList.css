@@ -103,6 +103,8 @@
   transition: all 0.3s ease;
   border-left: 4px solid #402C1C;
   position: relative;
+  height: 160px;
+  overflow: hidden;
 }
 
 .menu-card:hover {
