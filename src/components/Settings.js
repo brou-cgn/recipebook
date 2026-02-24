@@ -95,6 +95,20 @@ function SortablePortionUnitItem({ id, unit, onRemove }) {
 
 const CATEGORY_ALREADY_ASSIGNED_ERROR = 'Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
 
+/**
+ * Renders text with **bold** markdown syntax as <strong> elements.
+ */
+function renderBoldText(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function Settings({ onBack, currentUser }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
@@ -156,11 +170,12 @@ function Settings({ onBack, currentUser }) {
 
   // FAQ state
   const [faqs, setFaqs] = useState([]);
-  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null });
+  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null, level: 1 });
   const [editingFaqId, setEditingFaqId] = useState(null);
   const [uploadingFaqScreenshot, setUploadingFaqScreenshot] = useState(false);
   const [savingFaq, setSavingFaq] = useState(false);
   const [importingFaq, setImportingFaq] = useState(false);
+  const [faqSelectedIds, setFaqSelectedIds] = useState([]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -229,17 +244,19 @@ function Settings({ onBack, currentUser }) {
         await updateFaq(editingFaqId, {
           title: faqForm.title.trim(),
           description: faqForm.description.trim(),
-          screenshot: faqForm.screenshot || null
+          screenshot: faqForm.screenshot || null,
+          level: faqForm.level ?? 1
         });
       } else {
         await addFaq({
           title: faqForm.title.trim(),
           description: faqForm.description.trim(),
           screenshot: faqForm.screenshot || null,
+          level: faqForm.level ?? 1,
           order: faqs.length
         });
       }
-      setFaqForm({ title: '', description: '', screenshot: null });
+      setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
       setEditingFaqId(null);
     } catch (error) {
       alert('Fehler beim Speichern des Kochschule-Eintrags: ' + error.message);
@@ -250,7 +267,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleEditFaq = (faq) => {
     setEditingFaqId(faq.id);
-    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null });
+    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1 });
   };
 
   const handleDeleteFaq = async (faqId) => {
@@ -259,8 +276,9 @@ function Settings({ onBack, currentUser }) {
       await deleteFaq(faqId);
       if (editingFaqId === faqId) {
         setEditingFaqId(null);
-        setFaqForm({ title: '', description: '', screenshot: null });
+        setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
       }
+      setFaqSelectedIds(prev => prev.filter(id => id !== faqId));
     } catch (error) {
       alert('Fehler beim Löschen des Kochschule-Eintrags: ' + error.message);
     }
@@ -268,7 +286,17 @@ function Settings({ onBack, currentUser }) {
 
   const handleCancelFaqEdit = () => {
     setEditingFaqId(null);
-    setFaqForm({ title: '', description: '', screenshot: null });
+    setFaqForm({ title: '', description: '', screenshot: null, level: 1 });
+  };
+
+  const handleFaqIndent = async (delta) => {
+    const updates = faqSelectedIds.map(id => {
+      const faq = faqs.find(f => f.id === id);
+      if (!faq) return null;
+      const newLevel = Math.max(0, (faq.level ?? 1) + delta);
+      return updateFaq(id, { level: newLevel });
+    }).filter(Boolean);
+    await Promise.all(updates);
   };
 
   const handleImportFaqFromMd = async () => {
@@ -1799,6 +1827,18 @@ function Settings({ onBack, currentUser }) {
                     onChange={(e) => setFaqForm(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
+                <div className="faq-level-select">
+                  <label htmlFor="faqLevelSelect">Ebene:</label>
+                  <select
+                    id="faqLevelSelect"
+                    value={faqForm.level ?? 1}
+                    onChange={(e) => setFaqForm(prev => ({ ...prev, level: Number(e.target.value) }))}
+                  >
+                    <option value={0}>0 – Abschnittsüberschrift</option>
+                    <option value={1}>1 – Frage/Antwort</option>
+                    <option value={2}>2 – Eingerückt</option>
+                  </select>
+                </div>
                 <div className="faq-screenshot-section">
                   <label>Screenshot (optional):</label>
                   {faqForm.screenshot ? (
@@ -1846,37 +1886,78 @@ function Settings({ onBack, currentUser }) {
               {faqs.length === 0 ? (
                 <p className="section-description">Noch keine Kochschule-Einträge vorhanden. Füge oben den ersten Eintrag hinzu!</p>
               ) : (
-                <div className="faq-list">
-                  {faqs.map((faq) => (
-                    <div key={faq.id} className="faq-list-item">
-                      <div className="faq-list-item-header">
-                        <strong className="faq-list-item-title">{faq.title}</strong>
-                        <div className="faq-list-item-actions">
-                          <button
-                            className="faq-edit-btn"
-                            onClick={() => handleEditFaq(faq)}
-                            title="Bearbeiten"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="faq-delete-btn"
-                            onClick={() => handleDeleteFaq(faq.id)}
-                            title="Löschen"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                      {faq.description && (
-                        <p className="faq-list-item-description">{faq.description}</p>
-                      )}
-                      {faq.screenshot && (
-                        <img src={faq.screenshot} alt="Screenshot" className="faq-list-screenshot" />
-                      )}
+                <>
+                  {faqSelectedIds.length > 0 && (
+                    <div className="faq-indent-toolbar">
+                      <span className="faq-indent-toolbar-label">{faqSelectedIds.length} ausgewählt:</span>
+                      <button
+                        className="faq-indent-btn"
+                        onClick={() => handleFaqIndent(-1)}
+                        title="Ausrücken"
+                      >
+                        ← Ausrücken
+                      </button>
+                      <button
+                        className="faq-indent-btn"
+                        onClick={() => handleFaqIndent(1)}
+                        title="Einrücken"
+                      >
+                        Einrücken →
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                  <div className="faq-list">
+                    {faqs.map((faq) => {
+                      const isSelected = faqSelectedIds.includes(faq.id);
+                      return (
+                        <div
+                          key={faq.id}
+                          className={`faq-list-item${faq.level === 0 ? ' faq-list-item--heading' : ''}${faq.level > 1 ? ' faq-list-item--indented' : ''}${isSelected ? ' faq-list-item--selected' : ''}`}
+                        >
+                          <div className="faq-list-item-header">
+                            <input
+                              type="checkbox"
+                              className="faq-list-item-checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFaqSelectedIds(prev => [...prev, faq.id]);
+                                } else {
+                                  setFaqSelectedIds(prev => prev.filter(id => id !== faq.id));
+                                }
+                              }}
+                              aria-label="Auswählen"
+                            />
+                            <strong className="faq-list-item-title">{renderBoldText(faq.title)}</strong>
+                            <span className="faq-list-item-level">Ebene {faq.level ?? 1}</span>
+                            <div className="faq-list-item-actions">
+                              <button
+                                className="faq-edit-btn"
+                                onClick={() => handleEditFaq(faq)}
+                                title="Bearbeiten"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="faq-delete-btn"
+                                onClick={() => handleDeleteFaq(faq.id)}
+                                title="Löschen"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                          {faq.description && (
+                            <p className="faq-list-item-description">{renderBoldText(faq.description)}</p>
+                          )}
+                          {faq.screenshot && (
+                            <img src={faq.screenshot} alt="Screenshot" className="faq-list-screenshot" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </>
