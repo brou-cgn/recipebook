@@ -6,7 +6,7 @@ import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
-import { addFaq, updateFaq, deleteFaq, subscribeToFaqs } from '../utils/faqFirestore';
+import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import {
   DndContext,
   closestCenter,
@@ -160,6 +160,7 @@ function Settings({ onBack, currentUser }) {
   const [editingFaqId, setEditingFaqId] = useState(null);
   const [uploadingFaqScreenshot, setUploadingFaqScreenshot] = useState(false);
   const [savingFaq, setSavingFaq] = useState(false);
+  const [importingFaq, setImportingFaq] = useState(false);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -268,6 +269,22 @@ function Settings({ onBack, currentUser }) {
   const handleCancelFaqEdit = () => {
     setEditingFaqId(null);
     setFaqForm({ title: '', description: '', screenshot: null });
+  };
+
+  const handleImportFaqFromMd = async () => {
+    if (!window.confirm('Möchtest du alle FAQ-Einträge aus der FAQ.md importieren? Bereits vorhandene Einträge bleiben erhalten.')) return;
+    setImportingFaq(true);
+    try {
+      const response = await fetch(process.env.PUBLIC_URL + '/FAQ.md');
+      if (!response.ok) throw new Error('FAQ.md konnte nicht geladen werden.');
+      const text = await response.text();
+      const count = await importFaqsFromMarkdown(text, faqs.length);
+      alert(`${count} FAQ-Einträge erfolgreich importiert.`);
+    } catch (error) {
+      alert('Fehler beim Import: ' + error.message);
+    } finally {
+      setImportingFaq(false);
+    }
   };
 
   const handleSave = () => {
@@ -1746,6 +1763,21 @@ function Settings({ onBack, currentUser }) {
               <p className="section-description">
                 Hier kannst du Kochschule-Einträge anlegen und pflegen. Die Einträge werden im Menü für alle Nutzer sichtbar angezeigt.
               </p>
+
+              {/* FAQ Import aus FAQ.md */}
+              <div className="faq-import-section">
+                <h4>FAQ aus FAQ.md importieren</h4>
+                <p className="section-description">
+                  Importiert alle Einträge aus der <code>FAQ.md</code>-Datei automatisch als FAQ-Einträge. Bereits vorhandene Einträge werden nicht gelöscht.
+                </p>
+                <button
+                  className="save-button"
+                  onClick={handleImportFaqFromMd}
+                  disabled={importingFaq}
+                >
+                  {importingFaq ? 'Importiere...' : '📥 FAQ.md importieren'}
+                </button>
+              </div>
 
               {/* FAQ form */}
               <div className="faq-form">
