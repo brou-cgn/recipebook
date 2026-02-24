@@ -121,21 +121,27 @@ export const importFaqsFromMarkdown = async (markdownContent, currentFaqCount = 
   const lines = markdownContent.split('\n');
   const entries = [];
   let currentTitle = null;
+  let currentLevel = 1;
   let currentDescLines = [];
 
   const flush = () => {
     if (currentTitle) {
       const description = currentDescLines.join('\n').trim();
-      entries.push({ title: currentTitle, description });
+      entries.push({ title: currentTitle, description, level: currentLevel });
       currentTitle = null;
       currentDescLines = [];
     }
   };
 
   for (const line of lines) {
-    if (line.startsWith('### ')) {
+    if (line.startsWith('## ')) {
+      flush();
+      currentTitle = line.replace(/^##\s+/, '');
+      currentLevel = 0;
+    } else if (line.startsWith('### ')) {
       flush();
       currentTitle = line.replace(/^###\s+/, '');
+      currentLevel = 1;
     } else if (currentTitle !== null) {
       if (line.startsWith('#') || line.startsWith('---')) {
         flush();
@@ -150,6 +156,7 @@ export const importFaqsFromMarkdown = async (markdownContent, currentFaqCount = 
     await addFaq({
       title: entries[i].title,
       description: entries[i].description,
+      level: entries[i].level,
       screenshot: null,
       order: currentFaqCount + i
     });

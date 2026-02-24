@@ -4,6 +4,20 @@ import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import SearchIcon from './icons/SearchIcon';
 
+/**
+ * Renders text with **bold** markdown syntax as <strong> elements.
+ */
+function renderBoldText(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function Header({ 
   onSettingsClick, 
   currentView, 
@@ -270,13 +284,18 @@ function Header({
             </div>
             <div className="faq-modal-body">
               {faqs.map((faq) => (
-                <div key={faq.id} className="faq-item">
+                faq.level === 0 ? (
+                  <div key={faq.id} className="faq-section-heading">
+                    {renderBoldText(faq.title)}
+                  </div>
+                ) : (
+                <div key={faq.id} className={`faq-item${faq.level > 1 ? ' faq-item-indented' : ''}`}>
                   <button
                     className="faq-question-btn"
                     onClick={() => setExpandedFaqId(expandedFaqId === faq.id ? null : faq.id)}
                     aria-expanded={expandedFaqId === faq.id}
                   >
-                    <span className="faq-question-text">{faq.title}</span>
+                    <span className="faq-question-text">{renderBoldText(faq.title)}</span>
                     <span className="faq-question-arrow">
                       {expandedFaqId === faq.id ? '▲' : '▼'}
                     </span>
@@ -284,7 +303,7 @@ function Header({
                   {expandedFaqId === faq.id && (
                     <div className="faq-answer">
                       {faq.description && (
-                        <p className="faq-answer-text">{faq.description}</p>
+                        <p className="faq-answer-text">{renderBoldText(faq.description)}</p>
                       )}
                       {faq.screenshot && (
                         <img
@@ -296,6 +315,7 @@ function Header({
                     </div>
                   )}
                 </div>
+                )
               ))}
             </div>
           </div>

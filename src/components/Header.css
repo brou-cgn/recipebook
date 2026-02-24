@@ -665,3 +665,18 @@
   object-fit: contain;
   display: block;
 }
+
+.faq-section-heading {
+  padding: 0.75rem 1.5rem 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #402C1C;
+  background: #f7f3ef;
+  border-bottom: 1px solid #e8ddd4;
+}
+
+.faq-item-indented .faq-question-btn {
+  padding-left: 2.5rem;
+}
