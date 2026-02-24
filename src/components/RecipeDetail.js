@@ -269,7 +269,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   };
 
   const handleAutoCalculateAndSave = async () => {
-    const ingredients = recipe.zutaten || recipe.ingredients || [];
+    const rawIngredients = recipe.zutaten || recipe.ingredients || [];
+    const ingredients = rawIngredients
+      .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
+      .map(item => typeof item === 'string' ? item : item.text);
     if (ingredients.length === 0) return;
 
     setNutritionCalcLoading(true);
