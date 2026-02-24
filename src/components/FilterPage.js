@@ -8,16 +8,32 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [availableCategories, setAvailableCategories] = useState([]);
-  const [expandedSections, setExpandedSections] = useState({
-    group: true,
-    cuisine: true,
-    author: true,
-    status: true
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const defaults = { group: true, cuisine: true, author: true, status: true };
+    try {
+      const saved = localStorage.getItem('filterPageExpandedSections');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' &&
+            ['group', 'cuisine', 'author', 'status'].every(k => typeof parsed[k] === 'boolean')) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('FilterPage: could not read expandedSections from localStorage', e);
+    }
+    return defaults;
   });
   const closeButtonRef = useRef(null);
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections(prev => {
+      const next = { ...prev, [section]: !prev[section] };
+      try { localStorage.setItem('filterPageExpandedSections', JSON.stringify(next)); } catch (e) {
+        console.warn('FilterPage: could not save expandedSections to localStorage', e);
+      }
+      return next;
+    });
   };
 
   useEffect(() => {
