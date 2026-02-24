@@ -21,6 +21,7 @@ describe('FilterPage', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
   });
 
   test('renders filter page with all options', () => {
@@ -481,6 +482,45 @@ describe('FilterPage', () => {
     expect(statusHeader).toHaveAttribute('aria-expanded', 'true');
 
     fireEvent.click(statusHeader);
+    expect(statusHeader).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('saves expanded section state to localStorage when toggled', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={true}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /rezept-status/i }));
+
+    const saved = JSON.parse(localStorage.getItem('filterPageExpandedSections'));
+    expect(saved).not.toBeNull();
+    expect(saved.status).toBe(false);
+  });
+
+  test('restores collapsed section state from localStorage on mount', () => {
+    localStorage.setItem(
+      'filterPageExpandedSections',
+      JSON.stringify({ group: true, cuisine: true, author: true, status: false })
+    );
+
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={true}
+      />
+    );
+
+    // Status section should be collapsed (content not visible)
+    expect(screen.queryByDisplayValue('Alle Rezepte')).not.toBeInTheDocument();
+
+    const statusHeader = screen.getByRole('button', { name: /rezept-status/i });
     expect(statusHeader).toHaveAttribute('aria-expanded', 'false');
   });
 });
