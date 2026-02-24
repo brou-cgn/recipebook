@@ -1032,7 +1032,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                       )}
                     </span>
                     {recipe.naehrwerte?.kalorien != null && (
-                      <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / currentServings)} kcal</span>
+                      <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4))} kcal</span>
                     )}
                     <span className="nutrition-label">
                       {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError ? null : 'Nährwerte berechnen')}
