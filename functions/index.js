@@ -797,6 +797,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         salz: 0,
       };
 
+      const DEFAULT_SALT_PER_PORTION_G = 2;
       const details = [];
       let foundCount = 0;
 
@@ -806,6 +807,22 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           continue;
         }
         const ingredientStr = (ingredient && typeof ingredient === 'object') ? ingredient.text : ingredient;
+
+        // Special case: salt without quantity → default 2 g per portion
+        if (typeof ingredientStr === 'string' && /^salz$/i.test(ingredientStr.trim())) {
+          const saltAmountG = DEFAULT_SALT_PER_PORTION_G * portionen;
+          totals.salz += saltAmountG;
+          details.push({
+            ingredient: ingredientStr,
+            name: 'Salz',
+            found: true,
+            product: `Salz (Standard: ${DEFAULT_SALT_PER_PORTION_G} g pro Portion)`,
+            amountG: saltAmountG,
+          });
+          foundCount++;
+          continue;
+        }
+
         const parsed = parseIngredientForNutrition(ingredientStr);
         if (!parsed) {
           details.push({ingredient: ingredientStr, found: false, error: 'Konnte nicht geparst werden'});
