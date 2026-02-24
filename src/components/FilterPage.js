@@ -8,6 +8,16 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({
+    group: true,
+    cuisine: true,
+    author: true,
+    status: true
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -69,71 +79,127 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
       <div className="filter-page-content">
         {privateGroups && privateGroups.length > 0 && (
           <div className="filter-section">
-            <h3>Private Liste</h3>
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="filter-select"
-              aria-label="Private Liste"
+            <button
+              className="filter-section-header"
+              onClick={() => toggleSection('group')}
+              aria-expanded={expandedSections.group}
             >
-              <option value="">Alle Listen</option>
-              {privateGroups.map(group => (
-                <option key={group.id} value={group.id}>{group.name}</option>
-              ))}
-            </select>
+              <span className="filter-section-title">
+                Private Liste
+                {selectedGroup && <span className="filter-section-active-dot" aria-hidden="true" />}
+              </span>
+              <span className="filter-section-arrow">{expandedSections.group ? '▲' : '▼'}</span>
+            </button>
+            {expandedSections.group && (
+              <div className="filter-section-content">
+                <select
+                  value={selectedGroup}
+                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  className="filter-select"
+                  aria-label="Private Liste"
+                >
+                  <option value="">Alle Listen</option>
+                  {privateGroups.map(group => (
+                    <option key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
 
         {availableCategories.length > 0 && (
           <div className="filter-section">
-            <h3>Kulinarik</h3>
-            <div className="filter-checkbox-grid">
-              {availableCategories.map(category => (
-                <label key={category} className="filter-checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={category}
-                    checked={selectedCuisines.includes(category)}
-                    onChange={() => handleCuisineToggle(category)}
-                  />
-                  {category}
-                </label>
-              ))}
-            </div>
+            <button
+              className="filter-section-header"
+              onClick={() => toggleSection('cuisine')}
+              aria-expanded={expandedSections.cuisine}
+            >
+              <span className="filter-section-title">
+                Kulinarik
+                {selectedCuisines.length > 0 && <span className="filter-section-active-dot" aria-hidden="true" />}
+              </span>
+              <span className="filter-section-arrow">{expandedSections.cuisine ? '▲' : '▼'}</span>
+            </button>
+            {expandedSections.cuisine && (
+              <div className="filter-section-content">
+                <div className="filter-checkbox-grid">
+                  {availableCategories.map(category => (
+                    <label key={category} className="filter-checkbox-label">
+                      <input
+                        type="checkbox"
+                        value={category}
+                        checked={selectedCuisines.includes(category)}
+                        onChange={() => handleCuisineToggle(category)}
+                      />
+                      {category}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {availableAuthors && availableAuthors.length > 0 && (
           <div className="filter-section">
-            <h3>Autor</h3>
-            <div className="filter-checkbox-grid">
-              {availableAuthors.map(author => (
-                <label key={author.id} className="filter-checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={author.id}
-                    checked={selectedAuthors.includes(author.id)}
-                    onChange={() => handleAuthorToggle(author.id)}
-                  />
-                  {author.name}
-                </label>
-              ))}
-            </div>
+            <button
+              className="filter-section-header"
+              onClick={() => toggleSection('author')}
+              aria-expanded={expandedSections.author}
+            >
+              <span className="filter-section-title">
+                Autor
+                {selectedAuthors.length > 0 && <span className="filter-section-active-dot" aria-hidden="true" />}
+              </span>
+              <span className="filter-section-arrow">{expandedSections.author ? '▲' : '▼'}</span>
+            </button>
+            {expandedSections.author && (
+              <div className="filter-section-content">
+                <div className="filter-checkbox-grid">
+                  {availableAuthors.map(author => (
+                    <label key={author.id} className="filter-checkbox-label">
+                      <input
+                        type="checkbox"
+                        value={author.id}
+                        checked={selectedAuthors.includes(author.id)}
+                        onChange={() => handleAuthorToggle(author.id)}
+                      />
+                      {author.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {isAdmin && (
           <div className="filter-section">
-            <h3>Rezept-Status</h3>
-            <select
-              value={showDrafts}
-              onChange={(e) => setShowDrafts(e.target.value)}
-              className="filter-select"
+            <button
+              className="filter-section-header"
+              onClick={() => toggleSection('status')}
+              aria-expanded={expandedSections.status}
             >
-              <option value="all">Alle Rezepte</option>
-              <option value="yes">Nur Entwürfe</option>
-              <option value="no">Keine Entwürfe</option>
-            </select>
+              <span className="filter-section-title">
+                Rezept-Status
+                {showDrafts !== 'all' && <span className="filter-section-active-dot" aria-hidden="true" />}
+              </span>
+              <span className="filter-section-arrow">{expandedSections.status ? '▲' : '▼'}</span>
+            </button>
+            {expandedSections.status && (
+              <div className="filter-section-content">
+                <select
+                  value={showDrafts}
+                  onChange={(e) => setShowDrafts(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">Alle Rezepte</option>
+                  <option value="yes">Nur Entwürfe</option>
+                  <option value="no">Keine Entwürfe</option>
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -356,8 +356,8 @@ describe('FilterPage', () => {
       expect(screen.getByText('Kulinarik')).toBeInTheDocument();
     });
 
-    const sections = screen.getAllByRole('heading', { level: 3 });
-    expect(sections[0].textContent).toBe('Private Liste');
+    const sectionHeaders = screen.getAllByRole('button', { name: /private liste|kulinarik|autor|rezept-status/i });
+    expect(sectionHeaders[0].textContent).toMatch(/Private Liste/i);
   });
 
   test('selecting a private group includes it in applied filters', () => {
@@ -424,5 +424,63 @@ describe('FilterPage', () => {
 
     const select = screen.getByRole('combobox', { name: /private liste/i });
     expect(select.value).toBe('');
+  });
+
+  test('collapses a filter section when its header is clicked', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={true}
+      />
+    );
+
+    // Section content is visible initially
+    expect(screen.getByDisplayValue('Alle Rezepte')).toBeInTheDocument();
+
+    // Click the Rezept-Status accordion header to collapse it
+    fireEvent.click(screen.getByRole('button', { name: /rezept-status/i }));
+
+    // Content is now hidden
+    expect(screen.queryByDisplayValue('Alle Rezepte')).not.toBeInTheDocument();
+  });
+
+  test('expands a collapsed filter section when its header is clicked again', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={true}
+      />
+    );
+
+    const statusHeader = screen.getByRole('button', { name: /rezept-status/i });
+
+    // Collapse
+    fireEvent.click(statusHeader);
+    expect(screen.queryByDisplayValue('Alle Rezepte')).not.toBeInTheDocument();
+
+    // Expand again
+    fireEvent.click(statusHeader);
+    expect(screen.getByDisplayValue('Alle Rezepte')).toBeInTheDocument();
+  });
+
+  test('accordion header shows aria-expanded attribute', () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+        isAdmin={true}
+      />
+    );
+
+    const statusHeader = screen.getByRole('button', { name: /rezept-status/i });
+    expect(statusHeader).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(statusHeader);
+    expect(statusHeader).toHaveAttribute('aria-expanded', 'false');
   });
 });

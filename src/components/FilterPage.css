@@ -25,18 +25,55 @@
 .filter-section {
   background: white;
   border-radius: 8px;
-  padding: 0.875rem 1rem;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   margin-bottom: 0.75rem;
+  overflow: hidden;
 }
 
-.filter-section h3 {
-  margin: 0 0 0.6rem 0;
+.filter-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 0.5rem;
+}
+
+.filter-section-header:hover {
+  background-color: #f9f5f2;
+}
+
+.filter-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   color: #402C1C;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.filter-section-arrow {
+  font-size: 0.7rem;
+  color: #402C1C;
+  flex-shrink: 0;
+}
+
+.filter-section-active-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #402C1C;
+}
+
+.filter-section-content {
+  padding: 0 1rem 0.875rem 1rem;
 }
 
 .filter-options {
