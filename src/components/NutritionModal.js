@@ -4,6 +4,38 @@ import { httpsCallable } from 'firebase/functions';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals } from '../utils/nutritionUtils';
 import './NutritionModal.css';
 
+const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
+
+function loadStoredCalcResult(recipeId) {
+  if (!recipeId) return null;
+  try {
+    const stored = localStorage.getItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (
+      typeof parsed === 'object' && parsed !== null &&
+      typeof parsed.foundCount === 'number' &&
+      typeof parsed.totalCount === 'number' &&
+      Array.isArray(parsed.notIncluded)
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredCalcResult(recipeId, result) {
+  if (!recipeId) return;
+  try { localStorage.setItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId, JSON.stringify(result)); } catch { /* ignore */ }
+}
+
+function clearStoredCalcResult(recipeId) {
+  if (!recipeId) return;
+  try { localStorage.removeItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId); } catch { /* ignore */ }
+}
+
 function NutritionModal({ recipe, onClose, onSave }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
@@ -14,7 +46,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
   const [salz, setSalz] = useState('');
   const [saving, setSaving] = useState(false);
   const [autoCalcLoading, setAutoCalcLoading] = useState(false);
-  const [autoCalcResult, setAutoCalcResult] = useState(null);
+  const [autoCalcResult, setAutoCalcResult] = useState(() => loadStoredCalcResult(recipe?.id));
   const [calcProgress, setCalcProgress] = useState(null);
   const closeButtonRef = useRef(null);
 
@@ -91,6 +123,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
+    clearStoredCalcResult(recipe?.id);
     setCalcProgress({ done: 0, total: ingredients.length, current: ingredients[0] || '' });
 
     const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
@@ -133,7 +166,9 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
     setCalcProgress(null);
     setAutoCalcLoading(false);
-    setAutoCalcResult({ foundCount, totalCount: ingredients.length, notIncluded });
+    const result = { foundCount, totalCount: ingredients.length, notIncluded };
+    setAutoCalcResult(result);
+    saveStoredCalcResult(recipe?.id, result);
   };
 
   const hasValues =
