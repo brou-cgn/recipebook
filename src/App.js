@@ -297,7 +297,10 @@ function App() {
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
       } else {
         // Add new recipe or new version; attach groupId if created from within a group
-        const recipeWithGroup = activeGroupId ? { ...recipe, groupId: activeGroupId } : recipe;
+        const safeGroupId = activeGroupId
+          ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
+          : null;
+        const recipeWithGroup = safeGroupId ? { ...recipe, groupId: safeGroupId } : recipe;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
         // Auto-share the new recipe to generate the share link immediately
