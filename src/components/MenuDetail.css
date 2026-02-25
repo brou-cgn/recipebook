@@ -45,6 +45,8 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .favorite-button {
@@ -125,6 +127,10 @@
   border-radius: 6px;
   color: #402C1C;
   border-color: #402C1C;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .edit-button:hover {
