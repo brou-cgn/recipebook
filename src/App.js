@@ -129,8 +129,6 @@ function App() {
     selectedAuthors: [],
     selectedGroup: ''
   });
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [swRegistration, setSwRegistration] = useState(null);
   const recipeCountsInitialized = useRef(false);
 
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
@@ -178,15 +176,6 @@ function App() {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  useEffect(() => {
-    const handleSwUpdate = (event) => {
-      setUpdateAvailable(true);
-      setSwRegistration(event.detail);
-    };
-    window.addEventListener('swUpdate', handleSwUpdate);
-    return () => window.removeEventListener('swUpdate', handleSwUpdate);
   }, []);
 
   // Set up Firebase auth state observer
@@ -909,21 +898,6 @@ function App() {
           user={currentUser}
           onPasswordChanged={handlePasswordChanged}
         />
-      )}
-      {updateAvailable && (
-        <div className="sw-update-banner">
-          <span>🔄 Neue Version verfügbar!</span>
-          <button
-            onClick={() => {
-              if (swRegistration && swRegistration.waiting) {
-                swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              }
-              window.location.reload();
-            }}
-          >
-            Jetzt aktualisieren
-          </button>
-        </div>
       )}
     </div>
   );
