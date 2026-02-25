@@ -6,6 +6,7 @@ import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
+import ShoppingListModal from './ShoppingListModal';
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
@@ -13,8 +14,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
   const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
+  const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
   const [shareLoading, setShareLoading] = useState(false);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
+  const [showShoppingListModal, setShowShoppingListModal] = useState(false);
 
   // Load close button icon from settings
   useEffect(() => {
@@ -23,6 +26,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
       const icons = await getButtonIcons();
       setCloseButtonIcon(icons.menuCloseButton || '✕');
       setCopyLinkIcon(icons.copyLink || '📋');
+      setShoppingListIcon(icons.shoppingList || '🛒');
     };
     loadButtonIcons();
   }, []);
@@ -160,6 +164,21 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     }];
   }
 
+  const getMenuShoppingListIngredients = () => {
+    const ingredients = [];
+    for (const section of recipeSections) {
+      for (const recipe of section.recipes) {
+        for (const ing of (recipe.ingredients || [])) {
+          const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
+          if (item.type !== 'heading') {
+            ingredients.push(typeof ing === 'string' ? ing : ing.text);
+          }
+        }
+      }
+    }
+    return ingredients;
+  };
+
   return (
     <div className="menu-detail-container">
       <div className="menu-detail-header">
@@ -170,6 +189,18 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
             title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
           >
             {isFavorite ? '★' : '☆'}
+          </button>
+          <button
+            className="shopping-list-trigger-button"
+            onClick={() => setShowShoppingListModal(true)}
+            title="Einkaufsliste anzeigen"
+            aria-label="Einkaufsliste öffnen"
+          >
+            {isBase64Image(shoppingListIcon) ? (
+              <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+            ) : (
+              shoppingListIcon
+            )}
           </button>
           {canEditMenu(currentUser, menu) && (
             <button className="edit-button" onClick={() => onEdit(menu)}>
@@ -285,6 +316,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           </section>
         ))}
       </div>
+      {showShoppingListModal && (
+        <ShoppingListModal
+          items={getMenuShoppingListIngredients()}
+          title={menu.name}
+          onClose={() => setShowShoppingListModal(false)}
+        />
+      )}
     </div>
   );
 }

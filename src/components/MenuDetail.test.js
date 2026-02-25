@@ -89,7 +89,7 @@ describe('MenuDetail - Action Buttons', () => {
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
     const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(4);
+    expect(buttons.length).toBe(5);
   });
 });
 

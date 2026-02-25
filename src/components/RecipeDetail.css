@@ -125,7 +125,8 @@
 .version-button,
 .share-button,
 .share-copy-url-button,
-.publish-button {
+.publish-button,
+.shopping-list-trigger-button {
   background: white;
   border: 2px solid #ddd;
   padding: 0.75rem 1rem;
@@ -742,6 +743,17 @@
   }
 
   .mobile-action-buttons .favorite-button {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mobile-action-buttons .shopping-list-trigger-button {
     width: 48px;
     height: 48px;
     padding: 0;

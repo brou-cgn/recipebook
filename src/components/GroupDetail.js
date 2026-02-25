@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import ShoppingListModal from './ShoppingListModal';
 
 /**
  * Displays details of a single group including members and associated recipes.
@@ -21,6 +22,8 @@ import { isBase64Image } from '../utils/imageUtils';
 function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe }) {
   const [saving, setSaving] = useState(false);
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || '🛒');
+  const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberIds, setAddMemberIds] = useState([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -31,6 +34,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     const loadIcons = async () => {
       const icons = await getButtonIcons();
       setBackIcon(icons.privateListBack || DEFAULT_BUTTON_ICONS.privateListBack);
+      setShoppingListIcon(icons.shoppingList || DEFAULT_BUTTON_ICONS.shoppingList || '🛒');
     };
     loadIcons();
   }, []);
@@ -126,6 +130,19 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     }
   };
 
+  const getGroupShoppingListIngredients = () => {
+    const ingredients = [];
+    for (const recipe of groupRecipes) {
+      for (const ing of (recipe.ingredients || [])) {
+        const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
+        if (item.type !== 'heading') {
+          ingredients.push(typeof ing === 'string' ? ing : ing.text);
+        }
+      }
+    }
+    return ingredients;
+  };
+
   return (
     <div className="group-detail-container">
       <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
@@ -142,15 +159,31 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             {isPublic ? 'Öffentlich' : 'Privat'}
           </span>
         </div>
-        {onAddRecipe && (isOwner || isMember) && (
-          <button
-            className="group-add-recipe-btn"
-            onClick={() => onAddRecipe(group.id)}
-            aria-label={isPublic ? 'Rezept hinzufügen' : 'privates Rezept hinzufügen'}
-          >
-            {isPublic ? '+ Rezept hinzufügen' : '+ privates Rezept hinzufügen'}
-          </button>
-        )}
+        <div className="group-header-actions">
+          {onAddRecipe && (isOwner || isMember) && (
+            <button
+              className="group-add-recipe-btn"
+              onClick={() => onAddRecipe(group.id)}
+              aria-label={isPublic ? 'Rezept hinzufügen' : 'privates Rezept hinzufügen'}
+            >
+              {isPublic ? '+ Rezept hinzufügen' : '+ privates Rezept hinzufügen'}
+            </button>
+          )}
+          {groupRecipes.length > 0 && (
+            <button
+              className="shopping-list-trigger-button"
+              onClick={() => setShowShoppingListModal(true)}
+              title="Einkaufsliste anzeigen"
+              aria-label="Einkaufsliste öffnen"
+            >
+              {isBase64Image(shoppingListIcon) ? (
+                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+              ) : (
+                shoppingListIcon
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="group-detail-section">
@@ -295,6 +328,13 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             Liste löschen
           </button>
         </div>
+      )}
+      {showShoppingListModal && (
+        <ShoppingListModal
+          items={getGroupShoppingListIngredients()}
+          title={group.name}
+          onClose={() => setShowShoppingListModal(false)}
+        />
       )}
     </div>
   );
