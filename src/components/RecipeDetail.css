@@ -117,6 +117,8 @@
 .action-buttons {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .edit-button,
@@ -125,8 +127,7 @@
 .version-button,
 .share-button,
 .share-copy-url-button,
-.publish-button,
-.shopping-list-trigger-button {
+.publish-button {
   background: white;
   border: 2px solid #ddd;
   padding: 0.75rem 1rem;
@@ -137,9 +138,30 @@
   transition: all 0.3s ease;
 }
 
+.shopping-list-trigger-button {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shopping-list-trigger-button:hover {
+  opacity: 0.7;
+}
+
 .favorite-button {
   color: #DF7A00;
   border-color: #DF7A00;
+  width: 48px;
+  height: 48px;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .favorite-button:hover {
@@ -163,6 +185,10 @@
 .edit-button {
   color: #402C1C;
   border-color: #402C1C;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .edit-button:hover {

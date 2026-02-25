@@ -847,6 +847,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {isFavorite ? '★' : '☆'}
               </button>
             )}
+            {userCanDirectlyEdit && (
+              <button className="edit-button" onClick={() => onEdit(recipe)}>
+                Bearbeiten
+              </button>
+            )}
+            {userCanCreateVersion && !userCanDirectlyEdit && (
+              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+                Eigene Version erstellen
+              </button>
+            )}
             <button
               className="shopping-list-trigger-button"
               onClick={handleShoppingListClick}
@@ -859,16 +869,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 shoppingListIcon
               )}
             </button>
-            {userCanDirectlyEdit && (
-              <button className="edit-button" onClick={() => onEdit(recipe)}>
-                Bearbeiten
-              </button>
-            )}
-            {userCanCreateVersion && !userCanDirectlyEdit && (
-              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
-                Eigene Version erstellen
-              </button>
-            )}
             {userCanDelete && (
               <button className="delete-button" onClick={handleDelete}>
                 Löschen
@@ -1067,6 +1067,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {isFavorite ? '★' : '☆'}
                   </button>
                 )}
+                {userCanDirectlyEdit && (
+                  <button className="edit-button" onClick={() => onEdit(recipe)}>
+                    Bearbeiten
+                  </button>
+                )}
+                {userCanCreateVersion && !userCanDirectlyEdit && (
+                  <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+                    Eigene Version erstellen
+                  </button>
+                )}
                 <button
                   className="shopping-list-trigger-button"
                   onClick={handleShoppingListClick}
@@ -1079,16 +1089,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     shoppingListIcon
                   )}
                 </button>
-                {userCanDirectlyEdit && (
-                  <button className="edit-button" onClick={() => onEdit(recipe)}>
-                    Bearbeiten
-                  </button>
-                )}
-                {userCanCreateVersion && !userCanDirectlyEdit && (
-                  <button className="version-button" onClick={() => onCreateVersion(recipe)}>
-                    Eigene Version erstellen
-                  </button>
-                )}
                 {userCanDelete && (
                   <button className="delete-button" onClick={handleDelete}>
                     Löschen
