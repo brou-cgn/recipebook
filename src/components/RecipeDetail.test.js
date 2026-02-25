@@ -948,6 +948,61 @@ describe('RecipeDetail - Brightness-based alt icon switching', () => {
     // Canvas analysis should have been triggered for the cached image
     expect(createElementSpy).toHaveBeenCalledWith('canvas');
   });
+
+  test('falls back to direct analysis when CORS image load fails (onerror path)', async () => {
+    const createElementSpy = mockCanvasWithBrightness(200); // above BRIGHTNESS_THRESHOLD
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      image: 'https://example.com/photo.jpg',
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    // isBase64Image must return false so the CORS-Image branch is taken
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(false);
+
+    // Capture the Image constructor calls so we can trigger onerror
+    let corsImgInstance = null;
+    const OriginalImage = global.Image;
+    global.Image = function () {
+      corsImgInstance = new OriginalImage();
+      return corsImgInstance;
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const imgEl = document.querySelector('.recipe-detail-image img');
+    expect(imgEl).toBeInTheDocument();
+
+    await act(async () => {
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100, configurable: true });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100, configurable: true });
+      fireEvent.load(imgEl);
+    });
+
+    // Trigger the onerror on the CORS Image to exercise the fallback
+    await act(async () => {
+      if (corsImgInstance && corsImgInstance.onerror) {
+        corsImgInstance.onerror();
+      }
+    });
+
+    // The fallback should have attempted canvas analysis
+    expect(createElementSpy).toHaveBeenCalledWith('canvas');
+
+    global.Image = OriginalImage;
+  });
 });
 
 describe('RecipeDetail - Scroll to Top', () => {
