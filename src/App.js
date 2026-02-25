@@ -429,7 +429,12 @@ function App() {
     if (!currentUser) return;
 
     try {
-      await updateRecipeInFirestore(recipeId, { publishedToPublic: true });
+      const resolvedPublicGroupId = publicGroupId || groups.find(g => g.type === 'public')?.id;
+      await updateRecipeInFirestore(recipeId, {
+        publishedToPublic: true,
+        groupId: resolvedPublicGroupId,
+        groupType: 'public'
+      });
     } catch (error) {
       console.error('Error publishing recipe:', error);
       alert('Fehler beim Veröffentlichen des Rezepts. Bitte versuchen Sie es erneut.');
