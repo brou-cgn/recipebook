@@ -177,3 +177,23 @@ export const disableMenuSharing = async (menuId) => {
     throw error;
   }
 };
+
+/**
+ * Update the portion count for a specific recipe in a menu
+ * @param {string} menuId - ID of the menu
+ * @param {string} recipeId - ID of the recipe
+ * @param {number} portionCount - Number of portions to store
+ * @returns {Promise<void>}
+ */
+export const updateMenuPortionCount = async (menuId, recipeId, portionCount) => {
+  try {
+    const menuRef = doc(db, 'menus', menuId);
+    await updateDoc(menuRef, {
+      [`portionCounts.${recipeId}`]: portionCount,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating menu portion count:', error);
+    throw error;
+  }
+};

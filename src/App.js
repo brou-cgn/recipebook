@@ -46,7 +46,8 @@ import {
   subscribeToMenus,
   addMenu as addMenuToFirestore,
   updateMenu as updateMenuInFirestore,
-  deleteMenu as deleteMenuFromFirestore
+  deleteMenu as deleteMenuFromFirestore,
+  updateMenuPortionCount
 } from './utils/menuFirestore';
 import {
   subscribeToGroups,
@@ -569,6 +570,22 @@ function App() {
     }
   };
 
+  const handleMenuPortionCountChange = async (recipeId, portionCount) => {
+    if (!selectedMenu) return;
+    try {
+      await updateMenuPortionCount(selectedMenu.id, recipeId, portionCount);
+      setSelectedMenu(prev => ({
+        ...prev,
+        portionCounts: {
+          ...(prev.portionCounts || {}),
+          [recipeId]: portionCount
+        }
+      }));
+    } catch (error) {
+      console.error('Error updating menu portion count:', error);
+    }
+  };
+
   // Group handlers
   const handleSelectGroup = (group) => {
     setSelectedGroup(group);
@@ -759,6 +776,8 @@ function App() {
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
           publicGroupId={publicGroupId}
+          menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
+          onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
         />
       ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
