@@ -205,18 +205,20 @@ function App() {
 
   // Apply favicon settings on mount
   useEffect(() => {
+    if (!currentUser) return;
     const loadFavicon = async () => {
       await applyFaviconSettings();
     };
     loadFavicon();
-  }, []);
+  }, [currentUser]);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
+    if (!currentUser) return;
     ensurePublicGroup().then((id) => setPublicGroupId(id)).catch((err) => {
       console.error('Error ensuring public group:', err);
     });
-  }, []);
+  }, [currentUser]);
 
   // Set up real-time listener for recipes from Firestore.
   // Re-subscribes when userGroupIds changes so group-scoped recipe visibility stays current.
