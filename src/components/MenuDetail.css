@@ -147,6 +147,12 @@
   padding: 2rem;
 }
 
+.menu-delete-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .menu-title-row {
   display: flex;
   align-items: center;

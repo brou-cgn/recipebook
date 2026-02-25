@@ -71,7 +71,7 @@ describe('MenuDetail - Action Buttons', () => {
     expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
   });
 
-  test('action-buttons container wraps all four buttons', () => {
+  test('action-buttons container wraps all buttons except delete', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -89,7 +89,55 @@ describe('MenuDetail - Action Buttons', () => {
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
     const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(5);
+    expect(buttons.length).toBe(4);
+  });
+
+  test('delete button is not inside action-buttons', () => {
+    const { container } = render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const actionButtons = container.querySelector('.action-buttons');
+    const deleteInHeader = actionButtons.querySelector('.delete-button');
+    expect(deleteInHeader).not.toBeInTheDocument();
+  });
+
+  test('delete button is inside menu-delete-actions below the content', () => {
+    const { container } = render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const deleteActions = container.querySelector('.menu-delete-actions');
+    expect(deleteActions).toBeInTheDocument();
+    const deleteButton = deleteActions.querySelector('.delete-button');
+    expect(deleteButton).toBeInTheDocument();
+    expect(deleteButton).toHaveTextContent('Löschen');
+
+    // Verify menu-delete-actions appears after menu-detail-content
+    const menuContent = container.querySelector('.menu-detail-content');
+    expect(
+      menuContent.compareDocumentPosition(deleteActions) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });
 
