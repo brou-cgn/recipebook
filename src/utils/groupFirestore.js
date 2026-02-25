@@ -61,25 +61,43 @@ export const ensurePublicGroup = async () => {
  */
 export const subscribeToGroups = (userId, callback) => {
   const groupsRef = collection(db, 'groups');
+  const q1 = query(groupsRef, where('type', '==', 'public'));
+  const q2 = query(groupsRef, where('memberIds', 'array-contains', userId));
 
-  return onSnapshot(groupsRef, (snapshot) => {
-    const groups = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      // Include public groups and groups where user is owner or member
-      if (
-        data.type === 'public' ||
-        data.ownerId === userId ||
-        (Array.isArray(data.memberIds) && data.memberIds.includes(userId))
-      ) {
-        groups.push({ id: docSnap.id, ...data });
-      }
-    });
-    callback(groups);
-  }, (error) => {
+  let results1 = null;
+  let results2 = null;
+
+  const merge = () => {
+    if (results1 === null || results2 === null) return;
+    const map = new Map();
+    [...results1, ...results2].forEach(g => map.set(g.id, g));
+    callback(Array.from(map.values()));
+  };
+
+  let errorCalled = false;
+  const handleError = (error) => {
+    if (errorCalled) return;
+    errorCalled = true;
     console.error('Error subscribing to groups:', error);
     callback([]);
-  });
+  };
+
+  const unsub1 = onSnapshot(q1, (snapshot) => {
+    results1 = [];
+    snapshot.forEach(docSnap => results1.push({ id: docSnap.id, ...docSnap.data() }));
+    merge();
+  }, handleError);
+
+  const unsub2 = onSnapshot(q2, (snapshot) => {
+    results2 = [];
+    snapshot.forEach(docSnap => results2.push({ id: docSnap.id, ...docSnap.data() }));
+    merge();
+  }, handleError);
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 };
 
 /**
@@ -90,19 +108,16 @@ export const subscribeToGroups = (userId, callback) => {
 export const getGroups = async (userId) => {
   try {
     const groupsRef = collection(db, 'groups');
-    const snapshot = await getDocs(groupsRef);
-    const groups = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (
-        data.type === 'public' ||
-        data.ownerId === userId ||
-        (Array.isArray(data.memberIds) && data.memberIds.includes(userId))
-      ) {
-        groups.push({ id: docSnap.id, ...data });
-      }
+    const q1 = query(groupsRef, where('type', '==', 'public'));
+    const q2 = query(groupsRef, where('memberIds', 'array-contains', userId));
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const map = new Map();
+    [snap1, snap2].forEach(snap => {
+      snap.forEach(docSnap => {
+        map.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+      });
     });
-    return groups;
+    return Array.from(map.values());
   } catch (error) {
     console.error('Error getting groups:', error);
     return [];

@@ -34,15 +34,18 @@ import { deleteRecipeImage } from './storageUtils';
  */
 export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [], publicGroupIds = []) => {
   const recipesRef = collection(db, 'recipes');
-  
-  return onSnapshot(recipesRef, (snapshot) => {
+  const q1 = query(recipesRef, where('isPrivate', '==', false));
+  const q2 = query(recipesRef, where('authorId', '==', userId));
+
+  let results1 = null;
+  let results2 = null;
+
+  const mergeAndFilter = () => {
+    if (results1 === null || results2 === null) return;
+    const map = new Map();
+    [...results1, ...results2].forEach(r => map.set(r.id, r));
     const recipes = [];
-    snapshot.forEach((doc) => {
-      const recipe = {
-        id: doc.id,
-        ...doc.data()
-      };
-      
+    map.forEach(recipe => {
       // Group recipes are only visible to group members (and admins),
       // unless the recipe has been published to the public list.
       if (recipe.groupId && !recipe.publishedToPublic) {
@@ -57,10 +60,32 @@ export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [],
       }
     });
     callback(recipes);
-  }, (error) => {
+  };
+
+  let errorCalled = false;
+  const handleError = (error) => {
+    if (errorCalled) return;
+    errorCalled = true;
     console.error('Error subscribing to recipes:', error);
     callback([]);
-  });
+  };
+
+  const unsub1 = onSnapshot(q1, (snapshot) => {
+    results1 = [];
+    snapshot.forEach(docSnap => results1.push({ id: docSnap.id, ...docSnap.data() }));
+    mergeAndFilter();
+  }, handleError);
+
+  const unsub2 = onSnapshot(q2, (snapshot) => {
+    results2 = [];
+    snapshot.forEach(docSnap => results2.push({ id: docSnap.id, ...docSnap.data() }));
+    mergeAndFilter();
+  }, handleError);
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 };
 
 /**

@@ -26,8 +26,9 @@ import { removeUndefinedFields } from './firestoreUtils';
  */
 export const subscribeToMenus = (callback) => {
   const menusRef = collection(db, 'menus');
-  
-  return onSnapshot(menusRef, (snapshot) => {
+  const q = query(menusRef, where('isPrivate', '==', false));
+
+  return onSnapshot(q, (snapshot) => {
     const menus = [];
     snapshot.forEach((doc) => {
       menus.push({
@@ -49,7 +50,8 @@ export const subscribeToMenus = (callback) => {
 export const getMenus = async () => {
   try {
     const menusRef = collection(db, 'menus');
-    const snapshot = await getDocs(menusRef);
+    const q = query(menusRef, where('isPrivate', '==', false));
+    const snapshot = await getDocs(q);
     const menus = [];
     snapshot.forEach((doc) => {
       menus.push({

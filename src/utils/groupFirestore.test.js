@@ -67,14 +67,18 @@ describe('groupFirestore - subscribeToGroups', () => {
   });
 
   it('should include public groups regardless of user membership', (done) => {
-    const groups = [
-      { id: 'g1', type: 'public', name: PUBLIC_GROUP_NAME, ownerId: null, memberIds: [] },
-      { id: 'g2', type: 'private', name: 'Team A', ownerId: 'user2', memberIds: ['user2'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
-      return jest.fn();
-    });
+    // q1 (type=='public') returns the public group; q2 (memberIds contains user1) returns nothing
+    mockOnSnapshot
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([
+          { id: 'g1', type: 'public', name: PUBLIC_GROUP_NAME, ownerId: null, memberIds: [] }
+        ]));
+        return jest.fn();
+      })
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([]));
+        return jest.fn();
+      });
 
     subscribeToGroups('user1', (result) => {
       expect(result).toHaveLength(1);
@@ -84,14 +88,18 @@ describe('groupFirestore - subscribeToGroups', () => {
   });
 
   it('should include groups where user is owner', (done) => {
-    const groups = [
-      { id: 'g1', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] },
-      { id: 'g2', type: 'private', name: 'Other Group', ownerId: 'user2', memberIds: ['user2'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
-      return jest.fn();
-    });
+    // q1 (type=='public') returns nothing; q2 (memberIds contains user1) returns g1
+    mockOnSnapshot
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([]));
+        return jest.fn();
+      })
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([
+          { id: 'g1', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] }
+        ]));
+        return jest.fn();
+      });
 
     subscribeToGroups('user1', (result) => {
       expect(result).toHaveLength(1);
@@ -101,14 +109,18 @@ describe('groupFirestore - subscribeToGroups', () => {
   });
 
   it('should include groups where user is a member', (done) => {
-    const groups = [
-      { id: 'g1', type: 'private', name: 'Team', ownerId: 'user2', memberIds: ['user2', 'user1'] },
-      { id: 'g2', type: 'private', name: 'Other', ownerId: 'user3', memberIds: ['user3'] }
-    ];
-    mockOnSnapshot.mockImplementation((_ref, successCallback) => {
-      successCallback(createMockSnapshot(groups));
-      return jest.fn();
-    });
+    // q1 (type=='public') returns nothing; q2 (memberIds contains user1) returns g1
+    mockOnSnapshot
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([]));
+        return jest.fn();
+      })
+      .mockImplementationOnce((_ref, successCallback) => {
+        successCallback(createMockSnapshot([
+          { id: 'g1', type: 'private', name: 'Team', ownerId: 'user2', memberIds: ['user2', 'user1'] }
+        ]));
+        return jest.fn();
+      });
 
     subscribeToGroups('user1', (result) => {
       expect(result).toHaveLength(1);
@@ -118,7 +130,7 @@ describe('groupFirestore - subscribeToGroups', () => {
   });
 
   it('should call callback with empty array on error', (done) => {
-    mockOnSnapshot.mockImplementation((_ref, _successCallback, errorCallback) => {
+    mockOnSnapshot.mockImplementationOnce((_ref, _successCallback, errorCallback) => {
       errorCallback(new Error('Firestore error'));
       return jest.fn();
     });
@@ -139,12 +151,15 @@ describe('groupFirestore - getGroups', () => {
   });
 
   it('should return public and user-relevant groups', async () => {
-    const groups = [
-      { id: 'g1', type: 'public', name: PUBLIC_GROUP_NAME, ownerId: null, memberIds: [] },
-      { id: 'g2', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] },
-      { id: 'g3', type: 'private', name: 'Other', ownerId: 'user2', memberIds: ['user2'] }
+    const publicGroups = [
+      { id: 'g1', type: 'public', name: PUBLIC_GROUP_NAME, ownerId: null, memberIds: [] }
     ];
-    mockGetDocs.mockResolvedValue(createMockSnapshot(groups));
+    const memberGroups = [
+      { id: 'g2', type: 'private', name: 'My Group', ownerId: 'user1', memberIds: ['user1'] }
+    ];
+    mockGetDocs
+      .mockResolvedValueOnce(createMockSnapshot(publicGroups))
+      .mockResolvedValueOnce(createMockSnapshot(memberGroups));
 
     const result = await getGroups('user1');
     expect(result).toHaveLength(2);
