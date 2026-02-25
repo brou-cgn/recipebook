@@ -1,36 +1,119 @@
 # Firestore Security Rules
 
-This file contains security rules for the Firestore database that enforce access control for recipes, menus, and other collections.
+This file documents the security rules for the Firestore database that enforce access control for all collections.
 
-## Overview
+## Roles
 
-The security rules implement the following access control:
+| Role | Description |
+|------|-------------|
+| `admin` | Full access to everything |
+| `edit` | Can create and edit own content |
+| `comment` | Currently equivalent to `read` |
+| `read` | Read-only access |
+| `guest` | Not logged in (no Firebase Auth) |
 
-### Recipes
-- **Read (Public recipes)**: Any authenticated user
-- **Read (Private/Draft recipes)**: Only administrators and the recipe author
-- **Create**: Any authenticated user
-- **Update**: Only the recipe author or administrators
-- **Delete**: Only the recipe author or administrators
+## Helper Functions
 
-### Menus
-- **Read (Public menus)**: Any authenticated user
-- **Read (Private menus)**: Only the menu creator or administrators
-- **Create**: Any authenticated user
-- **Update**: Only the menu creator or administrators
-- **Delete**: Only the menu creator or administrators
+The following helper functions are defined in `firestore.rules`:
 
-### Users
-- **Read**: Users can read their own profile, administrators can read all profiles
-- **Update**: Users can update their own profile
-- **Create/Delete**: Only administrators
+- `isAuthenticated()` – Returns `true` if the user is logged in
+- `getUserData()` – Returns the current user's document from `/users/{uid}`
+- `isAdmin()` – Returns `true` if the user has the `admin` role
+- `isEdit()` – Returns `true` if the user has the `edit` role (or is admin)
+- `isAuthor(authorId)` – Returns `true` if the current user is the document's author
+- `isGroupMember(groupId)` – Returns `true` if the current user is a member of the group
+- `isGroupOwner(groupId)` – Returns `true` if the current user is the owner of the group
+- `isPublicGroup(groupId)` – Returns `true` if the group type is `public`
+- `isPrivateGroup(groupId)` – Returns `true` if the group type is `private`
 
-### Favorites (User subcollections)
-- **Read/Write**: Only the user who owns the favorites
+## Permission Concept per Collection
 
-### Settings and Custom Lists
-- **Read**: Any authenticated user
-- **Write**: Only administrators
+### Recipes (`/recipes/{recipeId}`)
+
+> **Important:** Every recipe must have a `groupId`. Recipes without a `groupId` cannot be created or read (except via share link).
+
+| Operation | Who |
+|-----------|-----|
+| Read (share link) | Anyone, including guests |
+| Read (public group, non-draft) | All authenticated users |
+| Read (public group, draft) | `admin` only |
+| Read (private group, non-draft) | `admin` (always), or authenticated group member |
+| Read (private group, draft) | `admin` only |
+| Create | `admin`, `edit` (groupId required) |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` only |
+
+### Menus (`/menus/{menuId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read (share link) | Anyone, including guests |
+| Read (non-draft) | All authenticated users |
+| Read (draft) | `admin` (all), `edit` (own) |
+| Create | `admin`, `edit` |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` (all), `edit` (own) |
+
+### Groups (`/groups/{groupId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read (public group) | `admin` only |
+| Read (private group) | `admin` (all), `edit` + `read` (member or owner) |
+| Create | `admin` always, `edit` (private groups only) |
+| Update | `admin` (all), `edit` + `read` (own groups) |
+| Delete | `admin` (all), `edit` (own = group owner) |
+
+### Users (`/users/{userId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create | `admin` or guest (for self-registration) |
+| Update | `admin` (all), any authenticated user (own profile) |
+| Delete | `admin` only |
+
+### Favorites & Menu Favorites (subcollections)
+
+- `/users/{userId}/favorites/{favoriteId}` – Read/Write: authenticated user (own only)
+- `/users/{userId}/menuFavorites/{favoriteId}` – Read/Write: authenticated user (own only)
+
+### Settings (`/settings/{settingId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
+### Custom Lists (`/customLists/{listId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
+### FAQs (`/faqs/{faqId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
+### Shopping Lists (`/shoppingLists/{listId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create | `admin`, `edit` |
+| Update | `admin` (all), `edit` (own) |
+| Delete | `admin` only |
+
+### AI Scan Limits (`/aiScanLimits/{limitId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | `admin`, `edit` |
+| Create / Update / Delete | `admin` only |
 
 ## Deployment
 
@@ -71,22 +154,3 @@ firebase emulators:start
 - Client-side filtering provides immediate UX feedback
 - Server-side rules (Firestore) provide the actual security enforcement
 - Both layers are necessary for proper security and user experience
-
-## Draft Recipe Visibility
-
-The key security feature implemented here is the restriction of draft recipe visibility:
-
-```javascript
-allow read: if isAuthenticated() && 
-               (!resource.data.isPrivate || 
-                isAdmin() || 
-                isAuthor(resource.data.authorId));
-```
-
-This ensures that:
-1. Public recipes (`isPrivate: false` or undefined) can be read by any authenticated user
-2. Private/Draft recipes (`isPrivate: true`) can only be read by:
-   - Administrators
-   - The author of the recipe
-
-This matches the client-side filtering implemented in `src/utils/recipeFirestore.js`.
