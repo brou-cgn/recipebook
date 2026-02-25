@@ -32,7 +32,7 @@ import { deleteRecipeImage } from './storageUtils';
  * @param {string[]} [userGroupIds=[]] - IDs of groups the current user belongs to
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = []) => {
+export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [], publicGroupIds = []) => {
   const recipesRef = collection(db, 'recipes');
   
   return onSnapshot(recipesRef, (snapshot) => {
@@ -46,7 +46,7 @@ export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [])
       // Group recipes are only visible to group members (and admins),
       // unless the recipe has been published to the public list.
       if (recipe.groupId && !recipe.publishedToPublic) {
-        if (!isAdmin && !userGroupIds.includes(recipe.groupId)) {
+        if (!isAdmin && !userGroupIds.includes(recipe.groupId) && !publicGroupIds.includes(recipe.groupId)) {
           return;
         }
       }
