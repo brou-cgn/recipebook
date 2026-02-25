@@ -14,7 +14,7 @@ import NutritionModal from './NutritionModal';
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -100,6 +100,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Update selected recipe when initial recipe changes
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
+    // Initialize serving multiplier from menu portion count if provided
+    if (menuPortionCount != null && initialRecipe.portionen) {
+      setServingMultiplier(menuPortionCount / initialRecipe.portionen);
+    } else {
+      setServingMultiplier(1);
+    }
     // Reset brightness-based alt icon state for the new recipe's image
     setUseCookingModeAlt(false);
     setUseCloseButtonAlt(false);
@@ -108,7 +114,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (contentRef.current) {
       contentRef.current.scrollTop = 0;
     }
-  }, [initialRecipe]);
+  }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // If the recipe image is already in the browser cache, the onLoad event
   // will not fire and brightness analysis would be skipped. This effect
@@ -867,6 +873,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         const newServings = currentServings - 1;
                         if (newServings >= 1) {
                           setServingMultiplier(newServings / basePortions);
+                          if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
                         }
                       }}
                       disabled={currentServings <= 1}
@@ -882,6 +889,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         const basePortions = recipe.portionen || 4;
                         const newServings = currentServings + 1;
                         setServingMultiplier(newServings / basePortions);
+                        if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
                       }}
                     >
                       +
@@ -1191,6 +1199,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         const newServings = currentServings - 1;
                         if (newServings >= 1) {
                           setServingMultiplier(newServings / basePortions);
+                          if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
                         }
                       }}
                       disabled={currentServings <= 1}
@@ -1206,6 +1215,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         const basePortions = recipe.portionen || 4;
                         const newServings = currentServings + 1;
                         setServingMultiplier(newServings / basePortions);
+                        if (onPortionCountChange) onPortionCountChange(recipe.id, newServings);
                       }}
                     >
                       +
