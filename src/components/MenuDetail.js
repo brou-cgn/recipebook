@@ -371,6 +371,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           items={getMenuShoppingListIngredients()}
           title={menu.name}
           onClose={() => setShowShoppingListModal(false)}
+          shareId={menu.shareId}
+          onEnableSharing={async () => {
+            const sid = await enableMenuSharing(menu.id);
+            setMenu({ ...menu, shareId: sid });
+            return sid;
+          }}
         />
       )}
       {showPortionSelector && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ShoppingListModal.css';
 
-function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing }) {
+function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton }) {
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );
@@ -158,14 +158,14 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing }) 
           <span className="shopping-list-count">
             {checkedCount} / {listItems.length} erledigt
           </span>
-          <button
+          {!hideBringButton && <button
             className="shopping-list-bring-btn"
             onClick={handleBringExport}
             disabled={bringLoading || listItems.length === 0}
             title="Einkaufsliste an Bring! übergeben"
           >
             {bringLoading ? '…' : '🛍️ Bring!'}
-          </button>
+          </button>}
           <button
             className="shopping-list-reset-btn"
             onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}

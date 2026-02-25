@@ -334,6 +334,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           items={getGroupShoppingListIngredients()}
           title={group.name}
           onClose={() => setShowShoppingListModal(false)}
+          hideBringButton={true}
         />
       )}
     </div>
