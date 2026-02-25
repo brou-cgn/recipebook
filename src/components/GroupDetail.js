@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { mergeIngredients } from '../utils/ingredientUtils';
 import ShoppingListModal from './ShoppingListModal';
 
 /**
@@ -140,7 +141,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         }
       }
     }
-    return ingredients;
+    return mergeIngredients(ingredients);
   };
 
   return (

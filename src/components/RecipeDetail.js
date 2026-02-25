@@ -7,6 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
+import { mergeIngredients } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -379,7 +380,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const getShoppingListIngredients = () => {
     const rawIngredients = recipe.ingredients || [];
-    return rawIngredients
+    const filtered = rawIngredients
       .filter(ing => {
         const item = typeof ing === 'string' ? { type: 'ingredient' } : ing;
         return item.type !== 'heading';
@@ -388,6 +389,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const text = typeof ing === 'string' ? ing : ing.text;
         return scaleIngredient(text);
       });
+    return mergeIngredients(filtered);
   };
 
   const getShareUrl = () => {

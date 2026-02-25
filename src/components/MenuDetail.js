@@ -6,6 +6,7 @@ import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
+import { mergeIngredients } from '../utils/ingredientUtils';
 import ShoppingListModal from './ShoppingListModal';
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
@@ -176,7 +177,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
         }
       }
     }
-    return ingredients;
+    return mergeIngredients(ingredients);
   };
 
   return (

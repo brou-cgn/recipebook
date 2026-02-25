@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, mergeIngredients } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -194,5 +194,83 @@ describe('formatIngredients', () => {
 
   test('handles undefined', () => {
     expect(formatIngredients(undefined)).toBe(undefined);
+  });
+});
+
+describe('mergeIngredients', () => {
+  describe('combining identical ingredients', () => {
+    test('sums quantities with the same unit', () => {
+      const result = mergeIngredients(['100 g Zucker', '50 g Zucker']);
+      expect(result).toEqual(['150 g Zucker']);
+    });
+
+    test('sums quantities across multiple occurrences', () => {
+      const result = mergeIngredients(['100 g Mehl', '200 g Mehl', '50 g Mehl']);
+      expect(result).toEqual(['350 g Mehl']);
+    });
+
+    test('sums liquid quantities', () => {
+      const result = mergeIngredients(['200 ml Milch', '300 ml Milch']);
+      expect(result).toEqual(['500 ml Milch']);
+    });
+
+    test('sums tablespoon quantities', () => {
+      const result = mergeIngredients(['2 EL Olivenöl', '1 EL Olivenöl']);
+      expect(result).toEqual(['3 EL Olivenöl']);
+    });
+
+    test('sums count ingredients (no unit)', () => {
+      const result = mergeIngredients(['3 Eier', '2 Eier']);
+      expect(result).toEqual(['5 Eier']);
+    });
+
+    test('deduplicates ingredients without amount', () => {
+      const result = mergeIngredients(['Salz', 'Salz', 'Pfeffer']);
+      expect(result).toEqual(['Salz', 'Pfeffer']);
+    });
+  });
+
+  describe('case insensitivity', () => {
+    test('merges ingredients regardless of name casing', () => {
+      const result = mergeIngredients(['100 g Zucker', '50 g zucker']);
+      expect(result).toEqual(['150 g Zucker']);
+    });
+  });
+
+  describe('preserving unrelated ingredients', () => {
+    test('keeps different ingredients separate', () => {
+      const result = mergeIngredients(['100 g Zucker', '200 g Mehl']);
+      expect(result).toEqual(['100 g Zucker', '200 g Mehl']);
+    });
+
+    test('keeps ingredients with different units separate', () => {
+      const result = mergeIngredients(['100 g Zucker', '1 kg Zucker']);
+      expect(result).toEqual(['100 g Zucker', '1 kg Zucker']);
+    });
+
+    test('handles mixed ingredients', () => {
+      const result = mergeIngredients(['100 g Zucker', '200 g Mehl', '50 g Zucker', '3 Eier']);
+      expect(result).toEqual(['150 g Zucker', '200 g Mehl', '3 Eier']);
+    });
+  });
+
+  describe('edge cases', () => {
+    test('returns empty array for empty input', () => {
+      expect(mergeIngredients([])).toEqual([]);
+    });
+
+    test('returns single item unchanged', () => {
+      expect(mergeIngredients(['100 g Mehl'])).toEqual(['100 g Mehl']);
+    });
+
+    test('handles null/undefined in array', () => {
+      const result = mergeIngredients(['100 g Mehl', null, undefined, '50 g Mehl']);
+      expect(result).toEqual(['150 g Mehl']);
+    });
+
+    test('returns non-array input unchanged', () => {
+      expect(mergeIngredients(null)).toBe(null);
+      expect(mergeIngredients(undefined)).toBe(undefined);
+    });
   });
 });
