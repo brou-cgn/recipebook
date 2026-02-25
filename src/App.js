@@ -340,7 +340,11 @@ function App() {
         const safeGroupId = activeGroupId
           ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
           : resolvedPublicGroupId;
-        const recipeWithGroup = safeGroupId ? { ...recipe, groupId: safeGroupId } : recipe;
+        // Auto-publish when creating via "Rezept hinzufügen" (no active private group)
+        const autoPublish = !activeGroupId && !isCreatingVersion;
+        const recipeWithGroup = safeGroupId
+          ? { ...recipe, groupId: safeGroupId, ...(autoPublish ? { publishedToPublic: true } : {}) }
+          : recipe;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
         // Auto-share the new recipe to generate the share link immediately
