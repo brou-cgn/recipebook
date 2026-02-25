@@ -5,8 +5,7 @@ import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * Displays details of a single group including members and associated recipes.
- * Owners can add/remove members and delete the group.
- * Members (and owners) can add recipes scoped to the group.
+ * Owners and members can add new members; only owners can remove members or delete the group.
  *
  * @param {Object} props
  * @param {Object} props.group - The group object
@@ -22,6 +21,11 @@ import { isBase64Image } from '../utils/imageUtils';
 function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe }) {
   const [saving, setSaving] = useState(false);
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [addMemberIds, setAddMemberIds] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [addMemberError, setAddMemberError] = useState('');
+  const [addMemberSuccess, setAddMemberSuccess] = useState('');
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -63,6 +67,65 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     await onDeleteGroup(group.id);
   };
 
+  // Users that are not yet members of this group
+  const nonMembers = (allUsers || []).filter(
+    (u) => !(group.memberIds || []).includes(u.id) && u.id !== currentUser?.id
+  );
+
+  const toggleAddMemberId = (userId) => {
+    setAddMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleAddMembers = async () => {
+    setAddMemberError('');
+    setAddMemberSuccess('');
+
+    const emailTrimmed = inviteEmail.trim();
+    const hasSelections = addMemberIds.length > 0;
+    const hasEmail = emailTrimmed.length > 0;
+
+    if (!hasSelections && !hasEmail) {
+      setAddMemberError('Bitte wähle mindestens ein Mitglied aus oder gib eine E-Mail-Adresse ein.');
+      return;
+    }
+
+    if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      setAddMemberError('Bitte gib eine gültige E-Mail-Adresse ein.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updatedMemberIds = [
+        ...(group.memberIds || []),
+        ...addMemberIds.filter((id) => !(group.memberIds || []).includes(id)),
+      ];
+      const updatedInvitedEmails = hasEmail
+        ? [...new Set([...(group.invitedEmails || []), emailTrimmed])]
+        : group.invitedEmails || [];
+
+      await onUpdateGroup(group.id, {
+        memberIds: updatedMemberIds,
+        invitedEmails: updatedInvitedEmails,
+      });
+
+      setAddMemberIds([]);
+      setInviteEmail('');
+      setShowAddMember(false);
+      setAddMemberSuccess(
+        hasEmail && !hasSelections
+          ? `Einladung an ${emailTrimmed} wurde gespeichert.`
+          : 'Mitglied(er) erfolgreich hinzugefügt.'
+      );
+    } catch (err) {
+      setAddMemberError('Fehler beim Hinzufügen. Bitte erneut versuchen.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="group-detail-container">
       <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
@@ -91,7 +154,76 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       </div>
 
       <div className="group-detail-section">
-        <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+        <div className="group-section-header">
+          <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+          {(isOwner || isMember) && !isPublic && (
+            <button
+              className="group-add-member-btn"
+              onClick={() => { setShowAddMember((v) => !v); setAddMemberError(''); setAddMemberSuccess(''); setAddMemberIds([]); setInviteEmail(''); }}
+              aria-label="Mitglied hinzufügen"
+            >
+              + Mitglied hinzufügen
+            </button>
+          )}
+        </div>
+        {addMemberSuccess && (
+          <p className="group-add-member-success" role="status">{addMemberSuccess}</p>
+        )}
+        {showAddMember && !isPublic && (
+          <div className="group-add-member-panel">
+            {nonMembers.length > 0 && (
+              <div className="group-dialog-field">
+                <label>Bestehende Nutzer</label>
+                <div className="group-add-member-list">
+                  {nonMembers.map((user) => (
+                    <label key={user.id} className="group-member-item">
+                      <input
+                        type="checkbox"
+                        checked={addMemberIds.includes(user.id)}
+                        onChange={() => toggleAddMemberId(user.id)}
+                      />
+                      <span className="group-member-name">
+                        {user.vorname} {user.nachname}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="group-dialog-field">
+              <label htmlFor="invite-email">Einladung per E-Mail</label>
+              <input
+                id="invite-email"
+                type="email"
+                className="group-invite-email-input"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="name@example.com"
+              />
+            </div>
+            {addMemberError && (
+              <p className="group-dialog-error" role="alert">{addMemberError}</p>
+            )}
+            <div className="group-add-member-actions">
+              <button
+                type="button"
+                className="group-btn-secondary"
+                onClick={() => { setShowAddMember(false); setAddMemberError(''); setAddMemberIds([]); setInviteEmail(''); }}
+                disabled={saving}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                className="group-btn-primary"
+                onClick={handleAddMembers}
+                disabled={saving}
+              >
+                {saving ? 'Speichern...' : 'Hinzufügen'}
+              </button>
+            </div>
+          </div>
+        )}
         {(group.memberIds || []).length === 0 ? (
           <p className="group-empty-hint">Keine Mitglieder.</p>
         ) : (
