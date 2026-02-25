@@ -49,7 +49,9 @@ service cloud.firestore {
       allow read: if isAdmin() && resource.data.groupId != null;
 
       // Recipes without groupId: all authenticated users can read (transition rule)
-      allow read: if isAuthenticated() && resource.data.groupId == null && !resource.data.isPrivate;
+      allow read: if isAuthenticated() && 
+                     !('groupId' in resource.data) && 
+                     resource.data.isPrivate == false;
 
       // Public group, non-draft: any authenticated user
       allow read: if isAuthenticated() &&
