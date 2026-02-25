@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -233,5 +233,57 @@ describe('scaleIngredient', () => {
 
   test('handles ingredients without numbers', () => {
     expect(scaleIngredient('Salz nach Geschmack', 2)).toBe('Salz nach Geschmack');
+  });
+});
+
+describe('combineIngredients', () => {
+  test('combines same ingredient with same unit', () => {
+    expect(combineIngredients(['100 g Zucker', '50 g Zucker'])).toEqual(['150 g Zucker']);
+  });
+
+  test('combines same ingredient with integer result', () => {
+    expect(combineIngredients(['200 g Mehl', '300 g Mehl'])).toEqual(['500 g Mehl']);
+  });
+
+  test('does not combine ingredients with different units', () => {
+    expect(combineIngredients(['100 g Zucker', '50 ml Zucker'])).toEqual(['100 g Zucker', '50 ml Zucker']);
+  });
+
+  test('does not combine ingredients with different names', () => {
+    expect(combineIngredients(['100 g Zucker', '100 g Salz'])).toEqual(['100 g Zucker', '100 g Salz']);
+  });
+
+  test('combines ingredients without units', () => {
+    expect(combineIngredients(['2 Eier', '3 Eier'])).toEqual(['5 Eier']);
+  });
+
+  test('keeps ingredients without amounts as-is and deduplicates', () => {
+    expect(combineIngredients(['Salz', 'Salz'])).toEqual(['Salz']);
+  });
+
+  test('combines case-insensitively', () => {
+    expect(combineIngredients(['100 g Zucker', '50 g zucker'])).toEqual(['150 g Zucker']);
+  });
+
+  test('preserves first-appearance order', () => {
+    const result = combineIngredients(['100 g Mehl', '200 g Zucker', '50 g Mehl']);
+    expect(result).toEqual(['150 g Mehl', '200 g Zucker']);
+  });
+
+  test('handles empty array', () => {
+    expect(combineIngredients([])).toEqual([]);
+  });
+
+  test('handles non-array input', () => {
+    expect(combineIngredients(null)).toBe(null);
+    expect(combineIngredients(undefined)).toBe(undefined);
+  });
+
+  test('handles ingredients with decimal result', () => {
+    expect(combineIngredients(['100 g Mehl', '50.5 g Mehl'])).toEqual(['150.5 g Mehl']);
+  });
+
+  test('handles fractions', () => {
+    expect(combineIngredients(['1/2 TL Salz', '1/2 TL Salz'])).toEqual(['1 TL Salz']);
   });
 });
