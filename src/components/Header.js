@@ -42,6 +42,7 @@ function Header({
   const searchRef = useRef(null);
   
   useEffect(() => {
+    if (!currentUser) return;
     const loadHeaderData = async () => {
       const slogan = await getHeaderSlogan();
       const logo = await getAppLogoImage();
@@ -49,7 +50,7 @@ function Header({
       setAppLogoImage(logo);
     };
     loadHeaderData();
-  }, []);
+  }, [currentUser]);
 
   // Subscribe to FAQs for live display in the menu
   useEffect(() => {
