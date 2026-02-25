@@ -908,49 +908,26 @@ describe('User Management Utilities', () => {
     });
   });
 
-  describe('canDeleteRecipe', () => {
-    let adminUser, editUser, recipe;
-
-    beforeEach(() => {
-      // Create test users
-      const adminResult = registerUser({
-        vorname: 'Admin',
-        nachname: 'User',
-        email: 'admin@example.com',
-        password: 'password123'
-      });
-      adminUser = adminResult.user;
-
-      const editResult = registerUser({
-        vorname: 'Edit',
-        nachname: 'User',
-        email: 'edit@example.com',
-        password: 'password123'
-      });
-      editUser = editResult.user;
-      updateUserRole(editUser.id, ROLES.EDIT);
-      // Refresh user object after role update
-      editUser = getUsers().find(u => u.id === editUser.id);
-
-      // Create test recipe
-      recipe = {
-        id: '1',
-        title: 'Test Recipe',
-        authorId: editUser.id
-      };
-    });
+    describe('canDeleteRecipe', () => {
+    const adminUser = { id: 'admin-1', role: ROLES.ADMIN, isAdmin: true };
+    const editUser = { id: 'edit-1', role: ROLES.EDIT, isAdmin: false };
+    const recipe = { id: '1', title: 'Test Recipe', authorId: editUser.id };
 
     test('should allow admin to delete any recipe', () => {
       expect(canDeleteRecipe(adminUser, recipe)).toBe(true);
     });
 
-    test('should not allow edit user to delete their own recipe', () => {
-      expect(canDeleteRecipe(editUser, recipe)).toBe(false);
+    test('should allow edit user to delete their own non-public recipe', () => {
+      expect(canDeleteRecipe(editUser, recipe, false)).toBe(true);
+    });
+
+    test('should not allow edit user to delete their own public recipe', () => {
+      expect(canDeleteRecipe(editUser, recipe, true)).toBe(false);
     });
 
     test('should not allow edit user to delete other users recipes', () => {
       const otherRecipe = { ...recipe, authorId: adminUser.id };
-      expect(canDeleteRecipe(editUser, otherRecipe)).toBe(false);
+      expect(canDeleteRecipe(editUser, otherRecipe, false)).toBe(false);
     });
 
     test('should return false for null user', () => {

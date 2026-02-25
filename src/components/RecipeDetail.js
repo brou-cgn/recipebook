@@ -14,7 +14,7 @@ import NutritionModal from './NutritionModal';
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -24,6 +24,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const [publishLoading, setPublishLoading] = useState(false);
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
   const stepsContainerRef = useRef(null);
@@ -186,7 +187,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
 
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
-  const userCanDelete = canDeleteRecipe(currentUser, recipe);
+  const isRecipePublic = !recipe.groupId || recipe.groupId === publicGroupId || !!recipe.publishedToPublic;
+  const userCanDelete = canDeleteRecipe(currentUser, recipe, isRecipePublic);
+  const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -247,6 +250,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
   const handleDelete = () => {
     if (window.confirm(`Möchten Sie "${recipe.title}" wirklich löschen?`)) {
       onDelete(recipe.id);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!onPublish) return;
+    if (window.confirm(`Möchten Sie "${recipe.title}" in der Liste "Öffentlich" veröffentlichen?`)) {
+      setPublishLoading(true);
+      try {
+        await onPublish(recipe.id);
+      } finally {
+        setPublishLoading(false);
+      }
     }
   };
 
@@ -682,6 +697,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 Löschen
               </button>
             )}
+            {userCanPublish && (
+              <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
+                {publishLoading ? '…' : 'Veröffentlichen'}
+              </button>
+            )}
             {userCanDirectlyEdit && !recipe.shareId && (
               <button
                 className="share-button"
@@ -879,6 +899,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 {userCanDelete && (
                   <button className="delete-button" onClick={handleDelete}>
                     Löschen
+                  </button>
+                )}
+                {userCanPublish && (
+                  <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
+                    {publishLoading ? '…' : 'Veröffentlichen'}
                   </button>
                 )}
                 {userCanDirectlyEdit && !recipe.shareId && (
@@ -1121,6 +1146,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onToggl
                 }) || <li>Keine Zubereitungsschritte aufgelistet</li>}
               </ol>
             </section>
+
+            {userCanPublish && (
+              <div className="publish-section">
+                <button className="publish-button publish-button-steps" onClick={handlePublish} disabled={publishLoading}>
+                  {publishLoading ? '…' : '🌐 Veröffentlichen'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

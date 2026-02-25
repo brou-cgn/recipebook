@@ -124,7 +124,8 @@
 .favorite-button,
 .version-button,
 .share-button,
-.share-copy-url-button {
+.share-copy-url-button,
+.publish-button {
   background: white;
   border: 2px solid #ddd;
   padding: 0.75rem 1rem;
@@ -212,6 +213,33 @@
 .share-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.publish-button {
+  color: #2e7d32;
+  border-color: #2e7d32;
+}
+
+.publish-button:hover:not(:disabled) {
+  background: #2e7d32;
+  color: white;
+}
+
+.publish-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.publish-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+}
+
+.publish-button-steps {
+  padding: 0.9rem 2rem;
+  font-size: 1rem;
 }
 
 .share-copy-url-button {
