@@ -72,12 +72,6 @@
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
 }
 
 .shopping-list-trigger-button:hover {
@@ -88,9 +82,8 @@
 }
 
 .shopping-list-icon-img {
-  width: 24px;
-  height: 24px;
   object-fit: contain;
+  font-size: 1.5rem;
 }
 
 .favorite-button:hover {
