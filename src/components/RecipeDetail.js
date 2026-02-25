@@ -28,11 +28,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
   const stepsContainerRef = useRef(null);
+  const recipeImageRef = useRef(null);
 
   // Get portion units from custom lists
   const [portionUnits, setPortionUnits] = useState([]);
   const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
+  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('👨‍🍳');
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
+  const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('✕');
+  // Whether to use alt icons due to bright image corners
+  const [useCookingModeAlt, setUseCookingModeAlt] = useState(false);
+  const [useCloseButtonAlt, setUseCloseButtonAlt] = useState(false);
   const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
@@ -45,7 +51,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const icons = await getButtonIcons();
       setPortionUnits(lists.portionUnits || []);
       setCookingModeIcon(icons.cookingMode || '👨‍🍳');
+      setCookingModeAltIcon(icons.cookingModeAlt || icons.cookingMode || '👨‍🍳');
       setCloseButtonIcon(icons.closeButton || '✕');
+      setCloseButtonAltIcon(icons.closeButtonAlt || icons.closeButton || '✕');
       setCopyLinkIcon(icons.copyLink || '📋');
       setNutritionEmptyIcon(icons.nutritionEmpty || '➕');
       setNutritionFilledIcon(icons.nutritionFilled || '🥦');
@@ -92,6 +100,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Update selected recipe when initial recipe changes
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
+    // Reset brightness-based alt icon state for the new recipe's image
+    setUseCookingModeAlt(false);
+    setUseCloseButtonAlt(false);
     // Scroll to top when opening recipe detail
     window.scrollTo(0, 0);
     if (contentRef.current) {
@@ -549,6 +560,47 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     };
   }, [cookingMode]);
 
+  /**
+   * Analyzes the brightness of the top-left and top-right corners of the recipe image.
+   * If a corner is too bright (luminance > threshold), the corresponding alt icon is used
+   * so that the button remains visible against a light background.
+   */
+  const handleRecipeImageLoad = (e) => {
+    const img = e.target;
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+
+      // Sample the top 20% height and 20% width of each corner
+      const sampleW = Math.max(1, Math.floor(img.naturalWidth * 0.2));
+      const sampleH = Math.max(1, Math.floor(img.naturalHeight * 0.2));
+      const BRIGHTNESS_THRESHOLD = 180;
+
+      // Top-left corner → cooking mode button
+      const leftData = ctx.getImageData(0, 0, sampleW, sampleH).data;
+      let leftBrightness = 0;
+      for (let i = 0; i < leftData.length; i += 4) {
+        leftBrightness += leftData[i] * 0.299 + leftData[i + 1] * 0.587 + leftData[i + 2] * 0.114;
+      }
+      leftBrightness /= leftData.length / 4;
+      setUseCookingModeAlt(leftBrightness > BRIGHTNESS_THRESHOLD);
+
+      // Top-right corner → close button
+      const rightData = ctx.getImageData(img.naturalWidth - sampleW, 0, sampleW, sampleH).data;
+      let rightBrightness = 0;
+      for (let i = 0; i < rightData.length; i += 4) {
+        rightBrightness += rightData[i] * 0.299 + rightData[i + 1] * 0.587 + rightData[i + 2] * 0.114;
+      }
+      rightBrightness /= rightData.length / 4;
+      setUseCloseButtonAlt(rightBrightness > BRIGHTNESS_THRESHOLD);
+    } catch (err) {
+      // Silently ignore CORS errors for external images – keep default icons
+    }
+  };
+
   const handleToggleFavorite = async () => {
     if (!onToggleFavorite) return;
     
@@ -842,7 +894,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           <>
             {recipe.image && (
               <div className="recipe-detail-image">
-                <img src={recipe.image} alt={recipe.title} />
+                <img
+                  src={recipe.image}
+                  alt={recipe.title}
+                  ref={recipeImageRef}
+                  crossOrigin="anonymous"
+                  onLoad={handleRecipeImageLoad}
+                />
                 {isMobile && (
                   <div className="image-overlay-actions">
                     <div 
@@ -853,10 +911,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCookingMode()}
                       aria-label="Kochmodus aktivieren"
                     >
-                      {isBase64Image(cookingModeIcon) ? (
-                        <img src={cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                      {/* Use alt icon when top-left image corner is too bright */}
+                      {isBase64Image(useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon) ? (
+                        <img src={useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
                       ) : (
-                        <span>{cookingModeIcon}</span>
+                        <span>{useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon}</span>
                       )}
                     </div>
                     <button 
@@ -864,10 +923,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       onClick={handleBackFromLinkedRecipe}
                       title="Zurück"
                     >
-                      {isBase64Image(closeButtonIcon) ? (
-                        <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
+                      {/* Use alt icon when top-right image corner is too bright */}
+                      {isBase64Image(useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon) ? (
+                        <img src={useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
                       ) : (
-                        closeButtonIcon
+                        useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon
                       )}
                     </button>
                   </div>

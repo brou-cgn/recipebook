@@ -143,10 +143,12 @@ function Settings({ onBack, currentUser }) {
   // Button icons state
   const [buttonIcons, setButtonIcons] = useState({
     cookingMode: '👨‍🍳',
+    cookingModeAlt: '👨‍🍳',
     importRecipe: '📥',
     scanImage: '📷',
     webImport: '🌐',
     closeButton: '✕',
+    closeButtonAlt: '✕',
     menuCloseButton: '✕',
     filterButton: '⚙',
     copyLink: '📋',
@@ -958,6 +960,63 @@ function Settings({ onBack, currentUser }) {
                 </div>
 
                 <div className="button-icon-item">
+                  <label htmlFor="cookingModeAltIcon">Kochmodus-Button Alternativ-Icon (bei hellem Bild oben links):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.cookingModeAlt) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="cookingModeAltIcon"
+                          value={buttonIcons.cookingModeAlt}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookingModeAlt: e.target.value })}
+                          placeholder="z.B. 👨‍🍳"
+                          maxLength={10}
+                        />
+                        <label htmlFor="cookingModeAltIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'cookingModeAlt' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="cookingModeAltIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('cookingModeAlt', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'cookingModeAlt'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('cookingModeAlt')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, cookingModeAlt: DEFAULT_BUTTON_ICONS.cookingModeAlt })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.cookingModeAlt) ? (
+                        <img src={buttonIcons.cookingModeAlt} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.cookingModeAlt}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Wird automatisch verwendet, wenn der Bildbereich oben links zu hell ist. Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
                   <label htmlFor="importRecipeIcon">Import-Button (Neues Rezept):</label>
                   <div className="button-icon-input-group">
                     {!isBase64Image(buttonIcons.importRecipe) ? (
@@ -1183,6 +1242,63 @@ function Settings({ onBack, currentUser }) {
                     </div>
                   </div>
                   <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="closeButtonAltIcon">Schließen-Button Alternativ-Icon (bei hellem Bild oben rechts):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.closeButtonAlt) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="closeButtonAltIcon"
+                          value={buttonIcons.closeButtonAlt}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, closeButtonAlt: e.target.value })}
+                          placeholder="z.B. ✕"
+                          maxLength={10}
+                        />
+                        <label htmlFor="closeButtonAltIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'closeButtonAlt' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="closeButtonAltIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('closeButtonAlt', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'closeButtonAlt'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('closeButtonAlt')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, closeButtonAlt: DEFAULT_BUTTON_ICONS.closeButtonAlt })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.closeButtonAlt) ? (
+                        <img src={buttonIcons.closeButtonAlt} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.closeButtonAlt}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Wird automatisch verwendet, wenn der Bildbereich oben rechts zu hell ist. Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
                 </div>
 
                 <div className="button-icon-item">
