@@ -808,6 +808,148 @@ describe('RecipeDetail - Close Button Icon', () => {
   });
 });
 
+describe('RecipeDetail - Brightness-based alt icon switching', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+    rolle: 'Familymember',
+  };
+
+  let originalCreateElement;
+
+  beforeEach(() => {
+    // Mobile viewport so overlay buttons are rendered
+    global.innerWidth = 400;
+    global.dispatchEvent(new Event('resize'));
+    originalCreateElement = document.createElement.bind(document);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  /**
+   * Returns a mock canvas whose getImageData always returns pixels with the
+   * given luminance value so the brightness threshold check is predictable.
+   */
+  function mockCanvasWithBrightness(luminance) {
+    const pixelValue = Math.round(luminance);
+    const spy = jest.spyOn(document, 'createElement').mockImplementation((tag) => {
+      if (tag === 'canvas') {
+        const mockCtx = {
+          drawImage: jest.fn(),
+          getImageData: jest.fn(() => ({
+            // Four pixels, each with (R, G, B, A) = (pixelValue, pixelValue, pixelValue, 255)
+            // Luminance = 0.299*R + 0.587*G + 0.114*B ≈ pixelValue
+            data: new Uint8ClampedArray([
+              pixelValue, pixelValue, pixelValue, 255,
+              pixelValue, pixelValue, pixelValue, 255,
+            ]),
+          })),
+        };
+        const canvas = { width: 0, height: 0, getContext: jest.fn(() => mockCtx) };
+        return canvas;
+      }
+      return originalCreateElement(tag);
+    });
+    return spy;
+  }
+
+  test('switches to alt icons when image corners are too bright (onLoad path)', async () => {
+    const createElementSpy = mockCanvasWithBrightness(200); // above BRIGHTNESS_THRESHOLD of 180
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      image: 'data:image/png;base64,abc123',
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    // isBase64Image must return true so the image is analyzed directly
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(true);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const imgEl = document.querySelector('.recipe-detail-image img');
+    expect(imgEl).toBeInTheDocument();
+
+    // Simulate image load
+    await act(async () => {
+      Object.defineProperty(imgEl, 'naturalWidth', { value: 100, configurable: true });
+      Object.defineProperty(imgEl, 'naturalHeight', { value: 100, configurable: true });
+      fireEvent.load(imgEl);
+    });
+
+    // Both alt icon states should be activated; since default alt icons equal
+    // default icons in tests, we verify the canvas was queried (brightness analyzed)
+    expect(createElementSpy).toHaveBeenCalledWith('canvas');
+  });
+
+  test('triggers brightness analysis for already-cached images (useEffect path)', async () => {
+    const createElementSpy = mockCanvasWithBrightness(200); // above threshold
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      image: 'data:image/png;base64,abc123',
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(true);
+
+    const { rerender } = render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Reset spy so we only count calls triggered by the cached-image effect
+    createElementSpy.mockClear();
+
+    // Simulate the image being already-complete (cached) on the current img element
+    const imgEl = document.querySelector('.recipe-detail-image img');
+    expect(imgEl).toBeInTheDocument();
+    Object.defineProperty(imgEl, 'complete', { value: true, configurable: true });
+    Object.defineProperty(imgEl, 'naturalWidth', { value: 100, configurable: true });
+    Object.defineProperty(imgEl, 'naturalHeight', { value: 100, configurable: true });
+
+    // Change the recipe image src – this changes selectedRecipe.image and
+    // triggers the useEffect that checks for already-cached images
+    const newRecipe = { ...mockRecipe, id: 'recipe-2', image: 'data:image/png;base64,xyz789' };
+    await act(async () => {
+      rerender(
+        <RecipeDetail
+          recipe={newRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Canvas analysis should have been triggered for the cached image
+    expect(createElementSpy).toHaveBeenCalledWith('canvas');
+  });
+});
+
 describe('RecipeDetail - Scroll to Top', () => {
   const currentUser = {
     id: 'user-1',

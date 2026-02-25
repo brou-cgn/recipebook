@@ -110,6 +110,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [initialRecipe]);
 
+  // If the recipe image is already in the browser cache, the onLoad event
+  // will not fire and brightness analysis would be skipped. This effect
+  // detects that situation and triggers the analysis manually.
+  useEffect(() => {
+    const img = recipeImageRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      handleRecipeImageLoad({ target: img });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRecipe.image]);
+
   // Keep header visible on mobile - removed auto-hide behavior
   useEffect(() => {
     if (!onHeaderVisibilityChange) return;
