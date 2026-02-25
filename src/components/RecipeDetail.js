@@ -697,12 +697,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Löschen
               </button>
             )}
-            {userCanPublish && (
-              <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
-                {publishLoading ? '…' : 'Veröffentlichen'}
-              </button>
-            )}
-            {userCanDirectlyEdit && !recipe.shareId && (
+            {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
               <button
                 className="share-button"
                 onClick={handleToggleShare}
@@ -712,7 +707,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {shareLoading ? '…' : '↑ Teilen'}
               </button>
             )}
-            {userCanDirectlyEdit && recipe.shareId && (
+            {userCanDirectlyEdit && isRecipePublic && recipe.shareId && (
               <button
                 className="share-copy-url-button"
                 onClick={handleCopyShareUrl}
@@ -901,12 +896,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     Löschen
                   </button>
                 )}
-                {userCanPublish && (
-                  <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
-                    {publishLoading ? '…' : 'Veröffentlichen'}
-                  </button>
-                )}
-                {userCanDirectlyEdit && !recipe.shareId && (
+                {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
                   <button
                     className="share-button"
                     onClick={handleToggleShare}
@@ -916,7 +906,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {shareLoading ? '…' : '↑ Teilen'}
                   </button>
                 )}
-                {userCanDirectlyEdit && recipe.shareId && (
+                {userCanDirectlyEdit && isRecipePublic && recipe.shareId && (
                   <button
                     className="share-copy-url-button"
                     onClick={handleCopyShareUrl}
@@ -1150,7 +1140,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {userCanPublish && (
               <div className="publish-section">
                 <button className="publish-button publish-button-steps" onClick={handlePublish} disabled={publishLoading}>
-                  {publishLoading ? '…' : '🌐 Veröffentlichen'}
+                  {publishLoading ? '…' : 'Veröffentlichen'}
                 </button>
               </div>
             )}
