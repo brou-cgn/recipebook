@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingListModal from './ShoppingListModal';
 
@@ -66,5 +66,74 @@ describe('ShoppingListModal', () => {
   test('shows empty message when no items', () => {
     render(<ShoppingListModal items={[]} title="Test" onClose={mockOnClose} />);
     expect(screen.getByText('Keine Zutaten vorhanden.')).toBeInTheDocument();
+  });
+
+  describe('Bring! integration', () => {
+    let windowOpenSpy;
+
+    beforeEach(() => {
+      windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      windowOpenSpy.mockRestore();
+    });
+
+    test('renders Bring! button', () => {
+      render(<ShoppingListModal items={mockItems} title="Test" onClose={mockOnClose} />);
+      expect(screen.getByTitle('Einkaufsliste an Bring! übergeben')).toBeInTheDocument();
+    });
+
+    test('Bring! button is disabled when there are no items', () => {
+      render(<ShoppingListModal items={[]} title="Test" onClose={mockOnClose} />);
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      expect(bringBtn).toBeDisabled();
+    });
+
+    test('opens Bring! deeplink with existing shareId', async () => {
+      render(
+        <ShoppingListModal
+          items={mockItems}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          shareId="test-share-id-123"
+        />
+      );
+
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        expect(windowOpenSpy).toHaveBeenCalledTimes(1);
+        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
+        expect(calledUrl).toContain('test-share-id-123');
+        expect(calledUrl).toContain('source=web');
+      });
+    });
+
+    test('calls onEnableSharing and opens Bring! deeplink when no shareId', async () => {
+      const mockEnableSharing = jest.fn().mockResolvedValue('new-share-id-456');
+
+      render(
+        <ShoppingListModal
+          items={mockItems}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          onEnableSharing={mockEnableSharing}
+        />
+      );
+
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        expect(mockEnableSharing).toHaveBeenCalledTimes(1);
+        expect(windowOpenSpy).toHaveBeenCalledTimes(1);
+        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
+        expect(calledUrl).toContain('new-share-id-456');
+      });
+    });
   });
 });
