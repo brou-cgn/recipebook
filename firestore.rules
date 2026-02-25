@@ -6,137 +6,66 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function userRole() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+             : null;
+    }
+
+    // Any authenticated user with a recognised role, OR authenticated but no user
+    // document yet (bootstrap – allows the first /users/{uid} write).
+    function isAnyUser() {
+      return isAuthenticated() && (
+        !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+        userRole() in ['guest', 'read', 'comment', 'edit', 'admin']
+      );
+    }
+
+    function isEditOrAdmin() {
+      return isAuthenticated() && userRole() in ['edit', 'admin'];
     }
 
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return isAuthenticated() && userRole() == 'admin';
     }
 
-    function isEdit() {
-      return isAuthenticated() && (getUserData().role == 'edit' || isAdmin());
-    }
-
-    function isAuthor(authorId) {
-      return isAuthenticated() && request.auth.uid == authorId;
-    }
-
-    function isGroupMember(groupId) {
-      return isAuthenticated() &&
-             get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
-    }
-
-    function isGroupOwner(groupId) {
-      return isAuthenticated() &&
-             get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid;
-    }
-
-    // Recipes collection rules
+    // Recipes collection
     match /recipes/{recipeId} {
-      // Share-link: anyone (including guests)
-      allow read: if resource.data.shareId != null && resource.data.shareId != '';
-
-      // Admin can read any recipe
-      allow read: if isAdmin();
-
-      // Public group, non-draft: any authenticated user
-      allow read: if isAuthenticated() &&
-                     resource.data.groupId != null &&
-                     !resource.data.isPrivate &&
-                     resource.data.groupType == 'public';
-
-      // Published recipes (from private group): any authenticated user
-      allow read: if isAuthenticated() &&
-                     !resource.data.isPrivate &&
-                     resource.data.publishedToPublic == true;
-
-      // Private group, non-draft: authenticated group member
-      allow read: if isAuthenticated() &&
-                     resource.data.groupId != null &&
-                     !resource.data.isPrivate &&
-                     resource.data.groupType == 'private' &&
-                     isGroupMember(resource.data.groupId);
-
-      // Draft: admin (all), edit (own author)
-      allow read: if resource.data.isPrivate &&
-                     (isAdmin() || (isEdit() && isAuthor(resource.data.authorId)));
-
-      // Create: admin or edit, groupId must be set
-      allow create: if (isAdmin() || isEdit()) &&
-                       request.resource.data.groupId != null;
-
-      // Update: admin (all), edit (own)
-      allow update: if isAdmin() ||
-                       (isEdit() && isAuthor(resource.data.authorId));
-
-      // Delete: only admin
-      allow delete: if isAdmin();
+      allow read: if isAnyUser();
+      allow create, update, delete: if isEditOrAdmin();
     }
 
-    // Menus collection rules
+    // Menus collection
     match /menus/{menuId} {
-      // Share-link: anyone (including guests)
-      allow read: if resource.data.shareId != null && resource.data.shareId != '';
-
-      // Non-draft: any authenticated user (isPrivate missing or false)
-      allow read: if isAuthenticated() && (resource.data.isPrivate == null || resource.data.isPrivate == false);
-
-      // Draft: admin (all), edit (own)
-      allow read: if resource.data.isPrivate &&
-                     (isAdmin() || (isEdit() && isAuthor(resource.data.authorId)));
-
-      // Create: admin or edit
-      allow create: if isAdmin() || isEdit();
-
-      // Update: admin (all), edit (own)
-      allow update: if isAdmin() ||
-                       (isEdit() && isAuthor(resource.data.authorId));
-
-      // Delete: admin (all), edit (own)
-      allow delete: if isAdmin() ||
-                       (isEdit() && isAuthor(resource.data.authorId));
+      allow read: if isAnyUser();
+      allow create, update, delete: if isEditOrAdmin();
     }
 
-    // Groups collection rules
+    // FAQs collection
+    match /faqs/{faqId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Groups collection
     match /groups/{groupId} {
-      // Public groups: all authenticated users can read
-      allow read: if isAuthenticated() && resource.data.type == 'public';
-
-      // Private groups: admin (all), edit+read (member or owner)
-      allow read: if resource.data.type == 'private' &&
-                     (isAdmin() ||
-                      ((isEdit() || (isAuthenticated() && getUserData().role == 'read')) &&
-                       (resource.data.memberIds.hasAny([request.auth.uid]) ||
-                        resource.data.ownerId == request.auth.uid)));
-
-      // Create: admin always, edit if creating a private group
-      allow create: if isAdmin() ||
-                       (isEdit() && request.resource.data.type == 'private');
-
-      // Update: admin (all), edit+read (own groups)
-      allow update: if isAdmin() ||
-                       ((isEdit() || (isAuthenticated() && getUserData().role == 'read')) &&
-                        (resource.data.memberIds.hasAny([request.auth.uid]) ||
-                         resource.data.ownerId == request.auth.uid));
-
-      // Delete: admin (all), edit (own = group owner)
-      allow delete: if isAdmin() ||
-                       (isEdit() && resource.data.ownerId == request.auth.uid);
+      allow read: if isAnyUser();
+      allow create, update, delete: if isEditOrAdmin();
     }
 
-    // Users collection rules
+    // Shopping lists collection
+    match /shoppingLists/{listId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isEditOrAdmin();
+    }
+
+    // Users collection
     match /users/{userId} {
-      // All authenticated users can read
-      allow read: if isAuthenticated();
-
-      // Admin or guest (for registration)
-      allow create: if isAdmin() || !isAuthenticated();
-
-      // Admin (all), or authenticated user (own profile)
-      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
-
-      // Only admin can delete
+      allow read: if isAnyUser();
+      // Bootstrap: any authenticated user may create their own document.
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Any authenticated user may update their own document; admin may update any.
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
 
@@ -152,33 +81,19 @@ service cloud.firestore {
 
     // Settings collection
     match /settings/{settingId} {
-      allow read: if isAuthenticated();
+      allow read: if isAnyUser();
       allow create, update, delete: if isAdmin();
     }
 
     // Custom lists collection
     match /customLists/{listId} {
-      allow read: if isAuthenticated();
+      allow read: if isAnyUser();
       allow create, update, delete: if isAdmin();
-    }
-
-    // FAQs collection
-    match /faqs/{faqId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Shopping lists collection
-    match /shoppingLists/{listId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin() || isEdit();
-      allow update: if isAdmin() || (isEdit() && isAuthor(resource.data.authorId));
-      allow delete: if isAdmin();
     }
 
     // AI Scan rate limiting collection
     match /aiScanLimits/{limitId} {
-      allow read: if isAdmin() || isEdit();
+      allow read: if isEditOrAdmin();
       allow create, update, delete: if isAdmin();
     }
   }
