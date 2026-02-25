@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ShoppingListModal.css';
-import { createSharedShoppingList } from '../utils/shoppingListFirestore';
 
 function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton }) {
   const [listItems, setListItems] = useState(() =>
@@ -59,7 +58,14 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   const handleBringExport = async () => {
     setBringLoading(true);
     try {
-      const sid = await createSharedShoppingList(title, listItems.map(i => i.text));
+      let sid = shareId;
+      if (!sid && onEnableSharing) {
+        sid = await onEnableSharing();
+      }
+      if (!sid) {
+        alert('Dieser Eintrag muss zuerst geteilt werden, um ihn an Bring! zu übergeben.');
+        return;
+      }
       const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}`;
       const bringUrl = `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(exportUrl)}&source=web`;
       window.open(bringUrl, '_blank', 'noopener,noreferrer');

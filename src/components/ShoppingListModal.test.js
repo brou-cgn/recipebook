@@ -3,13 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ShoppingListModal from './ShoppingListModal';
 
-// Mock the shoppingListFirestore utility
-jest.mock('../utils/shoppingListFirestore', () => ({
-  createSharedShoppingList: jest.fn(),
-}));
-
-import { createSharedShoppingList } from '../utils/shoppingListFirestore';
-
 describe('ShoppingListModal', () => {
   const mockItems = ['200g Mehl', '3 Eier', '100ml Milch'];
   const mockOnClose = jest.fn();
@@ -80,12 +73,10 @@ describe('ShoppingListModal', () => {
 
     beforeEach(() => {
       windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
-      createSharedShoppingList.mockResolvedValue('generated-share-id-789');
     });
 
     afterEach(() => {
       windowOpenSpy.mockRestore();
-      createSharedShoppingList.mockReset();
     });
 
     test('renders Bring! button', () => {
@@ -99,12 +90,13 @@ describe('ShoppingListModal', () => {
       expect(bringBtn).toBeDisabled();
     });
 
-    test('creates shared shopping list and opens Bring! deeplink', async () => {
+    test('opens Bring! deeplink with existing shareId', async () => {
       render(
         <ShoppingListModal
           items={mockItems}
           title="Test Rezept"
           onClose={mockOnClose}
+          shareId="test-share-id-123"
         />
       );
 
@@ -112,25 +104,23 @@ describe('ShoppingListModal', () => {
       fireEvent.click(bringBtn);
 
       await waitFor(() => {
-        expect(createSharedShoppingList).toHaveBeenCalledTimes(1);
-        expect(createSharedShoppingList).toHaveBeenCalledWith('Test Rezept', mockItems);
         expect(windowOpenSpy).toHaveBeenCalledTimes(1);
         const calledUrl = windowOpenSpy.mock.calls[0][0];
         expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
-        expect(calledUrl).toContain('generated-share-id-789');
+        expect(calledUrl).toContain('test-share-id-123');
         expect(calledUrl).toContain('source=web');
       });
     });
 
-    test('shows alert when createSharedShoppingList fails', async () => {
-      createSharedShoppingList.mockRejectedValue(new Error('Firestore error'));
-      const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    test('calls onEnableSharing and opens Bring! deeplink when no shareId', async () => {
+      const mockEnableSharing = jest.fn().mockResolvedValue('new-share-id-456');
 
       render(
         <ShoppingListModal
           items={mockItems}
           title="Test Rezept"
           onClose={mockOnClose}
+          onEnableSharing={mockEnableSharing}
         />
       );
 
@@ -138,13 +128,12 @@ describe('ShoppingListModal', () => {
       fireEvent.click(bringBtn);
 
       await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith(
-          'Fehler beim Exportieren zu Bring!. Bitte versuchen Sie es erneut.'
-        );
-        expect(windowOpenSpy).not.toHaveBeenCalled();
+        expect(mockEnableSharing).toHaveBeenCalledTimes(1);
+        expect(windowOpenSpy).toHaveBeenCalledTimes(1);
+        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
+        expect(calledUrl).toContain('new-share-id-456');
       });
-
-      alertSpy.mockRestore();
     });
   });
 });
