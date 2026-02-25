@@ -929,6 +929,53 @@ exports.bringRecipeExport = onRequest(
 
       try {
         const db = admin.firestore();
+
+        // First, check the shoppingLists collection for a pre-resolved list
+        const shoppingListsRef = db.collection('shoppingLists');
+        const slSnapshot = await shoppingListsRef
+            .where('shareId', '==', shareId)
+            .limit(1)
+            .get();
+
+        if (!slSnapshot.empty) {
+          const shoppingList = slSnapshot.docs[0].data();
+          const title = shoppingList.title || 'Einkaufsliste';
+          const items = shoppingList.items || [];
+
+          const jsonLd = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Recipe',
+            'name': title,
+            'recipeIngredient': items,
+          });
+
+          const escape = (s) => s
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+
+          const escapedTitle = escape(title);
+          const liItems = items.map((i) => `<li>${escape(i)}</li>`).join('');
+
+          const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapedTitle}</title>
+<script type="application/ld+json">${jsonLd}</script>
+</head>
+<body>
+<h1>${escapedTitle}</h1>
+<ul>${liItems}</ul>
+</body>
+</html>`;
+
+          res.set('Cache-Control', 'no-store');
+          res.status(200).send(html);
+          return;
+        }
+
         const recipesRef = db.collection('recipes');
         const snapshot = await recipesRef
             .where('shareId', '==', shareId)
