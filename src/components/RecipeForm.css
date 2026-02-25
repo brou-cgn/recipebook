@@ -138,11 +138,6 @@
   color: #E65100;
 }
 
-.group-assignment-icon {
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
 .group-assignment-text strong {
   font-weight: 600;
 }

@@ -765,7 +765,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         if (!groupName) return null;
         return (
           <div className={`group-assignment-banner ${isPublicTarget ? 'public' : 'private'}`}>
-            <span className="group-assignment-icon">{isPublicTarget ? '🌐' : '🔒'}</span>
             <span className="group-assignment-text">
               Wird in Liste <strong>{groupName}</strong> gespeichert
             </span>
