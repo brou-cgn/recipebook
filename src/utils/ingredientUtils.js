@@ -85,6 +85,93 @@ export function formatIngredients(ingredients) {
 }
 
 /**
+ * Parses an ingredient string into its amount, unit and name components.
+ * Examples:
+ *   "200 g Mehl"  -> { amount: 200, unit: 'g',  name: 'Mehl' }
+ *   "2 EL Öl"     -> { amount: 2,   unit: 'EL', name: 'Öl' }
+ *   "3 Eier"      -> { amount: 3,   unit: null, name: 'Eier' }
+ *   "Salz"        -> { amount: null, unit: null, name: 'Salz' }
+ * @param {string} ingredient - The ingredient string to parse
+ * @returns {{ amount: number|null, unit: string|null, name: string }}
+ */
+function parseIngredientParts(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string') {
+    return { amount: null, unit: null, name: ingredient || '' };
+  }
+  const str = ingredient.trim();
+
+  const sortedUnits = [...UNITS].sort((a, b) => b.length - a.length);
+  const unitsPattern = sortedUnits
+    .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+
+  // Match: number unit name (e.g. "200 g Mehl", "2EL Öl")
+  const withUnitRegex = new RegExp(
+    `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    'i'
+  );
+  let m = str.match(withUnitRegex);
+  if (m) {
+    const raw = m[1];
+    const amount = raw.includes('/')
+      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
+      : parseFloat(raw.replace(',', '.'));
+    return { amount, unit: m[2], name: m[3] };
+  }
+
+  // Match: number name without unit (e.g. "3 Eier")
+  const noUnitRegex = /^(\d+\/\d+|\d+(?:[.,]\d+)?)\s+(.+)$/;
+  m = str.match(noUnitRegex);
+  if (m) {
+    const raw = m[1];
+    const amount = raw.includes('/')
+      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
+      : parseFloat(raw.replace(',', '.'));
+    return { amount, unit: null, name: m[2] };
+  }
+
+  // No leading number found
+  return { amount: null, unit: null, name: str };
+}
+
+/**
+ * Combines duplicate ingredients by summing their amounts.
+ * Ingredients with the same name and unit (case-insensitive) are merged.
+ * Example: ["100 g Zucker", "50 g Zucker"] => ["150 g Zucker"]
+ * @param {string[]} ingredients - Array of ingredient strings
+ * @returns {string[]} - Array with duplicates combined
+ */
+export function combineIngredients(ingredients) {
+  if (!Array.isArray(ingredients)) return ingredients;
+
+  const combined = new Map();
+  const order = [];
+
+  for (const ingredient of ingredients) {
+    if (!ingredient) continue;
+    const { amount, unit, name } = parseIngredientParts(ingredient);
+    const key = `${name.toLowerCase()}|${(unit || '').toLowerCase()}`;
+
+    if (combined.has(key)) {
+      const existing = combined.get(key);
+      if (amount !== null && existing.amount !== null) {
+        existing.amount += amount;
+      }
+    } else {
+      combined.set(key, { amount, unit, name });
+      order.push(key);
+    }
+  }
+
+  return order.map(key => {
+    const { amount, unit, name } = combined.get(key);
+    if (amount === null) return name;
+    const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(1);
+    return unit ? `${formatted} ${unit} ${name}` : `${formatted} ${name}`;
+  });
+}
+
+/**
  * Scales the numeric amounts in an ingredient string by a given multiplier.
  * Example: scaleIngredient("200 g Mehl", 2) => "400 g Mehl"
  * @param {string} ingredient - The ingredient string to scale
