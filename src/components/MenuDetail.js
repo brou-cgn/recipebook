@@ -214,11 +214,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
               Bearbeiten
             </button>
           )}
-          {canDeleteMenu(currentUser, menu) && (
-            <button className="delete-button" onClick={handleDelete}>
-              Löschen
-            </button>
-          )}
           {canEditMenu(currentUser, menu) && !menu.shareId && (
             <button
               className="share-button"
@@ -323,6 +318,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           </section>
         ))}
       </div>
+      {canDeleteMenu(currentUser, menu) && (
+        <div className="menu-delete-actions">
+          <button className="delete-button" onClick={handleDelete}>
+            Löschen
+          </button>
+        </div>
+      )}
       {showShoppingListModal && (
         <ShoppingListModal
           items={getMenuShoppingListIngredients()}
