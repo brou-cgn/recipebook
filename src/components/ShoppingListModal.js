@@ -70,7 +70,16 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
       // plain ingredient strings (recipe links are resolved by the frontend
       // before they are passed to this modal as the `items` prop).
       const uncheckedItems = listItems.filter((i) => !i.checked).map((i) => i.text);
-      const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}&items=${encodeURIComponent(JSON.stringify(uncheckedItems))}`;
+      const saveRes = await fetch('/bring-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shareId: sid, items: uncheckedItems }),
+      });
+      if (!saveRes.ok) {
+        throw new Error(`Export failed: ${saveRes.status} ${saveRes.statusText}`);
+      }
+      const { exportId } = await saveRes.json();
+      const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}&exportId=${encodeURIComponent(exportId)}`;
       const bringUrl = `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(exportUrl)}&source=web`;
       window.open(bringUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {

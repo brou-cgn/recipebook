@@ -1003,33 +1003,63 @@ const sendBringHtml = (res, title, recipeIngredients) => {
  * Accepts ?shareId=<id> and returns an HTML page with structured Recipe JSON-LD
  * so the Bring! shopping list app can parse the ingredients.
  *
- * Optional ?items=<JSON-array> parameter: if provided, these pre-resolved
- * ingredient strings are used directly (allows the frontend to pass only the
- * unchecked/open items, skipping resolved recipe-links and done items).
+ * POST with { shareId, items }: saves items to Firestore and returns { exportId }.
+ * GET with ?shareId=<id>&exportId=<id>: loads items from Firestore and renders HTML.
+ * GET with ?shareId=<id> only: falls back to loading all ingredients from the recipe.
  */
+const BRING_EXPORT_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 exports.bringRecipeExport = onRequest(
     {cors: true},
     async (req, res) => {
+      // Handle POST: save pre-resolved items to Firestore, return exportId.
+      if (req.method === 'POST') {
+        const {shareId, items} = req.body || {};
+        if (!shareId || !Array.isArray(items)) {
+          res.status(400).send('Missing shareId or items');
+          return;
+        }
+        try {
+          const db = admin.firestore();
+          const exportRef = db.collection('bringExports').doc();
+          await exportRef.set({
+            shareId,
+            items,
+            expiresAt: Date.now() + BRING_EXPORT_TTL_MS,
+          });
+          res.status(200).json({exportId: exportRef.id});
+        } catch (error) {
+          console.error('bringRecipeExport POST error:', error);
+          res.status(500).send('Internal server error');
+        }
+        return;
+      }
+
       const shareId = req.query.shareId;
       if (!shareId) {
         res.status(400).send('Missing shareId parameter');
         return;
       }
 
-      // If the frontend already resolved and filtered the items, use them directly.
-      if (req.query.items) {
-        let parsedItems;
-        try {
-          parsedItems = JSON.parse(req.query.items);
-          if (!Array.isArray(parsedItems)) throw new Error('items must be an array');
-        } catch (e) {
-          res.status(400).send('Invalid items parameter');
-          return;
-        }
-
+      // If exportId is provided, load pre-resolved items from Firestore.
+      if (req.query.exportId) {
         try {
           const db = admin.firestore();
-          // Fetch title from the recipe/menu document identified by shareId.
+          const exportDoc = await db.collection('bringExports')
+              .doc(req.query.exportId).get();
+          if (!exportDoc.exists) {
+            res.status(404).send('Export not found or expired');
+            return;
+          }
+          const exportData = exportDoc.data();
+          if (exportData.expiresAt < Date.now()) {
+            res.status(410).send('Export expired');
+            return;
+          }
+          if (exportData.shareId !== shareId) {
+            res.status(403).send('Forbidden');
+            return;
+          }
           let title = 'Rezept';
           const recipeSnap = await db.collection('recipes')
               .where('shareId', '==', shareId).limit(1).get();
@@ -1042,9 +1072,9 @@ exports.bringRecipeExport = onRequest(
               title = menuSnap.docs[0].data().name || title;
             }
           }
-          sendBringHtml(res, title, parsedItems.map(String));
+          sendBringHtml(res, title, exportData.items.map(String));
         } catch (error) {
-          console.error('bringRecipeExport error (items path):', error);
+          console.error('bringRecipeExport error (exportId path):', error);
           res.status(500).send('Internal server error');
         }
         return;
