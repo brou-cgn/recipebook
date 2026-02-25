@@ -106,7 +106,14 @@ function NutritionModal({ recipe, onClose, onSave }) {
       ballaststoffe: parsePositiveNumber(ballaststoffe),
       salz: parsePositiveNumber(salz),
     };
-    const naehrwerte = naehrwerteToTotals(perPortion, portionen);
+    // Preserve calc metadata so the error log remains visible after manual save
+    const { calcFoundCount, calcTotalCount, calcNotIncluded } = recipe?.naehrwerte || {};
+    const naehrwerte = {
+      ...naehrwerteToTotals(perPortion, portionen),
+      ...(calcFoundCount !== undefined && { calcFoundCount }),
+      ...(calcTotalCount !== undefined && { calcTotalCount }),
+      ...(calcNotIncluded !== undefined && { calcNotIncluded }),
+    };
 
     setSaving(true);
     try {
