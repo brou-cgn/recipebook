@@ -2,3 +2,36 @@
   min-height: 100vh;
   background: #f5f5f5;
 }
+
+.sw-update-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #402C1C;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.sw-update-banner button {
+  background: white;
+  color: #402C1C;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.sw-update-banner button:hover {
+  background: #f0e6dc;
+}
