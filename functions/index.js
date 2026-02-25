@@ -914,9 +914,98 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
 );
 
 /**
+ * Recursively resolves an ingredient string that may contain a #recipe:... link.
+ * Returns an array of plain ingredient strings (no recipe links).
+ * @param {object} db - Firestore instance
+ * @param {string} ingText - Ingredient text, possibly a recipe link
+ * @param {Set} visited - Set of already-visited recipe IDs (prevents infinite recursion)
+ * @return {Promise<string[]>}
+ */
+const resolveIngredientText = async (db, ingText, visited) => {
+  const match = ingText.match(/^[^#]*#recipe:([^:]+):/);
+  if (!match) return [ingText];
+  const recipeId = match[1];
+  if (visited.has(recipeId)) return [];
+  visited.add(recipeId);
+  const doc = await db.collection('recipes').doc(recipeId).get();
+  if (!doc.exists) return [];
+  const linkedData = doc.data();
+  const result = [];
+  for (const ing of (linkedData.ingredients || [])) {
+    const text = typeof ing === 'string' ? ing : ing.text;
+    if (ing && typeof ing === 'object' && ing.type === 'heading') continue;
+    const resolved = await resolveIngredientText(db, text, visited);
+    result.push(...resolved);
+  }
+  return result;
+};
+
+/**
+ * Resolves a raw ingredients array (strings and objects) into a flat array of
+ * plain ingredient strings, expanding any #recipe:... links recursively.
+ * @param {object} db - Firestore instance
+ * @param {Array} rawIngredients
+ * @return {Promise<string[]>}
+ */
+const resolveIngredients = async (db, rawIngredients) => {
+  const result = [];
+  for (const ing of rawIngredients) {
+    if (typeof ing === 'object' && ing !== null && ing.type === 'heading') continue;
+    const text = typeof ing === 'string' ? ing : ing.text;
+    const resolved = await resolveIngredientText(db, text, new Set());
+    result.push(...resolved);
+  }
+  return result;
+};
+
+/**
+ * Helper to build and send the Bring!-compatible HTML response.
+ * @param {object} res - Express response object
+ * @param {string} title
+ * @param {string[]} recipeIngredients
+ */
+const sendBringHtml = (res, title, recipeIngredients) => {
+  const escape = (s) => String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Recipe',
+    'name': title,
+    'recipeIngredient': recipeIngredients,
+  });
+
+  const escapedTitle = escape(title);
+  const liItems = recipeIngredients.map((i) => `<li>${escape(i)}</li>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapedTitle}</title>
+<script type="application/ld+json">${jsonLd}</script>
+</head>
+<body>
+<h1>${escapedTitle}</h1>
+<ul>${liItems}</ul>
+</body>
+</html>`;
+
+  res.set('Cache-Control', 'public, max-age=300');
+  res.status(200).send(html);
+};
+
+/**
  * HTTP function to serve Schema.org Recipe HTML for Bring! deeplink integration.
  * Accepts ?shareId=<id> and returns an HTML page with structured Recipe JSON-LD
  * so the Bring! shopping list app can parse the ingredients.
+ *
+ * Optional ?items=<JSON-array> parameter: if provided, these pre-resolved
+ * ingredient strings are used directly (allows the frontend to pass only the
+ * unchecked/open items, skipping resolved recipe-links and done items).
  */
 exports.bringRecipeExport = onRequest(
     {cors: true},
@@ -924,6 +1013,40 @@ exports.bringRecipeExport = onRequest(
       const shareId = req.query.shareId;
       if (!shareId) {
         res.status(400).send('Missing shareId parameter');
+        return;
+      }
+
+      // If the frontend already resolved and filtered the items, use them directly.
+      if (req.query.items) {
+        let parsedItems;
+        try {
+          parsedItems = JSON.parse(req.query.items);
+          if (!Array.isArray(parsedItems)) throw new Error('items must be an array');
+        } catch (e) {
+          res.status(400).send('Invalid items parameter');
+          return;
+        }
+
+        try {
+          const db = admin.firestore();
+          // Fetch title from the recipe/menu document identified by shareId.
+          let title = 'Rezept';
+          const recipeSnap = await db.collection('recipes')
+              .where('shareId', '==', shareId).limit(1).get();
+          if (!recipeSnap.empty) {
+            title = recipeSnap.docs[0].data().title || title;
+          } else {
+            const menuSnap = await db.collection('menus')
+                .where('shareId', '==', shareId).limit(1).get();
+            if (!menuSnap.empty) {
+              title = menuSnap.docs[0].data().name || title;
+            }
+          }
+          sendBringHtml(res, title, parsedItems.map(String));
+        } catch (error) {
+          console.error('bringRecipeExport error (items path):', error);
+          res.status(500).send('Internal server error');
+        }
         return;
       }
 
@@ -967,97 +1090,25 @@ exports.bringRecipeExport = onRequest(
             recipeIds = [...new Set(menu.recipeIds)];
           }
 
-          // Load all referenced recipes and combine their ingredients
+          // Load all referenced recipes, resolve recipe links, and combine ingredients
           const recipeIngredients = [];
           for (const recipeId of recipeIds) {
             const recipeDoc = await db.collection('recipes').doc(recipeId).get();
             if (!recipeDoc.exists) continue;
             const recipeData = recipeDoc.data();
-            const rawIngredients = recipeData.ingredients || [];
-            for (const ing of rawIngredients) {
-              if (typeof ing === 'string') {
-                recipeIngredients.push(ing);
-              } else if (ing.type !== 'heading') {
-                recipeIngredients.push(ing.text);
-              }
-            }
+            const resolved = await resolveIngredients(db, recipeData.ingredients || []);
+            recipeIngredients.push(...resolved);
           }
 
-          const jsonLd = JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Recipe',
-            'name': title,
-            'recipeIngredient': recipeIngredients,
-          });
-
-          const escape = (s) => s
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;');
-
-          const escapedTitle = escape(title);
-          const liItems = recipeIngredients.map((i) => `<li>${escape(i)}</li>`).join('');
-
-          const html = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapedTitle}</title>
-<script type="application/ld+json">${jsonLd}</script>
-</head>
-<body>
-<h1>${escapedTitle}</h1>
-<ul>${liItems}</ul>
-</body>
-</html>`;
-
-          res.set('Cache-Control', 'public, max-age=300');
-          res.status(200).send(html);
+          sendBringHtml(res, title, recipeIngredients);
           return;
         }
 
         const recipe = snapshot.docs[0].data();
         const title = recipe.title || 'Rezept';
-        const rawIngredients = recipe.ingredients || [];
-        const recipeIngredients = rawIngredients
-            .filter((ing) => {
-              if (typeof ing === 'string') return true;
-              return ing.type !== 'heading';
-            })
-            .map((ing) => (typeof ing === 'string' ? ing : ing.text));
+        const recipeIngredients = await resolveIngredients(db, recipe.ingredients || []);
 
-        const jsonLd = JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'Recipe',
-          'name': title,
-          'recipeIngredient': recipeIngredients,
-        });
-
-        const escape = (s) => s
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        const escapedTitle = escape(title);
-        const liItems = recipeIngredients.map((i) => `<li>${escape(i)}</li>`).join('');
-
-        const html = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapedTitle}</title>
-<script type="application/ld+json">${jsonLd}</script>
-</head>
-<body>
-<h1>${escapedTitle}</h1>
-<ul>${liItems}</ul>
-</body>
-</html>`;
-
-        res.set('Cache-Control', 'public, max-age=300');
-        res.status(200).send(html);
+        sendBringHtml(res, title, recipeIngredients);
       } catch (error) {
         console.error('bringRecipeExport error:', error);
         res.status(500).send('Internal server error');

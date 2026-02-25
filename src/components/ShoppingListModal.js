@@ -66,7 +66,11 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
         alert('Dieser Eintrag muss zuerst geteilt werden, um ihn an Bring! zu übergeben.');
         return;
       }
-      const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}`;
+      // Only export unchecked (open) items. The items in listItems are already
+      // plain ingredient strings (recipe links are resolved by the frontend
+      // before they are passed to this modal as the `items` prop).
+      const uncheckedItems = listItems.filter((i) => !i.checked).map((i) => i.text);
+      const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}&items=${encodeURIComponent(JSON.stringify(uncheckedItems))}`;
       const bringUrl = `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(exportUrl)}&source=web`;
       window.open(bringUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {

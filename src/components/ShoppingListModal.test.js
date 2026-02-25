@@ -112,6 +112,55 @@ describe('ShoppingListModal', () => {
       });
     });
 
+    test('includes all unchecked items in export URL', async () => {
+      render(
+        <ShoppingListModal
+          items={mockItems}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          shareId="test-share-id-123"
+        />
+      );
+
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        const exportUrl = decodeURIComponent(calledUrl.split('url=')[1].split('&source=')[0]);
+        const itemsParam = new URL(exportUrl).searchParams.get('items');
+        const items = JSON.parse(itemsParam);
+        expect(items).toEqual(mockItems);
+      });
+    });
+
+    test('excludes checked (done) items from export URL', async () => {
+      render(
+        <ShoppingListModal
+          items={mockItems}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          shareId="test-share-id-123"
+        />
+      );
+
+      // Mark the first item as done
+      const checkboxes = screen.getAllByRole('checkbox');
+      fireEvent.click(checkboxes[0]);
+
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        const exportUrl = decodeURIComponent(calledUrl.split('url=')[1].split('&source=')[0]);
+        const itemsParam = new URL(exportUrl).searchParams.get('items');
+        const items = JSON.parse(itemsParam);
+        // First item (200g Mehl) is checked, so only the other two should appear
+        expect(items).toEqual(['3 Eier', '100ml Milch']);
+      });
+    });
+
     test('calls onEnableSharing and opens Bring! deeplink when no shareId', async () => {
       const mockEnableSharing = jest.fn().mockResolvedValue('new-share-id-456');
 
