@@ -1314,6 +1314,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           items={getShoppingListIngredients()}
           title={recipe.title}
           onClose={() => setShowShoppingListModal(false)}
+          shareId={recipe.shareId}
+          onEnableSharing={async () => {
+            const sid = await enableRecipeSharing(recipe.id);
+            setSelectedRecipe({ ...recipe, shareId: sid });
+            return sid;
+          }}
         />
       )}
     </div>

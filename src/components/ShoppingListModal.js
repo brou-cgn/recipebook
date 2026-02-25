@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ShoppingListModal.css';
 
-function ShoppingListModal({ items, title, onClose }) {
+function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing }) {
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
+  const [bringLoading, setBringLoading] = useState(false);
   const closeButtonRef = useRef(null);
 
   useEffect(() => {
@@ -53,6 +54,28 @@ function ShoppingListModal({ items, title, onClose }) {
   };
 
   const checkedCount = listItems.filter(i => i.checked).length;
+
+  const handleBringExport = async () => {
+    setBringLoading(true);
+    try {
+      let sid = shareId;
+      if (!sid && onEnableSharing) {
+        sid = await onEnableSharing();
+      }
+      if (!sid) {
+        alert('Das Rezept muss zuerst geteilt werden, um es an Bring! zu übergeben.');
+        return;
+      }
+      const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}`;
+      const bringUrl = `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(exportUrl)}&source=web`;
+      window.open(bringUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('Bring! export failed:', err);
+      alert('Fehler beim Exportieren zu Bring!. Bitte versuchen Sie es erneut.');
+    } finally {
+      setBringLoading(false);
+    }
+  };
 
   return (
     <div className="shopping-list-overlay" onClick={onClose}>
@@ -135,6 +158,14 @@ function ShoppingListModal({ items, title, onClose }) {
           <span className="shopping-list-count">
             {checkedCount} / {listItems.length} erledigt
           </span>
+          <button
+            className="shopping-list-bring-btn"
+            onClick={handleBringExport}
+            disabled={bringLoading || listItems.length === 0}
+            title="Einkaufsliste an Bring! übergeben"
+          >
+            {bringLoading ? '…' : '🛍️ Bring!'}
+          </button>
           <button
             className="shopping-list-reset-btn"
             onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}

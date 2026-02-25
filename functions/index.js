@@ -3,7 +3,7 @@
  * Provides secure server-side API access for AI OCR functionality
  */
 
-const {onCall, HttpsError} = require('firebase-functions/v2/https');
+const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -912,3 +912,79 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       return {naehrwerte, details, foundCount, totalCount: ingredients.length};
     }
 );
+
+/**
+ * HTTP function to serve Schema.org Recipe HTML for Bring! deeplink integration.
+ * Accepts ?shareId=<id> and returns an HTML page with structured Recipe JSON-LD
+ * so the Bring! shopping list app can parse the ingredients.
+ */
+exports.bringRecipeExport = onRequest(
+    {cors: true},
+    async (req, res) => {
+      const shareId = req.query.shareId;
+      if (!shareId) {
+        res.status(400).send('Missing shareId parameter');
+        return;
+      }
+
+      try {
+        const db = admin.firestore();
+        const recipesRef = db.collection('recipes');
+        const snapshot = await recipesRef
+            .where('shareId', '==', shareId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+          res.status(404).send('Recipe not found');
+          return;
+        }
+
+        const recipe = snapshot.docs[0].data();
+        const title = recipe.title || 'Rezept';
+        const rawIngredients = recipe.ingredients || [];
+        const recipeIngredients = rawIngredients
+            .filter((ing) => {
+              if (typeof ing === 'string') return true;
+              return ing.type !== 'heading';
+            })
+            .map((ing) => (typeof ing === 'string' ? ing : ing.text));
+
+        const jsonLd = JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Recipe',
+          'name': title,
+          'recipeIngredient': recipeIngredients,
+        });
+
+        const escape = (s) => s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const escapedTitle = escape(title);
+        const liItems = recipeIngredients.map((i) => `<li>${escape(i)}</li>`).join('');
+
+        const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapedTitle}</title>
+<script type="application/ld+json">${jsonLd}</script>
+</head>
+<body>
+<h1>${escapedTitle}</h1>
+<ul>${liItems}</ul>
+</body>
+</html>`;
+
+        res.set('Cache-Control', 'public, max-age=300');
+        res.status(200).send(html);
+      } catch (error) {
+        console.error('bringRecipeExport error:', error);
+        res.status(500).send('Internal server error');
+      }
+    },
+);
+
