@@ -70,12 +70,18 @@ describe('ShoppingListModal', () => {
 
   describe('Bring! integration', () => {
     let windowOpenSpy;
+    let fetchSpy;
 
     beforeEach(() => {
+      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ exportId: 'test-export-id' }),
+      });
       windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
     });
 
     afterEach(() => {
+      fetchSpy.mockRestore();
       windowOpenSpy.mockRestore();
     });
 
@@ -112,7 +118,7 @@ describe('ShoppingListModal', () => {
       });
     });
 
-    test('includes all unchecked items in export URL', async () => {
+    test('POSTs all unchecked items to /bring-export and uses exportId in URL', async () => {
       render(
         <ShoppingListModal
           items={mockItems}
@@ -126,15 +132,19 @@ describe('ShoppingListModal', () => {
       fireEvent.click(bringBtn);
 
       await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('/bring-export', expect.objectContaining({
+          method: 'POST',
+        }));
+        const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+        expect(body.items).toEqual(mockItems);
         const calledUrl = windowOpenSpy.mock.calls[0][0];
         const exportUrl = decodeURIComponent(calledUrl.split('url=')[1].split('&source=')[0]);
-        const itemsParam = new URL(exportUrl).searchParams.get('items');
-        const items = JSON.parse(itemsParam);
-        expect(items).toEqual(mockItems);
+        expect(exportUrl).toContain('exportId=test-export-id');
+        expect(exportUrl).not.toContain('items=');
       });
     });
 
-    test('excludes checked (done) items from export URL', async () => {
+    test('excludes checked (done) items from POST body', async () => {
       render(
         <ShoppingListModal
           items={mockItems}
@@ -152,12 +162,9 @@ describe('ShoppingListModal', () => {
       fireEvent.click(bringBtn);
 
       await waitFor(() => {
-        const calledUrl = windowOpenSpy.mock.calls[0][0];
-        const exportUrl = decodeURIComponent(calledUrl.split('url=')[1].split('&source=')[0]);
-        const itemsParam = new URL(exportUrl).searchParams.get('items');
-        const items = JSON.parse(itemsParam);
+        const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
         // First item (200g Mehl) is checked, so only the other two should appear
-        expect(items).toEqual(['3 Eier', '100ml Milch']);
+        expect(body.items).toEqual(['3 Eier', '100ml Milch']);
       });
     });
 
