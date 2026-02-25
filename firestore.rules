@@ -48,6 +48,9 @@ service cloud.firestore {
       // Admin can read any recipe that has a groupId (including drafts)
       allow read: if isAdmin() && resource.data.groupId != null;
 
+      // Recipes without groupId: all authenticated users can read (transition rule)
+      allow read: if isAuthenticated() && resource.data.groupId == null && !resource.data.isPrivate;
+
       // Public group, non-draft: any authenticated user
       allow read: if isAuthenticated() &&
                      resource.data.groupId != null &&
@@ -78,8 +81,8 @@ service cloud.firestore {
       // Share-link: anyone (including guests)
       allow read: if resource.data.shareId != null && resource.data.shareId != '';
 
-      // Non-draft: any authenticated user
-      allow read: if isAuthenticated() && !resource.data.isPrivate;
+      // Non-draft: any authenticated user (isPrivate missing or false)
+      allow read: if isAuthenticated() && (resource.data.isPrivate == null || resource.data.isPrivate == false);
 
       // Draft: admin (all), edit (own)
       allow read: if resource.data.isPrivate &&
@@ -99,8 +102,8 @@ service cloud.firestore {
 
     // Groups collection rules
     match /groups/{groupId} {
-      // Public groups: only admin
-      allow read: if isAdmin() && resource.data.type == 'public';
+      // Public groups: all authenticated users can read
+      allow read: if isAuthenticated() && resource.data.type == 'public';
 
       // Private groups: admin (all), edit+read (member or owner)
       allow read: if resource.data.type == 'private' &&
