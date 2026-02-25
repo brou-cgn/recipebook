@@ -83,3 +83,33 @@ export function formatIngredients(ingredients) {
 
   return ingredients.map(ingredient => formatIngredientSpacing(ingredient));
 }
+
+/**
+ * Scales the numeric amounts in an ingredient string by a given multiplier.
+ * Example: scaleIngredient("200 g Mehl", 2) => "400 g Mehl"
+ * @param {string} ingredient - The ingredient string to scale
+ * @param {number} multiplier - The scaling factor
+ * @returns {string} - The scaled ingredient string
+ */
+export function scaleIngredient(ingredient, multiplier) {
+  if (!ingredient || typeof ingredient !== 'string' || multiplier === 1) return ingredient;
+
+  const regex = /(?:^|\s)(\d+\/\d+|\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)?/g;
+
+  return ingredient.replace(regex, (match, number, unit) => {
+    const leadingSpace = match.startsWith(' ') ? ' ' : '';
+
+    let value;
+    if (number.includes('/')) {
+      const [num, denom] = number.split('/');
+      value = parseFloat(num) / parseFloat(denom);
+    } else {
+      value = parseFloat(number.replace(',', '.'));
+    }
+
+    const scaled = value * multiplier;
+    const formatted = scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1);
+
+    return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
+  });
+}
