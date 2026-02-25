@@ -78,7 +78,7 @@
 }
 
 .group-card-content h3 {
-  margin: 0.4rem 0 0.6rem;
+  margin: 0 0 0.4rem;
   color: #333;
   font-size: 1.15rem;
 }
@@ -90,6 +90,8 @@
   border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  display: inline-block;
+  margin-bottom: 0.5rem;
 }
 
 .group-type-indicator.public {

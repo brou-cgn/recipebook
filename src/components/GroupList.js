@@ -78,8 +78,8 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                   onClick={() => onSelectGroup(group)}
                 >
                   <div className="group-card-content">
-                    <span className="group-type-indicator private">Privat</span>
                     <h3>{group.name}</h3>
+                    <span className="group-type-indicator private">Privat</span>
                     <div className="group-card-meta">
                       <span>{(group.memberIds || []).length} Mitglied(er)</span>
                       {ownerName && (
