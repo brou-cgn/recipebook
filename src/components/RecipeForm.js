@@ -497,6 +497,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       return;
     }
 
+    if (speisekategorie.length === 0) {
+      alert('Bitte wählen Sie mindestens eine Speisekategorie aus');
+      return;
+    }
+
     // Auto-populate title image from category images if creating new recipe without title image
     let finalImage = image.trim();
     if (!recipe && !finalImage && speisekategorie.length > 0) {
