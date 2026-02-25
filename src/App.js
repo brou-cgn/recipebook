@@ -143,8 +143,9 @@ function App() {
   const selectedGroupRecipes = useMemo(() => {
     if (!selectedGroup) return [];
     if (selectedGroup.type === 'public') {
-      // Public group shows recipes explicitly assigned to it OR recipes with no group
-      return recipes.filter((r) => r.groupId === selectedGroup.id || !r.groupId);
+      // Public group shows recipes explicitly assigned to it, recipes with no group,
+      // or recipes that have been published to the public list
+      return recipes.filter((r) => r.groupId === selectedGroup.id || !r.groupId || r.publishedToPublic);
     }
     return recipes.filter((r) => r.groupId === selectedGroup.id);
   }, [recipes, selectedGroup]);
@@ -411,6 +412,17 @@ function App() {
     } catch (error) {
       console.error('Error deleting recipe:', error);
       alert('Fehler beim Löschen des Rezepts. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const handlePublishRecipe = async (recipeId) => {
+    if (!currentUser) return;
+
+    try {
+      await updateRecipeInFirestore(recipeId, { publishedToPublic: true });
+    } catch (error) {
+      console.error('Error publishing recipe:', error);
+      alert('Fehler beim Veröffentlichen des Rezepts. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -734,12 +746,14 @@ function App() {
           onBack={handleBackFromRecipeDetail}
           onEdit={handleEditRecipe}
           onDelete={handleDeleteRecipe}
+          onPublish={handlePublishRecipe}
           onToggleFavorite={handleToggleFavorite}
           onCreateVersion={handleCreateVersion}
           currentUser={currentUser}
           allRecipes={recipes}
           allUsers={allUsers}
           onHeaderVisibilityChange={handleHeaderVisibilityChange}
+          publicGroupId={publicGroupId}
         />
       ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail

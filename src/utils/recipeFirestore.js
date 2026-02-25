@@ -43,8 +43,9 @@ export const subscribeToRecipes = (userId, isAdmin, callback, userGroupIds = [])
         ...doc.data()
       };
       
-      // Group recipes are only visible to group members (and admins)
-      if (recipe.groupId) {
+      // Group recipes are only visible to group members (and admins),
+      // unless the recipe has been published to the public list.
+      if (recipe.groupId && !recipe.publishedToPublic) {
         if (!isAdmin && !userGroupIds.includes(recipe.groupId)) {
           return;
         }

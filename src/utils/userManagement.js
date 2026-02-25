@@ -550,15 +550,20 @@ export const canEditRecipe = (user, recipe) => {
 
 /**
  * Check if user can delete a specific recipe
- * Only administrators may delete recipes.
+ * Administrators may delete any recipe.
+ * Authors may delete their own recipe as long as it is not in the public list.
  * @param {Object} user - User object
  * @param {Object} recipe - Recipe object with authorId field
+ * @param {boolean} [isPublicRecipe=false] - Whether the recipe is assigned to the public list
  * @returns {boolean}
  */
-export const canDeleteRecipe = (user, recipe) => {
+export const canDeleteRecipe = (user, recipe, isPublicRecipe = false) => {
   if (!user) return false;
-  // Only admins can delete recipes
-  return user.role === ROLES.ADMIN;
+  // Admins can delete any recipe
+  if (user.role === ROLES.ADMIN) return true;
+  // Authors can delete their own non-public recipe
+  if (!isPublicRecipe && recipe && recipe.authorId === user.id) return true;
+  return false;
 };
 
 /**
