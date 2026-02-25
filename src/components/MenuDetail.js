@@ -7,6 +7,7 @@ import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients } from '../utils/ingredientUtils';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 import ShoppingListModal from './ShoppingListModal';
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
@@ -20,7 +21,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
-  const [portionCounts, setPortionCounts] = useState({});
+  const [portionCounts, setPortionCounts] = useState(initialMenu.portionCounts || {});
+  const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
 
   // Load close button icon from settings
   useEffect(() => {
@@ -167,6 +169,29 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     }];
   }
 
+  // Collect all unique linked (sub-)recipes referenced in menu recipe ingredients
+  const allLinkedRecipes = useMemo(() => {
+    const seenIds = new Set();
+    const result = [];
+    for (const section of recipeSections) {
+      for (const recipe of section.recipes) {
+        for (const ing of (recipe.ingredients || [])) {
+          const text = typeof ing === 'string' ? ing : ing?.text;
+          const link = decodeRecipeLink(text);
+          if (link && !seenIds.has(link.recipeId)) {
+            const linked = recipes.find(r => r.id === link.recipeId);
+            if (linked) {
+              seenIds.add(link.recipeId);
+              result.push(linked);
+            }
+          }
+        }
+      }
+    }
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipeSections, recipes]);
+
   const getMenuShoppingListIngredients = () => {
     const ingredients = [];
     for (const section of recipeSections) {
@@ -176,8 +201,24 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
         const multiplier = targetPortions / recipePortions;
         for (const ing of (recipe.ingredients || [])) {
           const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
-          if (item.type !== 'heading') {
-            const text = typeof ing === 'string' ? ing : ing.text;
+          if (item.type === 'heading') continue;
+          const text = typeof ing === 'string' ? ing : ing.text;
+          const recipeLink = decodeRecipeLink(text);
+          if (recipeLink) {
+            // Expand linked recipe ingredients (already included separately via allLinkedRecipes)
+            const linkedRecipe = recipes.find(r => r.id === recipeLink.recipeId);
+            if (linkedRecipe) {
+              const linkedTarget = linkedPortionCounts[recipeLink.recipeId] ?? (linkedRecipe.portionen || 4);
+              const linkedMultiplier = linkedTarget / (linkedRecipe.portionen || 4);
+              for (const linkedIng of (linkedRecipe.ingredients || [])) {
+                const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
+                if (linkedItem.type === 'heading') continue;
+                const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
+                if (decodeRecipeLink(linkedText)) continue; // skip nested links
+                ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
+              }
+            }
+          } else {
             ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
           }
         }
@@ -383,6 +424,42 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                   </div>
                 );
               })}
+              {allLinkedRecipes.length > 0 && (
+                <>
+                  <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+                  {allLinkedRecipes.map(linkedRecipe => {
+                    const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+                    return (
+                      <div key={linkedRecipe.id} className="portion-selector-item">
+                        <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                        <div className="portion-selector-controls">
+                          <button
+                            className="portion-selector-btn"
+                            onClick={() => setLinkedPortionCounts(prev => ({
+                              ...prev,
+                              [linkedRecipe.id]: Math.max(1, current - 1)
+                            }))}
+                            aria-label="Portionen verringern"
+                          >
+                            −
+                          </button>
+                          <span className="portion-selector-count">{current}</span>
+                          <button
+                            className="portion-selector-btn"
+                            onClick={() => setLinkedPortionCounts(prev => ({
+                              ...prev,
+                              [linkedRecipe.id]: current + 1
+                            }))}
+                            aria-label="Portionen erhöhen"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
             <div className="portion-selector-footer">
               <button
