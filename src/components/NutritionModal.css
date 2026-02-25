@@ -403,3 +403,142 @@
 .nutrition-not-included-reason {
   color: #999;
 }
+
+/* Inline reformulation editing */
+.nutrition-not-included-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.nutrition-reformulation-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.nutrition-reformulation-input {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  border: 1.5px solid #402C1C;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #333;
+  background: white;
+  min-width: 0;
+}
+
+.nutrition-reformulation-input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.nutrition-reformulation-confirm-btn,
+.nutrition-reformulation-cancel-btn {
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  line-height: 1;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.nutrition-reformulation-confirm-btn {
+  background: #2e7d32;
+  color: white;
+  border-color: #2e7d32;
+}
+
+.nutrition-reformulation-confirm-btn:hover {
+  background: #1b5e20;
+}
+
+.nutrition-reformulation-cancel-btn {
+  background: white;
+  color: #999;
+  border-color: #ccc;
+}
+
+.nutrition-reformulation-cancel-btn:hover {
+  background: #f5f5f5;
+  color: #555;
+}
+
+.nutrition-reformulation-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.2rem;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.nutrition-reformulation-edit-btn:hover {
+  opacity: 1;
+}
+
+.nutrition-reformulation-badge {
+  font-size: 0.72rem;
+  color: #402C1C;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Change log */
+.nutrition-change-log {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.nutrition-change-log summary {
+  cursor: pointer;
+  color: #999;
+  user-select: none;
+}
+
+.nutrition-change-log summary:hover {
+  color: #555;
+}
+
+.nutrition-change-log-list {
+  margin: 0.2rem 0 0 1rem;
+  padding: 0;
+  list-style: disc;
+}
+
+.nutrition-change-log-list li {
+  margin: 0.1rem 0;
+}
+
+/* Recalculate with reformulations button */
+.nutrition-recalc-reformulated-button {
+  margin-top: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px solid #402C1C;
+  background: #fdf6f0;
+  color: #402C1C;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nutrition-recalc-reformulated-button:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+}
+
+.nutrition-recalc-reformulated-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

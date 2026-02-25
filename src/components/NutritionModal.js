@@ -57,6 +57,19 @@ function NutritionModal({ recipe, onClose, onSave }) {
     return null;
   });
   const [calcProgress, setCalcProgress] = useState(null);
+  const [editingIngredient, setEditingIngredient] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [reformulations, setReformulations] = useState(() => {
+    const stored = loadStoredCalcResult(recipe?.id);
+    const notIncluded = stored?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
+    const map = {};
+    for (const item of notIncluded) {
+      if (item.reformulation) {
+        map[item.ingredient] = { text: item.reformulation, changeLog: item.changeLog || [] };
+      }
+    }
+    return map;
+  });
   const closeButtonRef = useRef(null);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
@@ -127,6 +140,36 @@ function NutritionModal({ recipe, onClose, onSave }) {
     }
   };
 
+  const handleSaveReformulation = async (ingredient, newText) => {
+    const trimmed = newText.trim();
+    setEditingIngredient(null);
+    if (!trimmed) return;
+    const prev = reformulations[ingredient];
+    const prevText = prev?.text || ingredient;
+    if (trimmed === prevText) return;
+
+    const changeLogEntry = { from: prevText, to: trimmed, timestamp: new Date().toISOString() };
+    const updated = { text: trimmed, changeLog: [...(prev?.changeLog || []), changeLogEntry] };
+    const newReformulations = { ...reformulations, [ingredient]: updated };
+    setReformulations(newReformulations);
+
+    if (autoCalcResult?.notIncluded) {
+      const updatedNotIncluded = autoCalcResult.notIncluded.map(item =>
+        item.ingredient === ingredient
+          ? { ...item, reformulation: updated.text, changeLog: updated.changeLog }
+          : item
+      );
+      const updatedResult = { ...autoCalcResult, notIncluded: updatedNotIncluded };
+      setAutoCalcResult(updatedResult);
+      saveStoredCalcResult(recipe?.id, updatedResult);
+      try {
+        await onSave({ ...(recipe?.naehrwerte || {}), calcNotIncluded: updatedNotIncluded });
+      } catch (err) {
+        console.error('Could not save reformulation to Firebase:', err);
+      }
+    }
+  };
+
   const handleAutoCalculate = async () => {
     const rawIngredients = recipe.zutaten || recipe.ingredients || [];
     const ingredients = rawIngredients
@@ -149,10 +192,11 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
     for (let i = 0; i < ingredients.length; i++) {
       const ingredient = ingredients[i];
-      setCalcProgress({ done: i, total: ingredients.length, current: ingredient });
+      const effectiveIngredient = reformulations[ingredient]?.text || ingredient;
+      setCalcProgress({ done: i, total: ingredients.length, current: effectiveIngredient });
 
       try {
-        const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
+        const result = await calculateNutrition({ ingredients: [effectiveIngredient], portionen: 1 });
         const { naehrwerte: n, details } = result.data;
         const detail = details && details[0];
         if (detail && detail.found) {
@@ -161,11 +205,21 @@ function NutritionModal({ recipe, onClose, onSave }) {
           });
           foundCount++;
         } else {
-          notIncluded.push({ ingredient, error: detail?.error || 'Nicht gefunden' });
+          const reform = reformulations[ingredient];
+          notIncluded.push({
+            ingredient,
+            error: detail?.error || 'Nicht gefunden',
+            ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
+          });
         }
       } catch (err) {
         console.error(`Auto-calculation failed for "${ingredient}":`, err);
-        notIncluded.push({ ingredient, error: mapNutritionCalcError(err) });
+        const reform = reformulations[ingredient];
+        notIncluded.push({
+          ingredient,
+          error: mapNutritionCalcError(err),
+          ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
+        });
       }
     }
 
@@ -389,13 +443,79 @@ function NutritionModal({ recipe, onClose, onSave }) {
                     <ul className="nutrition-not-included-list">
                       {autoCalcResult.notIncluded.map((item, i) => (
                         <li key={i} className="nutrition-not-included-item">
-                          <span className="nutrition-not-included-name">{item.ingredient}</span>
-                          {item.error && (
-                            <span className="nutrition-not-included-reason">: {item.error}</span>
+                          {editingIngredient === item.ingredient ? (
+                            <div className="nutrition-reformulation-edit">
+                              <input
+                                type="text"
+                                className="nutrition-reformulation-input"
+                                value={editingText}
+                                autoFocus
+                                onChange={(e) => setEditingText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveReformulation(item.ingredient, editingText);
+                                  if (e.key === 'Escape') setEditingIngredient(null);
+                                }}
+                              />
+                              <button
+                                className="nutrition-reformulation-confirm-btn"
+                                onClick={() => handleSaveReformulation(item.ingredient, editingText)}
+                                title="Umformulierung speichern"
+                              >✓</button>
+                              <button
+                                className="nutrition-reformulation-cancel-btn"
+                                onClick={() => setEditingIngredient(null)}
+                                title="Abbrechen"
+                              >✕</button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="nutrition-not-included-row">
+                                <span className="nutrition-not-included-name">
+                                  {reformulations[item.ingredient]?.text || item.ingredient}
+                                  {reformulations[item.ingredient] && (
+                                    <span className="nutrition-reformulation-badge"> (umformuliert)</span>
+                                  )}
+                                </span>
+                                {item.error && (
+                                  <span className="nutrition-not-included-reason">: {item.error}</span>
+                                )}
+                                <button
+                                  className="nutrition-reformulation-edit-btn"
+                                  onClick={() => {
+                                    setEditingIngredient(item.ingredient);
+                                    setEditingText(reformulations[item.ingredient]?.text || item.ingredient);
+                                  }}
+                                  title="Zutat umformulieren"
+                                >✏️</button>
+                              </div>
+                              {(item.changeLog || reformulations[item.ingredient]?.changeLog)?.length > 0 && (
+                                <details className="nutrition-change-log">
+                                  <summary>Änderungsprotokoll</summary>
+                                  <ul className="nutrition-change-log-list">
+                                    {(item.changeLog || reformulations[item.ingredient]?.changeLog).map((entry, j) => (
+                                      <li key={j}>
+                                        {new Date(entry.timestamp).toLocaleString('de-DE')}:{' '}
+                                        „{entry.from}" → „{entry.to}"
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              )}
+                            </>
                           )}
                         </li>
                       ))}
                     </ul>
+                    {Object.keys(reformulations).length > 0 && (
+                      <button
+                        className="nutrition-recalc-reformulated-button"
+                        onClick={handleAutoCalculate}
+                        disabled={autoCalcLoading}
+                        title="Nährwerte mit den umformulierten Zutaten neu berechnen"
+                      >
+                        🔄 Mit Umformulierungen neu berechnen
+                      </button>
+                    )}
                   </div>
                 )}
                 {autoCalcResult.saveError && (
