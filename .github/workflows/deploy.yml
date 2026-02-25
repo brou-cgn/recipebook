@@ -42,12 +42,12 @@ jobs:
       - name: Read package.json
         id: package
         run: |
-          echo "json=$(cat package.json | tr -d '\n')" >> $GITHUB_OUTPUT
+          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
       
       - name: Build
         env:
           CI: false
-          REACT_APP_VERSION: ${{ fromJson(steps.package.outputs.json).version }}
+          REACT_APP_VERSION: ${{ steps.package.outputs.version }}
           REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
           REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
           REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
