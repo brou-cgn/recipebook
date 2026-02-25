@@ -88,4 +88,21 @@ describe('RecipeList - Add Button Visibility', () => {
     fireEvent.click(btn);
     expect(onAddRecipe).toHaveBeenCalledWith('group-1');
   });
+
+  test('"Rezept hinzufügen" calls onAddRecipe without arguments (not with the click event)', async () => {
+    const onAddRecipe = jest.fn();
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={onAddRecipe}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const btn = await screen.findByRole('button', { name: /\+ Rezept hinzufügen/i });
+    fireEvent.click(btn);
+    expect(onAddRecipe).toHaveBeenCalledWith();
+  });
 });

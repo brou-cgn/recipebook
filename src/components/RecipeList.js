@@ -168,7 +168,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               + Privates Rezept hinzufügen
             </button>
           ) : userCanEdit && (
-            <button className="add-button" onClick={onAddRecipe}>
+            <button className="add-button" onClick={() => onAddRecipe()}>
               + Rezept hinzufügen
             </button>
           )}
