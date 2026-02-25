@@ -56,6 +56,9 @@ service cloud.firestore {
     
     // Menus collection rules
     match /menus/{menuId} {
+      // Allow unauthenticated reads for menus with a shareId (public sharing)
+      allow read: if resource.data.shareId != null && resource.data.shareId != '';
+
       // Anyone authenticated can read public menus
       // Only authors and admins can read private menus
       allow read: if isAuthenticated() && 
