@@ -56,10 +56,17 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      // Alle 60 Minuten auf Updates prüfen
+      // Alle 5 Minuten auf Updates prüfen
       setInterval(() => {
         registration.update();
-      }, 60 * 60 * 1000);
+      }, 5 * 60 * 1000);
+
+      // Auf Updates prüfen, wenn der Nutzer zur App zurückkehrt
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          registration.update();
+        }
+      });
 
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
