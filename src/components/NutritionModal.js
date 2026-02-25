@@ -185,6 +185,13 @@ function NutritionModal({ recipe, onClose, onSave }) {
     clearStoredCalcResult(recipe?.id);
     setCalcProgress({ done: 0, total: ingredients.length, current: ingredients[0] || '' });
 
+    // Persist calcPending so the loading indicator survives navigation away from this modal
+    try {
+      await onSave({ ...(recipe?.naehrwerte || {}), calcPending: true, calcError: null });
+    } catch (err) {
+      console.error('Could not set calcPending:', err);
+    }
+
     const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
