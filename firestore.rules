@@ -32,34 +32,30 @@ service cloud.firestore {
              get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid;
     }
 
-    function isPublicGroup(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)).data.type == 'public';
-    }
-
-    function isPrivateGroup(groupId) {
-      return get(/databases/$(database)/documents/groups/$(groupId)).data.type == 'private';
-    }
-
     // Recipes collection rules
     match /recipes/{recipeId} {
       // Share-link: anyone (including guests)
       allow read: if resource.data.shareId != null && resource.data.shareId != '';
 
-      // Admin can read any recipe that has a groupId (including drafts)
-      allow read: if isAdmin() && resource.data.groupId != null;
+      // Admin can read any recipe
+      allow read: if isAdmin();
 
       // Public group, non-draft: any authenticated user
       allow read: if isAuthenticated() &&
                      resource.data.groupId != null &&
                      !resource.data.isPrivate &&
-                     isPublicGroup(resource.data.groupId);
+                     resource.data.groupType == 'public';
 
       // Private group, non-draft: authenticated group member
       allow read: if isAuthenticated() &&
                      resource.data.groupId != null &&
                      !resource.data.isPrivate &&
-                     isPrivateGroup(resource.data.groupId) &&
+                     resource.data.groupType == 'private' &&
                      isGroupMember(resource.data.groupId);
+
+      // Draft: admin (all), edit (own author)
+      allow read: if resource.data.isPrivate &&
+                     (isAdmin() || (isEdit() && isAuthor(resource.data.authorId)));
 
       // Create: admin or edit, groupId must be set
       allow create: if (isAdmin() || isEdit()) &&

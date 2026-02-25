@@ -345,8 +345,10 @@ function App() {
           : resolvedPublicGroupId;
         // Auto-publish when creating via "Rezept hinzufügen" (no active private group)
         const autoPublish = !activeGroupId && !isCreatingVersion;
+        const activeGroup = groups.find(g => g.id === safeGroupId);
+        const groupType = activeGroup?.type ?? 'public';
         const recipeWithGroup = safeGroupId
-          ? { ...recipe, groupId: safeGroupId, ...(autoPublish ? { publishedToPublic: true } : {}) }
+          ? { ...recipe, groupId: safeGroupId, groupType, ...(autoPublish ? { publishedToPublic: true } : {}) }
           : recipe;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
