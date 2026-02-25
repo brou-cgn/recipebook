@@ -334,10 +334,11 @@ function App() {
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
       } else {
         // Add new recipe or new version; attach groupId if created from within a group,
-        // otherwise fall back to the public group
+        // otherwise fall back to the public group (from state or from the groups subscription)
+        const resolvedPublicGroupId = publicGroupId || groups.find(g => g.type === 'public')?.id;
         const safeGroupId = activeGroupId
           ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
-          : publicGroupId;
+          : resolvedPublicGroupId;
         const recipeWithGroup = safeGroupId ? { ...recipe, groupId: safeGroupId } : recipe;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
