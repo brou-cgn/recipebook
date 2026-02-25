@@ -40,7 +40,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
         </button>
       </div>
 
-      {publicGroup && (
+      {publicGroup && currentUser?.isAdmin && (
         <div className="group-section">
           <h3 className="group-section-title">Systemgruppen</h3>
           <div className="group-grid">
