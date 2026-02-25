@@ -12,7 +12,10 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  query,
+  where,
+  deleteField
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 
@@ -126,6 +129,51 @@ export const deleteMenu = async (menuId) => {
     await deleteDoc(menuRef);
   } catch (error) {
     console.error('Error deleting menu:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a menu by its shareId (public access, no authentication required)
+ * @param {string} shareId - The shareId of the menu
+ * @returns {Promise<Object|null>} Promise resolving to the menu or null if not found
+ */
+export const getMenuByShareId = async (shareId) => {
+  try {
+    const menusRef = collection(db, 'menus');
+    const q = query(menusRef, where('shareId', '==', shareId));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const menuDoc = snapshot.docs[0];
+    return { id: menuDoc.id, ...menuDoc.data() };
+  } catch (error) {
+    console.error('Error getting menu by shareId:', error);
+    return null;
+  }
+};
+
+/**
+ * Enable sharing for a menu by generating a shareId
+ * @param {string} menuId - ID of the menu
+ * @returns {Promise<string>} Promise resolving to the generated shareId
+ */
+export const enableMenuSharing = async (menuId) => {
+  const shareId = crypto.randomUUID();
+  await updateMenu(menuId, { shareId });
+  return shareId;
+};
+
+/**
+ * Disable sharing for a menu by removing the shareId
+ * @param {string} menuId - ID of the menu
+ * @returns {Promise<void>}
+ */
+export const disableMenuSharing = async (menuId) => {
+  try {
+    const menuRef = doc(db, 'menus', menuId);
+    await updateDoc(menuRef, { shareId: deleteField(), updatedAt: serverTimestamp() });
+  } catch (error) {
+    console.error('Error disabling menu sharing:', error);
     throw error;
   }
 };

@@ -14,6 +14,7 @@ import PasswordChangeModal from './components/PasswordChangeModal';
 import FilterPage from './components/FilterPage';
 import Kueche from './components/Kueche';
 import SharePage from './components/SharePage';
+import MenuSharePage from './components/MenuSharePage';
 import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
 import { 
@@ -151,9 +152,19 @@ function App() {
 
   const [sharePageId, setSharePageId] = useState(() => getShareIdFromHash());
 
+  // Detect menu share URL: #menu-share/:shareId
+  const getMenuShareIdFromHash = () => {
+    const hash = window.location.hash;
+    const match = hash.match(/^#menu-share\/(.+)$/);
+    return match ? match[1] : null;
+  };
+
+  const [menuSharePageId, setMenuSharePageId] = useState(() => getMenuShareIdFromHash());
+
   useEffect(() => {
     const handleHashChange = () => {
       setSharePageId(getShareIdFromHash());
+      setMenuSharePageId(getMenuShareIdFromHash());
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -647,6 +658,19 @@ function App() {
         <Header />
         <SharePage
           shareId={sharePageId}
+          currentUser={currentUser}
+        />
+      </div>
+    );
+  }
+
+  // If accessing a menu share URL, show MenuSharePage (no login required)
+  if (menuSharePageId) {
+    return (
+      <div className="App">
+        <Header />
+        <MenuSharePage
+          shareId={menuSharePageId}
           currentUser={currentUser}
         />
       </div>

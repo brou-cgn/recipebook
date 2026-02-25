@@ -18,13 +18,18 @@ jest.mock('../utils/menuSections', () => ({
   groupRecipesBySections: () => [],
 }));
 
+jest.mock('../utils/customLists', () => ({
+  getButtonIcons: () => Promise.resolve({ menuCloseButton: '✕', copyLink: '📋' }),
+}));
+
 jest.mock('../utils/userManagement', () => ({
   canEditMenu: () => true,
   canDeleteMenu: () => true,
 }));
 
-jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ menuCloseButton: '✕' }),
+jest.mock('../utils/menuFirestore', () => ({
+  enableMenuSharing: jest.fn(() => Promise.resolve('new-share-id')),
+  disableMenuSharing: jest.fn(() => Promise.resolve()),
 }));
 
 const mockMenu = {
@@ -45,7 +50,7 @@ const mockMenuWithMeta = {
 const currentUser = { id: 'user-1' };
 
 describe('MenuDetail - Action Buttons', () => {
-  test('renders favorite, edit and delete buttons', () => {
+  test('renders favorite, edit, delete and share buttons', () => {
     render(
       <MenuDetail
         menu={mockMenu}
@@ -63,9 +68,10 @@ describe('MenuDetail - Action Buttons', () => {
     expect(screen.getByTitle(/Favoriten/i)).toBeInTheDocument();
     expect(screen.getByText('Bearbeiten')).toBeInTheDocument();
     expect(screen.getByText('Löschen')).toBeInTheDocument();
+    expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
   });
 
-  test('action-buttons container wraps all three buttons', () => {
+  test('action-buttons container wraps all four buttons', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -83,7 +89,7 @@ describe('MenuDetail - Action Buttons', () => {
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
     const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(4);
   });
 });
 
@@ -128,6 +134,66 @@ describe('MenuDetail - Close Button in Title Row', () => {
     expect(header).toBeInTheDocument();
     const closeButtonInHeader = header.querySelector('.close-button');
     expect(closeButtonInHeader).not.toBeInTheDocument();
+  });
+});
+
+describe('MenuDetail - Share Buttons', () => {
+  test('shows Teilen button for menu without shareId', () => {
+    render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
+  });
+
+  test('hides Teilen button for menu with shareId', () => {
+    const sharedMenu = { ...mockMenu, shareId: 'some-share-id' };
+
+    render(
+      <MenuDetail
+        menu={sharedMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(screen.queryByTitle('Menü teilen')).toBeNull();
+  });
+
+  test('shows copy link button for menu with shareId', () => {
+    const sharedMenu = { ...mockMenu, shareId: 'some-share-id' };
+
+    render(
+      <MenuDetail
+        menu={sharedMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
   });
 });
 

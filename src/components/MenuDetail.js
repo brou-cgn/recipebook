@@ -5,11 +5,16 @@ import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
+import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 
-function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers }) {
+function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
+  const [menu, setMenu] = useState(initialMenu);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
+  const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareUrlCopied, setShareUrlCopied] = useState(false);
 
   // Load close button icon from settings
   useEffect(() => {
@@ -17,6 +22,7 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
       const { getButtonIcons } = require('../utils/customLists');
       const icons = await getButtonIcons();
       setCloseButtonIcon(icons.menuCloseButton || '✕');
+      setCopyLinkIcon(icons.copyLink || '📋');
     };
     loadButtonIcons();
   }, []);
@@ -91,6 +97,56 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
     }
   };
 
+  const getShareUrl = () => {
+    const base = window.location.href.split('#')[0];
+    return `${base}#menu-share/${menu.shareId}`;
+  };
+
+  const handleToggleShare = async () => {
+    setShareLoading(true);
+    try {
+      if (menu.shareId) {
+        await disableMenuSharing(menu.id);
+        setMenu({ ...menu, shareId: undefined });
+      } else {
+        const shareId = await enableMenuSharing(menu.id);
+        setMenu({ ...menu, shareId });
+      }
+    } catch (error) {
+      console.error('Error toggling share:', error);
+      alert('Fehler beim Ändern des Share-Status. Bitte versuchen Sie es erneut.');
+    }
+    setShareLoading(false);
+  };
+
+  const handleCopyShareUrl = async () => {
+    const url = getShareUrl();
+    if (navigator.share) {
+      try {
+        await navigator.share({ url, title: menu.name });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        // Fall through to clipboard copy on other errors
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareUrlCopied(true);
+      setTimeout(() => setShareUrlCopied(false), 2000);
+    } catch {
+      // Legacy fallback for older browsers that don't support the Clipboard API
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setShareUrlCopied(true);
+      setTimeout(() => setShareUrlCopied(false), 2000);
+    }
+  };
+
   // Get recipes grouped by sections
   let recipeSections = [];
   if (menu.sections && menu.sections.length > 0) {
@@ -107,7 +163,7 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
   return (
     <div className="menu-detail-container">
       <div className="menu-detail-header">
-        <div className="action-buttons">
+          <div className="action-buttons">
           <button 
             className={`favorite-button ${isFavorite ? 'favorite-active' : ''}`}
             onClick={handleToggleFavorite}
@@ -123,6 +179,46 @@ function MenuDetail({ menu, recipes, onBack, onEdit, onDelete, onSelectRecipe, o
           {canDeleteMenu(currentUser, menu) && (
             <button className="delete-button" onClick={handleDelete}>
               Löschen
+            </button>
+          )}
+          {canEditMenu(currentUser, menu) && !menu.shareId && (
+            <button
+              className="share-button"
+              onClick={handleToggleShare}
+              disabled={shareLoading}
+              title="Menü teilen"
+            >
+              {shareLoading ? '…' : '↑ Teilen'}
+            </button>
+          )}
+          {canEditMenu(currentUser, menu) && menu.shareId && (
+            <button
+              className="share-copy-url-button"
+              onClick={handleCopyShareUrl}
+              title="Share-Link kopieren"
+            >
+              {shareUrlCopied ? '✓' : (
+                isBase64Image(copyLinkIcon) ? (
+                  <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                ) : (
+                  copyLinkIcon
+                )
+              )}
+            </button>
+          )}
+          {isSharedView && !canEditMenu(currentUser, menu) && (
+            <button
+              className="share-copy-url-button"
+              onClick={handleCopyShareUrl}
+              title="Share-Link kopieren"
+            >
+              {shareUrlCopied ? '✓' : (
+                isBase64Image(copyLinkIcon) ? (
+                  <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
+                ) : (
+                  copyLinkIcon
+                )
+              )}
             </button>
           )}
         </div>
