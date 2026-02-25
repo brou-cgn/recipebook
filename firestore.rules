@@ -1,157 +1,184 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if user is authenticated
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    
-    // Helper function to check if user is the author of the document
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    function isEdit() {
+      return isAuthenticated() && (getUserData().role == 'edit' || isAdmin());
+    }
+
     function isAuthor(authorId) {
       return isAuthenticated() && request.auth.uid == authorId;
     }
-    
-    // Helper function to check if user is a member of the recipe's group
+
     function isGroupMember(groupId) {
       return isAuthenticated() &&
              get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds.hasAny([request.auth.uid]);
     }
 
+    function isGroupOwner(groupId) {
+      return isAuthenticated() &&
+             get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == request.auth.uid;
+    }
+
+    function isPublicGroup(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data.type == 'public';
+    }
+
+    function isPrivateGroup(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data.type == 'private';
+    }
+
     // Recipes collection rules
     match /recipes/{recipeId} {
-      // Allow unauthenticated reads for recipes with a shareId (public sharing)
+      // Share-link: anyone (including guests)
       allow read: if resource.data.shareId != null && resource.data.shareId != '';
-      
-      // Group recipes: only accessible to group members (and admins)
+
+      // Admin can read any recipe that has a groupId (including drafts)
+      allow read: if isAdmin() && resource.data.groupId != null;
+
+      // Public group, non-draft: any authenticated user
       allow read: if isAuthenticated() &&
                      resource.data.groupId != null &&
-                     (isAdmin() || isGroupMember(resource.data.groupId));
+                     !resource.data.isPrivate &&
+                     isPublicGroup(resource.data.groupId);
 
-      // Anyone authenticated can read public (non-group) recipes
-      // Only admins and authors can read private (draft) non-group recipes
-      allow read: if isAuthenticated() && 
-                     resource.data.groupId == null &&
-                     (!resource.data.isPrivate || 
-                      isAdmin() || 
-                      isAuthor(resource.data.authorId));
-      
-      // Authenticated users can create recipes
-      allow create: if isAuthenticated();
-      
-      // Only authors and admins can update recipes
-      allow update: if isAuthenticated() && 
-                       (isAuthor(resource.data.authorId) || isAdmin());
-      
-      // Only authors and admins can delete recipes
-      allow delete: if isAuthenticated() && 
-                       (isAuthor(resource.data.authorId) || isAdmin());
+      // Private group, non-draft: authenticated group member
+      allow read: if isAuthenticated() &&
+                     resource.data.groupId != null &&
+                     !resource.data.isPrivate &&
+                     isPrivateGroup(resource.data.groupId) &&
+                     isGroupMember(resource.data.groupId);
+
+      // Create: admin or edit, groupId must be set
+      allow create: if (isAdmin() || isEdit()) &&
+                       request.resource.data.groupId != null;
+
+      // Update: admin (all), edit (own)
+      allow update: if isAdmin() ||
+                       (isEdit() && isAuthor(resource.data.authorId));
+
+      // Delete: only admin
+      allow delete: if isAdmin();
     }
-    
+
     // Menus collection rules
     match /menus/{menuId} {
-      // Allow unauthenticated reads for menus with a shareId (public sharing)
+      // Share-link: anyone (including guests)
       allow read: if resource.data.shareId != null && resource.data.shareId != '';
 
-      // Anyone authenticated can read public menus
-      // Only authors and admins can read private menus
-      allow read: if isAuthenticated() && 
-                     (!resource.data.isPrivate || 
-                      isAuthor(resource.data.authorId) ||
-                      isAdmin());
-      
-      // Authenticated users can create menus
-      allow create: if isAuthenticated();
-      
-      // Only authors and admins can update menus
-      allow update: if isAuthenticated() && 
-                       (isAuthor(resource.data.authorId) || isAdmin());
-      
-      // Only authors and admins can delete menus
-      allow delete: if isAuthenticated() && 
-                       (isAuthor(resource.data.authorId) || isAdmin());
+      // Non-draft: any authenticated user
+      allow read: if isAuthenticated() && !resource.data.isPrivate;
+
+      // Draft: admin (all), edit (own)
+      allow read: if resource.data.isPrivate &&
+                     (isAdmin() || (isEdit() && isAuthor(resource.data.authorId)));
+
+      // Create: admin or edit
+      allow create: if isAdmin() || isEdit();
+
+      // Update: admin (all), edit (own)
+      allow update: if isAdmin() ||
+                       (isEdit() && isAuthor(resource.data.authorId));
+
+      // Delete: admin (all), edit (own)
+      allow delete: if isAdmin() ||
+                       (isEdit() && isAuthor(resource.data.authorId));
     }
-    
+
+    // Groups collection rules
+    match /groups/{groupId} {
+      // Public groups: only admin
+      allow read: if isAdmin() && resource.data.type == 'public';
+
+      // Private groups: admin (all), edit+read (member or owner)
+      allow read: if resource.data.type == 'private' &&
+                     (isAdmin() ||
+                      ((isEdit() || (isAuthenticated() && getUserData().role == 'read')) &&
+                       (resource.data.memberIds.hasAny([request.auth.uid]) ||
+                        resource.data.ownerId == request.auth.uid)));
+
+      // Create: admin always, edit if creating a private group
+      allow create: if isAdmin() ||
+                       (isEdit() && request.resource.data.type == 'private');
+
+      // Update: admin (all), edit+read (own groups)
+      allow update: if isAdmin() ||
+                       ((isEdit() || (isAuthenticated() && getUserData().role == 'read')) &&
+                        (resource.data.memberIds.hasAny([request.auth.uid]) ||
+                         resource.data.ownerId == request.auth.uid));
+
+      // Delete: admin (all), edit (own = group owner)
+      allow delete: if isAdmin() ||
+                       (isEdit() && resource.data.ownerId == request.auth.uid);
+    }
+
     // Users collection rules
     match /users/{userId} {
-      // Users can read their own profile and admins can read all profiles
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid == userId || isAdmin());
-      
-      // Users can update their own profile
-      allow update: if isAuthenticated() && request.auth.uid == userId;
-      
-      // Only admins can create or delete users
-      allow create, delete: if isAdmin();
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Admin or guest (for registration)
+      allow create: if isAdmin() || !isAuthenticated();
+
+      // Admin (all), or authenticated user (own profile)
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+
+      // Only admin can delete
+      allow delete: if isAdmin();
     }
-    
+
     // User favorites subcollection
     match /users/{userId}/favorites/{favoriteId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-    
+
     // User menu favorites subcollection
     match /users/{userId}/menuFavorites/{favoriteId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-    
-    // Settings collection (app-wide settings)
-    match /settings/{document=**} {
-      // Anyone can read settings
+
+    // Settings collection
+    match /settings/{settingId} {
       allow read: if isAuthenticated();
-      
-      // Only admins can write settings
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
-    
+
     // Custom lists collection
-    match /customLists/{document=**} {
-      // Anyone can read custom lists
+    match /customLists/{listId} {
       allow read: if isAuthenticated();
-      
-      // Only admins can write custom lists
-      allow write: if isAdmin();
-    }
-    
-    // Groups collection rules
-    match /groups/{groupId} {
-      // Authenticated users can read public groups or groups they are a member/owner of
-      allow read: if isAuthenticated() && (
-        resource.data.type == 'public' ||
-        resource.data.ownerId == request.auth.uid ||
-        request.auth.uid in resource.data.memberIds
-      );
-
-      // Authenticated users can create private groups
-      allow create: if isAuthenticated() &&
-        request.resource.data.type == 'private' &&
-        request.resource.data.ownerId == request.auth.uid;
-
-      // Only the owner (or admin) can update a private group
-      allow update: if isAuthenticated() && (
-        resource.data.ownerId == request.auth.uid || isAdmin()
-      );
-
-      // Only the owner (or admin) can delete a group
-      allow delete: if isAuthenticated() && (
-        resource.data.ownerId == request.auth.uid || isAdmin()
-      );
+      allow create, update, delete: if isAdmin();
     }
 
-    // AI Scan rate limiting collection (managed by Cloud Functions only)
-    match /aiScanLimits/{document=**} {
-      // Users can read their own usage records
-      allow read: if isAuthenticated() && 
-                     resource.data.userId == request.auth.uid;
-      
-      // Only Cloud Functions (admin SDK) can write - no direct client writes
-      allow write: if false;
+    // FAQs collection
+    match /faqs/{faqId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Shopping lists collection
+    match /shoppingLists/{listId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isEdit();
+      allow update: if isAdmin() || (isEdit() && isAuthor(resource.data.authorId));
+      allow delete: if isAdmin();
+    }
+
+    // AI Scan rate limiting collection
+    match /aiScanLimits/{limitId} {
+      allow read: if isAdmin() || isEdit();
+      allow create, update, delete: if isAdmin();
     }
   }
 }
