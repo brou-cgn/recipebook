@@ -628,7 +628,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const corsImg = new Image();
       corsImg.crossOrigin = 'anonymous';
       corsImg.onload = () => analyzeBrightness(corsImg);
-      // If the CORS load fails, keep the default (non-alt) icons silently.
+      corsImg.onerror = () => {
+        // CORS-only load failed (e.g. Firebase Storage without CORS config).
+        // Fall back to analyzing the already-rendered img element directly.
+        // analyzeBrightness catches SecurityError (tainted canvas) internally,
+        // so worst case the default icons are kept – same as before this fix.
+        analyzeBrightness(img);
+      };
       corsImg.src = img.src;
     }
   };
@@ -655,6 +661,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setRecipeNavigationStack([...recipeNavigationStack, selectedRecipe]);
       // Navigate to linked recipe
       setSelectedRecipe(linkedRecipe);
+      // Reset brightness flags for the new recipe image
+      setUseCookingModeAlt(false);
+      setUseCloseButtonAlt(false);
       setServingMultiplier(1);
       // Scroll to top
       if (contentRef.current) {
@@ -669,6 +678,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const previousRecipe = recipeNavigationStack[recipeNavigationStack.length - 1];
       setRecipeNavigationStack(recipeNavigationStack.slice(0, -1));
       setSelectedRecipe(previousRecipe);
+      // Reset brightness flags for the returning recipe image
+      setUseCookingModeAlt(false);
+      setUseCloseButtonAlt(false);
       setServingMultiplier(1);
       // Scroll to top
       if (contentRef.current) {
