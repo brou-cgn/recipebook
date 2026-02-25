@@ -198,6 +198,25 @@ export const deleteRecipe = async (recipeId) => {
 };
 
 /**
+ * Get multiple recipes by their IDs (for use in shared views)
+ * @param {string[]} recipeIds - Array of recipe IDs
+ * @returns {Promise<Array>} Promise resolving to array of recipes (only those that exist and are accessible)
+ */
+export const getRecipesByIds = async (recipeIds) => {
+  if (!recipeIds || recipeIds.length === 0) return [];
+  try {
+    const promises = recipeIds.map(id => getDoc(doc(db, 'recipes', id)));
+    const snaps = await Promise.all(promises);
+    return snaps
+      .filter(snap => snap.exists())
+      .map(snap => ({ id: snap.id, ...snap.data() }));
+  } catch (error) {
+    console.error('Error getting recipes by IDs:', error);
+    return [];
+  }
+};
+
+/**
  * Get a recipe by its shareId (public access, no authentication required)
  * @param {string} shareId - The shareId of the recipe
  * @returns {Promise<Object|null>} Promise resolving to the recipe or null if not found
