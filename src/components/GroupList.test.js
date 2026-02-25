@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import GroupList from './GroupList';
 
 const mockCurrentUser = { id: 'user1', vorname: 'Anna', nachname: 'Müller', isAdmin: false };
+const mockAdminUser = { id: 'admin1', vorname: 'Admin', nachname: 'User', isAdmin: true };
 const mockAllUsers = [
   { id: 'user1', vorname: 'Anna', nachname: 'Müller' },
   { id: 'user2', vorname: 'Ben', nachname: 'Schmidt' }
@@ -63,7 +64,23 @@ describe('GroupList', () => {
     expect(screen.getByText('2 Mitglied(er)')).toBeInTheDocument();
   });
 
-  it('renders the public group in the Systemgruppen section', () => {
+  it('renders the public group in the Systemgruppen section for admin users', () => {
+    render(
+      <GroupList
+        groups={[mockPublicGroup]}
+        allUsers={mockAllUsers}
+        currentUser={mockAdminUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+      />
+    );
+    expect(screen.getByText('Systemgruppen')).toBeInTheDocument();
+    // The group name appears as a heading in the card
+    const headings = screen.getAllByRole('heading', { level: 3 });
+    expect(headings.some((h) => h.textContent === 'Öffentlich')).toBe(true);
+  });
+
+  it('hides the public group from non-admin users', () => {
     render(
       <GroupList
         groups={[mockPublicGroup]}
@@ -73,10 +90,8 @@ describe('GroupList', () => {
         onCreateGroup={jest.fn()}
       />
     );
-    expect(screen.getByText('Systemgruppen')).toBeInTheDocument();
-    // The group name appears as a heading in the card
-    const headings = screen.getAllByRole('heading', { level: 3 });
-    expect(headings.some((h) => h.textContent === 'Öffentlich')).toBe(true);
+    expect(screen.queryByText('Systemgruppen')).not.toBeInTheDocument();
+    expect(screen.queryByText('Öffentlich')).not.toBeInTheDocument();
   });
 
   it('calls onSelectGroup when a group card is clicked', () => {

@@ -52,7 +52,8 @@ import {
   subscribeToGroups,
   addGroup as addGroupToFirestore,
   updateGroup as updateGroupInFirestore,
-  deleteGroup as deleteGroupFromFirestore
+  deleteGroup as deleteGroupFromFirestore,
+  ensurePublicGroup
 } from './utils/groupFirestore';
 
 // Helper function to check if a recipe matches the category filter
@@ -110,6 +111,7 @@ function App() {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [activeGroupId, setActiveGroupId] = useState(null);
+  const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -138,10 +140,14 @@ function App() {
   }, [groups, recipeFilters.selectedGroup]);
 
   // Recipes belonging to the currently selected group
-  const selectedGroupRecipes = useMemo(
-    () => recipes.filter((r) => r.groupId === selectedGroup?.id),
-    [recipes, selectedGroup?.id]
-  );
+  const selectedGroupRecipes = useMemo(() => {
+    if (!selectedGroup) return [];
+    if (selectedGroup.type === 'public') {
+      // Public group shows recipes explicitly assigned to it OR recipes with no group
+      return recipes.filter((r) => r.groupId === selectedGroup.id || !r.groupId);
+    }
+    return recipes.filter((r) => r.groupId === selectedGroup.id);
+  }, [recipes, selectedGroup]);
 
   // Detect share URL: #share/:shareId
   const getShareIdFromHash = () => {
@@ -201,6 +207,13 @@ function App() {
       await applyFaviconSettings();
     };
     loadFavicon();
+  }, []);
+
+  // Ensure the system-wide public group exists and store its ID
+  useEffect(() => {
+    ensurePublicGroup().then((id) => setPublicGroupId(id)).catch((err) => {
+      console.error('Error ensuring public group:', err);
+    });
   }, []);
 
   // Set up real-time listener for recipes from Firestore.
@@ -320,10 +333,11 @@ function App() {
         const { id, ...updates } = recipe;
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
       } else {
-        // Add new recipe or new version; attach groupId if created from within a group
+        // Add new recipe or new version; attach groupId if created from within a group,
+        // otherwise fall back to the public group
         const safeGroupId = activeGroupId
           ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
-          : null;
+          : publicGroupId;
         const recipeWithGroup = safeGroupId ? { ...recipe, groupId: safeGroupId } : recipe;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
