@@ -857,6 +857,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Eigene Version erstellen
               </button>
             )}
+            {userCanDelete && (
+              <button className="delete-button" onClick={handleDelete}>
+                Löschen
+              </button>
+            )}
             <button
               className="shopping-list-trigger-button"
               onClick={handleShoppingListClick}
@@ -869,11 +874,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 shoppingListIcon
               )}
             </button>
-            {userCanDelete && (
-              <button className="delete-button" onClick={handleDelete}>
-                Löschen
-              </button>
-            )}
             {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
               <button
                 className="share-button"
@@ -1077,6 +1077,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     Eigene Version erstellen
                   </button>
                 )}
+                {userCanDelete && (
+                  <button className="delete-button" onClick={handleDelete}>
+                    Löschen
+                  </button>
+                )}
                 <button
                   className="shopping-list-trigger-button"
                   onClick={handleShoppingListClick}
@@ -1089,11 +1094,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     shoppingListIcon
                   )}
                 </button>
-                {userCanDelete && (
-                  <button className="delete-button" onClick={handleDelete}>
-                    Löschen
-                  </button>
-                )}
                 {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
                   <button
                     className="share-button"
