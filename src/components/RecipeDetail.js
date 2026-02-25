@@ -7,6 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
+import { scaleIngredient as scaleIngredientUtil, combineIngredients } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -45,6 +46,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [showPortionSelector, setShowPortionSelector] = useState(false);
+  const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
 
   useEffect(() => {
@@ -217,6 +220,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Derive favorite status from favoriteIds
   const isFavorite = favoriteIds.includes(recipe?.id);
 
+  // Collect unique linked (sub-)recipes referenced in this recipe's ingredients
+  const linkedRecipes = useMemo(() => {
+    const seenIds = new Set();
+    const result = [];
+    for (const ing of (recipe.ingredients || [])) {
+      const text = typeof ing === 'string' ? ing : ing?.text;
+      const link = decodeRecipeLink(text);
+      if (link && !seenIds.has(link.recipeId)) {
+        const linked = allRecipes.find(r => r.id === link.recipeId);
+        if (linked) {
+          seenIds.add(link.recipeId);
+          result.push(linked);
+        }
+      }
+    }
+    return result;
+  }, [recipe.ingredients, allRecipes]);
+
   const userCanDirectlyEdit = canDirectlyEditRecipe(currentUser, recipe);
   const userCanCreateVersion = canCreateNewVersion(currentUser);
   const isRecipePublic = !recipe.groupId || recipe.groupId === publicGroupId || !!recipe.publishedToPublic;
@@ -379,15 +400,31 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const getShoppingListIngredients = () => {
     const rawIngredients = recipe.ingredients || [];
-    return rawIngredients
-      .filter(ing => {
-        const item = typeof ing === 'string' ? { type: 'ingredient' } : ing;
-        return item.type !== 'heading';
-      })
-      .map(ing => {
-        const text = typeof ing === 'string' ? ing : ing.text;
-        return scaleIngredient(text);
-      });
+    const ingredients = [];
+    for (const ing of rawIngredients) {
+      const item = typeof ing === 'string' ? { type: 'ingredient' } : ing;
+      if (item.type === 'heading') continue;
+      const text = typeof ing === 'string' ? ing : ing.text;
+      const recipeLink = decodeRecipeLink(text);
+      if (recipeLink) {
+        // Expand linked recipe ingredients
+        const linkedRecipe = allRecipes.find(r => r.id === recipeLink.recipeId);
+        if (linkedRecipe) {
+          const targetPortions = linkedPortionCounts[recipeLink.recipeId] ?? (linkedRecipe.portionen || 4);
+          const multiplier = targetPortions / (linkedRecipe.portionen || 4);
+          for (const linkedIng of (linkedRecipe.ingredients || [])) {
+            const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
+            if (linkedItem.type === 'heading') continue;
+            const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
+            if (decodeRecipeLink(linkedText)) continue; // skip nested links
+            ingredients.push(multiplier !== 1 ? scaleIngredientUtil(linkedText, multiplier) : linkedText);
+          }
+        }
+      } else {
+        ingredients.push(scaleIngredient(text));
+      }
+    }
+    return combineIngredients(ingredients);
   };
 
   const getShareUrl = () => {
@@ -468,6 +505,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
+
+  const handleShoppingListClick = () => {
+    if (linkedRecipes.length > 0) {
+      setLinkedPortionCounts({});
+      setShowPortionSelector(true);
+    } else {
+      setShowShoppingListModal(true);
+    }
+  };
 
   // Get the portion unit for the recipe
   const portionUnitId = recipe.portionUnitId || 'portion';
@@ -803,7 +849,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             )}
             <button
               className="shopping-list-trigger-button"
-              onClick={() => setShowShoppingListModal(true)}
+              onClick={handleShoppingListClick}
               title="Einkaufsliste anzeigen"
               aria-label="Einkaufsliste öffnen"
             >
@@ -1023,7 +1069,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
                 <button
                   className="shopping-list-trigger-button"
-                  onClick={() => setShowShoppingListModal(true)}
+                  onClick={handleShoppingListClick}
                   title="Einkaufsliste anzeigen"
                   aria-label="Einkaufsliste öffnen"
                 >
@@ -1315,6 +1361,73 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           title={recipe.title}
           onClose={() => setShowShoppingListModal(false)}
         />
+      )}
+      {showPortionSelector && linkedRecipes.length > 0 && (
+        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+          <div
+            className="portion-selector-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Portionen auswählen"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="portion-selector-header">
+              <h2 className="portion-selector-title">🛒 Portionen für Einkaufsliste</h2>
+              <button
+                className="portion-selector-close"
+                onClick={() => setShowPortionSelector(false)}
+                aria-label="Portionsauswahl schließen"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="portion-selector-body">
+              <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+              {linkedRecipes.map(linkedRecipe => {
+                const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+                return (
+                  <div key={linkedRecipe.id} className="portion-selector-item">
+                    <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                    <div className="portion-selector-controls">
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setLinkedPortionCounts(prev => ({
+                          ...prev,
+                          [linkedRecipe.id]: Math.max(1, current - 1)
+                        }))}
+                        aria-label="Portionen verringern"
+                      >
+                        −
+                      </button>
+                      <span className="portion-selector-count">{current}</span>
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setLinkedPortionCounts(prev => ({
+                          ...prev,
+                          [linkedRecipe.id]: current + 1
+                        }))}
+                        aria-label="Portionen erhöhen"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="portion-selector-footer">
+              <button
+                className="portion-selector-generate-btn"
+                onClick={() => {
+                  setShowPortionSelector(false);
+                  setShowShoppingListModal(true);
+                }}
+              >
+                Einkaufsliste erstellen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
