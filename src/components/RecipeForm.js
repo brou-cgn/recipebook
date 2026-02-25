@@ -161,7 +161,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   );
 }
 
-function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [] }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [] }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState('');
@@ -755,6 +755,23 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </div>
         </div>
       )}
+
+      {!recipe && !isCreatingVersion && (() => {
+        const targetGroup = activeGroupId
+          ? groups.find((g) => g.id === activeGroupId)
+          : groups.find((g) => g.type === 'public');
+        const isPublicTarget = !activeGroupId || targetGroup?.type === 'public';
+        const groupName = targetGroup?.name || (isPublicTarget ? 'Öffentlich' : null);
+        if (!groupName) return null;
+        return (
+          <div className={`group-assignment-banner ${isPublicTarget ? 'public' : 'private'}`}>
+            <span className="group-assignment-icon">{isPublicTarget ? '🌐' : '🔒'}</span>
+            <span className="group-assignment-text">
+              Wird in Liste <strong>{groupName}</strong> gespeichert
+            </span>
+          </div>
+        );
+      })()}
 
       <form className="recipe-form" onSubmit={handleSubmit}>
         <div className="form-group">

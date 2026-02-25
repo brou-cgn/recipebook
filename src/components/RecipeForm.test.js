@@ -2380,3 +2380,103 @@ describe('RecipeForm - Signature Sentence', () => {
     );
   });
 });
+
+describe('RecipeForm - Group Assignment Indicator', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  const mockGroups = [
+    { id: 'public-1', name: 'Öffentlich', type: 'public' },
+    { id: 'private-1', name: 'Familie', type: 'private' },
+  ];
+
+  const mockUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows public group indicator when no activeGroupId is set', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        activeGroupId={null}
+      />
+    );
+
+    const banner = await screen.findByText(/Wird in Liste/i);
+    expect(banner).toBeInTheDocument();
+    expect(banner.textContent).toContain('Öffentlich');
+  });
+
+  test('shows private group indicator when activeGroupId is a private group', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        activeGroupId="private-1"
+      />
+    );
+
+    const banner = await screen.findByText(/Wird in Liste/i);
+    expect(banner).toBeInTheDocument();
+    expect(banner.textContent).toContain('Familie');
+  });
+
+  test('does not show group indicator when editing an existing recipe', () => {
+    const existingRecipe = { id: 'r1', title: 'Existing', ingredients: [], steps: [] };
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        activeGroupId={null}
+      />
+    );
+
+    expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
+  });
+
+  test('does not show group indicator when creating a version', () => {
+    const existingRecipe = { id: 'r1', title: 'Existing', ingredients: [], steps: [] };
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        activeGroupId={null}
+        isCreatingVersion={true}
+      />
+    );
+
+    expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
+  });
+
+  test('shows public group indicator with fallback name when groups list is empty', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={[]}
+        activeGroupId={null}
+      />
+    );
+
+    const banner = screen.getByText(/Wird in Liste/i);
+    expect(banner).toBeInTheDocument();
+    expect(banner.textContent).toContain('Öffentlich');
+  });
+});

@@ -751,6 +751,8 @@ function App() {
           currentUser={currentUser}
           isCreatingVersion={isCreatingVersion}
           allRecipes={recipes}
+          activeGroupId={activeGroupId}
+          groups={groups}
         />
       ) : selectedMenu ? (
         // Menu detail view - shown regardless of currentView
