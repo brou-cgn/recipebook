@@ -10,6 +10,7 @@ import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
+import ShoppingListModal from './ShoppingListModal';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -43,6 +44,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
+  const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -57,6 +60,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setCopyLinkIcon(icons.copyLink || '📋');
       setNutritionEmptyIcon(icons.nutritionEmpty || '➕');
       setNutritionFilledIcon(icons.nutritionFilled || '🥦');
+      setShoppingListIcon(icons.shoppingList || '🛒');
     };
     loadSettings();
   }, []);
@@ -371,6 +375,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     } else if (!recipe.naehrwerte?.calcPending) {
       handleAutoCalculateAndSave();
     }
+  };
+
+  const getShoppingListIngredients = () => {
+    const rawIngredients = recipe.ingredients || [];
+    return rawIngredients
+      .filter(ing => {
+        const item = typeof ing === 'string' ? { type: 'ingredient' } : ing;
+        return item.type !== 'heading';
+      })
+      .map(ing => {
+        const text = typeof ing === 'string' ? ing : ing.text;
+        return scaleIngredient(text);
+      });
   };
 
   const getShareUrl = () => {
@@ -784,6 +801,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {isFavorite ? '★' : '☆'}
               </button>
             )}
+            <button
+              className="shopping-list-trigger-button"
+              onClick={() => setShowShoppingListModal(true)}
+              title="Einkaufsliste anzeigen"
+              aria-label="Einkaufsliste öffnen"
+            >
+              {isBase64Image(shoppingListIcon) ? (
+                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+              ) : (
+                shoppingListIcon
+              )}
+            </button>
             {userCanDirectlyEdit && (
               <button className="edit-button" onClick={() => onEdit(recipe)}>
                 Bearbeiten
@@ -992,6 +1021,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {isFavorite ? '★' : '☆'}
                   </button>
                 )}
+                <button
+                  className="shopping-list-trigger-button"
+                  onClick={() => setShowShoppingListModal(true)}
+                  title="Einkaufsliste anzeigen"
+                  aria-label="Einkaufsliste öffnen"
+                >
+                  {isBase64Image(shoppingListIcon) ? (
+                    <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+                  ) : (
+                    shoppingListIcon
+                  )}
+                </button>
                 {userCanDirectlyEdit && (
                   <button className="edit-button" onClick={() => onEdit(recipe)}>
                     Bearbeiten
@@ -1266,6 +1307,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           recipe={recipe}
           onClose={() => setShowNutritionModal(false)}
           onSave={handleSaveNutrition}
+        />
+      )}
+      {showShoppingListModal && (
+        <ShoppingListModal
+          items={getShoppingListIngredients()}
+          title={recipe.title}
+          onClose={() => setShowShoppingListModal(false)}
         />
       )}
     </div>

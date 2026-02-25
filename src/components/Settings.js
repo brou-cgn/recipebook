@@ -154,7 +154,8 @@ function Settings({ onBack, currentUser }) {
     copyLink: '📋',
     nutritionEmpty: '➕',
     nutritionFilled: '🥦',
-    privateListBack: '✕'
+    privateListBack: '✕',
+    shoppingList: '🛒'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -1637,6 +1638,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.privateListBack} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.privateListBack}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="shoppingListIcon">Einkaufslisten-Button (Rezept, Menü, Liste):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.shoppingList) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="shoppingListIcon"
+                          value={buttonIcons.shoppingList}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, shoppingList: e.target.value })}
+                          placeholder="z.B. 🛒"
+                          maxLength={10}
+                        />
+                        <label htmlFor="shoppingListIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'shoppingList' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="shoppingListIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('shoppingList', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'shoppingList'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('shoppingList')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, shoppingList: DEFAULT_BUTTON_ICONS.shoppingList })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.shoppingList) ? (
+                        <img src={buttonIcons.shoppingList} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.shoppingList}</span>
                       )}
                     </div>
                   </div>
