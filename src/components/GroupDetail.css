@@ -137,6 +137,10 @@
   color: #333;
 }
 
+.group-section-header h3 {
+  margin: 0;
+}
+
 .group-empty-hint {
   color: #999;
   font-size: 0.9rem;
@@ -197,6 +201,92 @@
 /* Recipe tiles section */
 .group-recipes-section {
   margin-top: 1.25rem;
+}
+
+.group-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.group-section-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.group-add-member-btn {
+  background: none;
+  border: 1.5px solid #402C1C;
+  color: #402C1C;
+  padding: 0.3rem 0.85rem;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.group-add-member-btn:hover {
+  background: #402C1C;
+  color: white;
+}
+
+.group-add-member-panel {
+  background: #f9f6f3;
+  border: 1px solid #e0d8d0;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.group-add-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: white;
+}
+
+.group-invite-email-input {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.group-invite-email-input:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.group-add-member-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.group-add-member-success {
+  color: #2e7d32;
+  font-size: 0.875rem;
+  margin: 0 0 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  background: #e8f5e9;
+  border-radius: 6px;
 }
 
 .group-recipe-grid {
