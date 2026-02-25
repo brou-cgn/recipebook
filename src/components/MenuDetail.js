@@ -6,6 +6,7 @@ import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
+import { scaleIngredient } from '../utils/ingredientUtils';
 import ShoppingListModal from './ShoppingListModal';
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
@@ -18,6 +19,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [shareLoading, setShareLoading] = useState(false);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [showPortionSelector, setShowPortionSelector] = useState(false);
+  const [portionCounts, setPortionCounts] = useState({});
 
   // Load close button icon from settings
   useEffect(() => {
@@ -168,10 +171,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     const ingredients = [];
     for (const section of recipeSections) {
       for (const recipe of section.recipes) {
+        const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+        const recipePortions = recipe.portionen || 4;
+        const multiplier = targetPortions / recipePortions;
         for (const ing of (recipe.ingredients || [])) {
           const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
           if (item.type !== 'heading') {
-            ingredients.push(typeof ing === 'string' ? ing : ing.text);
+            const text = typeof ing === 'string' ? ing : ing.text;
+            ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
           }
         }
       }
@@ -192,7 +199,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           </button>
           <button
             className="shopping-list-trigger-button"
-            onClick={() => setShowShoppingListModal(true)}
+            onClick={() => setShowPortionSelector(true)}
             title="Einkaufsliste anzeigen"
             aria-label="Einkaufsliste öffnen"
           >
@@ -322,6 +329,72 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           title={menu.name}
           onClose={() => setShowShoppingListModal(false)}
         />
+      )}
+      {showPortionSelector && (
+        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+          <div
+            className="portion-selector-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Portionen auswählen"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="portion-selector-header">
+              <h2 className="portion-selector-title">🛒 Portionen für Einkaufsliste</h2>
+              <button
+                className="portion-selector-close"
+                onClick={() => setShowPortionSelector(false)}
+                aria-label="Portionsauswahl schließen"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="portion-selector-body">
+              {recipeSections.flatMap(s => s.recipes).map(recipe => {
+                const current = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+                return (
+                  <div key={recipe.id} className="portion-selector-item">
+                    <span className="portion-selector-recipe-name">{recipe.title}</span>
+                    <div className="portion-selector-controls">
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setPortionCounts(prev => ({
+                          ...prev,
+                          [recipe.id]: Math.max(1, current - 1)
+                        }))}
+                        aria-label="Portionen verringern"
+                      >
+                        −
+                      </button>
+                      <span className="portion-selector-count">{current}</span>
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setPortionCounts(prev => ({
+                          ...prev,
+                          [recipe.id]: current + 1
+                        }))}
+                        aria-label="Portionen erhöhen"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="portion-selector-footer">
+              <button
+                className="portion-selector-generate-btn"
+                onClick={() => {
+                  setShowPortionSelector(false);
+                  setShowShoppingListModal(true);
+                }}
+              >
+                Einkaufsliste erstellen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

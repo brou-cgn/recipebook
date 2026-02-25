@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -194,5 +194,44 @@ describe('formatIngredients', () => {
 
   test('handles undefined', () => {
     expect(formatIngredients(undefined)).toBe(undefined);
+  });
+});
+
+describe('scaleIngredient', () => {
+  test('doubles amounts when multiplier is 2', () => {
+    expect(scaleIngredient('200 g Mehl', 2)).toBe('400 g Mehl');
+    expect(scaleIngredient('100 ml Milch', 2)).toBe('200 ml Milch');
+    expect(scaleIngredient('3 Eier', 2)).toBe('6 Eier');
+  });
+
+  test('halves amounts when multiplier is 0.5', () => {
+    expect(scaleIngredient('200 g Mehl', 0.5)).toBe('100 g Mehl');
+    expect(scaleIngredient('4 Eier', 0.5)).toBe('2 Eier');
+  });
+
+  test('returns ingredient unchanged when multiplier is 1', () => {
+    expect(scaleIngredient('200 g Mehl', 1)).toBe('200 g Mehl');
+  });
+
+  test('handles fractions', () => {
+    expect(scaleIngredient('1/2 TL Salz', 2)).toBe('1 TL Salz');
+  });
+
+  test('formats non-integer results to one decimal', () => {
+    expect(scaleIngredient('100 g Mehl', 1.5)).toBe('150 g Mehl');
+    expect(scaleIngredient('100 g Mehl', 3)).toBe('300 g Mehl');
+  });
+
+  test('returns null/undefined unchanged', () => {
+    expect(scaleIngredient(null, 2)).toBe(null);
+    expect(scaleIngredient(undefined, 2)).toBe(undefined);
+  });
+
+  test('returns empty string unchanged', () => {
+    expect(scaleIngredient('', 2)).toBe('');
+  });
+
+  test('handles ingredients without numbers', () => {
+    expect(scaleIngredient('Salz nach Geschmack', 2)).toBe('Salz nach Geschmack');
   });
 });
