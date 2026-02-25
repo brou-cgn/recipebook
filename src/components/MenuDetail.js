@@ -238,6 +238,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           >
             {isFavorite ? '★' : '☆'}
           </button>
+          {canEditMenu(currentUser, menu) && (
+            <button className="edit-button" onClick={() => onEdit(menu)}>
+              Bearbeiten
+            </button>
+          )}
           <button
             className="shopping-list-trigger-button"
             onClick={() => setShowPortionSelector(true)}
@@ -250,11 +255,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
               shoppingListIcon
             )}
           </button>
-          {canEditMenu(currentUser, menu) && (
-            <button className="edit-button" onClick={() => onEdit(menu)}>
-              Bearbeiten
-            </button>
-          )}
           {canEditMenu(currentUser, menu) && !menu.shareId && (
             <button
               className="share-button"

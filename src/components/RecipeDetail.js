@@ -847,18 +847,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {isFavorite ? '★' : '☆'}
               </button>
             )}
-            <button
-              className="shopping-list-trigger-button"
-              onClick={handleShoppingListClick}
-              title="Einkaufsliste anzeigen"
-              aria-label="Einkaufsliste öffnen"
-            >
-              {isBase64Image(shoppingListIcon) ? (
-                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
-              ) : (
-                shoppingListIcon
-              )}
-            </button>
             {userCanDirectlyEdit && (
               <button className="edit-button" onClick={() => onEdit(recipe)}>
                 Bearbeiten
@@ -874,6 +862,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Löschen
               </button>
             )}
+            <button
+              className="shopping-list-trigger-button"
+              onClick={handleShoppingListClick}
+              title="Einkaufsliste anzeigen"
+              aria-label="Einkaufsliste öffnen"
+            >
+              {isBase64Image(shoppingListIcon) ? (
+                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+              ) : (
+                shoppingListIcon
+              )}
+            </button>
             {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
               <button
                 className="share-button"
@@ -1067,18 +1067,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {isFavorite ? '★' : '☆'}
                   </button>
                 )}
-                <button
-                  className="shopping-list-trigger-button"
-                  onClick={handleShoppingListClick}
-                  title="Einkaufsliste anzeigen"
-                  aria-label="Einkaufsliste öffnen"
-                >
-                  {isBase64Image(shoppingListIcon) ? (
-                    <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
-                  ) : (
-                    shoppingListIcon
-                  )}
-                </button>
                 {userCanDirectlyEdit && (
                   <button className="edit-button" onClick={() => onEdit(recipe)}>
                     Bearbeiten
@@ -1094,6 +1082,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     Löschen
                   </button>
                 )}
+                <button
+                  className="shopping-list-trigger-button"
+                  onClick={handleShoppingListClick}
+                  title="Einkaufsliste anzeigen"
+                  aria-label="Einkaufsliste öffnen"
+                >
+                  {isBase64Image(shoppingListIcon) ? (
+                    <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+                  ) : (
+                    shoppingListIcon
+                  )}
+                </button>
                 {userCanDirectlyEdit && isRecipePublic && !recipe.shareId && (
                   <button
                     className="share-button"

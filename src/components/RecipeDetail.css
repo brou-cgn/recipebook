@@ -116,17 +116,16 @@
 
 .action-buttons {
   display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.5rem;
 }
 
 .edit-button,
 .delete-button,
-.favorite-button,
 .version-button,
 .share-button,
-.share-copy-url-button,
-.publish-button,
-.shopping-list-trigger-button {
+.publish-button {
   background: white;
   border: 2px solid #ddd;
   padding: 0.75rem 1rem;
@@ -138,8 +137,20 @@
 }
 
 .favorite-button {
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
   color: #DF7A00;
   border-color: #DF7A00;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .favorite-button:hover {
@@ -161,6 +172,12 @@
 }
 
 .edit-button {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 6px;
   color: #402C1C;
   border-color: #402C1C;
 }
@@ -168,6 +185,28 @@
 .edit-button:hover {
   background: #402C1C;
   color: white;
+}
+
+.shopping-list-trigger-button {
+  background: transparent;
+  border: none;
+  color: #555;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.shopping-list-trigger-button:hover {
+  opacity: 0.7;
+  transform: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .version-button {
