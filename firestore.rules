@@ -46,6 +46,11 @@ service cloud.firestore {
                      !resource.data.isPrivate &&
                      resource.data.groupType == 'public';
 
+      // Published recipes (from private group): any authenticated user
+      allow read: if isAuthenticated() &&
+                     !resource.data.isPrivate &&
+                     resource.data.publishedToPublic == true;
+
       // Private group, non-draft: authenticated group member
       allow read: if isAuthenticated() &&
                      resource.data.groupId != null &&
