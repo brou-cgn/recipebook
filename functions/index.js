@@ -936,7 +936,84 @@ exports.bringRecipeExport = onRequest(
             .get();
 
         if (snapshot.empty) {
-          res.status(404).send('Recipe not found');
+          // No recipe found – try the menus collection
+          const menusRef = db.collection('menus');
+          const menuSnapshot = await menusRef
+              .where('shareId', '==', shareId)
+              .limit(1)
+              .get();
+
+          if (menuSnapshot.empty) {
+            res.status(404).send('Recipe not found');
+            return;
+          }
+
+          const menu = menuSnapshot.docs[0].data();
+          const title = menu.name || 'Menü';
+
+          // Collect all unique recipe IDs from sections (new) or recipeIds (legacy)
+          let recipeIds = [];
+          if (menu.sections && Array.isArray(menu.sections)) {
+            const idSet = new Set();
+            for (const section of menu.sections) {
+              if (Array.isArray(section.recipeIds)) {
+                for (const id of section.recipeIds) {
+                  idSet.add(id);
+                }
+              }
+            }
+            recipeIds = Array.from(idSet);
+          } else if (Array.isArray(menu.recipeIds)) {
+            recipeIds = [...new Set(menu.recipeIds)];
+          }
+
+          // Load all referenced recipes and combine their ingredients
+          const recipeIngredients = [];
+          for (const recipeId of recipeIds) {
+            const recipeDoc = await db.collection('recipes').doc(recipeId).get();
+            if (!recipeDoc.exists) continue;
+            const recipeData = recipeDoc.data();
+            const rawIngredients = recipeData.ingredients || [];
+            for (const ing of rawIngredients) {
+              if (typeof ing === 'string') {
+                recipeIngredients.push(ing);
+              } else if (ing.type !== 'heading') {
+                recipeIngredients.push(ing.text);
+              }
+            }
+          }
+
+          const jsonLd = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Recipe',
+            'name': title,
+            'recipeIngredient': recipeIngredients,
+          });
+
+          const escape = (s) => s
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+
+          const escapedTitle = escape(title);
+          const liItems = recipeIngredients.map((i) => `<li>${escape(i)}</li>`).join('');
+
+          const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapedTitle}</title>
+<script type="application/ld+json">${jsonLd}</script>
+</head>
+<body>
+<h1>${escapedTitle}</h1>
+<ul>${liItems}</ul>
+</body>
+</html>`;
+
+          res.set('Cache-Control', 'public, max-age=300');
+          res.status(200).send(html);
           return;
         }
 

@@ -63,7 +63,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
         sid = await onEnableSharing();
       }
       if (!sid) {
-        alert('Das Rezept muss zuerst geteilt werden, um es an Bring! zu übergeben.');
+        alert('Dieser Eintrag muss zuerst geteilt werden, um ihn an Bring! zu übergeben.');
         return;
       }
       const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}`;
