@@ -14,9 +14,14 @@ root.render(
 
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
-    // Feuere ein Custom Event, damit die App einen Update-Banner zeigen kann
-    const event = new CustomEvent('swUpdate', { detail: registration });
-    window.dispatchEvent(event);
+    if (registration && registration.waiting) {
+      // Erst auf controllerchange warten, DANN neu laden
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+      // Neuen Service Worker aktivieren
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
   },
 });
 
