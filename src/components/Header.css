@@ -698,6 +698,15 @@
   border-bottom: 1px solid #e8ddd4;
 }
 
+.faq-section-description {
+  margin: 0.4rem 0 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #6b5744;
+}
+
 .faq-item-indented .faq-question-btn {
   padding-left: 2.5rem;
 }

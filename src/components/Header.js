@@ -308,6 +308,9 @@ function Header({
                 faq.level === 0 ? (
                   <div key={faq.id} className="faq-section-heading">
                     {renderBoldText(faq.title)}
+                    {faq.description && (
+                      <p className="faq-section-description">{renderBoldText(faq.description)}</p>
+                    )}
                   </div>
                 ) : (
                 <div key={faq.id} className={`faq-item${faq.level > 1 ? ' faq-item-indented' : ''}`}>

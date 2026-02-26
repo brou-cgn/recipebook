@@ -8,6 +8,16 @@ jest.mock('../utils/customLists', () => ({
   getAppLogoImage: () => Promise.resolve(null)
 }));
 
+// Mock faqFirestore with a controllable subscribeToFaqs
+jest.mock('../utils/faqFirestore', () => ({
+  subscribeToFaqs: jest.fn((cb) => {
+    cb([]);
+    return () => {};
+  })
+}));
+
+const { subscribeToFaqs: mockSubscribeToFaqs } = jest.requireMock('../utils/faqFirestore');
+
 const mockCurrentUser = {
   id: '1',
   vorname: 'Test',
@@ -135,5 +145,56 @@ describe('Header - Hamburger Menu Visibility', () => {
     fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
 
     expect(document.activeElement).not.toBe(searchInput);
+  });
+});
+
+describe('Header - FAQ Kochschule Modal', () => {
+  test('level-0 FAQ description is shown in the Kochschule modal', () => {
+    mockSubscribeToFaqs.mockImplementationOnce((cb) => {
+      cb([
+        { id: 'faq-0', level: 0, title: 'Abschnitt Kochbuch', description: 'Beschreibung der Ebene 0' },
+        { id: 'faq-1', level: 1, title: 'Frage 1', description: 'Antwort 1' }
+      ]);
+      return () => {};
+    });
+
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    // Open the hamburger menu
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+
+    // Open the Kochschule modal
+    fireEvent.click(screen.getByText('Kochschule'));
+
+    // The level-0 description should be visible
+    expect(screen.getByText('Beschreibung der Ebene 0')).toBeInTheDocument();
+  });
+
+  test('level-0 FAQ without description renders without error', () => {
+    mockSubscribeToFaqs.mockImplementationOnce((cb) => {
+      cb([{ id: 'faq-0', level: 0, title: 'Abschnitt ohne Beschreibung' }]);
+      return () => {};
+    });
+
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByText('Kochschule'));
+
+    expect(screen.getByText('Abschnitt ohne Beschreibung')).toBeInTheDocument();
   });
 });
