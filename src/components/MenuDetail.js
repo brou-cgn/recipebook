@@ -17,6 +17,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
   const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
+  const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
   const [shareLoading, setShareLoading] = useState(false);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
@@ -32,6 +33,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
       setCloseButtonIcon(icons.menuCloseButton || '✕');
       setCopyLinkIcon(icons.copyLink || '📋');
       setShoppingListIcon(icons.shoppingList || '🛒');
+      setBringButtonIcon(icons.bringButton || '🛍️');
     };
     loadButtonIcons();
   }, []);
@@ -372,6 +374,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           title={menu.name}
           onClose={() => setShowShoppingListModal(false)}
           shareId={menu.shareId}
+          bringButtonIcon={bringButtonIcon}
           onEnableSharing={async () => {
             const sid = await enableMenuSharing(menu.id);
             setMenu({ ...menu, shareId: sid });

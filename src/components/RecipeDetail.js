@@ -49,6 +49,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
+  const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -64,6 +65,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionEmptyIcon(icons.nutritionEmpty || '➕');
       setNutritionFilledIcon(icons.nutritionFilled || '🥦');
       setShoppingListIcon(icons.shoppingList || '🛒');
+      setBringButtonIcon(icons.bringButton || '🛍️');
     };
     loadSettings();
   }, []);
@@ -1361,6 +1363,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           title={recipe.title}
           onClose={() => setShowShoppingListModal(false)}
           shareId={recipe.shareId}
+          bringButtonIcon={bringButtonIcon}
           onEnableSharing={async () => {
             const sid = await enableRecipeSharing(recipe.id);
             setSelectedRecipe({ ...recipe, shareId: sid });

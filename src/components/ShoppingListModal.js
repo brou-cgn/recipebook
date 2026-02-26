@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isBase64Image } from '../utils/imageUtils';
 import './ShoppingListModal.css';
 
-function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton }) {
+function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon }) {
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );
@@ -54,6 +55,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   };
 
   const checkedCount = listItems.filter(i => i.checked).length;
+  const isBringIconImage = isBase64Image(bringButtonIcon);
 
   const handleBringExport = async () => {
     // Flush any open inline edit before exporting
@@ -195,12 +197,16 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
             {checkedCount} / {listItems.length} erledigt
           </span>
           {!hideBringButton && <button
-            className="shopping-list-bring-btn"
+            className={`shopping-list-bring-btn${isBringIconImage ? ' shopping-list-bring-btn--image' : ''}`}
             onClick={handleBringExport}
             disabled={bringLoading || listItems.length === 0}
             title="Einkaufsliste an Bring! übergeben"
           >
-            {bringLoading ? '…' : '🛍️ Bring!'}
+            {bringLoading ? '…' : (
+              isBringIconImage
+                ? <img src={bringButtonIcon} alt="Bring!" className="bring-btn-icon-img" />
+                : (bringButtonIcon || '🛍️') + ' Bring!'
+            )}
           </button>}
           <button
             className="shopping-list-reset-btn"
