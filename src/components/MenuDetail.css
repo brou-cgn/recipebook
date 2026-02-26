@@ -370,10 +370,9 @@
 
 @media (max-width: 480px) {
   .action-buttons {
-    flex: 1;
     flex-direction: row;
-    width: 100%;
-    flex-wrap: nowrap;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .favorite-button {
