@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -184,6 +184,9 @@ function Settings({ onBack, currentUser }) {
   const [importingFaq, setImportingFaq] = useState(false);
   const [faqSelectedIds, setFaqSelectedIds] = useState([]);
 
+  // Tile size state
+  const [tileSize, setTileSize] = useState(getTileSizePreference);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -334,11 +337,15 @@ function Settings({ onBack, currentUser }) {
     saveTimelineBubbleIcon(timelineBubbleIcon);
     saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
     saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
+    saveTileSizePreference(tileSize);
     
     // Apply favicon changes immediately
     updateFavicon(faviconImage);
     updatePageTitle(faviconText);
     updateAppLogo(appLogoImage);
+
+    // Apply tile size immediately
+    applyTileSizePreference(tileSize);
     
     // Notify service worker about settings update for PWA manifest/icons
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -2025,6 +2032,42 @@ function Settings({ onBack, currentUser }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Kachelgröße</h3>
+              <p className="section-description">
+                Passen Sie die Größe der Kacheln in allen Grid-Ansichten an. Diese Einstellung wirkt sich besonders auf mobilen Geräten aus.
+              </p>
+              <div className="tile-size-options">
+                <button
+                  type="button"
+                  className={`tile-size-btn${tileSize === TILE_SIZE_SMALL ? ' active' : ''}`}
+                  onClick={() => setTileSize(TILE_SIZE_SMALL)}
+                >
+                  <span className="tile-size-icon">⊞⊞⊞</span>
+                  <span className="tile-size-label">Klein</span>
+                  <span className="tile-size-desc">Mehr Kacheln pro Zeile</span>
+                </button>
+                <button
+                  type="button"
+                  className={`tile-size-btn${tileSize === TILE_SIZE_MEDIUM ? ' active' : ''}`}
+                  onClick={() => setTileSize(TILE_SIZE_MEDIUM)}
+                >
+                  <span className="tile-size-icon">⊞⊞</span>
+                  <span className="tile-size-label">Mittel</span>
+                  <span className="tile-size-desc">Standard</span>
+                </button>
+                <button
+                  type="button"
+                  className={`tile-size-btn${tileSize === TILE_SIZE_LARGE ? ' active' : ''}`}
+                  onClick={() => setTileSize(TILE_SIZE_LARGE)}
+                >
+                  <span className="tile-size-icon">⊞</span>
+                  <span className="tile-size-label">Groß</span>
+                  <span className="tile-size-desc">Weniger Kacheln pro Zeile</span>
+                </button>
               </div>
             </div>
 

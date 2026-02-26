@@ -56,6 +56,37 @@ export const DEFAULT_PORTION_UNITS = [
 export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
+// Tile size options for grid views
+export const TILE_SIZE_SMALL = '180px';
+export const TILE_SIZE_MEDIUM = '250px';
+export const TILE_SIZE_LARGE = '320px';
+export const DEFAULT_TILE_SIZE = TILE_SIZE_MEDIUM;
+
+/**
+ * Get the tile size preference from localStorage
+ * @returns {string} The tile size value (e.g. '180px', '250px', '320px')
+ */
+export function getTileSizePreference() {
+  return localStorage.getItem('tileSizePreference') || DEFAULT_TILE_SIZE;
+}
+
+/**
+ * Save the tile size preference to localStorage
+ * @param {string} size - Tile size value
+ */
+export function saveTileSizePreference(size) {
+  localStorage.setItem('tileSizePreference', size);
+}
+
+/**
+ * Apply the tile size preference as a CSS variable on the document root
+ * @param {string} [size] - Tile size value; reads from localStorage if omitted
+ */
+export function applyTileSizePreference(size) {
+  const tileSize = size || getTileSizePreference();
+  document.documentElement.style.setProperty('--tile-size-min', tileSize);
+}
+
 // Standard-Prompt für KI-Rezepterkennung (optimiert)
 export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
 
