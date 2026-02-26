@@ -14,7 +14,7 @@ describe('ShoppingListModal', () => {
   test('renders with title and items', () => {
     render(<ShoppingListModal items={mockItems} title="Test Rezept" onClose={mockOnClose} />);
     
-    expect(screen.getByText('🛒 Einkaufsliste')).toBeInTheDocument();
+    expect(screen.getByText('Einkaufsliste')).toBeInTheDocument();
     expect(screen.getByText('Test Rezept')).toBeInTheDocument();
     expect(screen.getByText('200g Mehl')).toBeInTheDocument();
     expect(screen.getByText('3 Eier')).toBeInTheDocument();
