@@ -222,7 +222,24 @@ export const getCurrentUser = () => {
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, async (firebaseUser) => {
     if (firebaseUser) {
-      // User is signed in
+      // Handle anonymous (guest) users - they have no Firestore profile
+      if (firebaseUser.isAnonymous) {
+        const guestUser = {
+          id: firebaseUser.uid,
+          vorname: 'Gast',
+          nachname: '',
+          email: 'guest@local',
+          isAdmin: false,
+          role: ROLES.GUEST,
+          isGuest: true,
+          createdAt: new Date().toISOString()
+        };
+        currentUserCache = guestUser;
+        callback(guestUser);
+        return;
+      }
+
+      // Regular user: load Firestore profile
       const userProfile = await getUserProfile(firebaseUser.uid);
       if (userProfile) {
         const user = { id: firebaseUser.uid, ...userProfile };
