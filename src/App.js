@@ -17,6 +17,7 @@ import SharePage from './components/SharePage';
 import MenuSharePage from './components/MenuSharePage';
 import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
+import AppCallsPage from './components/AppCallsPage';
 import { 
   loginUser, 
   logoutUser, 
@@ -818,6 +819,11 @@ function App() {
           onCancel={handleCancelMenuForm}
           currentUser={currentUser}
           allUsers={allUsers}
+        />
+      ) : currentView === 'appCalls' ? (
+        <AppCallsPage
+          onBack={() => handleViewChange('recipes')}
+          currentUser={currentUser}
         />
       ) : currentView === 'kueche' ? (
         <Kueche

@@ -243,6 +243,12 @@ function Header({
                       }}>
                         Einstellungen
                       </button>
+                      <button
+                        className={`menu-item ${currentView === 'appCalls' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('appCalls')}
+                      >
+                        Appaufrufe
+                      </button>
                     </div>
                   )}
                   <div className="menu-section">
