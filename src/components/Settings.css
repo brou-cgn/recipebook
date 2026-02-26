@@ -1286,3 +1286,53 @@
   border-color: #7aa0ff;
   background: #f0f4ff;
 }
+
+/* Tile size selector */
+.tile-size-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tile-size-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.tile-size-btn:hover {
+  border-color: #402C1C;
+}
+
+.tile-size-btn.active {
+  border-color: #402C1C;
+  background: #f7f3ef;
+  color: #402C1C;
+}
+
+.tile-size-icon {
+  font-size: 1.4rem;
+  letter-spacing: -0.15em;
+}
+
+.tile-size-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.tile-size-desc {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.tile-size-btn.active .tile-size-desc {
+  color: #6b4c35;
+}

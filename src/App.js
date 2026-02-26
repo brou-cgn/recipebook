@@ -34,6 +34,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
+import { applyTileSizePreference } from './utils/customLists';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -212,6 +213,11 @@ function App() {
     };
     loadFavicon();
   }, [currentUser]);
+
+  // Apply tile size preference on mount
+  useEffect(() => {
+    applyTileSizePreference();
+  }, []);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
