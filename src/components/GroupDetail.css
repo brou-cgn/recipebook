@@ -132,27 +132,24 @@
 }
 
 .group-header-actions .shopping-list-trigger-button {
-  background: white;
-  border: 2px solid #ddd;
-  padding: 0.4rem 0.6rem;
-  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #555;
   font-size: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: all 0.3s ease;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .group-header-actions .shopping-list-trigger-button:hover {
-  border-color: #402C1C;
-  background: #f9f5f2;
+  background: transparent;
+  border: none;
 }
 
 .shopping-list-icon-img {
-  width: 20px;
-  height: 20px;
+  width: 1.5rem;
+  height: 1.5rem;
   object-fit: contain;
 }
 
