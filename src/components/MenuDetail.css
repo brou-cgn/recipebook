@@ -379,7 +379,7 @@
   .edit-button,
   .delete-button {
     flex: 1;
-    min-width: 0;
+    min-width: calc(50% - 0.375rem);
   }
 
   .menu-detail-content {
