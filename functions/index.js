@@ -1010,8 +1010,17 @@ const sendBringHtml = (res, title, recipeIngredients) => {
 const BRING_EXPORT_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 exports.bringRecipeExport = onRequest(
-    {cors: true},
+    {cors: true, region: 'us-central1'},
     async (req, res) => {
+      // Handle CORS preflight
+      if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        res.status(204).send('');
+        return;
+      }
+
       // Handle POST: save pre-resolved items to Firestore, return exportId.
       if (req.method === 'POST') {
         const {shareId, items} = req.body || {};

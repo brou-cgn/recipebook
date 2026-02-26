@@ -44,7 +44,8 @@
     "rewrites": [
       {
         "source": "/bring-export",
-        "function": "bringRecipeExport"
+        "function": "bringRecipeExport",
+        "region": "us-central1"
       },
       {
         "source": "**",
