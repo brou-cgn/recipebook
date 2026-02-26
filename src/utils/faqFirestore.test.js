@@ -7,6 +7,9 @@ jest.mock('../firebase', () => ({
   db: {}
 }));
 
+// Mock global crypto for UUID generation
+global.crypto = { randomUUID: jest.fn(() => 'mock-uuid') };
+
 // Mock Firestore functions
 const mockAddDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
@@ -35,7 +38,7 @@ jest.mock('./firestoreUtils', () => ({
   removeUndefinedFields: jest.fn((obj) => obj)
 }));
 
-import { importFaqsFromMarkdown } from './faqFirestore';
+import { addFaq, importFaqsFromMarkdown } from './faqFirestore';
 
 const { collection: mockCollection } = jest.requireMock('firebase/firestore');
 const { removeUndefinedFields: mockRemoveUndefinedFields } = jest.requireMock('./firestoreUtils');
@@ -186,5 +189,48 @@ describe('importFaqsFromMarkdown', () => {
       'mock-collection-ref',
       expect.objectContaining({ title: 'Neue Frage', sourceId: 'faq-999', order: 1 })
     );
+  });
+});
+
+describe('addFaq', () => {
+  const { serverTimestamp: mockServerTimestamp } = jest.requireMock('firebase/firestore');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCollection.mockReturnValue('mock-collection-ref');
+    mockRemoveUndefinedFields.mockImplementation((obj) => obj);
+    mockAddDoc.mockResolvedValue({ id: 'new-id' });
+    mockServerTimestamp.mockReturnValue('mock-timestamp');
+    global.crypto.randomUUID.mockReturnValue('mock-uuid');
+  });
+
+  it('auto-generates a sourceId when none is provided', async () => {
+    const result = await addFaq({ title: 'Test', description: 'Desc', order: 0 });
+    expect(mockAddDoc).toHaveBeenCalledWith(
+      'mock-collection-ref',
+      expect.objectContaining({ sourceId: expect.any(String) })
+    );
+    const calledData = mockAddDoc.mock.calls[0][1];
+    expect(calledData.sourceId).toBeTruthy();
+    expect(result.sourceId).toBeTruthy();
+  });
+
+  it('preserves a provided sourceId instead of generating a new one', async () => {
+    await addFaq({ title: 'Test', description: 'Desc', order: 0, sourceId: 'my-custom-id' });
+    const calledData = mockAddDoc.mock.calls[0][1];
+    expect(calledData.sourceId).toBe('my-custom-id');
+  });
+
+  it('sets createdAt and updatedAt timestamps', async () => {
+    await addFaq({ title: 'Test', order: 0 });
+    const calledData = mockAddDoc.mock.calls[0][1];
+    expect(calledData.createdAt).toBe('mock-timestamp');
+    expect(calledData.updatedAt).toBe('mock-timestamp');
+  });
+
+  it('returns object with Firestore id and data', async () => {
+    const result = await addFaq({ title: 'Test', order: 0 });
+    expect(result.id).toBe('new-id');
+    expect(result.title).toBe('Test');
   });
 });
