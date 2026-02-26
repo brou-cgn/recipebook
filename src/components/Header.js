@@ -38,8 +38,15 @@ function Header({
   const [faqs, setFaqs] = useState([]);
   const [faqModalOpen, setFaqModalOpen] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   useEffect(() => {
     if (!currentUser) return;
@@ -63,7 +70,12 @@ function Header({
     };
   }, [currentUser]);
 
-  const visibleFaqs = faqs.filter(faq => !faq.adminOnly || currentUser?.isAdmin);
+  const visibleFaqs = faqs.filter(faq => {
+    if (faq.adminOnly && !currentUser?.isAdmin) return false;
+    if (isMobile && faq.showOnMobile === false) return false;
+    if (!isMobile && faq.showOnDesktop === false) return false;
+    return true;
+  });
 
   // Close menu when clicking outside
   useEffect(() => {
