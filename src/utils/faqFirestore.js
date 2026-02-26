@@ -71,6 +71,7 @@ export const getFaqs = async () => {
 export const addFaq = async (faqData) => {
   try {
     const data = {
+      sourceId: crypto.randomUUID(),
       ...faqData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
