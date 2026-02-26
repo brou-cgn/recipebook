@@ -1,4 +1,5 @@
 ## Be inspired
+<!-- id: BeInspired -->
 
 Am Wochenende steht Besuch ins Haus und irgendwie soll mal wieder was Besonderes auf den Tisch. „Worauf hab ich eigentlich Bock?" Lass dich einfach mal inspirieren… Vielleicht was Italienisches… Katjas Himbeerdessert oder das Tiramisu von Weihnachten…
 
@@ -18,6 +19,7 @@ Neben dem Suchfeld gibt es ein Dropdown-Menü mit Mahlzeitkategorien (z. B. Frü
 Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ein – die Liste filtert sich sofort nach passenden Rezepttiteln.
 
 ## Mise en Place
+<!-- id: MiseEnPlace -->
 
 Du hast DAS Rezept gefunden? Dann direkt mal speichern, vielleicht auch mit deiner persönlichen Note, dann ab auf die Einkaufsliste und schon stehst du im REWE.
 
@@ -42,6 +44,7 @@ Du hast DAS Rezept gefunden? Dann direkt mal speichern, vielleicht auch mit dein
 RecipeBook unterstützt die Integration mit der Bring!-App. Über die Einstellungen kannst du dein Bring!-Konto verknüpfen – Zutaten werden dann direkt in deine Bring!-Einkaufsliste übertragen, sodass du sie bequem beim Einkaufen auf deinem Smartphone nutzen kannst.
 
 ## Ran an die Töpfe!
+<!-- id: RanAnDieTöpfe -->
 
 Jetzt wird's ernst: Die Küche wird zu deiner Kochbühne. Schritt für Schritt nach Anleitung.
 
@@ -53,6 +56,7 @@ Der Kochmodus ist eine spezielle Ansicht, die das Kochen nach einem Rezept erlei
 Öffne ein Rezept in der Detailansicht und tippe auf das **👨‍🍳-Icon**, das über dem Rezeptbild eingeblendet wird. Eine grüne Leiste am oberen Bildschirmrand zeigt an, dass der Kochmodus aktiv ist. Mit dem **✕** in der grünen Leiste beendest du ihn wieder.
 
 ## Inspire
+<!-- id: Inspire -->
 
 Deine Lasagne kam am besten an und schon kommen die Fragen nach dem Rezept… dann speichere und teile es doch einfach.
 
@@ -63,7 +67,7 @@ Deine Lasagne kam am besten an und schon kommen die Fragen nach dem Rezept… da
 2. Fülle das Formular aus: **Titel** (Pflichtfeld), **Portionen**, **Kochdauer**, **Schwierigkeitsgrad**, **Zutaten**, **Zubereitung**, **Küchentags** und **Bild**.
 3. Klicke auf **„Speichern"**, um das Rezept zu sichern.
 
-Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollständig veröffentlicht möchtest.
+Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollständig veröffentlichen möchtest.
 
 ### Website importieren
 <!-- id: faq-website-importieren -->
