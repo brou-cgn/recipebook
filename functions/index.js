@@ -1023,7 +1023,20 @@ exports.bringRecipeExport = onRequest(
 
       // Handle POST: save pre-resolved items to Firestore, return exportId.
       if (req.method === 'POST') {
-        const {shareId, items} = req.body || {};
+        // req.body may be empty when proxied through Firebase Hosting rewrite –
+        // fall back to parsing req.rawBody (Buffer) if necessary.
+        let parsedBody = req.body;
+        if (!parsedBody || (typeof parsedBody === 'object' && Object.keys(parsedBody).length === 0)) {
+          try {
+            const raw = req.rawBody;
+            if (raw) {
+              parsedBody = JSON.parse(raw.toString('utf8'));
+            }
+          } catch (e) {
+            console.error('Failed to parse rawBody:', e);
+          }
+        }
+        const {shareId, items} = parsedBody || {};
         if (!shareId || !Array.isArray(items)) {
           res.status(400).send('Missing shareId or items');
           return;
