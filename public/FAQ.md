@@ -1,315 +1,86 @@
-# FAQ – RecipeBook
+# Be inspired
 
-Häufig gestellte Fragen zur Nutzung der RecipeBook-App.
+Am Wochenende steht Besuch ins Haus und irgendwie soll mal wieder was Besonderes auf den Tisch. „Worauf hab ich eigentlich Bock?" Lass dich einfach mal inspirieren… Vielleicht was Italienisches… Katjas Himbeerdessert oder das Tiramisu von Weihnachten…
 
----
+## Rezeptübersicht
 
-## 1. Rezeptübersicht und Filter
-<!-- id: faq-001 -->
+Die Startseite zeigt alle gespeicherten Rezepte als Kachelübersicht. Jede Kachel enthält das Rezeptbild (falls vorhanden), den Titel, zugehörige Küchentags, die Anzahl vorhandener Versionen sowie den Namen der Autorin oder des Autors. Klicke auf eine Kachel, um das vollständige Rezept zu öffnen.
 
-### Was sehe ich auf der Startseite?
-<!-- id: faq-002 -->
-
-Die Startseite zeigt alle gespeicherten Rezepte als Kachelübersicht. Jede Kachel enthält das Rezeptbild (falls vorhanden), den Titel, zugehörige Küchentags, die Anzahl vorhandener Versionen sowie den Namen der Autorin oder des Autors.
-
-### Wie kann ich Rezepte suchen?
-<!-- id: faq-003 -->
-
-Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ein – die Liste filtert sich sofort nach passenden Rezepttiteln.
-
-### Wie filtere ich nach Kategorie?
-<!-- id: faq-004 -->
+## Filtern
 
 Neben dem Suchfeld gibt es ein Dropdown-Menü mit Mahlzeitkategorien (z. B. Frühstück, Mittagessen, Abendessen). Wähle eine Kategorie aus, um nur Rezepte dieser Art anzuzeigen. Mit „Alle" werden wieder alle Rezepte angezeigt.
 
-### Wie zeige ich nur meine Lieblingsrezepte an?
-<!-- id: faq-005 -->
+## Suchen
 
-Klicke auf den **★-Button** in der Filterleiste, um ausschließlich als Favorit markierte Rezepte anzuzeigen. Erneutes Klicken hebt den Filter wieder auf.
+Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ein – die Liste filtert sich sofort nach passenden Rezepttiteln.
 
-### Wie füge ich ein neues Rezept hinzu?
-<!-- id: faq-006 -->
+# Mise en Place
 
-Klicke auf den Button **„+ Rezept hinzufügen"** in der Übersicht. Dieser Button ist nur sichtbar, wenn du über Bearbeitungsrechte verfügst.
+Du hast DAS Rezept gefunden? Dann direkt mal speichern, vielleicht auch mit deiner persönlichen Note, dann ab auf die Einkaufsliste und schon stehst du im REWE.
 
----
+## Favoriten
 
-## 2. Rezept erstellen
-<!-- id: faq-007 -->
+Öffne ein Rezept und klicke auf den **★-Button**, um es als Favorit zu markieren. In der Rezeptübersicht kannst du anschließend den **★-Button** in der Filterleiste aktivieren, um ausschließlich deine Lieblingsrezepte anzuzeigen. Erneutes Klicken hebt den Filter wieder auf.
 
-### Wie erstelle ich ein neues Rezept manuell?
-<!-- id: faq-008 -->
+## Eigene Version erstellen
+
+Öffne das gewünschte Rezept und klicke auf **„Bearbeiten"**. Passe Zutaten, Mengen oder Zubereitungsschritte nach deinem Geschmack an und speichere das Rezept als neue Version. So bleibt das Original erhalten und deine persönliche Note ist gesichert.
+
+## Einkaufsliste
+
+Öffne ein Rezept und klicke auf den Button **„Zur Einkaufsliste hinzufügen"**. Die Zutaten des Rezepts werden automatisch in deine Einkaufsliste übernommen. Du kannst die Einkaufsliste jederzeit über das Hauptmenü aufrufen, bearbeiten und Einträge abhaken.
+
+## Bring! Integration
+
+RecipeBook unterstützt die Integration mit der Bring!-App. Über die Einstellungen kannst du dein Bring!-Konto verknüpfen – Zutaten werden dann direkt in deine Bring!-Einkaufsliste übertragen, sodass du sie bequem beim Einkaufen auf deinem Smartphone nutzen kannst.
+
+# Ran an die Töpfe!
+
+Jetzt wird's ernst: Die Küche wird zu deiner Kochbühne. Schritt für Schritt nach Anleitung.
+
+## Kochmodus
+
+Der Kochmodus ist eine spezielle Ansicht, die das Kochen nach einem Rezept erleichtert. Er zeigt Zutaten und Zubereitungsschritte in einer übersichtlichen, schrittweisen Darstellung – optimiert für die Nutzung direkt am Herd. Dank der Wake-Lock-Funktion bleibt der Bildschirm während des Kochens an, und du kannst per Pfeiltasten oder Wischen zwischen den Schritten navigieren.
+
+Öffne ein Rezept in der Detailansicht und tippe auf das **👨‍🍳-Icon**, das über dem Rezeptbild eingeblendet wird. Eine grüne Leiste am oberen Bildschirmrand zeigt an, dass der Kochmodus aktiv ist. Mit dem **✕** in der grünen Leiste beendest du ihn wieder.
+
+# Inspire
+
+Deine Lasagne kam am besten an und schon kommen die Fragen nach dem Rezept… dann speichere und teile es doch einfach.
+
+## Rezept erstellen
 
 1. Klicke auf **„+ Rezept hinzufügen"** in der Rezeptübersicht.
-2. Fülle das Formular aus:
-   - **Titel** (Pflichtfeld)
-   - **Portionen**, **Kochdauer** und **Schwierigkeitsgrad** (optional)
-   - **Zutaten**: Klicke auf „+ Zutat hinzufügen", um Zutaten einzutragen. Die Reihenfolge lässt sich per Drag & Drop anpassen. Mit dem Abschnitt-Button kannst du Überschriften für Zutatengruppen ergänzen.
-   - **Zubereitung**: Trage die Zubereitungsschritte ein.
-   - **Küchentags**: Wähle passende Küchen-/Kategoriebegriffe aus.
-   - **Bild**: Lade ein Rezeptbild hoch.
+2. Fülle das Formular aus: **Titel** (Pflichtfeld), **Portionen**, **Kochdauer**, **Schwierigkeitsgrad**, **Zutaten**, **Zubereitung**, **Küchentags** und **Bild**.
 3. Klicke auf **„Speichern"**, um das Rezept zu sichern.
 
-### Kann ich ein Rezept auch als Entwurf speichern?
-<!-- id: faq-009 -->
+Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollständig veröffentlichen möchtest.
 
-Ja. Beim Erstellen oder Bearbeiten eines Rezepts kannst du es als Entwurf speichern. Entwürfe erscheinen in der Rezeptübersicht, sind aber als solche gekennzeichnet und noch nicht vollständig veröffentlicht.
+## Website importieren
 
-### Wie bearbeite ich ein bestehendes Rezept?
-<!-- id: faq-010 -->
-
-Öffne das Rezept per Klick auf die Kachel und klicke dann auf den **„Bearbeiten"**-Button. Nach den Änderungen speicherst du das Rezept erneut.
-
-### Wie lösche ich ein Rezept?
-<!-- id: faq-011 -->
-
-Öffne das Rezept und klicke auf den **„Löschen"**-Button. Bestätige die Sicherheitsabfrage. Hinweis: Das Löschen von Rezepten ist nur Administratorinnen und Administratoren möglich.
-
----
-
-## 3. Rezept erstellen – Foto Scan
-<!-- id: faq-012 -->
-
-### Was ist der Foto-Scan?
-<!-- id: faq-013 -->
-
-Mit dem Foto-Scan (OCR-Import) kannst du ein Rezept aus einem Kochbuch, einer Zeitschrift oder einer handgeschriebenen Karte fotografieren und automatisch in die App importieren. Die App erkennt Text und strukturiert ihn als Rezept.
-
-### Wie verwende ich den Foto-Scan?
-<!-- id: faq-014 -->
-
-1. Öffne das Rezeptformular (über **„+ Rezept hinzufügen"**).
-2. Klicke auf den Button **„📸 Rezept scannen"**.
-3. Wähle zwischen **Kamera** (Foto aufnehmen) und **Datei hochladen** (vorhandenes Bild auswählen).
-4. Wähle die Sprache des Rezepts (**Deutsch** oder **Englisch**).
-5. Klicke auf **„Scannen"** – die App verarbeitet das Bild (typischerweise 5–15 Sekunden).
-6. Prüfe den erkannten Text im Bearbeitungsfeld und korrigiere ihn bei Bedarf.
-7. Klicke auf **„Übernehmen"**, um das Formular mit den erkannten Daten zu befüllen.
-8. Prüfe alle Felder und speichere das Rezept.
-
-### Welche Bildformate werden unterstützt?
-<!-- id: faq-015 -->
-
-JPG und PNG werden unterstützt. Stelle sicher, dass das Bild gut beleuchtet, scharf und ohne starke Schatten oder Reflexionen ist.
-
-### Was tue ich, wenn der Scan ungenau ist?
-<!-- id: faq-016 -->
-
-- Prüfe Helligkeit und Schärfe des Bildes.
-- Wähle die korrekte Sprache aus.
-- Korrigiere den erkannten Text im Textfeld manuell, bevor du auf „Übernehmen" klickst.
-- Nutze bei Bedarf die KI-gestützte Erkennung (Gemini AI), falls diese konfiguriert ist – sie liefert deutlich bessere Ergebnisse als die Standard-Erkennung.
-
-### Kann ich mehrere Bilder auf einmal scannen?
-<!-- id: faq-017 -->
-
-Ja, du kannst mehrere Bilder hintereinander hinzufügen. Die erkannten Texte werden zusammengeführt und als ein Rezept importiert.
-
----
-
-## 4. Rezept erstellen – Website importieren
-<!-- id: faq-018 -->
-
-### Was ist der Website-Import?
-<!-- id: faq-019 -->
-
-Mit dem Website-Import kannst du ein Rezept direkt von einer Website übernehmen. Gib einfach die URL der Rezeptseite ein – die App lädt die Seite, macht einen Screenshot und extrahiert automatisch Titel, Zutaten, Zubereitungsschritte und weitere Metadaten.
-
-### Wie verwende ich den Website-Import?
-<!-- id: faq-020 -->
-
-1. Öffne das Rezeptformular (über **„+ Rezept hinzufügen"**).
-2. Klicke auf den Button **„🌐 Von Website importieren"** (o. Ä.).
+1. Öffne das Rezeptformular über **„+ Rezept hinzufügen"**.
+2. Klicke auf **„🌐 Von Website importieren"**.
 3. Gib die vollständige URL der Rezeptseite ein (z. B. `https://www.example.com/rezept/spaghetti`).
-4. Klicke auf **„Importieren"** – die App erstellt einen Screenshot und analysiert ihn.
-5. Prüfe das Ergebnis: Titel, Zutaten, Schritte und weitere Felder werden angezeigt.
-6. Klicke auf **„Übernehmen"**, um das Formular zu befüllen.
-7. Passe die Daten bei Bedarf an und speichere das Rezept.
+4. Klicke auf **„Importieren"** – die App analysiert die Seite und befüllt das Formular automatisch mit Titel, Zutaten und Zubereitungsschritten.
+5. Prüfe die Daten, passe sie bei Bedarf an und speichere das Rezept.
 
-### Welche Websites funktionieren mit dem Import?
-<!-- id: faq-021 -->
+## Rezept scannen
 
-Die meisten gängigen Rezeptwebsites funktionieren, da die KI den visuellen Inhalt der Seite auswertet. Für beste Ergebnisse empfehlen sich Seiten mit klar strukturierten Rezepten.
+1. Öffne das Rezeptformular über **„+ Rezept hinzufügen"**.
+2. Klicke auf **„📸 Rezept scannen"**.
+3. Wähle zwischen **Kamera** (Foto aufnehmen) und **Datei hochladen** (vorhandenes Bild auswählen).
+4. Wähle die Sprache des Rezepts (**Deutsch** oder **Englisch**) und klicke auf **„Scannen"**.
+5. Prüfe den erkannten Text, korrigiere ihn bei Bedarf und klicke auf **„Übernehmen"**.
+6. Prüfe alle Felder und speichere das Rezept.
 
-### Was passiert, wenn der Import fehlschlägt?
-<!-- id: faq-022 -->
+## Nährwerte berechnen
 
-Prüfe, ob die URL korrekt und erreichbar ist. Manche Websites blockieren automatische Zugriffe. In diesem Fall kannst du das Rezept manuell eingeben oder den Foto-Scan verwenden.
+Beim Erstellen oder Bearbeiten eines Rezepts kannst du die Nährwertberechnung starten. Die App analysiert die eingetragenen Zutaten und gibt dir eine Übersicht über Kalorien, Kohlenhydrate, Eiweiß und Fett – praktisch, wenn du auf eine ausgewogene Ernährung achtest.
 
----
+## Menü erstellen
 
-## 5. Menüübersicht
-<!-- id: faq-023 -->
-
-### Was ist die Menüübersicht?
-<!-- id: faq-024 -->
-
-Die Menüübersicht zeigt alle erstellten Menüs. Ein Menü ist eine Sammlung von Rezepten, die zu einer Mahlzeit oder einem Anlass zusammengestellt wurden (z. B. ein Drei-Gänge-Menü für ein Dinner).
-
-### Wie gelange ich zur Menüübersicht?
-<!-- id: faq-025 -->
-
-Navigiere über das Hauptmenü der App zum Bereich **„Menüs"**. Dort siehst du alle Menüs als Kacheln mit Name, Beschreibung, Datum und Autorin / Autor.
-
-### Kann ich Menüs nach Favoriten filtern?
-<!-- id: faq-026 -->
-
-Ja. Klicke auf den **★-Button** in der Filterleiste, um nur als Favorit markierte Menüs anzuzeigen.
-
-### Wie öffne ich ein Menü?
-<!-- id: faq-027 -->
-
-Klicke auf die Menükachel, um die Detailansicht zu öffnen. Dort siehst du alle zugehörigen Gänge und Rezepte.
-
----
-
-## 6. Menü erstellen
-<!-- id: faq-028 -->
-
-### Wie erstelle ich ein neues Menü?
-<!-- id: faq-029 -->
-
-1. Klicke in der Menüübersicht auf **„+ Menü erstellen"**.
-2. Gib einen **Namen** (Pflichtfeld) und optional eine **Beschreibung** ein.
-3. Wähle ein **Datum** (standardmäßig das heutige Datum).
-4. Füge **Abschnitte** (Gänge) hinzu, z. B. „Vorspeise", „Hauptgang", „Dessert":
-   - Klicke auf **„+ Abschnitt hinzufügen"**.
-   - Wähle aus vordefinierten Vorlagen oder gib einen eigenen Namen ein.
-   - Die Reihenfolge der Abschnitte lässt sich mit den Pfeil-Buttons (↑/↓) anpassen.
-5. Füge jedem Abschnitt **Rezepte** hinzu: Nutze die Suche, um Rezepte zu finden und in einen Abschnitt aufzunehmen.
-6. Klicke auf **„Speichern"**.
-
-### Wie viele Gänge kann ein Menü haben?
-<!-- id: faq-030 -->
-
-Mindestens ein Abschnitt ist erforderlich; die Anzahl der Abschnitte ist nicht begrenzt.
-
-### Wie bearbeite ich ein vorhandenes Menü?
-<!-- id: faq-031 -->
-
-Öffne das Menü über die Menüübersicht und klicke auf den **„Bearbeiten"**-Button. Passe Name, Datum, Abschnitte oder Rezepte an und speichere die Änderungen.
-
----
-
-## 7. Küchenseite
-<!-- id: faq-032 -->
-
-### Was ist die Küchenseite?
-<!-- id: faq-033 -->
-
-Die Küchenseite ist dein persönliches Dashboard. Sie gibt dir einen schnellen Überblick über dein Profil, deine privaten Listen und deine Kochaktivität.
-
-### Was enthält die Küchenseite?
-<!-- id: faq-034 -->
-
-Die Küchenseite besteht aus drei Bereichen:
-
-1. **Chefkoch**: Zeigt deinen Namen und Profilinformationen. Klicke darauf, um deine persönlichen Daten zu bearbeiten.
-
-2. **Meine Mise en Place**: Zeigt die Anzahl deiner privaten Listen (Gruppen). Klicke darauf, um deine Listen einzusehen und zu verwalten.
-
-3. **Mein Kochbuch**: Zeigt eine Übersicht über deine erstellten Rezepte und Menüs, inklusive eines Balkendiagramms zur Aktivität der letzten 6 Monate sowie eine aufklappbare Zeitleiste aller Einträge.
-
-### Wie gelange ich zur Küchenseite?
-<!-- id: faq-035 -->
-
-Navigiere über das Hauptmenü der App zum Bereich **„Küche"** (oder das Küchen-Icon).
-
----
-
-## 8. Profil anpassen
-<!-- id: faq-036 -->
-
-### Wie ändere ich meine persönlichen Daten?
-<!-- id: faq-037 -->
-
-1. Öffne die **Küchenseite** und klicke auf die **„Chefkoch"**-Kachel, oder navigiere direkt zu den persönlichen Einstellungen.
-2. Passe folgende Informationen an:
-   - Vorname und Nachname
-   - E-Mail-Adresse
-   - Profilbild (upload)
-3. Speichere die Änderungen.
-
-### Wie ändere ich mein Passwort?
-<!-- id: faq-038 -->
-
-Navigiere zu den Profileinstellungen und klicke auf **„Passwort ändern"**. Gib dein aktuelles Passwort und das neue Passwort (inklusive Bestätigung) ein und bestätige.
-
-### Kann ich die App-Einstellungen (Titel, Design) anpassen?
-<!-- id: faq-039 -->
-
-Ja – allerdings nur als Administratorin oder Administrator. Navigiere über das Hauptmenü zu **„Einstellungen"**. Dort kannst du:
-- Den **Seitentitel** und den **Header-Slogan** anpassen.
-- **Favicon und Logo** hochladen.
-- **Kategorien und Küchentags** verwalten (hinzufügen, umbenennen, sortieren).
-- **Design-Elemente** wie Icons für Zeitleiste und Menüs anpassen.
-- **Benutzerverwaltung**: Berechtigungen vergeben, Passwörter zurücksetzen oder Nutzer entfernen.
-
----
-
-## 9. Private Listen
-<!-- id: faq-040 -->
-
-### Was sind private Listen?
-<!-- id: faq-041 -->
-
-Private Listen (auch „Gruppen" genannt) ermöglichen es dir, Rezepte mit bestimmten Personen zu teilen oder eigene Sammlungen zu organisieren. Du kannst eine Liste erstellen, Mitglieder einladen und Rezepte hinzufügen, die nur für die Mitglieder dieser Liste sichtbar sind.
-
-### Wie erstelle ich eine private Liste?
-<!-- id: faq-042 -->
-
-1. Öffne die **Küchenseite** und klicke auf **„Meine Mise en Place"**, oder navigiere direkt zu den Gruppen.
-2. Klicke auf **„+ Liste erstellen"**.
-3. Gib einen Namen für die Liste ein und bestätige.
-
-### Wie füge ich Mitglieder zu einer Liste hinzu?
-<!-- id: faq-043 -->
-
-Öffne die gewünschte Liste und nutze die Funktion zum Hinzufügen von Mitgliedern. Nur Inhaberinnen und Inhaber der Liste können Mitglieder verwalten.
-
-### Wie füge ich Rezepte zu einer Liste hinzu?
-<!-- id: faq-044 -->
-
-Öffne die Liste und nutze die Rezeptsuche innerhalb der Gruppendetailansicht, um Rezepte hinzuzufügen. Mitglieder und Inhaberinnen/Inhaber können Rezepte hinzufügen.
-
-### Kann ich eine Liste löschen?
-<!-- id: faq-045 -->
-
-Ja, aber nur als Inhaberin oder Inhaber einer privaten Liste. Öffne die Liste und klicke auf **„Löschen"**. Bestätige die Sicherheitsabfrage. Hinweis: Die allgemeine, systemseitig vorgegebene Gruppe kann nicht gelöscht werden.
-
-### Wer kann meine private Liste sehen?
-<!-- id: faq-046 -->
-
-Nur du (als Inhaberin/Inhaber) und die von dir hinzugefügten Mitglieder können die Inhalte einer privaten Liste sehen.
-
----
-
-## 10. Kochmodus
-<!-- id: faq-047 -->
-
-### Was ist der Kochmodus?
-<!-- id: faq-048 -->
-
-Der Kochmodus ist eine spezielle Ansicht in der Rezeptdetailseite, die das Kochen nach einem Rezept erleichtert. Er zeigt Zutaten und Zubereitungsschritte in einer übersichtlichen, schrittweisen Darstellung – optimiert für die Nutzung direkt am Herd.
-
-### Welche Vorteile bietet der Kochmodus?
-<!-- id: faq-049 -->
-
-- **Schritt-für-Schritt-Ansicht**: Die Zubereitungsschritte werden einzeln und groß dargestellt, sodass du beim Kochen immer weißt, was als Nächstes zu tun ist.
-- **Bildschirm bleibt an**: Dank der Wake-Lock-Funktion wird der Bildschirm während des Kochmodus nicht automatisch gesperrt oder gedimmt – praktisch beim Kochen mit nassen Händen.
-- **Einfache Navigation**: Du kannst zwischen den Schritten mit den Pfeiltasten der Tastatur oder per Wischen (auf Mobilgeräten) navigieren.
-- **Zutatenübersicht**: Alle Zutaten bleiben sichtbar, damit du während des Kochens nichts vergisst.
-
-### Wie aktiviere ich den Kochmodus?
-<!-- id: faq-050 -->
-
-Öffne ein Rezept in der Detailansicht und tippe auf das **👨‍🍳-Icon**, das über dem Rezeptbild eingeblendet wird. Eine grüne Leiste am oberen Bildschirmrand zeigt an, dass der Kochmodus aktiv ist.
-
-### Wie beende ich den Kochmodus?
-<!-- id: faq-051 -->
-
-Tippe auf das **✕** in der grünen Leiste am oberen Bildschirmrand, um den Kochmodus zu beenden und zur normalen Rezeptansicht zurückzukehren.
-
----
-
-*Bei weiteren Fragen wende dich an die Administratorin oder den Administrator der App.*
+1. Navigiere über das Hauptmenü zu **„Menüs"** und klicke auf **„+ Menü erstellen"**.
+2. Gib einen **Namen** (Pflichtfeld) und optional eine **Beschreibung** sowie ein **Datum** ein.
+3. Füge **Abschnitte** (Gänge) hinzu, z. B. „Vorspeise", „Hauptgang", „Dessert".
+4. Weise jedem Abschnitt über die Rezeptsuche die passenden Rezepte zu.
+5. Klicke auf **„Speichern"**.
