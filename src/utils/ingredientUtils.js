@@ -135,6 +135,17 @@ function parseIngredientParts(ingredient) {
 }
 
 /**
+ * Returns true if the ingredient name is "Wasser" (regardless of amount/unit).
+ * Water is a common household item and should not appear in shopping lists.
+ * @param {string} ingredient - The ingredient string to check
+ * @returns {boolean}
+ */
+export function isWaterIngredient(ingredient) {
+  const { name } = parseIngredientParts(ingredient);
+  return name.toLowerCase() === 'wasser';
+}
+
+/**
  * Combines duplicate ingredients by summing their amounts.
  * Ingredients with the same name and unit (case-insensitive) are merged.
  * Example: ["100 g Zucker", "50 g Zucker"] => ["150 g Zucker"]
