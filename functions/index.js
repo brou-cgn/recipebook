@@ -4,8 +4,10 @@
  */
 
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
+const {onDocumentCreated} = require('firebase-functions/v2/firestore');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -13,6 +15,15 @@ admin.initializeApp();
 // Define the Gemini API key as a secret
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+// SMTP secrets for email notifications
+// Set with: firebase functions:secrets:set SMTP_HOST
+// and: SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM
+const smtpHost = defineSecret('SMTP_HOST');
+const smtpPort = defineSecret('SMTP_PORT');
+const smtpUser = defineSecret('SMTP_USER');
+const smtpPassword = defineSecret('SMTP_PASSWORD');
+const smtpFrom = defineSecret('SMTP_FROM');
 
 /**
  * Rate limiting configuration
@@ -1164,6 +1175,131 @@ exports.bringRecipeExport = onRequest(
       } catch (error) {
         console.error('bringRecipeExport error:', error);
         res.status(500).send('Internal server error');
+      }
+    },
+);
+
+/**
+ * Escape HTML special characters to prevent XSS in email HTML body.
+ * @param {string} str - Raw string to escape
+ * @return {string} HTML-escaped string
+ */
+function escapeHtml(str) {
+  return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+}
+
+/**
+ * Firestore trigger: send email notification to all admins when a new user registers.
+ * Triggered when a new document is created in the 'users' collection.
+ * Requires the following Firebase secrets to be set:
+ *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+ */
+exports.notifyAdminsOnUserRegistration = onDocumentCreated(
+    {
+      document: 'users/{userId}',
+      secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+    },
+    async (event) => {
+      const newUser = event.data ? event.data.data() : null;
+      if (!newUser) {
+        console.error('notifyAdminsOnUserRegistration: no user data in event');
+        return;
+      }
+
+      // Skip notifications for the very first user (the initial admin)
+      if (newUser.isAdmin) {
+        console.log('notifyAdminsOnUserRegistration: first user is admin, skipping self-notification');
+        return;
+      }
+
+      const smtpHostVal = smtpHost.value();
+      const smtpPortVal = smtpPort.value();
+      const smtpUserVal = smtpUser.value();
+      const smtpPasswordVal = smtpPassword.value();
+      const smtpFromVal = smtpFrom.value();
+
+      if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
+        console.warn('notifyAdminsOnUserRegistration: SMTP secrets not fully configured – skipping email');
+        return;
+      }
+
+      // Fetch all admin users from Firestore
+      const db = admin.firestore();
+      const usersSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
+
+      if (usersSnapshot.empty) {
+        console.log('notifyAdminsOnUserRegistration: no admin users found');
+        return;
+      }
+
+      const adminEmails = [];
+      usersSnapshot.forEach((doc) => {
+        const adminData = doc.data();
+        if (adminData.email) {
+          adminEmails.push(adminData.email);
+        }
+      });
+
+      if (adminEmails.length === 0) {
+        console.log('notifyAdminsOnUserRegistration: no admin email addresses found');
+        return;
+      }
+
+      // The transporter is created per invocation because Firebase secrets
+      // are only accessible during function execution, not at module load time.
+      const transporter = nodemailer.createTransport({
+        host: smtpHostVal,
+        port: parseInt(smtpPortVal || '587', 10),
+        secure: parseInt(smtpPortVal || '587', 10) === 465,
+        auth: {
+          user: smtpUserVal,
+          pass: smtpPasswordVal,
+        },
+      });
+
+      const registeredAt = newUser.createdAt ?
+        new Date(newUser.createdAt).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'}) :
+        new Date().toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
+
+      const fullName = `${newUser.vorname || ''} ${newUser.nachname || ''}`.trim();
+      const safeFullName = escapeHtml(fullName);
+      const safeEmail = escapeHtml(newUser.email || '–');
+      const safeRegisteredAt = escapeHtml(registeredAt);
+
+      const mailOptions = {
+        from: smtpFromVal,
+        // Use BCC to avoid exposing admin email addresses to each other
+        bcc: adminEmails.join(', '),
+        subject: 'Neue Benutzerregistrierung im Rezeptbuch',
+        text:
+          `Ein neuer Benutzer hat sich registriert:\n\n` +
+          `Name:          ${fullName}\n` +
+          `E-Mail:        ${newUser.email || '–'}\n` +
+          `Registriert:   ${registeredAt}\n\n` +
+          `Bitte melden Sie sich an, um den neuen Benutzer zu verwalten.`,
+        html:
+          `<p>Ein neuer Benutzer hat sich registriert:</p>` +
+          `<table style="border-collapse:collapse">` +
+          `<tr><td style="padding:4px 12px 4px 0"><strong>Name</strong></td>` +
+          `<td>${safeFullName}</td></tr>` +
+          `<tr><td style="padding:4px 12px 4px 0"><strong>E-Mail</strong></td>` +
+          `<td>${safeEmail}</td></tr>` +
+          `<tr><td style="padding:4px 12px 4px 0"><strong>Registriert</strong></td>` +
+          `<td>${safeRegisteredAt}</td></tr>` +
+          `</table>` +
+          `<p>Bitte melden Sie sich an, um den neuen Benutzer zu verwalten.</p>`,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`notifyAdminsOnUserRegistration: email sent to ${adminEmails.length} admin(s)`);
+      } catch (error) {
+        console.error('notifyAdminsOnUserRegistration: error sending email:', error);
       }
     },
 );
