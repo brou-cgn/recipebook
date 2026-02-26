@@ -196,23 +196,27 @@
 /* Einheitlicher Stil für Icon-Buttons ohne Rahmen (Shopping-List und URL-Kopieren) */
 .shopping-list-trigger-button,
 .share-copy-url-button {
-  color: #555;
   background: transparent;
   border: none;
+  color: #555;
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.shopping-list-icon-img {
-  object-fit: contain;
-  font-size: 1.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .shopping-list-trigger-button:hover,
 .share-copy-url-button:hover {
   background: transparent;
   border: none;
+}
+
+.shopping-list-icon-img,
+.copy-link-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
 }
 
 .version-button {
@@ -286,12 +290,6 @@
 .publish-button-steps {
   padding: 0.9rem 2rem;
   font-size: 1rem;
-}
-
-.copy-link-icon-img {
-  width: 1.5rem;
-  height: 1.5rem;
-  object-fit: contain;
 }
 
 .share-add-button {

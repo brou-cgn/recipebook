@@ -74,19 +74,21 @@
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .shopping-list-trigger-button:hover,
 .share-copy-url-button:hover {
-  opacity: 0.7;
-  transform: none;
-  box-shadow: none;
   background: transparent;
+  border: none;
 }
 
-.shopping-list-icon-img {
+.shopping-list-icon-img,
+.copy-link-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
   object-fit: contain;
-  font-size: 1.5rem;
 }
 
 .favorite-button:hover {
