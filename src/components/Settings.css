@@ -1214,6 +1214,42 @@
   cursor: pointer;
 }
 
+.faq-visibility-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.faq-visibility-title {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.faq-visibility-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.faq-visibility-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.faq-visibility-badge {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
 .faq-admin-badge {
   font-size: 0.75rem;
   color: #b35900;
@@ -1223,6 +1259,26 @@
   padding: 0.1rem 0.4rem;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.faq-move-btn {
+  background: transparent;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+  color: #555;
+}
+
+.faq-move-btn:hover:not(:disabled) {
+  background: rgba(64, 44, 28, 0.1);
+}
+
+.faq-move-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .faq-indent-toolbar {

@@ -177,7 +177,7 @@ function Settings({ onBack, currentUser }) {
 
   // FAQ state
   const [faqs, setFaqs] = useState([]);
-  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
+  const [faqForm, setFaqForm] = useState({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
   const [editingFaqId, setEditingFaqId] = useState(null);
   const [uploadingFaqScreenshot, setUploadingFaqScreenshot] = useState(false);
   const [savingFaq, setSavingFaq] = useState(false);
@@ -256,7 +256,9 @@ function Settings({ onBack, currentUser }) {
           description: faqForm.description.trim(),
           screenshot: faqForm.screenshot || null,
           level: faqForm.level ?? 1,
-          adminOnly: faqForm.adminOnly ?? false
+          adminOnly: faqForm.adminOnly ?? false,
+          showOnDesktop: faqForm.showOnDesktop ?? true,
+          showOnMobile: faqForm.showOnMobile ?? true
         });
       } else {
         await addFaq({
@@ -265,10 +267,12 @@ function Settings({ onBack, currentUser }) {
           screenshot: faqForm.screenshot || null,
           level: faqForm.level ?? 1,
           adminOnly: faqForm.adminOnly ?? false,
+          showOnDesktop: faqForm.showOnDesktop ?? true,
+          showOnMobile: faqForm.showOnMobile ?? true,
           order: faqs.length
         });
       }
-      setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
+      setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
       setEditingFaqId(null);
     } catch (error) {
       alert('Fehler beim Speichern des Kochschule-Eintrags: ' + error.message);
@@ -279,7 +283,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleEditFaq = (faq) => {
     setEditingFaqId(faq.id);
-    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1, adminOnly: faq.adminOnly ?? false });
+    setFaqForm({ title: faq.title || '', description: faq.description || '', screenshot: faq.screenshot || null, level: faq.level ?? 1, adminOnly: faq.adminOnly ?? false, showOnDesktop: faq.showOnDesktop ?? true, showOnMobile: faq.showOnMobile ?? true });
   };
 
   const handleDeleteFaq = async (faqId) => {
@@ -288,7 +292,7 @@ function Settings({ onBack, currentUser }) {
       await deleteFaq(faqId);
       if (editingFaqId === faqId) {
         setEditingFaqId(null);
-        setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
+        setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
       }
       setFaqSelectedIds(prev => prev.filter(id => id !== faqId));
     } catch (error) {
@@ -298,7 +302,7 @@ function Settings({ onBack, currentUser }) {
 
   const handleCancelFaqEdit = () => {
     setEditingFaqId(null);
-    setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false });
+    setFaqForm({ title: '', description: '', screenshot: null, level: 1, adminOnly: false, showOnDesktop: true, showOnMobile: true });
   };
 
   const handleFaqIndent = async (delta) => {
@@ -309,6 +313,28 @@ function Settings({ onBack, currentUser }) {
       return updateFaq(id, { level: newLevel });
     }).filter(Boolean);
     await Promise.all(updates);
+  };
+
+  const handleFaqMoveUp = async (faqId) => {
+    const index = faqs.findIndex(f => f.id === faqId);
+    if (index <= 0) return;
+    const faq = faqs[index];
+    const prevFaq = faqs[index - 1];
+    await Promise.all([
+      updateFaq(faq.id, { order: prevFaq.order ?? (index - 1) }),
+      updateFaq(prevFaq.id, { order: faq.order ?? index })
+    ]);
+  };
+
+  const handleFaqMoveDown = async (faqId) => {
+    const index = faqs.findIndex(f => f.id === faqId);
+    if (index < 0 || index >= faqs.length - 1) return;
+    const faq = faqs[index];
+    const nextFaq = faqs[index + 1];
+    await Promise.all([
+      updateFaq(faq.id, { order: nextFaq.order ?? (index + 1) }),
+      updateFaq(nextFaq.id, { order: faq.order ?? index })
+    ]);
   };
 
   const handleImportFaqFromMd = async () => {
@@ -2300,6 +2326,25 @@ function Settings({ onBack, currentUser }) {
                     Nur für Administratoren sichtbar
                   </label>
                 </div>
+                <div className="faq-visibility-section">
+                  <span className="faq-visibility-title">Sichtbarkeit:</span>
+                  <label className="faq-visibility-label">
+                    <input
+                      type="checkbox"
+                      checked={faqForm.showOnDesktop ?? true}
+                      onChange={(e) => setFaqForm(prev => ({ ...prev, showOnDesktop: e.target.checked }))}
+                    />
+                    🖥 Desktop
+                  </label>
+                  <label className="faq-visibility-label">
+                    <input
+                      type="checkbox"
+                      checked={faqForm.showOnMobile ?? true}
+                      onChange={(e) => setFaqForm(prev => ({ ...prev, showOnMobile: e.target.checked }))}
+                    />
+                    📱 Mobil
+                  </label>
+                </div>
                 <div className="faq-screenshot-section">
                   <label>Screenshot (optional):</label>
                   {faqForm.screenshot ? (
@@ -2368,7 +2413,7 @@ function Settings({ onBack, currentUser }) {
                     </div>
                   )}
                   <div className="faq-list">
-                    {faqs.map((faq) => {
+                    {faqs.map((faq, faqIndex) => {
                       const isSelected = faqSelectedIds.includes(faq.id);
                       return (
                         <div
@@ -2394,7 +2439,29 @@ function Settings({ onBack, currentUser }) {
                             {faq.adminOnly && (
                               <span className="faq-admin-badge" title="Nur für Administratoren sichtbar">🔒 Admin</span>
                             )}
+                            {(faq.showOnDesktop !== false) && (
+                              <span className="faq-visibility-badge" title="Auf Desktop sichtbar">🖥</span>
+                            )}
+                            {(faq.showOnMobile !== false) && (
+                              <span className="faq-visibility-badge" title="Auf Mobilgeräten sichtbar">📱</span>
+                            )}
                             <div className="faq-list-item-actions">
+                              <button
+                                className="faq-move-btn"
+                                onClick={() => handleFaqMoveUp(faq.id)}
+                                disabled={faqIndex === 0}
+                                title="Nach oben"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                className="faq-move-btn"
+                                onClick={() => handleFaqMoveDown(faq.id)}
+                                disabled={faqIndex === faqs.length - 1}
+                                title="Nach unten"
+                              >
+                                ↓
+                              </button>
                               <button
                                 className="faq-edit-btn"
                                 onClick={() => handleEditFaq(faq)}
