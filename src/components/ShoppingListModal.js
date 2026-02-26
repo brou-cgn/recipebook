@@ -115,7 +115,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shopping-list-header">
-          <h2 className="shopping-list-title">🛒 Einkaufsliste</h2>
+          <h2 className="shopping-list-title">Einkaufsliste</h2>
           <button
             ref={closeButtonRef}
             className="shopping-list-close"

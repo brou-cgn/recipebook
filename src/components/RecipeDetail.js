@@ -1382,7 +1382,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">🛒 Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
               <button
                 className="portion-selector-close"
                 onClick={() => setShowPortionSelector(false)}

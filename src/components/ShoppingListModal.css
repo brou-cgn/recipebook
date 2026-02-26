@@ -259,4 +259,10 @@
   .shopping-list-bring-btn {
     flex: 1;
   }
+
+  .shopping-list-bring-btn--image {
+    flex: none;
+    width: 40px;
+    height: 40px;
+  }
 }
