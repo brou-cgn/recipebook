@@ -194,32 +194,22 @@
 }
 
 .shopping-list-trigger-button {
+  color: #555;
   background: transparent;
   border: none;
-  color: #555;
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
 }
 
 .shopping-list-icon-img {
-  width: 1.5rem;
-  height: 1.5rem;
   object-fit: contain;
+  font-size: 1.5rem;
 }
 
 .shopping-list-trigger-button:hover {
-  opacity: 0.7;
-  transform: none;
-  box-shadow: none;
   background: transparent;
+  border: none;
 }
 
 .version-button {
@@ -649,12 +639,12 @@
   font-weight: 600;
 }
 
-.difficulty-stars {
+difficulty-stars {
   display: flex;
   gap: 0.25rem;
 }
 
-.difficulty-stars .star {
+difficulty-stars .star {
   font-size: 1.25rem;
   color: #DF7A00;
   transition: all 0.2s ease;
@@ -668,7 +658,6 @@
 .difficulty-stars .star.filled {
   color: #DF7A00;
 }
-
 
 .recipe-section {
   padding: 1.5rem;
@@ -737,7 +726,6 @@
   color: #333;
   font-size: 0.95rem;
 }
-
 
 .ingredients-list,
 .steps-list {
@@ -876,7 +864,6 @@
   .recipe-section {
     padding: 1rem;
   }
-
 
   .cooking-mode-indicator {
     padding: 0.625rem 0.75rem;
