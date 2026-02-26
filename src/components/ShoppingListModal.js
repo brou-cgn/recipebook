@@ -68,10 +68,6 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
       setEditingId(null);
     }
 
-    // Open the window synchronously NOW (before any await) so mobile browsers
-    // treat it as a user-gesture-initiated popup and don't block it.
-    const newWindow = window.open('', '_blank', 'noopener,noreferrer');
-
     setBringLoading(true);
     try {
       let sid = shareId;
@@ -79,7 +75,6 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
         sid = await onEnableSharing();
       }
       if (!sid) {
-        if (newWindow) newWindow.close();
         alert('Dieser Eintrag muss zuerst geteilt werden, um ihn an Bring! zu übergeben.');
         return;
       }
@@ -93,21 +88,16 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
         body: JSON.stringify({ shareId: sid, items: uncheckedItems }),
       });
       if (!saveRes.ok) {
-        if (newWindow) newWindow.close();
         throw new Error(`Export failed: ${saveRes.status} ${saveRes.statusText}`);
       }
       const { exportId } = await saveRes.json();
       const exportUrl = `${window.location.origin}/bring-export?shareId=${encodeURIComponent(sid)}&exportId=${encodeURIComponent(exportId)}`;
       const bringUrl = `https://api.getbring.com/rest/bringrecipes/deeplink?url=${encodeURIComponent(exportUrl)}&source=web`;
-      // Navigate the already-open window to the final URL
-      if (newWindow) {
-        newWindow.location.href = bringUrl;
-      } else {
-        // Fallback if popup was blocked despite our best efforts
-        window.location.href = bringUrl;
-      }
+      // Use location.href for reliable deeplink handling on iOS/Android.
+      // App deeplinks do not require a new window — the OS intercepts the
+      // navigation and opens the Bring! app (or falls back to the website).
+      window.location.href = bringUrl;
     } catch (err) {
-      if (newWindow) newWindow.close();
       console.error('Bring! export failed:', err);
       alert('Fehler beim Exportieren zu Bring!. Bitte versuchen Sie es erneut.');
     } finally {

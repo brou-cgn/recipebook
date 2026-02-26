@@ -69,7 +69,6 @@ describe('ShoppingListModal', () => {
   });
 
   describe('Bring! integration', () => {
-    let windowOpenSpy;
     let fetchSpy;
 
     beforeEach(() => {
@@ -77,12 +76,12 @@ describe('ShoppingListModal', () => {
         ok: true,
         json: jest.fn().mockResolvedValue({ exportId: 'test-export-id' }),
       });
-      windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => {});
+      delete window.location;
+      window.location = { href: '', origin: 'http://localhost' };
     });
 
     afterEach(() => {
       fetchSpy.mockRestore();
-      windowOpenSpy.mockRestore();
     });
 
     test('renders Bring! button', () => {
@@ -110,11 +109,9 @@ describe('ShoppingListModal', () => {
       fireEvent.click(bringBtn);
 
       await waitFor(() => {
-        expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-        const calledUrl = windowOpenSpy.mock.calls[0][0];
-        expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
-        expect(calledUrl).toContain('test-share-id-123');
-        expect(calledUrl).toContain('source=web');
+        expect(window.location.href).toContain('api.getbring.com/rest/bringrecipes/deeplink');
+        expect(window.location.href).toContain('test-share-id-123');
+        expect(window.location.href).toContain('source=web');
       });
     });
 
@@ -137,7 +134,7 @@ describe('ShoppingListModal', () => {
         }));
         const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
         expect(body.items).toEqual(mockItems);
-        const calledUrl = windowOpenSpy.mock.calls[0][0];
+        const calledUrl = window.location.href;
         const exportUrl = decodeURIComponent(calledUrl.split('url=')[1].split('&source=')[0]);
         expect(exportUrl).toContain('exportId=test-export-id');
         expect(exportUrl).not.toContain('items=');
@@ -215,10 +212,8 @@ describe('ShoppingListModal', () => {
 
       await waitFor(() => {
         expect(mockEnableSharing).toHaveBeenCalledTimes(1);
-        expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-        const calledUrl = windowOpenSpy.mock.calls[0][0];
-        expect(calledUrl).toContain('api.getbring.com/rest/bringrecipes/deeplink');
-        expect(calledUrl).toContain('new-share-id-456');
+        expect(window.location.href).toContain('api.getbring.com/rest/bringrecipes/deeplink');
+        expect(window.location.href).toContain('new-share-id-456');
       });
     });
   });
