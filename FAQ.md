@@ -3,14 +3,17 @@
 Am Wochenende steht Besuch ins Haus und irgendwie soll mal wieder was Besonderes auf den Tisch. „Worauf hab ich eigentlich Bock?" Lass dich einfach mal inspirieren… Vielleicht was Italienisches… Katjas Himbeerdessert oder das Tiramisu von Weihnachten…
 
 ## Rezeptübersicht
+<!-- id: faq-rezeptuebersicht -->
 
 Die Startseite zeigt alle gespeicherten Rezepte als Kachelübersicht. Jede Kachel enthält das Rezeptbild (falls vorhanden), den Titel, zugehörige Küchentags, die Anzahl vorhandener Versionen sowie den Namen der Autorin oder des Autors. Klicke auf eine Kachel, um das vollständige Rezept zu öffnen.
 
 ## Filtern
+<!-- id: faq-filtern -->
 
 Neben dem Suchfeld gibt es ein Dropdown-Menü mit Mahlzeitkategorien (z. B. Frühstück, Mittagessen, Abendessen). Wähle eine Kategorie aus, um nur Rezepte dieser Art anzuzeigen. Mit „Alle" werden wieder alle Rezepte angezeigt.
 
 ## Suchen
+<!-- id: faq-suchen -->
 
 Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ein – die Liste filtert sich sofort nach passenden Rezepttiteln.
 
@@ -19,18 +22,22 @@ Oben auf der Rezeptübersicht befindet sich ein Suchfeld. Tippe einen Begriff ei
 Du hast DAS Rezept gefunden? Dann direkt mal speichern, vielleicht auch mit deiner persönlichen Note, dann ab auf die Einkaufsliste und schon stehst du im REWE.
 
 ## Favoriten
+<!-- id: faq-favoriten -->
 
 Öffne ein Rezept und klicke auf den **★-Button**, um es als Favorit zu markieren. In der Rezeptübersicht kannst du anschließend den **★-Button** in der Filterleiste aktivieren, um ausschließlich deine Lieblingsrezepte anzuzeigen. Erneutes Klicken hebt den Filter wieder auf.
 
 ## Eigene Version erstellen
+<!-- id: faq-eigene-version -->
 
 Öffne das gewünschte Rezept und klicke auf **„Bearbeiten"**. Passe Zutaten, Mengen oder Zubereitungsschritte nach deinem Geschmack an und speichere das Rezept als neue Version. So bleibt das Original erhalten und deine persönliche Note ist gesichert.
 
 ## Einkaufsliste
+<!-- id: faq-einkaufsliste -->
 
 Öffne ein Rezept und klicke auf den Button **„Zur Einkaufsliste hinzufügen"**. Die Zutaten des Rezepts werden automatisch in deine Einkaufsliste übernommen. Du kannst die Einkaufsliste jederzeit über das Hauptmenü aufrufen, bearbeiten und Einträge abhaken.
 
 ## Bring! Integration
+<!-- id: faq-bring-integration -->
 
 RecipeBook unterstützt die Integration mit der Bring!-App. Über die Einstellungen kannst du dein Bring!-Konto verknüpfen – Zutaten werden dann direkt in deine Bring!-Einkaufsliste übertragen, sodass du sie bequem beim Einkaufen auf deinem Smartphone nutzen kannst.
 
@@ -39,6 +46,7 @@ RecipeBook unterstützt die Integration mit der Bring!-App. Über die Einstellun
 Jetzt wird's ernst: Die Küche wird zu deiner Kochbühne. Schritt für Schritt nach Anleitung.
 
 ## Kochmodus
+<!-- id: faq-kochmodus -->
 
 Der Kochmodus ist eine spezielle Ansicht, die das Kochen nach einem Rezept erleichtert. Er zeigt Zutaten und Zubereitungsschritte in einer übersichtlichen, schrittweisen Darstellung – optimiert für die Nutzung direkt am Herd. Dank der Wake-Lock-Funktion bleibt der Bildschirm während des Kochens an, und du kannst per Pfeiltasten oder Wischen zwischen den Schritten navigieren.
 
@@ -49,6 +57,7 @@ Der Kochmodus ist eine spezielle Ansicht, die das Kochen nach einem Rezept erlei
 Deine Lasagne kam am besten an und schon kommen die Fragen nach dem Rezept… dann speichere und teile es doch einfach.
 
 ## Rezept erstellen
+<!-- id: faq-rezept-erstellen -->
 
 1. Klicke auf **„+ Rezept hinzufügen"** in der Rezeptübersicht.
 2. Fülle das Formular aus: **Titel** (Pflichtfeld), **Portionen**, **Kochdauer**, **Schwierigkeitsgrad**, **Zutaten**, **Zubereitung**, **Küchentags** und **Bild**.
@@ -57,6 +66,7 @@ Deine Lasagne kam am besten an und schon kommen die Fragen nach dem Rezept… da
 Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollständig veröffentlichen möchtest.
 
 ## Website importieren
+<!-- id: faq-website-importieren -->
 
 1. Öffne das Rezeptformular über **„+ Rezept hinzufügen"**.
 2. Klicke auf **„🌐 Von Website importieren"**.
@@ -65,6 +75,7 @@ Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollstä
 5. Prüfe die Daten, passe sie bei Bedarf an und speichere das Rezept.
 
 ## Rezept scannen
+<!-- id: faq-rezept-scannen -->
 
 1. Öffne das Rezeptformular über **„+ Rezept hinzufügen"**.
 2. Klicke auf **„📸 Rezept scannen"**.
@@ -74,10 +85,12 @@ Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollstä
 6. Prüfe alle Felder und speichere das Rezept.
 
 ## Nährwerte berechnen
+<!-- id: faq-naehrwerte -->
 
 Beim Erstellen oder Bearbeiten eines Rezepts kannst du die Nährwertberechnung starten. Die App analysiert die eingetragenen Zutaten und gibt dir eine Übersicht über Kalorien, Kohlenhydrate, Eiweiß und Fett – praktisch, wenn du auf eine ausgewogene Ernährung achtest.
 
 ## Menü erstellen
+<!-- id: faq-menue-erstellen -->
 
 1. Navigiere über das Hauptmenü zu **„Menüs"** und klicke auf **„+ Menü erstellen"**.
 2. Gib einen **Namen** (Pflichtfeld) und optional eine **Beschreibung** sowie ein **Datum** ein.
