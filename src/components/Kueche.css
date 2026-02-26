@@ -45,7 +45,7 @@
 
 .kueche-tile-content {
   position: relative;
-  padding: 10px 18px 10px;
+  padding: 15px 18px 10px;
   display: block;
   height: 100%;
   box-sizing: border-box;
@@ -54,7 +54,7 @@
 .kueche-tile-content h3 {
   margin: 0 0 0.5rem 0;
   color: #DF7A00;
-  font-size: 1.00rem;
+  font-size: 1.25rem;
 }
 
 .kueche-tile--chefkoch .kueche-tile-content h3 {
