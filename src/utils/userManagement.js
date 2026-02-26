@@ -21,6 +21,7 @@ import {
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
+import { logAppCall } from './appCallsFirestore';
 
 // Permission roles
 export const ROLES = {
@@ -226,6 +227,12 @@ export const onAuthStateChange = (callback) => {
       if (userProfile) {
         const user = { id: firebaseUser.uid, ...userProfile };
         currentUserCache = user;
+        // Log only once per browser session to avoid duplicates on token refresh
+        const sessionKey = `appCallLogged_${user.id}`;
+        if (!sessionStorage.getItem(sessionKey)) {
+          sessionStorage.setItem(sessionKey, '1');
+          logAppCall(user);
+        }
         callback(user);
       } else {
         currentUserCache = null;

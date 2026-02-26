@@ -96,5 +96,12 @@ service cloud.firestore {
       allow read: if isEditOrAdmin();
       allow create, update, delete: if isAdmin();
     }
+
+    // App calls audit log collection
+    match /appCalls/{callId} {
+      allow read: if isAdmin();
+      allow create: if isAnyUser();
+      allow update, delete: if isAdmin();
+    }
   }
 }
