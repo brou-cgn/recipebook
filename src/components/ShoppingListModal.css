@@ -221,6 +221,30 @@
   background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
 }
 
+.shopping-list-bring-btn--image {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  overflow: hidden;
+}
+
+.shopping-list-bring-btn--image:hover:not(:disabled) {
+  background: transparent;
+  opacity: 0.85;
+}
+
+.bring-btn-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 6px;
+}
+
 @media (max-width: 480px) {
   .shopping-list-footer {
     flex-wrap: wrap;

@@ -155,7 +155,8 @@ function Settings({ onBack, currentUser }) {
     nutritionEmpty: '➕',
     nutritionFilled: '🥦',
     privateListBack: '✕',
-    shoppingList: '🛒'
+    shoppingList: '🛒',
+    bringButton: '🛍️'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -1695,6 +1696,63 @@ function Settings({ onBack, currentUser }) {
                         <img src={buttonIcons.shoppingList} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.shoppingList}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="bringButtonIcon">Bring!-Button (Einkaufsliste):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.bringButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="bringButtonIcon"
+                          value={buttonIcons.bringButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, bringButton: e.target.value })}
+                          placeholder="z.B. 🛍️"
+                          maxLength={10}
+                        />
+                        <label htmlFor="bringButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'bringButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="bringButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('bringButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'bringButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('bringButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, bringButton: DEFAULT_BUTTON_ICONS.bringButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.bringButton) ? (
+                        <img src={buttonIcons.bringButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.bringButton}</span>
                       )}
                     </div>
                   </div>
