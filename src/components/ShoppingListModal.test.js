@@ -144,6 +144,36 @@ describe('ShoppingListModal', () => {
       });
     });
 
+    test('flushes open inline edit before exporting to Bring!', async () => {
+      render(
+        <ShoppingListModal
+          items={mockItems}
+          title="Test Rezept"
+          onClose={mockOnClose}
+          shareId="test-share-id-123"
+        />
+      );
+
+      // Start editing the first item
+      const editBtns = screen.getAllByLabelText('Zutat bearbeiten');
+      fireEvent.click(editBtns[0]);
+
+      // Change the text without saving
+      const editInput = screen.getByRole('textbox', { name: '' });
+      fireEvent.change(editInput, { target: { value: '300g Mehl' } });
+
+      // Click Bring! without saving the edit
+      const bringBtn = screen.getByTitle('Einkaufsliste an Bring! übergeben');
+      fireEvent.click(bringBtn);
+
+      await waitFor(() => {
+        const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+        // The unsaved edit text '300g Mehl' should be used instead of the original '200g Mehl'
+        expect(body.items).toContain('300g Mehl');
+        expect(body.items).not.toContain('200g Mehl');
+      });
+    });
+
     test('excludes checked (done) items from POST body', async () => {
       render(
         <ShoppingListModal
