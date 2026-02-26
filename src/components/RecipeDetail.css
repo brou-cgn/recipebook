@@ -193,7 +193,9 @@
   color: white;
 }
 
-.shopping-list-trigger-button {
+/* Einheitlicher Stil für Icon-Buttons ohne Rahmen (Shopping-List und URL-Kopieren) */
+.shopping-list-trigger-button,
+.share-copy-url-button {
   color: #555;
   background: transparent;
   border: none;
@@ -207,7 +209,8 @@
   font-size: 1.5rem;
 }
 
-.shopping-list-trigger-button:hover {
+.shopping-list-trigger-button:hover,
+.share-copy-url-button:hover {
   background: transparent;
   border: none;
 }
@@ -285,22 +288,10 @@
   font-size: 1rem;
 }
 
-.share-copy-url-button {
-  color: #555;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-}
-
 .copy-link-icon-img {
   width: 1.5rem;
   height: 1.5rem;
   object-fit: contain;
-}
-
-.share-copy-url-button:hover {
-  background: transparent;
-  border: none;
 }
 
 .share-add-button {
@@ -793,7 +784,8 @@ difficulty-stars .star {
     flex-shrink: 0;
   }
 
-  .mobile-action-buttons .shopping-list-trigger-button {
+  .mobile-action-buttons .shopping-list-trigger-button,
+  .mobile-action-buttons .share-copy-url-button {
     width: 48px;
     height: 48px;
     padding: 0;
