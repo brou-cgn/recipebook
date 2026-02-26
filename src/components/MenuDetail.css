@@ -65,10 +65,6 @@
   padding: 0;
 }
 
-.share-copy-url-button {
-  margin-right: 1rem;
-}
-
 /* Einheitlicher Stil für Icon-Buttons ohne Rahmen (Shopping-List und URL-Kopieren) */
 .shopping-list-trigger-button,
 .share-copy-url-button {
@@ -375,6 +371,7 @@
     width: 100%;
     flex-wrap: nowrap;
     gap: 0.75rem;
+    padding: 1rem;
   }
 
   .favorite-button {
