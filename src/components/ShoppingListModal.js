@@ -56,6 +56,16 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   const checkedCount = listItems.filter(i => i.checked).length;
 
   const handleBringExport = async () => {
+    // Flush any open inline edit before exporting
+    let currentItems = listItems;
+    if (editingId !== null) {
+      currentItems = listItems.map(item =>
+        item.id === editingId ? { ...item, text: editText } : item
+      );
+      setListItems(currentItems);
+      setEditingId(null);
+    }
+
     setBringLoading(true);
     try {
       let sid = shareId;
@@ -69,7 +79,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
       // Only export unchecked (open) items. The items in listItems are already
       // plain ingredient strings (recipe links are resolved by the frontend
       // before they are passed to this modal as the `items` prop).
-      const uncheckedItems = listItems.filter((i) => !i.checked).map((i) => i.text);
+      const uncheckedItems = currentItems.filter((i) => !i.checked).map((i) => i.text);
       const saveRes = await fetch('/bring-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
