@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -285,5 +285,28 @@ describe('combineIngredients', () => {
 
   test('handles fractions', () => {
     expect(combineIngredients(['1/2 TL Salz', '1/2 TL Salz'])).toEqual(['1 TL Salz']);
+  });
+});
+
+describe('isWaterIngredient', () => {
+  test('detects plain "Wasser"', () => {
+    expect(isWaterIngredient('Wasser')).toBe(true);
+  });
+
+  test('detects "Wasser" with amount and unit', () => {
+    expect(isWaterIngredient('500 ml Wasser')).toBe(true);
+    expect(isWaterIngredient('1 l Wasser')).toBe(true);
+    expect(isWaterIngredient('2 Wasser')).toBe(true);
+  });
+
+  test('is case-insensitive', () => {
+    expect(isWaterIngredient('wasser')).toBe(true);
+    expect(isWaterIngredient('WASSER')).toBe(true);
+  });
+
+  test('does not filter other ingredients', () => {
+    expect(isWaterIngredient('Mehl')).toBe(false);
+    expect(isWaterIngredient('200 g Mehl')).toBe(false);
+    expect(isWaterIngredient('Mineralwasser')).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
-import { scaleIngredient as scaleIngredientUtil, combineIngredients } from '../utils/ingredientUtils';
+import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -419,11 +419,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             if (linkedItem.type === 'heading') continue;
             const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
             if (decodeRecipeLink(linkedText)) continue; // skip nested links
+            if (isWaterIngredient(linkedText)) continue; // skip water
             ingredients.push(multiplier !== 1 ? scaleIngredientUtil(linkedText, multiplier) : linkedText);
           }
         }
       } else {
-        ingredients.push(scaleIngredient(text));
+        if (!isWaterIngredient(text)) ingredients.push(scaleIngredient(text));
       }
     }
     return combineIngredients(ingredients);
