@@ -378,6 +378,13 @@
   }
 
   .favorite-button {
+    width: 48px;
+    flex-shrink: 0;
+  }
+
+  .shopping-list-trigger-button,
+  .share-copy-url-button {
+    width: 48px;
     flex-shrink: 0;
   }
 
