@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -308,5 +308,99 @@ describe('isWaterIngredient', () => {
     expect(isWaterIngredient('Mehl')).toBe(false);
     expect(isWaterIngredient('200 g Mehl')).toBe(false);
     expect(isWaterIngredient('Mineralwasser')).toBe(false);
+  });
+});
+
+describe('convertIngredientUnits', () => {
+  const conversionTable = [
+    { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '15' },
+    { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
+    { id: 'salz-tl', ingredient: 'Salz', unit: 'TL', grams: '6', milliliters: '' },
+    { id: 'zucker-el-empty', ingredient: 'Zucker', unit: 'EL', grams: '', milliliters: '' },
+  ];
+
+  test('converts EL to ml when milliliters entry exists', () => {
+    const { converted } = convertIngredientUnits(['2 EL Öl'], conversionTable);
+    expect(converted).toEqual(['30 ml Öl']);
+  });
+
+  test('converts EL to g when grams entry exists', () => {
+    const { converted } = convertIngredientUnits(['3 EL Mehl'], conversionTable);
+    expect(converted).toEqual(['30 g Mehl']);
+  });
+
+  test('converts TL to g', () => {
+    const { converted } = convertIngredientUnits(['1 TL Salz'], conversionTable);
+    expect(converted).toEqual(['6 g Salz']);
+  });
+
+  test('keeps ingredient unchanged when entry has no conversion values', () => {
+    const { converted, missing } = convertIngredientUnits(['2 EL Zucker'], conversionTable);
+    expect(converted).toEqual(['2 EL Zucker']);
+    expect(missing).toEqual([]);
+  });
+
+  test('keeps g ingredients unchanged', () => {
+    const { converted } = convertIngredientUnits(['200 g Mehl'], conversionTable);
+    expect(converted).toEqual(['200 g Mehl']);
+  });
+
+  test('keeps ml ingredients unchanged', () => {
+    const { converted } = convertIngredientUnits(['100 ml Milch'], conversionTable);
+    expect(converted).toEqual(['100 ml Milch']);
+  });
+
+  test('converts kg to g (standard metric)', () => {
+    const { converted } = convertIngredientUnits(['1 kg Kartoffeln'], []);
+    expect(converted).toEqual(['1000 g Kartoffeln']);
+  });
+
+  test('converts l to ml (standard metric)', () => {
+    const { converted } = convertIngredientUnits(['0.5 l Milch'], []);
+    expect(converted).toEqual(['500 ml Milch']);
+  });
+
+  test('records missing entry for unknown unit+ingredient', () => {
+    const { converted, missing } = convertIngredientUnits(['2 EL Öl', '1 Tasse Milch'], conversionTable);
+    expect(converted[0]).toBe('30 ml Öl');
+    expect(converted[1]).toBe('1 Tasse Milch');
+    expect(missing).toEqual([{ unit: 'Tasse', ingredient: 'Milch' }]);
+  });
+
+  test('deduplicates missing entries', () => {
+    const { missing } = convertIngredientUnits(
+      ['1 Tasse Milch', '2 Tasse Milch'],
+      []
+    );
+    expect(missing).toHaveLength(1);
+    expect(missing[0]).toEqual({ unit: 'Tasse', ingredient: 'Milch' });
+  });
+
+  test('handles ingredients without amounts', () => {
+    const { converted, missing } = convertIngredientUnits(['Salz'], conversionTable);
+    expect(converted).toEqual(['Salz']);
+    expect(missing).toEqual([]);
+  });
+
+  test('handles empty array', () => {
+    const { converted, missing } = convertIngredientUnits([], conversionTable);
+    expect(converted).toEqual([]);
+    expect(missing).toEqual([]);
+  });
+
+  test('handles non-array input', () => {
+    const result = convertIngredientUnits(null, conversionTable);
+    expect(result).toEqual({ converted: null, missing: [] });
+  });
+
+  test('uses empty conversionTable when not provided', () => {
+    const { missing } = convertIngredientUnits(['2 EL Öl']);
+    expect(missing).toEqual([{ unit: 'EL', ingredient: 'Öl' }]);
+  });
+
+  test('formats decimal results to one decimal place', () => {
+    const table = [{ id: 'x', ingredient: 'Butter', unit: 'EL', grams: '14.5', milliliters: '' }];
+    const { converted } = convertIngredientUnits(['2 EL Butter'], table);
+    expect(converted).toEqual(['29 g Butter']);
   });
 });

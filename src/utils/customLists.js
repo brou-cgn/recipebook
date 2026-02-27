@@ -502,6 +502,72 @@ export function clearSettingsCache() {
 }
 
 /**
+ * Adds missing conversion entries to the conversionTable in settings.
+ * Entries that already exist (same unit + ingredient, case-insensitive) are skipped.
+ *
+ * @param {Array<{unit: string, ingredient: string}>} missingEntries - Missing unit+ingredient pairs
+ * @param {Object[]} currentTable - The current conversion table (to skip known entries early)
+ * @returns {Promise<void>}
+ */
+export async function addMissingConversionEntries(missingEntries, currentTable = []) {
+  if (!missingEntries || missingEntries.length === 0) return;
+
+  // Skip entries already present in the local state table
+  const candidates = missingEntries.filter(
+    ({ unit, ingredient }) =>
+      !currentTable.some(
+        e =>
+          e.unit &&
+          e.ingredient &&
+          e.unit.toLowerCase() === unit.toLowerCase() &&
+          e.ingredient.toLowerCase() === ingredient.toLowerCase()
+      )
+  );
+
+  if (candidates.length === 0) return;
+
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    const settingsDoc = await getDoc(settingsRef);
+    const existingTable = settingsDoc.exists()
+      ? settingsDoc.data().conversionTable || []
+      : [];
+
+    // Filter out entries already persisted in Firestore
+    const toAdd = candidates.filter(
+      ({ unit, ingredient }) =>
+        !existingTable.some(
+          e =>
+            e.unit &&
+            e.ingredient &&
+            e.unit.toLowerCase() === unit.toLowerCase() &&
+            e.ingredient.toLowerCase() === ingredient.toLowerCase()
+        )
+    );
+
+    if (toAdd.length === 0) return;
+
+    const newEntries = toAdd.map(({ unit, ingredient }) => ({
+      id: `${ingredient.toLowerCase().replace(/\s+/g, '-')}-${unit.toLowerCase()}`,
+      ingredient,
+      unit,
+      grams: '',
+      milliliters: '',
+    }));
+
+    const updatedTable = [...existingTable, ...newEntries];
+    await updateDoc(settingsRef, { conversionTable: updatedTable });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.conversionTable = updatedTable;
+    }
+  } catch (error) {
+    console.error('Error adding missing conversion entries:', error);
+  }
+}
+
+/**
  * Get the button icons from Firestore or return defaults
  * @returns {Promise<Object>} Promise resolving to button icons object
  */

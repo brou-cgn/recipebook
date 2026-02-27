@@ -183,6 +183,82 @@ export function combineIngredients(ingredients) {
 }
 
 /**
+ * Converts ingredient units using the conversion table.
+ * Units 'g' and 'ml' are kept as-is.
+ * Standard metric conversions (kg→g, l→ml) are applied automatically.
+ * For other units the conversionTable is consulted using ingredient name + unit lookup.
+ *
+ * @param {string[]} ingredients - Array of ingredient strings
+ * @param {Object[]} conversionTable - Array of conversion table entries
+ * @returns {{ converted: string[], missing: {unit: string, ingredient: string}[] }}
+ */
+export function convertIngredientUnits(ingredients, conversionTable = []) {
+  if (!Array.isArray(ingredients)) return { converted: ingredients, missing: [] };
+
+  const missing = [];
+  const seenMissing = new Set();
+  const table = Array.isArray(conversionTable) ? conversionTable : [];
+
+  const converted = ingredients.map(ingredient => {
+    const { amount, unit, name } = parseIngredientParts(ingredient);
+
+    // No unit or already in target units – keep as-is
+    if (!unit || unit.toLowerCase() === 'g' || unit.toLowerCase() === 'ml') {
+      return ingredient;
+    }
+
+    if (amount !== null) {
+      // Standard metric conversions (no table entry needed)
+      if (unit.toLowerCase() === 'kg') {
+        const result = amount * 1000;
+        const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
+        return `${formatted} g ${name}`;
+      }
+      if (unit.toLowerCase() === 'l') {
+        const result = amount * 1000;
+        const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
+        return `${formatted} ml ${name}`;
+      }
+
+      // Look up in conversion table by unit + ingredient name
+      const entry = table.find(
+        e =>
+          e.unit &&
+          e.ingredient &&
+          e.unit.toLowerCase() === unit.toLowerCase() &&
+          e.ingredient.toLowerCase() === name.toLowerCase()
+      );
+
+      if (entry) {
+        if (entry.grams && parseFloat(entry.grams) > 0) {
+          const result = amount * parseFloat(entry.grams);
+          const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
+          return `${formatted} g ${name}`;
+        }
+        if (entry.milliliters && parseFloat(entry.milliliters) > 0) {
+          const result = amount * parseFloat(entry.milliliters);
+          const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
+          return `${formatted} ml ${name}`;
+        }
+        // Entry exists but has no conversion values yet – keep as-is
+        return ingredient;
+      }
+
+      // Not in table – record as missing
+      const key = `${unit.toLowerCase()}|${name.toLowerCase()}`;
+      if (!seenMissing.has(key)) {
+        seenMissing.add(key);
+        missing.push({ unit, ingredient: name });
+      }
+    }
+
+    return ingredient;
+  });
+
+  return { converted, missing };
+}
+
+/**
  * Scales the numeric amounts in an ingredient string by a given multiplier.
  * Example: scaleIngredient("200 g Mehl", 2) => "400 g Mehl"
  * @param {string} ingredient - The ingredient string to scale

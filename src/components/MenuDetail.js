@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
@@ -6,7 +6,7 @@ import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
-import { scaleIngredient, combineIngredients } from '../utils/ingredientUtils';
+import { scaleIngredient, combineIngredients, convertIngredientUnits } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import ShoppingListModal from './ShoppingListModal';
 
@@ -24,16 +24,19 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [portionCounts, setPortionCounts] = useState(initialMenu.portionCounts || {});
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
+  const [conversionTable, setConversionTable] = useState([]);
+  const missingSavedRef = useRef(false);
 
   // Load close button icon from settings
   useEffect(() => {
     const loadButtonIcons = async () => {
-      const { getButtonIcons } = require('../utils/customLists');
-      const icons = await getButtonIcons();
+      const { getButtonIcons, getCustomLists } = require('../utils/customLists');
+      const [icons, lists] = await Promise.all([getButtonIcons(), getCustomLists()]);
       setCloseButtonIcon(icons.menuCloseButton || '✕');
       setCopyLinkIcon(icons.copyLink || '📋');
       setShoppingListIcon(icons.shoppingList || '🛒');
       setBringButtonIcon(icons.bringButton || '🛍️');
+      setConversionTable(lists.conversionTable || []);
     };
     loadButtonIcons();
   }, []);
@@ -226,7 +229,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
         }
       }
     }
-    return combineIngredients(ingredients);
+    const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
+    if (missing.length > 0 && !missingSavedRef.current) {
+      missingSavedRef.current = true;
+      const { addMissingConversionEntries } = require('../utils/customLists');
+      addMissingConversionEntries(missing, conversionTable).catch(console.error);
+    }
+    return combineIngredients(converted);
   };
 
   return (
@@ -475,6 +484,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                 className="portion-selector-generate-btn"
                 onClick={() => {
                   setShowPortionSelector(false);
+                  missingSavedRef.current = false;
                   setShowShoppingListModal(true);
                 }}
               >
