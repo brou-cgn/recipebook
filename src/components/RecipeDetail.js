@@ -7,7 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
-import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient } from '../utils/ingredientUtils';
+import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -50,6 +50,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
+  const [conversionTable, setConversionTable] = useState([]);
+  const missingSavedRef = useRef(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -66,6 +68,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionFilledIcon(icons.nutritionFilled || '🥦');
       setShoppingListIcon(icons.shoppingList || '🛒');
       setBringButtonIcon(icons.bringButton || '🛍️');
+      setConversionTable(lists.conversionTable || []);
     };
     loadSettings();
   }, []);
@@ -427,7 +430,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         if (!isWaterIngredient(text)) ingredients.push(scaleIngredient(text));
       }
     }
-    return combineIngredients(ingredients);
+    const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
+    if (missing.length > 0 && !missingSavedRef.current) {
+      missingSavedRef.current = true;
+      const { addMissingConversionEntries } = require('../utils/customLists');
+      addMissingConversionEntries(missing, conversionTable).catch(console.error);
+    }
+    return combineIngredients(converted);
   };
 
   const getShareUrl = () => {
@@ -514,6 +523,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setLinkedPortionCounts({});
       setShowPortionSelector(true);
     } else {
+      missingSavedRef.current = false;
       setShowShoppingListModal(true);
     }
   };
@@ -1430,6 +1440,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 className="portion-selector-generate-btn"
                 onClick={() => {
                   setShowPortionSelector(false);
+                  missingSavedRef.current = false;
                   setShowShoppingListModal(true);
                 }}
               >
