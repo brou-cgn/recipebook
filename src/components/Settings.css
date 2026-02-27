@@ -303,6 +303,15 @@
   background: #fafafa;
 }
 
+.conversion-table tbody tr.conversion-row-no-values {
+  background: #fff8e1;
+  border-left: 3px solid #f59e0b;
+}
+
+.conversion-table tbody tr.conversion-row-no-values:hover {
+  background: #fff3cd;
+}
+
 .conversion-table-new-row {
   background: #f9f9f9;
 }

@@ -56,12 +56,12 @@ export const DEFAULT_PORTION_UNITS = [
 ];
 
 export const DEFAULT_CONVERSION_TABLE = [
-  { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
-  { id: 'zucker-el', ingredient: 'Zucker', unit: 'EL', grams: '12', milliliters: '' },
   { id: 'butter-el', ingredient: 'Butter', unit: 'EL', grams: '15', milliliters: '' },
-  { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '13' },
+  { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
   { id: 'milch-el', ingredient: 'Milch', unit: 'EL', grams: '', milliliters: '15' },
+  { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '13' },
   { id: 'salz-tl', ingredient: 'Salz', unit: 'TL', grams: '6', milliliters: '' },
+  { id: 'zucker-el', ingredient: 'Zucker', unit: 'EL', grams: '12', milliliters: '' },
 ];
 
 export const DEFAULT_SLOGAN = 'Unsere Besten';
