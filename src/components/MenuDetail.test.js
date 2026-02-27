@@ -1,6 +1,16 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import MenuDetail from './MenuDetail';
+
+jest.mock('./ShoppingListModal', () => function MockShoppingListModal({ items }) {
+  return (
+    <ul data-testid="shopping-list">
+      {(items || []).map((item, i) => (
+        <li key={i} data-testid="shopping-item">{item}</li>
+      ))}
+    </ul>
+  );
+});
 
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
@@ -20,6 +30,8 @@ jest.mock('../utils/menuSections', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({ menuCloseButton: '✕', copyLink: '📋' }),
+  getCustomLists: () => Promise.resolve({ conversionTable: [] }),
+  addMissingConversionEntries: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/userManagement', () => ({
@@ -271,5 +283,109 @@ describe('MenuDetail - Metadata before Description', () => {
     expect(
       authorDate.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+});
+
+describe('MenuDetail - Shopping List with Linked Recipes', () => {
+  const pizzateigRecipe = {
+    id: 'pizzateig',
+    title: 'Pizzateig',
+    portionen: 8,
+    ingredients: ['500 g Mehl', '300 ml Wasser', '10 g Salz'],
+  };
+
+  const makePizzaRecipe = (id) => ({
+    id,
+    title: `Pizza ${id}`,
+    portionen: 4,
+    ingredients: ['1 Teil #recipe:pizzateig:Pizzateig', '200 g Tomatensoße'],
+  });
+
+  const menuWith6Pizzas = {
+    id: 'menu-pizza',
+    name: 'Pizza-Menü',
+    recipeIds: ['pizza-1', 'pizza-2', 'pizza-3', 'pizza-4', 'pizza-5', 'pizza-6'],
+  };
+
+  const recipes6Pizzas = [
+    pizzateigRecipe,
+    ...['pizza-1', 'pizza-2', 'pizza-3', 'pizza-4', 'pizza-5', 'pizza-6'].map(makePizzaRecipe),
+  ];
+
+  const openShoppingList = async (menu, recipes) => {
+    render(
+      <MenuDetail
+        menu={menu}
+        recipes={recipes}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={{ id: 'user-1' }}
+        allUsers={[]}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    fireEvent.click(await screen.findByText('Einkaufsliste erstellen'));
+    return screen.findAllByTestId('shopping-item');
+  };
+
+  test('6 pizzas each using 1 Teil Pizzateig gives scaled Mehl (not 6x the full recipe)', async () => {
+    const items = await openShoppingList(menuWith6Pizzas, recipes6Pizzas);
+    const texts = items.map((el) => el.textContent);
+    // 6 pizzas × 1 Teil out of 8 Teile = 0.75 → 500 g × 0.75 = 375 g
+    expect(texts).toContain('375 g Mehl');
+    // Water should be skipped
+    expect(texts.some((t) => t.toLowerCase().includes('wasser'))).toBe(false);
+  });
+
+  test('linked recipe ingredients appear exactly once (not once per main recipe)', async () => {
+    const items = await openShoppingList(menuWith6Pizzas, recipes6Pizzas);
+    const texts = items.map((el) => el.textContent);
+    // Mehl should be combined into a single entry
+    expect(texts.filter((t) => t.includes('Mehl'))).toHaveLength(1);
+  });
+
+  test('2 pizzas each using 0.5 Teil Pizzateig scales correctly', async () => {
+    const menuWith2Pizzas = {
+      id: 'menu-pizza-2',
+      name: 'Pizza-Menü-2',
+      recipeIds: ['pizza-a', 'pizza-b'],
+    };
+    const pizzaWith0_5Teil = (id) => ({
+      id,
+      title: `Pizza ${id}`,
+      portionen: 4,
+      ingredients: ['0.5 Teil #recipe:pizzateig:Pizzateig'],
+    });
+    const recipes = [
+      pizzateigRecipe,
+      pizzaWith0_5Teil('pizza-a'),
+      pizzaWith0_5Teil('pizza-b'),
+    ];
+    const items = await openShoppingList(menuWith2Pizzas, recipes);
+    const texts = items.map((el) => el.textContent);
+    // 2 pizzas × 0.5 Teil = 1 Teil out of 8 = 0.125 → 500 g × 0.125 = 62.5 g
+    expect(texts).toContain('62.5 g Mehl');
+  });
+
+  test('recipe link without quantityPrefix defaults to 1 Teil', async () => {
+    const menuSingle = {
+      id: 'menu-single',
+      name: 'Single Pizza',
+      recipeIds: ['pizza-plain'],
+    };
+    const pizzaWithNoPrefix = {
+      id: 'pizza-plain',
+      title: 'Plain Pizza',
+      portionen: 4,
+      ingredients: ['#recipe:pizzateig:Pizzateig'],
+    };
+    const recipes = [pizzateigRecipe, pizzaWithNoPrefix];
+    const items = await openShoppingList(menuSingle, recipes);
+    const texts = items.map((el) => el.textContent);
+    // 1 Teil (default) out of 8 = 0.125 → 500 g × 0.125 = 62.5 g
+    expect(texts).toContain('62.5 g Mehl');
   });
 });
