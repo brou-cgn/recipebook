@@ -361,6 +361,17 @@ describe('convertIngredientUnits', () => {
   });
 
   test('records missing entry for unknown unit+ingredient and returns name only', () => {
+  test('converts cl to ml (standard metric)', () => {
+    const { converted } = convertIngredientUnits(['3 cl Zitronensaft'], []);
+    expect(converted).toEqual(['30 ml Zitronensaft']);
+  });
+
+  test('converts 1 cl to 10 ml (standard metric)', () => {
+    const { converted } = convertIngredientUnits(['1 cl Zitronensaft'], []);
+    expect(converted).toEqual(['10 ml Zitronensaft']);
+  });
+
+  test('records missing entry for unknown unit+ingredient', () => {
     const { converted, missing } = convertIngredientUnits(['2 EL Öl', '1 Tasse Milch'], conversionTable);
     expect(converted[0]).toBe('30 ml Öl');
     expect(converted[1]).toBe('Milch');
