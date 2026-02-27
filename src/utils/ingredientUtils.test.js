@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -402,5 +402,49 @@ describe('convertIngredientUnits', () => {
     const table = [{ id: 'x', ingredient: 'Butter', unit: 'EL', grams: '14.5', milliliters: '' }];
     const { converted } = convertIngredientUnits(['2 EL Butter'], table);
     expect(converted).toEqual(['29 g Butter']);
+  });
+});
+
+describe('parseIngredientParts (async) with Teelöffel/Esslöffel', () => {
+  test('parses Teelöffel correctly', async () => {
+    const result = await parseIngredientParts('1 Teelöffel Salz');
+    expect(result).toEqual({ amount: 1, unit: 'Teelöffel', name: 'Salz' });
+  });
+
+  test('parses Esslöffel correctly', async () => {
+    const result = await parseIngredientParts('2 Esslöffel Öl');
+    expect(result).toEqual({ amount: 2, unit: 'Esslöffel', name: 'Öl' });
+  });
+
+  test('parses TL correctly', async () => {
+    const result = await parseIngredientParts('1 TL Salz');
+    expect(result).toEqual({ amount: 1, unit: 'TL', name: 'Salz' });
+  });
+});
+
+describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () => {
+  const conversionTable = [
+    { id: 'trueffeloel-tl', ingredient: 'Trüffelöl', unit: 'TL', grams: '', milliliters: '5' },
+    { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '15' },
+  ];
+
+  test('converts Teelöffel to ml using TL entry', () => {
+    const { converted } = convertIngredientUnits(['1 Teelöffel Trüffelöl'], conversionTable);
+    expect(converted).toEqual(['5 ml Trüffelöl']);
+  });
+
+  test('converts Esslöffel to ml using EL entry', () => {
+    const { converted } = convertIngredientUnits(['2 Esslöffel Öl'], conversionTable);
+    expect(converted).toEqual(['30 ml Öl']);
+  });
+
+  test('converts tsp to ml using TL entry', () => {
+    const { converted } = convertIngredientUnits(['1 tsp Trüffelöl'], conversionTable);
+    expect(converted).toEqual(['5 ml Trüffelöl']);
+  });
+
+  test('converts tbsp to ml using EL entry', () => {
+    const { converted } = convertIngredientUnits(['2 tbsp Öl'], conversionTable);
+    expect(converted).toEqual(['30 ml Öl']);
   });
 });
