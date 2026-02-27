@@ -250,6 +250,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     for (const section of recipeSections) {
       for (const recipe of section.recipes) {
         const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+        if (targetPortions === 0) continue;
         const recipePortions = recipe.portionen || 4;
         const multiplier = targetPortions / recipePortions;
         for (const ing of (recipe.ingredients || [])) {
@@ -266,6 +267,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     // Add each linked recipe's ingredients exactly once using the portion slider value
     for (const linkedRecipe of allLinkedRecipes) {
       const linkedTarget = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+      if (linkedTarget === 0) continue;
       const portionen = linkedRecipe.portionen || 4;
       const linkedMultiplier = linkedTarget / portionen;
       for (const linkedIng of (linkedRecipe.ingredients || [])) {
