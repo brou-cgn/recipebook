@@ -114,13 +114,18 @@ function Settings({ onBack, currentUser }) {
     cuisineTypes: [],
     mealCategories: [],
     units: [],
-    portionUnits: []
+    portionUnits: [],
+    conversionTable: []
   });
   const [newCuisine, setNewCuisine] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newUnit, setNewUnit] = useState('');
   const [newPortionSingular, setNewPortionSingular] = useState('');
   const [newPortionPlural, setNewPortionPlural] = useState('');
+  const [newConversionIngredient, setNewConversionIngredient] = useState('');
+  const [newConversionUnit, setNewConversionUnit] = useState('');
+  const [newConversionGrams, setNewConversionGrams] = useState('');
+  const [newConversionMl, setNewConversionMl] = useState('');
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [activeTab, setActiveTab] = useState('general'); // 'general', 'lists', or 'users'
   const isAdmin = isCurrentUserAdmin();
@@ -471,6 +476,44 @@ function Settings({ onBack, currentUser }) {
     setLists({
       ...lists,
       portionUnits: lists.portionUnits.filter(pu => pu.id !== unitId)
+    });
+  };
+
+  const addConversionEntry = () => {
+    if (newConversionIngredient.trim() && newConversionUnit.trim()) {
+      const slugify = (str) => str.toLowerCase()
+        .replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue').replace(/ß/g, 'ss')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const newId = `${slugify(newConversionIngredient)}-${slugify(newConversionUnit)}-${Date.now()}`;
+      const entry = {
+        id: newId,
+        ingredient: newConversionIngredient.trim(),
+        unit: newConversionUnit.trim(),
+        grams: newConversionGrams.trim(),
+        milliliters: newConversionMl.trim()
+      };
+      setLists({
+        ...lists,
+        conversionTable: [...(lists.conversionTable || []), entry]
+      });
+      setNewConversionIngredient('');
+      setNewConversionUnit('');
+      setNewConversionGrams('');
+      setNewConversionMl('');
+    }
+  };
+
+  const removeConversionEntry = (id) => {
+    setLists({
+      ...lists,
+      conversionTable: lists.conversionTable.filter(e => e.id !== id)
+    });
+  };
+
+  const updateConversionEntry = (id, field, value) => {
+    setLists({
+      ...lists,
+      conversionTable: lists.conversionTable.map(e => e.id === id ? { ...e, [field]: value } : e)
     });
   };
 
@@ -2204,6 +2247,111 @@ function Settings({ onBack, currentUser }) {
               </div>
             </SortableContext>
           </DndContext>
+        </div>
+
+        <div className="settings-section">
+          <h3>Umrechnungstabelle</h3>
+          <p className="section-description">
+            Definieren Sie Umrechnungswerte für Zutaten. Die Tabelle gibt an, wie viel Gramm (g) oder Milliliter (ml) eine Einheit einer Zutat entspricht.
+          </p>
+          <div className="conversion-table-container">
+            <table className="conversion-table">
+              <thead>
+                <tr>
+                  <th>Zutat</th>
+                  <th>Einheit</th>
+                  <th>In g</th>
+                  <th>In ml</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(lists.conversionTable || []).map((entry) => (
+                  <tr key={entry.id}>
+                    <td>
+                      <input
+                        type="text"
+                        value={entry.ingredient}
+                        onChange={(e) => updateConversionEntry(entry.id, 'ingredient', e.target.value)}
+                        className="conversion-table-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={entry.unit}
+                        onChange={(e) => updateConversionEntry(entry.id, 'unit', e.target.value)}
+                        className="conversion-table-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={entry.grams}
+                        onChange={(e) => updateConversionEntry(entry.id, 'grams', e.target.value)}
+                        className="conversion-table-input"
+                        placeholder="–"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        value={entry.milliliters}
+                        onChange={(e) => updateConversionEntry(entry.id, 'milliliters', e.target.value)}
+                        className="conversion-table-input"
+                        placeholder="–"
+                      />
+                    </td>
+                    <td>
+                      <button className="remove-btn" onClick={() => removeConversionEntry(entry.id)} title="Entfernen">✕</button>
+                    </td>
+                  </tr>
+                ))}
+                <tr className="conversion-table-new-row">
+                  <td>
+                    <input
+                      type="text"
+                      value={newConversionIngredient}
+                      onChange={(e) => setNewConversionIngredient(e.target.value)}
+                      placeholder="Zutat..."
+                      className="conversion-table-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={newConversionUnit}
+                      onChange={(e) => setNewConversionUnit(e.target.value)}
+                      placeholder="Einheit..."
+                      className="conversion-table-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={newConversionGrams}
+                      onChange={(e) => setNewConversionGrams(e.target.value)}
+                      placeholder="–"
+                      className="conversion-table-input"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={newConversionMl}
+                      onChange={(e) => setNewConversionMl(e.target.value)}
+                      placeholder="–"
+                      className="conversion-table-input"
+                      onKeyDown={(e) => e.key === 'Enter' && addConversionEntry()}
+                    />
+                  </td>
+                  <td>
+                    <button onClick={addConversionEntry} className="add-conversion-btn" title="Hinzufügen">+</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="settings-actions">

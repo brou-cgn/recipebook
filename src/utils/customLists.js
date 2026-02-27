@@ -53,6 +53,15 @@ export const DEFAULT_PORTION_UNITS = [
   { id: 'person', singular: 'Person', plural: 'Personen' }
 ];
 
+export const DEFAULT_CONVERSION_TABLE = [
+  { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
+  { id: 'zucker-el', ingredient: 'Zucker', unit: 'EL', grams: '12', milliliters: '' },
+  { id: 'butter-el', ingredient: 'Butter', unit: 'EL', grams: '15', milliliters: '' },
+  { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '13' },
+  { id: 'milch-el', ingredient: 'Milch', unit: 'EL', grams: '', milliliters: '15' },
+  { id: 'salz-tl', ingredient: 'Salz', unit: 'TL', grams: '6', milliliters: '' },
+];
+
 export const DEFAULT_SLOGAN = 'Unsere Besten';
 export const DEFAULT_FAVICON_TEXT = 'DishBook';
 
@@ -226,6 +235,7 @@ export async function getSettings() {
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
+        conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         faviconImage: settings.faviconImage || null,
@@ -248,6 +258,7 @@ export async function getSettings() {
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
+      conversionTable: DEFAULT_CONVERSION_TABLE,
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
@@ -275,6 +286,7 @@ export async function getSettings() {
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
+      conversionTable: DEFAULT_CONVERSION_TABLE,
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
@@ -304,7 +316,8 @@ export async function getCustomLists() {
     cuisineTypes: settings.cuisineTypes ?? DEFAULT_CUISINE_TYPES,
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
-    portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS
+    portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
+    conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE
   };
 }
 
@@ -337,7 +350,8 @@ export async function resetCustomLists() {
     cuisineTypes: DEFAULT_CUISINE_TYPES,
     mealCategories: DEFAULT_MEAL_CATEGORIES,
     units: DEFAULT_UNITS,
-    portionUnits: DEFAULT_PORTION_UNITS
+    portionUnits: DEFAULT_PORTION_UNITS,
+    conversionTable: DEFAULT_CONVERSION_TABLE
   };
   
   await saveCustomLists(defaultLists);
