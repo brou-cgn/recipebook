@@ -21,6 +21,7 @@ import {
   DEFAULT_MEAL_CATEGORIES,
   DEFAULT_UNITS,
   DEFAULT_PORTION_UNITS,
+  DEFAULT_CONVERSION_TABLE,
 } from './customLists';
 import { getDoc, updateDoc, doc } from 'firebase/firestore';
 
@@ -148,6 +149,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.mealCategories).toEqual(DEFAULT_MEAL_CATEGORIES);
     expect(lists.units).toEqual(DEFAULT_UNITS);
     expect(lists.portionUnits).toEqual(DEFAULT_PORTION_UNITS);
+    expect(lists.conversionTable).toEqual(DEFAULT_CONVERSION_TABLE);
   });
 
   test('returns custom values when present in Firestore', async () => {

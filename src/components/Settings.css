@@ -273,6 +273,85 @@
   }
 }
 
+/* Conversion table */
+.conversion-table-container {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.conversion-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.conversion-table th,
+.conversion-table td {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.conversion-table th {
+  background: #f5f5f5;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.conversion-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.conversion-table-new-row {
+  background: #f9f9f9;
+}
+
+.conversion-table-input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.conversion-table-input:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.conversion-table .remove-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.conversion-table .remove-btn:hover {
+  background: #d32f2f;
+}
+
+.add-conversion-btn {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: white;
+  border: none;
+  padding: 0.35rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.add-conversion-btn:hover {
+  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
+}
+
 /* User Management Styles within Settings */
 .info-text {
   color: #666;
