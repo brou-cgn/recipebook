@@ -169,7 +169,20 @@ registerRoute(
         background_color: '#ffffff',
         description: `${settings?.faviconText || 'DishBook'} - A Progressive Web App for managing your favorite recipes`,
         categories: ['food', 'lifestyle', 'productivity'],
-        orientation: 'portrait-primary'
+        orientation: 'portrait-primary',
+        share_target: {
+          action: '/share-target',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            files: [
+              {
+                name: 'images',
+                accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/*']
+              }
+            ]
+          }
+        }
       };
       
       return new Response(JSON.stringify(manifest), {
@@ -246,6 +259,10 @@ registerRoute(
     // If this isn't a navigation, skip.
     if (request.mode !== 'navigate') {
       return false;
+    } // If this is a POST request (e.g., Web Share Target), skip.
+
+    if (request.method !== 'GET') {
+      return false;
     } // If this is a URL that starts with /_, skip.
 
     if (url.pathname.startsWith('/_')) {
@@ -283,3 +300,43 @@ registerRoute(
 );
 
 // Any other custom service worker logic can go here.
+
+// Helper to convert a File/Blob to a base64 data URL inside the service worker
+async function fileToBase64InSW(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  // Use Array.from + join for efficient binary-to-string conversion
+  const binary = Array.from(uint8Array, (byte) => String.fromCharCode(byte)).join('');
+  const base64 = btoa(binary);
+  return `data:${file.type || 'image/jpeg'};base64,${base64}`;
+}
+
+// Handle Web Share Target POST requests
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method === 'POST' && url.pathname === '/share-target') {
+    event.respondWith(
+      (async () => {
+        try {
+          const formData = await event.request.formData();
+          const files = formData.getAll('images');
+
+          const base64Images = [];
+          for (const file of files) {
+            if (file instanceof File || file instanceof Blob) {
+              const base64 = await fileToBase64InSW(file);
+              base64Images.push(base64);
+            }
+          }
+
+          if (base64Images.length > 0) {
+            await saveToIndexedDB('pendingSharedImages', base64Images);
+          }
+        } catch (error) {
+          console.error('[SW] Error handling share target:', error);
+        }
+        return Response.redirect('/?share-target=true', 303);
+      })()
+    );
+  }
+});

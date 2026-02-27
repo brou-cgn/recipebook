@@ -18,6 +18,7 @@ import MenuSharePage from './components/MenuSharePage';
 import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
+import InstagramImportModal from './components/InstagramImportModal';
 import { 
   loginUser, 
   logoutUser, 
@@ -58,6 +59,48 @@ import {
   deleteGroup as deleteGroupFromFirestore,
   ensurePublicGroup
 } from './utils/groupFirestore';
+
+// IndexedDB helpers to read/clear shared images written by the service worker
+function readSharedImagesFromDB() {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('recipebook-settings', 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('settings')) {
+        db.close();
+        return resolve([]);
+      }
+      const tx = db.transaction(['settings'], 'readonly');
+      const store = tx.objectStore('settings');
+      const getReq = store.get('pendingSharedImages');
+      getReq.onsuccess = () => {
+        db.close();
+        resolve(Array.isArray(getReq.result) ? getReq.result : []);
+      };
+      getReq.onerror = () => { db.close(); resolve([]); };
+    };
+    request.onerror = () => resolve([]);
+  });
+}
+
+function clearSharedImagesFromDB() {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('recipebook-settings', 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('settings')) {
+        db.close();
+        return resolve();
+      }
+      const tx = db.transaction(['settings'], 'readwrite');
+      const store = tx.objectStore('settings');
+      store.delete('pendingSharedImages');
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); resolve(); };
+    };
+    request.onerror = () => resolve();
+  });
+}
 
 // Helper function to check if a recipe matches the category filter
 function matchesCategoryFilter(recipe, categoryFilter) {
@@ -132,6 +175,8 @@ function App() {
     selectedGroup: ''
   });
   const recipeCountsInitialized = useRef(false);
+  const [sharedImages, setSharedImages] = useState([]);
+  const [showInstagramImport, setShowInstagramImport] = useState(false);
 
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
@@ -218,6 +263,26 @@ function App() {
   useEffect(() => {
     applyTileSizePreference();
   }, []);
+
+  // Detect Web Share Target: read shared images from IndexedDB when URL param is present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('share-target')) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      readSharedImagesFromDB().then((images) => {
+        if (images.length > 0) {
+          setSharedImages(images);
+        }
+      });
+    }
+  }, []);
+
+  // Show Instagram Import Modal once user is authenticated and shared images are available
+  useEffect(() => {
+    if (currentUser && sharedImages.length > 0) {
+      setShowInstagramImport(true);
+    }
+  }, [currentUser, sharedImages]);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
@@ -339,7 +404,7 @@ function App() {
     if (!currentUser) return;
 
     try {
-      if (editingRecipe && !isCreatingVersion) {
+      if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
         // Update existing recipe (direct edit)
         const { id, ...updates } = recipe;
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
@@ -698,6 +763,23 @@ function App() {
     setIsFilterPageOpen(false);
   };
 
+  const handleInstagramImport = (recipe) => {
+    setShowInstagramImport(false);
+    setSharedImages([]);
+    clearSharedImagesFromDB();
+    // Open RecipeForm pre-populated with the imported recipe
+    setEditingRecipe(recipe);
+    setIsCreatingVersion(false);
+    setActiveGroupId(null);
+    setIsFormOpen(true);
+  };
+
+  const handleInstagramImportCancel = () => {
+    setShowInstagramImport(false);
+    setSharedImages([]);
+    clearSharedImagesFromDB();
+  };
+
   // Show loading state while checking auth
   if (authLoading) {
     return (
@@ -913,6 +995,13 @@ function App() {
         <PasswordChangeModal 
           user={currentUser}
           onPasswordChanged={handlePasswordChanged}
+        />
+      )}
+      {showInstagramImport && (
+        <InstagramImportModal
+          initialImages={sharedImages}
+          onImport={handleInstagramImport}
+          onCancel={handleInstagramImportCancel}
         />
       )}
     </div>
