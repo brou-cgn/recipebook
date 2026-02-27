@@ -416,6 +416,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const linkedRecipe = allRecipes.find(r => r.id === recipeLink.recipeId);
         if (linkedRecipe) {
           const targetPortions = linkedPortionCounts[recipeLink.recipeId] ?? (linkedRecipe.portionen || 4);
+          if (targetPortions === 0) continue;
           const multiplier = targetPortions / (linkedRecipe.portionen || 4);
           for (const linkedIng of (linkedRecipe.ingredients || [])) {
             const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
@@ -1413,9 +1414,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         className="portion-selector-btn"
                         onClick={() => setLinkedPortionCounts(prev => ({
                           ...prev,
-                          [linkedRecipe.id]: Math.max(1, current - 1)
+                          [linkedRecipe.id]: Math.max(0, current - 1)
                         }))}
                         aria-label="Portionen verringern"
+                        disabled={current === 0}
                       >
                         −
                       </button>
