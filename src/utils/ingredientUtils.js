@@ -304,6 +304,11 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
         const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
         return `${formatted} ml ${name}`;
       }
+      if (unit.toLowerCase() === 'cl') {
+        const result = amount * 10;
+        const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
+        return `${formatted} ml ${name}`;
+      }
 
       // Look up in conversion table by unit + ingredient name
       const entry = table.find(
