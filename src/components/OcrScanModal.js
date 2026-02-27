@@ -6,6 +6,8 @@ import { getValidationSummary } from '../utils/ocrValidation';
 import { fileToBase64 } from '../utils/imageUtils';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
+const MAX_CAMERA_PHOTOS = 10;
+
 function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [step, setStep] = useState(initialImage ? 'scan' : 'upload'); // 'upload', 'scan', 'edit', 'ai-result', 'batch-processing'
   // imageBase64 tracks the current image but OCR functions receive it directly as parameter
@@ -27,6 +29,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [allOcrResults, setAllOcrResults] = useState([]);
+  const [capturedPhotos, setCapturedPhotos] = useState([]);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -43,6 +46,12 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialImage]);
 
+  // Set video srcObject once the video element is in the DOM (after cameraActive becomes true)
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive]);
   // Handle file upload
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -241,20 +250,17 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setCameraActive(true);
-      }
+      streamRef.current = stream;
+      setCameraActive(true);
     } catch (err) {
       setError(`Kamera-Zugriff fehlgeschlagen: ${err.message}. Bitte erlauben Sie den Kamera-Zugriff oder verwenden Sie den Datei-Upload.`);
     }
   };
 
-  // Capture photo from camera
+  // Capture photo from camera and add to capturedPhotos array
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
+    if (capturedPhotos.length >= MAX_CAMERA_PHOTOS) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -265,10 +271,82 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     ctx.drawImage(video, 0, 0);
 
     const base64 = canvas.toDataURL('image/png');
-    setImageBase64(base64);
+    setCapturedPhotos(prev => [...prev, base64]);
+  };
+
+  // Remove the last captured photo
+  const removeLastPhoto = () => {
+    setCapturedPhotos(prev => prev.slice(0, -1));
+  };
+
+  // Cancel camera: stop camera and discard all captured photos
+  const cancelCamera = () => {
     stopCamera();
-    setStep('scan');
-    performOcr(base64);
+    setCapturedPhotos([]);
+  };
+
+  // Process an array of base64 images sequentially (camera batch).
+  // Similar to processBatchImages(), but accepts base64 strings directly
+  // instead of File objects, avoiding an extra fileToBase64 conversion step.
+  const processBase64Batch = async (base64Images) => {
+    const results = [];
+
+    for (let i = 0; i < base64Images.length; i++) {
+      setCurrentImageIndex(i);
+      setScanProgress(0);
+
+      try {
+        const base64 = base64Images[i];
+
+        if (ocrMode === 'ai') {
+          const result = await recognizeRecipeWithAI(base64, {
+            language,
+            provider: 'gemini',
+            onProgress: (progress) => setScanProgress(progress)
+          });
+          results.push(result);
+        } else {
+          const langCode = language === 'de' ? 'deu' : 'eng';
+          const result = await recognizeText(base64, langCode,
+            (progress) => setScanProgress(progress)
+          );
+          results.push({ text: result.text });
+        }
+      } catch (err) {
+        console.error(`Error processing photo ${i + 1}:`, err);
+        results.push({ error: err.message });
+      }
+    }
+
+    setAllOcrResults(results);
+
+    try {
+      const merged = mergeOcrResults(results, ocrMode);
+
+      if (ocrMode === 'ai') {
+        setAiResult(merged);
+        setStep('ai-result');
+      } else {
+        setOcrText(merged.text);
+        setStep('edit');
+      }
+    } catch (err) {
+      setError(err.message);
+      setStep('upload');
+    }
+  };
+
+  // Start batch OCR analysis on all captured camera photos
+  const startBatchAnalysis = async () => {
+    if (capturedPhotos.length === 0) return;
+
+    const photos = [...capturedPhotos];
+    stopCamera();
+    setCurrentImageIndex(0);
+    setAllOcrResults([]);
+    setUploadedImages(photos);
+    setStep('batch-processing');
+    await processBase64Batch(photos);
   };
 
   // Stop camera
@@ -462,6 +540,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     setUploadedImages([]);
     setCurrentImageIndex(0);
     setAllOcrResults([]);
+    setCapturedPhotos([]);
   };
 
   // Handle cancel
@@ -597,11 +676,62 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
                     playsInline
                     className="camera-video"
                   />
+
+                  {capturedPhotos.length > 0 && (
+                    <div className="captured-photos-preview">
+                      <p className="captured-photos-count">
+                        {capturedPhotos.length} Foto{capturedPhotos.length !== 1 ? 's' : ''} aufgenommen
+                        {capturedPhotos.length >= MAX_CAMERA_PHOTOS && (
+                          <span className="captured-photos-max"> (Maximum erreicht)</span>
+                        )}
+                      </p>
+                      <div className="captured-thumbnails">
+                        {capturedPhotos.map((photo, index) => (
+                          <div key={index} className="thumbnail-wrapper">
+                            <img
+                              src={photo}
+                              alt={`Foto ${index + 1}`}
+                              className="photo-thumbnail"
+                            />
+                            <span className="thumbnail-number">{index + 1}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="camera-controls">
-                    <button className="capture-button" onClick={capturePhoto}>
-                      📸 Foto aufnehmen
+                    <button
+                      className="capture-button"
+                      onClick={capturePhoto}
+                      disabled={capturedPhotos.length >= MAX_CAMERA_PHOTOS}
+                      aria-label="Foto aufnehmen"
+                    >
+                      📸 {capturedPhotos.length > 0 ? 'Weiteres Foto aufnehmen' : 'Foto aufnehmen'}
                     </button>
-                    <button className="stop-camera-button" onClick={stopCamera}>
+                    {capturedPhotos.length > 0 && (
+                      <>
+                        <button
+                          className="start-analysis-button"
+                          onClick={startBatchAnalysis}
+                          aria-label={`Analyse starten für ${capturedPhotos.length} Foto${capturedPhotos.length !== 1 ? 's' : ''}`}
+                        >
+                          ✓ Analyse starten ({capturedPhotos.length})
+                        </button>
+                        <button
+                          className="remove-last-photo-button"
+                          onClick={removeLastPhoto}
+                          aria-label="Letztes Foto löschen"
+                        >
+                          🗑️ Letztes löschen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="stop-camera-button"
+                      onClick={cancelCamera}
+                      aria-label="Kamera abbrechen"
+                    >
                       ✕ Abbrechen
                     </button>
                   </div>
