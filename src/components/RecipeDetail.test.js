@@ -622,6 +622,52 @@ describe('RecipeDetail - Recipe Links', () => {
       expect(item.textContent).not.toMatch(/^•/);
     });
   });
+
+  test('portion selector allows decrementing to 0 and disables button at 0', () => {
+    const recipeWithOneLink = {
+      id: 'recipe-main',
+      title: 'Hauptrezept',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['#recipe:recipe-linked:Pizzateig'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={recipeWithOneLink}
+        allRecipes={[mockLinkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Open portion selector
+    const shoppingListBtn = screen.getByLabelText('Einkaufsliste öffnen');
+    fireEvent.click(shoppingListBtn);
+
+    expect(screen.getByText('Portionen für Einkaufsliste')).toBeInTheDocument();
+
+    // Initial count should be 4 (mockLinkedRecipe.portionen)
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    expect(decrementBtn).not.toBeDisabled();
+
+    // Decrement all the way to 0
+    fireEvent.click(decrementBtn); // 3
+    fireEvent.click(decrementBtn); // 2
+    fireEvent.click(decrementBtn); // 1
+    fireEvent.click(decrementBtn); // 0
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+    // Button should be disabled at 0 and count should not go below 0
+    expect(decrementBtn).toBeDisabled();
+    fireEvent.click(decrementBtn);
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
 });
 
 describe('RecipeDetail - Creation Date Display', () => {
