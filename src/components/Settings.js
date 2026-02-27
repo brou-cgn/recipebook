@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
+import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
@@ -115,11 +116,13 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
     mealCategories: [],
     units: [],
     portionUnits: [],
-    conversionTable: []
+    conversionTable: [],
+    customUnits: []
   });
   const [newCuisine, setNewCuisine] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [newUnit, setNewUnit] = useState('');
+  const [newCustomUnit, setNewCustomUnit] = useState('');
   const [newPortionSingular, setNewPortionSingular] = useState('');
   const [newPortionPlural, setNewPortionPlural] = useState('');
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
@@ -515,6 +518,33 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
       ...lists,
       conversionTable: lists.conversionTable.map(e => e.id === id ? { ...e, [field]: value } : e)
     });
+  };
+
+  const addCustomUnitHandler = () => {
+    const trimmed = newCustomUnit.trim();
+    const currentUnits = lists.customUnits || [];
+    if (trimmed && !currentUnits.includes(trimmed)) {
+      const updated = [...currentUnits, trimmed];
+      const updatedLists = { ...lists, customUnits: updated };
+      setLists(updatedLists);
+      saveCustomLists(updatedLists);
+      invalidateUnitsCache();
+      setNewCustomUnit('');
+    }
+  };
+
+  const removeCustomUnitHandler = (index) => {
+    const updated = (lists.customUnits || []).filter((_, i) => i !== index);
+    const updatedLists = { ...lists, customUnits: updated };
+    setLists(updatedLists);
+    saveCustomLists(updatedLists);
+    invalidateUnitsCache();
+  };
+
+  const updateCustomUnitHandler = (index, value) => {
+    const updated = [...(lists.customUnits || [])];
+    updated[index] = value;
+    setLists({ ...lists, customUnits: updated });
   };
 
   // Drag and drop sensors
@@ -2351,6 +2381,48 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3>Verfügbare Maßeinheiten</h3>
+          <p className="section-description">
+            Definieren Sie zusätzliche Maßeinheiten, die bei der Zutatenerkennung verwendet werden.
+            Standard-Einheiten wie g, kg, ml, l, TL, EL, Teelöffel, Esslöffel sind bereits vorinstalliert.
+          </p>
+          <div className="custom-units-container">
+            <div className="custom-units-list">
+              {(lists.customUnits || []).map((unit, index) => (
+                <div key={index} className="custom-unit-item">
+                  <input
+                    type="text"
+                    value={unit}
+                    onChange={(e) => updateCustomUnitHandler(index, e.target.value)}
+                    className="custom-unit-input"
+                  />
+                  <button
+                    onClick={() => removeCustomUnitHandler(index)}
+                    className="custom-unit-remove"
+                    title="Einheit entfernen"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="custom-unit-add-row">
+              <input
+                type="text"
+                value={newCustomUnit}
+                onChange={(e) => setNewCustomUnit(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addCustomUnitHandler()}
+                placeholder="Neue Maßeinheit..."
+                className="custom-unit-input"
+              />
+              <button onClick={addCustomUnitHandler} className="add-custom-unit-btn">
+                + Hinzufügen
+              </button>
+            </div>
           </div>
         </div>
 

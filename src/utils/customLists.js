@@ -32,17 +32,19 @@ export const DEFAULT_MEAL_CATEGORIES = [
 ];
 
 export const DEFAULT_UNITS = [
-  'g',
-  'kg',
-  'ml',
-  'l',
-  'tsp',
-  'tbsp',
-  'cup',
-  'oz',
-  'lb',
-  'piece',
-  'pinch'
+  'g', 'kg', 'ml', 'l',
+  'EL', 'TL', 'Esslöffel', 'Teelöffel',
+  'Prise', 'Prisen',
+  'Tasse', 'Tassen',
+  'Becher',
+  'Stück', 'Stk',
+  'Bund',
+  'Pck', 'Pkg',
+  'Dose', 'Dosen',
+  'cl', 'dl',
+  'tsp', 'tbsp',
+  'cup', 'oz', 'lb',
+  'piece', 'pinch'
 ];
 
 export const DEFAULT_PORTION_UNITS = [
@@ -317,7 +319,8 @@ export async function getCustomLists() {
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
-    conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE
+    conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
+    customUnits: settings.customUnits ?? []
   };
 }
 
@@ -356,6 +359,70 @@ export async function resetCustomLists() {
   
   await saveCustomLists(defaultLists);
   return defaultLists;
+}
+
+/**
+ * Get all available units from defaults and custom units stored in Firestore
+ * Combines DEFAULT_UNITS, customUnits, and units from conversionTable
+ * @returns {Promise<string[]>} Promise resolving to array of unit strings
+ */
+export async function getAvailableUnits() {
+  try {
+    const lists = await getCustomLists();
+    const customUnits = lists.customUnits || [];
+    const conversionUnits = (lists.conversionTable || [])
+      .map(entry => entry.unit)
+      .filter(u => u && u.trim());
+
+    const allUnits = [
+      ...DEFAULT_UNITS,
+      ...customUnits,
+      ...conversionUnits
+    ];
+
+    return [...new Set(allUnits)].filter(u => u);
+  } catch (error) {
+    console.error('Error loading units:', error);
+    return DEFAULT_UNITS;
+  }
+}
+
+/**
+ * Add a custom unit to Firestore
+ * @param {string} unit - Unit to add
+ * @returns {Promise<void>}
+ */
+export async function addCustomUnit(unit) {
+  if (!unit || !unit.trim()) return;
+
+  try {
+    const lists = await getCustomLists();
+    const customUnits = lists.customUnits || [];
+
+    if (!customUnits.some(u => u.toLowerCase() === unit.trim().toLowerCase())) {
+      customUnits.push(unit.trim());
+      await saveCustomLists({ ...lists, customUnits });
+    }
+  } catch (error) {
+    console.error('Error adding custom unit:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a custom unit from Firestore
+ * @param {string} unit - Unit to remove
+ * @returns {Promise<void>}
+ */
+export async function removeCustomUnit(unit) {
+  try {
+    const lists = await getCustomLists();
+    const customUnits = (lists.customUnits || []).filter(u => u !== unit);
+    await saveCustomLists({ ...lists, customUnits });
+  } catch (error) {
+    console.error('Error removing custom unit:', error);
+    throw error;
+  }
 }
 
 /**

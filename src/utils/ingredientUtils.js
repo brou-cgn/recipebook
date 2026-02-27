@@ -8,6 +8,7 @@
 const UNITS = [
   'ml', 'l', 'g', 'kg', 'mg',
   'EL', 'TL', 'Tl', 'El',  // Esslöffel, Teelöffel variants
+  'Esslöffel', 'Teelöffel', // Full German names
   'Prise', 'Prisen',
   'Tasse', 'Tassen',
   'Becher',
@@ -15,8 +16,38 @@ const UNITS = [
   'Bund',
   'Pck', 'Pkg',
   'Dose', 'Dosen',
-  'cl', 'dl'
+  'cl', 'dl',
+  'tsp', 'tbsp',
+  'cup', 'oz', 'lb',
+  'piece', 'pinch'
 ];
+
+// Cache for dynamically loaded units
+let cachedUnits = null;
+
+/**
+ * Get recognized units dynamically from Firestore (with fallback to UNITS)
+ * @returns {Promise<string[]>}
+ */
+export async function getRecognizedUnits() {
+  if (!cachedUnits) {
+    try {
+      const { getAvailableUnits } = await import('./customLists');
+      cachedUnits = await getAvailableUnits();
+    } catch (error) {
+      console.error('Error loading units from Firestore, using defaults:', error);
+      cachedUnits = [...UNITS];
+    }
+  }
+  return cachedUnits;
+}
+
+/**
+ * Invalidate the units cache (call after updating units in settings)
+ */
+export function invalidateUnitsCache() {
+  cachedUnits = null;
+}
 
 /**
  * Formats an ingredient string to ensure proper spacing between numbers and units
@@ -94,7 +125,7 @@ export function formatIngredients(ingredients) {
  * @param {string} ingredient - The ingredient string to parse
  * @returns {{ amount: number|null, unit: string|null, name: string }}
  */
-function parseIngredientParts(ingredient) {
+function parseIngredientPartsSync(ingredient) {
   if (!ingredient || typeof ingredient !== 'string') {
     return { amount: null, unit: null, name: ingredient || '' };
   }
@@ -135,13 +166,57 @@ function parseIngredientParts(ingredient) {
 }
 
 /**
+ * Parses an ingredient string using dynamically loaded units from Firestore.
+ * Async version of the internal parseIngredientParts for external use.
+ * @param {string} ingredient - The ingredient string to parse
+ * @returns {Promise<{ amount: number|null, unit: string|null, name: string }>}
+ */
+export async function parseIngredientParts(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string') {
+    return { amount: null, unit: null, name: ingredient || '' };
+  }
+  const str = ingredient.trim();
+  const units = await getRecognizedUnits();
+
+  const sortedUnits = [...units].sort((a, b) => b.length - a.length);
+  const unitsPattern = sortedUnits
+    .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+
+  const withUnitRegex = new RegExp(
+    `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    'i'
+  );
+  let m = str.match(withUnitRegex);
+  if (m) {
+    const raw = m[1];
+    const amount = raw.includes('/')
+      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
+      : parseFloat(raw.replace(',', '.'));
+    return { amount, unit: m[2], name: m[3] };
+  }
+
+  const noUnitRegex = /^(\d+\/\d+|\d+(?:[.,]\d+)?)\s+(.+)$/;
+  m = str.match(noUnitRegex);
+  if (m) {
+    const raw = m[1];
+    const amount = raw.includes('/')
+      ? parseFloat(raw.split('/')[0]) / parseFloat(raw.split('/')[1])
+      : parseFloat(raw.replace(',', '.'));
+    return { amount, unit: null, name: m[2] };
+  }
+
+  return { amount: null, unit: null, name: str };
+}
+
+/**
  * Returns true if the ingredient name is "Wasser" (regardless of amount/unit).
  * Water is a common household item and should not appear in shopping lists.
  * @param {string} ingredient - The ingredient string to check
  * @returns {boolean}
  */
 export function isWaterIngredient(ingredient) {
-  const { name } = parseIngredientParts(ingredient);
+  const { name } = parseIngredientPartsSync(ingredient);
   return name.toLowerCase() === 'wasser';
 }
 
@@ -160,7 +235,7 @@ export function combineIngredients(ingredients) {
 
   for (const ingredient of ingredients) {
     if (!ingredient) continue;
-    const { amount, unit, name } = parseIngredientParts(ingredient);
+    const { amount, unit, name } = parseIngredientPartsSync(ingredient);
     const key = `${name.toLowerCase()}|${(unit || '').toLowerCase()}`;
 
     if (combined.has(key)) {
@@ -200,7 +275,17 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
   const table = Array.isArray(conversionTable) ? conversionTable : [];
 
   const converted = ingredients.map(ingredient => {
-    const { amount, unit, name } = parseIngredientParts(ingredient);
+    let { amount, unit, name } = parseIngredientPartsSync(ingredient);
+
+    // Normalize unit variants for better table matching
+    if (unit) {
+      const unitLower = unit.toLowerCase();
+      if (unitLower === 'teelöffel' || unitLower === 'tsp') {
+        unit = 'TL';
+      } else if (unitLower === 'esslöffel' || unitLower === 'tbsp') {
+        unit = 'EL';
+      }
+    }
 
     // No unit or already in target units – keep as-is
     if (!unit || unit.toLowerCase() === 'g' || unit.toLowerCase() === 'ml') {
