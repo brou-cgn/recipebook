@@ -370,6 +370,52 @@ describe('MenuDetail - Shopping List with Linked Recipes', () => {
     expect(texts).toContain('62.5 g Mehl');
   });
 
+  test('6 pizzas each using 2 Teile Pizzateig gives correct Mehl (main bug scenario)', async () => {
+    const menuWith6Pizzas2Teile = {
+      id: 'menu-pizza-2t',
+      name: 'Pizza-Menü 2 Teile',
+      recipeIds: ['pizza-1', 'pizza-2', 'pizza-3', 'pizza-4', 'pizza-5', 'pizza-6'],
+    };
+    const pizzaWith2Teile = (id) => ({
+      id,
+      title: `Pizza ${id}`,
+      portionen: 4,
+      ingredients: ['2 Teile #recipe:pizzateig:Pizzateig'],
+    });
+    const recipes = [
+      { id: 'pizzateig', title: 'Pizzateig', portionen: 8, ingredients: ['1170 g Mehl'] },
+      ...['pizza-1', 'pizza-2', 'pizza-3', 'pizza-4', 'pizza-5', 'pizza-6'].map(pizzaWith2Teile),
+    ];
+    const items = await openShoppingList(menuWith6Pizzas2Teile, recipes);
+    const texts = items.map((el) => el.textContent);
+    // 6 pizzas × 2 Teile = 12 parts needed; 12/8 = 1.5 → 1170 g × 1.5 = 1755 g
+    expect(texts).toContain('1755 g Mehl');
+  });
+
+  test('portion slider for linked recipe is pre-initialized with calculated total parts', async () => {
+    render(
+      <MenuDetail
+        menu={menuWith6Pizzas}
+        recipes={recipes6Pizzas}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={{ id: 'user-1' }}
+        allUsers={[]}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    // The linked recipe section should appear
+    await screen.findByText('Verlinkte Rezepte');
+    // The counter for Pizzateig should show 6 (6 pizzas × 1 Teil), not 8 (recipe default)
+    const pizzateigRow = screen.getByText('Pizzateig').closest('.portion-selector-item');
+    const { getByText: getByTextInRow } = require('@testing-library/react');
+    const countEl = pizzateigRow.querySelector('.portion-selector-count');
+    expect(countEl.textContent).toBe('6');
+  });
+
   test('recipe link without quantityPrefix defaults to 1 Teil', async () => {
     const menuSingle = {
       id: 'menu-single',
