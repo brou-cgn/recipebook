@@ -423,9 +423,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                         className="portion-selector-btn"
                         onClick={() => setPortionCounts(prev => ({
                           ...prev,
-                          [recipe.id]: Math.max(1, current - 1)
+                          [recipe.id]: Math.max(0, current - 1)
                         }))}
                         aria-label="Portionen verringern"
+                        disabled={current === 0}
                       >
                         −
                       </button>
@@ -457,9 +458,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                             className="portion-selector-btn"
                             onClick={() => setLinkedPortionCounts(prev => ({
                               ...prev,
-                              [linkedRecipe.id]: Math.max(1, current - 1)
+                              [linkedRecipe.id]: Math.max(0, current - 1)
                             }))}
                             aria-label="Portionen verringern"
+                            disabled={current === 0}
                           >
                             −
                           </button>
