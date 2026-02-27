@@ -1,0 +1,381 @@
+/* Instagram Import Modal Styles */
+
+.instagram-import-modal {
+  background: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.instagram-import-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.instagram-import-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.instagram-import-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.instagram-import-instructions {
+  margin-bottom: 16px;
+  color: #555;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* Image Grid */
+.instagram-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.instagram-image-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background-color: #f0f0f0;
+}
+
+.instagram-image-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.instagram-image-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+
+.instagram-image-remove:hover {
+  background-color: rgba(244, 67, 54, 0.9);
+}
+
+.instagram-add-image {
+  aspect-ratio: 1;
+  border: 2px dashed #2196F3;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #2196F3;
+  font-size: 2rem;
+  transition: all 0.2s;
+  background-color: #f0f7ff;
+  min-height: 80px;
+}
+
+.instagram-add-image:hover {
+  background-color: #2196F3;
+  color: white;
+}
+
+/* Processing Step */
+.instagram-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  text-align: center;
+}
+
+.instagram-processing-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.instagram-processing-subtitle {
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.instagram-progress-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 12px;
+  background-color: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.instagram-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  transition: width 0.3s ease;
+  border-radius: 6px;
+}
+
+.instagram-progress-text {
+  color: #555;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+}
+
+.instagram-image-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.instagram-image-indicator {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.instagram-image-indicator.completed {
+  background-color: #4caf50;
+  color: white;
+}
+
+.instagram-image-indicator.processing {
+  background-color: #ff9800;
+  color: white;
+  animation: instagram-pulse 1s infinite;
+}
+
+.instagram-image-indicator.pending {
+  background-color: #e0e0e0;
+  color: #999;
+}
+
+@keyframes instagram-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Result Step */
+.instagram-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.instagram-merged-notice {
+  padding: 10px 14px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #1976d2;
+}
+
+.instagram-result-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.instagram-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.instagram-meta-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.instagram-result-section {
+  background-color: #f9f9f9;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.instagram-result-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 1rem;
+}
+
+.instagram-result-section ul,
+.instagram-result-section ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instagram-result-section li {
+  margin-bottom: 5px;
+  color: #555;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Error */
+.instagram-error {
+  padding: 12px;
+  background-color: #ffebee;
+  border: 1px solid #ef5350;
+  border-radius: 4px;
+  color: #c62828;
+  font-size: 0.9rem;
+}
+
+/* Actions */
+.instagram-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.instagram-cancel-button {
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.instagram-cancel-button:hover {
+  background-color: #f5f5f5;
+}
+
+.instagram-analyse-button {
+  padding: 10px 24px;
+  border: none;
+  background-color: #E91E63;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.instagram-analyse-button:hover:not(:disabled) {
+  background-color: #C2185B;
+}
+
+.instagram-analyse-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.instagram-back-button {
+  padding: 10px 20px;
+  border: 1px solid #2196F3;
+  background-color: white;
+  color: #2196F3;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.instagram-back-button:hover {
+  background-color: #2196F3;
+  color: white;
+}
+
+.instagram-import-button {
+  padding: 10px 24px;
+  border: none;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.instagram-import-button:hover {
+  background-color: #45a049;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .instagram-import-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .instagram-import-header {
+    padding: 16px;
+  }
+
+  .instagram-import-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .instagram-import-content {
+    padding: 16px;
+  }
+
+  .instagram-image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+  }
+
+  .instagram-import-actions {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .instagram-analyse-button,
+  .instagram-import-button {
+    flex: 1;
+  }
+}
