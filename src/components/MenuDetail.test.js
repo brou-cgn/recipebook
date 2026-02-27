@@ -388,4 +388,31 @@ describe('MenuDetail - Shopping List with Linked Recipes', () => {
     // 1 Teil (default) out of 8 = 0.125 → 500 g × 0.125 = 62.5 g
     expect(texts).toContain('62.5 g Mehl');
   });
+
+  test('recipe with 0 portions contributes no ingredients to the shopping list', async () => {
+    const recipeZero = {
+      id: 'recipe-zero',
+      title: 'Zero Portions Recipe',
+      portionen: 4,
+      ingredients: ['100 g Butter'],
+    };
+    const recipeNormal = {
+      id: 'recipe-normal',
+      title: 'Normal Recipe',
+      portionen: 4,
+      ingredients: ['200 g Zucker'],
+    };
+    const menuWithZero = {
+      id: 'menu-zero',
+      name: 'Zero Test Menü',
+      recipeIds: ['recipe-zero', 'recipe-normal'],
+      portionCounts: { 'recipe-zero': 0 },
+    };
+    const items = await openShoppingList(menuWithZero, [recipeZero, recipeNormal]);
+    const texts = items.map((el) => el.textContent);
+    // recipe-zero is set to 0 portions → its ingredients must not appear
+    expect(texts.some((t) => t.toLowerCase().includes('butter'))).toBe(false);
+    // recipe-normal has default portions → its ingredients must appear
+    expect(texts).toContain('200 g Zucker');
+  });
 });
