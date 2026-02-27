@@ -810,6 +810,11 @@ export const setTemporaryPassword = async (userId, tempPassword) => {
         success: false,
         message: 'Keine Berechtigung. Nur Administratoren können Passwörter zurücksetzen.'
       };
+    } else if (error.code === 'functions/not-found') {
+      return {
+        success: false,
+        message: 'Benutzer nicht gefunden.'
+      };
     } else if (error.code === 'functions/invalid-argument') {
       return {
         success: false,
