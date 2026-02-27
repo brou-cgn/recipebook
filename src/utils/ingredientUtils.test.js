@@ -447,4 +447,24 @@ describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () =
     const { converted } = convertIngredientUnits(['2 tbsp Öl'], conversionTable);
     expect(converted).toEqual(['30 ml Öl']);
   });
+
+  test('converts "teelöffel" (lowercase) to ml', () => {
+    const { converted } = convertIngredientUnits(['1 teelöffel Trüffelöl'], conversionTable);
+    expect(converted).toEqual(['5 ml Trüffelöl']);
+  });
+
+  test('converts "TEELÖFFEL" (uppercase) to ml', () => {
+    const { converted } = convertIngredientUnits(['1 TEELÖFFEL Trüffelöl'], conversionTable);
+    expect(converted).toEqual(['5 ml Trüffelöl']);
+  });
+
+  test('converts "tl" (lowercase abbreviation) to ml using TL entry', () => {
+    const { converted } = convertIngredientUnits(['1 tl Trüffelöl'], conversionTable);
+    expect(converted).toEqual(['5 ml Trüffelöl']);
+  });
+
+  test('converts "el" (lowercase abbreviation) to ml using EL entry', () => {
+    const { converted } = convertIngredientUnits(['2 el Öl'], conversionTable);
+    expect(converted).toEqual(['30 ml Öl']);
+  });
 });
