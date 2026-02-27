@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { isWaterIngredient } from '../utils/ingredientUtils';
 import ShoppingListModal from './ShoppingListModal';
 
 /**
@@ -136,7 +137,8 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       for (const ing of (recipe.ingredients || [])) {
         const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
         if (item.type !== 'heading') {
-          ingredients.push(typeof ing === 'string' ? ing : ing.text);
+          const text = typeof ing === 'string' ? ing : ing.text;
+          if (!isWaterIngredient(text)) ingredients.push(text);
         }
       }
     }
