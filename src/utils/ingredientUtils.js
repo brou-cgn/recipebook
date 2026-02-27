@@ -280,9 +280,9 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
     // Normalize unit variants for better table matching
     if (unit) {
       const unitLower = unit.toLowerCase();
-      if (unitLower === 'teelöffel' || unitLower === 'tsp') {
+      if (unitLower === 'teelöffel' || unitLower === 'tl' || unitLower === 'teel' || unitLower === 'teaspoon' || unitLower === 'tsp') {
         unit = 'TL';
-      } else if (unitLower === 'esslöffel' || unitLower === 'tbsp') {
+      } else if (unitLower === 'esslöffel' || unitLower === 'el' || unitLower === 'essl' || unitLower === 'tablespoon' || unitLower === 'tbsp') {
         unit = 'EL';
       }
     }
