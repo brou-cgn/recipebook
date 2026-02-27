@@ -109,7 +109,7 @@ function renderBoldText(text) {
   });
 }
 
-function Settings({ onBack, currentUser }) {
+function Settings({ onBack, currentUser, allUsers = [] }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -2641,7 +2641,7 @@ function Settings({ onBack, currentUser }) {
             </div>
           </>
         ) : (
-          <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} />
+          <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}
       </div>
     </div>

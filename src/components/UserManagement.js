@@ -15,8 +15,8 @@ import {
   getRoleDisplayName
 } from '../utils/userManagement';
 
-function UserManagement({ onBack, currentUser }) {
-  const [users, setUsers] = useState([]);
+function UserManagement({ onBack, currentUser, allUsers = [] }) {
+  const [users, setUsers] = useState(allUsers);
   const [message, setMessage] = useState({ text: '', type: '' }); // 'success' or 'error'
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ vorname: '', nachname: '' });
@@ -33,14 +33,22 @@ function UserManagement({ onBack, currentUser }) {
     loadUsers();
   }, []);
 
+  // Sync with allUsers prop whenever it changes (e.g. when App.js finishes loading)
+  useEffect(() => {
+    if (allUsers.length > 0 && users.length === 0) {
+      setUsers(allUsers);
+    }
+  }, [allUsers]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadUsers = async () => {
-    const users = await getUsers();
-    setUsers(users);
+    const fetchedUsers = await getUsers();
+    // Fall back to allUsers prop when Firestore returns empty (may indicate a permission/network issue)
+    setUsers(fetchedUsers.length > 0 ? fetchedUsers : allUsers);
     const count = await getAdminCount();
     setAdminCount(count);
     // Load daily AI-OCR scan counts for all users
     const counts = {};
-    await Promise.all(users.map(async (user) => {
+    await Promise.all(fetchedUsers.map(async (user) => {
       counts[user.id] = await getUserAiOcrScanCount(user.id);
     }));
     setAiOcrScanCounts(counts);
