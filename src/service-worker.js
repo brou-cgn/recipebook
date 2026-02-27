@@ -175,10 +175,17 @@ registerRoute(
           method: 'POST',
           enctype: 'multipart/form-data',
           params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
             files: [
               {
                 name: 'images',
                 accept: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/*']
+              },
+              {
+                name: 'files',
+                accept: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/*']
               }
             ]
           }
@@ -319,19 +326,31 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         try {
           const formData = await event.request.formData();
-          const files = formData.getAll('images');
+
+          // Extract text fields
+          const title = formData.get('title') || '';
+          const text = formData.get('text') || '';
+          const sharedUrl = formData.get('url') || '';
+
+          // Extract image files (from 'images' field)
+          const imageFiles = formData.getAll('images');
+          // Extract other files like PDFs (from 'files' field)
+          const otherFiles = formData.getAll('files');
+          const allFiles = [...imageFiles, ...otherFiles];
 
           const base64Images = [];
-          for (const file of files) {
+          for (const file of allFiles) {
             if (file instanceof File || file instanceof Blob) {
-              const base64 = await fileToBase64InSW(file);
-              base64Images.push(base64);
+              const mimeType = file.type || '';
+              if (mimeType.startsWith('image/')) {
+                const base64 = await fileToBase64InSW(file);
+                base64Images.push(base64);
+              }
             }
           }
 
-          if (base64Images.length > 0) {
-            await saveToIndexedDB('pendingSharedImages', base64Images);
-          }
+          const sharedData = { images: base64Images, title, text, url: sharedUrl };
+          await saveToIndexedDB('pendingSharedData', sharedData);
         } catch (error) {
           console.error('[SW] Error handling share target:', error);
         }

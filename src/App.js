@@ -18,7 +18,7 @@ import MenuSharePage from './components/MenuSharePage';
 import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
-import InstagramImportModal from './components/InstagramImportModal';
+import UniversalImportModal from './components/UniversalImportModal';
 import { 
   loginUser, 
   logoutUser, 
@@ -60,30 +60,50 @@ import {
   ensurePublicGroup
 } from './utils/groupFirestore';
 
-// IndexedDB helpers to read/clear shared images written by the service worker
-function readSharedImagesFromDB() {
+// IndexedDB helpers to read/clear shared data written by the service worker
+function readSharedDataFromDB() {
   return new Promise((resolve) => {
     const request = indexedDB.open('recipebook-settings', 1);
     request.onsuccess = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains('settings')) {
         db.close();
-        return resolve([]);
+        return resolve({ images: [], title: '', text: '', url: '' });
       }
       const tx = db.transaction(['settings'], 'readonly');
       const store = tx.objectStore('settings');
-      const getReq = store.get('pendingSharedImages');
-      getReq.onsuccess = () => {
-        db.close();
-        resolve(Array.isArray(getReq.result) ? getReq.result : []);
+      // Try new unified key first
+      const newReq = store.get('pendingSharedData');
+      newReq.onsuccess = () => {
+        if (newReq.result && typeof newReq.result === 'object') {
+          db.close();
+          return resolve({
+            images: Array.isArray(newReq.result.images) ? newReq.result.images : [],
+            title: newReq.result.title || '',
+            text: newReq.result.text || '',
+            url: newReq.result.url || '',
+          });
+        }
+        // Fall back to legacy images-only key
+        const legacyReq = store.get('pendingSharedImages');
+        legacyReq.onsuccess = () => {
+          db.close();
+          resolve({
+            images: Array.isArray(legacyReq.result) ? legacyReq.result : [],
+            title: '',
+            text: '',
+            url: '',
+          });
+        };
+        legacyReq.onerror = () => { db.close(); resolve({ images: [], title: '', text: '', url: '' }); };
       };
-      getReq.onerror = () => { db.close(); resolve([]); };
+      newReq.onerror = () => { db.close(); resolve({ images: [], title: '', text: '', url: '' }); };
     };
-    request.onerror = () => resolve([]);
+    request.onerror = () => resolve({ images: [], title: '', text: '', url: '' });
   });
 }
 
-function clearSharedImagesFromDB() {
+function clearSharedDataFromDB() {
   return new Promise((resolve) => {
     const request = indexedDB.open('recipebook-settings', 1);
     request.onsuccess = () => {
@@ -94,6 +114,7 @@ function clearSharedImagesFromDB() {
       }
       const tx = db.transaction(['settings'], 'readwrite');
       const store = tx.objectStore('settings');
+      store.delete('pendingSharedData');
       store.delete('pendingSharedImages');
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); resolve(); };
@@ -175,8 +196,8 @@ function App() {
     selectedGroup: ''
   });
   const recipeCountsInitialized = useRef(false);
-  const [sharedImages, setSharedImages] = useState([]);
-  const [showInstagramImport, setShowInstagramImport] = useState(false);
+  const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
+  const [showUniversalImport, setShowUniversalImport] = useState(false);
 
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
@@ -264,25 +285,27 @@ function App() {
     applyTileSizePreference();
   }, []);
 
-  // Detect Web Share Target: read shared images from IndexedDB when URL param is present
+  // Detect Web Share Target: read shared data from IndexedDB when URL param is present
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('share-target')) {
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-      readSharedImagesFromDB().then((images) => {
-        if (images.length > 0) {
-          setSharedImages(images);
+      readSharedDataFromDB().then((data) => {
+        const hasContent = data.images.length > 0 || data.title || data.text || data.url;
+        if (hasContent) {
+          setSharedData(data);
         }
       });
     }
   }, []);
 
-  // Show Instagram Import Modal once user is authenticated and shared images are available
+  // Show Universal Import Modal once user is authenticated and shared data is available
   useEffect(() => {
-    if (currentUser && sharedImages.length > 0) {
-      setShowInstagramImport(true);
+    const hasContent = sharedData.images.length > 0 || sharedData.title || sharedData.text || sharedData.url;
+    if (currentUser && hasContent) {
+      setShowUniversalImport(true);
     }
-  }, [currentUser, sharedImages]);
+  }, [currentUser, sharedData]);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
@@ -763,10 +786,10 @@ function App() {
     setIsFilterPageOpen(false);
   };
 
-  const handleInstagramImport = (recipe) => {
-    setShowInstagramImport(false);
-    setSharedImages([]);
-    clearSharedImagesFromDB();
+  const handleUniversalImport = (recipe) => {
+    setShowUniversalImport(false);
+    setSharedData({ images: [], title: '', text: '', url: '' });
+    clearSharedDataFromDB();
     // Open RecipeForm pre-populated with the imported recipe
     setEditingRecipe(recipe);
     setIsCreatingVersion(false);
@@ -774,10 +797,10 @@ function App() {
     setIsFormOpen(true);
   };
 
-  const handleInstagramImportCancel = () => {
-    setShowInstagramImport(false);
-    setSharedImages([]);
-    clearSharedImagesFromDB();
+  const handleUniversalImportCancel = () => {
+    setShowUniversalImport(false);
+    setSharedData({ images: [], title: '', text: '', url: '' });
+    clearSharedDataFromDB();
   };
 
   // Show loading state while checking auth
@@ -997,11 +1020,14 @@ function App() {
           onPasswordChanged={handlePasswordChanged}
         />
       )}
-      {showInstagramImport && (
-        <InstagramImportModal
-          initialImages={sharedImages}
-          onImport={handleInstagramImport}
-          onCancel={handleInstagramImportCancel}
+      {showUniversalImport && (
+        <UniversalImportModal
+          initialImages={sharedData.images}
+          initialTitle={sharedData.title}
+          initialText={sharedData.text}
+          initialUrl={sharedData.url}
+          onImport={handleUniversalImport}
+          onCancel={handleUniversalImportCancel}
         />
       )}
     </div>
