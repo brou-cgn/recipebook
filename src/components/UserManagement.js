@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './UserManagement.css';
 import { 
   getUsers, 
@@ -15,8 +15,8 @@ import {
   getRoleDisplayName
 } from '../utils/userManagement';
 
-function UserManagement({ onBack, currentUser }) {
-  const [users, setUsers] = useState([]);
+function UserManagement({ onBack, currentUser, allUsers = [] }) {
+  const [users, setUsers] = useState(allUsers);
   const [message, setMessage] = useState({ text: '', type: '' }); // 'success' or 'error'
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ vorname: '', nachname: '' });
@@ -28,19 +28,33 @@ function UserManagement({ onBack, currentUser }) {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
   const [adminCount, setAdminCount] = useState(0);
   const [aiOcrScanCounts, setAiOcrScanCounts] = useState({});
+  // Track whether users have been loaded from Firestore at least once
+  const firestoreLoadedRef = useRef(false);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
+  // Sync with allUsers prop when it changes and Firestore hasn't provided data yet
+  useEffect(() => {
+    if (allUsers.length > 0 && !firestoreLoadedRef.current) {
+      setUsers(allUsers);
+    }
+  }, [allUsers]);
+
   const loadUsers = async () => {
-    const users = await getUsers();
-    setUsers(users);
+    const fetchedUsers = await getUsers();
+    // Determine which users to display: Firestore data if available, otherwise allUsers fallback
+    const usersToDisplay = fetchedUsers.length > 0 ? fetchedUsers : allUsers;
+    if (fetchedUsers.length > 0) {
+      firestoreLoadedRef.current = true;
+    }
+    setUsers(usersToDisplay);
     const count = await getAdminCount();
     setAdminCount(count);
-    // Load daily AI-OCR scan counts for all users
+    // Load daily AI-OCR scan counts for all displayed users
     const counts = {};
-    await Promise.all(users.map(async (user) => {
+    await Promise.all(usersToDisplay.map(async (user) => {
       counts[user.id] = await getUserAiOcrScanCount(user.id);
     }));
     setAiOcrScanCounts(counts);

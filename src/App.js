@@ -771,7 +771,7 @@ function App() {
         onSearchChange={handleSearchChange}
       />
       {isSettingsOpen ? (
-        <Settings onBack={handleCloseSettings} currentUser={currentUser} />
+        <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} />
       ) : selectedRecipe ? (
         // Recipe detail view - shown regardless of currentView
         <RecipeDetail
