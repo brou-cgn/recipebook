@@ -1,6 +1,6 @@
 {
-  "short_name": "DishBook",
-  "name": "DishBook - Unsere Besten",
+  "short_name": "brouBook",
+  "name": "brouBook - Unsere besten Momente",
   "icons": [
     {
       "src": "favicon.ico",
@@ -24,7 +24,7 @@
   "display": "standalone",
   "theme_color": "#402C1C",
   "background_color": "#ffffff",
-  "description": "DishBook - A Progressive Web App for managing your favorite recipes",
+  "description": "brouBook - Eine Progressive Web App zum Verwalten deiner Lieblingsrezepte",
   "categories": ["food", "lifestyle", "productivity"],
   "orientation": "portrait-primary"
 }

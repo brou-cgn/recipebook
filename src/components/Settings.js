@@ -882,7 +882,7 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
             <div className="settings-section">
               <h3>Header-Slogan</h3>
               <p className="section-description">
-                Passen Sie den Slogan an, der im Header unter "DishBook" angezeigt wird.
+                Passen Sie den Slogan an, der im Header unter "brouBook" angezeigt wird.
               </p>
               <div className="list-input">
                 <input
@@ -897,7 +897,7 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
             <div className="settings-section">
               <h3>Favicon</h3>
               <p className="section-description">
-                Personalisieren Sie das Favicon (Browser-Tab-Symbol) und den Titel Ihrer DishBook-Instanz.
+                Personalisieren Sie das Favicon (Browser-Tab-Symbol) und den Titel Ihrer brouBook-Instanz.
               </p>
               
               {/* Favicon Text */}
@@ -909,7 +909,7 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
                     id="faviconText"
                     value={faviconText}
                     onChange={(e) => setFaviconText(e.target.value)}
-                    placeholder="z.B. DishBook"
+                    placeholder="z.B. brouBook"
                     maxLength={50}
                   />
                 </div>

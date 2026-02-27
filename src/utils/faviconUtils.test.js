@@ -3,8 +3,8 @@ import { getSettings } from './customLists';
 
 // Mock customLists module
 jest.mock('./customLists', () => ({
-  DEFAULT_FAVICON_TEXT: 'DishBook',
-  DEFAULT_SLOGAN: 'Unsere Besten',
+  DEFAULT_FAVICON_TEXT: 'brouBook',
+  DEFAULT_SLOGAN: 'Unsere besten Momente',
   getSettings: jest.fn()
 }));
 
@@ -177,17 +177,17 @@ describe('faviconUtils', () => {
 
     test('uses default slogan when slogan is not provided', () => {
       updatePageTitle('MyRecipes', null);
-      expect(document.title).toBe('MyRecipes - Unsere Besten');
+      expect(document.title).toBe('MyRecipes - Unsere besten Momente');
     });
 
     test('uses default favicon text when text is not provided', () => {
       updatePageTitle(null, 'Custom Slogan');
-      expect(document.title).toBe('DishBook - Custom Slogan');
+      expect(document.title).toBe('brouBook - Custom Slogan');
     });
 
     test('uses both defaults when neither text nor slogan provided', () => {
       updatePageTitle(null, null);
-      expect(document.title).toBe('DishBook - Unsere Besten');
+      expect(document.title).toBe('brouBook - Unsere besten Momente');
     });
   });
 
@@ -302,7 +302,7 @@ describe('faviconUtils', () => {
 
       await applyFaviconSettings();
 
-      expect(document.title).toBe('DishBook - Unsere Besten');
+      expect(document.title).toBe('brouBook - Unsere besten Momente');
     });
   });
 });
