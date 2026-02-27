@@ -199,6 +199,24 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
 
   const getMenuShoppingListIngredients = () => {
     const ingredients = [];
+
+    // Extract a numeric quantity from a prefix string like "1 Teil", "0.5 Stück", "1/2"
+    const extractQuantityFromPrefix = (prefix) => {
+      if (!prefix) return null;
+      const match = prefix.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+)/);
+      if (match) {
+        const num = match[1];
+        if (num.includes('/')) {
+          const [numerator, denominator] = num.split('/');
+          return parseFloat(numerator) / parseFloat(denominator);
+        }
+        return parseFloat(num.replace(',', '.'));
+      }
+      return null;
+    };
+
+    // First pass: accumulate total parts needed per linked recipe and collect normal ingredients
+    const linkedRecipeRequirements = {}; // { recipeId: totalPartsNeeded }
     for (const section of recipeSections) {
       for (const recipe of section.recipes) {
         const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
@@ -210,20 +228,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           const text = typeof ing === 'string' ? ing : ing.text;
           const recipeLink = decodeRecipeLink(text);
           if (recipeLink) {
-            // Expand linked recipe ingredients (already included separately via allLinkedRecipes)
-            const linkedRecipe = recipes.find(r => r.id === recipeLink.recipeId);
-            if (linkedRecipe) {
-              const linkedTarget = linkedPortionCounts[recipeLink.recipeId] ?? (linkedRecipe.portionen || 4);
-              const linkedMultiplier = linkedTarget / (linkedRecipe.portionen || 4);
-              for (const linkedIng of (linkedRecipe.ingredients || [])) {
-                const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
-                if (linkedItem.type === 'heading') continue;
-                const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
-                if (decodeRecipeLink(linkedText)) continue; // skip nested links
-                if (isWaterIngredient(linkedText)) continue; // skip water
-                ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
-              }
-            }
+            const quantityFromLink = extractQuantityFromPrefix(recipeLink.quantityPrefix) || 1;
+            const partsNeeded = quantityFromLink * multiplier;
+            linkedRecipeRequirements[recipeLink.recipeId] = (linkedRecipeRequirements[recipeLink.recipeId] || 0) + partsNeeded;
           } else {
             if (isWaterIngredient(text)) continue; // skip water
             ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
@@ -231,6 +238,28 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
         }
       }
     }
+
+    // Second pass: add each linked recipe's ingredients exactly once with the correct multiplier
+    for (const [recipeId, totalParts] of Object.entries(linkedRecipeRequirements)) {
+      const linkedRecipe = recipes.find(r => r.id === recipeId);
+      if (linkedRecipe) {
+        const linkedTarget = linkedPortionCounts[recipeId] ?? (linkedRecipe.portionen || 4);
+        const portionen = linkedRecipe.portionen || 4;
+        // Scale by (totalParts / portionen) to cover actual need,
+        // multiplied by (linkedTarget / portionen) for the user's portion-slider adjustment.
+        // e.g. 6 pizzas × 1 Teil, portionen=8, default slider: (6 × 8) / (8 × 8) = 0.75
+        const linkedMultiplier = (totalParts * linkedTarget) / (portionen * portionen);
+        for (const linkedIng of (linkedRecipe.ingredients || [])) {
+          const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
+          if (linkedItem.type === 'heading') continue;
+          const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
+          if (decodeRecipeLink(linkedText)) continue; // skip nested links
+          if (isWaterIngredient(linkedText)) continue; // skip water
+          ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
+        }
+      }
+    }
+
     const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
     if (missing.length > 0 && !missingSavedRef.current) {
       missingSavedRef.current = true;
