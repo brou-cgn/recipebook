@@ -317,6 +317,20 @@ describe('Recipe Firestore - Recipe Count', () => {
 
       expect(mockUpdateDoc).not.toHaveBeenCalled();
     });
+
+    it('should succeed even if recipe_count increment fails', async () => {
+      mockUpdateDoc.mockRejectedValueOnce(new Error('Permission denied')); // count update fails
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Should not throw - recipe was saved, count update is secondary
+      await expect(addRecipe({ title: 'Test Recipe' }, 'user1')).resolves.toBeDefined();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error incrementing recipe count for author:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('deleteRecipe', () => {
@@ -439,6 +453,24 @@ describe('Recipe Firestore - Recipe Count', () => {
 
       expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
       expect(mockUpdateDoc).not.toHaveBeenCalledWith('users/user1', expect.anything());
+    });
+
+    it('should succeed even if recipe count update after author change fails', async () => {
+      mockUpdateDoc
+        .mockResolvedValueOnce(undefined) // main recipe update succeeds
+        .mockRejectedValueOnce(new Error('Permission denied')); // count update fails
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Should not throw - the recipe was already saved, counts are secondary
+      await expect(
+        updateRecipe('recipe1', { title: 'Test', authorId: 'user2' }, 'user1')
+      ).resolves.toBeUndefined();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error updating recipe counts after author change:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });
