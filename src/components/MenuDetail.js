@@ -197,26 +197,24 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeSections, recipes]);
 
-  const getMenuShoppingListIngredients = () => {
-    const ingredients = [];
-
-    // Extract a numeric quantity from a prefix string like "1 Teil", "0.5 Stück", "1/2"
-    const extractQuantityFromPrefix = (prefix) => {
-      if (!prefix) return null;
-      const match = prefix.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+)/);
-      if (match) {
-        const num = match[1];
-        if (num.includes('/')) {
-          const [numerator, denominator] = num.split('/');
-          return parseFloat(numerator) / parseFloat(denominator);
-        }
-        return parseFloat(num.replace(',', '.'));
+  // Extract a numeric quantity from a prefix string like "1 Teil", "0.5 Stück", "1/2"
+  const extractQuantityFromPrefix = (prefix) => {
+    if (!prefix) return null;
+    const match = prefix.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+)/);
+    if (match) {
+      const num = match[1];
+      if (num.includes('/')) {
+        const [numerator, denominator] = num.split('/');
+        return parseFloat(numerator) / parseFloat(denominator);
       }
-      return null;
-    };
+      return parseFloat(num.replace(',', '.'));
+    }
+    return null;
+  };
 
-    // First pass: accumulate total parts needed per linked recipe and collect normal ingredients
-    const linkedRecipeRequirements = {}; // { recipeId: totalPartsNeeded }
+  // Calculate total parts needed per linked recipe based on current portionCounts
+  const calculateLinkedRecipeRequirements = () => {
+    const requirements = {};
     for (const section of recipeSections) {
       for (const recipe of section.recipes) {
         const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
@@ -230,33 +228,52 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           if (recipeLink) {
             const quantityFromLink = extractQuantityFromPrefix(recipeLink.quantityPrefix) || 1;
             const partsNeeded = quantityFromLink * multiplier;
-            linkedRecipeRequirements[recipeLink.recipeId] = (linkedRecipeRequirements[recipeLink.recipeId] || 0) + partsNeeded;
-          } else {
-            if (isWaterIngredient(text)) continue; // skip water
-            ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
+            requirements[recipeLink.recipeId] = (requirements[recipeLink.recipeId] || 0) + partsNeeded;
           }
         }
       }
     }
+    return requirements;
+  };
 
-    // Second pass: add each linked recipe's ingredients exactly once with the correct multiplier
-    for (const [recipeId, totalParts] of Object.entries(linkedRecipeRequirements)) {
-      const linkedRecipe = recipes.find(r => r.id === recipeId);
-      if (linkedRecipe) {
-        const linkedTarget = linkedPortionCounts[recipeId] ?? (linkedRecipe.portionen || 4);
-        const portionen = linkedRecipe.portionen || 4;
-        // Scale by (totalParts / portionen) to cover actual need,
-        // multiplied by (linkedTarget / portionen) for the user's portion-slider adjustment.
-        // e.g. 6 pizzas × 1 Teil, portionen=8, default slider: (6 × 8) / (8 × 8) = 0.75
-        const linkedMultiplier = (totalParts * linkedTarget) / (portionen * portionen);
-        for (const linkedIng of (linkedRecipe.ingredients || [])) {
-          const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
-          if (linkedItem.type === 'heading') continue;
-          const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
-          if (decodeRecipeLink(linkedText)) continue; // skip nested links
-          if (isWaterIngredient(linkedText)) continue; // skip water
-          ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
+  const handleShoppingListClick = () => {
+    const requirements = calculateLinkedRecipeRequirements();
+    setLinkedPortionCounts(requirements);
+    setShowPortionSelector(true);
+  };
+
+  const getMenuShoppingListIngredients = () => {
+    const ingredients = [];
+
+    // Collect normal ingredients from all recipes
+    for (const section of recipeSections) {
+      for (const recipe of section.recipes) {
+        const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+        const recipePortions = recipe.portionen || 4;
+        const multiplier = targetPortions / recipePortions;
+        for (const ing of (recipe.ingredients || [])) {
+          const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
+          if (item.type === 'heading') continue;
+          const text = typeof ing === 'string' ? ing : ing.text;
+          if (decodeRecipeLink(text)) continue; // skip recipe links
+          if (isWaterIngredient(text)) continue; // skip water
+          ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
         }
+      }
+    }
+
+    // Add each linked recipe's ingredients exactly once using the portion slider value
+    for (const linkedRecipe of allLinkedRecipes) {
+      const linkedTarget = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+      const portionen = linkedRecipe.portionen || 4;
+      const linkedMultiplier = linkedTarget / portionen;
+      for (const linkedIng of (linkedRecipe.ingredients || [])) {
+        const linkedItem = typeof linkedIng === 'string' ? { type: 'ingredient', text: linkedIng } : linkedIng;
+        if (linkedItem.type === 'heading') continue;
+        const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
+        if (decodeRecipeLink(linkedText)) continue; // skip nested links
+        if (isWaterIngredient(linkedText)) continue; // skip water
+        ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
       }
     }
 
@@ -287,7 +304,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           )}
           <button
             className="shopping-list-trigger-button"
-            onClick={() => setShowPortionSelector(true)}
+            onClick={handleShoppingListClick}
             title="Einkaufsliste anzeigen"
             aria-label="Einkaufsliste öffnen"
           >
