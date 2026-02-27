@@ -115,7 +115,12 @@ export const addRecipe = async (recipe, authorId) => {
 
     // Increment recipe_count for the author
     if (authorId) {
-      await updateDoc(doc(db, 'users', authorId), { recipe_count: increment(1) });
+      try {
+        await updateDoc(doc(db, 'users', authorId), { recipe_count: increment(1) });
+      } catch (countError) {
+        // Log but do not re-throw: the recipe has already been saved successfully.
+        console.error('Error incrementing recipe count for author:', countError);
+      }
     }
 
     return {
@@ -155,8 +160,9 @@ export const updateRecipe = async (recipeId, updates, previousAuthorId) => {
         await updateDoc(doc(db, 'users', previousAuthorId), { recipe_count: increment(-1) });
         await updateDoc(doc(db, 'users', newAuthorId), { recipe_count: increment(1) });
       } catch (countError) {
+        // Log but do not re-throw: the recipe has already been saved successfully.
+        // Author count is a secondary stat that can be corrected later.
         console.error('Error updating recipe counts after author change:', countError);
-        throw countError;
       }
     }
   } catch (error) {

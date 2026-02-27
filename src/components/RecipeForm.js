@@ -502,6 +502,16 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       return;
     }
 
+    if (ingredients.filter(i => i.text.trim() !== '').length === 0) {
+      alert('Bitte geben Sie mindestens eine Zutat ein');
+      return;
+    }
+
+    if (steps.filter(s => s.text.trim() !== '').length === 0) {
+      alert('Bitte geben Sie mindestens einen Zubereitungsschritt ein');
+      return;
+    }
+
     // Auto-populate title image from category images if creating new recipe without title image
     let finalImage = image.trim();
     if (!recipe && !finalImage && speisekategorie.length > 0) {
