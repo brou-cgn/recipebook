@@ -1304,3 +1304,61 @@ exports.notifyAdminsOnUserRegistration = onDocumentCreated(
     },
 );
 
+/**
+ * Cloud Function: Set a user's password (admin only)
+ * Allows an admin to set a temporary password for another user via Firebase Admin SDK.
+ *
+ * Input data:
+ * - targetUserId: The UID of the user whose password should be changed
+ * - newPassword: The new password to set (min 6 characters)
+ *
+ * Returns: { success: true }
+ */
+exports.setUserPassword = onCall(
+    {
+      maxInstances: 10,
+    },
+    async (request) => {
+      // Authentication check
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'Sie müssen angemeldet sein, um diese Aktion durchzuführen.'
+        );
+      }
+
+      const {targetUserId, newPassword} = request.data;
+
+      // Input validation
+      if (!targetUserId || typeof targetUserId !== 'string') {
+        throw new HttpsError('invalid-argument', 'Ungültige Benutzer-ID.');
+      }
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+        throw new HttpsError(
+            'invalid-argument',
+            'Das Passwort muss mindestens 6 Zeichen lang sein.'
+        );
+      }
+
+      // Verify that the calling user is an admin by checking Firestore
+      const db = admin.firestore();
+      const callerDoc = await db.collection('users').doc(auth.uid).get();
+      if (!callerDoc.exists || !callerDoc.data().isAdmin) {
+        throw new HttpsError(
+            'permission-denied',
+            'Nur Administratoren können Passwörter zurücksetzen.'
+        );
+      }
+
+      // Update the target user's password via Firebase Admin SDK
+      await admin.auth().updateUser(targetUserId, {password: newPassword});
+
+      // Set requiresPasswordChange flag in Firestore
+      await db.collection('users').doc(targetUserId).update({requiresPasswordChange: true});
+
+      console.log(`[${new Date().toISOString()}] Admin ${auth.uid} successfully set temporary password for user ${targetUserId}`);
+      return {success: true};
+    }
+);
+

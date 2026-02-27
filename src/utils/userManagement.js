@@ -3,7 +3,7 @@
  * Handles user data storage, authentication, and admin management using Firebase
  */
 
-import { auth, db } from '../firebase';
+import { auth, db, functions } from '../firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -21,6 +21,7 @@ import {
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { logAppCall } from './appCallsFirestore';
 
 // Permission roles
@@ -776,10 +777,11 @@ export const updateUserProfile = async (userId, profileData) => {
 
 /**
  * Set a temporary password for a user
- * NOTE: Due to Firebase client SDK limitations, this function only sets the requiresPasswordChange flag.
- * Actual password reset must be done through Firebase password reset email or implemented via Firebase Admin SDK.
+ * Uses a Firebase Cloud Function to update the password via the Admin SDK.
+ * Also sets the requiresPasswordChange flag in Firestore so the user is
+ * prompted to choose a new password on next login.
  * @param {string} userId - ID of user to update
- * @param {string} tempPassword - Temporary password (plain text) - Currently not used, kept for API compatibility
+ * @param {string} tempPassword - Temporary password (plain text, min 6 chars)
  * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
  */
 export const setTemporaryPassword = async (userId, tempPassword) => {
@@ -793,29 +795,28 @@ export const setTemporaryPassword = async (userId, tempPassword) => {
   }
 
   try {
-    const users = await getUsers();
-    
-    // Find the user
-    const user = users.find(u => u.id === userId);
-    if (!user) {
-      return {
-        success: false,
-        message: 'Benutzer nicht gefunden.'
-      };
-    }
-    
-    // Update user with temporary password flag in Firestore
-    // NOTE: Firebase doesn't allow admins to set passwords for other users client-side
-    // This would need to be implemented with Firebase Admin SDK on the server
-    // For now, we'll just set the flag and the user will need to reset via email
-    await updateDoc(doc(db, 'users', userId), { requiresPasswordChange: true });
-    
+    const setUserPassword = httpsCallable(functions, 'setUserPassword');
+    await setUserPassword({ targetUserId: userId, newPassword: tempPassword });
+
     return {
       success: true,
-      message: 'Benutzer muss Passwort zurücksetzen.'
+      message: 'Temporäres Passwort erfolgreich gesetzt. Der Benutzer wird beim nächsten Login aufgefordert, ein neues Passwort zu vergeben.'
     };
   } catch (error) {
     console.error('Error setting temporary password:', error);
+
+    if (error.code === 'functions/permission-denied') {
+      return {
+        success: false,
+        message: 'Keine Berechtigung. Nur Administratoren können Passwörter zurücksetzen.'
+      };
+    } else if (error.code === 'functions/invalid-argument') {
+      return {
+        success: false,
+        message: error.message || 'Ungültige Eingabe.'
+      };
+    }
+
     return {
       success: false,
       message: 'Fehler beim Setzen des temporären Passworts.'
