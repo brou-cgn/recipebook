@@ -715,4 +715,205 @@ describe('OcrScanModal', () => {
       expect(screen.getByText(/3 KI-Scans/i)).toBeInTheDocument();
     }, { timeout: OCR_TIMEOUT });
   });
+
+  // Camera multi-photo tests
+  describe('Camera multi-photo capture', () => {
+    let mockGetUserMedia;
+    let mockVideoElement;
+
+    beforeEach(() => {
+      // Mock MediaStream and getUserMedia
+      const mockTrack = { stop: jest.fn() };
+      const mockStream = { getTracks: jest.fn().mockReturnValue([mockTrack]) };
+      mockGetUserMedia = jest.fn().mockResolvedValue(mockStream);
+      Object.defineProperty(global.navigator, 'mediaDevices', {
+        value: { getUserMedia: mockGetUserMedia },
+        writable: true,
+        configurable: true,
+      });
+
+      // Mock canvas toDataURL
+      mockVideoElement = {
+        videoWidth: 640,
+        videoHeight: 480,
+      };
+      HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,photo1');
+      HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
+        drawImage: jest.fn(),
+      });
+    });
+
+    test('camera start button activates camera', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(mockGetUserMedia).toHaveBeenCalledWith({ video: { facingMode: 'environment' } });
+      });
+    });
+
+    test('capturing a photo keeps camera active and shows thumbnail', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      const captureButton = screen.getByText('📸 Foto aufnehmen');
+      fireEvent.click(captureButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
+        expect(screen.getByAltText('Foto 1')).toBeInTheDocument();
+      });
+
+      // Camera should still be active (capture button text changes)
+      expect(screen.getByText(/Weiteres Foto aufnehmen/i)).toBeInTheDocument();
+    });
+
+    test('capturing multiple photos shows correct count and thumbnails', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      // Take first photo
+      fireEvent.click(screen.getByText('📸 Foto aufnehmen'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
+      });
+
+      // Take second photo
+      fireEvent.click(screen.getByText(/Weiteres Foto aufnehmen/i));
+
+      await waitFor(() => {
+        expect(screen.getByText(/2 Fotos aufgenommen/i)).toBeInTheDocument();
+        expect(screen.getByAltText('Foto 1')).toBeInTheDocument();
+        expect(screen.getByAltText('Foto 2')).toBeInTheDocument();
+      });
+    });
+
+    test('analyse starten button appears after first photo', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      // No analyse button before any photo
+      expect(screen.queryByText(/Analyse starten/i)).not.toBeInTheDocument();
+
+      // Take first photo
+      fireEvent.click(screen.getByText('📸 Foto aufnehmen'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+      });
+    });
+
+    test('letztes löschen button removes last photo', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      // Take two photos
+      fireEvent.click(screen.getByText('📸 Foto aufnehmen'));
+      await waitFor(() => {
+        expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText(/Weiteres Foto aufnehmen/i));
+      await waitFor(() => {
+        expect(screen.getByText(/2 Fotos aufgenommen/i)).toBeInTheDocument();
+      });
+
+      // Remove last photo
+      fireEvent.click(screen.getByText(/Letztes löschen/i));
+
+      await waitFor(() => {
+        expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
+        expect(screen.queryByAltText('Foto 2')).not.toBeInTheDocument();
+      });
+    });
+
+    test('abbrechen button stops camera and discards photos', async () => {
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      // Take a photo
+      fireEvent.click(screen.getByText('📸 Foto aufnehmen'));
+      await waitFor(() => {
+        expect(screen.getByText(/1 Foto aufgenommen/i)).toBeInTheDocument();
+      });
+
+      // Cancel camera
+      const abortButton = screen.getByText('✕ Abbrechen');
+      fireEvent.click(abortButton);
+
+      await waitFor(() => {
+        // Should return to upload step with camera inactive
+        expect(screen.getByText('📷 Kamera starten')).toBeInTheDocument();
+        expect(screen.queryByText(/aufgenommen/i)).not.toBeInTheDocument();
+      });
+    });
+
+    test('startBatchAnalysis processes captured photos and shows results', async () => {
+      const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
+      recognizeRecipeWithAI.mockResolvedValue({
+        title: 'Kamera Rezept',
+        ingredients: ['Mehl', 'Eier'],
+        steps: ['Mischen', 'Backen'],
+        servings: 4,
+      });
+
+      render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+      const cameraButton = screen.getByText('📷 Kamera starten');
+      fireEvent.click(cameraButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('📸 Foto aufnehmen')).toBeInTheDocument();
+      });
+
+      // Take a photo
+      fireEvent.click(screen.getByText('📸 Foto aufnehmen'));
+      await waitFor(() => {
+        expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+      });
+
+      // Start analysis
+      fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
+
+      await waitFor(() => {
+        expect(screen.getByText('Kamera Rezept')).toBeInTheDocument();
+      }, { timeout: OCR_TIMEOUT });
+
+      // Should show import button
+      expect(screen.getByText('Übernehmen')).toBeInTheDocument();
+    });
+  });
 });
