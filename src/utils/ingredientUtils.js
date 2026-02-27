@@ -330,8 +330,8 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
           const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
           return `${formatted} ml ${name}`;
         }
-        // Entry exists but has no conversion values yet – keep as-is
-        return ingredient;
+        // Entry exists but has no conversion values – show name only
+        return name;
       }
 
       // Not in table – record as missing
@@ -342,7 +342,7 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
       }
     }
 
-    return ingredient;
+    return name;
   });
 
   return { converted, missing };
