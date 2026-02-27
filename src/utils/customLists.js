@@ -64,8 +64,8 @@ export const DEFAULT_CONVERSION_TABLE = [
   { id: 'zucker-el', ingredient: 'Zucker', unit: 'EL', grams: '12', milliliters: '' },
 ];
 
-export const DEFAULT_SLOGAN = 'Unsere Besten';
-export const DEFAULT_FAVICON_TEXT = 'DishBook';
+export const DEFAULT_SLOGAN = 'Unsere besten Momente';
+export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';

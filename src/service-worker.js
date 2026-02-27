@@ -122,10 +122,10 @@ registerRoute(
       
       // Create dynamic manifest
       const manifest = {
-        short_name: settings?.faviconText || 'DishBook',
+        short_name: settings?.faviconText || 'brouBook',
         name: settings?.faviconText 
-          ? `${settings.faviconText} - ${settings.headerSlogan || 'Unsere Besten'}`
-          : 'DishBook - Unsere Besten',
+          ? `${settings.faviconText} - ${settings.headerSlogan || 'Unsere besten Momente'}`
+          : 'brouBook - Unsere besten Momente',
         icons: settings?.appLogoImage ? [
           {
             src: settings.appLogoImage,
@@ -167,7 +167,7 @@ registerRoute(
         display: 'standalone',
         theme_color: '#4CAF50',
         background_color: '#ffffff',
-        description: `${settings?.faviconText || 'DishBook'} - A Progressive Web App for managing your favorite recipes`,
+        description: `${settings?.faviconText || 'brouBook'} - A Progressive Web App for managing your favorite recipes`,
         categories: ['food', 'lifestyle', 'productivity'],
         orientation: 'portrait-primary',
         share_target: {
