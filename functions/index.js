@@ -1351,14 +1351,37 @@ exports.setUserPassword = onCall(
         );
       }
 
-      // Update the target user's password via Firebase Admin SDK
-      await admin.auth().updateUser(targetUserId, {password: newPassword});
+      try {
+        // Update the target user's password via Firebase Admin SDK
+        await admin.auth().updateUser(targetUserId, {password: newPassword});
 
-      // Set requiresPasswordChange flag in Firestore
-      await db.collection('users').doc(targetUserId).update({requiresPasswordChange: true});
+        // Set requiresPasswordChange flag in Firestore (use set with merge to handle missing docs)
+        await db.collection('users').doc(targetUserId).set(
+            {requiresPasswordChange: true},
+            {merge: true},
+        );
+      } catch (err) {
+        console.error(`[${new Date().toISOString()}] Error setting password for user ${targetUserId}:`, err);
+        if (err.code === 'auth/user-not-found') {
+          throw new HttpsError(
+              'not-found',
+              'Benutzer nicht gefunden.',
+          );
+        }
+        if (err.code === 'auth/invalid-password') {
+          throw new HttpsError(
+              'invalid-argument',
+              'Das Passwort entspricht nicht den Anforderungen.',
+          );
+        }
+        throw new HttpsError(
+            'internal',
+            'Fehler beim Setzen des Passworts. Bitte versuchen Sie es erneut.',
+        );
+      }
 
       console.log(`[${new Date().toISOString()}] Admin ${auth.uid} successfully set temporary password for user ${targetUserId}`);
       return {success: true};
-    }
+    },
 );
 
