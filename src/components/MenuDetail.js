@@ -6,7 +6,7 @@ import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
-import { scaleIngredient, combineIngredients, convertIngredientUnits } from '../utils/ingredientUtils';
+import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import ShoppingListModal from './ShoppingListModal';
 
@@ -220,10 +220,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                 if (linkedItem.type === 'heading') continue;
                 const linkedText = typeof linkedIng === 'string' ? linkedIng : linkedIng.text;
                 if (decodeRecipeLink(linkedText)) continue; // skip nested links
+                if (isWaterIngredient(linkedText)) continue; // skip water
                 ingredients.push(linkedMultiplier !== 1 ? scaleIngredient(linkedText, linkedMultiplier) : linkedText);
               }
             }
           } else {
+            if (isWaterIngredient(text)) continue; // skip water
             ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
           }
         }
