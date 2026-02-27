@@ -2296,8 +2296,12 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
                 </tr>
               </thead>
               <tbody>
-                {(lists.conversionTable || []).map((entry) => (
-                  <tr key={entry.id}>
+                {[...(lists.conversionTable || [])].sort((a, b) =>
+                  (a.ingredient || '').localeCompare(b.ingredient || '', undefined, { sensitivity: 'base' })
+                ).map((entry) => {
+                  const missingValues = !entry.grams?.trim() && !entry.milliliters?.trim();
+                  return (
+                  <tr key={entry.id} className={missingValues ? 'conversion-row-no-values' : ''}>
                     <td>
                       <input
                         type="text"
@@ -2336,7 +2340,8 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
                       <button className="remove-btn" onClick={() => removeConversionEntry(entry.id)} title="Entfernen">✕</button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 <tr className="conversion-table-new-row">
                   <td>
                     <input
