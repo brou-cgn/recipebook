@@ -91,6 +91,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Category images collection
+    match /categoryImages/{imageId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isAdmin();
+    }
+
     // AI Scan rate limiting collection
     match /aiScanLimits/{limitId} {
       allow read: if isEditOrAdmin();

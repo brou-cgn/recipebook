@@ -108,6 +108,13 @@ The following helper functions are defined in `firestore.rules`:
 | Update | `admin` (all), `edit` (own) |
 | Delete | `admin` only |
 
+### Category Images (`/categoryImages/{imageId}`)
+
+| Operation | Who |
+|-----------|-----|
+| Read | All authenticated users |
+| Create / Update / Delete | `admin` only |
+
 ### AI Scan Limits (`/aiScanLimits/{limitId}`)
 
 | Operation | Who |
