@@ -558,7 +558,7 @@ exports.scanRecipeWithAI = onCall(
 exports.captureWebsiteScreenshot = onCall(
     {
       maxInstances: 10,
-      memory: '1GiB',
+      memory: '2GiB',
       timeoutSeconds: 60,
     },
     async (request) => {
@@ -594,25 +594,7 @@ exports.captureWebsiteScreenshot = onCall(
         throw new HttpsError('invalid-argument', 'Invalid URL format');
       }
 
-      // Check if Puppeteer is available BEFORE rate limiting
-      // This prevents users from consuming their quota when the feature is unavailable
-      // Note: Puppeteer is NOT installed in this implementation
-      // To activate this feature:
-      // 1. Add puppeteer to package.json dependencies: npm install puppeteer@^21.0.0
-      // 2. Deploy to a Cloud Function with sufficient resources (2GB+ memory)
-      // 3. Uncomment the implementation code below
-      // 4. Remove this error check
-      
-      console.error('Puppeteer not configured in Cloud Functions');
-      throw new HttpsError(
-          'failed-precondition',
-          'Screenshot capture requires Puppeteer to be installed. ' +
-          'Please add "puppeteer": "^21.0.0" to functions/package.json and redeploy. ' +
-          'For now, please use the photo scan feature instead.'
-      );
-
-      // Rate limiting (only checked after Puppeteer availability)
-      // This code will run once Puppeteer is installed and the error above is removed
+      // Rate limiting
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
       if (!rateLimitResult.allowed) {
         const limit = getRateLimit(isAdmin, isAuthenticated);
@@ -624,11 +606,19 @@ exports.captureWebsiteScreenshot = onCall(
 
       // Puppeteer implementation:
       const puppeteer = require('puppeteer');
+      const chromium = require('@sparticuz/chromium');
 
       try {
         const browser = await puppeteer.launch({
-          headless: 'new',
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          args: chromium.args.concat([
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+          ]),
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
         });
 
         const page = await browser.newPage();
