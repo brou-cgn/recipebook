@@ -1447,6 +1447,39 @@ describe('RecipeDetail - Share Button Visibility', () => {
 
     Object.defineProperty(navigator, 'share', { value: originalShare, configurable: true });
   });
+
+  test('shows Teilen button for non-author when recipe has no shareId', () => {
+    const nonAuthorUser = { id: 'user-2', vorname: 'Other', nachname: 'User' };
+
+    render(
+      <RecipeDetail
+        recipe={baseRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={nonAuthorUser}
+      />
+    );
+
+    expect(screen.getByTitle('Rezept teilen')).toBeInTheDocument();
+  });
+
+  test('shows copy link button for non-author when recipe has shareId', () => {
+    const nonAuthorUser = { id: 'user-2', vorname: 'Other', nachname: 'User' };
+    const sharedRecipe = { ...baseRecipe, shareId: 'some-share-id' };
+
+    render(
+      <RecipeDetail
+        recipe={sharedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={nonAuthorUser}
+      />
+    );
+
+    expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
+  });
 });
 
 describe('RecipeDetail - Metadata Order', () => {
