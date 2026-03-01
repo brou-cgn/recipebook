@@ -222,6 +222,11 @@
 .version-button {
   color: #2196F3;
   border-color: #2196F3;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .version-button:hover {
