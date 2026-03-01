@@ -8,6 +8,7 @@ const {onDocumentCreated} = require('firebase-functions/v2/firestore');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -15,6 +16,10 @@ admin.initializeApp();
 // Define the Gemini API key as a secret
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+// API key for Apple Shortcut / external recipe import
+// Set with: firebase functions:secrets:set SHORTCUT_API_KEY
+const shortcutApiKey = defineSecret('SHORTCUT_API_KEY');
 
 // SMTP secrets for email notifications
 // Set with: firebase functions:secrets:set SMTP_HOST
@@ -1485,7 +1490,8 @@ function validateAndNormaliseRecipeInput(body) {
  * POST /addRecipeViaAPI
  *
  * Headers:
- *   Authorization: Bearer <Firebase ID Token>
+ *   X-Api-Key: <API Key stored as SHORTCUT_API_KEY secret>
+ *   X-User-Id: <Firebase User ID>
  *   Content-Type: application/json
  *
  * Body (JSON) – supports both German and English field names:
@@ -1504,16 +1510,17 @@ function validateAndNormaliseRecipeInput(body) {
  *   200 { success: true, recipeId: string }
  *   400 { success: false, error: string }
  *   401 { success: false, error: string }
- *   403 { success: false, error: string }
+ *   404 { success: false, error: string }
+ *   405 { success: false, error: string }
  *   500 { success: false, error: string }
  */
 exports.addRecipeViaAPI = onRequest(
-    {maxInstances: 10},
+    {maxInstances: 10, secrets: [shortcutApiKey]},
     async (req, res) => {
-      // CORS: allow any origin since authentication is enforced via Bearer token
+      // CORS: allow any origin; authentication is enforced via API key
       res.set('Access-Control-Allow-Origin', '*');
       res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
 
       if (req.method === 'OPTIONS') {
         res.status(204).send('');
@@ -1525,41 +1532,45 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
-      // --- Authentication ---
-      const authHeader = req.headers.authorization || '';
-      if (!authHeader.startsWith('Bearer ')) {
+      // --- Authentication via API Key ---
+      const apiKey = req.headers['x-api-key'];
+      const userId = req.headers['x-user-id'];
+
+      if (!apiKey || !userId) {
         res.status(401).json({
           success: false,
-          error: 'Authorization header mit Firebase ID Token erforderlich (Bearer <token>)',
+          error: 'Missing authentication headers',
+          required: ['X-Api-Key', 'X-User-Id'],
         });
         return;
       }
 
-      const idToken = authHeader.slice(7);
-      let decodedToken;
-      try {
-        decodedToken = await admin.auth().verifyIdToken(idToken);
-      } catch (err) {
-        console.error('addRecipeViaAPI: invalid token:', err.message);
-        res.status(401).json({success: false, error: 'Ungültiges oder abgelaufenes Token'});
+      const validApiKey = process.env.SHORTCUT_API_KEY;
+      let isValidKey = false;
+      if (validApiKey) {
+        try {
+          isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
+        } catch (_) {
+          isValidKey = false;
+        }
+      }
+      if (!isValidKey) {
+        console.warn('addRecipeViaAPI: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
         return;
       }
 
-      const userId = decodedToken.uid;
-
-      // --- Authorisation: user must have edit or admin role ---
+      // --- Validate user exists in Firestore ---
       const db = admin.firestore();
-      const userDoc = await db.collection('users').doc(userId).get();
-      if (!userDoc.exists) {
-        res.status(403).json({success: false, error: 'Benutzer nicht gefunden'});
-        return;
-      }
-      const userRole = userDoc.data().role;
-      if (!['edit', 'admin'].includes(userRole)) {
-        res.status(403).json({
-          success: false,
-          error: 'Keine Berechtigung zum Erstellen von Rezepten. Benötigte Rolle: edit oder admin',
-        });
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+          res.status(404).json({success: false, error: 'User not found'});
+          return;
+        }
+      } catch (err) {
+        console.error('addRecipeViaAPI: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
         return;
       }
 

@@ -9,20 +9,27 @@ This directory contains Firebase Cloud Functions that provide secure server-side
 An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – create recipes directly in Firestore without going through the RecipeBook UI.
 
 **Features:**
-- ✅ Authentication: Firebase ID Token (Bearer) required
-- ✅ Authorisation: user must have role `edit` or `admin`
+- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
 - ✅ Accepts both German and English field names (compatible with AI/Shortcut output)
 - ✅ Input validation with descriptive error messages
 - ✅ CORS enabled
 - ✅ Automatically sets `authorId`, `createdAt`, `updatedAt`
 - ✅ Increments user's `recipe_count`
 
+**Authentication:** API Key (stored as Firebase Secret `SHORTCUT_API_KEY`)
+
+**Setup:**
+1. API Key generieren: `openssl rand -hex 32`
+2. Als Secret speichern: `firebase functions:secrets:set SHORTCUT_API_KEY`
+3. User ID aus Firebase Console kopieren (Authentication → Benutzer auswählen → UID kopieren)
+
 **Request:**
 
 ```
 POST https://<region>-<project-id>.cloudfunctions.net/addRecipeViaAPI
 Content-Type: application/json
-Authorization: Bearer <Firebase ID Token>
+X-Api-Key: <API Key>
+X-User-Id: <Firebase User ID>
 ```
 
 **Body (JSON) – supported field names:**
@@ -85,38 +92,26 @@ Authorization: Bearer <Firebase ID Token>
 | Status | Reason |
 |--------|--------|
 | 400 | Missing or invalid fields |
-| 401 | Missing, invalid, or expired token |
-| 403 | User not found or insufficient role |
+| 401 | Missing or invalid API Key / User ID header |
+| 404 | User not found |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
 
 ---
 
-#### Getting a Firebase ID Token
-
-The Firebase ID Token is a short-lived JWT. You can obtain it in the app or via the [Firebase Auth REST API](https://firebase.google.com/docs/reference/rest/auth):
-
-```bash
-curl -X POST \
-  'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<WEB_API_KEY>' \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"your@email.com","password":"yourpassword","returnSecureToken":true}'
-```
-
-The `idToken` field in the response is your Bearer token (valid for 1 hour).
-
----
-
 #### Apple Shortcut – Example Setup
 
-1. **Sign in once** to get a token (use "Get Contents of URL" action with the REST endpoint above).
-2. **Store the token** in a Shortcut variable or a text field.
-3. **Send the recipe** with a "Get Contents of URL" action:
+See [APPLE_SHORTCUT_SETUP.md](../APPLE_SHORTCUT_SETUP.md) for a full step-by-step guide.
+
+1. **Generate an API key** once: `openssl rand -hex 32`
+2. **Store the key** as a Firebase Secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
+3. **Find your User ID** in Firebase Console → Authentication → select your user → copy UID.
+4. **Send the recipe** with a "Get Contents of URL" action:
    - Method: `POST`
    - URL: `https://us-central1-<project-id>.cloudfunctions.net/addRecipeViaAPI`
-   - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+   - Headers: `X-Api-Key: <your-api-key>`, `X-User-Id: <your-uid>`, `Content-Type: application/json`
    - Body: JSON with the recipe fields listed above.
-4. **Check the result**: the response contains `recipeId` if successful.
+5. **Check the result**: the response contains `recipeId` if successful.
 
 > **Tip:** Use OpenAI / AI Actions in your Shortcut to extract and structure the recipe text before sending it to this endpoint. Replace the "Create Note" step with a "Get Contents of URL" POST action.
 
@@ -220,7 +215,8 @@ firebase emulators:start --only functions
 
 The function uses Firebase Secrets for secure API key storage:
 
-- `GEMINI_API_KEY` - Google Gemini Vision API key (required)
+- `GEMINI_API_KEY` - Google Gemini Vision API key (required for `scanRecipeWithAI`)
+- `SHORTCUT_API_KEY` - API key for `addRecipeViaAPI` (required for Apple Shortcut integration)
 
 ## Rate Limiting
 
