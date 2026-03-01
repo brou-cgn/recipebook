@@ -1375,3 +1375,243 @@ exports.setUserPassword = onCall(
     },
 );
 
+/**
+ * Validate and normalise recipe data submitted via the API.
+ * Accepts both English (Apple Shortcut / AI output) and German field names.
+ *
+ * Required: title (or titel)
+ * Required: at least one entry in ingredients (or zutaten)
+ * Required: at least one entry in steps (or zubereitung)
+ *
+ * @param {object} body - Raw request body
+ * @returns {object} Normalised recipe object ready for Firestore
+ * @throws {Error} when required fields are missing or invalid
+ */
+function validateAndNormaliseRecipeInput(body) {
+  if (!body || typeof body !== 'object') {
+    throw Object.assign(new Error('Request body must be a JSON object'), {code: 400});
+  }
+
+  // --- title ---
+  const title = (body.title || body.titel || '').toString().trim();
+  if (!title) {
+    throw Object.assign(new Error('Rezepttitel (title) fehlt'), {code: 400});
+  }
+
+  // --- ingredients ---
+  const rawIngredients = body.ingredients || body.zutaten;
+  if (!Array.isArray(rawIngredients) || rawIngredients.length === 0) {
+    throw Object.assign(
+        new Error('ingredients (Zutaten) muss ein nicht-leeres Array sein'),
+        {code: 400},
+    );
+  }
+  const ingredients = rawIngredients
+      .map((i) => (typeof i === 'string' ? i.trim() : String(i || '').trim()))
+      .filter(Boolean);
+  if (ingredients.length === 0) {
+    throw Object.assign(
+        new Error('ingredients (Zutaten) enthält keine gültigen Einträge'),
+        {code: 400},
+    );
+  }
+
+  // --- steps ---
+  const rawSteps = body.steps || body.zubereitung;
+  if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
+    throw Object.assign(
+        new Error('steps (Zubereitung) muss ein nicht-leeres Array sein'),
+        {code: 400},
+    );
+  }
+  const steps = rawSteps
+      .map((s) => (typeof s === 'string' ? s.trim() : String(s || '').trim()))
+      .filter(Boolean);
+  if (steps.length === 0) {
+    throw Object.assign(
+        new Error('steps (Zubereitung) enthält keine gültigen Einträge'),
+        {code: 400},
+    );
+  }
+
+  // --- optional fields ---
+  const portionen = parseInt(body.portionen ?? body.servings ?? body.portions ?? 0, 10) || undefined;
+  const kochdauer = parseInt(body.kochdauer ?? body.cookTime ?? body.prepTime ?? body.zubereitungszeit ?? 0, 10) || undefined;
+  const rawSchwierigkeit = parseInt(body.schwierigkeit ?? body.difficulty ?? 0, 10);
+  if (rawSchwierigkeit !== 0 && (rawSchwierigkeit < 1 || rawSchwierigkeit > 5)) {
+    throw Object.assign(
+        new Error('schwierigkeit (difficulty) muss zwischen 1 und 5 liegen'),
+        {code: 400},
+    );
+  }
+  const schwierigkeit = rawSchwierigkeit || undefined;
+  const speisekategorie = (body.speisekategorie || body.category || body.kategorie || '').toString().trim() || undefined;
+
+  // kulinarik: accept string or array
+  let kulinarik;
+  const rawKulinarik = body.kulinarik || body.cuisine || body.kulinarisch;
+  if (Array.isArray(rawKulinarik)) {
+    kulinarik = rawKulinarik.map(String).filter(Boolean);
+  } else if (rawKulinarik) {
+    kulinarik = [String(rawKulinarik).trim()].filter(Boolean);
+  }
+
+  // tags: accept string (comma-separated) or array
+  let tags;
+  const rawTags = body.tags;
+  if (Array.isArray(rawTags)) {
+    tags = rawTags.map(String).filter(Boolean);
+  } else if (rawTags) {
+    tags = String(rawTags).split(',').map((t) => t.trim()).filter(Boolean);
+  }
+
+  const notizen = (body.notizen || body.notes || '').toString().trim() || undefined;
+
+  const recipe = {title, ingredients, steps};
+  if (portionen !== undefined) recipe.portionen = portionen;
+  if (kochdauer !== undefined) recipe.kochdauer = kochdauer;
+  if (schwierigkeit !== undefined) recipe.schwierigkeit = schwierigkeit;
+  if (speisekategorie !== undefined) recipe.speisekategorie = speisekategorie;
+  if (kulinarik !== undefined && kulinarik.length > 0) recipe.kulinarik = kulinarik;
+  if (tags !== undefined && tags.length > 0) recipe.tags = tags;
+  if (notizen !== undefined) recipe.notizen = notizen;
+
+  return recipe;
+}
+
+/**
+ * Cloud Function: Add a recipe via HTTP API (for Apple Shortcuts and external integrations)
+ *
+ * POST /addRecipeViaAPI
+ *
+ * Headers:
+ *   Authorization: Bearer <Firebase ID Token>
+ *   Content-Type: application/json
+ *
+ * Body (JSON) – supports both German and English field names:
+ *   title / titel           {string}   Required – recipe title
+ *   ingredients / zutaten   {string[]} Required – list of ingredients
+ *   steps / zubereitung     {string[]} Required – list of preparation steps
+ *   portionen / servings    {number}   Optional – number of servings
+ *   kochdauer / cookTime    {number}   Optional – cooking time in minutes
+ *   schwierigkeit/difficulty{number}   Optional – difficulty 1–5
+ *   speisekategorie/category{string}   Optional – meal category
+ *   kulinarik / cuisine     {string|string[]} Optional – cuisine type(s)
+ *   tags                    {string[]} Optional – tags
+ *   notizen / notes         {string}   Optional – additional notes
+ *
+ * Returns:
+ *   200 { success: true, recipeId: string }
+ *   400 { success: false, error: string }
+ *   401 { success: false, error: string }
+ *   403 { success: false, error: string }
+ *   500 { success: false, error: string }
+ */
+exports.addRecipeViaAPI = onRequest(
+    {maxInstances: 10},
+    async (req, res) => {
+      // CORS: allow any origin since authentication is enforced via Bearer token
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      // --- Authentication ---
+      const authHeader = req.headers.authorization || '';
+      if (!authHeader.startsWith('Bearer ')) {
+        res.status(401).json({
+          success: false,
+          error: 'Authorization header mit Firebase ID Token erforderlich (Bearer <token>)',
+        });
+        return;
+      }
+
+      const idToken = authHeader.slice(7);
+      let decodedToken;
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (err) {
+        console.error('addRecipeViaAPI: invalid token:', err.message);
+        res.status(401).json({success: false, error: 'Ungültiges oder abgelaufenes Token'});
+        return;
+      }
+
+      const userId = decodedToken.uid;
+
+      // --- Authorisation: user must have edit or admin role ---
+      const db = admin.firestore();
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        res.status(403).json({success: false, error: 'Benutzer nicht gefunden'});
+        return;
+      }
+      const userRole = userDoc.data().role;
+      if (!['edit', 'admin'].includes(userRole)) {
+        res.status(403).json({
+          success: false,
+          error: 'Keine Berechtigung zum Erstellen von Rezepten. Benötigte Rolle: edit oder admin',
+        });
+        return;
+      }
+
+      // --- Parse body ---
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (e) {
+          res.status(400).json({success: false, error: 'Ungültiges JSON im Request-Body'});
+          return;
+        }
+      }
+
+      // --- Validate & normalise ---
+      let recipeData;
+      try {
+        recipeData = validateAndNormaliseRecipeInput(body);
+      } catch (err) {
+        res.status(err.code || 400).json({success: false, error: err.message});
+        return;
+      }
+
+      // --- Save to Firestore ---
+      try {
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        const docData = {
+          ...recipeData,
+          authorId: userId,
+          createdAt: now,
+          updatedAt: now,
+          isPrivate: false,
+        };
+
+        const docRef = await db.collection('recipes').add(docData);
+
+        // Increment recipe_count for the author (best-effort)
+        try {
+          await db.collection('users').doc(userId).update({
+            recipe_count: admin.firestore.FieldValue.increment(1),
+          });
+        } catch (countErr) {
+          console.error('addRecipeViaAPI: error incrementing recipe_count:', countErr);
+        }
+
+        console.log(`addRecipeViaAPI: recipe "${recipeData.title}" created by user ${userId} (id: ${docRef.id})`);
+        res.status(200).json({success: true, recipeId: docRef.id});
+      } catch (err) {
+        console.error('addRecipeViaAPI: Firestore error:', err);
+        res.status(500).json({success: false, error: 'Fehler beim Speichern des Rezepts'});
+      }
+    },
+);
+

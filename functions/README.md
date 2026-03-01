@@ -4,6 +4,124 @@ This directory contains Firebase Cloud Functions that provide secure server-side
 
 ## Functions
 
+### addRecipeViaAPI
+
+An HTTP endpoint that lets external tools – such as an **Apple Shortcut** – create recipes directly in Firestore without going through the RecipeBook UI.
+
+**Features:**
+- ✅ Authentication: Firebase ID Token (Bearer) required
+- ✅ Authorisation: user must have role `edit` or `admin`
+- ✅ Accepts both German and English field names (compatible with AI/Shortcut output)
+- ✅ Input validation with descriptive error messages
+- ✅ CORS enabled
+- ✅ Automatically sets `authorId`, `createdAt`, `updatedAt`
+- ✅ Increments user's `recipe_count`
+
+**Request:**
+
+```
+POST https://<region>-<project-id>.cloudfunctions.net/addRecipeViaAPI
+Content-Type: application/json
+Authorization: Bearer <Firebase ID Token>
+```
+
+**Body (JSON) – supported field names:**
+
+| Field | Alias(es) | Type | Required | Description |
+|-------|-----------|------|----------|-------------|
+| `title` | `titel` | string | ✅ | Recipe title |
+| `ingredients` | `zutaten` | string[] | ✅ | List of ingredients |
+| `steps` | `zubereitung` | string[] | ✅ | Preparation steps |
+| `portionen` | `servings`, `portions` | number | – | Number of servings |
+| `kochdauer` | `cookTime`, `prepTime`, `zubereitungszeit` | number | – | Cooking time in minutes |
+| `schwierigkeit` | `difficulty` | number (1–5) | – | Difficulty level; must be 1–5 if provided |
+| `speisekategorie` | `category`, `kategorie` | string | – | Meal category |
+| `kulinarik` | `cuisine`, `kulinarisch` | string \| string[] | – | Cuisine type(s) |
+| `tags` | – | string \| string[] | – | Tags (comma-separated string or array) |
+| `notizen` | `notes` | string | – | Additional notes |
+
+**Example request body:**
+
+```json
+{
+  "title": "Spaghetti Carbonara",
+  "portionen": 4,
+  "kochdauer": 30,
+  "schwierigkeit": 2,
+  "kulinarik": ["Italienisch"],
+  "speisekategorie": "Hauptgericht",
+  "tags": ["klassisch", "pasta"],
+  "ingredients": [
+    "400 g Spaghetti",
+    "200 g Guanciale",
+    "4 Eigelb",
+    "100 g Pecorino Romano",
+    "Schwarzer Pfeffer",
+    "Salz"
+  ],
+  "steps": [
+    "Wasser in einem großen Topf zum Kochen bringen und salzen.",
+    "Guanciale in Würfel schneiden und bei mittlerer Hitze knusprig braten.",
+    "Eigelb mit geriebenem Pecorino und Pfeffer verrühren.",
+    "Spaghetti bissfest kochen, etwas Kochwasser auffangen.",
+    "Pasta zum Guanciale geben, von der Hitze nehmen.",
+    "Ei-Käse-Mischung unterrühren, mit Nudelwasser cremig rühren und sofort servieren."
+  ],
+  "notizen": "Pfanne unbedingt von der Hitze nehmen, bevor die Eier hinzugefügt werden."
+}
+```
+
+**Success response (200):**
+
+```json
+{
+  "success": true,
+  "recipeId": "abc123xyz"
+}
+```
+
+**Error responses:**
+
+| Status | Reason |
+|--------|--------|
+| 400 | Missing or invalid fields |
+| 401 | Missing, invalid, or expired token |
+| 403 | User not found or insufficient role |
+| 405 | Wrong HTTP method (only POST allowed) |
+| 500 | Firestore write error |
+
+---
+
+#### Getting a Firebase ID Token
+
+The Firebase ID Token is a short-lived JWT. You can obtain it in the app or via the [Firebase Auth REST API](https://firebase.google.com/docs/reference/rest/auth):
+
+```bash
+curl -X POST \
+  'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<WEB_API_KEY>' \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"your@email.com","password":"yourpassword","returnSecureToken":true}'
+```
+
+The `idToken` field in the response is your Bearer token (valid for 1 hour).
+
+---
+
+#### Apple Shortcut – Example Setup
+
+1. **Sign in once** to get a token (use "Get Contents of URL" action with the REST endpoint above).
+2. **Store the token** in a Shortcut variable or a text field.
+3. **Send the recipe** with a "Get Contents of URL" action:
+   - Method: `POST`
+   - URL: `https://us-central1-<project-id>.cloudfunctions.net/addRecipeViaAPI`
+   - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+   - Body: JSON with the recipe fields listed above.
+4. **Check the result**: the response contains `recipeId` if successful.
+
+> **Tip:** Use OpenAI / AI Actions in your Shortcut to extract and structure the recipe text before sending it to this endpoint. Replace the "Create Note" step with a "Get Contents of URL" POST action.
+
+---
+
 ### scanRecipeWithAI
 
 A secure proxy for Google Gemini Vision API that provides AI-powered recipe recognition.
