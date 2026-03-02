@@ -24,6 +24,7 @@ import {
   logoutUser, 
   registerUser,
   loginAsGuest,
+  sendPasswordResetEmail,
   getUsers,
   onAuthStateChange,
   canEditMenu,
@@ -797,6 +798,10 @@ function App() {
     return result;
   };
 
+  const handleResetPassword = async (email) => {
+    return await sendPasswordResetEmail(email);
+  };
+
   const handleHeaderVisibilityChange = (visible) => {
     setHeaderVisible(visible);
   };
@@ -883,6 +888,7 @@ function App() {
             onLogin={handleLogin}
             onSwitchToRegister={handleSwitchToRegister}
             onGuestLogin={handleGuestLogin}
+            onResetPassword={handleResetPassword}
           />
         ) : (
           <Register 

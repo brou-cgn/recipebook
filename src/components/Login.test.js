@@ -5,10 +5,12 @@ import Login from './Login';
 describe('Login Component', () => {
   const mockOnLogin = jest.fn();
   const mockOnSwitchToRegister = jest.fn();
+  const mockOnResetPassword = jest.fn();
 
   beforeEach(() => {
     mockOnLogin.mockClear();
     mockOnSwitchToRegister.mockClear();
+    mockOnResetPassword.mockClear();
   });
 
   test('renders login form', () => {
@@ -20,7 +22,7 @@ describe('Login Component', () => {
     expect(screen.getByRole('button', { name: /Anmelden/i })).toBeInTheDocument();
   });
 
-  test('displays error message on failed login', () => {
+  test('displays error message on failed login', async () => {
     mockOnLogin.mockReturnValue({
       success: false,
       message: 'Ungültige E-Mail oder Passwort.'
@@ -37,7 +39,9 @@ describe('Login Component', () => {
     fireEvent.click(submitButton);
 
     expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', 'wrongpassword');
-    expect(screen.getByText(/Ungültige E-Mail oder Passwort/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Ungültige E-Mail oder Passwort/i)).toBeInTheDocument();
+    });
   });
 
   test('calls onLogin with email and password on submit', () => {
@@ -81,5 +85,106 @@ describe('Login Component', () => {
     fireEvent.click(registerButton);
 
     expect(mockOnSwitchToRegister).toHaveBeenCalled();
+  });
+
+  test('shows "Passwort vergessen?" link when onResetPassword is provided', () => {
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        onResetPassword={mockOnResetPassword}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Passwort vergessen\?/i })).toBeInTheDocument();
+  });
+
+  test('does not show "Passwort vergessen?" link when onResetPassword is not provided', () => {
+    render(<Login onLogin={mockOnLogin} onSwitchToRegister={mockOnSwitchToRegister} />);
+
+    expect(screen.queryByRole('button', { name: /Passwort vergessen\?/i })).not.toBeInTheDocument();
+  });
+
+  test('shows password reset form when "Passwort vergessen?" is clicked', () => {
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        onResetPassword={mockOnResetPassword}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Passwort vergessen\?/i }));
+
+    expect(screen.getByRole('heading', { name: /Passwort zurücksetzen/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/E-Mail-Adresse/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /E-Mail senden/i })).toBeInTheDocument();
+  });
+
+  test('calls onResetPassword with trimmed email on submit', async () => {
+    mockOnResetPassword.mockResolvedValue({
+      success: true,
+      message: 'Eine E-Mail zum Zurücksetzen des Passworts wurde versendet.'
+    });
+
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        onResetPassword={mockOnResetPassword}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Passwort vergessen\?/i }));
+
+    const resetEmailInput = screen.getByLabelText(/E-Mail-Adresse/i);
+    fireEvent.change(resetEmailInput, { target: { value: 'user@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /E-Mail senden/i }));
+
+    expect(mockOnResetPassword).toHaveBeenCalledWith('user@example.com');
+    await waitFor(() => {
+      expect(screen.getByText(/Eine E-Mail zum Zurücksetzen/i)).toBeInTheDocument();
+    });
+  });
+
+  test('shows error message when reset password fails', async () => {
+    mockOnResetPassword.mockResolvedValue({
+      success: false,
+      message: 'Ungültige E-Mail-Adresse.'
+    });
+
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        onResetPassword={mockOnResetPassword}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Passwort vergessen\?/i }));
+
+    const resetEmailInput = screen.getByLabelText(/E-Mail-Adresse/i);
+    fireEvent.change(resetEmailInput, { target: { value: 'invalid' } });
+    fireEvent.click(screen.getByRole('button', { name: /E-Mail senden/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ungültige E-Mail-Adresse/i)).toBeInTheDocument();
+    });
+  });
+
+  test('navigates back to login form when "Zurück zur Anmeldung" is clicked', () => {
+    render(
+      <Login
+        onLogin={mockOnLogin}
+        onSwitchToRegister={mockOnSwitchToRegister}
+        onResetPassword={mockOnResetPassword}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Passwort vergessen\?/i }));
+    expect(screen.getByRole('heading', { name: /Passwort zurücksetzen/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück zur Anmeldung/i }));
+    expect(screen.getByRole('heading', { name: /Anmelden/i })).toBeInTheDocument();
   });
 });

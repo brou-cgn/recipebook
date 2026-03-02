@@ -10,6 +10,7 @@ import {
   signInAnonymously,
   signOut,
   updatePassword as firebaseUpdatePassword,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   onAuthStateChanged
 } from 'firebase/auth';
 import {
@@ -190,6 +191,35 @@ export const loginUser = async (email, password) => {
     }
     
     return { success: false, message: 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.' };
+  }
+};
+
+/**
+ * Send a password reset email to the given address
+ * @param {string} email - E-mail address of the account to reset
+ * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
+ */
+export const sendPasswordResetEmail = async (email) => {
+  if (!email) {
+    return { success: false, message: 'E-Mail-Adresse erforderlich.' };
+  }
+
+  try {
+    await firebaseSendPasswordResetEmail(auth, email.toLowerCase().trim());
+    return {
+      success: true,
+      message: 'Eine E-Mail zum Zurücksetzen des Passworts wurde versendet, falls ein Konto mit dieser Adresse existiert.'
+    };
+  } catch (error) {
+    console.error('Password reset error:', error);
+
+    if (error.code === 'auth/invalid-email') {
+      return { success: false, message: 'Ungültige E-Mail-Adresse.' };
+    } else if (error.code === 'auth/too-many-requests') {
+      return { success: false, message: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.' };
+    }
+
+    return { success: false, message: 'Fehler beim Senden der E-Mail. Bitte versuchen Sie es erneut.' };
   }
 };
 
