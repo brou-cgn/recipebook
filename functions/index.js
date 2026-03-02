@@ -628,12 +628,37 @@ exports.captureWebsiteScreenshot = onCall(
 
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
-        
+
+        // Set a realistic browser User-Agent to avoid bot detection
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        // Set language header to avoid redirects on locale-sensitive sites
+        await page.setExtraHTTPHeaders({ 'Accept-Language': 'de-DE,de;q=0.9' });
+
         // Navigate to the URL with timeout
         await page.goto(url, { 
           waitUntil: 'networkidle0',
           timeout: 30000 
         });
+
+        // Dismiss cookie/DSGVO consent banner if present (e.g. Usercentrics CMP)
+        const cookieConsentSelector = 'button[data-testid="uc-accept-all-button"]';
+        try {
+          await page.waitForSelector(cookieConsentSelector, { timeout: 5000 });
+          await page.click(cookieConsentSelector);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } catch (e) {
+          // No cookie banner found – continue without clicking
+        }
+
+        // Wait for main content to be visible
+        try {
+          await page.waitForSelector('h1', { timeout: 5000 });
+          // Short pause to allow dynamic content to finish loading
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch (e) {
+          // No h1 found – take screenshot anyway
+        }
 
         // Take screenshot
         const screenshot = await page.screenshot({ 
