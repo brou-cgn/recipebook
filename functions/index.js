@@ -1509,8 +1509,8 @@ function validateAndNormaliseRecipeInput(body) {
  * Returns:
  *   200 { success: true, recipeId: string }
  *   400 { success: false, error: string }
- *   401 { success: false, error: string }
- *   404 { success: false, error: string }
+ *   401 { success: false, error: string, requiredHeaders?: string[] }
+ *   403 { success: false, error: string }
  *   405 { success: false, error: string }
  *   500 { success: false, error: string }
  */
@@ -1540,19 +1540,23 @@ exports.addRecipeViaAPI = onRequest(
         res.status(401).json({
           success: false,
           error: 'Missing authentication headers',
-          required: ['X-Api-Key', 'X-User-Id'],
+          requiredHeaders: ['X-Api-Key', 'X-User-Id'],
         });
         return;
       }
 
-      const validApiKey = process.env.SHORTCUT_API_KEY;
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('addRecipeViaAPI: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
+        return;
+      }
+
       let isValidKey = false;
-      if (validApiKey) {
-        try {
-          isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
-        } catch (_) {
-          isValidKey = false;
-        }
+      try {
+        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
+      } catch (_) {
+        isValidKey = false;
       }
       if (!isValidKey) {
         console.warn('addRecipeViaAPI: invalid API key attempt');
@@ -1560,12 +1564,17 @@ exports.addRecipeViaAPI = onRequest(
         return;
       }
 
-      // --- Validate user exists in Firestore ---
+      // --- Validate user exists in Firestore and has required role ---
       const db = admin.firestore();
       try {
         const userDoc = await db.collection('users').doc(userId).get();
         if (!userDoc.exists) {
-          res.status(404).json({success: false, error: 'User not found'});
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const role = userDoc.data()?.role;
+        if (role !== 'edit' && role !== 'admin') {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
           return;
         }
       } catch (err) {

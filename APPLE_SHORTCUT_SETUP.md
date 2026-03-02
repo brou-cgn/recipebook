@@ -142,9 +142,9 @@ Füge im Kurzbefehl eine **„Inhalt von URL laden"** Aktion hinzu und konfiguri
 |-------------|-----------|
 | 400 | Fehlende oder ungültige Felder im Body |
 | 401 | Fehlender oder ungültiger API Key / User ID Header |
-| 404 | User nicht gefunden |
+| 403 | User nicht gefunden oder fehlende Berechtigung (Rolle muss `edit` oder `admin` sein) |
 | 405 | Falsche HTTP-Methode (nur POST erlaubt) |
-| 500 | Fehler beim Speichern in Firestore |
+| 500 | Fehler beim Speichern in Firestore oder fehlendes SHORTCUT_API_KEY Secret |
 
 ---
 
@@ -167,9 +167,10 @@ So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Im
 - Prüfe, ob der API Key im Header exakt mit dem gespeicherten Secret übereinstimmt
 - Stelle sicher, dass die Function neu deployt wurde: `firebase deploy --only functions:addRecipeViaAPI`
 
-**„User not found" (404)**
+**„User not found" oder „Insufficient permissions" (403)**
 - Prüfe, ob die User ID korrekt kopiert wurde
 - Stelle sicher, dass der Benutzer in der Firebase Authentication existiert und einen Eintrag in der `users` Firestore-Collection hat
+- Stelle sicher, dass der Benutzer die Rolle `edit` oder `admin` hat
 
 **„Method not allowed" (405)**
 - Stelle sicher, dass die HTTP-Methode auf `POST` gesetzt ist
