@@ -5,6 +5,7 @@ import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersion
 import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import RecipeRating from './RecipeRating';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -208,7 +209,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   </div>
                 )}
                 <div className="recipe-card-content">
-                  <h3>{recipe.title}</h3>
+                  <div className="recipe-card-title-row">
+                    <h3>{recipe.title}</h3>
+                    <RecipeRating
+                      recipeId={recipe.id}
+                      ratingAvg={recipe.ratingAvg}
+                      ratingCount={recipe.ratingCount}
+                    />
+                  </div>
                   {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
                     <div className="recipe-kulinarik">
                       {Array.isArray(recipe.kulinarik)

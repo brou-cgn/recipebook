@@ -12,6 +12,7 @@ import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
+import RecipeRating from './RecipeRating';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -1164,7 +1165,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </div>
             )}
 
-            <h1 className="recipe-title">{recipe.title}</h1>
+            <div className="recipe-title-row">
+              <h1 className="recipe-title">{recipe.title}</h1>
+              <RecipeRating
+                recipeId={recipe.id}
+                ratingAvg={recipe.ratingAvg}
+                ratingCount={recipe.ratingCount}
+                currentUser={currentUser}
+                interactive={true}
+              />
+            </div>
 
             <div className="recipe-captions">
               {hasMultipleVersions && (
