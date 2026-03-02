@@ -326,12 +326,16 @@ function App() {
     }
   }, [currentUser, sharedData]);
 
-  // Once currentUser is loaded AND has webimport permission, open the form with the pending URL
+  // Once currentUser is loaded, process pending webimport URL
   useEffect(() => {
     if (!pendingWebimportUrl) return;
-    if (!currentUser?.webimport) return;
+    if (!currentUser) return; // wait for login
 
-    setWebimportDeeplink(pendingWebimportUrl);
+    if (currentUser.webimport) {
+      // User has webimport permission: open form with WebImport modal
+      setWebimportDeeplink(pendingWebimportUrl);
+    }
+    // Always open the form (webimport URL is shown in modal if permission exists)
     setPendingWebimportUrl(null); // consume it so it doesn't trigger again
     setEditingRecipe(null);
     setIsCreatingVersion(false);
@@ -883,6 +887,19 @@ function App() {
     return (
       <div className="App">
         <Header />
+        {pendingWebimportUrl && (
+          <div style={{
+            background: '#E3F2FD',
+            borderLeft: '4px solid #2196F3',
+            padding: '0.75rem 1rem',
+            margin: '1rem',
+            borderRadius: '4px',
+            fontSize: '0.95rem',
+            color: '#1565C0'
+          }}>
+            🌐 Bitte melde dich an, um das Rezept zu importieren.
+          </div>
+        )}
         {authView === 'login' ? (
           <Login 
             onLogin={handleLogin}
