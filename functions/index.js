@@ -1635,3 +1635,219 @@ exports.addRecipeViaAPI = onRequest(
     },
 );
 
+// TTL for recipe text imports (default: 10 minutes)
+const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Cloud Function: Create a temporary recipe import from raw text.
+ *
+ * POST /createRecipeImportFromText
+ *
+ * Headers:
+ *   X-Api-Key: <API Key stored as SHORTCUT_API_KEY secret>
+ *   X-User-Id: <Firebase User ID>
+ *   Content-Type: application/json
+ *
+ * Body (JSON):
+ *   rawText {string} Required – unstructured recipe text
+ *
+ * Returns:
+ *   200 { success: true, importUrl: string }
+ *   400 { success: false, error: string }
+ *   401 { success: false, error: string }
+ *   403 { success: false, error: string }
+ *   404 { success: false, error: string }
+ *   405 { success: false, error: string }
+ *   500 { success: false, error: string }
+ */
+exports.createRecipeImportFromText = onRequest(
+    {maxInstances: 10, secrets: [shortcutApiKey]},
+    async (req, res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
+
+      if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      // --- Authentication via API Key ---
+      const apiKey = req.headers['x-api-key'];
+      const userId = req.headers['x-user-id'];
+
+      if (!apiKey || !userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          required: ['X-Api-Key', 'X-User-Id'],
+        });
+        return;
+      }
+
+      const validApiKey = process.env.SHORTCUT_API_KEY;
+      let isValidKey = false;
+      if (validApiKey) {
+        try {
+          isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
+        } catch (_) {
+          isValidKey = false;
+        }
+      }
+      if (!isValidKey) {
+        console.warn('createRecipeImportFromText: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      // --- Validate user exists and has required role ---
+      const db = admin.firestore();
+      let userData;
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+          res.status(404).json({success: false, error: 'User not found'});
+          return;
+        }
+        userData = userDoc.data();
+      } catch (err) {
+        console.error('createRecipeImportFromText: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      const userRole = userData.role || '';
+      if (userRole !== 'edit' && userRole !== 'admin' && !userData.isAdmin) {
+        res.status(403).json({
+          success: false,
+          error: 'Insufficient permissions. Role edit or admin required.',
+        });
+        return;
+      }
+
+      // --- Parse body ---
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (e) {
+          res.status(400).json({success: false, error: 'Ungültiges JSON im Request-Body'});
+          return;
+        }
+      }
+
+      const rawText = (body && typeof body.rawText === 'string') ? body.rawText.trim() : '';
+      if (!rawText) {
+        res.status(400).json({success: false, error: 'rawText darf nicht leer sein'});
+        return;
+      }
+
+      // --- Save to Firestore imports collection with TTL ---
+      try {
+        const importRef = db.collection('imports').doc();
+        const expiresAt = Date.now() + RECIPE_IMPORT_TTL_MS;
+        await importRef.set({
+          rawText,
+          userId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          expiresAt,
+        });
+
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const importUrl = `${baseUrl}/recipeImportPage?token=${importRef.id}`;
+
+        console.log(`createRecipeImportFromText: import ${importRef.id} created by user ${userId}`);
+        res.status(200).json({success: true, importUrl});
+      } catch (err) {
+        console.error('createRecipeImportFromText: Firestore error:', err);
+        res.status(500).json({success: false, error: 'Fehler beim Speichern des Imports'});
+      }
+    },
+);
+
+/**
+ * Cloud Function: Render a temporary recipe import as structured HTML.
+ *
+ * GET /recipeImportPage?token=<importId>
+ *
+ * No authentication required – the random token acts as a capability URL.
+ * Returns HTML with the raw text and JSON-LD structured data.
+ * Returns 404 if not found, 410 if expired.
+ */
+exports.recipeImportPage = onRequest(
+    {maxInstances: 10},
+    async (req, res) => {
+      if (req.method !== 'GET') {
+        res.status(405).send('Method not allowed. Use GET.');
+        return;
+      }
+
+      const token = req.query.token;
+      if (!token) {
+        res.status(400).send('Missing token parameter');
+        return;
+      }
+
+      const db = admin.firestore();
+      let importData;
+      try {
+        const importDoc = await db.collection('imports').doc(token).get();
+        if (!importDoc.exists) {
+          res.status(404).send('Import not found');
+          return;
+        }
+        importData = importDoc.data();
+      } catch (err) {
+        console.error('recipeImportPage: Firestore error:', err);
+        res.status(500).send('Internal server error');
+        return;
+      }
+
+      if (importData.expiresAt < Date.now()) {
+        res.status(410).send('Import expired');
+        return;
+      }
+
+      const rawText = importData.rawText || '';
+
+      // Derive a title from the first non-empty line of the raw text
+      const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+      const title = lines[0] || 'Rezept-Import';
+
+      const escape = (s) => String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+
+      const jsonLd = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Recipe',
+        'name': title,
+        'description': rawText,
+      });
+
+      const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escape(title)}</title>
+<script type="application/ld+json">${jsonLd}</script>
+</head>
+<body>
+<h1>${escape(title)}</h1>
+<pre>${escape(rawText)}</pre>
+</body>
+</html>`;
+
+      res.set('Cache-Control', 'no-store');
+      res.status(200).send(html);
+    },
+);
+

@@ -117,6 +117,91 @@ See [APPLE_SHORTCUT_SETUP.md](../APPLE_SHORTCUT_SETUP.md) for a full step-by-ste
 
 ---
 
+### createRecipeImportFromText
+
+An HTTP endpoint that stores unstructured recipe text temporarily in Firestore and returns a public URL that renders the text as structured HTML. This enables Apple Shortcuts or other tools to hand off raw text to an AI/website-import workflow without having to build JSON arrays manually.
+
+**Features:**
+- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
+- ✅ Role check: only users with role `edit` or `admin` may create imports
+- ✅ Configurable TTL (default 10 minutes)
+- ✅ Returns a capability URL (`importUrl`) that is publicly accessible
+
+**Request:**
+
+```
+POST https://<region>-<project-id>.cloudfunctions.net/createRecipeImportFromText
+Content-Type: application/json
+X-Api-Key: <API Key>
+X-User-Id: <Firebase User ID>
+```
+
+**Body (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rawText` | string | ✅ | Unstructured recipe text |
+
+**Example request body:**
+
+```json
+{
+  "rawText": "Spaghetti Carbonara\n\nZutaten:\n400g Spaghetti\n200g Guanciale\n4 Eigelb\n\nZubereitung:\nWasser kochen und Pasta kochen.\nGuanciale anbraten.\nEigelb mit Käse verrühren."
+}
+```
+
+**Success response (200):**
+
+```json
+{
+  "success": true,
+  "importUrl": "https://.../recipeImportPage?token=<importId>"
+}
+```
+
+**Error responses:**
+
+| Status | Reason |
+|--------|--------|
+| 400 | Missing or empty `rawText` |
+| 401 | Missing or invalid API Key / User ID header |
+| 403 | User role insufficient (requires `edit` or `admin`) |
+| 404 | User not found |
+| 405 | Wrong HTTP method (only POST allowed) |
+| 500 | Firestore write error |
+
+---
+
+### recipeImportPage
+
+A public HTTP endpoint that renders a temporary recipe import as structured HTML. The URL is only accessible via the random `token` returned by `createRecipeImportFromText`.
+
+**Features:**
+- ✅ No authentication required – random token acts as a capability URL
+- ✅ TTL enforced (returns 410 Gone after expiry)
+- ✅ Returns HTML with `<h1>` title, `<pre>` raw text, and JSON-LD `@type: Recipe`
+- ✅ Compatible with the existing website-import / AI OCR workflow
+
+**Request:**
+
+```
+GET https://<region>-<project-id>.cloudfunctions.net/recipeImportPage?token=<importId>
+```
+
+**Success response (200):** HTML page with structured content.
+
+**Error responses:**
+
+| Status | Reason |
+|--------|--------|
+| 400 | Missing `token` parameter |
+| 404 | Import not found |
+| 405 | Wrong HTTP method (only GET allowed) |
+| 410 | Import expired |
+| 500 | Firestore read error |
+
+---
+
 ### scanRecipeWithAI
 
 A secure proxy for Google Gemini Vision API that provides AI-powered recipe recognition.
