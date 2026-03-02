@@ -20,17 +20,16 @@ function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
     }
   };
 
-  // Handle URL submission
-  const handleSubmit = async () => {
+  // Core submission logic – works with an explicit URL argument
+  const submitUrl = async (urlToSubmit) => {
     setError('');
-    
-    // Validate URL
-    if (!url.trim()) {
+
+    if (!urlToSubmit || !urlToSubmit.trim()) {
       setError('Bitte geben Sie eine URL ein');
       return;
     }
 
-    if (!isValidUrl(url.trim())) {
+    if (!isValidUrl(urlToSubmit.trim())) {
       setError('Bitte geben Sie eine gültige URL ein (z.B. https://example.com)');
       return;
     }
@@ -41,7 +40,7 @@ function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
     try {
       // Step 1: Capture screenshot
       setProgress(20);
-      const screenshotBase64 = await captureWebsiteScreenshot(url.trim(), (prog) => {
+      const screenshotBase64 = await captureWebsiteScreenshot(urlToSubmit.trim(), (prog) => {
         setProgress(20 + (prog * 0.3)); // 20-50%
       });
 
@@ -65,6 +64,9 @@ function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
       setProgress(0);
     }
   };
+
+  // Handle URL submission from the form
+  const handleSubmit = () => submitUrl(url);
 
   // Handle import of AI result
   const handleImport = () => {
@@ -109,8 +111,8 @@ function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
 
   // Auto-submit when initialUrl is provided and valid
   useEffect(() => {
-    if (initialUrl && isValidUrl(initialUrl) && step === 'url') {
-      handleSubmit();
+    if (initialUrl && isValidUrl(initialUrl)) {
+      submitUrl(initialUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
