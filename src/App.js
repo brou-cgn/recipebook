@@ -199,6 +199,23 @@ function App() {
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
+  // Store pending webimport URL read synchronously on mount, before Firebase loads the user
+  const [pendingWebimportUrl, setPendingWebimportUrl] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const webimportUrl = urlParams.get('webimport');
+    if (webimportUrl) {
+      // Clean the URL immediately so it doesn't persist in browser history
+      urlParams.delete('webimport');
+      const remainingSearch = urlParams.toString();
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash
+      );
+      return webimportUrl;
+    }
+    return null;
+  });
 
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
@@ -308,21 +325,17 @@ function App() {
     }
   }, [currentUser, sharedData]);
 
-  // Detect webimport deeplink URL parameter and open RecipeForm with WebImportModal
+  // Once currentUser is loaded AND has webimport permission, open the form with the pending URL
   useEffect(() => {
+    if (!pendingWebimportUrl) return;
     if (!currentUser?.webimport) return;
-    const urlParams = new URLSearchParams(window.location.search);
-    const webimportUrl = urlParams.get('webimport');
-    if (webimportUrl) {
-      urlParams.delete('webimport');
-      const remainingSearch = urlParams.toString();
-      window.history.replaceState({}, '', window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash);
-      setWebimportDeeplink(webimportUrl);
-      setEditingRecipe(null);
-      setIsCreatingVersion(false);
-      setIsFormOpen(true);
-    }
-  }, [currentUser]);
+
+    setWebimportDeeplink(pendingWebimportUrl);
+    setPendingWebimportUrl(null); // consume it so it doesn't trigger again
+    setEditingRecipe(null);
+    setIsCreatingVersion(false);
+    setIsFormOpen(true);
+  }, [currentUser, pendingWebimportUrl]);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
