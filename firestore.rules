@@ -31,13 +31,18 @@ service cloud.firestore {
 
     // Recipes collection
     match /recipes/{recipeId} {
-      allow read: if isAnyUser();
+      // Unauthenticated users may fetch a single non-private recipe by its document ID
+      // (e.g. recipes that are part of a shared menu) or query by shareId.
+      allow get: if isAnyUser() || !resource.data.isPrivate;
+      allow list: if isAnyUser() || resource.data.shareId != null;
       allow create, update, delete: if isEditOrAdmin();
     }
 
     // Menus collection
     match /menus/{menuId} {
-      allow read: if isAnyUser();
+      // Unauthenticated users may read a menu that has sharing enabled (has a shareId).
+      allow get: if isAnyUser() || resource.data.shareId != null;
+      allow list: if isAnyUser() || resource.data.shareId != null;
       allow create, update, delete: if isEditOrAdmin();
     }
 
