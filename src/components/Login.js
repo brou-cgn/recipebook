@@ -50,7 +50,7 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
     setIsLoading(true);
 
     try {
-      const result = await onResetPassword(resetEmail || '');
+      const result = await onResetPassword((resetEmail || '').trim());
       if (result.success) {
         setResetMessage(result.message);
       } else {

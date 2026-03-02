@@ -138,7 +138,7 @@ describe('Login Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /Passwort vergessen\?/i }));
 
     const resetEmailInput = screen.getByLabelText(/E-Mail-Adresse/i);
-    fireEvent.change(resetEmailInput, { target: { value: 'user@example.com' } });
+    fireEvent.change(resetEmailInput, { target: { value: '  user@example.com  ' } });
     fireEvent.click(screen.getByRole('button', { name: /E-Mail senden/i }));
 
     expect(mockOnResetPassword).toHaveBeenCalledWith('user@example.com');
