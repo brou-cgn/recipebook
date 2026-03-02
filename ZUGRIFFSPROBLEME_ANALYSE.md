@@ -329,30 +329,37 @@ service cloud.firestore {
 - Session wird in `sessionStorage` gespeichert
 - Firestore Rules müssen angepasst werden für erste Registrierung
 
-**Empfohlene Rules für RecipeBook:**
+**Sichere Rules für RecipeBook:**
+
+> 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **NIEMALS** Regeln wie `allow read: if true`, `allow create: if true` oder `allow read, write: if true`.
+> - Solche Regeln öffnen Ihre Datenbank für **jeden weltweit** – auch ohne Anmeldung.
+> - Angreifer können damit beliebige Nutzer-Dokumente anlegen, einschließlich Admin-Accounts.
+>
+> Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus der Datei [`firestore.rules`](firestore.rules) im Repository.
+
+Die sichere Konfiguration für die `users`-Collection verwendet Firebase Authentication:
 ```javascript
-// Erlaubt Registrierung des ersten Benutzers
+// Sichere Rules – nur authentifizierte Nutzer dürfen eigene Dokumente erstellen
 match /users/{userId} {
-  allow read: if true; // Oder nur für angemeldete: isSignedIn()
-  allow create: if true; // Erste Registrierung muss möglich sein
+  allow read: if request.auth != null;
+  allow create: if request.auth != null && request.auth.uid == userId;
   allow update: if request.auth != null && request.auth.uid == userId;
+  allow delete: if false; // Nur Admins via Admin SDK
 }
 ```
+Die vollständigen, produktionsreifen Regeln befinden sich in [`firestore.rules`](firestore.rules). Weitere Dokumentation: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
 
 #### Problem E2: Erste Registrierung unmöglich
 **Symptom:** Registrierung schlägt fehl mit Permission Error  
 **Ursache:** Security Rules erlauben kein CREATE ohne Authentication
 
-**Lösung:**
+**Lösung:** Stellen Sie sicher, dass Firebase Authentication (Email/Password) aktiviert ist und verwenden Sie die sicheren Rules aus [`firestore.rules`](firestore.rules). Die dort hinterlegte Regel erlaubt es authentifizierten Nutzern, ihr eigenes Dokument anzulegen:
 ```javascript
-match /users/{userId} {
-  allow create: if true; // Erlaubt Erstregistrierung
-  // Alternative: Zeitlich begrenzt in Test-Phase
-  allow create: if request.time < timestamp.date(2026, 12, 31);
-}
+// Aus firestore.rules – Bootstrap: authentifizierter Nutzer darf eigenes Dokument erstellen
+allow create: if isAuthenticated() && request.auth.uid == userId;
 ```
 
-⚠️ **Sicherheitshinweis:** Dies ist eine bewusste Design-Entscheidung. RecipeBook nutzt ein Custom Auth-System, daher muss Registrierung ohne Firebase Auth möglich sein.
+> ⚠️ **Wichtig:** `allow create: if true` darf **nicht** verwendet werden, da dies es jedem (ohne Anmeldung) erlaubt, beliebige Nutzer-Dokumente anzulegen – einschließlich Admin-Accounts.
 
 ---
 
@@ -468,7 +475,7 @@ Settings → Secrets → Actions → Alle 7 REACT_APP_FIREBASE_* vorhanden?
 | **Leere Seite** | Weiße Seite nach Deployment | Console: Firebase Error? | GitHub Secrets konfigurieren |
 | **Login fehlschlägt** | "Anmeldung fehlgeschlagen" | Firebase Console → Authentication aktiviert? | Email/Password aktivieren |
 | **Kein Rezept-Erstellen** | Button nicht sichtbar | User Permission in Console checken | Admin: Berechtigung auf "edit" setzen |
-| **Registrierung unmöglich** | Permission Error | Firestore Rules prüfen | Rules: `allow create: if true` für users |
+| **Registrierung unmöglich** | Permission Error | Firestore Rules prüfen | Sichere Rules aus `firestore.rules` deployen; Firebase Auth aktivieren |
 | **Daten laden nicht** | Leere Liste trotz Login | Network Tab: 403 Fehler? | Firestore Rules: `allow read` prüfen |
 | **Offline nicht funktioniert** | App funktioniert nicht ohne Internet | Browser: IndexedDB unterstützt? | Modernen Browser nutzen, ein Tab |
 | **404 auf GitHub Pages** | Seite nicht gefunden | GitHub Settings → Pages | Source: "GitHub Actions" setzen |
@@ -559,17 +566,9 @@ await signInWithEmailAndPassword(auth, email, password);
 
 ### 6.2 Firestore Security Rules
 
-**Aktuelles Problem:** Rules müssen `allow create: if true` erlauben für Registrierung
+> 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **niemals** Regeln wie `allow read, write: if true`, `allow create: if true` oder `allow read: if true` ohne Authentifizierungsprüfung. Solche Regeln geben jedem – auch nicht angemeldeten Personen – vollen Zugriff auf alle Daten.
 
-**Verbesserung für Produktion:**
-```javascript
-// Bessere Approach: Captcha oder Cloud Function
-match /users/{userId} {
-  allow create: if request.resource.data.captchaToken.matches('valid_token_pattern');
-}
-```
-
-Oder: Firebase Authentication nutzen (empfohlen)
+**Korrekte Vorgehensweise:** Verwenden Sie die in [`firestore.rules`](firestore.rules) hinterlegten, authentifizierungsbasierten Rules und deployen Sie diese mit `firebase deploy --only firestore:rules`. Details: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
 
 ### 6.3 Umgebungsvariablen
 
@@ -601,7 +600,7 @@ Oder: Firebase Authentication nutzen (empfohlen)
 
 ### #4: Erste Registrierung schlägt fehl ⚠️
 **Häufigkeit:** ⭐⭐  
-**Lösung:** Firestore Rules: `allow create: if true` für users
+**Lösung:** Firebase Authentication aktivieren und sichere Rules aus [`firestore.rules`](firestore.rules) deployen
 
 ### #5: Daten werden nicht geladen 🌐
 **Häufigkeit:** ⭐⭐  

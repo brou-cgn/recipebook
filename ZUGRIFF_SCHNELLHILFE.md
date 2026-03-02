@@ -70,14 +70,11 @@
 3. Beide Passwort-Felder identisch
 
 **Administrator:**
-1. Firebase Console → Firestore → Rules
-2. Folgende Rule hinzufügen:
-```javascript
-match /users/{userId} {
-  allow create: if true; // Erste Registrierung erlauben
-}
-```
+1. Firebase Authentication aktivieren (Email/Password)
+2. Sichere Rules aus [`firestore.rules`](firestore.rules) in Firebase Console → Firestore → Rules eintragen
 3. Publish
+
+> 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **NIEMALS** `allow create: if true` oder `allow read, write: if true` in den Firestore Rules. Diese Regeln geben jedem weltweit vollen Zugriff auf Ihre Datenbank. Nutzen Sie ausschließlich die authentifizierungsbasierten Rules aus [`firestore.rules`](firestore.rules).
 
 **📖 Details:** [ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md#problem-e2-erste-registrierung-unmöglich)
 
@@ -91,10 +88,10 @@ match /users/{userId} {
 
 1. **Internetverbindung prüfen** (beim ersten Besuch erforderlich!)
 2. **Angemeldet?** Oben rechts sollte Name stehen
-3. **Firestore Rules:** Firebase Console → Firestore → Rules:
+3. **Firestore Rules:** Sichere Rules aus [`firestore.rules`](firestore.rules) deployen (Firebase Auth erforderlich):
 ```javascript
 match /recipes/{recipeId} {
-  allow read: if true; // Lesen erlauben
+  allow read: if request.auth != null;
 }
 ```
 4. **Gibt es Rezepte?** Erste erstellen (als Admin/Editor)

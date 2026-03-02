@@ -432,44 +432,18 @@ Als Administrator können Sie:
    
    a) In Firestore Database → **Rules** Tab
    
-   b) **Kopieren Sie diese Rules:**
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       // Erlaubt Zugriff für alle (für RecipeBook Custom Auth)
-       match /{document=**} {
-         allow read, write: if true;
-       }
-     }
-   }
-   ```
-   
-   **⚠️ Hinweis:** Dies ist für **private/Demo-Nutzung**. Für Produktion siehe [ZUGRIFFSPROBLEME_ANALYSE.md](ZUGRIFFSPROBLEME_ANALYSE.md)
-   
+   b) **Kopieren Sie die sicheren Rules aus der Datei [`firestore.rules`](firestore.rules) im Repository.**
+
+   > 🚨 **SICHERHEITSWARNUNG:** Verwenden Sie **NIEMALS** die Regel `allow read, write: if true`.
+   > - Diese Regel öffnet Ihre **gesamte Datenbank** für alle Personen weltweit – auch ohne Anmeldung.
+   > - Jeder kann damit alle Daten lesen, ändern oder löschen, einschließlich Benutzerkonten und Admin-Zugänge.
+   > - Sie darf weder in Produktion noch in öffentlich zugänglichen Umgebungen eingesetzt werden.
+   >
+   > Nutzen Sie ausschließlich die sicheren Rules aus der Datei [`firestore.rules`](firestore.rules). Weitere Informationen: [FIRESTORE_RULES.md](FIRESTORE_RULES.md)
+
    c) **"Publish"** (Veröffentlichen) klicken
 
-3. **Alternative: Sicherere Rules (empfohlen):**
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       // Benutzer
-       match /users/{userId} {
-         allow read: if true;
-         allow create: if true; // Erste Registrierung
-         allow update, delete: if false; // Nur über App-Logik
-       }
-       
-       // Rezepte, Menüs, etc.
-       match /{document=**} {
-         allow read, write: if true; // Voller Zugriff für angemeldete
-       }
-     }
-   }
-   ```
-
-4. **Testen:**
+3. **Testen:**
    - App neu laden
    - Anmelden versuchen
    - Rezepte sollten laden
