@@ -53,7 +53,8 @@
 }
 
 .rating-heart-icon.empty {
-  color: #ccc;
+  color: #DF7A00;
+  opacity: 0.4;
 }
 
 .rating-text {
@@ -83,11 +84,13 @@
   font-size: 1.4rem;
   line-height: 1;
   transition: transform 0.15s ease, color 0.15s ease;
-  color: #ccc;
+  color: #DF7A00;
+  opacity: 0.4;
 }
 
 .rating-heart-btn.filled {
   color: #DF7A00;
+  opacity: 1;
 }
 
 .rating-heart-btn:hover:not(:disabled),
@@ -113,8 +116,3 @@
   font-weight: 400;
 }
 
-.recipe-rating-empty .rating-heart-icon.empty {
-  color: #ccc;
-  font-size: 1rem;
-  opacity: 0.7;
-}

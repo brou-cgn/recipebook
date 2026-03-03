@@ -215,6 +215,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                       recipeId={recipe.id}
                       ratingAvg={recipe.ratingAvg}
                       ratingCount={recipe.ratingCount}
+                      currentUser={currentUser}
                     />
                   </div>
                   {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (

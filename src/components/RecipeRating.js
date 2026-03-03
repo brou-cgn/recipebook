@@ -50,6 +50,12 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
     }
   }, [interactive, initialAvg, initialCount]);
 
+  // Non-interactive: load user's own rating for personalised heart display
+  useEffect(() => {
+    if (interactive || !recipeId) return;
+    getUserRating(recipeId, currentUser).then(setUserRating);
+  }, [interactive, recipeId, currentUser]);
+
   // Interactive: live subscription + load user's existing rating
   useEffect(() => {
     if (!interactive || !recipeId) return;
@@ -88,30 +94,28 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
           title="Bewerten"
           aria-label={count > 0 ? `Bewertung: Ø ${formatRatingAvg(avg)} (${count} ${count === 1 ? 'Bewertung' : 'Bewertungen'}) – Jetzt bewerten` : 'Jetzt bewerten'}
         >
-          <span className="rating-heart-icon filled">♥</span>
+          <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`}>{userRating !== null ? '♥' : '♡'}</span>
           {count > 0 && (
             <span className="rating-detail-summary-text">{formatRatingAvg(avg)} ({count})</span>
           )}
         </button>
       );
     }
-    if (!count) {
-      return (
-        <div className="recipe-rating-compact recipe-rating-empty" title="Noch keine Bewertungen" aria-label="Noch keine Bewertungen">
-          <span className="rating-heart-icon empty" aria-hidden="true">♡</span>
-        </div>
-      );
-    }
+    const cardTitle = userRating !== null
+      ? `Deine Bewertung: ${userRating} Herz${userRating === 1 ? '' : 'en'}`
+      : count > 0
+        ? `Ø ${formatRatingAvg(avg)} (${count} Bewertungen)`
+        : 'Noch keine Bewertungen';
     return (
-      <div className="recipe-rating-compact" title={`Ø ${formatRatingAvg(avg)} (${count} Bewertungen)`}>
+      <div className="recipe-rating-compact" title={cardTitle} aria-label={cardTitle}>
         <span className="rating-hearts-display" aria-hidden="true">
           {[1, 2, 3, 4, 5].map((n) => (
-            <span key={n} className={`rating-heart-icon ${shouldFillHeart(avg, n) ? 'filled' : 'empty'}`}>
-              {shouldFillHeart(avg, n) ? '♥' : '♡'}
+            <span key={n} className={`rating-heart-icon ${userRating !== null && userRating >= n ? 'filled' : 'empty'}`}>
+              {userRating !== null && userRating >= n ? '♥' : '♡'}
             </span>
           ))}
         </span>
-        <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>
+        {count > 0 && userRating === null && <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>}
       </div>
     );
   }
