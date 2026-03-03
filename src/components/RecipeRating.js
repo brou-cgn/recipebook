@@ -10,6 +10,13 @@ import { rateRecipe, getUserRating, subscribeToRatingSummary } from '../utils/re
 const shouldFillHeart = (avg, n) => avg >= n - 0.5;
 
 /**
+ * Formats a rating average using German locale (comma as decimal separator).
+ * E.g. 4.8 → "4,8"
+ */
+const formatRatingAvg = (avg) =>
+  avg.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/**
  * RecipeRating component
  *
  * Displays a 1–5 heart rating. In interactive mode the user can click a heart
@@ -79,18 +86,18 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
           className="recipe-rating-detail-summary"
           onClick={onOpenModal}
           title="Bewerten"
-          aria-label={count > 0 ? `Bewertung: Ø ${avg.toFixed(1)} (${count} ${count === 1 ? 'Bewertung' : 'Bewertungen'}) – Jetzt bewerten` : 'Jetzt bewerten'}
+          aria-label={count > 0 ? `Bewertung: Ø ${formatRatingAvg(avg)} (${count} ${count === 1 ? 'Bewertung' : 'Bewertungen'}) – Jetzt bewerten` : 'Jetzt bewerten'}
         >
           <span className="rating-heart-icon filled">♥</span>
           {count > 0 && (
-            <span className="rating-detail-summary-text">{avg.toFixed(1)} ({count})</span>
+            <span className="rating-detail-summary-text">{formatRatingAvg(avg)} ({count})</span>
           )}
         </button>
       );
     }
     if (!count) return null;
     return (
-      <div className="recipe-rating-compact" title={`Ø ${avg.toFixed(1)} (${count} Bewertungen)`}>
+      <div className="recipe-rating-compact" title={`Ø ${formatRatingAvg(avg)} (${count} Bewertungen)`}>
         <span className="rating-hearts-display" aria-hidden="true">
           {[1, 2, 3, 4, 5].map((n) => (
             <span key={n} className={`rating-heart-icon ${shouldFillHeart(avg, n) ? 'filled' : 'empty'}`}>
@@ -98,7 +105,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
             </span>
           ))}
         </span>
-        <span className="rating-text">{avg.toFixed(1)} ({count})</span>
+        <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>
       </div>
     );
   }
@@ -126,7 +133,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
       </div>
       {count > 0 && (
         <span className="rating-summary-text">
-          {avg.toFixed(1)} <span className="rating-count-text">({count} {count === 1 ? 'Bewertung' : 'Bewertungen'})</span>
+          {formatRatingAvg(avg)} <span className="rating-count-text">({count} {count === 1 ? 'Bewertung' : 'Bewertungen'})</span>
         </span>
       )}
     </div>
