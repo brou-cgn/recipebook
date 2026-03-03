@@ -289,6 +289,12 @@
   border: 1px solid #bbdefb;
 }
 
+.role-badge.role-moderator {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
 .role-badge.role-comment {
   background: #f3e5f5;
   color: #7b1fa2;

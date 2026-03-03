@@ -583,6 +583,11 @@ describe('User Management Utilities', () => {
       expect(canEditRecipes(adminUser)).toBe(true);
     });
 
+    test('should return true for moderator users', () => {
+      const moderatorUser = { role: ROLES.MODERATOR, isAdmin: false };
+      expect(canEditRecipes(moderatorUser)).toBe(true);
+    });
+
     test('should return true for edit users', () => {
       const editUser = { role: ROLES.EDIT, isAdmin: false };
       expect(canEditRecipes(editUser)).toBe(true);
@@ -609,6 +614,11 @@ describe('User Management Utilities', () => {
       expect(canDeleteRecipes(adminUser)).toBe(true);
     });
 
+    test('should return false for moderator users', () => {
+      const moderatorUser = { role: ROLES.MODERATOR, isAdmin: false };
+      expect(canDeleteRecipes(moderatorUser)).toBe(false);
+    });
+
     test('should return false for edit users', () => {
       const editUser = { role: ROLES.EDIT, isAdmin: false };
       expect(canDeleteRecipes(editUser)).toBe(false);
@@ -627,6 +637,7 @@ describe('User Management Utilities', () => {
   describe('getRoleDisplayName', () => {
     test('should return correct display names', () => {
       expect(getRoleDisplayName(ROLES.ADMIN)).toBe('Administrator');
+      expect(getRoleDisplayName(ROLES.MODERATOR)).toBe('Moderator');
       expect(getRoleDisplayName(ROLES.EDIT)).toBe('Bearbeiten');
       expect(getRoleDisplayName(ROLES.COMMENT)).toBe('Kommentieren');
       expect(getRoleDisplayName(ROLES.READ)).toBe('Lesen');

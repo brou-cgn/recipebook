@@ -28,6 +28,7 @@ import { logAppCall } from './appCallsFirestore';
 // Permission roles
 export const ROLES = {
   ADMIN: 'admin',
+  MODERATOR: 'moderator',
   EDIT: 'edit',
   COMMENT: 'comment',
   READ: 'read',
@@ -514,7 +515,7 @@ export const deleteUser = async (userId) => {
 
 /**
  * Check if user has a specific permission level or higher based on hierarchy
- * Hierarchy: ADMIN > EDIT > COMMENT > READ > GUEST
+ * Hierarchy: ADMIN > MODERATOR > EDIT > COMMENT > READ > GUEST
  * @param {Object} user - User object
  * @param {string} requiredRole - Required role level
  * @returns {boolean}
@@ -528,7 +529,8 @@ export const hasPermission = (user, requiredRole) => {
     [ROLES.READ]: 2,
     [ROLES.COMMENT]: 3,
     [ROLES.EDIT]: 4,
-    [ROLES.ADMIN]: 5
+    [ROLES.MODERATOR]: 5,
+    [ROLES.ADMIN]: 6
   };
   
   const userLevel = roleHierarchy[user.role] || 0;
@@ -690,6 +692,7 @@ export const canDeleteMenu = (user, menu) => {
 export const getRoleDisplayName = (role) => {
   const roleNames = {
     [ROLES.ADMIN]: 'Administrator',
+    [ROLES.MODERATOR]: 'Moderator',
     [ROLES.EDIT]: 'Bearbeiten',
     [ROLES.COMMENT]: 'Kommentieren',
     [ROLES.READ]: 'Lesen',

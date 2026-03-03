@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
-import { isCurrentUserAdmin } from '../utils/userManagement';
+import { isCurrentUserAdmin, ROLES } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
@@ -130,8 +130,9 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
   const [newConversionGrams, setNewConversionGrams] = useState('');
   const [newConversionMl, setNewConversionMl] = useState('');
   const [headerSlogan, setHeaderSlogan] = useState('');
-  const [activeTab, setActiveTab] = useState('general'); // 'general', 'lists', or 'users'
+  const [activeTab, setActiveTab] = useState(currentUser?.role === ROLES.MODERATOR ? 'lists' : 'general'); // 'general', 'lists', or 'users'
   const isAdmin = isCurrentUserAdmin();
+  const isModerator = currentUser?.role === ROLES.MODERATOR;
   
   // Category images state
   const [categoryImages, setCategoryImages] = useState([]);
@@ -841,38 +842,46 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
         <h2>Einstellungen</h2>
       </div>
 
-      {isAdmin && (
+      {(isAdmin || isModerator) && (
         <div className="settings-tabs">
-          <button
-            className={`tab-button ${activeTab === 'general' ? 'active' : ''}`}
-            onClick={() => setActiveTab('general')}
-          >
-            Allgemein
-          </button>
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'general' ? 'active' : ''}`}
+              onClick={() => setActiveTab('general')}
+            >
+              Allgemein
+            </button>
+          )}
           <button
             className={`tab-button ${activeTab === 'lists' ? 'active' : ''}`}
             onClick={() => setActiveTab('lists')}
           >
             Listen & Kategorien
           </button>
-          <button
-            className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
-            Benutzerverwaltung
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'ai' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ai')}
-          >
-            KI-Einstellungen
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
-            onClick={() => setActiveTab('faq')}
-          >
-            Kochschule
-          </button>
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              Benutzerverwaltung
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'ai' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ai')}
+            >
+              KI-Einstellungen
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
+              onClick={() => setActiveTab('faq')}
+            >
+              Kochschule
+            </button>
+          )}
         </div>
       )}
 

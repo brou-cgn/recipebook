@@ -217,6 +217,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
           <h3>Berechtigungshierarchie:</h3>
           <ul>
             <li><strong>Administrator:</strong> Vollzugriff - kann alle Rezepte bearbeiten und löschen, Benutzer verwalten. Beinhaltet alle anderen Berechtigungen.</li>
+            <li><strong>Moderator:</strong> Alle Berechtigungen von "Bearbeiten". Kann zusätzlich Listen &amp; Kategorien in den Einstellungen pflegen.</li>
             <li><strong>Bearbeiten:</strong> Kann eigene Rezepte bearbeiten und kommentieren. Beinhaltet Kommentieren und Lesen.</li>
             <li><strong>Kommentieren:</strong> Kann Rezepte kommentieren (zukünftige Funktion). Beinhaltet Lesen.</li>
             <li><strong>Lesen:</strong> Kann Rezepte nur ansehen.</li>
@@ -390,6 +391,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               >
                 {/* GUEST role is not included as it's a temporary role for unauthenticated access */}
                 <option value={ROLES.ADMIN}>Administrator</option>
+                <option value={ROLES.MODERATOR}>Moderator</option>
                 <option value={ROLES.EDIT}>Bearbeiten</option>
                 <option value={ROLES.COMMENT}>Kommentieren</option>
                 <option value={ROLES.READ}>Lesen</option>
@@ -398,6 +400,9 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <div className="role-description">
               {selectedRole === ROLES.ADMIN && (
                 <p>Vollzugriff - kann alle Rezepte bearbeiten und löschen, Benutzer verwalten.</p>
+              )}
+              {selectedRole === ROLES.MODERATOR && (
+                <p>Alle Berechtigungen von "Bearbeiten". Kann zusätzlich Listen &amp; Kategorien in den Einstellungen pflegen.</p>
               )}
               {selectedRole === ROLES.EDIT && (
                 <p>Kann eigene Rezepte bearbeiten. Beinhaltet Kommentieren und Lesen.</p>
