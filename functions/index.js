@@ -31,6 +31,15 @@ const smtpPassword = defineSecret('SMTP_PASSWORD');
 const smtpFrom = defineSecret('SMTP_FROM');
 
 /**
+ * Trusted origins allowed for CORS on API endpoints.
+ * Server-to-server callers (e.g. Apple Shortcuts) send no Origin header and
+ * are therefore unaffected by this list.
+ */
+const ALLOWED_ORIGINS = [
+  'https://brou-cgn.github.io',
+];
+
+/**
  * Rate limiting configuration
  */
 const RATE_LIMITS = {
@@ -1542,13 +1551,17 @@ function validateAndNormaliseRecipeInput(body) {
 exports.addRecipeViaAPI = onRequest(
     {maxInstances: 10, secrets: [shortcutApiKey]},
     async (req, res) => {
-      // CORS: allow any origin; authentication is enforced via API key
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
-
-      if (req.method === 'OPTIONS') {
-        res.status(204).send('');
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
         return;
       }
 
@@ -1688,12 +1701,17 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
 exports.createRecipeImportFromText = onRequest(
     {maxInstances: 10, secrets: [shortcutApiKey]},
     async (req, res) => {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
-
-      if (req.method === 'OPTIONS') {
-        res.status(204).send('');
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
         return;
       }
 
