@@ -7,6 +7,36 @@
   white-space: nowrap;
 }
 
+/* ── Detail-view summary (single heart + avg + count, clickable) ── */
+.recipe-rating-detail-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  line-height: 1;
+}
+
+.recipe-rating-detail-summary:hover {
+  background: rgba(224, 92, 122, 0.08);
+}
+
+.recipe-rating-detail-summary .rating-heart-icon {
+  font-size: 1.1rem;
+}
+
+.rating-detail-summary-text {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 500;
+}
+
 .rating-hearts-display {
   display: inline-flex;
   gap: 1px;

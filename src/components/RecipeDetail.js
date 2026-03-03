@@ -12,6 +12,7 @@ import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
+import RatingModal from './RatingModal';
 import RecipeRating from './RecipeRating';
 
 // Mobile breakpoint constant
@@ -47,6 +48,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
@@ -1172,7 +1174,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 ratingAvg={recipe.ratingAvg}
                 ratingCount={recipe.ratingCount}
                 currentUser={currentUser}
-                interactive={true}
+                onOpenModal={() => setShowRatingModal(true)}
               />
             </div>
 
@@ -1391,6 +1393,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             setSelectedRecipe({ ...recipe, shareId: sid });
             return sid;
           }}
+        />
+      )}
+      {showRatingModal && (
+        <RatingModal
+          recipeId={recipe.id}
+          currentUser={currentUser}
+          onClose={() => setShowRatingModal(false)}
         />
       )}
       {showPortionSelector && linkedRecipes.length > 0 && (

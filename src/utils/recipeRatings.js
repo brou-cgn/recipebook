@@ -82,7 +82,7 @@ const updateRatingSummary = async (recipeId) => {
  * @param {Object|null} currentUser - Current user or null for guest
  * @returns {Promise<void>}
  */
-export const rateRecipe = async (recipeId, rating, currentUser) => {
+export const rateRecipe = async (recipeId, rating, currentUser, comment = null) => {
   if (!recipeId || !rating || rating < 1 || rating > 5) {
     throw new Error('Invalid rating parameters');
   }
@@ -97,6 +97,7 @@ export const rateRecipe = async (recipeId, rating, currentUser) => {
     raterKey,
     userType,
     userId: currentUser?.id || null,
+    comment: comment || null,
     updatedAt: serverTimestamp()
   });
 
@@ -121,6 +122,29 @@ export const getUserRating = async (recipeId, currentUser) => {
   } catch (error) {
     console.error('Error getting user rating:', error);
     return null;
+  }
+};
+
+/**
+ * Get the current rater's existing rating and comment for a recipe.
+ * @param {string} recipeId - Recipe ID
+ * @param {Object|null} currentUser - Current user or null for guest
+ * @returns {Promise<{rating: number|null, comment: string|null}>}
+ */
+export const getUserRatingData = async (recipeId, currentUser) => {
+  if (!recipeId) return { rating: null, comment: null };
+
+  const raterKey = getRaterKey(currentUser);
+  const ratingRef = doc(db, 'recipes', recipeId, 'ratings', raterKey);
+
+  try {
+    const snap = await getDoc(ratingRef);
+    if (!snap.exists()) return { rating: null, comment: null };
+    const data = snap.data();
+    return { rating: data.rating || null, comment: data.comment || null };
+  } catch (error) {
+    console.error('Error getting user rating data:', error);
+    return { rating: null, comment: null };
   }
 };
 
