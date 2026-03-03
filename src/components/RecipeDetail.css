@@ -863,9 +863,13 @@ difficulty-stars .star {
     height: 250px;
   }
   
+  .recipe-title-row {
+    padding: 1rem 1rem 0;
+  }
+
   .recipe-title {
     font-size: 1.5rem;
-    padding: 1rem;
+    padding: 0;
   }
 
   .recipe-metadata {
