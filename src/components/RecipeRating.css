@@ -4,7 +4,7 @@
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  flex-wrap: wrap;
+  white-space: nowrap;
 }
 
 /* ── Detail-view summary (single heart + avg + count, clickable) ── */
