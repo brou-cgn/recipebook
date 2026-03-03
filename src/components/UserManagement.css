@@ -229,8 +229,9 @@
   border-color: #f44336;
 }
 
-/* Fotoscan Toggle */
-.fotoscan-toggle {
+/* Fotoscan / Permission Toggle */
+.fotoscan-toggle,
+.permission-toggle {
   padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
@@ -240,30 +241,81 @@
   min-width: 40px;
 }
 
-.fotoscan-toggle:hover {
+.fotoscan-toggle:hover,
+.permission-toggle:hover {
   transform: scale(1.1);
 }
 
-.fotoscan-toggle.active {
+.fotoscan-toggle.active,
+.permission-toggle.active {
   background: #c8e6c9;
   border: 1px solid #4caf50;
   color: #2e7d32;
 }
 
-.fotoscan-toggle.active:hover {
+.fotoscan-toggle.active:hover,
+.permission-toggle.active:hover {
   background: #a5d6a7;
   border-color: #388e3c;
 }
 
-.fotoscan-toggle:not(.active) {
+.fotoscan-toggle:not(.active),
+.permission-toggle:not(.active) {
   background: #ffcdd2;
   border: 1px solid #f44336;
   color: #c62828;
 }
 
-.fotoscan-toggle:not(.active):hover {
+.fotoscan-toggle:not(.active):hover,
+.permission-toggle:not(.active):hover {
   background: #ef9a9a;
   border-color: #d32f2f;
+}
+
+/* Role Permissions Table */
+.role-permissions-section {
+  margin-bottom: 30px;
+}
+
+.role-permissions-section h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.role-permissions-table-container {
+  overflow-x: auto;
+}
+
+.role-permissions-table {
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 320px;
+}
+
+.role-permissions-table th,
+.role-permissions-table td {
+  padding: 10px 16px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+}
+
+.role-permissions-table th:first-child,
+.role-permissions-table td:first-child {
+  text-align: left;
+}
+
+.role-permissions-table th {
+  background: #f8f9fa;
+  color: #555;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.role-permissions-table tbody tr:hover {
+  background: #f8f9fa;
 }
 
 /* Role Badges */

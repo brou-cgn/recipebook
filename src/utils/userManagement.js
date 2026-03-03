@@ -1019,3 +1019,59 @@ export const updateUserWebimport = async (userId, webimport) => {
     };
   }
 };
+
+/**
+ * Default role permissions for fotoscan and webimport features.
+ * Admins get both features enabled by default; all other roles start with both disabled.
+ */
+export const ROLE_PERMISSIONS_DEFAULT = {
+  [ROLES.ADMIN]: { fotoscan: true, webimport: true },
+  [ROLES.MODERATOR]: { fotoscan: false, webimport: false },
+  [ROLES.EDIT]: { fotoscan: false, webimport: false },
+  [ROLES.COMMENT]: { fotoscan: false, webimport: false },
+  [ROLES.READ]: { fotoscan: false, webimport: false },
+};
+
+/**
+ * Get role-based feature permissions (fotoscan, webimport) from Firestore.
+ * Falls back to ROLE_PERMISSIONS_DEFAULT if no Firestore data exists.
+ * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean }
+ */
+export const getRolePermissions = async () => {
+  try {
+    const permsRef = collection(db, 'rolePermissions');
+    const snapshot = await getDocs(permsRef);
+    const perms = JSON.parse(JSON.stringify(ROLE_PERMISSIONS_DEFAULT));
+    snapshot.forEach((docSnap) => {
+      const role = docSnap.id;
+      if (perms[role] !== undefined) {
+        perms[role] = { ...perms[role], ...docSnap.data() };
+      }
+    });
+    return perms;
+  } catch (error) {
+    console.error('Error getting role permissions:', error);
+    return JSON.parse(JSON.stringify(ROLE_PERMISSIONS_DEFAULT));
+  }
+};
+
+/**
+ * Update a feature permission for a specific role.
+ * @param {string} role - Role constant (from ROLES, excluding GUEST)
+ * @param {string} feature - Feature name ('fotoscan' or 'webimport')
+ * @param {boolean} value - New boolean value
+ * @returns {Promise<{success: boolean, message: string}>} Result object
+ */
+export const updateRolePermission = async (role, feature, value) => {
+  if (!Object.values(ROLES).includes(role) || role === ROLES.GUEST) {
+    return { success: false, message: 'Ungültige Berechtigung.' };
+  }
+  try {
+    const docRef = doc(db, 'rolePermissions', role);
+    await setDoc(docRef, { [feature]: value }, { merge: true });
+    return { success: true, message: 'Berechtigung erfolgreich aktualisiert.' };
+  } catch (error) {
+    console.error('Error updating role permission:', error);
+    return { success: false, message: 'Fehler beim Aktualisieren der Berechtigung.' };
+  }
+};

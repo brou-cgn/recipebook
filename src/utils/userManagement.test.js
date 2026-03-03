@@ -28,7 +28,9 @@ import {
   setTemporaryPassword,
   changePassword,
   updateUserFotoscan,
-  ROLES
+  ROLES,
+  ROLE_PERMISSIONS_DEFAULT,
+  updateRolePermission
 } from './userManagement';
 
 describe('User Management Utilities', () => {
@@ -1305,6 +1307,44 @@ describe('User Management Utilities', () => {
       const result = await registerUser(userData);
       expect(result.success).toBe(true);
       expect(result.user.fotoscan).toBe(false);
+    });
+  });
+
+  describe('ROLE_PERMISSIONS_DEFAULT', () => {
+    test('should have fotoscan and webimport enabled for admin', () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].fotoscan).toBe(true);
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].webimport).toBe(true);
+    });
+
+    test('should have fotoscan and webimport disabled for non-admin roles', () => {
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].fotoscan).toBe(false);
+        expect(ROLE_PERMISSIONS_DEFAULT[role].webimport).toBe(false);
+      });
+    });
+
+    test('should include all assignable roles', () => {
+      [ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT).toHaveProperty(role);
+      });
+    });
+
+    test('should not include GUEST role', () => {
+      expect(ROLE_PERMISSIONS_DEFAULT).not.toHaveProperty(ROLES.GUEST);
+    });
+  });
+
+  describe('updateRolePermission', () => {
+    test('should reject GUEST role', async () => {
+      const result = await updateRolePermission(ROLES.GUEST, 'fotoscan', true);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Ungültige Berechtigung.');
+    });
+
+    test('should reject invalid role', async () => {
+      const result = await updateRolePermission('invalid-role', 'fotoscan', true);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Ungültige Berechtigung.');
     });
   });
 });

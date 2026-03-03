@@ -8,11 +8,11 @@ import {
   setTemporaryPassword,
   validatePassword,
   deleteUser,
-  updateUserFotoscan,
-  updateUserWebimport,
   getUserAiOcrScanCount,
   ROLES,
-  getRoleDisplayName
+  getRoleDisplayName,
+  getRolePermissions,
+  updateRolePermission
 } from '../utils/userManagement';
 
 function UserManagement({ onBack, currentUser, allUsers = [] }) {
@@ -28,11 +28,13 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
   const [adminCount, setAdminCount] = useState(0);
   const [aiOcrScanCounts, setAiOcrScanCounts] = useState({});
+  const [rolePermissions, setRolePermissions] = useState(null);
   // Track whether users have been loaded from Firestore at least once
   const firestoreLoadedRef = useRef(false);
 
   useEffect(() => {
     loadUsers();
+    loadRolePermissions();
   }, []);
 
   // Sync with allUsers prop when it changes and Firestore hasn't provided data yet
@@ -58,6 +60,22 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
       counts[user.id] = await getUserAiOcrScanCount(user.id);
     }));
     setAiOcrScanCounts(counts);
+  };
+
+  const loadRolePermissions = async () => {
+    const perms = await getRolePermissions();
+    setRolePermissions(perms);
+  };
+
+  const handleToggleRolePermission = async (role, feature, currentValue) => {
+    const result = await updateRolePermission(role, feature, !currentValue);
+    if (result.success) {
+      await loadRolePermissions();
+      setMessage({ text: result.message, type: 'success' });
+    } else {
+      setMessage({ text: result.message, type: 'error' });
+    }
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
   const handleRoleChange = async (userId, newRole) => {
@@ -168,32 +186,6 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
     setPasswordError('');
   };
 
-  const handleToggleFotoscan = async (userId, currentValue) => {
-    const result = await updateUserFotoscan(userId, !currentValue);
-    
-    if (result.success) {
-      await loadUsers();
-      setMessage({ text: result.message, type: 'success' });
-    } else {
-      setMessage({ text: result.message, type: 'error' });
-    }
-    
-    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-  };
-
-  const handleToggleWebimport = async (userId, currentValue) => {
-    const result = await updateUserWebimport(userId, !currentValue);
-    
-    if (result.success) {
-      await loadUsers();
-      setMessage({ text: result.message, type: 'success' });
-    } else {
-      setMessage({ text: result.message, type: 'error' });
-    }
-    
-    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
-  };
-
   return (
     <div className="user-management-container">
       <div className="user-management-header">
@@ -224,6 +216,54 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <li><strong>Gast:</strong> Temporärer Zugriff nur zum Lesen.</li>
           </ul>
         </div>
+
+        <div className="role-permissions-section">
+          <h3>Funktionen nach Berechtigung</h3>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan und Webimport haben.</p>
+          <div className="role-permissions-table-container">
+            <table className="role-permissions-table">
+              <thead>
+                <tr>
+                  <th>Berechtigung</th>
+                  <th>Fotoscan</th>
+                  <th>Webimport</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false };
+                  return (
+                    <tr key={role}>
+                      <td>
+                        <span className={`role-badge role-${role}`}>
+                          {getRoleDisplayName(role)}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.fotoscan ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'fotoscan', perms.fotoscan)}
+                          title={perms.fotoscan ? 'Fotoscan deaktivieren' : 'Fotoscan aktivieren'}
+                        >
+                          {perms.fotoscan ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.webimport ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'webimport', perms.webimport)}
+                          title={perms.webimport ? 'Webimport deaktivieren' : 'Webimport aktivieren'}
+                        >
+                          {perms.webimport ? '✓' : '✗'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
         
         {users.length === 0 ? (
           <div className="empty-state">
@@ -239,8 +279,6 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>E-Mail</th>
                   <th>Registriert am</th>
                   <th>Berechtigung</th>
-                  <th>Fotoscan</th>
-                  <th>Webimport</th>
                   <th title="KI-OCR Scans heute (reset 0 Uhr MEZ)">KI-OCR heute</th>
                   <th>Rezepte</th>
                   <th>Aktionen</th>
@@ -257,24 +295,6 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                       <span className={`role-badge role-${user.role}`}>
                         {getRoleDisplayName(user.role)}
                       </span>
-                    </td>
-                    <td>
-                      <button 
-                        className={`fotoscan-toggle ${user.fotoscan ? 'active' : ''}`}
-                        onClick={() => handleToggleFotoscan(user.id, user.fotoscan)}
-                        title={user.fotoscan ? 'Fotoscan deaktivieren' : 'Fotoscan aktivieren'}
-                      >
-                        {user.fotoscan ? '✓' : '✗'}
-                      </button>
-                    </td>
-                    <td>
-                      <button 
-                        className={`fotoscan-toggle ${user.webimport ? 'active' : ''}`}
-                        onClick={() => handleToggleWebimport(user.id, user.webimport)}
-                        title={user.webimport ? 'Webimport deaktivieren' : 'Webimport aktivieren'}
-                      >
-                        {user.webimport ? '✓' : '✗'}
-                      </button>
                     </td>
                     <td>{aiOcrScanCounts[user.id] ?? 0}</td>
                     <td>{user.recipe_count ?? 0}</td>

@@ -28,7 +28,8 @@ import {
   getUsers,
   onAuthStateChange,
   canEditMenu,
-  canDeleteMenu
+  canDeleteMenu,
+  getRolePermissions
 } from './utils/userManagement';
 import { 
   toggleFavorite,
@@ -289,6 +290,28 @@ function App() {
       loadUsers();
     }
   }, [currentUser]);
+
+  // Load role permissions and apply effective fotoscan/webimport to currentUser
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let cancelled = false;
+    const applyRolePermissions = async () => {
+      const perms = await getRolePermissions();
+      if (cancelled) return;
+      const rolePerms = perms[currentUser.role] || {};
+      setCurrentUser(prev => {
+        if (!prev || prev.id !== currentUser.id) return prev;
+        return {
+          ...prev,
+          fotoscan: rolePerms.fotoscan ?? false,
+          webimport: rolePerms.webimport ?? false,
+        };
+      });
+    };
+    applyRolePermissions();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, currentUser?.role]);
 
   // Apply favicon settings on mount
   useEffect(() => {
