@@ -17,12 +17,12 @@ service cloud.firestore {
     function isAnyUser() {
       return isAuthenticated() && (
         !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
-        userRole() in ['guest', 'read', 'comment', 'edit', 'admin']
+        userRole() in ['guest', 'read', 'comment', 'edit', 'moderator', 'admin']
       );
     }
 
     function isEditOrAdmin() {
-      return isAuthenticated() && userRole() in ['edit', 'admin'];
+      return isAuthenticated() && userRole() in ['edit', 'moderator', 'admin'];
     }
 
     function isAdmin() {
