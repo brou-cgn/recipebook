@@ -108,14 +108,10 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
         : 'Noch keine Bewertungen';
     return (
       <div className="recipe-rating-compact" title={cardTitle} aria-label={cardTitle}>
-        <span className="rating-hearts-display" aria-hidden="true">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span key={n} className={`rating-heart-icon ${userRating !== null && userRating >= n ? 'filled' : 'empty'}`}>
-              {userRating !== null && userRating >= n ? '♥' : '♡'}
-            </span>
-          ))}
+        <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`} aria-hidden="true">
+          {userRating !== null ? '♥' : '♡'}
         </span>
-        {count > 0 && userRating === null && <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>}
+        {count > 0 && <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>}
       </div>
     );
   }
