@@ -18,7 +18,7 @@ import RecipeRating from './RecipeRating';
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, privateLists = [], onAddToPrivateList, onRemoveFromPrivateList }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -323,6 +323,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       } finally {
         setPublishLoading(false);
       }
+    }
+  };
+
+  const handleTogglePrivateList = async (listId) => {
+    if (!recipe.id) return;
+    const list = privateLists.find(l => l.id === listId);
+    if (!list) return;
+    const isInList = Array.isArray(list.recipeIds) && list.recipeIds.includes(recipe.id);
+    if (isInList) {
+      if (onRemoveFromPrivateList) await onRemoveFromPrivateList(listId, recipe.id);
+    } else {
+      if (onAddToPrivateList) await onAddToPrivateList(listId, recipe.id);
     }
   };
 
@@ -1368,6 +1380,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 <button className="publish-button publish-button-steps" onClick={handlePublish} disabled={publishLoading}>
                   {publishLoading ? '…' : 'Veröffentlichen'}
                 </button>
+              </div>
+            )}
+
+            {currentUser && privateLists.length > 0 && (onAddToPrivateList || onRemoveFromPrivateList) && (
+              <div className="private-lists-section">
+                <h3 className="private-lists-title">Private Listen</h3>
+                <div className="private-lists-items">
+                  {privateLists.map(list => {
+                    const isInList = Array.isArray(list.recipeIds) && list.recipeIds.includes(recipe.id);
+                    return (
+                      <label key={list.id} className="private-list-item">
+                        <input
+                          type="checkbox"
+                          checked={isInList}
+                          onChange={() => handleTogglePrivateList(list.id)}
+                        />
+                        <span>{list.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>

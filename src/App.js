@@ -59,7 +59,9 @@ import {
   addGroup as addGroupToFirestore,
   updateGroup as updateGroupInFirestore,
   deleteGroup as deleteGroupFromFirestore,
-  ensurePublicGroup
+  ensurePublicGroup,
+  addRecipeToGroup as addRecipeToGroupInFirestore,
+  removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
 
 // IndexedDB helpers to read/clear shared data written by the service worker
@@ -160,9 +162,12 @@ function matchesAuthorFilter(recipe, selectedAuthors) {
 }
 
 // Helper function to check if a recipe matches the private group filter
-function matchesGroupFilter(recipe, selectedGroup) {
+// Checks both the recipe's groupId and the group's recipeIds array (for cross-group assignments)
+function matchesGroupFilter(recipe, selectedGroup, groups) {
   if (!selectedGroup) return true;
-  return recipe.groupId === selectedGroup;
+  if (recipe.groupId === selectedGroup) return true;
+  const group = groups && groups.find(g => g.id === selectedGroup);
+  return Array.isArray(group?.recipeIds) && group.recipeIds.includes(recipe.id);
 }
 
 function App() {
@@ -236,7 +241,8 @@ function App() {
       // or recipes that have been published to the public list
       return recipes.filter((r) => r.groupId === selectedGroup.id || !r.groupId || r.publishedToPublic);
     }
-    return recipes.filter((r) => r.groupId === selectedGroup.id);
+    const groupRecipeIds = Array.isArray(selectedGroup.recipeIds) ? selectedGroup.recipeIds : [];
+    return recipes.filter((r) => r.groupId === selectedGroup.id || groupRecipeIds.includes(r.id));
   }, [recipes, selectedGroup]);
 
   // Detect share URL: #share/:shareId
@@ -787,6 +793,22 @@ function App() {
     }
   };
 
+  const handleAddRecipeToPrivateList = async (groupId, recipeId) => {
+    try {
+      await addRecipeToGroupInFirestore(groupId, recipeId);
+    } catch (error) {
+      console.error('Error adding recipe to private list:', error);
+    }
+  };
+
+  const handleRemoveRecipeFromPrivateList = async (groupId, recipeId) => {
+    try {
+      await removeRecipeFromGroupInFirestore(groupId, recipeId);
+    } catch (error) {
+      console.error('Error removing recipe from private list:', error);
+    }
+  };
+
   // User authentication handlers
   const handleLogin = async (email, password) => {
     const result = await loginUser(email, password);
@@ -976,6 +998,9 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
+          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
+          onAddToPrivateList={handleAddRecipeToPrivateList}
+          onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
         />
       ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
@@ -1083,7 +1108,7 @@ function App() {
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines) &&
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
-              matchesGroupFilter(recipe, recipeFilters.selectedGroup)
+              matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}

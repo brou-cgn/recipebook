@@ -22,7 +22,9 @@ import {
   onSnapshot,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { removeUndefinedFields } from './firestoreUtils';
 
@@ -166,6 +168,44 @@ export const deleteGroup = async (groupId) => {
     await deleteDoc(groupRef);
   } catch (error) {
     console.error('Error deleting group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add a recipe to a group's recipeIds list (persistent assignment)
+ * @param {string} groupId - ID of the group
+ * @param {string} recipeId - ID of the recipe to add
+ * @returns {Promise<void>}
+ */
+export const addRecipeToGroup = async (groupId, recipeId) => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    await updateDoc(groupRef, {
+      recipeIds: arrayUnion(recipeId),
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error adding recipe to group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a recipe from a group's recipeIds list
+ * @param {string} groupId - ID of the group
+ * @param {string} recipeId - ID of the recipe to remove
+ * @returns {Promise<void>}
+ */
+export const removeRecipeFromGroup = async (groupId, recipeId) => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    await updateDoc(groupRef, {
+      recipeIds: arrayRemove(recipeId),
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error removing recipe from group:', error);
     throw error;
   }
 };

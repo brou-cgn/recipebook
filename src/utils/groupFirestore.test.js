@@ -28,7 +28,9 @@ jest.mock('firebase/firestore', () => ({
   onSnapshot: (...args) => mockOnSnapshot(...args),
   query: (...args) => mockQuery(...args),
   where: (...args) => mockWhere(...args),
-  serverTimestamp: jest.fn(() => 'mock-timestamp')
+  serverTimestamp: jest.fn(() => 'mock-timestamp'),
+  arrayUnion: jest.fn((...args) => ({ _type: 'arrayUnion', elements: args })),
+  arrayRemove: jest.fn((...args) => ({ _type: 'arrayRemove', elements: args }))
 }));
 
 // Mock Firestore Utils
@@ -44,6 +46,8 @@ import {
   deleteGroup,
   getGroup,
   ensurePublicGroup,
+  addRecipeToGroup,
+  removeRecipeFromGroup,
   PUBLIC_GROUP_NAME
 } from './groupFirestore';
 
@@ -316,5 +320,65 @@ describe('groupFirestore - ensurePublicGroup', () => {
       'mock-collection-ref',
       expect.objectContaining({ type: 'public', name: PUBLIC_GROUP_NAME })
     );
+  });
+});
+
+describe('groupFirestore - addRecipeToGroup', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDoc.mockImplementation((_db, ...path) => path.join('/'));
+    mockUpdateDoc.mockResolvedValue(undefined);
+    jest.requireMock('firebase/firestore').serverTimestamp.mockReturnValue('mock-timestamp');
+  });
+
+  it('should call updateDoc with arrayUnion for the recipeId', async () => {
+    const { arrayUnion: mockArrayUnion } = jest.requireMock('firebase/firestore');
+    mockArrayUnion.mockReturnValue({ _type: 'arrayUnion', elements: ['recipe-1'] });
+
+    await addRecipeToGroup('g1', 'recipe-1');
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      'groups/g1',
+      expect.objectContaining({ updatedAt: 'mock-timestamp' })
+    );
+    expect(mockArrayUnion).toHaveBeenCalledWith('recipe-1');
+  });
+
+  it('should throw on Firestore error', async () => {
+    mockUpdateDoc.mockRejectedValue(new Error('Firestore error'));
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(addRecipeToGroup('g1', 'recipe-1')).rejects.toThrow('Firestore error');
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('groupFirestore - removeRecipeFromGroup', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDoc.mockImplementation((_db, ...path) => path.join('/'));
+    mockUpdateDoc.mockResolvedValue(undefined);
+    jest.requireMock('firebase/firestore').serverTimestamp.mockReturnValue('mock-timestamp');
+  });
+
+  it('should call updateDoc with arrayRemove for the recipeId', async () => {
+    const { arrayRemove: mockArrayRemove } = jest.requireMock('firebase/firestore');
+    mockArrayRemove.mockReturnValue({ _type: 'arrayRemove', elements: ['recipe-1'] });
+
+    await removeRecipeFromGroup('g1', 'recipe-1');
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      'groups/g1',
+      expect.objectContaining({ updatedAt: 'mock-timestamp' })
+    );
+    expect(mockArrayRemove).toHaveBeenCalledWith('recipe-1');
+  });
+
+  it('should throw on Firestore error', async () => {
+    mockUpdateDoc.mockRejectedValue(new Error('Firestore error'));
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(removeRecipeFromGroup('g1', 'recipe-1')).rejects.toThrow('Firestore error');
+    consoleSpy.mockRestore();
   });
 });
