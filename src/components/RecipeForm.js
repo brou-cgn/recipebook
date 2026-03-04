@@ -205,7 +205,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setShowWebImportModal(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialWebImportUrl]);
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
