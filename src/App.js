@@ -371,6 +371,7 @@ function App() {
     // Always open the form (webimport URL is shown in modal if permission exists)
     setPendingWebimportUrl(null); // consume it so it doesn't trigger again
     setEditingRecipe(null);
+    setSelectedRecipe(null);
     setIsCreatingVersion(false);
     setIsFormOpen(true);
   }, [currentUser, pendingWebimportUrl]);
