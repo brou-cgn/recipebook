@@ -219,7 +219,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe und Rezepteimport haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe, App-Aufrufe (Menü) und Rezepteimport haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -228,12 +228,13 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Fotoscan</th>
                   <th>Webimport</th>
                   <th>App-Aufrufe</th>
+                  <th>App-Aufrufe (Menü)</th>
                   <th>Rezepteimport</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, recipeImport: false };
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -266,6 +267,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.appCalls ? 'App-Aufrufe deaktivieren' : 'App-Aufrufe aktivieren'}
                         >
                           {perms.appCalls ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.appCallsMenu ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'appCallsMenu', perms.appCallsMenu)}
+                          title={perms.appCallsMenu ? 'App-Aufrufe (Menü) deaktivieren' : 'App-Aufrufe (Menü) aktivieren'}
+                        >
+                          {perms.appCallsMenu ? '✓' : '✗'}
                         </button>
                       </td>
                       <td>
