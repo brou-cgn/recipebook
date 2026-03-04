@@ -256,7 +256,7 @@ function Header({
                       }}>
                         Einstellungen
                       </button>
-                      {currentUser?.appCallsMenu && (
+                      {currentUser?.isAdmin && (
                         <button
                           className={`menu-item ${currentView === 'appCalls' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('appCalls')}
