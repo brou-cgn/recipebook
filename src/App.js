@@ -206,13 +206,19 @@ function App() {
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
+  const [webimportAuthorId, setWebimportAuthorId] = useState('');
+  // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
+  const initialWebimportAuthorRef = useRef('');
   // Store pending webimport URL read synchronously on mount, before Firebase loads the user
   const [pendingWebimportUrl, setPendingWebimportUrl] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const webimportUrl = urlParams.get('webimport');
+    const webimportAuthor = urlParams.get('webimportAuthor') || '';
     if (webimportUrl) {
+      initialWebimportAuthorRef.current = webimportAuthor;
       // Clean the URL immediately so it doesn't persist in browser history
       urlParams.delete('webimport');
+      urlParams.delete('webimportAuthor');
       const remainingSearch = urlParams.toString();
       window.history.replaceState(
         {},
@@ -367,6 +373,10 @@ function App() {
     if (currentUser.webimport) {
       // User has webimport permission: open form with WebImport modal
       setWebimportDeeplink(pendingWebimportUrl);
+    }
+    if (initialWebimportAuthorRef.current) {
+      setWebimportAuthorId(initialWebimportAuthorRef.current);
+      initialWebimportAuthorRef.current = '';
     }
     // Always open the form (webimport URL is shown in modal if permission exists)
     setPendingWebimportUrl(null); // consume it so it doesn't trigger again
@@ -616,6 +626,7 @@ function App() {
     setIsCreatingVersion(false);
     setActiveGroupId(null);
     setWebimportDeeplink('');
+    setWebimportAuthorId('');
   };
 
   const handleOpenSettings = () => {
@@ -1026,6 +1037,7 @@ function App() {
           groups={groups}
           privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
           initialWebImportUrl={webimportDeeplink}
+          initialWebImportAuthorId={webimportAuthorId}
         />
       ) : selectedMenu ? (
         // Menu detail view - shown regardless of currentView
