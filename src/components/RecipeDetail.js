@@ -886,11 +886,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Eigene Version erstellen
               </button>
             )}
-            {userCanDelete && (
-              <button className="delete-button" onClick={handleDelete}>
-                Löschen
-              </button>
-            )}
             <button
               className="shopping-list-trigger-button"
               onClick={handleShoppingListClick}
@@ -1104,11 +1099,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {userCanCreateVersion && !userCanDirectlyEdit && (
                   <button className="version-button" onClick={() => onCreateVersion(recipe)}>
                     Eigene Version erstellen
-                  </button>
-                )}
-                {userCanDelete && (
-                  <button className="delete-button" onClick={handleDelete}>
-                    Löschen
                   </button>
                 )}
                 <button
@@ -1375,11 +1365,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </ol>
             </section>
 
-            {userCanPublish && (
-              <div className="publish-section">
-                <button className="publish-button publish-button-steps" onClick={handlePublish} disabled={publishLoading}>
-                  {publishLoading ? '…' : 'Veröffentlichen'}
-                </button>
+            {(userCanPublish || userCanDelete) && (
+              <div className="bottom-action-buttons">
+                {userCanPublish && (
+                  <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
+                    {publishLoading ? '…' : 'Veröffentlichen'}
+                  </button>
+                )}
+                {userCanDelete && (
+                  <button className="delete-button" onClick={handleDelete}>
+                    Löschen
+                  </button>
+                )}
               </div>
             )}
 
