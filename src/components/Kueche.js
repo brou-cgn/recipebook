@@ -238,6 +238,27 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               </div>
             </div>
           </div>
+          {currentUser?.appCalls && (
+            <div
+              className="kueche-tile kueche-tile--appaufrufe"
+              onClick={() => onViewChange && onViewChange('appCalls')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('appCalls'); } }}
+              role="button"
+              tabIndex={0}
+              aria-label="Küchenbetrieb Statistik öffnen"
+            >
+              <div className="kueche-tile-content">
+                <h3>Küchenbetrieb</h3>
+                <div className="kueche-tile-meta">
+                  <span className="meta-text">
+                    <strong>{todayCallsCount}</strong>
+                    <span>{todayCallsCount === 1 ? 'Aufruf heute' : 'Aufrufe heute'}</span>
+                  </span>
+                </div>
+                <AppCallsBarChart appCalls={appCalls} />
+              </div>
+            </div>
+          )}
           <div
             className="kueche-tile kueche-tile--meinkochbuch"
             onClick={() => setShowTimeline(prev => !prev)}
@@ -272,27 +293,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               categoryImages={categoryImages}
               defaultImage={timelineMenuDefaultImage}
             />
-          )}
-          {currentUser?.appCalls && (
-            <div
-              className="kueche-tile kueche-tile--appaufrufe"
-              onClick={() => onViewChange && onViewChange('appCalls')}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('appCalls'); } }}
-              role="button"
-              tabIndex={0}
-              aria-label="App-Aufrufe Statistik öffnen"
-            >
-              <div className="kueche-tile-content">
-                <h3>App-Aufrufe</h3>
-                <div className="kueche-tile-meta">
-                  <span className="meta-text">
-                    <strong>{todayCallsCount}</strong>
-                    <span>{todayCallsCount === 1 ? 'Aufruf heute' : 'Aufrufe heute'}</span>
-                  </span>
-                </div>
-                <AppCallsBarChart appCalls={appCalls} />
-              </div>
-            </div>
           )}
         </>
       )}
