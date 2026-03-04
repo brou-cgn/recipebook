@@ -31,11 +31,19 @@
 }
 
 .kueche-tile.kueche-tile--mise-en-place {
-  border-left-color: #2E86AB;
+  border-left-color: #5A2A4A;
 }
 
 .kueche-tile--mise-en-place .kueche-tile-content h3 {
-  color: #2E86AB;
+  color: #5A2A4A;
+}
+
+.kueche-tile.kueche-tile--appaufrufe {
+  border-left-color: #7A2E2E;
+}
+
+.kueche-tile--appaufrufe .kueche-tile-content h3 {
+  color: #7A2E2E;
 }
 
 .kueche-tile:hover {

@@ -613,7 +613,7 @@ describe('Kueche', () => {
     expect(miseEnPlace.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  test('App-Aufrufe tile is not rendered for non-admin users', () => {
+  test('Küchenbetrieb tile is not rendered for non-admin users', () => {
     render(
       <Kueche
         recipes={[]}
@@ -624,10 +624,10 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.queryByText('App-Aufrufe')).not.toBeInTheDocument();
+    expect(screen.queryByText('Küchenbetrieb')).not.toBeInTheDocument();
   });
 
-  test('App-Aufrufe tile is rendered for admin users', () => {
+  test('Küchenbetrieb tile is rendered for admin users', () => {
     render(
       <Kueche
         recipes={[]}
@@ -638,10 +638,10 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.getByText('App-Aufrufe')).toBeInTheDocument();
+    expect(screen.getByText('Küchenbetrieb')).toBeInTheDocument();
   });
 
-  test('App-Aufrufe tile shows today call count', async () => {
+  test('Küchenbetrieb tile shows today call count', async () => {
     const { getAppCalls } = require('../utils/appCallsFirestore');
     const now = new Date();
     getAppCalls.mockResolvedValueOnce([
@@ -659,12 +659,12 @@ describe('Kueche', () => {
       />
     );
 
-    expect(screen.getByText('App-Aufrufe')).toBeInTheDocument();
+    expect(screen.getByText('Küchenbetrieb')).toBeInTheDocument();
     expect(await screen.findByText('2')).toBeInTheDocument();
     expect(screen.getByText('Aufrufe heute')).toBeInTheDocument();
   });
 
-  test('App-Aufrufe tile calls onViewChange with appCalls when clicked', () => {
+  test('Küchenbetrieb tile calls onViewChange with appCalls when clicked', () => {
     const handleViewChange = jest.fn();
 
     render(
@@ -678,11 +678,11 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /App-Aufrufe Statistik öffnen/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Küchenbetrieb Statistik öffnen/i }));
     expect(handleViewChange).toHaveBeenCalledWith('appCalls');
   });
 
-  test('App-Aufrufe tile renders bar chart with 7 bars', () => {
+  test('Küchenbetrieb tile renders bar chart with 7 bars', () => {
     render(
       <Kueche
         recipes={[]}
