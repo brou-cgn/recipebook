@@ -504,10 +504,11 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
             <div className="form-group">
               <label>Temporäres Passwort</label>
               <input
-                type="text"
+                type="password"
                 value={tempPassword}
                 onChange={(e) => setTempPassword(e.target.value)}
                 placeholder="Mindestens 6 Zeichen"
+                autoComplete="new-password"
               />
               {passwordError && (
                 <div className="field-error">{passwordError}</div>
