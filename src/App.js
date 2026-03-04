@@ -306,6 +306,7 @@ function App() {
           fotoscan: rolePerms.fotoscan ?? false,
           webimport: rolePerms.webimport ?? false,
           appCalls: rolePerms.appCalls ?? false,
+          appCallsMenu: rolePerms.appCallsMenu ?? false,
           recipeImport: rolePerms.recipeImport ?? false,
         };
       });
