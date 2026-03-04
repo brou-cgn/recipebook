@@ -1021,21 +1021,21 @@ export const updateUserWebimport = async (userId, webimport) => {
 };
 
 /**
- * Default role permissions for fotoscan, webimport, appCalls and recipeImport features.
+ * Default role permissions for fotoscan, webimport, appCalls, appCallsMenu and recipeImport features.
  * Admins get all features enabled by default; all other roles start with all disabled.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { fotoscan: true, webimport: true, appCalls: true, recipeImport: true },
-  [ROLES.MODERATOR]: { fotoscan: false, webimport: false, appCalls: false, recipeImport: false },
-  [ROLES.EDIT]: { fotoscan: false, webimport: false, appCalls: false, recipeImport: false },
-  [ROLES.COMMENT]: { fotoscan: false, webimport: false, appCalls: false, recipeImport: false },
-  [ROLES.READ]: { fotoscan: false, webimport: false, appCalls: false, recipeImport: false },
+  [ROLES.ADMIN]: { fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true },
+  [ROLES.MODERATOR]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false },
+  [ROLES.EDIT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false },
+  [ROLES.COMMENT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false },
+  [ROLES.READ]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false },
 };
 
 /**
- * Get role-based feature permissions (fotoscan, webimport, appCalls, recipeImport) from Firestore.
+ * Get role-based feature permissions (fotoscan, webimport, appCalls, appCallsMenu, recipeImport) from Firestore.
  * Falls back to ROLE_PERMISSIONS_DEFAULT if no Firestore data exists.
- * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean, appCalls: boolean, recipeImport: boolean }
+ * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean }
  */
 export const getRolePermissions = async () => {
   try {
@@ -1058,7 +1058,7 @@ export const getRolePermissions = async () => {
 /**
  * Update a feature permission for a specific role.
  * @param {string} role - Role constant (from ROLES, excluding GUEST)
- * @param {string} feature - Feature name ('fotoscan', 'webimport', 'appCalls' or 'recipeImport')
+ * @param {string} feature - Feature name ('fotoscan', 'webimport', 'appCalls', 'appCallsMenu' or 'recipeImport')
  * @param {boolean} value - New boolean value
  * @returns {Promise<{success: boolean, message: string}>} Result object
  */
