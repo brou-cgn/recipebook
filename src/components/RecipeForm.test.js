@@ -2591,3 +2591,161 @@ describe('RecipeForm - Group Assignment Indicator', () => {
     expect(banner.textContent).toContain('Öffentlich');
   });
 });
+
+describe('RecipeForm - Private List Selector', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  const mockGroups = [
+    { id: 'public-1', name: 'Öffentlich', type: 'public' },
+    { id: 'private-1', name: 'Familie', type: 'private' },
+    { id: 'private-2', name: 'Arbeit', type: 'private' },
+  ];
+
+  const mockPrivateLists = [
+    { id: 'private-1', name: 'Familie', type: 'private' },
+    { id: 'private-2', name: 'Arbeit', type: 'private' },
+  ];
+
+  const mockUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('does not show private list selector when no private lists exist', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={[]}
+        activeGroupId={null}
+      />
+    );
+
+    expect(screen.queryByLabelText('Private Liste:')).not.toBeInTheDocument();
+  });
+
+  test('shows private list selector when private lists are available for new recipe', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    const selector = screen.getByLabelText('Private Liste:');
+    expect(selector).toBeInTheDocument();
+    expect(screen.getByText('Familie')).toBeInTheDocument();
+    expect(screen.getByText('Arbeit')).toBeInTheDocument();
+  });
+
+  test('private list selector has a default empty option', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    const selector = screen.getByLabelText('Private Liste:');
+    expect(selector.value).toBe('');
+    expect(screen.getByText(/Keine \(öffentlich\)/i)).toBeInTheDocument();
+  });
+
+  test('does not show private list selector when editing an existing recipe', () => {
+    const existingRecipe = { id: 'r1', title: 'Existing', ingredients: [], steps: [] };
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    expect(screen.queryByLabelText('Private Liste:')).not.toBeInTheDocument();
+  });
+
+  test('does not show private list selector when creating a version', () => {
+    const existingRecipe = { id: 'r1', title: 'Existing', ingredients: [], steps: [] };
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+        isCreatingVersion={true}
+      />
+    );
+
+    expect(screen.queryByLabelText('Private Liste:')).not.toBeInTheDocument();
+  });
+
+  test('updates group assignment banner when a private list is selected', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    // Initially shows public
+    const banner = await screen.findByText(/Wird in Liste/i);
+    expect(banner.textContent).toContain('Öffentlich');
+
+    // Select a private list
+    const selector = screen.getByLabelText('Private Liste:');
+    fireEvent.change(selector, { target: { value: 'private-1' } });
+
+    // Banner should now show the private list name
+    expect(screen.getByText(/Wird in Liste/i).textContent).toContain('Familie');
+  });
+
+  test('banner shows private styling when a private list is selected', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={mockUser}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    // Select a private list
+    const selector = screen.getByLabelText('Private Liste:');
+    fireEvent.change(selector, { target: { value: 'private-1' } });
+
+    // Banner should have 'private' class
+    const bannerContainer = screen.getByText(/Wird in Liste/i).closest('.group-assignment-banner');
+    expect(bannerContainer).toHaveClass('private');
+    expect(bannerContainer).not.toHaveClass('public');
+  });
+});

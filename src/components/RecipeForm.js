@@ -162,6 +162,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
 }
 
 function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], initialWebImportUrl = '', initialWebImportAuthorId = '' }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], privateLists = [], initialWebImportUrl = '' }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState('');
@@ -196,6 +197,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
   // Private checkbox state - only visible to admins
   const [isPrivate, setIsPrivate] = useState(false);
+  // Selected private list for new recipes
+  const [selectedPrivateListId, setSelectedPrivateListId] = useState('');
   // AI OCR daily limit state
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
 
@@ -279,6 +282,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
       setIsPrivate(false);
+      setSelectedPrivateListId('');
     }
   }, [recipe, currentUser, isCreatingVersion]);
 
@@ -583,7 +587,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       parentRecipeId: parentRecipeId || null,
       isPrivate: isPrivate,
       createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
-      versionCreatedFrom: isCreatingVersion ? recipe?.title : null
+      versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
+      ...(!recipe && !isCreatingVersion && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
     };
 
     // Add id only if it exists (editing existing recipe)
@@ -780,10 +785,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       )}
 
       {!recipe && !isCreatingVersion && (() => {
-        const targetGroup = activeGroupId
-          ? groups.find((g) => g.id === activeGroupId)
-          : groups.find((g) => g.type === 'public');
-        const isPublicTarget = !activeGroupId || targetGroup?.type === 'public';
+        const selectedPrivateList = selectedPrivateListId
+          ? privateLists.find((l) => l.id === selectedPrivateListId)
+          : null;
+        const targetGroup = selectedPrivateList
+          ? selectedPrivateList
+          : activeGroupId
+            ? groups.find((g) => g.id === activeGroupId)
+            : groups.find((g) => g.type === 'public');
+        const isPublicTarget = !selectedPrivateListId && (!activeGroupId || targetGroup?.type === 'public');
         const groupName = targetGroup?.name || (isPublicTarget ? 'Öffentlich' : null);
         if (!groupName) return null;
         return (
@@ -1067,6 +1077,25 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             + Schritt hinzufügen
           </button>
         </div>
+
+        {/* Private list selector - only shown when creating a new recipe */}
+        {!recipe && !isCreatingVersion && privateLists.length > 0 && (
+          <div className="form-group private-list-selector">
+            <label htmlFor="private-list-select">Private Liste:</label>
+            <select
+              id="private-list-select"
+              value={selectedPrivateListId}
+              onChange={(e) => setSelectedPrivateListId(e.target.value)}
+            >
+              <option value="">– Keine (öffentlich) –</option>
+              {privateLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Draft checkbox - only visible to admins */}
         {isCurrentUserAdmin() && (

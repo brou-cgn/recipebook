@@ -514,16 +514,25 @@ function App() {
         // Add new recipe or new version; attach groupId if created from within a group,
         // otherwise fall back to the public group (from state or from the groups subscription)
         const resolvedPublicGroupId = publicGroupId || groups.find(g => g.type === 'public')?.id;
-        const safeGroupId = activeGroupId
-          ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
-          : resolvedPublicGroupId;
-        // Auto-publish when creating via "Rezept hinzufügen" (no active private group)
-        const autoPublish = !activeGroupId && !isCreatingVersion;
+        let safeGroupId;
+        let autoPublish;
+        const { selectedGroupId, ...recipeWithoutMeta } = recipe;
+        if (selectedGroupId) {
+          // User explicitly chose a private list from the form dropdown
+          safeGroupId = selectedGroupId;
+          autoPublish = false;
+        } else {
+          safeGroupId = activeGroupId
+            ? (typeof activeGroupId === 'string' ? activeGroupId : activeGroupId.id ?? String(activeGroupId))
+            : resolvedPublicGroupId;
+          // Auto-publish when creating via "Rezept hinzufügen" (no active private group)
+          autoPublish = !activeGroupId && !isCreatingVersion;
+        }
         const activeGroup = groups.find(g => g.id === safeGroupId);
         const groupType = activeGroup?.type ?? 'public';
         const recipeWithGroup = safeGroupId
-          ? { ...recipe, groupId: safeGroupId, groupType, ...(autoPublish ? { publishedToPublic: true } : {}) }
-          : recipe;
+          ? { ...recipeWithoutMeta, groupId: safeGroupId, groupType, ...(autoPublish ? { publishedToPublic: true } : {}) }
+          : recipeWithoutMeta;
         const savedRecipe = await addRecipeToFirestore(recipeWithGroup, currentUser.id);
 
         // Auto-share the new recipe to generate the share link immediately
@@ -1026,6 +1035,7 @@ function App() {
           allRecipes={recipes}
           activeGroupId={activeGroupId}
           groups={groups}
+          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
           initialWebImportUrl={webimportDeeplink}
           initialWebImportAuthorId={webimportAuthorId}
         />
