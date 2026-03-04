@@ -209,15 +209,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   </div>
                 )}
                 <div className="recipe-card-content">
-                  <div className="recipe-card-title-row">
-                    <h3>{recipe.title}</h3>
-                    <RecipeRating
-                      recipeId={recipe.id}
-                      ratingAvg={recipe.ratingAvg}
-                      ratingCount={recipe.ratingCount}
-                      currentUser={currentUser}
-                    />
-                  </div>
+                  <h3>{recipe.title}</h3>
                   {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
                     <div className="recipe-kulinarik">
                       {Array.isArray(recipe.kulinarik)
@@ -229,14 +221,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                     </div>
                   )}
                   <div className="recipe-footer">
+                    {authorName && (
+                      <div className="recipe-author">{authorName}</div>
+                    )}
                     {group.versionCount > 1 && (
                       <div className="version-count">
                         {group.versionCount} Versionen
                       </div>
                     )}
-                    {authorName && (
-                      <div className="recipe-author">{authorName}</div>
-                    )}
+                    <RecipeRating
+                      recipeId={recipe.id}
+                      ratingAvg={recipe.ratingAvg}
+                      ratingCount={recipe.ratingCount}
+                      currentUser={currentUser}
+                    />
                   </div>
                 </div>
               </div>
