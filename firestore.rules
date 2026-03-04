@@ -140,7 +140,7 @@ service cloud.firestore {
 
     // App calls audit log collection
     match /appCalls/{callId} {
-      allow read: if isAdmin();
+      allow read: if isAnyUser();
       allow create: if isAnyUser();
       allow update, delete: if isAdmin();
     }
