@@ -3,7 +3,7 @@ import './WebImportModal.css';
 import { captureWebsiteScreenshot } from '../utils/webImportService';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
-function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
+function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
   const [step, setStep] = useState('url'); // 'url', 'loading', 'result'
   const [url, setUrl] = useState(initialUrl);
   const [error, setError] = useState('');
@@ -92,6 +92,7 @@ function WebImportModal({ onImport, onCancel, initialUrl = '' }) {
         kulinarik: aiResult.cuisine ? [aiResult.cuisine] : [],
         schwierigkeit: aiResult.difficulty || 3,
         speisekategorie: aiResult.category ? [aiResult.category] : [],
+        ...(authorId ? { authorId } : {}),
       };
       
       onImport(recipe);

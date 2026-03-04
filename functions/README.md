@@ -123,9 +123,10 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
-- ✅ Role check: only users with role `edit` or `admin` may create imports
+- ✅ Role check: only users with role `edit`, `admin`, or flag `isShortcutUser: true` may create imports
+- ✅ Optional `X-Author-Id` header to attribute the imported recipe to a different user
 - ✅ Configurable TTL (default 10 minutes)
-- ✅ Returns a capability URL (`importUrl`) that is publicly accessible
+- ✅ Returns a capability URL (`importUrl`) and the effective `authorId` that is publicly accessible
 
 **Request:**
 
@@ -133,7 +134,8 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 POST https://<region>-<project-id>.cloudfunctions.net/createRecipeImportFromText
 Content-Type: application/json
 X-Api-Key: <API Key>
-X-User-Id: <Firebase User ID>
+X-User-Id: <Firebase User ID of the service/shortcut user>
+X-Author-Id: <Firebase User ID of the real author> (optional)
 ```
 
 **Body (JSON):**
@@ -155,9 +157,12 @@ X-User-Id: <Firebase User ID>
 ```json
 {
   "success": true,
-  "importUrl": "https://.../recipeImportPage?token=<importId>"
+  "importUrl": "https://.../recipeImportPage?token=<importId>",
+  "authorId": "<Firebase User ID of the author>"
 }
 ```
+
+The `authorId` is set to `X-Author-Id` if provided, otherwise to `X-User-Id`.
 
 **Error responses:**
 
@@ -165,10 +170,18 @@ X-User-Id: <Firebase User ID>
 |--------|--------|
 | 400 | Missing or empty `rawText` |
 | 401 | Missing or invalid API Key / User ID header |
-| 403 | User role insufficient (requires `edit` or `admin`) |
+| 403 | User role insufficient (requires `edit`, `admin`, or `isShortcutUser: true`) |
 | 404 | User not found |
 | 405 | Wrong HTTP method (only POST allowed) |
 | 500 | Firestore write error |
+
+**Service user setup (shortcut user):**
+
+To use a technical service account for authentication while attributing the recipe to the real author:
+
+1. Create a dedicated user in Firebase Authentication for the shortcut/service account
+2. In Firestore `users` collection, set `isShortcutUser: true` on that user's document
+3. In the iOS Shortcut, use the service user's UID in `X-User-Id` and the real user's UID in `X-Author-Id`
 
 ---
 
@@ -179,7 +192,7 @@ A public HTTP endpoint that renders a temporary recipe import as structured HTML
 **Features:**
 - ✅ No authentication required – random token acts as a capability URL
 - ✅ TTL enforced (returns 410 Gone after expiry)
-- ✅ Returns HTML with `<h1>` title, `<pre>` raw text, and JSON-LD `@type: Recipe`
+- ✅ Returns HTML with `<h1>` title, `<pre>` raw text, JSON-LD `@type: Recipe`, and a `<meta name="x-author-id">` tag
 - ✅ Compatible with the existing website-import / AI OCR workflow
 
 **Request:**

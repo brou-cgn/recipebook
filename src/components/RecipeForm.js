@@ -161,7 +161,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   );
 }
 
-function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], initialWebImportUrl = '' }) {
+function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCreatingVersion = false, allRecipes = [], activeGroupId = null, groups = [], initialWebImportUrl = '', initialWebImportAuthorId = '' }) {
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [portionen, setPortionen] = useState('');
@@ -1115,6 +1115,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           initialUrl={initialWebImportUrl}
           onImport={handleWebImport}
           onCancel={() => setShowWebImportModal(false)}
+          authorId={initialWebImportAuthorId}
         />
       )}
 
