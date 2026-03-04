@@ -82,6 +82,13 @@ service cloud.firestore {
       allow create, update, delete: if isEditOrAdmin();
     }
 
+    // Role permissions collection – stores feature permissions (fotoscan, webimport) per role.
+    // All authenticated users may read; only admins may write.
+    match /rolePermissions/{roleId} {
+      allow read: if isAnyUser();
+      allow write: if isAdmin();
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAnyUser();
