@@ -1,4 +1,4 @@
-import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals } from './nutritionUtils';
+import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from './nutritionUtils';
 
 describe('mapNutritionCalcError', () => {
   it('returns network error message for functions/unavailable code', () => {
@@ -154,6 +154,43 @@ describe('naehrwerteToTotals', () => {
     const perPortion = naehrwertePerPortion(original, 4);
     const backToTotals = naehrwerteToTotals(perPortion, 4);
     expect(backToTotals).toEqual(original);
+  });
+});
+
+describe('extractQuantityFromPrefix', () => {
+  it('returns null for null or undefined prefix', () => {
+    expect(extractQuantityFromPrefix(null)).toBeNull();
+    expect(extractQuantityFromPrefix(undefined)).toBeNull();
+    expect(extractQuantityFromPrefix('')).toBeNull();
+  });
+
+  it('parses simple integer', () => {
+    expect(extractQuantityFromPrefix('2')).toBe(2);
+    expect(extractQuantityFromPrefix('1')).toBe(1);
+  });
+
+  it('parses decimal with dot', () => {
+    expect(extractQuantityFromPrefix('0.5 Portionen')).toBe(0.5);
+    expect(extractQuantityFromPrefix('1.5')).toBe(1.5);
+  });
+
+  it('parses decimal with comma', () => {
+    expect(extractQuantityFromPrefix('1,5 Teil')).toBe(1.5);
+  });
+
+  it('parses fraction', () => {
+    expect(extractQuantityFromPrefix('1/2')).toBe(0.5);
+    expect(extractQuantityFromPrefix('3/4 Stück')).toBeCloseTo(0.75);
+  });
+
+  it('parses number followed by a unit word', () => {
+    expect(extractQuantityFromPrefix('2 Teil')).toBe(2);
+    expect(extractQuantityFromPrefix('3 Portionen')).toBe(3);
+  });
+
+  it('returns null for non-numeric prefix', () => {
+    expect(extractQuantityFromPrefix('keine Zahl')).toBeNull();
+    expect(extractQuantityFromPrefix('abc')).toBeNull();
   });
 });
 

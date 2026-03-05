@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals } from '../utils/nutritionUtils';
+import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -36,7 +37,7 @@ function clearStoredCalcResult(recipeId) {
   try { localStorage.removeItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId); } catch { /* ignore */ }
 }
 
-function NutritionModal({ recipe, onClose, onSave }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [] }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -172,10 +173,23 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
   const handleAutoCalculate = async () => {
     const rawIngredients = recipe.zutaten || recipe.ingredients || [];
-    const ingredients = rawIngredients
+    const allIngredientTexts = rawIngredients
       .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
       .map(item => typeof item === 'string' ? item : item.text);
-    if (ingredients.length === 0) {
+
+    // Separate recipe-link ingredients from regular ingredients
+    const ingredients = [];
+    const recipeLinkItems = [];
+    for (const text of allIngredientTexts) {
+      const link = decodeRecipeLink(text);
+      if (link) {
+        recipeLinkItems.push({ ingredient: text, link });
+      } else {
+        ingredients.push(text);
+      }
+    }
+
+    if (ingredients.length === 0 && recipeLinkItems.length === 0) {
       setAutoCalcResult({ error: 'Keine Zutaten im Rezept gefunden.' });
       return;
     }
@@ -183,7 +197,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
     clearStoredCalcResult(recipe?.id);
-    setCalcProgress({ done: 0, total: ingredients.length, current: ingredients[0] || '' });
+    setCalcProgress({ done: 0, total: ingredients.length + recipeLinkItems.length, current: ingredients[0] || (recipeLinkItems[0]?.link.recipeName) || '' });
 
     // Persist calcPending so the loading indicator survives navigation away from this modal
     try {
@@ -197,10 +211,11 @@ function NutritionModal({ recipe, onClose, onSave }) {
     const notIncluded = [];
     let foundCount = 0;
 
+    // Process regular ingredients via OpenFoodFacts
     for (let i = 0; i < ingredients.length; i++) {
       const ingredient = ingredients[i];
       const effectiveIngredient = reformulations[ingredient]?.text || ingredient;
-      setCalcProgress({ done: i, total: ingredients.length, current: effectiveIngredient });
+      setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: effectiveIngredient });
 
       try {
         const result = await calculateNutrition({ ingredients: [effectiveIngredient], portionen: 1 });
@@ -230,6 +245,35 @@ function NutritionModal({ recipe, onClose, onSave }) {
       }
     }
 
+    // Process recipe-link ingredients dynamically from linked recipe's naehrwerte
+    for (let i = 0; i < recipeLinkItems.length; i++) {
+      const { ingredient, link } = recipeLinkItems[i];
+      setCalcProgress({ done: ingredients.length + i, total: ingredients.length + recipeLinkItems.length, current: link.recipeName });
+
+      const linkedRecipe = allRecipes.find(r => r.id === link.recipeId);
+      if (linkedRecipe && linkedRecipe.naehrwerte) {
+        const linkedPortionen = linkedRecipe.portionen || 1;
+        const parsedQuantity = extractQuantityFromPrefix(link.quantityPrefix);
+        if (parsedQuantity === null && link.quantityPrefix) {
+          console.warn(`Could not parse quantity prefix "${link.quantityPrefix}" for linked recipe "${link.recipeName}". Defaulting to 1.`);
+        }
+        const quantity = parsedQuantity || 1;
+        const multiplier = quantity / linkedPortionen;
+        Object.keys(totals).forEach(key => {
+          totals[key] += (linkedRecipe.naehrwerte[key] || 0) * multiplier;
+        });
+        foundCount++;
+      } else {
+        notIncluded.push({
+          ingredient,
+          error: linkedRecipe
+            ? `Verlinktes Rezept "${link.recipeName}" hat keine gespeicherten Nährwerte. Bitte berechnen Sie zuerst die Nährwerte für dieses Rezept.`
+            : `Verlinktes Rezept "${link.recipeName}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          isRecipeLink: true,
+        });
+      }
+    }
+
     // Set per-portion display values in form fields (totals ÷ portionen)
     const portionen = recipe.portionen || 1;
     const perPortion = naehrwertePerPortion(totals, portionen);
@@ -243,7 +287,8 @@ function NutritionModal({ recipe, onClose, onSave }) {
 
     setCalcProgress(null);
     setAutoCalcLoading(false);
-    const result = { foundCount, totalCount: ingredients.length, notIncluded };
+    const totalCount = ingredients.length + recipeLinkItems.length;
+    const result = { foundCount, totalCount, notIncluded };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
 
@@ -254,7 +299,7 @@ function NutritionModal({ recipe, onClose, onSave }) {
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: foundCount,
-      calcTotalCount: ingredients.length,
+      calcTotalCount: totalCount,
     };
     try {
       await onSave(finalNaehrwerte);
