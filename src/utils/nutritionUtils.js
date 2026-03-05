@@ -1,4 +1,24 @@
 /**
+ * Extracts a numeric quantity from an ingredient quantity prefix string.
+ * Supports formats like "1 Teil", "0.5 Stück", "1/2", "2", "200 ml".
+ * @param {string|null} prefix - The quantity prefix string.
+ * @returns {number|null} The numeric value, or null if not parseable.
+ */
+export function extractQuantityFromPrefix(prefix) {
+  if (!prefix) return null;
+  const match = prefix.match(/^(\d+\/\d+|\d+(?:[.,]\d+)?)/);
+  if (match) {
+    const num = match[1];
+    if (num.includes('/')) {
+      const [numerator, denominator] = num.split('/');
+      return parseFloat(numerator) / parseFloat(denominator);
+    }
+    return parseFloat(num.replace(',', '.'));
+  }
+  return null;
+}
+
+/**
  * Maps a Firebase callable function error to a user-facing German error message.
  * @param {Error} err - The error thrown by a Firebase httpsCallable call.
  * @returns {string} A descriptive German error message.

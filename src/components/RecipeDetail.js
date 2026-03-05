@@ -1407,6 +1407,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {showNutritionModal && (
         <NutritionModal
           recipe={recipe}
+          allRecipes={allRecipes}
           onClose={() => setShowNutritionModal(false)}
           onSave={handleSaveNutrition}
         />
