@@ -28,19 +28,19 @@ function Register({ onRegister, onSwitchToLogin }) {
     setIsLoading(true);
     
     try {
-      // Trim all inputs to prevent whitespace issues (especially on mobile)
-      const trimmedPassword = (formData.password || '').trim();
-      const trimmedConfirmPassword = (formData.confirmPassword || '').trim();
+      // Trim name/email fields only; passwords must not be trimmed to preserve user-intended characters
+      const password = formData.password || '';
+      const confirmPassword = formData.confirmPassword || '';
       
       // Validate passwords match
-      if (trimmedPassword !== trimmedConfirmPassword) {
+      if (password !== confirmPassword) {
         setError('Passwörter stimmen nicht überein.');
         setIsLoading(false);
         return;
       }
       
       // Validate password strength
-      const passwordValidation = validatePassword(trimmedPassword);
+      const passwordValidation = validatePassword(password);
       if (!passwordValidation.valid) {
         setError(passwordValidation.message);
         setIsLoading(false);
@@ -51,7 +51,7 @@ function Register({ onRegister, onSwitchToLogin }) {
         vorname: (formData.vorname || '').trim(),
         nachname: (formData.nachname || '').trim(),
         email: (formData.email || '').trim(),
-        password: trimmedPassword
+        password: password
       });
       
       if (result.success) {

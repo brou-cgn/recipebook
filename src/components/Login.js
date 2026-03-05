@@ -17,8 +17,8 @@ function Login({ onLogin, onSwitchToRegister, onGuestLogin, onResetPassword }) {
     setIsLoading(true);
     
     try {
-      // Trim email and password to prevent whitespace issues (especially on mobile)
-      const result = await onLogin((email || '').trim(), (password || '').trim());
+      // Trim email only; password must not be trimmed to preserve user-intended characters
+      const result = await onLogin((email || '').trim(), password || '');
       if (!result.success) {
         setError(result.message);
       }

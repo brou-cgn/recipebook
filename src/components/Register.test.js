@@ -132,7 +132,7 @@ describe('Register Component', () => {
     expect(mockOnSwitchToLogin).toHaveBeenCalled();
   });
 
-  test('trims whitespace from all inputs before registration', () => {
+  test('trims whitespace from name and email but preserves password whitespace before registration', () => {
     mockOnRegister.mockReturnValue({ success: true, message: 'Registrierung erfolgreich!' });
 
     render(<Register onRegister={mockOnRegister} onSwitchToLogin={mockOnSwitchToLogin} />);
@@ -146,12 +146,12 @@ describe('Register Component', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
-    // Should be called with trimmed values
+    // Name and email should be trimmed; password must NOT be trimmed (NIST SP 800-63B)
     expect(mockOnRegister).toHaveBeenCalledWith({
       vorname: 'Max',
       nachname: 'Mustermann',
       email: 'max@example.com',
-      password: 'password123'
+      password: '  password123  '
     });
   });
 });

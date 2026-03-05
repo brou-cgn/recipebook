@@ -60,7 +60,7 @@ describe('Login Component', () => {
     expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', 'password123');
   });
 
-  test('trims whitespace from email and password before login', () => {
+  test('trims whitespace from email but preserves password whitespace before login', () => {
     mockOnLogin.mockReturnValue({ success: true });
 
     render(<Login onLogin={mockOnLogin} onSwitchToRegister={mockOnSwitchToRegister} />);
@@ -74,8 +74,8 @@ describe('Login Component', () => {
     fireEvent.change(passwordInput, { target: { value: '  password123  ' } });
     fireEvent.click(submitButton);
 
-    // Should be called with trimmed values
-    expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', 'password123');
+    // Email should be trimmed; password must NOT be trimmed (NIST SP 800-63B)
+    expect(mockOnLogin).toHaveBeenCalledWith('test@example.com', '  password123  ');
   });
 
   test('switches to register view when register button is clicked', () => {
