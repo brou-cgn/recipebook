@@ -48,6 +48,11 @@
         "region": "us-central1"
       },
       {
+        "source": "/recipeImportPage",
+        "function": "recipeImportPage",
+        "region": "us-central1"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

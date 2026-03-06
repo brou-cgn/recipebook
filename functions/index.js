@@ -1853,7 +1853,7 @@ exports.createRecipeImportFromText = onRequest(
  * Returns 404 if not found, 410 if expired.
  */
 exports.recipeImportPage = onRequest(
-    {maxInstances: 10},
+    {maxInstances: 10, cors: true},
     async (req, res) => {
       if (req.method !== 'GET') {
         res.status(405).send('Method not allowed. Use GET.');
