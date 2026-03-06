@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './WebImportModal.css';
 import { captureWebsiteScreenshot, isRecipeImportPageUrl, parseRecipeImportPage } from '../utils/webImportService';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
+import { extractKulinarikFromTags } from '../utils/ocrParser';
 
 function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
   const [step, setStep] = useState('url'); // 'url', 'loading', 'result'
@@ -90,15 +91,20 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
         return numMatch ? parseInt(numMatch[0], 10) : 0;
       };
 
+      const kulinarikFromCuisine = aiResult.cuisine ? [aiResult.cuisine] : [];
+      const kulinarikFromTags = extractKulinarikFromTags(aiResult.tags || []);
+      const kulinarikSet = new Set(kulinarikFromCuisine);
+      kulinarikFromTags.forEach(k => kulinarikSet.add(k));
+
       const recipe = {
         title: aiResult.title || '',
         ingredients: aiResult.ingredients || [],
         steps: aiResult.steps || [],
         portionen: aiResult.servings || 4,
         kochdauer: parseTime(aiResult.prepTime) || parseTime(aiResult.cookTime) || 30,
-        kulinarik: aiResult.cuisine ? [aiResult.cuisine] : [],
+        kulinarik: [...kulinarikSet],
         schwierigkeit: aiResult.difficulty || 3,
-        speisekategorie: aiResult.category ? [aiResult.category] : [],
+        speisekategorie: aiResult.category || '',
         ...(authorId ? { authorId } : {}),
       };
       

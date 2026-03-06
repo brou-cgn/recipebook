@@ -7,13 +7,23 @@
 jest.mock('../firebase', () => ({ functions: {} }));
 jest.mock('firebase/functions', () => ({ httpsCallable: jest.fn() }));
 
-// Mock the OCR parser so we can control its output in unit tests
-jest.mock('./ocrParser', () => ({
-  parseOcrTextSmart: jest.fn(),
+// Mock the AI OCR service so we can control its output in unit tests
+jest.mock('./aiOcrService', () => ({
+  recognizeRecipeWithAI: jest.fn(),
 }));
 
+// Mock canvas API since jsdom does not implement it
+HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
+  fillStyle: '',
+  fillRect: jest.fn(),
+  fillText: jest.fn(),
+  measureText: jest.fn().mockReturnValue({ width: 0 }),
+  font: '',
+});
+HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
+
 import { isRecipeImportPageUrl, parseRecipeImportPage } from './webImportService';
-import { parseOcrTextSmart } from './ocrParser';
+import { recognizeRecipeWithAI } from './aiOcrService';
 
 // --------------------------------------------------------------------------
 // isRecipeImportPageUrl
@@ -54,20 +64,31 @@ describe('isRecipeImportPageUrl', () => {
 // --------------------------------------------------------------------------
 
 describe('parseRecipeImportPage', () => {
-  const mockRecipe = {
+  const mockAiResult = {
     title: 'Spaghetti Carbonara',
     ingredients: ['400g Spaghetti', '200g Pancetta'],
     steps: ['Nudeln kochen', 'Sauce zubereiten'],
-    portionen: 4,
-    kochdauer: 30,
-    kulinarik: ['Italienisch'],
-    schwierigkeit: 3,
-    speisekategorie: 'Hauptgericht',
+    servings: 4,
+    prepTime: null,
+    cookTime: '30 min',
+    difficulty: 3,
+    cuisine: 'Italienisch',
+    category: 'Hauptgericht',
+    tags: [],
   };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    parseOcrTextSmart.mockReturnValue({ recipe: mockRecipe, validation: {} });
+    // Reset canvas mocks
+    HTMLCanvasElement.prototype.getContext.mockReturnValue({
+      fillStyle: '',
+      fillRect: jest.fn(),
+      fillText: jest.fn(),
+      measureText: jest.fn().mockReturnValue({ width: 0 }),
+      font: '',
+    });
+    HTMLCanvasElement.prototype.toDataURL.mockReturnValue('data:image/png;base64,mockcanvas');
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
   });
 
   function buildHtml({ title = 'Spaghetti Carbonara', rawText = 'Spaghetti Carbonara\nZutaten\n400g Spaghetti', withJsonLd = true } = {}) {
@@ -108,7 +129,22 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     expect(result.category).toBe('Hauptgericht');
   });
 
-  test('falls back to h1/pre when JSON-LD is absent', async () => {
+  test('calls AI with text from JSON-LD description', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(buildHtml()),
+    });
+
+    await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
+
+    // AI should have been called with a canvas image and German language
+    expect(recognizeRecipeWithAI).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ language: 'de', provider: 'gemini' }),
+    );
+  });
+
+  test('falls back to h1/pre text when JSON-LD is absent', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       text: jest.fn().mockResolvedValue(buildHtml({ withJsonLd: false })),
@@ -116,11 +152,8 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
 
     await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
 
-    // The OCR parser should be called with the text from <pre>
-    expect(parseOcrTextSmart).toHaveBeenCalledWith(
-      expect.stringContaining('Spaghetti Carbonara'),
-      'de',
-    );
+    // AI should still be called (with text from <pre> rendered to canvas)
+    expect(recognizeRecipeWithAI).toHaveBeenCalled();
   });
 
   test('reports progress across the 10–100 range', async () => {
@@ -165,10 +198,10 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     ).rejects.toThrow(/geladen werden/i);
   });
 
-  test('uses JSON-LD title when OCR parser returns generic fallback title', async () => {
-    parseOcrTextSmart.mockReturnValue({
-      recipe: { ...mockRecipe, title: 'OCR-Rezept' },
-      validation: {},
+  test('uses JSON-LD title when AI returns no title', async () => {
+    recognizeRecipeWithAI.mockResolvedValue({
+      ...mockAiResult,
+      title: '',
     });
 
     global.fetch = jest.fn().mockResolvedValue({
@@ -181,10 +214,11 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     expect(result.title).toBe('Echter Titel');
   });
 
-  test('handles kulinarik as an empty array gracefully', async () => {
-    parseOcrTextSmart.mockReturnValue({
-      recipe: { ...mockRecipe, kulinarik: [], speisekategorie: '' },
-      validation: {},
+  test('handles null cuisine and category gracefully', async () => {
+    recognizeRecipeWithAI.mockResolvedValue({
+      ...mockAiResult,
+      cuisine: null,
+      category: null,
     });
 
     global.fetch = jest.fn().mockResolvedValue({
@@ -196,5 +230,21 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
 
     expect(result.cuisine).toBeNull();
     expect(result.category).toBeNull();
+  });
+
+  test('includes tags from AI result', async () => {
+    recognizeRecipeWithAI.mockResolvedValue({
+      ...mockAiResult,
+      tags: ['vegetarisch', 'glutenfrei'],
+    });
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(buildHtml()),
+    });
+
+    const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
+
+    expect(result.tags).toEqual(['vegetarisch', 'glutenfrei']);
   });
 });

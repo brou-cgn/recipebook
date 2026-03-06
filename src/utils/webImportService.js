@@ -6,7 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { parseOcrTextSmart } from './ocrParser';
+import { recognizeRecipeWithAI } from './aiOcrService';
 
 /**
  * Capture a screenshot of a website
@@ -102,9 +102,56 @@ export function isRecipeImportPageUrl(url) {
 }
 
 /**
+ * Render text onto an HTML canvas and return a base64-encoded PNG data URL.
+ * Used to convert plain recipe text into an image for AI processing.
+ *
+ * @param {string} text - Text to render
+ * @returns {string} Base64-encoded PNG data URL
+ */
+export function textToCanvasBase64(text) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = Math.min(4000, Math.max(600, text.split('\n').length * 24 + 80));
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    // Canvas not supported in this environment
+    return '';
+  }
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000000';
+  ctx.font = '18px Arial, sans-serif';
+
+  const lines = text.split('\n');
+  let y = 40;
+  for (const line of lines) {
+    const words = line.split(' ');
+    let currentLine = '';
+    for (const word of words) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      if (ctx.measureText(testLine).width > 760 && currentLine) {
+        ctx.fillText(currentLine, 20, y);
+        y += 26;
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) {
+      ctx.fillText(currentLine, 20, y);
+      y += 26;
+    }
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+/**
  * Fetch a recipeImportPage URL and parse the recipe data directly from its HTML.
- * Extracts title and raw text from the embedded JSON-LD (or `<h1>`/`<pre>`
- * as fallback), then uses the local OCR parser to produce structured data.
+ * Extracts the raw text from the embedded JSON-LD (or `<h1>`/`<pre>` as fallback),
+ * then uses Gemini AI to produce fully structured recipe data.
  *
  * Returns an object that is compatible with the `aiResult` shape expected by
  * WebImportModal (title, ingredients, steps, servings, cookTime, difficulty,
@@ -130,11 +177,9 @@ export async function parseRecipeImportPage(url, onProgress = null) {
     throw new Error(`Fehler beim Laden der Import-Seite (HTTP ${response.status}).`);
   }
 
-  if (onProgress) onProgress(40);
+  if (onProgress) onProgress(30);
 
   const html = await response.text();
-
-  if (onProgress) onProgress(60);
 
   // Parse the HTML in the browser
   const parser = new DOMParser();
@@ -163,35 +208,33 @@ export async function parseRecipeImportPage(url, onProgress = null) {
     rawText = doc.querySelector('pre')?.textContent?.trim() || '';
   }
 
-  if (onProgress) onProgress(80);
+  if (onProgress) onProgress(50);
 
-  // Parse raw text into structured recipe using the existing OCR parser
-  const { recipe } = parseOcrTextSmart(rawText, 'de');
-
-  // Use the title from JSON-LD/h1 when the parser could not detect one
-  if (title && (!recipe.title || recipe.title === 'OCR-Rezept')) {
-    recipe.title = title;
-  }
+  // Render the raw text onto a canvas image and analyze with Gemini AI.
+  // This produces properly structured ingredients, steps and metadata –
+  // much more reliably than a keyword-based text parser.
+  const imageBase64 = textToCanvasBase64(rawText);
+  const aiResult = await recognizeRecipeWithAI(imageBase64, {
+    language: 'de',
+    provider: 'gemini',
+    onProgress: onProgress ? (p) => onProgress(50 + Math.round(p * 0.5)) : null,
+  });
 
   if (onProgress) onProgress(100);
 
-  // Helper: return first array element, non-empty string, or null
-  const firstOrNull = (value) => {
-    if (Array.isArray(value)) return value.length > 0 ? value[0] : null;
-    if (typeof value === 'string') return value || null;
-    return null;
-  };
+  // Prefer the title extracted from JSON-LD/h1 if AI did not detect one
+  const resultTitle = aiResult.title || title || '';
 
-  // Convert to the aiResult format expected by WebImportModal
   return {
-    title: recipe.title || title || '',
-    ingredients: recipe.ingredients || [],
-    steps: recipe.steps || [],
-    servings: recipe.portionen || null,
-    cookTime: recipe.kochdauer ? `${recipe.kochdauer} min` : null,
-    difficulty: recipe.schwierigkeit || null,
-    cuisine: firstOrNull(recipe.kulinarik),
-    category: firstOrNull(recipe.speisekategorie),
+    title: resultTitle,
+    ingredients: aiResult.ingredients || [],
+    steps: aiResult.steps || [],
+    servings: aiResult.servings || null,
+    cookTime: aiResult.prepTime || aiResult.cookTime || null,
+    difficulty: aiResult.difficulty || null,
+    cuisine: aiResult.cuisine || null,
+    category: aiResult.category || null,
+    tags: aiResult.tags || [],
   };
 }
 
