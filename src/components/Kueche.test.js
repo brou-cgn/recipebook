@@ -18,6 +18,10 @@ jest.mock('../utils/appCallsFirestore', () => ({
   getAppCalls: jest.fn(),
 }));
 
+jest.mock('../utils/recipeCallsFirestore', () => ({
+  getRecipeCalls: jest.fn(),
+}));
+
 jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(() => Promise.resolve({ success: true, message: 'Profil erfolgreich aktualisiert.' })),
 }));
@@ -26,6 +30,8 @@ describe('Kueche', () => {
   beforeEach(() => {
     const { getAppCalls } = require('../utils/appCallsFirestore');
     getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
   });
 
   const mockRecipes = [
@@ -79,7 +85,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.queryByText('Other Recipe')).not.toBeInTheDocument();
   });
@@ -93,7 +99,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('Other Recipe')).toBeInTheDocument();
   });
@@ -110,7 +116,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('My Menu')).toBeInTheDocument();
     expect(screen.queryByText('Other Menu')).not.toBeInTheDocument();
   });
@@ -127,7 +133,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
     expect(screen.getByText('My Menu')).toBeInTheDocument();
   });
@@ -162,7 +168,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     fireEvent.click(screen.getByText('My Menu').closest('.timeline-card'));
     expect(handleSelectMenu).toHaveBeenCalledWith(mockMenus[0]);
   });
@@ -189,7 +195,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     // The timeline should show the date from menuDate (15. Juni 2024), not createdAt (01. Januar 2024)
     expect(screen.getByText('15. Juni 2024')).toBeInTheDocument();
     expect(screen.queryByText('01. Januar 2024')).not.toBeInTheDocument();
@@ -215,7 +221,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('Created By Menu')).toBeInTheDocument();
   });
 
@@ -239,7 +245,7 @@ describe('Kueche', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     const img = await screen.findByAltText('Image Menu');
     expect(img).toHaveAttribute('src', DEFAULT_MENU_IMAGE);
   });
@@ -373,7 +379,7 @@ describe('Kueche', () => {
 
     expect(screen.queryByText('My Recipe')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Meine Küche/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Toggle Meine Küche timeline/i }));
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
   });
 
@@ -389,7 +395,7 @@ describe('Kueche', () => {
       />
     );
 
-    const tile = screen.getByRole('button', { name: /Meine Küche/i });
+    const tile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
     fireEvent.click(tile);
     expect(screen.getByText('My Recipe')).toBeInTheDocument();
 
@@ -696,5 +702,107 @@ describe('Kueche', () => {
     const chart = screen.getByTestId('app-calls-bar-chart');
     expect(chart).toBeInTheDocument();
     expect(chart.children).toHaveLength(7);
+  });
+
+  test('Meine Küchenstars tile is rendered for logged-in users', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    expect(screen.getByText('Meine Küchenstars')).toBeInTheDocument();
+  });
+
+  test('Meine Küchenstars tile is not rendered when currentUser is not provided', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+      />
+    );
+
+    expect(screen.queryByText('Meine Küchenstars')).not.toBeInTheDocument();
+  });
+
+  test('Meine Küchenstars tile calls onViewChange with meineKuechenstars when clicked', () => {
+    const handleViewChange = jest.fn();
+
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+        onViewChange={handleViewChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Meine Küchenstars/i }));
+    expect(handleViewChange).toHaveBeenCalledWith('meineKuechenstars');
+  });
+
+  test('Meine Küchenstars tile shows most viewed own recipe', async () => {
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValueOnce([
+      { id: 'rc1', recipeId: '1', timestamp: { toDate: () => new Date() } },
+      { id: 'rc2', recipeId: '1', timestamp: { toDate: () => new Date() } },
+      { id: 'rc3', recipeId: '2', timestamp: { toDate: () => new Date() } },
+    ]);
+
+    render(
+      <Kueche
+        recipes={mockRecipes}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    expect(await screen.findByText('My Recipe')).toBeInTheDocument();
+    expect(await screen.findByText('2')).toBeInTheDocument();
+  });
+
+  test('Meine Küchenstars tile renders bar chart with 7 bars', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1' }}
+      />
+    );
+
+    const chart = screen.getByTestId('recipe-calls-bar-chart');
+    expect(chart).toBeInTheDocument();
+    expect(chart.children).toHaveLength(7);
+  });
+
+  test('Meine Küchenstars tile is positioned between Küchenbetrieb and Mein Kochbuch', () => {
+    render(
+      <Kueche
+        recipes={[]}
+        menus={[]}
+        onSelectRecipe={() => {}}
+        allUsers={mockUsers}
+        currentUser={{ id: 'user-1', appCalls: true }}
+      />
+    );
+
+    const kuechenbetriebTile = screen.getByRole('button', { name: /Küchenbetrieb Statistik öffnen/i });
+    const kuechenstarsTile = screen.getByRole('button', { name: /Meine Küchenstars/i });
+    const kochbuchTile = screen.getByRole('button', { name: /Toggle Meine Küche timeline/i });
+
+    expect(kuechenbetriebTile.compareDocumentPosition(kuechenstarsTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(kuechenstarsTile.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

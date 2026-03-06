@@ -5,6 +5,7 @@ import PersonalDataPage from './PersonalDataPage';
 import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getAppCalls } from '../utils/appCallsFirestore';
+import { getRecipeCalls } from '../utils/recipeCallsFirestore';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -56,6 +57,47 @@ function getLastSevenDaysAppCallCounts(appCalls) {
     if (entry) entry.count++;
   });
   return days;
+}
+
+function getLastSevenDaysRecipeCallCounts(recipeCalls) {
+  const now = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    days.push({ year: d.getFullYear(), month: d.getMonth(), day: d.getDate(), count: 0 });
+  }
+  recipeCalls.forEach(call => {
+    const date = parseCallTimestamp(call);
+    if (!date || isNaN(date.getTime())) return;
+    const entry = days.find(d => d.year === date.getFullYear() && d.month === date.getMonth() && d.day === date.getDate());
+    if (entry) entry.count++;
+  });
+  return days;
+}
+
+function RecipeCallsBarChart({ recipeCalls }) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDay = now.getDate();
+  const dailyData = getLastSevenDaysRecipeCallCounts(recipeCalls);
+  const maxCount = Math.max(...dailyData.map(d => d.count), 1);
+
+  return (
+    <div className="kueche-bar-chart" data-testid="recipe-calls-bar-chart" aria-hidden="true">
+      {dailyData.map((d, i) => {
+        const isToday = d.year === currentYear && d.month === currentMonth && d.day === currentDay;
+        const heightPercent = Math.max(MIN_BAR_HEIGHT_PERCENT, Math.round((d.count / maxCount) * 100));
+        return (
+          <div
+            key={i}
+            className={`kueche-bar-chart__bar${isToday ? ' kueche-bar-chart__bar--meine-kuechenstars' : ''}`}
+            style={{ height: `${heightPercent}%` }}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 function AppCallsBarChart({ appCalls }) {
@@ -115,6 +157,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [appCalls, setAppCalls] = useState([]);
+  const [recipeCalls, setRecipeCalls] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -133,6 +176,11 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   useEffect(() => {
     if (!currentUser?.appCalls) return;
     getAppCalls().then(calls => setAppCalls(calls)).catch(() => {});
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    getRecipeCalls().then(calls => setRecipeCalls(calls)).catch(() => {});
   }, [currentUser]);
 
   const filteredRecipes = currentUser
@@ -154,6 +202,17 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       if (!date || isNaN(date.getTime())) return false;
       return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
     }).length;
+  })();
+
+  const ownRecipeCalls = recipeCalls.filter(call => filteredRecipes.some(r => r.id === call.recipeId));
+
+  const mostViewedRecipe = (() => {
+    if (!filteredRecipes.length) return null;
+    const counts = filteredRecipes.map(recipe => ({
+      recipe,
+      count: recipeCalls.filter(call => call.recipeId === recipe.id).length,
+    })).sort((a, b) => b.count - a.count);
+    return counts[0] && counts[0].count > 0 ? counts[0] : null;
   })();
 
   // Transform menus into the shape expected by RecipeTimeline
@@ -256,6 +315,29 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
                   </span>
                 </div>
                 <AppCallsBarChart appCalls={appCalls} />
+              </div>
+            </div>
+          )}
+          {currentUser && (
+            <div
+              className="kueche-tile kueche-tile--meine-kuechenstars"
+              onClick={() => onViewChange && onViewChange('meineKuechenstars')}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewChange && onViewChange('meineKuechenstars'); } }}
+              role="button"
+              tabIndex={0}
+              aria-label="Meine Küchenstars Top Rezepte öffnen"
+            >
+              <div className="kueche-tile-content">
+                <h3>Meine Küchenstars</h3>
+                {mostViewedRecipe && (
+                  <div className="kueche-tile-meta">
+                    <span className="meta-text">
+                      <strong>{mostViewedRecipe.count}</strong>
+                      <span>{mostViewedRecipe.recipe.title}</span>
+                    </span>
+                  </div>
+                )}
+                <RecipeCallsBarChart recipeCalls={ownRecipeCalls} />
               </div>
             </div>
           )}
