@@ -2255,7 +2255,7 @@ exports.createRecipeImportFromText = onRequest(
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
         res.set('Access-Control-Allow-Origin', origin);
         res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id, X-Author-Id');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key, X-User-Id');
         if (req.method === 'OPTIONS') {
           res.status(204).send('');
           return;
@@ -2324,9 +2324,6 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
-      // --- Read optional X-Author-Id header ---
-      const authorId = req.headers['x-author-id'] || userId;
-
       // --- Parse body ---
       let body = req.body;
       if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
@@ -2352,7 +2349,6 @@ exports.createRecipeImportFromText = onRequest(
         await importRef.set({
           rawText,
           userId,
-          authorId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           expiresAt,
         });
@@ -2361,7 +2357,7 @@ exports.createRecipeImportFromText = onRequest(
         const importUrl = `${baseUrl}/recipeImportPage?token=${importRef.id}`;
 
         console.log(`createRecipeImportFromText: import ${importRef.id} created by user ${userId}`);
-        res.status(200).json({success: true, importUrl, authorId});
+        res.status(200).json({success: true, importUrl});
       } catch (err) {
         console.error('createRecipeImportFromText: Firestore error:', err);
         res.status(500).json({success: false, error: 'Fehler beim Speichern des Imports'});
@@ -2413,7 +2409,6 @@ exports.recipeImportPage = onRequest(
       }
 
       const rawText = importData.rawText || '';
-      const authorId = importData.authorId || '';
 
       // Derive a title from the first non-empty line of the raw text
       const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -2429,7 +2424,6 @@ exports.recipeImportPage = onRequest(
         '@type': 'Recipe',
         'name': title,
         'description': rawText,
-        'author': authorId ? {'@type': 'Person', 'identifier': authorId} : undefined,
       });
 
       const html = `<!DOCTYPE html>
@@ -2437,7 +2431,6 @@ exports.recipeImportPage = onRequest(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="x-author-id" content="${escape(authorId)}">
 <title>${escape(title)}</title>
 <script type="application/ld+json">${jsonLd}</script>
 </head>

@@ -124,9 +124,8 @@ An HTTP endpoint that stores unstructured recipe text temporarily in Firestore a
 **Features:**
 - ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
 - ✅ Role check: only users with role `edit`, `admin`, or flag `isShortcutUser: true` may create imports
-- ✅ Optional `X-Author-Id` header to attribute the imported recipe to a different user
 - ✅ Configurable TTL (default 10 minutes)
-- ✅ Returns a capability URL (`importUrl`) and the effective `authorId` that is publicly accessible
+- ✅ Returns a capability URL (`importUrl`) that is publicly accessible
 
 **Request:**
 
@@ -135,7 +134,6 @@ POST https://<region>-<project-id>.cloudfunctions.net/createRecipeImportFromText
 Content-Type: application/json
 X-Api-Key: <API Key>
 X-User-Id: <Firebase User ID of the service/shortcut user>
-X-Author-Id: <Firebase User ID of the real author> (optional)
 ```
 
 **Body (JSON):**
@@ -157,12 +155,9 @@ X-Author-Id: <Firebase User ID of the real author> (optional)
 ```json
 {
   "success": true,
-  "importUrl": "https://.../recipeImportPage?token=<importId>",
-  "authorId": "<Firebase User ID of the author>"
+  "importUrl": "https://.../recipeImportPage?token=<importId>"
 }
 ```
-
-The `authorId` is set to `X-Author-Id` if provided, otherwise to `X-User-Id`.
 
 **Error responses:**
 
@@ -177,11 +172,11 @@ The `authorId` is set to `X-Author-Id` if provided, otherwise to `X-User-Id`.
 
 **Service user setup (shortcut user):**
 
-To use a technical service account for authentication while attributing the recipe to the real author:
+To use a technical service account for authentication:
 
 1. Create a dedicated user in Firebase Authentication for the shortcut/service account
 2. In Firestore `users` collection, set `isShortcutUser: true` on that user's document
-3. In the iOS Shortcut, use the service user's UID in `X-User-Id` and the real user's UID in `X-Author-Id`
+3. In the iOS Shortcut, use the service user's UID in `X-User-Id`
 
 ---
 
@@ -192,7 +187,7 @@ A public HTTP endpoint that renders a temporary recipe import as structured HTML
 **Features:**
 - ✅ No authentication required – random token acts as a capability URL
 - ✅ TTL enforced (returns 410 Gone after expiry)
-- ✅ Returns HTML with `<h1>` title, `<pre>` raw text, JSON-LD `@type: Recipe`, and a `<meta name="x-author-id">` tag
+- ✅ Returns HTML with `<h1>` title, `<pre>` raw text, and JSON-LD `@type: Recipe`
 - ✅ Compatible with the existing website-import / AI OCR workflow
 
 **Request:**

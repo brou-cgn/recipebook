@@ -161,15 +161,15 @@ So ersetzt du den bisherigen „Notiz erstellen"-Schritt durch einen direkten Im
 
 ---
 
-## Rezept exportieren mit Service-User und Autoren-Delegation
+## Rezept exportieren mit Service-User
 
-Für den Kurzbefehl „Rezept exportieren" kann ein technischer **Service-User** zur Authentifizierung verwendet werden, während das importierte Rezept dem **echten Benutzer** als Autor zugeordnet wird.
+Für den Kurzbefehl „Rezept exportieren" wird ein technischer **Service-User** zur Authentifizierung verwendet.
 
 ### Voraussetzungen
 
 1. Erstelle einen dedizierten Service-User in Firebase Authentication (z. B. `shortcut-service@example.com`)
 2. Setze in der Firestore `users`-Collection auf diesem User-Dokument: `isShortcutUser: true`
-3. Notiere die UID des Service-Users sowie die UID des echten Autors
+3. Notiere die UID des Service-Users
 
 ### Kurzbefehl-Aktion: `createRecipeImportFromText`
 
@@ -187,7 +187,6 @@ Füge eine **„Inhalt von URL laden"** Aktion hinzu:
 | `Content-Type` | `application/json` |
 | `X-Api-Key` | `<dein-api-key>` |
 | `X-User-Id` | `<uid-des-service-users>` |
-| `X-Author-Id` | `<uid-des-echten-autors>` |
 
 **Body:** `{ "rawText": "<Rezepttext>" }`
 
@@ -198,20 +197,13 @@ Die Cloud Function gibt zurück:
 ```json
 {
   "success": true,
-  "importUrl": "https://.../recipeImportPage?token=...",
-  "authorId": "<uid-des-echten-autors>"
+  "importUrl": "https://.../recipeImportPage?token=..."
 }
 ```
 
 ### App-URL aufbauen
 
-Nach dem API-Call baust du die App-URL mit beiden Werten:
-
-```
-https://broubook.web.app/?webimport=<importUrl>&webimportAuthor=<authorId>
-```
-
-Diese URL öffnest du im Kurzbefehl mit der Aktion „URL öffnen". Die App erkennt automatisch den `webimportAuthor`-Parameter und setzt ihn als Autor des neuen Rezepts.
+Nach dem API-Call öffnest du die `importUrl` direkt mit der Aktion „URL öffnen". Die App erkennt automatisch den Import und startet den Import-Workflow.
 
 ---
 
