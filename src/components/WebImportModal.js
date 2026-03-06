@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './WebImportModal.css';
-import { captureWebsiteScreenshot } from '../utils/webImportService';
+import { captureWebsiteScreenshot, isRecipeImportPageUrl, parseRecipeImportPage } from '../utils/webImportService';
 import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
 function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
@@ -38,21 +38,28 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
     setProgress(10);
 
     try {
-      // Step 1: Capture screenshot
-      setProgress(20);
-      const screenshotBase64 = await captureWebsiteScreenshot(urlToSubmit.trim(), (prog) => {
-        setProgress(20 + (prog * 0.3)); // 20-50%
-      });
+      let result;
 
-      // Step 2: Process with Gemini OCR
-      setProgress(50);
-      const result = await recognizeRecipeWithAI(screenshotBase64, {
-        language: 'de',
-        provider: 'gemini',
-        onProgress: (prog) => {
-          setProgress(50 + (prog * 0.5)); // 50-100%
-        }
-      });
+      if (isRecipeImportPageUrl(urlToSubmit.trim())) {
+        // Direct HTML parsing path – no screenshot or AI needed
+        result = await parseRecipeImportPage(urlToSubmit.trim(), setProgress);
+      } else {
+        // Step 1: Capture screenshot
+        setProgress(20);
+        const screenshotBase64 = await captureWebsiteScreenshot(urlToSubmit.trim(), (prog) => {
+          setProgress(20 + (prog * 0.3)); // 20-50%
+        });
+
+        // Step 2: Process with Gemini OCR
+        setProgress(50);
+        result = await recognizeRecipeWithAI(screenshotBase64, {
+          language: 'de',
+          provider: 'gemini',
+          onProgress: (prog) => {
+            setProgress(50 + (prog * 0.5)); // 50-100%
+          }
+        });
+      }
 
       setProgress(100);
       setAiResult(result);

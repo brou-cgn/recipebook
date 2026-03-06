@@ -6,6 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { parseOcrTextSmart } from './ocrParser';
 
 /**
  * Capture a screenshot of a website
@@ -81,6 +82,117 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
     
     throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.');
   }
+}
+
+/**
+ * Check whether a URL points to an internal recipeImportPage.
+ * These pages embed structured JSON-LD data and can be parsed directly
+ * without a Puppeteer screenshot or AI OCR step.
+ *
+ * @param {string} url - URL to test
+ * @returns {boolean} True when the URL matches /recipeImportPage?token=…
+ */
+export function isRecipeImportPageUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname === '/recipeImportPage' && urlObj.searchParams.has('token');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch a recipeImportPage URL and parse the recipe data directly from its HTML.
+ * Extracts title and raw text from the embedded JSON-LD (or `<h1>`/`<pre>`
+ * as fallback), then uses the local OCR parser to produce structured data.
+ *
+ * Returns an object that is compatible with the `aiResult` shape expected by
+ * WebImportModal (title, ingredients, steps, servings, cookTime, difficulty,
+ * cuisine, category).
+ *
+ * @param {string} url - A recipeImportPage URL (validated by isRecipeImportPageUrl)
+ * @param {Function} [onProgress] - Optional progress callback (0–100)
+ * @returns {Promise<Object>} Structured recipe data
+ */
+export async function parseRecipeImportPage(url, onProgress = null) {
+  if (onProgress) onProgress(10);
+
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    throw new Error('Import-Seite konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.');
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) throw new Error('Import nicht gefunden. Möglicherweise wurde er bereits gelöscht.');
+    if (response.status === 410) throw new Error('Import ist abgelaufen. Bitte erstellen Sie einen neuen Import.');
+    throw new Error(`Fehler beim Laden der Import-Seite (HTTP ${response.status}).`);
+  }
+
+  if (onProgress) onProgress(40);
+
+  const html = await response.text();
+
+  if (onProgress) onProgress(60);
+
+  // Parse the HTML in the browser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Prefer JSON-LD as it is the most reliable source
+  let title = '';
+  let rawText = '';
+
+  const jsonLdScript = doc.querySelector('script[type="application/ld+json"]');
+  if (jsonLdScript) {
+    try {
+      const jsonLd = JSON.parse(jsonLdScript.textContent);
+      title = jsonLd.name || '';
+      rawText = jsonLd.description || '';
+    } catch {
+      // fall through to DOM fallback
+    }
+  }
+
+  // DOM fallback
+  if (!title) {
+    title = doc.querySelector('h1')?.textContent?.trim() || '';
+  }
+  if (!rawText) {
+    rawText = doc.querySelector('pre')?.textContent?.trim() || '';
+  }
+
+  if (onProgress) onProgress(80);
+
+  // Parse raw text into structured recipe using the existing OCR parser
+  const { recipe } = parseOcrTextSmart(rawText, 'de');
+
+  // Use the title from JSON-LD/h1 when the parser could not detect one
+  if (title && (!recipe.title || recipe.title === 'OCR-Rezept')) {
+    recipe.title = title;
+  }
+
+  if (onProgress) onProgress(100);
+
+  // Helper: return first array element, non-empty string, or null
+  const firstOrNull = (value) => {
+    if (Array.isArray(value)) return value.length > 0 ? value[0] : null;
+    if (typeof value === 'string') return value || null;
+    return null;
+  };
+
+  // Convert to the aiResult format expected by WebImportModal
+  return {
+    title: recipe.title || title || '',
+    ingredients: recipe.ingredients || [],
+    steps: recipe.steps || [],
+    servings: recipe.portionen || null,
+    cookTime: recipe.kochdauer ? `${recipe.kochdauer} min` : null,
+    difficulty: recipe.schwierigkeit || null,
+    cuisine: firstOrNull(recipe.kulinarik),
+    category: firstOrNull(recipe.speisekategorie),
+  };
 }
 
 /**
