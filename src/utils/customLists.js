@@ -238,6 +238,7 @@ export async function getSettings() {
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
+        customUnits: settings.customUnits || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         faviconImage: settings.faviconImage || null,

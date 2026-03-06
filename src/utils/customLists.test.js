@@ -166,4 +166,51 @@ describe('getCustomLists – default fallbacks', () => {
 
     expect(lists.cuisineTypes).toEqual(customCuisine);
   });
+
+  test('returns saved portionUnits from Firestore instead of defaults', async () => {
+    const savedPortionUnits = [
+      { id: 'portion', singular: 'Portion', plural: 'Portionen' },
+      { id: 'pizza', singular: 'Pizza', plural: 'Pizzen' },
+      { id: 'neue-einheit', singular: 'Neue Einheit', plural: 'Neue Einheiten' },
+    ];
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        portionUnits: savedPortionUnits,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.portionUnits).toEqual(savedPortionUnits);
+    expect(lists.portionUnits).toHaveLength(3);
+    expect(lists.portionUnits[2].id).toBe('neue-einheit');
+  });
+
+  test('includes customUnits from Firestore in the returned lists', async () => {
+    const savedCustomUnits = ['myUnit', 'anotherUnit'];
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        customUnits: savedCustomUnits,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.customUnits).toEqual(savedCustomUnits);
+  });
+
+  test('customUnits defaults to empty array when not in Firestore', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.customUnits).toEqual([]);
+  });
 });

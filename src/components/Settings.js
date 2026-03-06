@@ -373,46 +373,56 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     }
   };
 
-  const handleSave = () => {
-    saveCustomLists(lists);
-    saveHeaderSlogan(headerSlogan);
-    saveFaviconImage(faviconImage);
-    saveFaviconText(faviconText);
-    saveAppLogoImage(appLogoImage);
-    saveButtonIcons(buttonIcons);
-    saveTimelineBubbleIcon(timelineBubbleIcon);
-    saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
-    saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
-    saveTileSizePreference(tileSize);
-    
-    // Apply favicon changes immediately
-    updateFavicon(faviconImage);
-    updatePageTitle(faviconText);
-    updateAppLogo(appLogoImage);
+  const handleSave = async () => {
+    try {
+      await saveCustomLists(lists);
+      saveHeaderSlogan(headerSlogan);
+      saveFaviconImage(faviconImage);
+      saveFaviconText(faviconText);
+      saveAppLogoImage(appLogoImage);
+      saveButtonIcons(buttonIcons);
+      saveTimelineBubbleIcon(timelineBubbleIcon);
+      saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
+      saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
+      saveTileSizePreference(tileSize);
 
-    // Apply tile size immediately
-    applyTileSizePreference(tileSize);
-    
-    // Notify service worker about settings update for PWA manifest/icons
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({
-        type: 'UPDATE_APP_SETTINGS',
-        settings: {
-          faviconText: faviconText,
-          headerSlogan: headerSlogan,
-          appLogoImage: appLogoImage
-        }
-      });
+      // Apply favicon changes immediately
+      updateFavicon(faviconImage);
+      updatePageTitle(faviconText);
+      updateAppLogo(appLogoImage);
+
+      // Apply tile size immediately
+      applyTileSizePreference(tileSize);
+
+      // Notify service worker about settings update for PWA manifest/icons
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'UPDATE_APP_SETTINGS',
+          settings: {
+            faviconText: faviconText,
+            headerSlogan: headerSlogan,
+            appLogoImage: appLogoImage
+          }
+        });
+      }
+
+      alert('Einstellungen erfolgreich gespeichert!');
+    } catch (error) {
+      console.error('Fehler beim Speichern der Einstellungen:', error);
+      alert('Fehler beim Speichern der Einstellungen. Bitte versuchen Sie es erneut.');
     }
-    
-    alert('Einstellungen erfolgreich gespeichert!');
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Möchten Sie wirklich alle Listen auf die Standardwerte zurücksetzen?')) {
-      const defaultLists = resetCustomLists();
-      setLists(defaultLists);
-      alert('Listen auf Standardwerte zurückgesetzt!');
+      try {
+        const defaultLists = await resetCustomLists();
+        setLists(defaultLists);
+        alert('Listen auf Standardwerte zurückgesetzt!');
+      } catch (error) {
+        console.error('Fehler beim Zurücksetzen der Listen:', error);
+        alert('Fehler beim Zurücksetzen der Listen. Bitte versuchen Sie es erneut.');
+      }
     }
   };
 
