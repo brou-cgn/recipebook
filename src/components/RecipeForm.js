@@ -893,7 +893,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               value={portionen}
               onChange={(e) => setPortionen(e.target.value)}
               min="1"
-              max="100"
+              max="1000"
               placeholder="4"
             />
           </div>
