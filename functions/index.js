@@ -49,6 +49,11 @@ const RATE_LIMITS = {
 };
 
 /**
+ * Maximum number of account registrations allowed per IP address per hour.
+ */
+const REGISTRATION_RATE_LIMIT = 5;
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB in bytes
@@ -272,6 +277,51 @@ async function checkRateLimit(userId, isAuthenticated, isAdmin = false) {
     console.error('Rate limit check error:', error);
     // On error, allow the request (fail open)
     return {allowed: true, remaining: limit, limit};
+  }
+}
+
+/**
+ * Check and enforce the per-IP registration rate limit.
+ * Stores counters in the `registrationLimits` Firestore collection, keyed by
+ * IP address and the current UTC hour so the counter resets each hour.
+ *
+ * @param {string} ip - Normalised client IP address
+ * @returns {Promise<{allowed: boolean, remaining: number}>}
+ */
+async function checkRegistrationRateLimit(ip) {
+  const db = admin.firestore();
+  // Bucket by UTC hour so the counter resets automatically each hour
+  const hourKey = new Date().toISOString().slice(0, 13); // e.g. "2026-03-06T19"
+  const docRef = db.collection('registrationLimits').doc(`${ip}_${hourKey}`);
+
+  try {
+    return await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(docRef);
+
+      if (!snap.exists) {
+        transaction.set(docRef, {
+          ip,
+          hourKey,
+          count: 1,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return {allowed: true, remaining: REGISTRATION_RATE_LIMIT - 1};
+      }
+
+      const data = snap.data();
+      if (data.count >= REGISTRATION_RATE_LIMIT) {
+        return {allowed: false, remaining: 0};
+      }
+
+      transaction.update(docRef, {
+        count: admin.firestore.FieldValue.increment(1),
+      });
+      return {allowed: true, remaining: REGISTRATION_RATE_LIMIT - data.count - 1};
+    });
+  } catch (error) {
+    console.error('Registration rate limit check error:', error);
+    // Fail open so a Firestore outage does not block all registrations
+    return {allowed: true, remaining: REGISTRATION_RATE_LIMIT};
   }
 }
 
@@ -2179,6 +2229,21 @@ exports.createUserProfile = onCall(
 
       const {vorname, nachname, email} = request.data || {};
       const uid = request.auth.uid;
+
+      // IP-based registration rate limiting
+      const rawIp = (
+        request.rawRequest.headers['x-forwarded-for'] ||
+        request.rawRequest.ip ||
+        'unknown'
+      );
+      const clientIp = rawIp.split(',')[0].trim();
+      const rateLimitResult = await checkRegistrationRateLimit(clientIp);
+      if (!rateLimitResult.allowed) {
+        throw new HttpsError(
+            'resource-exhausted',
+            'Zu viele Registrierungsversuche. Bitte versuchen Sie es später erneut.',
+        );
+      }
 
       // Basic input validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

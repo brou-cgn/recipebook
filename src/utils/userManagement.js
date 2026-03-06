@@ -121,6 +121,8 @@ export const registerUser = async (userData) => {
       return { success: false, message: 'Ungültige E-Mail-Adresse.' };
     } else if (error.code === 'auth/weak-password') {
       return { success: false, message: 'Das Passwort ist zu schwach. Mindestens 12 Zeichen erforderlich.' };
+    } else if (error.code === 'functions/resource-exhausted') {
+      return { success: false, message: 'Zu viele Registrierungsversuche. Bitte versuchen Sie es später erneut.' };
     }
     
     return { success: false, message: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.' };

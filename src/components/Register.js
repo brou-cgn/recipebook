@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './Register.css';
 import { validatePassword } from '../utils/userManagement';
+
+// Minimum seconds that must elapse between registration attempts
+const SUBMIT_COOLDOWN_SECONDS = 30;
 
 function Register({ onRegister, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
@@ -13,6 +16,7 @@ function Register({ onRegister, onSwitchToLogin }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const lastSubmitRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -25,8 +29,20 @@ function Register({ onRegister, onSwitchToLogin }) {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Client-side cooldown: prevent rapid repeated submission attempts
+    const now = Date.now();
+    if (lastSubmitRef.current !== null) {
+      const elapsed = (now - lastSubmitRef.current) / 1000;
+      if (elapsed < SUBMIT_COOLDOWN_SECONDS) {
+        const remaining = Math.ceil(SUBMIT_COOLDOWN_SECONDS - elapsed);
+        setError(`Bitte warten Sie noch ${remaining} Sekunden vor dem nächsten Registrierungsversuch.`);
+        return;
+      }
+    }
+
     setIsLoading(true);
-    
+    lastSubmitRef.current = now;
     try {
       // Trim name/email fields only; passwords must not be trimmed to preserve user-intended characters
       const password = formData.password || '';
