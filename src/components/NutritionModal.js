@@ -72,6 +72,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     }
     return map;
   });
+  const [acceptedIngredients, setAcceptedIngredients] = useState(() => {
+    const stored = loadStoredCalcResult(recipe?.id);
+    const list = stored?.acceptedIngredients || recipe?.naehrwerte?.calcAcceptedIngredients || [];
+    return new Set(list);
+  });
   const closeButtonRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -123,13 +128,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       salz: parsePositiveNumber(salz),
     };
     // Preserve calc metadata so the error log remains visible after manual save
-    const { calcFoundCount, calcTotalCount, calcNotIncluded, calcReformulations } = recipe?.naehrwerte || {};
+    const { calcFoundCount, calcTotalCount, calcNotIncluded, calcReformulations, calcAcceptedIngredients } = recipe?.naehrwerte || {};
     const naehrwerte = {
       ...naehrwerteToTotals(perPortion, portionen),
       ...(calcFoundCount !== undefined && { calcFoundCount }),
       ...(calcTotalCount !== undefined && { calcTotalCount }),
       ...(calcNotIncluded !== undefined && { calcNotIncluded }),
       ...(calcReformulations !== undefined && { calcReformulations }),
+      ...(calcAcceptedIngredients !== undefined && { calcAcceptedIngredients }),
     };
 
     setSaving(true);
@@ -171,6 +177,37 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       } catch (err) {
         console.error('Could not save reformulation to Firebase:', err);
       }
+    }
+  };
+
+  const handleAcceptIngredient = async (ingredient) => {
+    const newAccepted = new Set(acceptedIngredients);
+    newAccepted.add(ingredient);
+    setAcceptedIngredients(newAccepted);
+    const acceptedArray = [...newAccepted];
+
+    const updatedNotIncluded = autoCalcResult?.notIncluded
+      ? autoCalcResult.notIncluded.filter(item => item.ingredient !== ingredient)
+      : null;
+    const updatedFoundCount = autoCalcResult ? autoCalcResult.foundCount + 1 : undefined;
+
+    if (updatedNotIncluded !== null && updatedFoundCount !== undefined) {
+      const updatedResult = { ...autoCalcResult, notIncluded: updatedNotIncluded, foundCount: updatedFoundCount };
+      setAutoCalcResult(updatedResult);
+      saveStoredCalcResult(recipe?.id, { ...updatedResult, acceptedIngredients: acceptedArray });
+    }
+
+    try {
+      await onSave({
+        ...(recipe?.naehrwerte || {}),
+        ...(updatedNotIncluded !== null && {
+          calcNotIncluded: updatedNotIncluded.length > 0 ? updatedNotIncluded : null,
+        }),
+        ...(updatedFoundCount !== undefined && { calcFoundCount: updatedFoundCount }),
+        calcAcceptedIngredients: acceptedArray,
+      });
+    } catch (err) {
+      console.error('Could not save accepted ingredient to Firebase:', err);
     }
   };
 
@@ -224,6 +261,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         break;
       }
       const ingredient = ingredients[i];
+
+      // Skip accepted ingredients – count them as found without an API call
+      if (acceptedIngredients.has(ingredient)) {
+        setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
+        foundCount++;
+        continue;
+      }
+
       const effectiveIngredient = reformulations[ingredient]?.text || ingredient;
       setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: effectiveIngredient });
 
@@ -264,6 +309,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         break;
       }
       const { ingredient, link } = recipeLinkItems[i];
+
+      // Skip accepted ingredients – count them as found without resolution
+      if (acceptedIngredients.has(ingredient)) {
+        setCalcProgress({ done: ingredients.length + i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
+        foundCount++;
+        continue;
+      }
+
       setCalcProgress({ done: ingredients.length + i, total: ingredients.length + recipeLinkItems.length, current: link.recipeName });
 
       const linkedRecipe = allRecipes.find(r => r.id === link.recipeId);
@@ -310,10 +363,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     }
 
     const totalCount = ingredients.length + recipeLinkItems.length;
+    const acceptedArray = acceptedIngredients.size > 0 ? [...acceptedIngredients] : undefined;
     const result = {
       foundCount,
       totalCount,
       notIncluded,
+      ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(successfulReformulations).length > 0 && { calcReformulations: successfulReformulations }),
     };
     setAutoCalcResult(result);
@@ -328,6 +383,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       calcFoundCount: foundCount,
       calcTotalCount: totalCount,
       calcReformulations: Object.keys(successfulReformulations).length > 0 ? successfulReformulations : null,
+      calcAcceptedIngredients: acceptedArray || null,
     };
     try {
       await onSave(finalNaehrwerte);
@@ -570,6 +626,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                                   }}
                                   title="Zutat umformulieren"
                                 >✏️</button>
+                                <button
+                                  className="nutrition-accept-ingredient-btn"
+                                  onClick={() => handleAcceptIngredient(item.ingredient)}
+                                  title="Als gefunden markieren (von der Neuberechnung ausschließen)"
+                                >✔</button>
                               </div>
                               {(item.changeLog || reformulations[item.ingredient]?.changeLog)?.length > 0 && (
                                 <details className="nutrition-change-log">
@@ -589,7 +650,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                         </li>
                       ))}
                     </ul>
-                    {Object.keys(reformulations).length > 0 && (
+                    {(Object.keys(reformulations).length > 0 || acceptedIngredients.size > 0) && (
                       <button
                         className="nutrition-recalc-reformulated-button"
                         onClick={handleAutoCalculate}

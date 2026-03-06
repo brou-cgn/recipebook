@@ -484,6 +484,22 @@
   opacity: 1;
 }
 
+.nutrition-accept-ingredient-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.2rem;
+  opacity: 0.5;
+  color: #2e7d32;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.nutrition-accept-ingredient-btn:hover {
+  opacity: 1;
+}
+
 .nutrition-reformulation-badge {
   font-size: 0.72rem;
   color: #402C1C;
