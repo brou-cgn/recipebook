@@ -154,4 +154,23 @@ describe('Register Component', () => {
       password: '  password123  '
     });
   });
+
+  test('blocks registration after 5 attempts within one hour (client-side rate limit)', async () => {
+    // Pre-seed localStorage with 5 recent registration attempts
+    const now = Date.now();
+    const recentAttempts = [now - 1000, now - 2000, now - 3000, now - 4000, now - 5000];
+    localStorage.setItem('registrationAttempts', JSON.stringify(recentAttempts));
+
+    render(<Register onRegister={mockOnRegister} onSwitchToLogin={mockOnSwitchToLogin} />);
+
+    fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: 'Max' } });
+    fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: 'Mustermann' } });
+    fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: 'max@example.com' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'ValidPassword1!' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'ValidPassword1!' } });
+    fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
+
+    expect(screen.getByText(/Zu viele Registrierungsversuche/i)).toBeInTheDocument();
+    expect(mockOnRegister).not.toHaveBeenCalled();
+  });
 });

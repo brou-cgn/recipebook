@@ -98,6 +98,20 @@ export const registerUser = async (userData) => {
   }
   
   try {
+    // Server-side rate limit check before creating the Firebase Auth user.
+    // The Cloud Function extracts the caller's IP from the request headers;
+    // the client passes an empty payload since IP detection happens server-side.
+    const rateLimitFn = httpsCallable(functions, 'checkRegistrationRateLimit');
+    await rateLimitFn({});
+  } catch (error) {
+    if (error.code === 'functions/resource-exhausted') {
+      return { success: false, message: error.message || 'Zu viele Registrierungsversuche. Bitte später erneut versuchen.' };
+    }
+    // For other errors (e.g. network), fail open so legitimate users are not blocked
+    console.warn('Registration rate limit check failed, proceeding:', error);
+  }
+
+  try {
     // Create Firebase Auth user
     const userCredential = await createUserWithEmailAndPassword(
       auth,

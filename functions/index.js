@@ -49,6 +49,11 @@ const RATE_LIMITS = {
 };
 
 /**
+ * Maximum number of registration attempts per IP address per hour.
+ */
+const REGISTRATION_RATE_LIMIT = 5;
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB in bytes
@@ -1461,6 +1466,101 @@ function escapeHtml(str) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
 }
+
+/**
+ * Check and update registration rate limit for an IP address.
+ * Allows at most REGISTRATION_RATE_LIMIT registrations per IP per hour.
+ * @param {string} ip - Caller IP address
+ * @returns {Promise<{allowed: boolean, retryAfterSeconds: number}>}
+ */
+async function checkRegistrationRateLimit(ip) {
+  const db = admin.firestore();
+  // Build hour slot string "YYYY-MM-DDTHH" using explicit UTC offset for Europe/Berlin.
+  // We use Intl.DateTimeFormat parts to avoid locale-dependent string formats.
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? '00';
+  // hour12:false may return "24" for midnight in some runtimes; normalise it
+  const hourVal = get('hour') === '24' ? '00' : get('hour');
+  const hourSlot = `${get('year')}-${get('month')}-${get('day')}T${hourVal}`; // e.g. "2024-01-15T14"
+
+  // Sanitize IP for use as a Firestore document ID
+  const safeIp = (ip || 'unknown').replace(/[^a-zA-Z0-9._:-]/g, '_').slice(0, 128);
+  const docRef = db.collection('registrationLimits').doc(`${safeIp}_${hourSlot}`);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const snap = await transaction.get(docRef);
+
+      if (!snap.exists) {
+        transaction.set(docRef, {
+          ip: safeIp,
+          hourSlot,
+          count: 1,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return {allowed: true, retryAfterSeconds: 0};
+      }
+
+      const data = snap.data();
+      if (data.count >= REGISTRATION_RATE_LIMIT) {
+        // Tell the client to retry after the remainder of the current hour
+        const now = new Date();
+        const nextHour = new Date(now);
+        nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+        const retryAfterSeconds = Math.ceil((nextHour - now) / 1000);
+        return {allowed: false, retryAfterSeconds};
+      }
+
+      transaction.update(docRef, {
+        count: admin.firestore.FieldValue.increment(1),
+      });
+      return {allowed: true, retryAfterSeconds: 0};
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Registration rate limit check error:', error);
+    // On error, fail open so legitimate users are not blocked
+    return {allowed: true, retryAfterSeconds: 0};
+  }
+}
+
+/**
+ * Cloud Function: Check registration rate limit for the calling IP address.
+ * Must be called by the client before attempting to register a new user.
+ * Returns { allowed: boolean, retryAfterSeconds: number }.
+ */
+exports.checkRegistrationRateLimit = onCall(
+    {
+      maxInstances: 10,
+    },
+    async (request) => {
+      const ip =
+        request.rawRequest?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+        request.rawRequest?.ip ||
+        'unknown';
+
+      const result = await checkRegistrationRateLimit(ip);
+
+      if (!result.allowed) {
+        throw new HttpsError(
+            'resource-exhausted',
+            `Zu viele Registrierungsversuche. Bitte in ${Math.ceil(result.retryAfterSeconds / 60)} Minute(n) erneut versuchen.`,
+            {retryAfterSeconds: result.retryAfterSeconds}
+        );
+      }
+
+      return {allowed: true};
+    }
+);
 
 /**
  * Firestore trigger: send email notification to all admins when a new user registers.

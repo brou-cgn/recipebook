@@ -2,6 +2,45 @@ import React, { useState } from 'react';
 import './Register.css';
 import { validatePassword } from '../utils/userManagement';
 
+/**
+ * Client-side registration attempt tracker using localStorage.
+ * Limits to 5 attempts per hour per browser to provide a fast-path
+ * defense before the server-side rate limit is hit.
+ */
+const REGISTRATION_CLIENT_LIMIT = 5;
+const REGISTRATION_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const REGISTRATION_STORAGE_KEY = 'registrationAttempts';
+
+function getClientRateLimitStatus() {
+  try {
+    const stored = localStorage.getItem(REGISTRATION_STORAGE_KEY);
+    const attempts = stored ? JSON.parse(stored) : [];
+    const now = Date.now();
+    const recent = attempts.filter((ts) => now - ts < REGISTRATION_WINDOW_MS);
+    if (recent.length >= REGISTRATION_CLIENT_LIMIT) {
+      const oldestTs = Math.min(...recent);
+      const retryAfterMs = REGISTRATION_WINDOW_MS - (now - oldestTs);
+      return { allowed: false, retryAfterMs };
+    }
+    return { allowed: true, retryAfterMs: 0 };
+  } catch {
+    return { allowed: true, retryAfterMs: 0 };
+  }
+}
+
+function recordClientRegistrationAttempt() {
+  try {
+    const stored = localStorage.getItem(REGISTRATION_STORAGE_KEY);
+    const attempts = stored ? JSON.parse(stored) : [];
+    const now = Date.now();
+    const recent = attempts.filter((ts) => now - ts < REGISTRATION_WINDOW_MS);
+    recent.push(now);
+    localStorage.setItem(REGISTRATION_STORAGE_KEY, JSON.stringify(recent));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 function Register({ onRegister, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
     vorname: '',
@@ -28,6 +67,15 @@ function Register({ onRegister, onSwitchToLogin }) {
     setIsLoading(true);
     
     try {
+      // Client-side rate limit check (fast-path before hitting the server)
+      const clientLimit = getClientRateLimitStatus();
+      if (!clientLimit.allowed) {
+        const minutes = Math.ceil(clientLimit.retryAfterMs / 60000);
+        setError(`Zu viele Registrierungsversuche. Bitte in ${minutes} Minute(n) erneut versuchen.`);
+        setIsLoading(false);
+        return;
+      }
+
       // Trim name/email fields only; passwords must not be trimmed to preserve user-intended characters
       const password = formData.password || '';
       const confirmPassword = formData.confirmPassword || '';
@@ -47,6 +95,9 @@ function Register({ onRegister, onSwitchToLogin }) {
         return;
       }
       
+      // Record the attempt before calling the server (counts toward the hourly limit)
+      recordClientRegistrationAttempt();
+
       const result = await onRegister({
         vorname: (formData.vorname || '').trim(),
         nachname: (formData.nachname || '').trim(),
