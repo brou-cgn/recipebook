@@ -1028,18 +1028,22 @@ exports.scrapeInstagramReel = onCall(
         await browser.close();
         browser = null;
 
+        // Minimum character lengths for heuristic content quality checks
+        const MIN_BODY_TEXT_LENGTH = 100;
+        const MIN_COMBINED_TEXT_LENGTH = 30;
+
         // Build combined text from all available sources
         const parts = [];
         if (extractedData.title) parts.push(`Titel: ${extractedData.title}`);
         if (extractedData.description) {
           parts.push(`Caption:\n${extractedData.description}`);
         }
-        if (extractedData.bodyText && extractedData.bodyText.length > 100) {
+        if (extractedData.bodyText && extractedData.bodyText.length > MIN_BODY_TEXT_LENGTH) {
           parts.push(`Seiteninhalt:\n${extractedData.bodyText}`);
         }
         const combinedText = parts.join('\n\n');
 
-        if (!combinedText.trim() || combinedText.length < 30) {
+        if (!combinedText.trim() || combinedText.length < MIN_COMBINED_TEXT_LENGTH) {
           throw new HttpsError(
               'not-found',
               'Kein Rezeptinhalt auf der Instagram-Seite gefunden. ' +
