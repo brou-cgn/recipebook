@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
-import { isCurrentUserAdmin, ROLES } from '../utils/userManagement';
+import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
@@ -110,7 +110,7 @@ function renderBoldText(text) {
   });
 }
 
-function Settings({ onBack, currentUser, allUsers = [] }) {
+function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -196,6 +196,12 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
   // Tile size state
   const [tileSize, setTileSize] = useState(getTileSizePreference);
 
+  // Role permissions state (for abortCalc permission check)
+  const [rolePermissions, setRolePermissions] = useState(null);
+
+  // Active calculations abort state
+  const [abortingCalcId, setAbortingCalcId] = useState(null);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     const loadSettings = async () => {
@@ -224,6 +230,11 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
       setAiPrompt(aiRecipePrompt);
     };
     loadSettings();
+  }, []);
+
+  // Load role permissions for abortCalc check
+  useEffect(() => {
+    getRolePermissions().then(setRolePermissions);
   }, []);
 
   // Subscribe to FAQs for real-time updates
@@ -833,6 +844,24 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
     setTimelineMenuDefaultImage(null);
   };
 
+  const handleAbortCalcForRecipe = async (recipe) => {
+    if (!onUpdateRecipe) return;
+    setAbortingCalcId(recipe.id);
+    try {
+      await onUpdateRecipe(recipe.id, {
+        naehrwerte: {
+          ...(recipe.naehrwerte || {}),
+          calcPending: false,
+          calcError: 'Berechnung abgebrochen',
+        },
+      });
+    } catch (err) {
+      console.error('Error aborting calculation:', err);
+    } finally {
+      setAbortingCalcId(null);
+    }
+  };
+
   return (
     <div className="settings-container">
       <div className="settings-header">
@@ -888,6 +917,48 @@ function Settings({ onBack, currentUser, allUsers = [] }) {
       <div className="settings-content">
         {activeTab === 'general' ? (
           <>
+            {rolePermissions?.[currentUser?.role]?.abortCalc && (
+              <div className="settings-section">
+                <h3>Aktive Nährwertberechnungen</h3>
+                <p className="section-description">
+                  Übersicht aller Rezepte, bei denen gerade eine Nährwertberechnung läuft. Sie können einzelne Berechnungen hier gezielt abbrechen.
+                </p>
+                {(() => {
+                  const pending = allRecipes.filter(r => r.naehrwerte?.calcPending === true);
+                  if (pending.length === 0) {
+                    return <p className="section-description">Keine aktiven Berechnungen vorhanden.</p>;
+                  }
+                  return (
+                    <table className="role-permissions-table">
+                      <thead>
+                        <tr>
+                          <th>Rezept</th>
+                          <th>Aktion</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pending.map(recipe => (
+                          <tr key={recipe.id}>
+                            <td>{recipe.titel || recipe.name || recipe.id}</td>
+                            <td>
+                              <button
+                                className="nutrition-abort-settings-button"
+                                onClick={() => handleAbortCalcForRecipe(recipe)}
+                                disabled={abortingCalcId === recipe.id}
+                                title="Berechnung abbrechen"
+                              >
+                                {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : '❌ Abbrechen'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            )}
+
             <div className="settings-section">
               <h3>Header-Slogan</h3>
               <p className="section-description">

@@ -162,17 +162,17 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   };
 
   // Get recipes grouped by sections
-  let recipeSections = [];
-  if (menu.sections && menu.sections.length > 0) {
-    recipeSections = groupRecipesBySections(menu.sections, recipes);
-  } else {
+  const recipeSections = useMemo(() => {
+    if (menu.sections && menu.sections.length > 0) {
+      return groupRecipesBySections(menu.sections, recipes);
+    }
     // Fallback for old menu format
     const menuRecipes = recipes.filter(r => menu.recipeIds?.includes(r.id));
-    recipeSections = [{
+    return [{
       name: 'Alle Rezepte',
       recipes: menuRecipes
     }];
-  }
+  }, [menu, recipes]);
 
   // Collect all unique linked (sub-)recipes referenced in menu recipe ingredients
   const allLinkedRecipes = useMemo(() => {

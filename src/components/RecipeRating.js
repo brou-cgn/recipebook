@@ -3,13 +3,6 @@ import './RecipeRating.css';
 import { rateRecipe, getUserRating, subscribeToRatingSummary } from '../utils/recipeRatings';
 
 /**
- * Returns true when a heart at position `n` (1–5) should be shown as filled,
- * given the supplied average. Rounds to the nearest half-heart so a 3.5 avg
- * fills positions 1–3 fully and position 4 partially (displayed as filled).
- */
-const shouldFillHeart = (avg, n) => avg >= n - 0.5;
-
-/**
  * Formats a rating average using German locale (comma as decimal separator).
  * E.g. 4.8 → "4,8"
  */

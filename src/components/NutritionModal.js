@@ -325,31 +325,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     }
   };
 
-  const handleAbortCalculation = async () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    try {
-      await onSave({
-        ...(recipe?.naehrwerte || {}),
-        calcPending: false,
-        calcError: 'Berechnung abgebrochen',
-      });
-    } catch (err) {
-      console.error('Error clearing calcPending on abort:', err);
-    }
-
-    setCalcProgress(null);
-    setAutoCalcLoading(false);
-    setAutoCalcResult({
-      info: 'Berechnung abgebrochen. Bereits gefundene Werte wurden übernommen.',
-      foundCount: 0,
-      totalCount: 0,
-      notIncluded: [],
-    });
-  };
-
   const hasValues =
     kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
     zucker !== '' || ballaststoffe !== '' || salz !== '';
@@ -522,15 +497,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                   <p className="nutrition-calc-current">Überprüfe: {calcProgress.current}</p>
                 )}
               </div>
-            )}
-            {calcProgress && (currentUser?.isAdmin || currentUser?.role === 'moderator') && (
-              <button
-                className="nutrition-abort-button"
-                onClick={handleAbortCalculation}
-                title="Berechnung abbrechen"
-              >
-                ❌ Abbrechen
-              </button>
             )}
             {autoCalcResult && autoCalcResult.info && (
               <p className="nutrition-autocalc-info">{autoCalcResult.info}</p>
