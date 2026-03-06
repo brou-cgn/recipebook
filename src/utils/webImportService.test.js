@@ -29,7 +29,7 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { isRecipeImportPageUrl, parseRecipeImportPage } from './webImportService';
+import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml } from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 
@@ -64,6 +64,63 @@ describe('isRecipeImportPageUrl', () => {
 
   test('returns false for an empty string', () => {
     expect(isRecipeImportPageUrl('')).toBe(false);
+  });
+});
+
+// --------------------------------------------------------------------------
+// extractTextFromHtml
+// --------------------------------------------------------------------------
+
+describe('extractTextFromHtml', () => {
+  test('extracts plain text from a simple HTML document', () => {
+    const html = '<!DOCTYPE html><html><body><p>Hello World</p></body></html>';
+    const result = extractTextFromHtml(html);
+    expect(result).toContain('Hello World');
+    expect(result).not.toMatch(/<[^>]+>/);
+  });
+
+  test('removes script and style tags', () => {
+    const html = '<html><head><script>alert("x")</script><style>body{color:red}</style></head><body>Visible content</body></html>';
+    const result = extractTextFromHtml(html);
+    expect(result).toContain('Visible content');
+    expect(result).not.toContain('alert');
+    expect(result).not.toContain('color:red');
+  });
+
+  test('removes nav, header, footer and aside tags', () => {
+    const html = '<html><body><header>Site header</header><nav>Menu</nav><main>Recipe text</main><aside>Sidebar</aside><footer>Footer</footer></body></html>';
+    const result = extractTextFromHtml(html);
+    expect(result).toContain('Recipe text');
+    expect(result).not.toContain('Site header');
+    expect(result).not.toContain('Menu');
+    expect(result).not.toContain('Sidebar');
+    expect(result).not.toContain('Footer');
+  });
+
+  test('truncates output to 80,000 characters', () => {
+    const longContent = 'A'.repeat(100000);
+    const html = `<html><body><p>${longContent}</p></body></html>`;
+    const result = extractTextFromHtml(html);
+    expect(result.length).toBeLessThanOrEqual(80000);
+  });
+
+  test('collapses excessive blank lines', () => {
+    const html = '<html><body><p>Line 1</p>\n\n\n\n<p>Line 2</p></body></html>';
+    const result = extractTextFromHtml(html);
+    expect(result).not.toMatch(/\n{3,}/);
+  });
+
+  test('falls back to regex stripping when DOMParser is unavailable', () => {
+    const origDOMParser = global.DOMParser;
+    try {
+      global.DOMParser = function () { throw new Error('No DOMParser'); };
+      const html = '<p>Fallback content</p>';
+      const result = extractTextFromHtml(html);
+      expect(result).toContain('Fallback content');
+      expect(result).not.toMatch(/<[^>]+>/);
+    } finally {
+      global.DOMParser = origDOMParser;
+    }
   });
 });
 
@@ -350,9 +407,9 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
 
     const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
 
-    // processHtmlWithGemini should have been called with the raw HTML
+    // processHtmlWithGemini should have been called with cleaned plain text (not raw HTML)
     expect(processHtmlWithGemini).toHaveBeenCalledWith(
-      expect.stringMatching(/<!DOCTYPE html/i),
+      expect.not.stringMatching(/<[^>]+>/),
       'de',
       null,
     );
@@ -384,7 +441,7 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
 
     expect(processHtmlWithGemini).toHaveBeenCalledWith(
-      expect.stringMatching(/<html/i),
+      expect.not.stringMatching(/<[^>]+>/),
       'de',
       null,
     );

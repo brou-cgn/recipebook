@@ -150,6 +150,27 @@ export function textToCanvasBase64(text) {
 }
 
 /**
+ * Extract plain text from raw HTML, removing scripts, styles and boilerplate.
+ * Keeps the content under 80,000 characters so it stays within the Cloud Function limit.
+ * @param {string} html - Raw HTML string
+ * @returns {string} Cleaned plain text (max 80,000 chars)
+ */
+export function extractTextFromHtml(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    // Remove non-content elements
+    doc.querySelectorAll('script, style, svg, noscript, header, footer, nav, aside, iframe').forEach(el => el.remove());
+    const text = (doc.body?.innerText || doc.body?.textContent || '').trim();
+    // Collapse excessive whitespace and limit size
+    return text.replace(/\n{3,}/g, '\n\n').slice(0, 80000);
+  } catch {
+    // If DOMParser fails, do a simple regex strip and truncate
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 80000);
+  }
+}
+
+/**
  * Fetch a recipeImportPage URL and parse the recipe data directly from its HTML.
  * Extracts the raw text from the embedded JSON-LD (or `<h1>`/`<pre>` as fallback),
  * then uses Gemini AI to produce fully structured recipe data.
@@ -215,9 +236,12 @@ export async function parseRecipeImportPage(url, onProgress = null) {
   if (/^\s*<!DOCTYPE\s+html/i.test(rawText) || /^\s*<html[\s>]/i.test(rawText)) {
     if (onProgress) onProgress(50);
 
+    // Clean the HTML before sending to the Cloud Function to stay within its size limit
+    const cleanedText = extractTextFromHtml(rawText);
+
     let aiResult;
     try {
-      aiResult = await processHtmlWithGemini(rawText, 'de',
+      aiResult = await processHtmlWithGemini(cleanedText, 'de',
         onProgress ? (p) => onProgress(50 + Math.round(p * 0.5)) : null,
       );
     } catch (htmlAiError) {
