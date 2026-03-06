@@ -159,11 +159,18 @@ export function extractTextFromHtml(html) {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    // Remove non-content elements
-    doc.querySelectorAll('script, style, svg, noscript, header, footer, nav, aside, iframe').forEach(el => el.remove());
-    const text = (doc.body?.innerText || doc.body?.textContent || '').trim();
+    // Remove clearly non-content elements
+    doc.querySelectorAll('script, style, svg, noscript, iframe').forEach(el => el.remove());
+
+    let text = (doc.body?.textContent || '').trim();
+
+    // If still empty after removing non-content tags, use raw documentElement textContent
+    if (!text) {
+      text = (doc.documentElement?.textContent || '').trim();
+    }
+
     // Collapse excessive whitespace and limit size
-    return text.replace(/\n{3,}/g, '\n\n').slice(0, 80000);
+    return text.replace(/\s{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').slice(0, 80000);
   } catch {
     // If DOMParser fails, do a simple regex strip and truncate
     return html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 80000);
@@ -238,6 +245,13 @@ export async function parseRecipeImportPage(url, onProgress = null) {
 
     // Clean the HTML before sending to the Cloud Function to stay within its size limit
     const cleanedText = extractTextFromHtml(rawText);
+
+    if (!cleanedText || !cleanedText.trim()) {
+      throw new Error(
+        'Die importierte Seite enthält keinen lesbaren Text. ' +
+        'Bitte stelle sicher, dass die Seite ein Rezept enthält.',
+      );
+    }
 
     let aiResult;
     try {
