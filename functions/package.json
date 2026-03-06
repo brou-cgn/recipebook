@@ -25,5 +25,8 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
+  },
+  "config": {
+    "puppeteer_skip_chromium_download": "true"
   }
 }
