@@ -63,6 +63,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import { logRecipeCall } from './utils/appCallsFirestore';
 
 // IndexedDB helpers to read/clear shared data written by the service worker
 function readSharedDataFromDB() {
@@ -472,6 +473,7 @@ function App() {
 
   const handleSelectRecipe = (recipe) => {
     setSelectedRecipe(recipe);
+    logRecipeCall(currentUser, recipe);
   };
 
   const handleBackFromRecipeDetail = () => {

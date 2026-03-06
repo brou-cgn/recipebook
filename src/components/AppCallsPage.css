@@ -24,6 +24,36 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.app-calls-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0;
+}
+
+.app-calls-tab {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.app-calls-tab:hover {
+  color: #555;
+}
+
+.app-calls-tab.active {
+  color: #402C1C;
+  border-bottom-color: #402C1C;
+}
+
 .app-calls-info-text {
   color: #666;
   margin-bottom: 25px;

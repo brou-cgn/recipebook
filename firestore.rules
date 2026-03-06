@@ -144,5 +144,12 @@ service cloud.firestore {
       allow create: if isAnyUser();
       allow update, delete: if isAdmin();
     }
+
+    // Recipe calls audit log collection
+    match /recipeCalls/{callId} {
+      allow read: if isAnyUser();
+      allow create: if isAnyUser();
+      allow update, delete: if isAdmin();
+    }
   }
 }
