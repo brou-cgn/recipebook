@@ -337,6 +337,167 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     }
   };
 
+  const handleRecalcReformulated = async () => {
+    const notIncludedItems = autoCalcResult?.notIncluded || [];
+    if (notIncludedItems.length === 0) return;
+
+    const regularItems = notIncludedItems.filter(item => !item.isRecipeLink);
+    const recipeLinkNotIncluded = notIncludedItems.filter(item => item.isRecipeLink);
+    const totalToProcess = regularItems.length + recipeLinkNotIncluded.length;
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    setAutoCalcLoading(true);
+    setCalcProgress({
+      done: 0,
+      total: totalToProcess,
+      current: regularItems[0]?.ingredient || recipeLinkNotIncluded[0]?.ingredient || '',
+    });
+
+    // Derive existing totals from the current form field values (per-portion × portionen)
+    const portionen = recipe.portionen || 1;
+    const existingPerPortion = {
+      kalorien: parsePositiveNumber(kalorien),
+      protein: parsePositiveNumber(protein),
+      fett: parsePositiveNumber(fett),
+      kohlenhydrate: parsePositiveNumber(kohlenhydrate),
+      zucker: parsePositiveNumber(zucker),
+      ballaststoffe: parsePositiveNumber(ballaststoffe),
+      salz: parsePositiveNumber(salz),
+    };
+    const existingTotals = naehrwerteToTotals(existingPerPortion, portionen);
+
+    const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+    const newTotals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
+    const stillNotIncluded = [];
+    const newSuccessfulReformulations = {};
+    let newFoundCount = 0;
+
+    // Process regular (non-link) not-included ingredients
+    for (let i = 0; i < regularItems.length; i++) {
+      if (abortController.signal.aborted) break;
+
+      const item = regularItems[i];
+      const { ingredient } = item;
+      const effectiveIngredient = reformulations[ingredient]?.text || ingredient;
+      setCalcProgress({ done: i, total: totalToProcess, current: effectiveIngredient });
+
+      try {
+        const result = await calculateNutrition({ ingredients: [effectiveIngredient], portionen: 1 });
+        const { naehrwerte: n, details } = result.data;
+        const detail = details && details[0];
+        if (detail && detail.found) {
+          Object.keys(newTotals).forEach(key => { newTotals[key] += n[key] || 0; });
+          newFoundCount++;
+          if (reformulations[ingredient]) {
+            newSuccessfulReformulations[ingredient] = reformulations[ingredient];
+          }
+        } else {
+          const reform = reformulations[ingredient];
+          stillNotIncluded.push({
+            ingredient,
+            error: detail?.error || 'Nicht gefunden',
+            ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
+          });
+        }
+      } catch (err) {
+        console.error(`Recalculation failed for "${ingredient}":`, err);
+        const reform = reformulations[ingredient];
+        stillNotIncluded.push({
+          ingredient,
+          error: mapNutritionCalcError(err),
+          ...(reform && { reformulation: reform.text, changeLog: reform.changeLog }),
+        });
+      }
+    }
+
+    // Process recipe-link not-included ingredients
+    for (let i = 0; i < recipeLinkNotIncluded.length; i++) {
+      if (abortController.signal.aborted) break;
+
+      const { ingredient } = recipeLinkNotIncluded[i];
+      const link = decodeRecipeLink(ingredient);
+      setCalcProgress({ done: regularItems.length + i, total: totalToProcess, current: link?.recipeName || ingredient });
+
+      const linkedRecipe = allRecipes.find(r => r.id === link?.recipeId);
+      if (linkedRecipe && linkedRecipe.naehrwerte) {
+        const linkedPortionen = linkedRecipe.portionen || 1;
+        const parsedQuantity = extractQuantityFromPrefix(link.quantityPrefix);
+        if (parsedQuantity === null && link.quantityPrefix) {
+          console.warn(`Could not parse quantity prefix "${link.quantityPrefix}" for linked recipe "${link.recipeName}". Defaulting to 1.`);
+        }
+        const quantity = parsedQuantity || 1;
+        const multiplier = quantity / linkedPortionen;
+        Object.keys(newTotals).forEach(key => { newTotals[key] += (linkedRecipe.naehrwerte[key] || 0) * multiplier; });
+        newFoundCount++;
+      } else {
+        stillNotIncluded.push({
+          ingredient,
+          error: linkedRecipe
+            ? `Verlinktes Rezept "${link.recipeName}" hat keine gespeicherten Nährwerte. Bitte berechnen Sie zuerst die Nährwerte für dieses Rezept.`
+            : `Verlinktes Rezept "${link?.recipeName || ingredient}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          isRecipeLink: true,
+        });
+      }
+    }
+
+    // Add newly calculated values to existing totals
+    const combinedTotals = {};
+    Object.keys(newTotals).forEach(key => {
+      combinedTotals[key] = (existingTotals[key] || 0) + newTotals[key];
+    });
+
+    // Update form fields with combined per-portion values
+    const combinedPerPortion = naehrwertePerPortion(combinedTotals, portionen);
+    setKalorien(combinedPerPortion.kalorien != null ? String(combinedPerPortion.kalorien) : '');
+    setProtein(combinedPerPortion.protein != null ? String(combinedPerPortion.protein) : '');
+    setFett(combinedPerPortion.fett != null ? String(combinedPerPortion.fett) : '');
+    setKohlenhydrate(combinedPerPortion.kohlenhydrate != null ? String(combinedPerPortion.kohlenhydrate) : '');
+    setZucker(combinedPerPortion.zucker != null ? String(combinedPerPortion.zucker) : '');
+    setBallaststoffe(combinedPerPortion.ballaststoffe != null ? String(combinedPerPortion.ballaststoffe) : '');
+    setSalz(combinedPerPortion.salz != null ? String(combinedPerPortion.salz) : '');
+
+    abortControllerRef.current = null;
+    setCalcProgress(null);
+    setAutoCalcLoading(false);
+
+    if (abortController.signal.aborted) return;
+
+    const prevFoundCount = autoCalcResult?.foundCount || 0;
+    const prevTotalCount = autoCalcResult?.totalCount || 0;
+    const mergedReformulations = {
+      ...(autoCalcResult?.calcReformulations || {}),
+      ...newSuccessfulReformulations,
+    };
+
+    const updatedResult = {
+      foundCount: prevFoundCount + newFoundCount,
+      totalCount: prevTotalCount,
+      notIncluded: stillNotIncluded,
+      ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
+    };
+    setAutoCalcResult(updatedResult);
+    saveStoredCalcResult(recipe?.id, updatedResult);
+
+    // Persist combined totals and updated per-ingredient errors to Firestore
+    const finalNaehrwerte = {
+      ...combinedTotals,
+      calcPending: false,
+      calcError: null,
+      calcNotIncluded: stillNotIncluded.length > 0 ? stillNotIncluded : null,
+      calcFoundCount: prevFoundCount + newFoundCount,
+      calcTotalCount: prevTotalCount,
+      calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
+    };
+    try {
+      await onSave(finalNaehrwerte);
+    } catch (saveErr) {
+      console.error('Could not auto-save nutrition data after recalc:', saveErr);
+      setAutoCalcResult(prev => prev ? { ...prev, saveError: true } : null);
+    }
+  };
+
   const hasValues =
     kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
     zucker !== '' || ballaststoffe !== '' || salz !== '';
@@ -592,7 +753,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                     {Object.keys(reformulations).length > 0 && (
                       <button
                         className="nutrition-recalc-reformulated-button"
-                        onClick={handleAutoCalculate}
+                        onClick={handleRecalcReformulated}
                         disabled={autoCalcLoading}
                         title="Nährwerte mit den umformulierten Zutaten neu berechnen"
                       >
