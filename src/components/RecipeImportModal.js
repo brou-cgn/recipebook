@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import './RecipeImportModal.css';
-import { importRecipe } from '../utils/recipeImport';
 import { parseBulkCSV } from '../utils/csvBulkImport';
 import { getImageForCategories } from '../utils/categoryImages';
 
 function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
-  const [importText, setImportText] = useState('');
   const [error, setError] = useState('');
   const [csvRecipes, setCsvRecipes] = useState(null);
   const [csvFileName, setCsvFileName] = useState('');
@@ -24,22 +22,11 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
       return;
     }
     
-    // Otherwise, handle text import
-    if (!importText.trim()) {
-      if (csvFileName) {
-        // CSV file was selected but parsing failed
-        setError('CSV-Datei konnte nicht verarbeitet werden. Bitte überprüfen Sie das Dateiformat.');
-      } else {
-        setError('Bitte wählen Sie eine CSV-Datei aus');
-      }
-      return;
-    }
-
-    try {
-      const recipe = importRecipe(importText);
-      onImport(recipe);
-    } catch (err) {
-      setError(err.message);
+    // No CSV file selected or parsing failed
+    if (csvFileName) {
+      setError('CSV-Datei konnte nicht verarbeitet werden. Bitte überprüfen Sie das Dateiformat.');
+    } else {
+      setError('Bitte wählen Sie eine CSV-Datei aus');
     }
   };
 

@@ -1001,7 +1001,7 @@ function App() {
         onSearchChange={handleSearchChange}
       />
       {isSettingsOpen ? (
-        <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} />
+        <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
       ) : selectedRecipe ? (
         // Recipe detail view - shown regardless of currentView
         <RecipeDetail

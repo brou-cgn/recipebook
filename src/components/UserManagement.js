@@ -35,6 +35,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
   useEffect(() => {
     loadUsers();
     loadRolePermissions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync with allUsers prop when it changes and Firestore hasn't provided data yet
@@ -219,7 +220,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport und Bewertungs-Löschen haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen und Nährwert-Abbruch haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -231,11 +232,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Menüpunkt</th>
                   <th>Rezepteimport</th>
                   <th>Bew. löschen</th>
+                  <th>NW-Abbruch</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false };
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -295,6 +297,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.deleteRating ? 'Bewertungs-Löschen deaktivieren' : 'Bewertungs-Löschen aktivieren'}
                         >
                           {perms.deleteRating ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.abortCalc ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'abortCalc', perms.abortCalc)}
+                          title={perms.abortCalc ? 'Nährwert-Abbruch deaktivieren' : 'Nährwert-Abbruch aktivieren'}
+                        >
+                          {perms.abortCalc ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>
