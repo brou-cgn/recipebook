@@ -82,6 +82,116 @@ async function getRecipeExtractionPrompt(lang = 'de') {
 }
 
 /**
+ * Process raw HTML content with Gemini AI via Cloud Function.
+ * Used to extract recipe data from Instagram reels or other social-media HTML.
+ *
+ * @param {string} rawHtml - Raw HTML string to process
+ * @param {string} lang - Language code ('de' or 'en')
+ * @param {Function} onProgress - Optional progress callback
+ * @returns {Promise<Object>} Structured recipe data
+ */
+export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = null) {
+  if (onProgress) onProgress(10);
+
+  if (!rawHtml || typeof rawHtml !== 'string') {
+    throw new Error('Invalid HTML data');
+  }
+
+  if (onProgress) onProgress(20);
+
+  // Load configured cuisine types and meal categories to pass to the Cloud Function
+  let cuisineTypes;
+  let mealCategories;
+  try {
+    clearSettingsCache();
+    const lists = await getCustomLists();
+    cuisineTypes = lists.cuisineTypes;
+    mealCategories = lists.mealCategories;
+  } catch (e) {
+    console.warn('Failed to load custom lists for AI HTML prompt, using base prompt:', e);
+  }
+
+  let lastError = null;
+  let progressInterval = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        await sleep(RETRY_DELAYS[attempt - 1]);
+        if (onProgress) onProgress(20 + attempt * 5);
+      }
+
+      const processHtmlWithAI = httpsCallable(functions, 'processHtmlWithAI');
+
+      let simulatedProgress = 30;
+      if (onProgress) {
+        onProgress(30);
+        progressInterval = setInterval(() => {
+          simulatedProgress = Math.min(85, simulatedProgress + 1);
+          onProgress(simulatedProgress);
+        }, 300);
+      }
+
+      const result = await processHtmlWithAI({
+        rawHtml,
+        language: lang,
+        cuisineTypes,
+        mealCategories,
+      });
+
+      clearInterval(progressInterval);
+      progressInterval = null;
+      if (onProgress) onProgress(90);
+
+      const recipeData = result.data;
+
+      if (!recipeData) {
+        throw new Error('No response from AI service');
+      }
+
+      if (onProgress) onProgress(100);
+
+      return recipeData;
+    } catch (error) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+      lastError = error;
+      console.error(`HTML processing attempt ${attempt + 1} failed:`, error);
+
+      const errorCode = error.code;
+      if (attempt < MAX_RETRIES && RETRYABLE_CODES.includes(errorCode)) {
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  if (onProgress) onProgress(0);
+
+  const error = lastError;
+  const errorCode = error.code;
+
+  if (errorCode === 'unauthenticated') {
+    throw new Error('Bitte melde dich an, um den HTML-Import zu nutzen.');
+  } else if (errorCode === 'resource-exhausted') {
+    throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut.');
+  } else if (errorCode === 'invalid-argument') {
+    throw new Error(error.message || 'Ungültiger HTML-Inhalt.');
+  } else if (errorCode === 'failed-precondition') {
+    throw new Error('AI-Service nicht konfiguriert. Bitte kontaktiere den Administrator.');
+  } else if (errorCode === 'unavailable') {
+    throw new Error('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+  } else if (errorCode === 'deadline-exceeded') {
+    throw new Error('Zeitüberschreitung. Bitte versuche es erneut.');
+  } else if (error.message) {
+    throw new Error(error.message);
+  }
+
+  throw new Error('HTML-Verarbeitung fehlgeschlagen. Bitte versuche es erneut.');
+}
+
+/**
  * Recognize recipe using Google Gemini Vision API via Cloud Function
  * @param {string} imageBase64 - Base64 encoded image (with or without data URL prefix)
  * @param {string} lang - Language code ('de' or 'en')

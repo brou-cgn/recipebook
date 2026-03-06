@@ -6,7 +6,7 @@
 
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
-import { recognizeRecipeWithAI } from './aiOcrService';
+import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 
 /**
@@ -211,12 +211,35 @@ export async function parseRecipeImportPage(url, onProgress = null) {
 
   // Detect raw HTML content (e.g. from Instagram or other non-recipe pages).
   // This happens when the share extension captures page HTML instead of recipe data.
+  // Process it directly with Gemini AI using a dedicated HTML-cleaning prompt.
   if (/^\s*<!DOCTYPE\s+html/i.test(rawText) || /^\s*<html[\s>]/i.test(rawText)) {
-    throw new Error(
-      'Die importierte Seite enthält kein gültiges Rezept. ' +
-      'Instagram und ähnliche Seiten werden nicht unterstützt – ' +
-      'bitte importieren Sie eine Rezept-Website.',
-    );
+    if (onProgress) onProgress(50);
+
+    let aiResult;
+    try {
+      aiResult = await processHtmlWithGemini(rawText, 'de',
+        onProgress ? (p) => onProgress(50 + Math.round(p * 0.5)) : null,
+      );
+    } catch (htmlAiError) {
+      throw new Error(
+        'Die importierte Seite konnte nicht als Rezept verarbeitet werden. ' +
+        (htmlAiError.message || 'Bitte versuche es erneut.'),
+      );
+    }
+
+    if (onProgress) onProgress(100);
+
+    return {
+      title: aiResult.title || title || '',
+      ingredients: aiResult.ingredients || [],
+      steps: aiResult.steps || [],
+      servings: aiResult.servings || null,
+      cookTime: aiResult.prepTime || aiResult.cookTime || null,
+      difficulty: aiResult.difficulty || null,
+      cuisine: aiResult.cuisine || null,
+      category: aiResult.category || null,
+      tags: aiResult.tags || [],
+    };
   }
 
   if (onProgress) onProgress(50);

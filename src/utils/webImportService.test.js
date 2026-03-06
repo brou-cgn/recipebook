@@ -10,6 +10,7 @@ jest.mock('firebase/functions', () => ({ httpsCallable: jest.fn() }));
 // Mock the AI OCR service so we can control its output in unit tests
 jest.mock('./aiOcrService', () => ({
   recognizeRecipeWithAI: jest.fn(),
+  processHtmlWithGemini: jest.fn(),
 }));
 
 // Mock ocrParser to allow testing the fallback path
@@ -29,7 +30,7 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
 import { isRecipeImportPageUrl, parseRecipeImportPage } from './webImportService';
-import { recognizeRecipeWithAI } from './aiOcrService';
+import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 
 // --------------------------------------------------------------------------
@@ -96,6 +97,8 @@ describe('parseRecipeImportPage', () => {
     });
     HTMLCanvasElement.prototype.toDataURL.mockReturnValue('data:image/png;base64,mockcanvas');
     recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+    // Also mock processHtmlWithGemini so HTML-content tests succeed by default
+    processHtmlWithGemini.mockResolvedValue(mockAiResult);
     parseOcrText.mockReturnValue({
       title: 'Fallback Rezept',
       ingredients: ['500g Mehl', '2 Eier'],
@@ -323,7 +326,7 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
     ).rejects.toThrow('AI error');
   });
 
-  test('throws a user-friendly error when rawText is raw HTML (e.g. Instagram page)', async () => {
+  test('processes raw HTML from Instagram via processHtmlWithGemini', async () => {
     const rawHtmlContent = `<!DOCTYPE html><html class="_9dls" lang="de"><head></head><body>Instagram content</body></html>`;
     // HTML-escape the raw HTML so DOMParser stores it as text inside <pre>
     const escapedRawHtml = rawHtmlContent
@@ -345,15 +348,24 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
       text: jest.fn().mockResolvedValue(importPageHtml),
     });
 
-    await expect(
-      parseRecipeImportPage('https://example.com/recipeImportPage?token=abc'),
-    ).rejects.toThrow(/kein gültiges Rezept/i);
+    const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
 
-    // AI should NOT have been called – we bail out early
+    // processHtmlWithGemini should have been called with the raw HTML
+    expect(processHtmlWithGemini).toHaveBeenCalledWith(
+      expect.stringMatching(/<!DOCTYPE html/i),
+      'de',
+      null,
+    );
+
+    // recognizeRecipeWithAI (canvas-based) should NOT have been called
     expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+
+    // Result should match the mocked AI output
+    expect(result.title).toBe('Spaghetti Carbonara');
+    expect(result.ingredients).toEqual(['400g Spaghetti', '200g Pancetta']);
   });
 
-  test('throws a user-friendly error when JSON-LD description is raw HTML', async () => {
+  test('processes raw HTML from JSON-LD description via processHtmlWithGemini', async () => {
     const rawHtmlContent = '<html lang="de"><body>Non-recipe page</body></html>';
     const jsonLd = JSON.stringify({ name: 'Test', description: rawHtmlContent });
     const importPageHtml = `<!DOCTYPE html>
@@ -369,11 +381,40 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
       text: jest.fn().mockResolvedValue(importPageHtml),
     });
 
+    const result = await parseRecipeImportPage('https://example.com/recipeImportPage?token=abc');
+
+    expect(processHtmlWithGemini).toHaveBeenCalledWith(
+      expect.stringMatching(/<html/i),
+      'de',
+      null,
+    );
+    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+    expect(result.title).toBe('Spaghetti Carbonara');
+  });
+
+  test('wraps processHtmlWithGemini error with user-friendly message', async () => {
+    processHtmlWithGemini.mockRejectedValue(new Error('AI unavailable'));
+
+    const rawHtmlContent = `<!DOCTYPE html><html><body>Instagram</body></html>`;
+    const escapedRawHtml = rawHtmlContent
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const importPageHtml = `<!DOCTYPE html>
+<html lang="de">
+<head><title>Import</title></head>
+<body><pre>${escapedRawHtml}</pre>
+</body>
+</html>`;
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue(importPageHtml),
+    });
+
     await expect(
       parseRecipeImportPage('https://example.com/recipeImportPage?token=abc'),
-    ).rejects.toThrow(/kein gültiges Rezept/i);
-
-    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+    ).rejects.toThrow(/nicht als Rezept verarbeitet werden/i);
   });
 
   test('re-throws AI error when text parsing also fails', async () => {

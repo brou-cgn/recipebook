@@ -52,6 +52,7 @@ const RATE_LIMITS = {
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB in bytes
+const MAX_HTML_SIZE = 500000; // 500 KB in characters
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
@@ -574,6 +575,229 @@ exports.scanRecipeWithAI = onCall(
         throw error;
       }
     }
+);
+
+/**
+ * Call Gemini API with plain text input (no image) to process raw HTML content.
+ * Returns the same structured recipe shape as callGeminiAPI.
+ *
+ * @param {string} rawHtml - Raw HTML string to process
+ * @param {string} lang - Language code ('de' or 'en')
+ * @param {string} apiKey - Gemini API key
+ * @param {string[]|undefined} cuisineTypes - Configured cuisine types
+ * @param {string[]|undefined} mealCategories - Configured meal categories
+ * @returns {Promise<Object>} Structured recipe data
+ */
+async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCategories) {
+  const cuisineList = Array.isArray(cuisineTypes) && cuisineTypes.length > 0
+    ? cuisineTypes.map((c) => `- ${c}`).join('\n')
+    : '- Italienisch\n- Asiatisch\n- Deutsch\n- Amerikanisch\n- Mediterran\n- Mexikanisch\n- Französisch\n- Japanisch\n- Indisch\n- Griechisch';
+
+  const categoryList = Array.isArray(mealCategories) && mealCategories.length > 0
+    ? mealCategories.map((c) => `- ${c}`).join('\n')
+    : '- Hauptgericht\n- Dessert\n- Vorspeise\n- Beilage\n- Snack\n- Suppe\n- Salat\n- Getränk';
+
+  const prompt = `Der folgende Inhalt ist unverarbeitetes HTML aus einem Social-Media-Reel oder einer Webseite. Bereinige allen Code und sämtliche HTML-Artefakte und extrahiere das Rezept und die Zutaten. Wenn es nicht auf Deutsch ist, übersetze es auf Deutsch.
+
+Gib das Ergebnis ausschließlich als JSON-Objekt zurück – ohne Markdown-Formatierung, ohne Einleitung, ohne Erläuterungen:
+{
+  "titel": "Name des Rezepts",
+  "portionen": Anzahl der Portionen als Zahl (nur die Zahl, z.B. 4),
+  "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
+  "kochzeit": Kochzeit in Minuten als Zahl (optional, sonst null),
+  "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
+  "kulinarik": "Kulinarische Herkunft aus dieser Liste:\\n${cuisineList}",
+  "kategorie": "Kategorie aus dieser Liste:\\n${categoryList}",
+  "tags": ["vegetarisch", "vegan", "glutenfrei"],
+  "zutaten": [
+    "500 g Spaghetti",
+    "200 g Speck"
+  ],
+  "zubereitung": [
+    "Wasser kochen und salzen",
+    "Pasta nach Anweisung kochen"
+  ],
+  "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
+}
+
+HTML-Inhalt:
+${rawHtml}`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {text: prompt},
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      topK: 32,
+      topP: 1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Gemini text API error:', errorData);
+      const errorMessage = errorData.error?.message || response.statusText;
+      if (response.status === 429) {
+        throw new HttpsError('resource-exhausted', `Gemini API error: ${errorMessage}`);
+      } else if (response.status === 503 || response.status === 502) {
+        throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
+      }
+      throw new HttpsError('internal', `Gemini API error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new HttpsError('internal', 'No response from Gemini API');
+    }
+
+    // Parse JSON response (handle markdown code blocks)
+    let jsonText = textResponse.trim();
+    const codeBlockMatch = jsonText.match(/```(?:json)?\r?\n([\s\S]*?)\r?\n```/);
+    if (codeBlockMatch) {
+      jsonText = codeBlockMatch[1].trim();
+    } else if (!jsonText.startsWith('{')) {
+      const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (jsonObjectMatch) {
+        jsonText = jsonObjectMatch[0];
+      }
+    }
+
+    const recipeData = JSON.parse(jsonText);
+
+    return {
+      title: recipeData.titel || recipeData.title || '',
+      servings: recipeData.portionen || recipeData.servings || 0,
+      prepTime: recipeData.zubereitungszeit || recipeData.prepTime || '',
+      cookTime: recipeData.kochzeit || recipeData.cookTime || '',
+      difficulty: recipeData.schwierigkeit || recipeData.difficulty || 0,
+      cuisine: recipeData.kulinarik || recipeData.cuisine || '',
+      category: recipeData.kategorie || recipeData.category || '',
+      tags: recipeData.tags || [],
+      ingredients: recipeData.zutaten || recipeData.ingredients || [],
+      steps: recipeData.zubereitung || recipeData.steps || [],
+      notes: recipeData.notizen || recipeData.notes || '',
+      confidence: 95,
+      provider: 'gemini',
+      rawResponse: textResponse,
+    };
+  } catch (error) {
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    console.error('Gemini text API call error:', error);
+    if (error.message.includes('quota')) {
+      throw new HttpsError('resource-exhausted', 'API quota exceeded. Please try again later.');
+    } else if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      throw new HttpsError('deadline-exceeded', 'Request timed out. Please try again.');
+    } else if (error.message.includes('JSON')) {
+      throw new HttpsError(
+          'invalid-argument',
+          'Failed to parse recipe data. The HTML might not contain a valid recipe.',
+      );
+    }
+    throw new HttpsError('internal', 'Failed to process HTML with AI: ' + error.message);
+  }
+}
+
+/**
+ * Cloud Function: Process raw HTML with Gemini AI to extract recipe data.
+ * Used when the Apple Shortcut passes raw HTML from Instagram reels or
+ * other social-media pages via a recipeImportPage deeplink.
+ *
+ * Input data:
+ * - rawHtml: Raw HTML string to process
+ * - language: Language code ('de' or 'en'), defaults to 'de'
+ *
+ * Returns: Structured recipe data (same shape as scanRecipeWithAI)
+ */
+exports.processHtmlWithAI = onCall(
+    {
+      secrets: [geminiApiKey],
+      maxInstances: 10,
+      memory: '256MiB',
+      timeoutSeconds: 60,
+    },
+    async (request) => {
+      const {rawHtml, language = 'de', cuisineTypes, mealCategories} = request.data;
+
+      // Authentication check
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to use AI HTML processing',
+        );
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
+
+      console.log(`HTML processing request from user ${userId}`);
+
+      // Input validation
+      if (!rawHtml || typeof rawHtml !== 'string') {
+        throw new HttpsError('invalid-argument', 'rawHtml must be a non-empty string');
+      }
+      if (rawHtml.length > MAX_HTML_SIZE) {
+        throw new HttpsError('invalid-argument', 'HTML content too large (max 500 KB)');
+      }
+
+      // Validate language
+      if (!['de', 'en'].includes(language)) {
+        throw new HttpsError('invalid-argument', 'Language must be "de" or "en"');
+      }
+
+      // Rate limiting (shared with image scanning)
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      if (!rateLimitResult.allowed) {
+        const limit = getRateLimit(isAdmin, isAuthenticated);
+        throw new HttpsError(
+            'resource-exhausted',
+            `Tageslimit erreicht (${limit}/${limit} Scans). Versuche es morgen erneut.`,
+        );
+      }
+
+      // Get API key from secret
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        console.error('GEMINI_API_KEY secret not configured');
+        throw new HttpsError(
+            'failed-precondition',
+            'AI service not configured. Please contact administrator.',
+        );
+      }
+
+      try {
+        const result = await callGeminiTextAPI(rawHtml, language, apiKey, cuisineTypes, mealCategories);
+        console.log(`HTML processing successful for user ${userId}`);
+        return {
+          ...result,
+          remainingScans: rateLimitResult.remaining,
+          dailyLimit: rateLimitResult.limit,
+        };
+      } catch (error) {
+        console.error(`HTML processing failed for user ${userId}:`, error);
+        throw error;
+      }
+    },
 );
 
 /**
