@@ -7,6 +7,7 @@
  *   - userVorname: string
  *   - userNachname: string
  *   - userEmail: string
+ *   - isGuest: boolean  (true for anonymous/guest sessions, false for registered users)
  *   - timestamp: serverTimestamp
  */
 
@@ -22,17 +23,18 @@ import {
 
 /**
  * Log an app call (session start) to Firestore
- * @param {Object} user - User object with id, vorname, nachname, email
+ * @param {Object} user - User object with id, vorname, nachname, email, isGuest
  * @returns {Promise<void>}
  */
 export const logAppCall = async (user) => {
-  if (!user || !user.id || user.isGuest) return;
+  if (!user || !user.id) return;
   try {
     await addDoc(collection(db, 'appCalls'), {
       userId: user.id,
       userVorname: user.vorname || '',
       userNachname: user.nachname || '',
       userEmail: user.email || '',
+      isGuest: user.isGuest === true,
       timestamp: serverTimestamp()
     });
   } catch (error) {

@@ -267,6 +267,12 @@ export const onAuthStateChange = (callback) => {
           createdAt: new Date().toISOString()
         };
         currentUserCache = guestUser;
+        // Log only once per browser session to avoid duplicates on token refresh
+        const guestSessionKey = `appCallLogged_${guestUser.id}`;
+        if (!sessionStorage.getItem(guestSessionKey)) {
+          sessionStorage.setItem(guestSessionKey, '1');
+          logAppCall(guestUser);
+        }
         callback(guestUser);
         return;
       }

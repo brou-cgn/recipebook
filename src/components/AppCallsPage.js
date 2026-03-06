@@ -57,6 +57,7 @@ function AppCallsPage({ onBack, currentUser }) {
                     <th>Vorname</th>
                     <th>Nachname</th>
                     <th>E-Mail</th>
+                    <th>Art</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -70,6 +71,7 @@ function AppCallsPage({ onBack, currentUser }) {
                       <td>{call.userVorname}</td>
                       <td>{call.userNachname}</td>
                       <td>{call.userEmail}</td>
+                      <td>{call.isGuest ? 'Gast' : 'Angemeldet'}</td>
                     </tr>
                   ))}
                 </tbody>
