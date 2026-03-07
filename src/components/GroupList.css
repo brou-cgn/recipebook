@@ -18,17 +18,8 @@
   text-align: left;
 }
 
-.group-list-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.group-list-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
+.group-list-actions {
+  margin-bottom: 1.5rem;
 }
 
 .add-group-button {
@@ -192,10 +183,6 @@
 
   .group-list-header h2 {
     text-align: left;
-  }
-
-  .group-list-header-actions {
-    flex-wrap: wrap;
   }
 }
 
