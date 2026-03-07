@@ -18,6 +18,9 @@ import RecipeRating from './RecipeRating';
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 
+// Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
+const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
+
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, privateLists = [], onAddToPrivateList, onRemoveFromPrivateList }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
@@ -571,14 +574,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   // ── Timer helpers ──────────────────────────────────────────────────────────
 
-  // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
-  const TIME_REGEX = /(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)/gi;
-
   function parseTimeToSeconds(value, unit) {
     const num = parseFloat(value.replace(',', '.'));
     const u = unit.toLowerCase();
     if (u === 'h' || u.startsWith('stund')) return Math.round(num * 3600);
-    if (u === 'm' || u.startsWith('min')) return Math.round(num * 60);
+    if (u.startsWith('min')) return Math.round(num * 60);
     // seconds: 'sek', 'sekunde', 'sekunden'
     return Math.round(num);
   }
@@ -744,7 +744,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     let lastIndex = 0;
     let match;
     let matchIndex = 0;
-    const re = new RegExp(TIME_REGEX.source, 'gi');
+    const re = new RegExp(TIME_REGEX_SOURCE, 'gi');
     while ((match = re.exec(stepText)) !== null) {
       if (match.index > lastIndex) {
         parts.push(stepText.slice(lastIndex, match.index));
