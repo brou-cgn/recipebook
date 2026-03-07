@@ -308,7 +308,7 @@ describe('Kueche', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
-    expect(screen.getByText('Persönliche Daten')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Chefkoch', level: 2 })).toBeInTheDocument();
   });
 
   test('PersonalDataPage back button returns to Kueche', () => {
@@ -323,11 +323,10 @@ describe('Kueche', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Chefkoch persönliche Daten/i }));
-    expect(screen.getByText('Persönliche Daten')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Chefkoch', level: 2 })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getByText('Chefkoch')).toBeInTheDocument();
-    expect(screen.queryByText('Persönliche Daten')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Abbrechen/i }));
+    expect(screen.queryByRole('heading', { name: 'Chefkoch', level: 2 })).not.toBeInTheDocument();
   });
 
   test('renders the info tile above the timeline with recipe and menu counts', () => {

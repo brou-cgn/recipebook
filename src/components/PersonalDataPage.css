@@ -117,3 +117,26 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.personal-data-section-divider {
+  border: none;
+  border-top: 2px solid #f0f0f0;
+  margin: 2rem 0;
+}
+
+.personal-data-password-section {
+  margin-top: 0;
+}
+
+.personal-data-section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.personal-data-password-hint {
+  margin: 0 0 1.2rem 0;
+  font-size: 0.85rem;
+  color: #666;
+}

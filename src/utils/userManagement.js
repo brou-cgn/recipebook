@@ -10,6 +10,8 @@ import {
   signInAnonymously,
   signOut,
   updatePassword as firebaseUpdatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   onAuthStateChanged
 } from 'firebase/auth';
@@ -883,8 +885,8 @@ export const setTemporaryPassword = async (userId, tempPassword) => {
  * @param {string} newPassword - New password (plain text)
  * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
  */
-export const changePassword = async (userId, newPassword) => {
-  // Validate password
+export const changePassword = async (userId, newPassword, currentPassword) => {
+  // Validate new password
   const validation = validatePassword(newPassword);
   if (!validation.valid) {
     return {
@@ -900,6 +902,12 @@ export const changePassword = async (userId, newPassword) => {
         success: false,
         message: 'Benutzer nicht angemeldet oder IDs stimmen nicht überein.'
       };
+    }
+
+    // Reauthenticate with current password if provided
+    if (currentPassword) {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
     }
     
     // Update password in Firebase Auth
@@ -923,7 +931,14 @@ export const changePassword = async (userId, newPassword) => {
     if (error.code === 'auth/requires-recent-login') {
       return {
         success: false,
-        message: 'Für diese Aktion ist eine erneute Anmeldung erforderlich.'
+        message: 'Für diese Aktion ist eine erneute Anmeldung erforderlich. Bitte melden Sie sich erneut an.'
+      };
+    }
+
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      return {
+        success: false,
+        message: 'Das aktuelle Passwort ist nicht korrekt.'
       };
     }
     
