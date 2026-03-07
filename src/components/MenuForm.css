@@ -52,6 +52,7 @@
 }
 
 .form-group input[type="text"],
+.form-group input[type="date"],
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
