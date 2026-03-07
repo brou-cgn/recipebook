@@ -176,4 +176,38 @@ describe('GroupList', () => {
     );
     expect(screen.queryByRole('button', { name: /schließen/i })).not.toBeInTheDocument();
   });
+
+  it('close button is inside group-list-title-row next to the heading', () => {
+    const { container } = render(
+      <GroupList
+        groups={[]}
+        allUsers={mockAllUsers}
+        currentUser={mockCurrentUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+    const titleRow = container.querySelector('.group-list-title-row');
+    expect(titleRow).toBeInTheDocument();
+    const closeBtn = titleRow.querySelector('.group-list-close-btn');
+    expect(closeBtn).toBeInTheDocument();
+  });
+
+  it('close button is not inside group-list-header-actions', () => {
+    const { container } = render(
+      <GroupList
+        groups={[]}
+        allUsers={mockAllUsers}
+        currentUser={mockCurrentUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+    const actions = container.querySelector('.group-list-header-actions');
+    expect(actions).toBeInTheDocument();
+    const closeBtnInActions = actions.querySelector('.group-list-close-btn');
+    expect(closeBtnInActions).not.toBeInTheDocument();
+  });
 });

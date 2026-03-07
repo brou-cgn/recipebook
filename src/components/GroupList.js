@@ -44,11 +44,8 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   return (
     <div className="group-list-container">
       <div className="group-list-header">
-        <h2>Meine Mise en Place</h2>
-        <div className="group-list-header-actions">
-          <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
-            + Liste erstellen
-          </button>
+        <div className="group-list-title-row">
+          <h2>Meine Mise en Place</h2>
           {onBack && (
             <button
               className="group-list-close-btn"
@@ -63,6 +60,11 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
               )}
             </button>
           )}
+        </div>
+        <div className="group-list-header-actions">
+          <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
+            + Liste erstellen
+          </button>
         </div>
       </div>
 

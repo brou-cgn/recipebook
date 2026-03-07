@@ -18,6 +18,12 @@
   text-align: left;
 }
 
+.group-list-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .group-list-header-actions {
   display: flex;
   align-items: center;
