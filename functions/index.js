@@ -110,7 +110,7 @@ WICHTIGE REGELN:
 2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
 3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
 4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
-5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, Esslöffel statt EL, Teelöffel statt TL)
+5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, Esslöffel statt EL, Teelöffel statt TL). Wandle Brüche in Dezimalzahlen um (z.B. "1/2" wird zu "0.5", "1 1/2" wird zu "1.5").
 6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
 7. Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
 **Verfügbare Kulinarik-Typen:**
@@ -639,45 +639,51 @@ exports.scanRecipeWithAI = onCall(
  * @returns {Promise<Object>} Structured recipe data
  */
 async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCategories) {
-  const cuisineList = Array.isArray(cuisineTypes) && cuisineTypes.length > 0
-    ? cuisineTypes.map((c) => `- ${c}`).join('\n')
-    : '- Italienisch\n- Asiatisch\n- Deutsch\n- Amerikanisch\n- Mediterran\n- Mexikanisch\n- Französisch\n- Japanisch\n- Indisch\n- Griechisch';
+  // Load the configured prompt from Firestore (like callGeminiAPI does)
+  let prompt = await getRecipeExtractionPrompt();
 
-  const categoryList = Array.isArray(mealCategories) && mealCategories.length > 0
-    ? mealCategories.map((c) => `- ${c}`).join('\n')
-    : '- Hauptgericht\n- Dessert\n- Vorspeise\n- Beilage\n- Snack\n- Suppe\n- Salat\n- Getränk';
+  // Warn if expected placeholders are missing from the prompt
+  if (!prompt.includes('{{CUISINE_TYPES}}')) {
+    console.warn('WARNING: {{CUISINE_TYPES}} placeholder was not found in prompt!');
+  }
+  if (!prompt.includes('{{MEAL_CATEGORIES}}')) {
+    console.warn('WARNING: {{MEAL_CATEGORIES}} placeholder was not found in prompt!');
+  }
 
-  const prompt = `Der folgende Inhalt ist unverarbeitetes HTML aus einem Social-Media-Reel oder einer Webseite. Bereinige allen Code und sämtliche HTML-Artefakte und extrahiere das Rezept und die Zutaten. Wenn es nicht auf Deutsch ist, übersetze es auf Deutsch.
+  // Replace placeholders with actual configured lists
+  if (Array.isArray(cuisineTypes) && cuisineTypes.length > 0) {
+    const cuisineList = cuisineTypes.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', cuisineList);
+  } else {
+    // Fallback to default lists if not provided
+    prompt = prompt.replaceAll('{{CUISINE_TYPES}}', '- Italienisch\n- Asiatisch\n- Deutsch\n- Amerikanisch\n- Mediterran\n- Mexikanisch\n- Französisch\n- Japanisch\n- Indisch\n- Griechisch');
+  }
 
-Gib das Ergebnis ausschließlich als JSON-Objekt zurück – ohne Markdown-Formatierung, ohne Einleitung, ohne Erläuterungen:
-{
-  "titel": "Name des Rezepts",
-  "portionen": Anzahl der Portionen als Zahl (nur die Zahl, z.B. 4),
-  "zubereitungszeit": Zeit in Minuten als Zahl (nur die Zahl, z.B. 30),
-  "kochzeit": Kochzeit in Minuten als Zahl (optional, sonst null),
-  "schwierigkeit": Schwierigkeitsgrad 1-5 (1=sehr einfach, 5=sehr schwer),
-  "kulinarik": "Kulinarische Herkunft aus dieser Liste:\\n${cuisineList}",
-  "kategorie": "Kategorie aus dieser Liste:\\n${categoryList}",
-  "tags": ["vegetarisch", "vegan", "glutenfrei"],
-  "zutaten": [
-    "500 g Spaghetti",
-    "200 g Speck"
-  ],
-  "zubereitung": [
-    "Wasser kochen und salzen",
-    "Pasta nach Anweisung kochen"
-  ],
-  "notizen": "Zusätzliche Hinweise oder Tipps (optional)"
-}
+  if (Array.isArray(mealCategories) && mealCategories.length > 0) {
+    const categoryList = mealCategories.map((c) => `- ${c}`).join('\n');
+    prompt = prompt.replaceAll('{{MEAL_CATEGORIES}}', categoryList);
+  } else {
+    // Fallback to default lists if not provided
+    prompt = prompt.replaceAll('{{MEAL_CATEGORIES}}', '- Hauptgericht\n- Dessert\n- Vorspeise\n- Beilage\n- Snack\n- Suppe\n- Salat\n- Getränk');
+  }
 
-HTML-Inhalt:
-${rawHtml}`;
+  console.log(`Using AI prompt for HTML processing with replaced placeholders`);
+  console.log(`Cuisine types: ${cuisineTypes?.length || 0} items`);
+  console.log(`Meal categories: ${mealCategories?.length || 0} items`);
+
+  // HTML-specific instructions as prefix
+  const htmlSpecificInstructions = `Der folgende Inhalt ist unverarbeitetes HTML aus einem Social-Media-Reel oder einer Webseite. Bereinige allen Code und sämtliche HTML-Artefakte und extrahiere das Rezept und die Zutaten. Wenn es nicht auf Deutsch ist, übersetze es auf Deutsch.
+
+`;
+
+  // Combine HTML-specific instructions with the configured prompt and the HTML content
+  const fullPrompt = htmlSpecificInstructions + prompt + `\n\nHTML-Inhalt:\n${rawHtml}`;
 
   const requestBody = {
     contents: [
       {
         parts: [
-          {text: prompt},
+          {text: fullPrompt},
         ],
       },
     ],
