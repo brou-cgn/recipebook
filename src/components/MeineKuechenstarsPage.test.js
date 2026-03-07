@@ -1,9 +1,18 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import MeineKuechenstarsPage from './MeineKuechenstarsPage';
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecipeCalls: jest.fn(),
+}));
+
+jest.mock('../utils/customLists', () => ({
+  getButtonIcons: () => Promise.resolve({}),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '✕' },
+}));
+
+jest.mock('../utils/imageUtils', () => ({
+  isBase64Image: jest.fn().mockReturnValue(false),
 }));
 
 const mockCurrentUser = { id: 'user-1' };
@@ -31,7 +40,7 @@ describe('MeineKuechenstarsPage', () => {
     expect(screen.getByText('Meine Küchenstars')).toBeInTheDocument();
   });
 
-  test('renders back button', () => {
+  test('renders close button', () => {
     render(
       <MeineKuechenstarsPage
         onBack={() => {}}
@@ -39,10 +48,10 @@ describe('MeineKuechenstarsPage', () => {
         recipes={[]}
       />
     );
-    expect(screen.getByText(/Zurück/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /schließen/i })).toBeInTheDocument();
   });
 
-  test('calls onBack when back button is clicked', () => {
+  test('calls onBack when close button is clicked', () => {
     const handleBack = jest.fn();
     render(
       <MeineKuechenstarsPage
@@ -51,7 +60,7 @@ describe('MeineKuechenstarsPage', () => {
         recipes={[]}
       />
     );
-    screen.getByText(/Zurück/).click();
+    fireEvent.click(screen.getByRole('button', { name: /schließen/i }));
     expect(handleBack).toHaveBeenCalled();
   });
 

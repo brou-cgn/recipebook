@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './MeineKuechenstarsPage.css';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
 
   useEffect(() => {
     getRecipeCalls()
@@ -16,6 +19,12 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
         console.error('Fehler beim Laden der Rezeptaufrufe:', err);
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    getButtonIcons().then((icons) => {
+      setCloseIcon(icons.privateListBack || DEFAULT_BUTTON_ICONS.privateListBack);
+    });
   }, []);
 
   const ownRecipes = recipes.filter(r => r.authorId === currentUser?.id);
@@ -35,8 +44,21 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   return (
     <div className="meine-kuechenstars-container">
       <div className="meine-kuechenstars-header">
-        <button className="back-button" onClick={onBack}>← Zurück</button>
         <h2>Meine Küchenstars</h2>
+        {onBack && (
+          <button
+            className="meine-kuechenstars-close-btn"
+            onClick={onBack}
+            aria-label="Schließen"
+            title="Schließen"
+          >
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Schließen" className="meine-kuechenstars-close-icon-img" />
+            ) : (
+              <span>{closeIcon}</span>
+            )}
+          </button>
+        )}
       </div>
       <div className="meine-kuechenstars-content">
         <p className="meine-kuechenstars-info-text">
