@@ -167,7 +167,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
       return groupRecipesBySections(menu.sections, recipes);
     }
     // Fallback for old menu format
-    const menuRecipes = recipes.filter(r => menu.recipeIds?.includes(r.id));
+    const menuRecipes = (menu.recipeIds || [])
+      .map(id => recipes.find(r => r.id === id))
+      .filter(Boolean);
     return [{
       name: 'Alle Rezepte',
       recipes: menuRecipes
