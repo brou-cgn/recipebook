@@ -205,6 +205,8 @@ function App() {
     selectedGroup: ''
   });
   const recipeCountsInitialized = useRef(false);
+  const recipeListScrollPositionRef = useRef(0);
+  const shouldRestoreRecipeListScrollRef = useRef(false);
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
@@ -473,6 +475,11 @@ function App() {
   }, [currentUser]);
 
   const handleSelectRecipe = (recipe) => {
+    // Save scroll position when opening a recipe from the recipe list (not from a menu)
+    if (!selectedMenu) {
+      recipeListScrollPositionRef.current = window.scrollY;
+      shouldRestoreRecipeListScrollRef.current = true;
+    }
     setSelectedRecipe(recipe);
     if (recipe && currentUser) {
       logRecipeCall(currentUser, recipe);
@@ -484,6 +491,22 @@ function App() {
     setSelectedRecipe(null);
     // selectedMenu state is preserved, so if it's set, we'll return to MenuDetail
   };
+
+  // Restore recipe list scroll position after returning from recipe detail
+  useEffect(() => {
+    if (!selectedRecipe && shouldRestoreRecipeListScrollRef.current) {
+      shouldRestoreRecipeListScrollRef.current = false;
+      const savedPosition = recipeListScrollPositionRef.current;
+      // Double rAF ensures the RecipeList has fully re-rendered before
+      // the scroll position is restored (one frame for React to commit the
+      // DOM, a second for the browser to apply layout).
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, savedPosition);
+        });
+      });
+    }
+  }, [selectedRecipe]);
 
   const handleAddRecipe = (groupId = null) => {
     setActiveGroupId(groupId);
