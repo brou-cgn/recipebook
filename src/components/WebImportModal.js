@@ -186,7 +186,7 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
               <p className="web-import-instructions">
                 {isInstagramReelUrl(url)
                   ? (progress < 70
-                      ? '📸 Extrahiere Caption und Kommentare...'
+                      ? 'Extrahiere Caption und Kommentare...'
                       : '🤖 Analysiere Rezept...')
                   : (progress < 50
                       ? 'Analysiere Website...'
