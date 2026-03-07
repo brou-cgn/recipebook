@@ -60,6 +60,7 @@ describe('PersonalDataPage', () => {
         nachname: 'Mustermann',
         email: 'john@example.com',
         signatureSatz: 'Guten Appetit!',
+        defaultWebImportListId: '',
       });
     });
   });

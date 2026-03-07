@@ -255,6 +255,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             setShowPersonalData(false);
             if (onProfileUpdated) onProfileUpdated(updatedUser);
           }}
+          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
         />
       ) : (
         <>

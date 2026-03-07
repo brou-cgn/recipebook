@@ -38,7 +38,8 @@
 }
 
 .personal-data-field input,
-.personal-data-field textarea {
+.personal-data-field textarea,
+.personal-data-field select {
   padding: 0.6rem 0.8rem;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -48,7 +49,8 @@
 }
 
 .personal-data-field input:focus,
-.personal-data-field textarea:focus {
+.personal-data-field textarea:focus,
+.personal-data-field select:focus {
   outline: none;
   border-color: #1a1a1a;
 }
