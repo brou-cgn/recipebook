@@ -413,6 +413,33 @@
   background: #f9f6f3;
   border-radius: 6px;
   margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.selected-recipe-item.dragging {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #fff;
+  border: 2px solid #402C1C;
+}
+
+.drag-handle {
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: grab;
+  font-size: 1.1rem;
+  padding: 0 0.25rem;
+  line-height: 1;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  color: #402C1C;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .remove-recipe-button {

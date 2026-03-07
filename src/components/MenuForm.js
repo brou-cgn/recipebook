@@ -3,6 +3,71 @@ import './MenuForm.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  TouchSensor,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Sortable Recipe Item Component for menu sections
+function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`selected-recipe-item ${isDragging ? 'dragging' : ''}`}
+    >
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Rezept verschieben"
+      >
+        ⋮⋮
+      </button>
+      <span className="recipe-name">
+        {recipe.title}
+        {isFavorite && <span className="favorite-indicator">★</span>}
+      </span>
+      <button
+        type="button"
+        className="remove-recipe-button"
+        onClick={() => onRemove(sectionIndex, recipe.id)}
+        title="Rezept entfernen"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
 
 function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [name, setName] = useState('');
@@ -14,6 +79,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [showSectionInput, setShowSectionInput] = useState(false);
   const [searchQueries, setSearchQueries] = useState({});
   const [favoriteIds, setFavoriteIds] = useState([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Load favorite IDs when user changes
   useEffect(() => {
@@ -201,6 +274,21 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setSections(newSections);
   };
 
+  const handleDragEndRecipes = (sectionIndex, event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSections((prevSections) => {
+        const newSections = prevSections.map((section, idx) => {
+          if (idx !== sectionIndex) return section;
+          const oldIndex = section.recipeIds.indexOf(active.id);
+          const newIndex = section.recipeIds.indexOf(over.id);
+          return { ...section, recipeIds: arrayMove(section.recipeIds, oldIndex, newIndex) };
+        });
+        return newSections;
+      });
+    }
+  };
+
   const getFilteredRecipes = (sectionIndex) => {
     const query = searchQueries[sectionIndex] || '';
     const section = sections[sectionIndex];
@@ -351,27 +439,32 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                     {section.recipeIds.length > 0 && (
                       <div className="selected-recipes">
                         <h5>Ausgewählte Rezepte:</h5>
-                        {section.recipeIds.map(recipeId => {
-                          const recipe = recipes.find(r => r.id === recipeId);
-                          if (!recipe) return null;
-                          const isFavorite = favoriteIds.includes(recipe.id);
-                          return (
-                            <div key={recipe.id} className="selected-recipe-item">
-                              <span className="recipe-name">
-                                {recipe.title}
-                                {isFavorite && <span className="favorite-indicator">★</span>}
-                              </span>
-                              <button
-                                type="button"
-                                className="remove-recipe-button"
-                                onClick={() => handleRemoveRecipeFromSection(sectionIndex, recipe.id)}
-                                title="Rezept entfernen"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          );
-                        })}
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(event) => handleDragEndRecipes(sectionIndex, event)}
+                        >
+                          <SortableContext
+                            items={section.recipeIds}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {section.recipeIds.map(recipeId => {
+                              const recipe = recipes.find(r => r.id === recipeId);
+                              if (!recipe) return null;
+                              const isFavorite = favoriteIds.includes(recipe.id);
+                              return (
+                                <SortableRecipeItem
+                                  key={recipe.id}
+                                  id={recipe.id}
+                                  recipe={recipe}
+                                  isFavorite={isFavorite}
+                                  sectionIndex={sectionIndex}
+                                  onRemove={handleRemoveRecipeFromSection}
+                                />
+                              );
+                            })}
+                          </SortableContext>
+                        </DndContext>
                       </div>
                     )}
                     
