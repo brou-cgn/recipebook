@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image } from '../utils/imageUtils';
@@ -200,6 +200,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [selectedPrivateListId, setSelectedPrivateListId] = useState('');
   // AI OCR daily limit state
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
+  // Tracks whether the web import default list pre-selection has been applied
+  const webImportListPreselected = useRef(false);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -208,6 +210,16 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialWebImportUrl]);
+
+  // Pre-select the user's default private list when opening via deeplink web import
+  useEffect(() => {
+    if (!initialWebImportUrl || recipe || webImportListPreselected.current) return;
+    if (privateLists.length === 0 || !currentUser) return;
+    webImportListPreselected.current = true;
+    const defaultId = currentUser.defaultWebImportListId;
+    const listExists = defaultId && privateLists.some(l => l.id === defaultId);
+    setSelectedPrivateListId(listExists ? defaultId : privateLists[0].id);
+  }, [initialWebImportUrl, privateLists, currentUser, recipe]);
 
   // Drag and drop sensors with touch support
   const sensors = useSensors(
@@ -281,9 +293,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setAuthorId(currentUser?.id || '');
       setParentRecipeId('');
       setIsPrivate(false);
-      setSelectedPrivateListId('');
+      if (!initialWebImportUrl) {
+        setSelectedPrivateListId('');
+      }
     }
-  }, [recipe, currentUser, isCreatingVersion]);
+  }, [recipe, currentUser, isCreatingVersion, initialWebImportUrl]);
 
   useEffect(() => {
     const loadCustomLists = async () => {

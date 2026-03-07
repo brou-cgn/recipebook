@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import './PersonalDataPage.css';
 import { updateUserProfile, changePassword } from '../utils/userManagement';
 
-function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
+function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
   const [vorname, setVorname] = useState(currentUser?.vorname || '');
   const [nachname, setNachname] = useState(currentUser?.nachname || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [signatureSatz, setSignatureSatz] = useState(currentUser?.signatureSatz || '');
+  const [defaultWebImportListId, setDefaultWebImportListId] = useState(currentUser?.defaultWebImportListId || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -25,7 +26,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
       vorname: vorname.trim(),
       nachname: nachname.trim(),
       email: email.trim(),
-      signatureSatz: signatureSatz.trim()
+      signatureSatz: signatureSatz.trim(),
+      defaultWebImportListId: defaultWebImportListId
     });
 
     setSaving(false);
@@ -37,7 +39,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
         vorname: vorname.trim(),
         nachname: nachname.trim(),
         email: email.trim(),
-        signatureSatz: signatureSatz.trim()
+        signatureSatz: signatureSatz.trim(),
+        defaultWebImportListId: defaultWebImportListId
       });
     }
   };
@@ -109,6 +112,23 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated }) {
             rows={3}
           />
         </div>
+        {privateLists.length > 0 && (
+          <div className="personal-data-field">
+            <label htmlFor="defaultWebImportList">Standard-Liste für Webimport (optional)</label>
+            <select
+              id="defaultWebImportList"
+              value={defaultWebImportListId}
+              onChange={(e) => setDefaultWebImportListId(e.target.value)}
+            >
+              <option value="">– Keine Vorauswahl –</option>
+              {privateLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         {message && (
           <div className={`personal-data-message ${message.success ? 'success' : 'error'}`}>
             {message.text}
