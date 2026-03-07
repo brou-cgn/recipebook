@@ -55,6 +55,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
   const [conversionTable, setConversionTable] = useState([]);
   const missingSavedRef = useRef(false);
+  const [activeTimers, setActiveTimers] = useState({});
+  const timerIntervalsRef = useRef({});
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -567,6 +569,251 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   };
 
+  // ── Timer helpers ──────────────────────────────────────────────────────────
+
+  // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
+  const TIME_REGEX = /(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)/gi;
+
+  function parseTimeToSeconds(value, unit) {
+    const num = parseFloat(value.replace(',', '.'));
+    const u = unit.toLowerCase();
+    if (u === 'h' || u.startsWith('stund')) return Math.round(num * 3600);
+    if (u === 'm' || u.startsWith('min')) return Math.round(num * 60);
+    // seconds: 'sek', 'sekunde', 'sekunden'
+    return Math.round(num);
+  }
+
+  function formatTime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function playTimerDoneSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.3, 0.6].forEach(offset => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.25);
+        osc.start(ctx.currentTime + offset);
+        osc.stop(ctx.currentTime + offset + 0.25);
+      });
+    } catch (_) {
+      // Audio API not available – silently ignore
+    }
+  }
+
+  function notifyTimerDone(label) {
+    playTimerDoneSound();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('⏰ Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
+    }
+  }
+
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  function startTimer(stepKey, timerIndex, totalSeconds, label) {
+    requestNotificationPermission();
+    setActiveTimers(prev => ({
+      ...prev,
+      [stepKey]: {
+        ...(prev[stepKey] || {}),
+        [timerIndex]: {
+          totalSeconds,
+          remainingSeconds: totalSeconds,
+          running: true,
+          finished: false,
+          label,
+        },
+      },
+    }));
+    const intervalKey = `${stepKey}_${timerIndex}`;
+    if (timerIntervalsRef.current[intervalKey]) {
+      clearInterval(timerIntervalsRef.current[intervalKey]);
+    }
+    timerIntervalsRef.current[intervalKey] = setInterval(() => {
+      setActiveTimers(prev => {
+        const stepTimers = prev[stepKey];
+        if (!stepTimers) return prev;
+        const t = stepTimers[timerIndex];
+        if (!t || !t.running) return prev;
+        const next = t.remainingSeconds - 1;
+        if (next <= 0) {
+          clearInterval(timerIntervalsRef.current[intervalKey]);
+          delete timerIntervalsRef.current[intervalKey];
+          notifyTimerDone(t.label);
+          return {
+            ...prev,
+            [stepKey]: {
+              ...stepTimers,
+              [timerIndex]: { ...t, remainingSeconds: 0, running: false, finished: true },
+            },
+          };
+        }
+        return {
+          ...prev,
+          [stepKey]: {
+            ...stepTimers,
+            [timerIndex]: { ...t, remainingSeconds: next },
+          },
+        };
+      });
+    }, 1000);
+  }
+
+  function pauseTimer(stepKey, timerIndex) {
+    const intervalKey = `${stepKey}_${timerIndex}`;
+    clearInterval(timerIntervalsRef.current[intervalKey]);
+    delete timerIntervalsRef.current[intervalKey];
+    setActiveTimers(prev => {
+      const stepTimers = prev[stepKey];
+      if (!stepTimers) return prev;
+      return {
+        ...prev,
+        [stepKey]: {
+          ...stepTimers,
+          [timerIndex]: { ...stepTimers[timerIndex], running: false },
+        },
+      };
+    });
+  }
+
+  function resumeTimer(stepKey, timerIndex) {
+    setActiveTimers(prev => {
+      const stepTimers = prev[stepKey];
+      if (!stepTimers) return prev;
+      const t = stepTimers[timerIndex];
+      if (!t || t.finished) return prev;
+      const intervalKey = `${stepKey}_${timerIndex}`;
+      if (timerIntervalsRef.current[intervalKey]) clearInterval(timerIntervalsRef.current[intervalKey]);
+      timerIntervalsRef.current[intervalKey] = setInterval(() => {
+        setActiveTimers(cur => {
+          const st = cur[stepKey];
+          if (!st) return cur;
+          const tt = st[timerIndex];
+          if (!tt || !tt.running) return cur;
+          const next = tt.remainingSeconds - 1;
+          if (next <= 0) {
+            clearInterval(timerIntervalsRef.current[intervalKey]);
+            delete timerIntervalsRef.current[intervalKey];
+            notifyTimerDone(tt.label);
+            return { ...cur, [stepKey]: { ...st, [timerIndex]: { ...tt, remainingSeconds: 0, running: false, finished: true } } };
+          }
+          return { ...cur, [stepKey]: { ...st, [timerIndex]: { ...tt, remainingSeconds: next } } };
+        });
+      }, 1000);
+      return {
+        ...prev,
+        [stepKey]: { ...stepTimers, [timerIndex]: { ...t, running: true } },
+      };
+    });
+  }
+
+  function stopTimer(stepKey, timerIndex) {
+    const intervalKey = `${stepKey}_${timerIndex}`;
+    clearInterval(timerIntervalsRef.current[intervalKey]);
+    delete timerIntervalsRef.current[intervalKey];
+    setActiveTimers(prev => {
+      const stepTimers = { ...(prev[stepKey] || {}) };
+      delete stepTimers[timerIndex];
+      return { ...prev, [stepKey]: stepTimers };
+    });
+  }
+
+  // Clean up all intervals on unmount
+  useEffect(() => {
+    const intervals = timerIntervalsRef.current;
+    return () => {
+      Object.values(intervals).forEach(id => clearInterval(id));
+    };
+  }, []);
+
+  function renderStepContent(stepText, stepKey) {
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    let matchIndex = 0;
+    const re = new RegExp(TIME_REGEX.source, 'gi');
+    while ((match = re.exec(stepText)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(stepText.slice(lastIndex, match.index));
+      }
+      const timerIndex = matchIndex++;
+      const totalSeconds = parseTimeToSeconds(match[1], match[2]);
+      const label = match[0];
+      const timer = activeTimers[stepKey]?.[timerIndex];
+      if (timer) {
+        const progress = 1 - timer.remainingSeconds / timer.totalSeconds;
+        parts.push(
+          <span key={`timer-${timerIndex}`} className="step-timer-inline">
+            <span className="step-timer-label">{label}</span>
+            <span className="step-timer-display">
+              <span
+                className="step-timer-progress-ring"
+                style={{ '--progress': progress }}
+                aria-hidden="true"
+              />
+              <span className={`step-timer-time${timer.finished ? ' finished' : ''}`}>
+                {timer.finished ? '✓' : formatTime(timer.remainingSeconds)}
+              </span>
+            </span>
+            <span className="step-timer-controls">
+              {!timer.finished && (
+                timer.running
+                  ? <button
+                      className="step-timer-btn pause"
+                      onClick={e => { e.stopPropagation(); pauseTimer(stepKey, timerIndex); }}
+                      aria-label="Timer pausieren"
+                      title="Pausieren"
+                    >⏸</button>
+                  : <button
+                      className="step-timer-btn resume"
+                      onClick={e => { e.stopPropagation(); resumeTimer(stepKey, timerIndex); }}
+                      aria-label="Timer fortsetzen"
+                      title="Fortsetzen"
+                    >▶</button>
+              )}
+              <button
+                className="step-timer-btn stop"
+                onClick={e => { e.stopPropagation(); stopTimer(stepKey, timerIndex); }}
+                aria-label="Timer stoppen"
+                title="Stoppen"
+              >✕</button>
+            </span>
+          </span>
+        );
+      } else {
+        parts.push(
+          <button
+            key={`timer-btn-${timerIndex}`}
+            className="step-timer-start-btn"
+            onClick={e => { e.stopPropagation(); startTimer(stepKey, timerIndex, totalSeconds, label); }}
+            aria-label={`Timer für ${label} starten`}
+            title={`Timer für ${label} starten`}
+          >
+            ⏱ {label} ▶
+          </button>
+        );
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < stepText.length) {
+      parts.push(stepText.slice(lastIndex));
+    }
+    return parts.length > 0 ? parts : stepText;
+  }
+
   // Get actual step items (filter out headings) - moved before useEffect
   const stepItems = useMemo(() => {
     const steps = recipe.steps || [];
@@ -1006,20 +1253,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {/* Horizontal step cards with swipe support */}
             <section className="cooking-mode-steps">
               <div className="step-carousel" ref={stepsContainerRef}>
-                {stepItems.map((step, index) => (
-                  <div
-                    key={index}
-                    className={`step-card ${index === currentStepIndex ? 'active' : ''}`}
-                    onClick={() => setCurrentStepIndex(index)}
-                  >
-                    <div className="step-content">
-                      {typeof step === 'string' ? step : step.text}
+                {stepItems.map((step, index) => {
+                  const stepText = typeof step === 'string' ? step : step.text;
+                  const stepKey = `step_${index}`;
+                  return (
+                    <div
+                      key={index}
+                      className={`step-card ${index === currentStepIndex ? 'active' : ''}`}
+                      onClick={() => setCurrentStepIndex(index)}
+                    >
+                      <div className="step-content">
+                        {renderStepContent(stepText, stepKey)}
+                      </div>
+                      <div className="step-counter">
+                        Schritt {index + 1} von {totalSteps}
+                      </div>
                     </div>
-                    <div className="step-counter">
-                      Schritt {index + 1} von {totalSteps}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               {/* Progress indicator dots */}

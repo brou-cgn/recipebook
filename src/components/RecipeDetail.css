@@ -1121,6 +1121,131 @@ difficulty-stars .star {
   }
 }
 
+/* ── Step-Timer styles ──────────────────────────────────────────────────── */
+
+/* Inline timer-start button (replaces the time mention in step text) */
+.step-timer-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, #402C1C 0%, #6b4226 100%);
+  color: white;
+  border: none;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 6px rgba(64, 44, 28, 0.35);
+  white-space: nowrap;
+}
+
+.step-timer-start-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(64, 44, 28, 0.45);
+}
+
+.step-timer-start-btn:active {
+  transform: translateY(0);
+}
+
+/* Running timer container */
+.step-timer-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #f5f0eb;
+  border: 1.5px solid #c89c6e;
+  border-radius: 20px;
+  padding: 0.15rem 0.55rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.step-timer-label {
+  font-size: 0.85em;
+  color: #6b4226;
+  font-weight: 500;
+}
+
+/* Display wrapper holding ring + digits */
+.step-timer-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  position: relative;
+}
+
+/* SVG-less circular progress using conic-gradient */
+.step-timer-progress-ring {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #402C1C calc(var(--progress, 0) * 360deg),
+    #e0d5c8 0deg
+  );
+  flex-shrink: 0;
+}
+
+.step-timer-time {
+  font-size: 0.9em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #402C1C;
+  min-width: 2.8em;
+  text-align: center;
+}
+
+.step-timer-time.finished {
+  color: #4CAF50;
+  font-size: 1em;
+}
+
+/* Control buttons (pause/resume/stop) */
+.step-timer-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.step-timer-btn {
+  background: transparent;
+  border: 1.5px solid #c89c6e;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+  color: #6b4226;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.step-timer-btn:hover {
+  background: #402C1C;
+  color: white;
+  border-color: #402C1C;
+}
+
+.step-timer-btn.stop {
+  color: #cc4444;
+  border-color: #cc4444;
+}
+
+.step-timer-btn.stop:hover {
+  background: #cc4444;
+  color: white;
+  border-color: #cc4444;
+}
+
 /* Recipe link styles */
 .ingredient-with-link {
   /* Keep consistent list styling with other ingredients */
