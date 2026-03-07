@@ -146,6 +146,19 @@ describe('menuSections utility functions', () => {
       const grouped = groupRecipesBySections(menuSections, recipes);
       expect(grouped[0].recipes).toHaveLength(0);
     });
+
+    test('preserves recipe order from recipeIds, not from allRecipes order', () => {
+      // allRecipes is ordered: recipe1, recipe2, recipe3
+      // but section has recipeIds in reverse order: recipe3, recipe2, recipe1
+      const menuSections = [
+        { name: 'Hauptspeise', recipeIds: ['recipe3', 'recipe2', 'recipe1'] }
+      ];
+
+      const grouped = groupRecipesBySections(menuSections, recipes);
+      expect(grouped[0].recipes[0].id).toBe('recipe3');
+      expect(grouped[0].recipes[1].id).toBe('recipe2');
+      expect(grouped[0].recipes[2].id).toBe('recipe1');
+    });
   });
 
   describe('validateMenuSections', () => {

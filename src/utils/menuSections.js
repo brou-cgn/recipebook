@@ -78,7 +78,9 @@ export const groupRecipesBySections = (menuSections, allRecipes) => {
   
   return menuSections.map(section => ({
     name: section.name,
-    recipes: allRecipes.filter(recipe => section.recipeIds?.includes(recipe.id))
+    recipes: (section.recipeIds || [])
+      .map(id => allRecipes.find(recipe => recipe.id === id))
+      .filter(Boolean)
   }));
 };
 
