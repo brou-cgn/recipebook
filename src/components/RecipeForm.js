@@ -116,6 +116,16 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   const isHeading = typeof item === 'object' && item.type === 'heading';
   const text = typeof item === 'object' ? item.text : item;
 
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [text]);
+
   return (
     <div
       ref={setNodeRef}
@@ -131,8 +141,8 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
       >
         ⋮⋮
       </button>
-      {!isHeading && <span className="step-number">{stepNumber}.</span>}
       <textarea
+        ref={textareaRef}
         value={text}
         onChange={(e) => onChange(index, e.target.value)}
         placeholder={isHeading ? 'Zwischenüberschrift' : `Schritt ${stepNumber}`}
