@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import './AppCallsPage.css';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function AppCallsPage({ onBack, currentUser }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('app');
+  const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
 
   useEffect(() => {
     const loadData = async () => {
@@ -17,14 +20,28 @@ function AppCallsPage({ onBack, currentUser }) {
       setLoading(false);
     };
     loadData();
+    getButtonIcons().then((icons) => {
+      setCloseIcon(icons.privateListBack || DEFAULT_BUTTON_ICONS.privateListBack);
+    });
   }, []);
 
   if (!currentUser?.appCalls) {
     return (
       <div className="app-calls-container">
         <div className="app-calls-header">
-          <button className="back-button" onClick={onBack}>← Zurück</button>
-          <h2>Appaufrufe</h2>
+          <h2>Küchenbetrieb</h2>
+          <button
+            className="group-list-close-btn"
+            onClick={onBack}
+            aria-label="Schließen"
+            title="Schließen"
+          >
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Schließen" className="group-list-close-icon-img" />
+            ) : (
+              <span>{closeIcon}</span>
+            )}
+          </button>
         </div>
         <div className="app-calls-content">
           <p className="app-calls-info-text">
@@ -38,8 +55,19 @@ function AppCallsPage({ onBack, currentUser }) {
   return (
     <div className="app-calls-container">
       <div className="app-calls-header">
-        <button className="back-button" onClick={onBack}>← Zurück</button>
-        <h2>Appaufrufe</h2>
+        <h2>Küchenbetrieb</h2>
+        <button
+          className="group-list-close-btn"
+          onClick={onBack}
+          aria-label="Schließen"
+          title="Schließen"
+        >
+          {isBase64Image(closeIcon) ? (
+            <img src={closeIcon} alt="Schließen" className="group-list-close-icon-img" />
+          ) : (
+            <span>{closeIcon}</span>
+          )}
+        </button>
       </div>
       <div className="app-calls-tabs">
         <button

@@ -1069,7 +1069,7 @@ function App() {
         />
       ) : currentView === 'appCalls' ? (
         <AppCallsPage
-          onBack={() => handleViewChange('recipes')}
+          onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
         />
       ) : currentView === 'meineKuechenstars' ? (
