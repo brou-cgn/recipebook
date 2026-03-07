@@ -33,6 +33,8 @@ jest.mock('../utils/customLists', () => ({
   }),
   getButtonIcons: () => Promise.resolve({
     cookingMode: '👨‍🍳',
+    timerStart: '⏱',
+    timerStop: '⏹',
   }),
 }));
 
@@ -87,7 +89,7 @@ describe('RecipeDetail - Step Timer', () => {
     );
     enterCookingMode();
 
-    // The first step card should contain a timer start button for "10 Minuten"
+    // The first step card should contain a timer start button at the top right
     const timerBtn = document.querySelector('.step-timer-start-btn');
     expect(timerBtn).toBeInTheDocument();
     expect(timerBtn.textContent).toContain('10 Minuten');
@@ -111,9 +113,10 @@ describe('RecipeDetail - Step Timer', () => {
 
     const secondCard = document.querySelectorAll('.step-card')[1];
     expect(secondCard.querySelector('.step-timer-start-btn')).toBeNull();
+    expect(secondCard.querySelector('.step-timer-header')).toBeNull();
   });
 
-  test('clicking timer start button shows countdown display', () => {
+  test('clicking timer start button shows countdown and stop button', () => {
     render(
       <RecipeDetail
         recipe={mockRecipe}
@@ -128,11 +131,14 @@ describe('RecipeDetail - Step Timer', () => {
     const timerBtn = document.querySelector('.step-timer-start-btn');
     fireEvent.click(timerBtn);
 
-    // Timer display should now be visible
-    expect(document.querySelector('.step-timer-inline')).toBeInTheDocument();
+    // Top area with stop button and countdown should now be visible
+    expect(document.querySelector('.step-timer-top-area')).toBeInTheDocument();
     expect(document.querySelector('.step-timer-time')).toBeInTheDocument();
     // Should show 10:00 (600 seconds = 10 minutes)
     expect(document.querySelector('.step-timer-time').textContent).toBe('10:00');
+    // Start button on the first card should be gone (third step still has its own start button)
+    const firstCard = document.querySelectorAll('.step-card')[0];
+    expect(firstCard.querySelector('.step-timer-start-btn')).toBeNull();
   });
 
   test('timer counts down after 1 second', () => {
@@ -155,7 +161,7 @@ describe('RecipeDetail - Step Timer', () => {
     expect(document.querySelector('.step-timer-time').textContent).toBe('09:59');
   });
 
-  test('pause button stops the countdown', () => {
+  test('progress bar is shown while timer is running', () => {
     render(
       <RecipeDetail
         recipe={mockRecipe}
@@ -167,21 +173,17 @@ describe('RecipeDetail - Step Timer', () => {
     );
     enterCookingMode();
 
+    // No progress bar before timer starts
+    expect(document.querySelector('.step-timer-progress-bar')).toBeNull();
+
     fireEvent.click(document.querySelector('.step-timer-start-btn'));
 
-    act(() => { jest.advanceTimersByTime(2000); });
-    expect(document.querySelector('.step-timer-time').textContent).toBe('09:58');
-
-    // Pause
-    const pauseBtn = document.querySelector('.step-timer-btn.pause');
-    fireEvent.click(pauseBtn);
-
-    act(() => { jest.advanceTimersByTime(3000); });
-    // Should still be at 09:58 (paused)
-    expect(document.querySelector('.step-timer-time').textContent).toBe('09:58');
+    // Progress bar should appear after starting the timer
+    expect(document.querySelector('.step-timer-progress-bar')).toBeInTheDocument();
+    expect(document.querySelector('.step-timer-progress-fill')).toBeInTheDocument();
   });
 
-  test('resume button restarts the countdown after pause', () => {
+  test('stop button resets the timer and shows start button again', () => {
     render(
       <RecipeDetail
         recipe={mockRecipe}
@@ -194,17 +196,17 @@ describe('RecipeDetail - Step Timer', () => {
     enterCookingMode();
 
     fireEvent.click(document.querySelector('.step-timer-start-btn'));
-    act(() => { jest.advanceTimersByTime(1000); });
-    fireEvent.click(document.querySelector('.step-timer-btn.pause'));
-
-    // Resume
-    const resumeBtn = document.querySelector('.step-timer-btn.resume');
-    expect(resumeBtn).toBeInTheDocument();
-    fireEvent.click(resumeBtn);
-
     act(() => { jest.advanceTimersByTime(2000); });
-    // 1 second before pause + 2 seconds after resume = 09:57
-    expect(document.querySelector('.step-timer-time').textContent).toBe('09:57');
+
+    // Stop
+    const stopBtn = document.querySelector('.step-timer-btn.stop');
+    expect(stopBtn).toBeInTheDocument();
+    fireEvent.click(stopBtn);
+
+    // Timer display gone, start button should be back
+    expect(document.querySelector('.step-timer-top-area')).toBeNull();
+    expect(document.querySelector('.step-timer-progress-bar')).toBeNull();
+    expect(document.querySelector('.step-timer-start-btn')).toBeInTheDocument();
   });
 
   test('stop button removes the timer display', () => {
@@ -220,12 +222,12 @@ describe('RecipeDetail - Step Timer', () => {
     enterCookingMode();
 
     fireEvent.click(document.querySelector('.step-timer-start-btn'));
-    expect(document.querySelector('.step-timer-inline')).toBeInTheDocument();
+    expect(document.querySelector('.step-timer-top-area')).toBeInTheDocument();
 
     fireEvent.click(document.querySelector('.step-timer-btn.stop'));
 
     // Timer display gone, start button should be back
-    expect(document.querySelector('.step-timer-inline')).toBeNull();
+    expect(document.querySelector('.step-timer-top-area')).toBeNull();
     expect(document.querySelector('.step-timer-start-btn')).toBeInTheDocument();
   });
 

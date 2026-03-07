@@ -1123,7 +1123,14 @@ difficulty-stars .star {
 
 /* ── Step-Timer styles ──────────────────────────────────────────────────── */
 
-/* Inline timer-start button (replaces the time mention in step text) */
+/* Header row inside the step card that holds the start/stop button (right-aligned) */
+.step-timer-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+/* Start button – top right of the step card */
 .step-timer-start-btn {
   display: inline-flex;
   align-items: center;
@@ -1131,12 +1138,11 @@ difficulty-stars .star {
   background: linear-gradient(135deg, #402C1C 0%, #6b4226 100%);
   color: white;
   border: none;
-  padding: 0.15rem 0.55rem;
+  padding: 0.25rem 0.7rem;
   border-radius: 20px;
   font-size: 0.9em;
   font-weight: 600;
   cursor: pointer;
-  vertical-align: middle;
   transition: transform 0.15s, box-shadow 0.15s;
   box-shadow: 0 2px 6px rgba(64, 44, 28, 0.35);
   white-space: nowrap;
@@ -1151,46 +1157,19 @@ difficulty-stars .star {
   transform: translateY(0);
 }
 
-/* Running timer container */
-.step-timer-inline {
+/* Container shown in place of the start button while the timer is running */
+.step-timer-top-area {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   background: #f5f0eb;
   border: 1.5px solid #c89c6e;
   border-radius: 20px;
-  padding: 0.15rem 0.55rem;
-  vertical-align: middle;
+  padding: 0.25rem 0.6rem;
   white-space: nowrap;
 }
 
-.step-timer-label {
-  font-size: 0.85em;
-  color: #6b4226;
-  font-weight: 500;
-}
-
-/* Display wrapper holding ring + digits */
-.step-timer-display {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  position: relative;
-}
-
-/* SVG-less circular progress using conic-gradient */
-.step-timer-progress-ring {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #402C1C calc(var(--progress, 0) * 360deg),
-    #e0d5c8 0deg
-  );
-  flex-shrink: 0;
-}
-
+/* Countdown digits inside the top area */
 .step-timer-time {
   font-size: 0.9em;
   font-weight: 700;
@@ -1205,45 +1184,49 @@ difficulty-stars .star {
   font-size: 1em;
 }
 
-/* Control buttons (pause/resume/stop) */
-.step-timer-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-}
-
-.step-timer-btn {
+/* Stop button inside .step-timer-top-area */
+.step-timer-btn.stop {
   background: transparent;
-  border: 1.5px solid #c89c6e;
+  border: 1.5px solid #cc4444;
   border-radius: 50%;
   width: 24px;
   height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   cursor: pointer;
   padding: 0;
-  color: #6b4226;
+  color: #cc4444;
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
-}
-
-.step-timer-btn:hover {
-  background: #402C1C;
-  color: white;
-  border-color: #402C1C;
-}
-
-.step-timer-btn.stop {
-  color: #cc4444;
-  border-color: #cc4444;
 }
 
 .step-timer-btn.stop:hover {
   background: #cc4444;
   color: white;
-  border-color: #cc4444;
+}
+
+/* Progress bar – spans the full width at the very bottom of the step card */
+.step-timer-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  background: #e0d5c8;
+}
+
+.step-timer-progress-fill {
+  height: 100%;
+  background: #402C1C;
+  transition: width 1s linear;
+}
+
+.step-timer-progress-fill.finished {
+  background: #4CAF50;
 }
 
 /* Recipe link styles */
