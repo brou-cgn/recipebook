@@ -1117,7 +1117,7 @@ exports.captureWebsiteScreenshot = onCall(
     {
       maxInstances: 10,
       memory: '2GiB',
-      timeoutSeconds: 60,
+      timeoutSeconds: 120,
     },
     async (request) => {
       const {url} = request.data;
@@ -1166,8 +1166,9 @@ exports.captureWebsiteScreenshot = onCall(
       const puppeteer = require('puppeteer');
       const chromium = require('@sparticuz/chromium');
 
+      let browser;
       try {
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
           args: chromium.args.concat([
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -1188,20 +1189,54 @@ exports.captureWebsiteScreenshot = onCall(
         // Set language header to avoid redirects on locale-sensitive sites
         await page.setExtraHTTPHeaders({ 'Accept-Language': 'de-DE,de;q=0.9' });
 
-        // Navigate to the URL with timeout
-        await page.goto(url, { 
-          waitUntil: 'networkidle0',
-          timeout: 30000 
-        });
-
-        // Dismiss cookie/DSGVO consent banner if present (e.g. Usercentrics CMP)
-        const cookieConsentSelector = 'button[data-testid="uc-accept-all-button"]';
+        // Navigate to the URL – use 'domcontentloaded' instead of 'networkidle0'
+        // because heavy sites (tracking, ads, lazy-loading) never reach networkidle0
         try {
-          await page.waitForSelector(cookieConsentSelector, { timeout: 5000 });
-          await page.click(cookieConsentSelector);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        } catch (e) {
-          // No cookie banner found – continue without clicking
+          await page.goto(url, { 
+            waitUntil: 'domcontentloaded',
+            timeout: 30000 
+          });
+        } catch (navError) {
+          // Continue even if navigation times out – page is likely usable
+          console.warn(`Navigation warning for ${url}:`, navError.message);
+        }
+
+        // Wait a bit for dynamic content to render
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        // Dismiss cookie/DSGVO consent banner if present (supports multiple CMPs)
+        const cookieSelectors = [
+          'button[data-testid="uc-accept-all-button"]',           // Usercentrics
+          '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll', // Cookiebot
+          '.borlabs-cookie-btn-accept-all',                         // Borlabs Cookie
+          'button[id*="accept"][id*="cookie"]',                     // Generic
+          'button[class*="accept-all"]',                            // Generic
+          'a.cmplz-btn.cmplz-accept',                              // Complianz
+        ];
+        for (const selector of cookieSelectors) {
+          try {
+            await page.waitForSelector(selector, { timeout: 2000 });
+            await page.click(selector);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            break;
+          } catch (_) {
+            // Selector not found – try next
+          }
+        }
+
+        // If URL has a fragment (e.g. #recipe), scroll to that element
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.hash) {
+            const elementId = urlObj.hash.substring(1);
+            await page.evaluate((id) => {
+              const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+              if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }, elementId);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        } catch (_) {
+          // Ignore scroll errors
         }
 
         // Wait for main content to be visible
@@ -1229,6 +1264,9 @@ exports.captureWebsiteScreenshot = onCall(
           timestamp: new Date().toISOString()
         };
       } catch (error) {
+        // Close browser on error to prevent memory leaks
+        if (browser) { try { await browser.close(); } catch (_) { /* ignore */ } }
+
         console.error(`Screenshot capture failed for user ${userId}:`, error);
         
         if (error.message.includes('timeout')) {
