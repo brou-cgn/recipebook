@@ -135,3 +135,72 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Mini-timeline below the date input */
+.cook-date-input-wrapper {
+  padding: 0 0.25rem;
+}
+
+.cook-date-timeline {
+  position: relative;
+  padding: 0.5rem 0 0.25rem 2.25rem;
+  margin-top: 0.25rem;
+}
+
+.cook-date-timeline-line {
+  position: absolute;
+  left: 0.65rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 3px;
+  background: linear-gradient(180deg, #402C1C 0%, #DF7A00 100%);
+  border-radius: 2px;
+}
+
+.cook-date-timeline-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.cook-date-timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.cook-date-timeline-dot {
+  position: absolute;
+  left: -1.85rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #402C1C;
+  border: 2px solid #f5f5f5;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cook-date-timeline-dot--cook {
+  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
+}
+
+.cook-date-timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cook-date-timeline-label {
+  font-size: 0.78rem;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cook-date-timeline-date {
+  font-size: 0.9rem;
+  color: #333;
+  font-weight: 500;
+}

@@ -1703,6 +1703,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           recipeId={recipe.id}
           currentUser={currentUser}
           lastCookDate={lastCookDate}
+          recipeCreatedAt={recipe.createdAt}
           onSaved={(date) => setLastCookDate(date)}
           onClose={() => setShowCookDateModal(false)}
         />
