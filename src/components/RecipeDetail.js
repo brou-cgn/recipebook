@@ -56,6 +56,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
+  const [timerStartIcon, setTimerStartIcon] = useState('⏱');
+  const [timerStopIcon, setTimerStopIcon] = useState('⏹');
   const [conversionTable, setConversionTable] = useState([]);
   const missingSavedRef = useRef(false);
   const [activeTimers, setActiveTimers] = useState({});
@@ -76,6 +78,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionFilledIcon(icons.nutritionFilled || '🥦');
       setShoppingListIcon(icons.shoppingList || '🛒');
       setBringButtonIcon(icons.bringButton || '🛍️');
+      setTimerStartIcon(icons.timerStart || '⏱');
+      setTimerStopIcon(icons.timerStop || '⏹');
       setConversionTable(lists.conversionTable || []);
     };
     loadSettings();
@@ -739,80 +743,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     };
   }, []);
 
-  function renderStepContent(stepText, stepKey) {
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-    let matchIndex = 0;
-    const re = new RegExp(TIME_REGEX_SOURCE, 'gi');
-    while ((match = re.exec(stepText)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push(stepText.slice(lastIndex, match.index));
-      }
-      const timerIndex = matchIndex++;
-      const totalSeconds = parseTimeToSeconds(match[1], match[2]);
-      const label = match[0];
-      const timer = activeTimers[stepKey]?.[timerIndex];
-      if (timer) {
-        const progress = 1 - timer.remainingSeconds / timer.totalSeconds;
-        parts.push(
-          <span key={`timer-${timerIndex}`} className="step-timer-inline">
-            <span className="step-timer-label">{label}</span>
-            <span className="step-timer-display">
-              <span
-                className="step-timer-progress-ring"
-                style={{ '--progress': progress }}
-                aria-hidden="true"
-              />
-              <span className={`step-timer-time${timer.finished ? ' finished' : ''}`}>
-                {timer.finished ? '✓' : formatTime(timer.remainingSeconds)}
-              </span>
-            </span>
-            <span className="step-timer-controls">
-              {!timer.finished && (
-                timer.running
-                  ? <button
-                      className="step-timer-btn pause"
-                      onClick={e => { e.stopPropagation(); pauseTimer(stepKey, timerIndex); }}
-                      aria-label="Timer pausieren"
-                      title="Pausieren"
-                    >⏸</button>
-                  : <button
-                      className="step-timer-btn resume"
-                      onClick={e => { e.stopPropagation(); resumeTimer(stepKey, timerIndex); }}
-                      aria-label="Timer fortsetzen"
-                      title="Fortsetzen"
-                    >▶</button>
-              )}
-              <button
-                className="step-timer-btn stop"
-                onClick={e => { e.stopPropagation(); stopTimer(stepKey, timerIndex); }}
-                aria-label="Timer stoppen"
-                title="Stoppen"
-              >✕</button>
-            </span>
-          </span>
-        );
-      } else {
-        parts.push(
-          <button
-            key={`timer-btn-${timerIndex}`}
-            className="step-timer-start-btn"
-            onClick={e => { e.stopPropagation(); startTimer(stepKey, timerIndex, totalSeconds, label); }}
-            aria-label={`Timer für ${label} starten`}
-            title={`Timer für ${label} starten`}
-          >
-            ⏱ {label} ▶
-          </button>
-        );
-      }
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < stepText.length) {
-      parts.push(stepText.slice(lastIndex));
-    }
-    return parts.length > 0 ? parts : stepText;
-  }
+
 
   // Get actual step items (filter out headings) - moved before useEffect
   const stepItems = useMemo(() => {
@@ -1256,18 +1187,68 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {stepItems.map((step, index) => {
                   const stepText = typeof step === 'string' ? step : step.text;
                   const stepKey = `step_${index}`;
+
+                  // Detect first time mention for the per-step timer
+                  const re = new RegExp(TIME_REGEX_SOURCE, 'gi');
+                  const firstMatch = re.exec(stepText);
+                  const timerLabel = firstMatch ? firstMatch[0] : null;
+                  const timerSeconds = firstMatch ? parseTimeToSeconds(firstMatch[1], firstMatch[2]) : 0;
+                  const timer = timerLabel ? activeTimers[stepKey]?.[0] : null;
+
                   return (
                     <div
                       key={index}
                       className={`step-card ${index === currentStepIndex ? 'active' : ''}`}
                       onClick={() => setCurrentStepIndex(index)}
                     >
+                      {/* Timer header: start/stop button at top right */}
+                      {timerLabel && (
+                        <div className="step-timer-header">
+                          {timer ? (
+                            <div className="step-timer-top-area">
+                              <span className={`step-timer-time${timer.finished ? ' finished' : ''}`}>
+                                {timer.finished ? '✓' : formatTime(timer.remainingSeconds)}
+                              </span>
+                              <button
+                                className="step-timer-btn stop"
+                                onClick={e => { e.stopPropagation(); stopTimer(stepKey, 0); }}
+                                aria-label="Timer stoppen"
+                                title="Stoppen"
+                              >
+                                {isBase64Image(timerStopIcon)
+                                  ? <img src={timerStopIcon} alt="Timer stoppen" className="timer-stop-icon-img" />
+                                  : timerStopIcon}
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="step-timer-start-btn"
+                              onClick={e => { e.stopPropagation(); startTimer(stepKey, 0, timerSeconds, timerLabel); }}
+                              aria-label={`Timer für ${timerLabel} starten`}
+                              title={`Timer für ${timerLabel} starten`}
+                            >
+                              {isBase64Image(timerStartIcon)
+                                ? <img src={timerStartIcon} alt="Timer starten" className="timer-start-icon-img" />
+                                : timerStartIcon} {timerLabel}
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <div className="step-content">
-                        {renderStepContent(stepText, stepKey)}
+                        {stepText}
                       </div>
                       <div className="step-counter">
                         Schritt {index + 1} von {totalSteps}
                       </div>
+                      {/* Progress bar at bottom – spans full card width */}
+                      {timer && (
+                        <div className="step-timer-progress-bar" aria-hidden="true">
+                          <div
+                            className={`step-timer-progress-fill${timer.finished ? ' finished' : ''}`}
+                            style={{ width: `${(timer.remainingSeconds / timer.totalSeconds) * 100}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

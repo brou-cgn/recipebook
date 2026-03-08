@@ -165,7 +165,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     nutritionFilled: '🥦',
     privateListBack: '✕',
     shoppingList: '🛒',
-    bringButton: '🛍️'
+    bringButton: '🛍️',
+    timerStart: '⏱',
+    timerStop: '⏹'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -1949,6 +1951,120 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.bringButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.bringButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="timerStartIcon">Timer-Start-Button (Kochmodus):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.timerStart) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="timerStartIcon"
+                          value={buttonIcons.timerStart}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, timerStart: e.target.value })}
+                          placeholder="z.B. ⏱"
+                          maxLength={10}
+                        />
+                        <label htmlFor="timerStartIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'timerStart' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="timerStartIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('timerStart', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'timerStart'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('timerStart')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, timerStart: DEFAULT_BUTTON_ICONS.timerStart })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.timerStart) ? (
+                        <img src={buttonIcons.timerStart} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.timerStart}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="timerStopIcon">Timer-Stopp-Button (Kochmodus):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.timerStop) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="timerStopIcon"
+                          value={buttonIcons.timerStop}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, timerStop: e.target.value })}
+                          placeholder="z.B. ⏹"
+                          maxLength={10}
+                        />
+                        <label htmlFor="timerStopIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'timerStop' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="timerStopIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('timerStop', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'timerStop'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('timerStop')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, timerStop: DEFAULT_BUTTON_ICONS.timerStop })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.timerStop) ? (
+                        <img src={buttonIcons.timerStop} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.timerStop}</span>
                       )}
                     </div>
                   </div>

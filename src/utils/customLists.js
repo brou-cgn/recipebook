@@ -191,7 +191,9 @@ export const DEFAULT_BUTTON_ICONS = {
   nutritionFilled: '🥦',
   privateListBack: '✕',
   shoppingList: '🛒',
-  bringButton: '🛍️'
+  bringButton: '🛍️',
+  timerStart: '⏱',
+  timerStop: '⏹'
 };
 
 // Cache for settings to avoid repeated Firestore reads
