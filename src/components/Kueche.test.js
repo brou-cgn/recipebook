@@ -8,6 +8,12 @@ jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineMenuBubbleIcon: () => Promise.resolve(null),
   getTimelineMenuDefaultImage: () => Promise.resolve(DEFAULT_MENU_IMAGE),
+  getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
+  getTimelineCookEventDefaultImage: () => Promise.resolve(null),
+}));
+
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: jest.fn(() => Promise.resolve([])),
 }));
 
 jest.mock('../utils/categoryImages', () => ({
@@ -32,6 +38,8 @@ describe('Kueche', () => {
     getAppCalls.mockResolvedValue([]);
     const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecipeCalls.mockResolvedValue([]);
+    const { getAllCookDates } = require('../utils/recipeCookDates');
+    getAllCookDates.mockResolvedValue([]);
   });
 
   const mockRecipes = [
