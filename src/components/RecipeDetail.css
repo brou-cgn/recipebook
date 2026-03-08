@@ -1134,17 +1134,18 @@ difficulty-stars .star {
 .step-timer-start-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
   background: transparent;
   color: #402C1C;
-  border: 1.5px solid transparent;
-  padding: 0.25rem 0.7rem;
-  border-radius: 20px;
+  border: none;
+  padding: 0;
+  border-radius: 50%;
   font-size: 0.9em;
-  font-weight: 600;
   cursor: pointer;
   transition: color 0.15s;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .step-timer-start-btn:hover {
@@ -1229,12 +1230,9 @@ difficulty-stars .star {
 
 /* Icon images for timer start button */
 .timer-start-icon-img {
-  max-width: 16px;
-  max-height: 16px;
-  width: auto;
-  height: auto;
+  width: 27px;
+  height: 27px;
   object-fit: contain;
-  vertical-align: middle;
 }
 
 /* Icon images for timer stop button */
