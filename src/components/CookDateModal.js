@@ -19,7 +19,7 @@ import { setCookDate } from '../utils/recipeCookDates';
  */
 function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, recipeTitle, recipeImage, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [selectedDate, setSelectedDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -56,7 +56,7 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
     <div className="cook-date-modal-overlay" onClick={onClose}>
       <div className="cook-date-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
-          <h2 className="cook-date-modal-title">Kochdatum eintragen</h2>
+          <h2 className="cook-date-modal-title">Kochbuch</h2>
           <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">✕</button>
         </div>
         <div className="cook-date-modal-body">
