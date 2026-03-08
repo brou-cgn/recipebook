@@ -56,7 +56,7 @@ const REGISTRATION_RATE_LIMIT = 5;
 /**
  * Input validation constants
  */
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB in bytes
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
 const MAX_HTML_SIZE = 500000; // 500 KB in characters
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -1251,7 +1251,9 @@ exports.captureWebsiteScreenshot = onCall(
         // Take screenshot
         const screenshot = await page.screenshot({ 
           encoding: 'base64',
-          fullPage: true 
+          fullPage: true,
+          type: 'jpeg',
+          quality: 80,
         });
 
         await browser.close();
@@ -1259,7 +1261,7 @@ exports.captureWebsiteScreenshot = onCall(
         console.log(`Screenshot captured successfully for user ${userId}`);
         
         return {
-          screenshot: `data:image/png;base64,${screenshot}`,
+          screenshot: `data:image/jpeg;base64,${screenshot}`,
           url: url,
           timestamp: new Date().toISOString()
         };
