@@ -193,7 +193,8 @@ export const DEFAULT_BUTTON_ICONS = {
   shoppingList: '🛒',
   bringButton: '🛍️',
   timerStart: '⏱',
-  timerStop: '⏹'
+  timerStop: '⏹',
+  cookDate: '📅'
 };
 
 // Cache for settings to avoid repeated Firestore reads

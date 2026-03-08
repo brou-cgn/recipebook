@@ -167,7 +167,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     shoppingList: '🛒',
     bringButton: '🛍️',
     timerStart: '⏱',
-    timerStop: '⏹'
+    timerStop: '⏹',
+    cookDate: '📅'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -2065,6 +2066,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.timerStop} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.timerStop}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="cookDateIcon">Kochdatum-Button (Rezeptdetailansicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.cookDate) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="cookDateIcon"
+                          value={buttonIcons.cookDate}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookDate: e.target.value })}
+                          placeholder="z.B. 📅"
+                          maxLength={10}
+                        />
+                        <label htmlFor="cookDateIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'cookDate' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="cookDateIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('cookDate', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'cookDate'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('cookDate')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, cookDate: DEFAULT_BUTTON_ICONS.cookDate })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.cookDate) ? (
+                        <img src={buttonIcons.cookDate} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.cookDate}</span>
                       )}
                     </div>
                   </div>

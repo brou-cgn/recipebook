@@ -14,6 +14,8 @@ import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
 import RecipeRating from './RecipeRating';
+import CookDateModal from './CookDateModal';
+import { getLastCookDate } from '../utils/recipeCookDates';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -58,7 +60,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
   const [timerStartIcon, setTimerStartIcon] = useState('⏱');
   const [timerStopIcon, setTimerStopIcon] = useState('⏹');
+  const [cookDateIcon, setCookDateIcon] = useState('📅');
   const [conversionTable, setConversionTable] = useState([]);
+  const [lastCookDate, setLastCookDate] = useState(null);
+  const [showCookDateModal, setShowCookDateModal] = useState(false);
   const missingSavedRef = useRef(false);
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
@@ -80,6 +85,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setBringButtonIcon(icons.bringButton || '🛍️');
       setTimerStartIcon(icons.timerStart || '⏱');
       setTimerStopIcon(icons.timerStop || '⏹');
+      setCookDateIcon(icons.cookDate || '📅');
       setConversionTable(lists.conversionTable || []);
     };
     loadSettings();
@@ -120,6 +126,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  // Load last cook date when user or recipe changes
+  useEffect(() => {
+    if (!currentUser?.id || !selectedRecipe?.id) {
+      setLastCookDate(null);
+      return;
+    }
+    getLastCookDate(currentUser.id, selectedRecipe.id).then(setLastCookDate);
+  }, [currentUser?.id, selectedRecipe?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update selected recipe when initial recipe changes
   useEffect(() => {
@@ -1403,13 +1418,29 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
             <div className="recipe-title-row">
               <h1 className="recipe-title">{recipe.title}</h1>
-              <RecipeRating
-                recipeId={recipe.id}
-                ratingAvg={recipe.ratingAvg}
-                ratingCount={recipe.ratingCount}
-                currentUser={currentUser}
-                onOpenModal={() => setShowRatingModal(true)}
-              />
+              <div className="recipe-title-actions">
+                {currentUser && !currentUser.isGuest && (
+                  <button
+                    className={`cook-date-button${lastCookDate ? ' has-cook-date' : ''}`}
+                    onClick={() => setShowCookDateModal(true)}
+                    title={lastCookDate ? `Zuletzt gekocht: ${lastCookDate.toLocaleDateString('de-DE')}` : 'Kochdatum eintragen'}
+                    aria-label={lastCookDate ? `Kochdatum eintragen (zuletzt: ${lastCookDate.toLocaleDateString('de-DE')})` : 'Kochdatum eintragen'}
+                  >
+                    {isBase64Image(cookDateIcon) ? (
+                      <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
+                    ) : (
+                      cookDateIcon
+                    )}
+                  </button>
+                )}
+                <RecipeRating
+                  recipeId={recipe.id}
+                  ratingAvg={recipe.ratingAvg}
+                  ratingCount={recipe.ratingCount}
+                  currentUser={currentUser}
+                  onOpenModal={() => setShowRatingModal(true)}
+                />
+              </div>
             </div>
 
             <div className="recipe-captions">
@@ -1665,6 +1696,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           currentUser={currentUser}
           canDeleteRatings={currentUser?.deleteRating === true}
           onClose={() => setShowRatingModal(false)}
+        />
+      )}
+      {showCookDateModal && currentUser && (
+        <CookDateModal
+          recipeId={recipe.id}
+          currentUser={currentUser}
+          lastCookDate={lastCookDate}
+          onSaved={(date) => setLastCookDate(date)}
+          onClose={() => setShowCookDateModal(false)}
         />
       )}
       {showPortionSelector && linkedRecipes.length > 0 && (
