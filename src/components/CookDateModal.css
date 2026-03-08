@@ -85,6 +85,8 @@
   font-family: inherit;
   color: #333;
   transition: border-color 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .cook-date-input:focus {
