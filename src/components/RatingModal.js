@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './RatingModal.css';
 import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings, deleteRating } from '../utils/recipeRatings';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * RatingModal component
@@ -24,8 +26,18 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   const [saved, setSaved] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [allRatings, setAllRatings] = useState([]);
+  const [heartEmptyIcon, setHeartEmptyIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+  const [heartFilledIcon, setHeartFilledIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartFilled);
 
   const isGuest = !currentUser || currentUser.isGuest;
+
+  // Load configurable heart icons
+  useEffect(() => {
+    getButtonIcons().then((icons) => {
+      setHeartEmptyIcon(icons.ratingHeartEmpty || DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+      setHeartFilledIcon(icons.ratingHeartFilled || DEFAULT_BUTTON_ICONS.ratingHeartFilled);
+    });
+  }, []);
 
   // Live rating summary subscription
   useEffect(() => {
@@ -80,6 +92,14 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
 
   const activeRating = hoveredRating || selectedRating || 0;
 
+  const renderHeartIcon = (filled) => {
+    const icon = filled ? heartFilledIcon : heartEmptyIcon;
+    if (isBase64Image(icon)) {
+      return <img src={icon} alt={filled ? '♥' : '♡'} className="rating-heart-img" />;
+    }
+    return icon;
+  };
+
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -110,7 +130,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
                 aria-label={`${n} von 5 Herzen`}
                 aria-pressed={selectedRating === n}
               >
-                {activeRating >= n ? '♥' : '♡'}
+                {renderHeartIcon(activeRating >= n)}
               </button>
             ))}
           </div>
@@ -154,7 +174,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
                   <div className="rating-review-hearts" aria-label={`${r.rating} von 5 Herzen`}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <span key={n} className={`rating-review-heart ${r.rating >= n ? 'filled' : 'empty'}`}>
-                        {r.rating >= n ? '♥' : '♡'}
+                        {renderHeartIcon(r.rating >= n)}
                       </span>
                     ))}
                   </div>

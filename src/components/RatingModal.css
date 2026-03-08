@@ -260,3 +260,10 @@
   color: #c94d6b;
   background: rgba(224, 92, 122, 0.08);
 }
+
+.rating-heart-img {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  vertical-align: middle;
+}

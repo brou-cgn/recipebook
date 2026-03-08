@@ -163,6 +163,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     copyLink: '📋',
     nutritionEmpty: '➕',
     nutritionFilled: '🥦',
+    ratingHeartEmpty: '♡',
+    ratingHeartFilled: '♥',
     privateListBack: '✕',
     shoppingList: '🛒',
     bringButton: '🛍️',
@@ -1781,6 +1783,120 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.nutritionFilled} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.nutritionFilled}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="ratingHeartEmptyIcon">Bewertungsherz-Icon (leer, keine eigene Bewertung):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.ratingHeartEmpty) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="ratingHeartEmptyIcon"
+                          value={buttonIcons.ratingHeartEmpty}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartEmpty: e.target.value })}
+                          placeholder="z.B. ♡"
+                          maxLength={10}
+                        />
+                        <label htmlFor="ratingHeartEmptyIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'ratingHeartEmpty' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="ratingHeartEmptyIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('ratingHeartEmpty', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'ratingHeartEmpty'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('ratingHeartEmpty')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartEmpty: DEFAULT_BUTTON_ICONS.ratingHeartEmpty })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.ratingHeartEmpty) ? (
+                        <img src={buttonIcons.ratingHeartEmpty} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.ratingHeartEmpty}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="ratingHeartFilledIcon">Bewertungsherz-Icon (ausgefüllt, eigene Bewertung vorhanden):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.ratingHeartFilled) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="ratingHeartFilledIcon"
+                          value={buttonIcons.ratingHeartFilled}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartFilled: e.target.value })}
+                          placeholder="z.B. ♥"
+                          maxLength={10}
+                        />
+                        <label htmlFor="ratingHeartFilledIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'ratingHeartFilled' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="ratingHeartFilledIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('ratingHeartFilled', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'ratingHeartFilled'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('ratingHeartFilled')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartFilled: DEFAULT_BUTTON_ICONS.ratingHeartFilled })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.ratingHeartFilled) ? (
+                        <img src={buttonIcons.ratingHeartFilled} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.ratingHeartFilled}</span>
                       )}
                     </div>
                   </div>

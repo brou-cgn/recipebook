@@ -189,6 +189,8 @@ export const DEFAULT_BUTTON_ICONS = {
   copyLink: '📋',
   nutritionEmpty: '➕',
   nutritionFilled: '🥦',
+  ratingHeartEmpty: '♡',
+  ratingHeartFilled: '♥',
   privateListBack: '✕',
   shoppingList: '🛒',
   bringButton: '🛍️',

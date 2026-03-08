@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeRating.css';
 import { rateRecipe, getUserRating, subscribeToRatingSummary } from '../utils/recipeRatings';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * Formats a rating average using German locale (comma as decimal separator).
@@ -34,6 +36,16 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
   const [userRating, setUserRating] = useState(null);
   const [hoveredRating, setHoveredRating] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [heartEmptyIcon, setHeartEmptyIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+  const [heartFilledIcon, setHeartFilledIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartFilled);
+
+  // Load configurable heart icons
+  useEffect(() => {
+    getButtonIcons().then((icons) => {
+      setHeartEmptyIcon(icons.ratingHeartEmpty || DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+      setHeartFilledIcon(icons.ratingHeartFilled || DEFAULT_BUTTON_ICONS.ratingHeartFilled);
+    });
+  }, []);
 
   // Non-interactive: sync with prop changes
   useEffect(() => {
@@ -77,6 +89,14 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
   };
 
   // Compact / read-only display (used on recipe cards)
+  const renderHeartIcon = (filled) => {
+    const icon = filled ? heartFilledIcon : heartEmptyIcon;
+    if (isBase64Image(icon)) {
+      return <img src={icon} alt={filled ? '♥' : '♡'} className="rating-heart-img" />;
+    }
+    return icon;
+  };
+
   if (!interactive) {
     // Detail-view summary: single heart + avg + count, clickable to open modal
     if (onOpenModal) {
@@ -87,7 +107,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
           title="Bewerten"
           aria-label={count > 0 ? `Bewertung: Ø ${formatRatingAvg(avg)} (${count} ${count === 1 ? 'Bewertung' : 'Bewertungen'}) – Jetzt bewerten` : 'Jetzt bewerten'}
         >
-          <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`}>{userRating !== null ? '♥' : '♡'}</span>
+          <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`}>{renderHeartIcon(userRating !== null)}</span>
           {count > 0 && (
             <span className="rating-detail-summary-text">{formatRatingAvg(avg)} ({count})</span>
           )}
@@ -102,7 +122,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
     return (
       <div className="recipe-rating-compact" title={cardTitle} aria-label={cardTitle}>
         <span className={`rating-heart-icon ${userRating !== null ? 'filled' : 'empty'}`} aria-hidden="true">
-          {userRating !== null ? '♥' : '♡'}
+          {renderHeartIcon(userRating !== null)}
         </span>
         {count > 0 && <span className="rating-text">{formatRatingAvg(avg)} ({count})</span>}
       </div>
@@ -126,7 +146,7 @@ function RecipeRating({ recipeId, ratingAvg: initialAvg, ratingCount: initialCou
             aria-label={`${n} von 5 Herzen`}
             aria-pressed={userRating === n}
           >
-            {activeRating >= n ? '♥' : '♡'}
+            {renderHeartIcon(activeRating >= n)}
           </button>
         ))}
       </div>
