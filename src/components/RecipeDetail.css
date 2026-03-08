@@ -1187,7 +1187,7 @@ difficulty-stars .star {
 /* Stop button inside .step-timer-top-area */
 .step-timer-btn.stop {
   background: transparent;
-  border: 1.5px solid #cc4444;
+  border: none;
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -1198,13 +1198,13 @@ difficulty-stars .star {
   cursor: pointer;
   padding: 0;
   color: #cc4444;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s;
   flex-shrink: 0;
 }
 
 .step-timer-btn.stop:hover {
-  background: #cc4444;
-  color: white;
+  background: transparent;
+  color: #aa2222;
 }
 
 /* Progress bar – spans the full width at the very bottom of the step card */
