@@ -87,6 +87,7 @@
   transition: border-color 0.2s ease;
   -webkit-appearance: none;
   appearance: none;
+  min-height: 2.5rem;
 }
 
 .cook-date-input:focus {
@@ -294,4 +295,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.15rem;
+  text-align: right;
 }
