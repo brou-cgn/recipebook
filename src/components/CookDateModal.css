@@ -209,7 +209,7 @@
   top: 10px;
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #402C1C 0%, #6b4a2e 100%);
+  background: #1A1A1A;
   border-radius: 50%;
   border: 2px solid #f5f5f5;
   z-index: 2;
@@ -220,7 +220,7 @@
 }
 
 .cook-date-timeline-marker--cook {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
+  background: #2F5D50;
 }
 
 .cook-date-timeline-marker-emoji {

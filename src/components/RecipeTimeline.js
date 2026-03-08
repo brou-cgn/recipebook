@@ -13,6 +13,12 @@ function getDateKey(timestamp) {
   }
 }
 
+function getMarkerColor(type) {
+  if (type === 'menu') return '#DF7A00';
+  if (type === 'cookEvent') return '#2F5D50';
+  return '#1A1A1A';
+}
+
 function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubbleIcon = null, timelineMenuBubbleIcon = null, timelineCookEventBubbleIcon = null, defaultImage = null, timelineCookEventDefaultImage = null, categoryImages = [], itemType = 'recipe' }) {
   const [expandedDates, setExpandedDates] = useState({});
 
@@ -77,17 +83,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
     if (type === 'cookEvent') {
       return recipe.originalRecipe?.image || timelineCookEventDefaultImage || defaultImage;
     }
-    if (!categoryImages || categoryImages.length === 0) return null;
-    const categories = Array.isArray(recipe.speisekategorie)
-      ? recipe.speisekategorie
-      : recipe.speisekategorie
-        ? [recipe.speisekategorie]
-        : [];
-    for (const cat of categories) {
-      const match = categoryImages.find(img => img.categories.includes(cat));
-      if (match) return match.image;
-    }
-    return null;
+    return recipe.image || null;
   };
 
   const renderCard = (recipe) => {
@@ -120,6 +116,7 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
         const isExpanded = expandedDates[dateKey];
         const hasMultiple = dayRecipes.length > 1;
         const primaryRecipe = dayRecipes[0];
+        const primaryType = primaryRecipe.itemType || itemType;
 
         return (
           <div
@@ -127,13 +124,12 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
             className={`timeline-item${isExpanded ? ' expanded' : ''}`}
             style={{ animationDelay: `${groupIndex * 0.05}s` }}
           >
-            <div className="timeline-marker">
+            <div className="timeline-marker" style={{ background: getMarkerColor(primaryType) }}>
               {(() => {
-                const type = primaryRecipe.itemType || itemType;
                 let icon;
-                if (type === 'menu') {
+                if (primaryType === 'menu') {
                   icon = timelineMenuBubbleIcon;
-                } else if (type === 'cookEvent') {
+                } else if (primaryType === 'cookEvent') {
                   icon = timelineCookEventBubbleIcon;
                 } else {
                   icon = timelineBubbleIcon;
@@ -156,10 +152,9 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     aria-label={isExpanded ? 'Stapel einklappen' : 'Stapel ausklappen'}
                   >
                     {(() => {
-                      const type = primaryRecipe.itemType || itemType;
                       let label;
-                      if (type === 'menu') label = 'Menüs';
-                      else if (type === 'cookEvent') label = 'Kochereignisse';
+                      if (primaryType === 'menu') label = 'Menüs';
+                      else if (primaryType === 'cookEvent') label = 'Kochereignisse';
                       else label = 'Rezepte';
                       return `${isExpanded ? '▾' : '▸'} ${dayRecipes.length} ${label}`;
                     })()}
