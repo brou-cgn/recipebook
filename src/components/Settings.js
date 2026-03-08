@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -186,6 +186,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
   const [uploadingTimelineMenuDefaultImage, setUploadingTimelineMenuDefaultImage] = useState(false);
 
+  // Timeline cook event bubble icon state
+  const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
+  const [uploadingTimelineCookEventBubbleIcon, setUploadingTimelineCookEventBubbleIcon] = useState(false);
+
+  // Timeline cook event default image state
+  const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
+  const [uploadingTimelineCookEventDefaultImage, setUploadingTimelineCookEventDefaultImage] = useState(false);
+
   // AI recipe prompt state
   const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_RECIPE_PROMPT);
 
@@ -220,6 +228,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const timelineIcon = await getTimelineBubbleIcon();
       const timelineMenuIcon = await getTimelineMenuBubbleIcon();
       const timelineMenuImg = await getTimelineMenuDefaultImage();
+      const timelineCookEventIcon = await getTimelineCookEventBubbleIcon();
+      const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
       
       setLists(lists);
@@ -232,6 +242,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
       setTimelineMenuDefaultImage(timelineMenuImg);
+      setTimelineCookEventBubbleIcon(timelineCookEventIcon);
+      setTimelineCookEventDefaultImage(timelineCookEventImg);
       setAiPrompt(aiRecipePrompt);
     };
     loadSettings();
@@ -389,6 +401,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveTimelineBubbleIcon(timelineBubbleIcon);
       saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
       saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
+      saveTimelineCookEventBubbleIcon(timelineCookEventBubbleIcon);
+      saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
 
       // Apply favicon changes immediately
@@ -857,6 +871,50 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   const handleRemoveTimelineMenuDefaultImage = () => {
     setTimelineMenuDefaultImage(null);
+  };
+
+  // Timeline cook event bubble icon handlers
+  const handleTimelineCookEventBubbleIconUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingTimelineCookEventBubbleIcon(true);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const compressedBase64 = await compressImage(base64);
+      setTimelineCookEventBubbleIcon(compressedBase64);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingTimelineCookEventBubbleIcon(false);
+    }
+  };
+
+  const handleRemoveTimelineCookEventBubbleIcon = () => {
+    setTimelineCookEventBubbleIcon(null);
+  };
+
+  // Timeline cook event default image handlers
+  const handleTimelineCookEventDefaultImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingTimelineCookEventDefaultImage(true);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const compressedBase64 = await compressImage(base64);
+      setTimelineCookEventDefaultImage(compressedBase64);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setUploadingTimelineCookEventDefaultImage(false);
+    }
+  };
+
+  const handleRemoveTimelineCookEventDefaultImage = () => {
+    setTimelineCookEventDefaultImage(null);
   };
 
   const handleAbortCalcForRecipe = async (recipe) => {
@@ -2367,6 +2425,88 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   onChange={handleTimelineMenuDefaultImageUpload}
                   style={{ display: 'none' }}
                   disabled={uploadingTimelineMenuDefaultImage}
+                />
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Zeitleisten-Bubble-Icon (Kochereignisse)</h3>
+              <p className="section-description">
+                Optionales Icon, das in den Bubbles der Zeitleiste "Kochbuch" für Kochereignisse angezeigt wird.
+                Unterstützte Formate: JPEG, PNG, SVG. Empfohlen: quadratisches Bild.
+              </p>
+              <div className="favicon-image-section">
+                {timelineCookEventBubbleIcon ? (
+                  <div className="favicon-preview">
+                    <img src={timelineCookEventBubbleIcon} alt="Kochereignis-Zeitleisten-Icon" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'contain' }} />
+                    <div className="favicon-actions">
+                      <label htmlFor="timelineCookEventBubbleIconFile" className="favicon-change-btn">
+                        {uploadingTimelineCookEventBubbleIcon ? 'Hochladen...' : '🔄 Ändern'}
+                      </label>
+                      <button
+                        className="favicon-remove-btn"
+                        onClick={handleRemoveTimelineCookEventBubbleIcon}
+                        disabled={uploadingTimelineCookEventBubbleIcon}
+                      >
+                        ✕ Entfernen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="favicon-upload">
+                    <label htmlFor="timelineCookEventBubbleIconFile" className="image-upload-label">
+                      {uploadingTimelineCookEventBubbleIcon ? 'Hochladen...' : '📷 Icon hochladen'}
+                    </label>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  id="timelineCookEventBubbleIconFile"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  onChange={handleTimelineCookEventBubbleIconUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingTimelineCookEventBubbleIcon}
+                />
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Standardbild für Kochereignisse in der Zeitleiste</h3>
+              <p className="section-description">
+                Dieses Bild wird für Kochereigniskarten in der Zeitleiste "Kochbuch" verwendet, wenn kein Rezeptbild vorhanden ist.
+                Unterstützte Formate: JPEG, PNG, WebP. Empfohlen: 16:9 oder quadratisches Format.
+              </p>
+              <div className="favicon-image-section">
+                {timelineCookEventDefaultImage ? (
+                  <div className="favicon-preview">
+                    <img src={timelineCookEventDefaultImage} alt="Standardbild Kochereignisse" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <div className="favicon-actions">
+                      <label htmlFor="timelineCookEventDefaultImageFile" className="favicon-change-btn">
+                        {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : '🔄 Ändern'}
+                      </label>
+                      <button
+                        className="favicon-remove-btn"
+                        onClick={handleRemoveTimelineCookEventDefaultImage}
+                        disabled={uploadingTimelineCookEventDefaultImage}
+                      >
+                        ✕ Entfernen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="favicon-upload">
+                    <label htmlFor="timelineCookEventDefaultImageFile" className="image-upload-label">
+                      {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : '📷 Standardbild hochladen'}
+                    </label>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  id="timelineCookEventDefaultImageFile"
+                  accept="image/*"
+                  onChange={handleTimelineCookEventDefaultImageUpload}
+                  style={{ display: 'none' }}
+                  disabled={uploadingTimelineCookEventDefaultImage}
                 />
               </div>
             </div>

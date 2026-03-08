@@ -64,13 +64,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [conversionTable, setConversionTable] = useState([]);
   const [lastCookDate, setLastCookDate] = useState(null);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
+  const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
+  const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
+  const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const missingSavedRef = useRef(false);
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
 
   useEffect(() => {
     const loadSettings = async () => {
-      const { getCustomLists, getButtonIcons } = require('../utils/customLists');
+      const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } = require('../utils/customLists');
       const lists = await getCustomLists();
       const icons = await getButtonIcons();
       setPortionUnits(lists.portionUnits || []);
@@ -87,6 +90,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimerStopIcon(icons.timerStop || '⏹');
       setCookDateIcon(icons.cookDate || '📅');
       setConversionTable(lists.conversionTable || []);
+      const bubbleIcon = await getTimelineBubbleIcon();
+      const cookEventBubbleIcon = await getTimelineCookEventBubbleIcon();
+      const cookEventDefaultImg = await getTimelineCookEventDefaultImage();
+      setTimelineBubbleIcon(bubbleIcon);
+      setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
+      setTimelineCookEventDefaultImage(cookEventDefaultImg);
     };
     loadSettings();
   }, []);
@@ -1706,6 +1715,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           recipeCreatedAt={recipe.createdAt}
           recipeTitle={recipe.title}
           recipeImage={recipe.image}
+          timelineBubbleIcon={timelineBubbleIcon}
+          timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
+          timelineCookEventDefaultImage={timelineCookEventDefaultImage}
           onSaved={(date) => setLastCookDate(date)}
           onClose={() => setShowCookDateModal(false)}
         />
