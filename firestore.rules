@@ -157,5 +157,13 @@ service cloud.firestore {
       allow create: if isAnyUser();
       allow update, delete: if isAdmin();
     }
+
+    // Cook dates collection - global tracking of when users cooked recipes
+    match /cookDates/{cookDateId} {
+      allow read: if isAnyUser();
+      allow create: if isAnyUser() && request.resource.data.userId == request.auth.uid;
+      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid)
+                    || isEditOrAdmin();
+    }
   }
 }
