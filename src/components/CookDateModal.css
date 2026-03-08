@@ -225,6 +225,13 @@
   line-height: 1;
 }
 
+.cook-date-timeline-marker-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
 .cook-date-timeline-card {
   background: white;
   border-radius: 12px;

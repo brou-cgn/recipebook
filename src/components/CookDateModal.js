@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './CookDateModal.css';
 import { setCookDate } from '../utils/recipeCookDates';
+import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * CookDateModal component
@@ -8,16 +9,19 @@ import { setCookDate } from '../utils/recipeCookDates';
  * Opens as a modal dialog to let the user record when they cooked a recipe.
  *
  * @param {Object}   props
- * @param {string}   props.recipeId        - Recipe document ID
- * @param {Object}   props.currentUser     - Current user object
- * @param {Date|null} props.lastCookDate   - Last recorded cook date, or null
- * @param {*}        props.recipeCreatedAt - Recipe creation date (Date, Firestore Timestamp, or ISO string)
- * @param {string}   [props.recipeTitle]   - Recipe title for display in the timeline tiles
- * @param {string}   [props.recipeImage]   - Recipe image URL for display in the timeline tiles
- * @param {Function} props.onSaved         - Called with the new Date when saved
- * @param {Function} props.onClose         - Called when the modal should close
+ * @param {string}   props.recipeId                    - Recipe document ID
+ * @param {Object}   props.currentUser                 - Current user object
+ * @param {Date|null} props.lastCookDate               - Last recorded cook date, or null
+ * @param {*}        props.recipeCreatedAt             - Recipe creation date (Date, Firestore Timestamp, or ISO string)
+ * @param {string}   [props.recipeTitle]               - Recipe title for display in the timeline tiles
+ * @param {string}   [props.recipeImage]               - Recipe image URL for display in the timeline tiles
+ * @param {string}   [props.timelineBubbleIcon]        - Bubble icon for the "Erstellt am" marker (same as in Mein Kochbuch)
+ * @param {string}   [props.timelineCookEventBubbleIcon] - Bubble icon for the "Gekocht am" marker
+ * @param {string}   [props.timelineCookEventDefaultImage] - Default image for cooking events when no recipe image is available
+ * @param {Function} props.onSaved                     - Called with the new Date when saved
+ * @param {Function} props.onClose                     - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, recipeTitle, recipeImage, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, recipeTitle, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,7 +82,15 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
             {recipeCreatedAt && (
               <div className="cook-date-timeline-item">
                 <div className="cook-date-timeline-marker">
-                  <span className="cook-date-timeline-marker-emoji">📝</span>
+                  {timelineBubbleIcon ? (
+                    isBase64Image(timelineBubbleIcon) ? (
+                      <img src={timelineBubbleIcon} alt="" className="cook-date-timeline-marker-icon" />
+                    ) : (
+                      <span className="cook-date-timeline-marker-emoji">{timelineBubbleIcon}</span>
+                    )
+                  ) : (
+                    <span className="cook-date-timeline-marker-emoji">📝</span>
+                  )}
                 </div>
                 <div className="cook-date-timeline-card">
                   {recipeImage && (
@@ -96,12 +108,20 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
             )}
             <div className="cook-date-timeline-item">
               <div className="cook-date-timeline-marker cook-date-timeline-marker--cook">
-                <span className="cook-date-timeline-marker-emoji">🍳</span>
+                {timelineCookEventBubbleIcon ? (
+                  isBase64Image(timelineCookEventBubbleIcon) ? (
+                    <img src={timelineCookEventBubbleIcon} alt="" className="cook-date-timeline-marker-icon" />
+                  ) : (
+                    <span className="cook-date-timeline-marker-emoji">{timelineCookEventBubbleIcon}</span>
+                  )
+                ) : (
+                  <span className="cook-date-timeline-marker-emoji">🍳</span>
+                )}
               </div>
               <div className="cook-date-timeline-card">
-                {recipeImage && (
+                {(recipeImage || timelineCookEventDefaultImage) && (
                   <div className="cook-date-timeline-card-image">
-                    <img src={recipeImage} alt={recipeTitle || 'Rezept'} />
+                    <img src={recipeImage || timelineCookEventDefaultImage} alt={recipeTitle || 'Rezept'} />
                   </div>
                 )}
                 <div className="cook-date-timeline-card-info">

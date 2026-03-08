@@ -251,8 +251,10 @@ export async function getSettings() {
         buttonIcons: { ...DEFAULT_BUTTON_ICONS, ...(settings.buttonIcons || {}) },
         timelineBubbleIcon: settings.timelineBubbleIcon || null,
         timelineMenuBubbleIcon: settings.timelineMenuBubbleIcon || null,
+        timelineCookEventBubbleIcon: settings.timelineCookEventBubbleIcon || null,
         timelineRecipeDefaultImage: settings.timelineRecipeDefaultImage || null,
         timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null,
+        timelineCookEventDefaultImage: settings.timelineCookEventDefaultImage || null,
         aiRecipePrompt,
         autoShareOnCreate: settings.autoShareOnCreate ?? false
       };
@@ -274,8 +276,10 @@ export async function getSettings() {
       buttonIcons: DEFAULT_BUTTON_ICONS,
       timelineBubbleIcon: null,
       timelineMenuBubbleIcon: null,
+      timelineCookEventBubbleIcon: null,
       timelineRecipeDefaultImage: null,
       timelineMenuDefaultImage: null,
+      timelineCookEventDefaultImage: null,
       aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
       autoShareOnCreate: false
     };
@@ -302,8 +306,10 @@ export async function getSettings() {
       buttonIcons: DEFAULT_BUTTON_ICONS,
       timelineBubbleIcon: null,
       timelineMenuBubbleIcon: null,
+      timelineCookEventBubbleIcon: null,
       timelineRecipeDefaultImage: null,
       timelineMenuDefaultImage: null,
+      timelineCookEventDefaultImage: null,
       aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
       autoShareOnCreate: false
     };
@@ -790,6 +796,64 @@ export async function saveTimelineMenuDefaultImage(imageBase64) {
     }
   } catch (error) {
     console.error('Error saving timeline menu default image:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the timeline cook event bubble icon from Firestore
+ * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
+ */
+export async function getTimelineCookEventBubbleIcon() {
+  const settings = await getSettings();
+  return settings.timelineCookEventBubbleIcon || null;
+}
+
+/**
+ * Save the timeline cook event bubble icon to Firestore
+ * @param {string|null} imageBase64 - Base64 encoded image or null to remove
+ * @returns {Promise<void>}
+ */
+export async function saveTimelineCookEventBubbleIcon(imageBase64) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { timelineCookEventBubbleIcon: imageBase64 || null });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.timelineCookEventBubbleIcon = imageBase64 || null;
+    }
+  } catch (error) {
+    console.error('Error saving timeline cook event bubble icon:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the default cook event image for the timeline from Firestore
+ * @returns {Promise<string|null>} Promise resolving to base64 encoded image or null
+ */
+export async function getTimelineCookEventDefaultImage() {
+  const settings = await getSettings();
+  return settings.timelineCookEventDefaultImage || null;
+}
+
+/**
+ * Save the default cook event image for the timeline to Firestore
+ * @param {string|null} imageBase64 - Base64 encoded image or null to remove
+ * @returns {Promise<void>}
+ */
+export async function saveTimelineCookEventDefaultImage(imageBase64) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { timelineCookEventDefaultImage: imageBase64 || null });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.timelineCookEventDefaultImage = imageBase64 || null;
+    }
+  } catch (error) {
+    console.error('Error saving timeline cook event default image:', error);
     throw error;
   }
 }
