@@ -1704,6 +1704,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           currentUser={currentUser}
           lastCookDate={lastCookDate}
           recipeCreatedAt={recipe.createdAt}
+          recipeTitle={recipe.title}
+          recipeImage={recipe.image}
           onSaved={(date) => setLastCookDate(date)}
           onClose={() => setShowCookDateModal(false)}
         />

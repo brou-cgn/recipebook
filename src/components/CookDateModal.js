@@ -12,10 +12,12 @@ import { setCookDate } from '../utils/recipeCookDates';
  * @param {Object}   props.currentUser     - Current user object
  * @param {Date|null} props.lastCookDate   - Last recorded cook date, or null
  * @param {*}        props.recipeCreatedAt - Recipe creation date (Date, Firestore Timestamp, or ISO string)
+ * @param {string}   [props.recipeTitle]   - Recipe title for display in the timeline tiles
+ * @param {string}   [props.recipeImage]   - Recipe image URL for display in the timeline tiles
  * @param {Function} props.onSaved         - Called with the new Date when saved
  * @param {Function} props.onClose         - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, recipeTitle, recipeImage, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,18 +77,38 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, o
             <div className="cook-date-timeline-line" />
             {recipeCreatedAt && (
               <div className="cook-date-timeline-item">
-                <div className="cook-date-timeline-dot" />
-                <div className="cook-date-timeline-content">
-                  <span className="cook-date-timeline-label">Erstellt am</span>
-                  <span className="cook-date-timeline-date">{formatDate(recipeCreatedAt)}</span>
+                <div className="cook-date-timeline-marker">
+                  <span className="cook-date-timeline-marker-emoji">📝</span>
+                </div>
+                <div className="cook-date-timeline-card">
+                  {recipeImage && (
+                    <div className="cook-date-timeline-card-image">
+                      <img src={recipeImage} alt={recipeTitle || 'Rezept'} />
+                    </div>
+                  )}
+                  <div className="cook-date-timeline-card-info">
+                    <span className="cook-date-timeline-label">Erstellt am</span>
+                    <span className="cook-date-timeline-date">{formatDate(recipeCreatedAt)}</span>
+                    {recipeTitle && <span className="cook-date-timeline-recipe-title">{recipeTitle}</span>}
+                  </div>
                 </div>
               </div>
             )}
             <div className="cook-date-timeline-item">
-              <div className="cook-date-timeline-dot cook-date-timeline-dot--cook" />
-              <div className="cook-date-timeline-content">
-                <span className="cook-date-timeline-label">Gekocht am</span>
-                <span className="cook-date-timeline-date">{formatSelectedDate(selectedDate)}</span>
+              <div className="cook-date-timeline-marker cook-date-timeline-marker--cook">
+                <span className="cook-date-timeline-marker-emoji">🍳</span>
+              </div>
+              <div className="cook-date-timeline-card">
+                {recipeImage && (
+                  <div className="cook-date-timeline-card-image">
+                    <img src={recipeImage} alt={recipeTitle || 'Rezept'} />
+                  </div>
+                )}
+                <div className="cook-date-timeline-card-info">
+                  <span className="cook-date-timeline-label">Gekocht am</span>
+                  <span className="cook-date-timeline-date">{formatSelectedDate(selectedDate)}</span>
+                  {recipeTitle && <span className="cook-date-timeline-recipe-title">{recipeTitle}</span>}
+                </div>
               </div>
             </div>
           </div>
