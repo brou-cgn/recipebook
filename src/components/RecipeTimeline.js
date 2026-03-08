@@ -13,7 +13,7 @@ function getDateKey(timestamp) {
   }
 }
 
-function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubbleIcon = null, timelineMenuBubbleIcon = null, defaultImage = null, categoryImages = [], itemType = 'recipe' }) {
+function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubbleIcon = null, timelineMenuBubbleIcon = null, timelineCookEventBubbleIcon = null, defaultImage = null, timelineCookEventDefaultImage = null, categoryImages = [], itemType = 'recipe' }) {
   const [expandedDates, setExpandedDates] = useState({});
 
   // Sort recipes by createdAt in reverse chronological order (newest first)
@@ -72,7 +72,11 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
   };
 
   const getDisplayImage = (recipe) => {
-    if ((recipe.itemType || itemType) === 'menu') return defaultImage;
+    const type = recipe.itemType || itemType;
+    if (type === 'menu') return defaultImage;
+    if (type === 'cookEvent') {
+      return recipe.originalRecipe?.image || timelineCookEventDefaultImage || defaultImage;
+    }
     if (!categoryImages || categoryImages.length === 0) return null;
     const categories = Array.isArray(recipe.speisekategorie)
       ? recipe.speisekategorie
@@ -125,8 +129,15 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
           >
             <div className="timeline-marker">
               {(() => {
-                const isMenu = (primaryRecipe.itemType || itemType) === 'menu';
-                const icon = isMenu ? timelineMenuBubbleIcon : timelineBubbleIcon;
+                const type = primaryRecipe.itemType || itemType;
+                let icon;
+                if (type === 'menu') {
+                  icon = timelineMenuBubbleIcon;
+                } else if (type === 'cookEvent') {
+                  icon = timelineCookEventBubbleIcon;
+                } else {
+                  icon = timelineBubbleIcon;
+                }
                 if (!icon) return null;
                 return isBase64Image(icon) ? (
                   <img src={icon} alt="" className="timeline-marker-icon" />
@@ -144,7 +155,14 @@ function RecipeTimeline({ recipes, onSelectRecipe, allUsers = [], timelineBubble
                     onClick={() => toggleExpand(dateKey)}
                     aria-label={isExpanded ? 'Stapel einklappen' : 'Stapel ausklappen'}
                   >
-                    {isExpanded ? '▾' : '▸'} {dayRecipes.length} {(primaryRecipe.itemType || itemType) === 'menu' ? 'Menüs' : 'Rezepte'}
+                    {(() => {
+                      const type = primaryRecipe.itemType || itemType;
+                      let label;
+                      if (type === 'menu') label = 'Menüs';
+                      else if (type === 'cookEvent') label = 'Kochereignisse';
+                      else label = 'Rezepte';
+                      return `${isExpanded ? '▾' : '▸'} ${dayRecipes.length} ${label}`;
+                    })()}
                   </button>
                 )}
               </div>

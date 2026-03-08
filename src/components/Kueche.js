@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
-import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage } from '../utils/customLists';
+import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } from '../utils/customLists';
+import { getAllCookDates } from '../utils/recipeCookDates';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
@@ -153,11 +154,14 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
+  const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [categoryImages, setCategoryImages] = useState([]);
   const [timelineMenuDefaultImage, setTimelineMenuDefaultImage] = useState(null);
+  const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const [showPersonalData, setShowPersonalData] = useState(false);
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
+  const [cookDates, setCookDates] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -165,11 +169,15 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       getTimelineMenuBubbleIcon(),
       getCategoryImages(),
       getTimelineMenuDefaultImage(),
-    ]).then(([icon, menuIcon, catImages, menuImg]) => {
+      getTimelineCookEventBubbleIcon(),
+      getTimelineCookEventDefaultImage(),
+    ]).then(([icon, menuIcon, catImages, menuImg, cookEventIcon, cookEventImg]) => {
       setTimelineBubbleIcon(icon);
       setTimelineMenuBubbleIcon(menuIcon);
       setCategoryImages(catImages);
       setTimelineMenuDefaultImage(menuImg);
+      setTimelineCookEventBubbleIcon(cookEventIcon);
+      setTimelineCookEventDefaultImage(cookEventImg);
     }).catch(() => {});
   }, []);
 
@@ -183,9 +191,20 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
     getRecipeCalls().then(calls => setRecipeCalls(calls)).catch(() => {});
   }, [currentUser]);
 
-  const filteredRecipes = currentUser
-    ? recipes.filter(r => r.authorId === currentUser.id)
-    : recipes;
+  const filteredRecipes = useMemo(
+    () => currentUser ? recipes.filter(r => r.authorId === currentUser.id) : recipes,
+    [currentUser, recipes]
+  );
+
+  useEffect(() => {
+    if (!currentUser || !filteredRecipes.length) {
+      setCookDates([]);
+      return;
+    }
+    Promise.all(filteredRecipes.map(r => getAllCookDates(r.id)))
+      .then(results => setCookDates(results.flat()))
+      .catch(() => setCookDates([]));
+  }, [currentUser, filteredRecipes]);
 
   const filteredMenus = currentUser
     ? menus.filter(m => (m.authorId || m.createdBy) === currentUser.id)
@@ -226,12 +245,28 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
     itemType: 'menu',
   }));
 
-  const combinedItems = [...filteredRecipes, ...menuTimelineItems];
+  // Transform cookDates into the shape expected by RecipeTimeline
+  const cookDateTimelineItems = cookDates
+    .filter(cd => currentUser ? cd.userId === currentUser.id : true)
+    .map(cookDate => ({
+      id: `cookdate-${cookDate.id}`,
+      title: filteredRecipes.find(r => r.id === cookDate.recipeId)?.title || 'Unbekanntes Rezept',
+      recipeId: cookDate.recipeId,
+      createdAt: cookDate.date,
+      authorId: cookDate.userId,
+      itemType: 'cookEvent',
+      originalRecipe: filteredRecipes.find(r => r.id === cookDate.recipeId),
+    }));
+
+  const combinedItems = [...filteredRecipes, ...menuTimelineItems, ...cookDateTimelineItems];
 
   const handleSelectItem = (item) => {
     if (item.itemType === 'menu') {
       const menu = filteredMenus.find(m => m.id === item.id);
       if (menu && onSelectMenu) onSelectMenu(menu);
+    } else if (item.itemType === 'cookEvent') {
+      const recipe = filteredRecipes.find(r => r.id === item.recipeId);
+      if (recipe && onSelectRecipe) onSelectRecipe(recipe);
     } else {
       if (onSelectRecipe) onSelectRecipe(item);
     }
@@ -373,8 +408,10 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               allUsers={allUsers}
               timelineBubbleIcon={timelineBubbleIcon}
               timelineMenuBubbleIcon={timelineMenuBubbleIcon}
+              timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
               categoryImages={categoryImages}
               defaultImage={timelineMenuDefaultImage}
+              timelineCookEventDefaultImage={timelineCookEventDefaultImage}
             />
           )}
         </>
