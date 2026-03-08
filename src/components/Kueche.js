@@ -247,7 +247,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
 
   // Transform cookDates into the shape expected by RecipeTimeline
   const cookDateTimelineItems = cookDates
-    .filter(cd => currentUser ? cd.userId === currentUser.id : true)
     .map(cookDate => ({
       id: `cookdate-${cookDate.id}`,
       title: filteredRecipes.find(r => r.id === cookDate.recipeId)?.title || 'Unbekanntes Rezept',
