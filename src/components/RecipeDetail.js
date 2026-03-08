@@ -15,7 +15,7 @@ import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
-import { getLastCookDate } from '../utils/recipeCookDates';
+
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
@@ -62,7 +62,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [timerStopIcon, setTimerStopIcon] = useState('⏹');
   const [cookDateIcon, setCookDateIcon] = useState('📅');
   const [conversionTable, setConversionTable] = useState([]);
-  const [lastCookDate, setLastCookDate] = useState(null);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
@@ -135,15 +134,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     };
     loadFavorites();
   }, [currentUser?.id]);
-
-  // Load last cook date when user or recipe changes
-  useEffect(() => {
-    if (!currentUser?.id || !selectedRecipe?.id) {
-      setLastCookDate(null);
-      return;
-    }
-    getLastCookDate(currentUser.id, selectedRecipe.id).then(setLastCookDate);
-  }, [currentUser?.id, selectedRecipe?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update selected recipe when initial recipe changes
   useEffect(() => {
@@ -1430,10 +1420,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <div className="recipe-title-actions">
                 {currentUser && !currentUser.isGuest && (
                   <button
-                    className={`cook-date-button${lastCookDate ? ' has-cook-date' : ''}`}
+                    className="cook-date-button"
                     onClick={() => setShowCookDateModal(true)}
-                    title={lastCookDate ? `Zuletzt gekocht: ${lastCookDate.toLocaleDateString('de-DE')}` : 'Kochdatum eintragen'}
-                    aria-label={lastCookDate ? `Kochdatum eintragen (zuletzt: ${lastCookDate.toLocaleDateString('de-DE')})` : 'Kochdatum eintragen'}
+                    title="Kochdatum erfassen"
+                    aria-label="Kochdatum erfassen"
                   >
                     {isBase64Image(cookDateIcon) ? (
                       <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
@@ -1711,14 +1701,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         <CookDateModal
           recipeId={recipe.id}
           currentUser={currentUser}
-          lastCookDate={lastCookDate}
+          allUsers={allUsers}
+          recipeAuthorId={recipe.authorId}
           recipeCreatedAt={recipe.createdAt}
-          recipeTitle={recipe.title}
           recipeImage={recipe.image}
           timelineBubbleIcon={timelineBubbleIcon}
           timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
           timelineCookEventDefaultImage={timelineCookEventDefaultImage}
-          onSaved={(date) => setLastCookDate(date)}
           onClose={() => setShowCookDateModal(false)}
         />
       )}

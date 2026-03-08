@@ -1,31 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './CookDateModal.css';
-import { setCookDate } from '../utils/recipeCookDates';
+import { setCookDate, getAllCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
 
 /**
  * CookDateModal component
  *
  * Opens as a modal dialog to let the user record when they cooked a recipe.
+ * Displays a timeline of all cook dates across all users for this recipe.
  *
  * @param {Object}   props
  * @param {string}   props.recipeId                    - Recipe document ID
  * @param {Object}   props.currentUser                 - Current user object
- * @param {Date|null} props.lastCookDate               - Last recorded cook date, or null
+ * @param {Array}    [props.allUsers]                  - Array of all user objects { id, name, ... }
+ * @param {string}   [props.recipeAuthorId]            - Author user ID for the "Erstellt am" entry
  * @param {*}        props.recipeCreatedAt             - Recipe creation date (Date, Firestore Timestamp, or ISO string)
- * @param {string}   [props.recipeTitle]               - Recipe title for display in the timeline tiles
  * @param {string}   [props.recipeImage]               - Recipe image URL for display in the timeline tiles
- * @param {string}   [props.timelineBubbleIcon]        - Bubble icon for the "Erstellt am" marker (same as in Mein Kochbuch)
+ * @param {string}   [props.timelineBubbleIcon]        - Bubble icon for the "Erstellt am" marker
  * @param {string}   [props.timelineCookEventBubbleIcon] - Bubble icon for the "Gekocht am" marker
  * @param {string}   [props.timelineCookEventDefaultImage] - Default image for cooking events when no recipe image is available
- * @param {Function} props.onSaved                     - Called with the new Date when saved
+ * @param {Function} [props.onSaved]                    - Optionally called with the new Date when saved
  * @param {Function} props.onClose                     - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, recipeTitle, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [cookDates, setCookDates] = useState([]);
+
+  useEffect(() => {
+    if (!recipeId) return;
+    getAllCookDates(recipeId).then(setCookDates);
+  }, [recipeId]);
+
+  const getUserName = (userId) => {
+    if (!userId) return 'Unbekannter Benutzer';
+    const user = allUsers.find((u) => u.id === userId);
+    return user?.name || 'Unbekannter Benutzer';
+  };
 
   const formatDate = (date) => {
     if (!date) return null;
@@ -47,8 +60,10 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
     try {
       const date = new Date(selectedDate);
       await setCookDate(currentUser.id, recipeId, date);
+      const updated = await getAllCookDates(recipeId);
+      setCookDates(updated);
       setSaved(true);
-      onSaved(date);
+      if (onSaved) onSaved(date);
       setTimeout(onClose, 600);
     } catch (error) {
       console.error('Error saving cook date:', error);
@@ -79,6 +94,33 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
           </div>
           <div className="cook-date-timeline">
             <div className="cook-date-timeline-line" />
+            {cookDates.map((cd) => (
+              <div key={cd.id} className="cook-date-timeline-item">
+                <div className="cook-date-timeline-marker cook-date-timeline-marker--cook">
+                  {timelineCookEventBubbleIcon ? (
+                    isBase64Image(timelineCookEventBubbleIcon) ? (
+                      <img src={timelineCookEventBubbleIcon} alt="" className="cook-date-timeline-marker-icon" />
+                    ) : (
+                      <span className="cook-date-timeline-marker-emoji">{timelineCookEventBubbleIcon}</span>
+                    )
+                  ) : (
+                    <span className="cook-date-timeline-marker-emoji">🍳</span>
+                  )}
+                </div>
+                <div className="cook-date-timeline-card">
+                  {(recipeImage || timelineCookEventDefaultImage) && (
+                    <div className="cook-date-timeline-card-image">
+                      <img src={recipeImage || timelineCookEventDefaultImage} alt="Rezept" />
+                    </div>
+                  )}
+                  <div className="cook-date-timeline-card-info">
+                    <span className="cook-date-timeline-label">Gekocht am</span>
+                    <span className="cook-date-timeline-date">{formatDate(cd.date)}</span>
+                    <span className="cook-date-timeline-recipe-title">{getUserName(cd.userId)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
             {recipeCreatedAt && (
               <div className="cook-date-timeline-item">
                 <div className="cook-date-timeline-marker">
@@ -95,42 +137,17 @@ function CookDateModal({ recipeId, currentUser, lastCookDate, recipeCreatedAt, r
                 <div className="cook-date-timeline-card">
                   {recipeImage && (
                     <div className="cook-date-timeline-card-image">
-                      <img src={recipeImage} alt={recipeTitle || 'Rezept'} />
+                      <img src={recipeImage} alt="Rezept" />
                     </div>
                   )}
                   <div className="cook-date-timeline-card-info">
                     <span className="cook-date-timeline-label">Erstellt am</span>
                     <span className="cook-date-timeline-date">{formatDate(recipeCreatedAt)}</span>
-                    {recipeTitle && <span className="cook-date-timeline-recipe-title">{recipeTitle}</span>}
+                    <span className="cook-date-timeline-recipe-title">{getUserName(recipeAuthorId)}</span>
                   </div>
                 </div>
               </div>
             )}
-            <div className="cook-date-timeline-item">
-              <div className="cook-date-timeline-marker cook-date-timeline-marker--cook">
-                {timelineCookEventBubbleIcon ? (
-                  isBase64Image(timelineCookEventBubbleIcon) ? (
-                    <img src={timelineCookEventBubbleIcon} alt="" className="cook-date-timeline-marker-icon" />
-                  ) : (
-                    <span className="cook-date-timeline-marker-emoji">{timelineCookEventBubbleIcon}</span>
-                  )
-                ) : (
-                  <span className="cook-date-timeline-marker-emoji">🍳</span>
-                )}
-              </div>
-              <div className="cook-date-timeline-card">
-                {(recipeImage || timelineCookEventDefaultImage) && (
-                  <div className="cook-date-timeline-card-image">
-                    <img src={recipeImage || timelineCookEventDefaultImage} alt={recipeTitle || 'Rezept'} />
-                  </div>
-                )}
-                <div className="cook-date-timeline-card-info">
-                  <span className="cook-date-timeline-label">Gekocht am</span>
-                  <span className="cook-date-timeline-date">{formatSelectedDate(selectedDate)}</span>
-                  {recipeTitle && <span className="cook-date-timeline-recipe-title">{recipeTitle}</span>}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         <div className="cook-date-modal-footer">
