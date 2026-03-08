@@ -538,6 +538,8 @@ function App() {
         // Update existing recipe (direct edit)
         const { id, ...updates } = recipe;
         await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
+        // Navigate back to the recipe detail view after a successful update
+        setSelectedRecipe({ ...editingRecipe, ...updates });
       } else {
         // Add new recipe or new version; attach groupId if created from within a group,
         // otherwise fall back to the public group (from state or from the groups subscription)
@@ -650,6 +652,11 @@ function App() {
 
   const handleCancelForm = () => {
     setIsFormOpen(false);
+    if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
+      // Return to recipe detail view when canceling an edit of an existing recipe
+      const recipe = recipes.find(r => r.id === editingRecipe.id) || editingRecipe;
+      setSelectedRecipe(recipe);
+    }
     setEditingRecipe(null);
     setIsCreatingVersion(false);
     setActiveGroupId(null);
