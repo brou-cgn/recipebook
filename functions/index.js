@@ -80,7 +80,7 @@ const COMMON_PASSWORDS = [
 /**
  * Default AI recipe extraction prompt (must stay in sync with src/utils/customLists.js)
  */
-const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
+const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON. Extrahiere nur das Rezept, ignoriere Kommentare, Likes, UI‑Text. Erfinde keine Zutaten/Mengen/Temperaturen.
 
 Bitte gib das Ergebnis im folgenden JSON-Format zurück:
 {
@@ -188,8 +188,7 @@ async function getRecipeExtractionPrompt() {
     // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
     if (
       !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-      !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
-      !aiRecipePrompt.includes('Wandle Brüche in Dezimalzahlen um')
+      !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}')
     ) {
       console.warn('AI prompt in Firestore is outdated or missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT');
       aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
