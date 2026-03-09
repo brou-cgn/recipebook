@@ -18,6 +18,12 @@ jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: () => Promise.resolve([]),
 }));
 
+jest.mock('../utils/recipeCallsFirestore', () => ({
+  getRecipeCalls: jest.fn(),
+}));
+
+const mockGetRecipeCalls = jest.requireMock('../utils/recipeCallsFirestore').getRecipeCalls;
+
 const mockRecipes = [
   {
     id: '1',
@@ -49,6 +55,11 @@ const mockRecipes = [
 ];
 
 describe('RecipeList - Sort Swiper', () => {
+  beforeEach(() => {
+    // resetMocks: true clears jest.fn() implementations between tests, so re-apply the default
+    mockGetRecipeCalls.mockResolvedValue([]);
+  });
+
   test('renders sort swiper with "Im Trend" and "Alphabetisch" options', async () => {
     render(
       <RecipeList
@@ -201,5 +212,32 @@ describe('RecipeList - Sort Swiper', () => {
     const titles = Array.from(cards).map(c => c.textContent);
     // viewCount: Apple Pie=200, Banana Bread=100, Zebra Cake=50
     expect(titles).toEqual(['Apple Pie', 'Banana Bread', 'Zebra Cake']);
+  });
+
+  test('trending mode sorts recipes by recipeCalls count from all users', async () => {
+    mockGetRecipeCalls.mockResolvedValueOnce([
+      { id: 'call-1', recipeId: '3' }, // Zebra Cake – 3 calls
+      { id: 'call-2', recipeId: '3' },
+      { id: 'call-3', recipeId: '3' },
+      { id: 'call-4', recipeId: '1' }, // Banana Bread – 1 call
+    ]);
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Zebra Cake');
+
+    const cards = document.querySelectorAll('.recipe-card h3');
+    const titles = Array.from(cards).map(c => c.textContent);
+    // Zebra Cake=3 calls, Banana Bread=1 call, Apple Pie=0 calls
+    expect(titles).toEqual(['Zebra Cake', 'Banana Bread', 'Apple Pie']);
   });
 });
