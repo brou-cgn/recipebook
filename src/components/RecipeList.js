@@ -13,7 +13,10 @@ const SORT_MODES = [
   { id: 'alphabetical', label: 'Alphabetisch' },
 ];
 
-const SWIPER_ITEM_OUTER_WIDTH = 152; // 140px item + 2×6px margin
+const SWIPER_ITEM_TOTAL = 154; // 130px item + 2×12px margin = total slot width for scroll math
+const SCROLL_SNAP_THRESHOLD = 5; // px – minimum distance before programmatic scroll is triggered
+const HAPTIC_SNAP_MS = 10; // vibration duration on snap/menu open (ms)
+const HAPTIC_HOVER_MS = 5; // vibration duration on long-press option hover (ms)
 
 function getTimestampMs(ts) {
   if (!ts) return 0;
@@ -31,8 +34,22 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
   const [recipeCalls, setRecipeCalls] = useState([]);
-  const touchStartX = useRef(null);
+  const trackRef = useRef(null);
+  const itemRefs = useRef([]);
+  const scrollEndTimer = useRef(null);
+  const longPressTimer = useRef(null);
+  const longPressMenuOpenRef = useRef(false);
+  const highlightedModeRef = useRef(null);
+  const touchMoved = useRef(false);
+  const sortModeRef = useRef('trending');
+  const swiperRef = useRef(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
 
+  const [longPressMenuVisible, setLongPressMenuVisible] = useState(false);
+  const [highlightedMode, setHighlightedMode] = useState(null);
+  
   // Load all recipe calls once on mount for trending sort
   useEffect(() => {
     const loadRecipeCalls = async () => {
@@ -97,6 +114,70 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  // Keep sortModeRef in sync for use in non-reactive callbacks
+  useEffect(() => {
+    sortModeRef.current = sortMode;
+  }, [sortMode]);
+
+  // Sync sortMode → scroll position and update progressive scaling
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const idx = SORT_MODES.findIndex(m => m.id === sortMode);
+    const targetScroll = idx * SWIPER_ITEM_TOTAL;
+    if (typeof track.scrollTo === 'function' && Math.abs(track.scrollLeft - targetScroll) > SCROLL_SNAP_THRESHOLD) {
+      track.scrollTo({ left: targetScroll, behavior: 'smooth' });
+    }
+    SORT_MODES.forEach((_, i) => {
+      const item = itemRefs.current[i];
+      if (!item) return;
+      const distance = Math.abs(track.scrollLeft - i * SWIPER_ITEM_TOTAL);
+      const normalized = Math.min(distance / SWIPER_ITEM_TOTAL, 1);
+      item.style.transform = `scale(${1 - normalized * 0.3})`;
+      item.style.opacity = Math.max(0.4, 1 - normalized * 0.6);
+    });
+  }, [sortMode]);
+
+  // Attach non-passive touchmove listener for long-press menu navigation
+  useEffect(() => {
+    const swiper = swiperRef.current;
+    if (!swiper) return;
+    const handleTouchMoveDirect = (e) => {
+      if (!longPressMenuOpenRef.current) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const menuItem = el?.closest('[data-mode-id]');
+      if (menuItem) {
+        const modeId = menuItem.dataset.modeId;
+        if (modeId && modeId !== highlightedModeRef.current) {
+          navigator.vibrate?.(HAPTIC_HOVER_MS);
+          highlightedModeRef.current = modeId;
+          setHighlightedMode(modeId);
+        }
+      }
+    };
+    swiper.addEventListener('touchmove', handleTouchMoveDirect, { passive: false });
+    return () => swiper.removeEventListener('touchmove', handleTouchMoveDirect);
+  }, []);
+
+  // Mouse drag support for desktop
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging.current || !trackRef.current) return;
+      trackRef.current.scrollLeft = dragStartScrollLeft.current + (dragStartX.current - e.clientX);
+    };
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
   
   // Generate dynamic heading based on filters
   const getHeading = () => {
@@ -190,21 +271,72 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
   const activeSortIndex = SORT_MODES.findIndex(m => m.id === sortMode);
 
-  const handleSwiperTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
+  // Scroll handler: progressive scaling + debounced snap detection
+  const handleTrackScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const scrollLeft = track.scrollLeft;
+    SORT_MODES.forEach((_, i) => {
+      const item = itemRefs.current[i];
+      if (!item) return;
+      const distance = Math.abs(scrollLeft - i * SWIPER_ITEM_TOTAL);
+      const normalized = Math.min(distance / SWIPER_ITEM_TOTAL, 1);
+      item.style.transform = `scale(${1 - normalized * 0.3})`;
+      item.style.opacity = Math.max(0.4, 1 - normalized * 0.6);
+    });
+    clearTimeout(scrollEndTimer.current);
+    scrollEndTimer.current = setTimeout(() => {
+      const newIdx = Math.max(0, Math.min(SORT_MODES.length - 1, Math.round(track.scrollLeft / SWIPER_ITEM_TOTAL)));
+      const newMode = SORT_MODES[newIdx].id;
+      if (newMode !== sortModeRef.current) {
+        navigator.vibrate?.(HAPTIC_SNAP_MS);
+        setSortMode(newMode);
+      }
+    }, 100);
   };
 
-  const handleSwiperTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 50) {
-      if (delta > 0 && activeSortIndex < SORT_MODES.length - 1) {
-        setSortMode(SORT_MODES[activeSortIndex + 1].id);
-      } else if (delta < 0 && activeSortIndex > 0) {
-        setSortMode(SORT_MODES[activeSortIndex - 1].id);
+  // Touch start: begin long-press timer
+  const handleSwiperTouchStart = () => {
+    touchMoved.current = false;
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      if (!touchMoved.current) {
+        longPressMenuOpenRef.current = true;
+        highlightedModeRef.current = sortModeRef.current;
+        navigator.vibrate?.(HAPTIC_SNAP_MS);
+        setHighlightedMode(sortModeRef.current);
+        setLongPressMenuVisible(true);
       }
+    }, 500);
+  };
+
+  // Touch move (React synthetic): cancel long-press on significant move
+  const handleSwiperTouchMoveReact = () => {
+    if (!longPressMenuOpenRef.current) {
+      touchMoved.current = true;
+      clearTimeout(longPressTimer.current);
     }
-    touchStartX.current = null;
+  };
+
+  // Touch end: commit long-press selection
+  const handleSwiperTouchEnd = () => {
+    clearTimeout(longPressTimer.current);
+    if (longPressMenuOpenRef.current) {
+      if (highlightedModeRef.current) {
+        setSortMode(highlightedModeRef.current);
+      }
+      setLongPressMenuVisible(false);
+      longPressMenuOpenRef.current = false;
+      setHighlightedMode(null);
+      highlightedModeRef.current = null;
+    }
+  };
+
+  // Mouse down: start drag for desktop
+  const handleTrackMouseDown = (e) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartScrollLeft.current = trackRef.current?.scrollLeft ?? 0;
   };
 
   return (
@@ -328,27 +460,47 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
       <div
         className="sort-swiper"
+        ref={swiperRef}
         onTouchStart={handleSwiperTouchStart}
+        onTouchMove={handleSwiperTouchMoveReact}
         onTouchEnd={handleSwiperTouchEnd}
         aria-label="Sortierung wählen"
       >
         <div
           className="sort-swiper-track"
-          style={{
-            transform: `translateX(calc(50vw - ${activeSortIndex * SWIPER_ITEM_OUTER_WIDTH + SWIPER_ITEM_OUTER_WIDTH / 2}px))`
-          }}
+          ref={trackRef}
+          onScroll={handleTrackScroll}
+          onMouseDown={handleTrackMouseDown}
         >
-          {SORT_MODES.map((mode) => (
+          <div className="sort-swiper-spacer" aria-hidden="true" />
+          {SORT_MODES.map((mode, index) => (
             <button
               key={mode.id}
+              ref={el => { itemRefs.current[index] = el; }}
               className={`sort-swiper-item${sortMode === mode.id ? ' active' : ''}`}
               onClick={() => setSortMode(mode.id)}
               aria-pressed={sortMode === mode.id}
             >
               {mode.label}
+              <span className="sort-swiper-dot" aria-hidden="true" />
             </button>
           ))}
+          <div className="sort-swiper-spacer" aria-hidden="true" />
         </div>
+        {longPressMenuVisible && (
+          <div className="sort-swiper-longpress-menu" role="menu" aria-label="Sortieroption wählen">
+            {SORT_MODES.map((mode) => (
+              <div
+                key={mode.id}
+                className={`sort-swiper-longpress-item${highlightedMode === mode.id ? ' highlighted' : ''}`}
+                data-mode-id={mode.id}
+                role="menuitem"
+              >
+                {mode.label}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
