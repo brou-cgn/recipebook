@@ -1194,15 +1194,15 @@ exports.captureWebsiteScreenshot = onCall(
         try {
           await page.goto(url, { 
             waitUntil: 'domcontentloaded',
-            timeout: 30000 
+            timeout: 20000 
           });
         } catch (navError) {
           // Continue even if navigation times out – page is likely usable
-          console.warn(`Navigation warning for ${url}:`, navError.message);
+          console.warn(`Navigation timeout for ${url}:`, navError.message);
         }
 
         // Wait a bit for dynamic content to render
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         // Dismiss cookie/DSGVO consent banner if present (supports multiple CMPs)
         const cookieSelectors = [
@@ -1226,37 +1226,62 @@ exports.captureWebsiteScreenshot = onCall(
 
         // If URL has a fragment (e.g. #recipe), scroll to that element
         let hasFragment = false;
+        let scrollSuccessful = false;
         try {
           const urlObj = new URL(url);
           if (urlObj.hash) {
             hasFragment = true;
             const elementId = urlObj.hash.substring(1);
-            await page.evaluate((id) => {
+            scrollSuccessful = await page.evaluate((id) => {
               const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
-              if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+              if (el) {
+                el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                return true;
+              }
+              return false;
             }, elementId);
+            if (!scrollSuccessful) {
+              console.warn(`Fragment #${elementId} not found on page ${url}, will fall back to full-page screenshot`);
+            }
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
-        } catch (_) {
-          // Ignore scroll errors
+        } catch (scrollError) {
+          console.warn(`Fragment scroll failed for ${url}:`, scrollError.message);
         }
 
         // Wait for main content to be visible
         try {
-          await page.waitForSelector('h1', { timeout: 5000 });
+          await page.waitForSelector('h1', { timeout: 3000 });
           // Short pause to allow dynamic content to finish loading
           await new Promise((resolve) => setTimeout(resolve, 1000));
         } catch (e) {
           // No h1 found – take screenshot anyway
         }
 
-        // Take screenshot: viewport-only when a fragment is present, full page otherwise
-        const screenshot = await page.screenshot({ 
-          encoding: 'base64',
-          fullPage: !hasFragment,
-          type: 'jpeg',
-          quality: 80,
-        });
+        // Take viewport-only screenshot when fragment scroll succeeded, full page otherwise
+        const fullPage = !hasFragment || !scrollSuccessful;
+        let screenshot;
+        try {
+          screenshot = await page.screenshot({ 
+            encoding: 'base64',
+            fullPage: fullPage,
+            type: 'jpeg',
+            quality: 80,
+          });
+        } catch (screenshotError) {
+          if (hasFragment && (screenshotError.name === 'TimeoutError' || screenshotError.message.includes('timeout'))) {
+            // Fallback: retry with full-page capture
+            console.warn(`Viewport screenshot timed out for fragment URL ${url}, retrying with full-page`);
+            screenshot = await page.screenshot({
+              encoding: 'base64',
+              fullPage: true,
+              type: 'jpeg',
+              quality: 80,
+            });
+          } else {
+            throw screenshotError;
+          }
+        }
 
         await browser.close();
 
@@ -1273,8 +1298,11 @@ exports.captureWebsiteScreenshot = onCall(
 
         console.error(`Screenshot capture failed for user ${userId}:`, error);
         
-        if (error.message.includes('timeout')) {
-          throw new HttpsError('deadline-exceeded', 'Website took too long to load');
+        if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
+          if (error.message.includes('Navigation') || error.message.includes('goto')) {
+            throw new HttpsError('deadline-exceeded', `Website navigation timed out for URL: ${url}`);
+          }
+          throw new HttpsError('deadline-exceeded', `Screenshot capture timed out for URL: ${url}`);
         }
         
         throw new HttpsError('internal', 'Failed to capture screenshot: ' + error.message);
