@@ -1197,7 +1197,7 @@ exports.captureWebsiteScreenshot = onCall(
         try {
           await page.goto(url, { 
             waitUntil: 'domcontentloaded',
-            timeout: 20000 
+            timeout: 30000 
           });
         } catch (navError) {
           // Continue even if navigation times out – page is likely usable
@@ -1218,9 +1218,9 @@ exports.captureWebsiteScreenshot = onCall(
         ];
         for (const selector of cookieSelectors) {
           try {
-            await page.waitForSelector(selector, { timeout: 2000 });
+            await page.waitForSelector(selector, { timeout: 800 });
             await page.click(selector);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 500));
             break;
           } catch (_) {
             // Selector not found – try next
