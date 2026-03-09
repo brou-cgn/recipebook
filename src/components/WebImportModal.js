@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './WebImportModal.css';
 import {
-  captureWebsiteScreenshot,
   isRecipeImportPageUrl,
   parseRecipeImportPage,
   isInstagramReelUrl,
   importInstagramReel,
+  importRecipeFromUrl,
 } from '../utils/webImportService';
-import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 import { extractKulinarikFromTags } from '../utils/ocrParser';
 
 function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
@@ -54,21 +53,8 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
         // Direct HTML parsing path – no screenshot or AI needed
         result = await parseRecipeImportPage(urlToSubmit.trim(), setProgress);
       } else {
-        // Step 1: Capture screenshot
-        setProgress(20);
-        const screenshotBase64 = await captureWebsiteScreenshot(urlToSubmit.trim(), (prog) => {
-          setProgress(20 + (prog * 0.3)); // 20-50%
-        });
-
-        // Step 2: Process with Gemini OCR
-        setProgress(50);
-        result = await recognizeRecipeWithAI(screenshotBase64, {
-          language: 'de',
-          provider: 'gemini',
-          onProgress: (prog) => {
-            setProgress(50 + (prog * 0.5)); // 50-100%
-          }
-        });
+        // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
+        result = await importRecipeFromUrl(urlToSubmit.trim(), setProgress);
       }
 
       setProgress(100);
@@ -188,9 +174,11 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
                   ? (progress < 70
                       ? 'Extrahiere Caption und Kommentare...'
                       : '🤖 Analysiere Rezept...')
-                  : (progress < 50
-                      ? 'Analysiere Website...'
-                      : 'Analysiere Rezept...')}
+                  : (progress < 30
+                      ? 'Analysiere Website-Struktur...'
+                      : progress < 40
+                        ? 'Extrahiere Rezeptdaten...'
+                        : '🤖 Analysiere Rezept...')}
               </p>
               <div className="progress-container">
                 <div className="progress-bar">

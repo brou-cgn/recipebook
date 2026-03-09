@@ -276,7 +276,7 @@ export function extractTextFromHtml(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     // Remove clearly non-content elements
-    doc.querySelectorAll('script, style, svg, noscript, iframe').forEach(el => el.remove());
+    doc.querySelectorAll('script, style, svg, noscript, iframe, nav, header, footer, aside').forEach(el => el.remove());
 
     let text = (doc.body?.textContent || '').trim();
 
@@ -452,6 +452,206 @@ export async function parseRecipeImportPage(url, onProgress = null) {
     category: aiResult.category || null,
     tags: aiResult.tags || [],
   };
+}
+
+/**
+ * Parse a Schema.org Recipe from any JSON-LD blocks found in an HTML string.
+ * Supports `recipeInstructions` as an array of strings or HowToStep objects.
+ * Supports ISO 8601 duration strings (e.g. "PT30M") for time fields.
+ *
+ * @param {string} html - Raw HTML string
+ * @returns {Object|null} Structured recipe data, or null if no Recipe JSON-LD found
+ */
+export function parseJsonLdRecipe(html) {
+  let doc;
+  try {
+    const parser = new DOMParser();
+    doc = parser.parseFromString(html, 'text/html');
+  } catch {
+    return null;
+  }
+
+  const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+  for (const script of scripts) {
+    let json;
+    try {
+      json = JSON.parse(script.textContent);
+    } catch {
+      continue;
+    }
+
+    // Support both a single object and @graph arrays
+    const candidates = [];
+    if (Array.isArray(json)) {
+      candidates.push(...json);
+    } else if (json['@graph'] && Array.isArray(json['@graph'])) {
+      candidates.push(...json['@graph']);
+    } else {
+      candidates.push(json);
+    }
+
+    for (const candidate of candidates) {
+      const type = candidate['@type'];
+      const isRecipe =
+        type === 'Recipe' ||
+        (Array.isArray(type) && type.includes('Recipe'));
+      if (!isRecipe) continue;
+
+      // Parse ISO 8601 duration like "PT30M" or "PT1H30M" → minutes
+      const parseDuration = (str) => {
+        if (!str) return null;
+        const match = String(str).match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
+        if (!match) return null;
+        const hours = parseInt(match[1] || '0', 10);
+        const minutes = parseInt(match[2] || '0', 10);
+        return hours * 60 + minutes || null;
+      };
+
+      // Extract ingredients
+      const ingredients = Array.isArray(candidate.recipeIngredient)
+        ? candidate.recipeIngredient.filter(Boolean).map(String)
+        : [];
+
+      // Extract steps – can be strings or HowToStep objects
+      let steps = [];
+      if (Array.isArray(candidate.recipeInstructions)) {
+        steps = candidate.recipeInstructions.flatMap((item) => {
+          if (typeof item === 'string') return [item];
+          if (item['@type'] === 'HowToStep' && item.text) return [String(item.text)];
+          if (item['@type'] === 'HowToSection' && Array.isArray(item.itemListElement)) {
+            return item.itemListElement
+              .map((s) => (s['@type'] === 'HowToStep' ? String(s.text || '') : ''))
+              .filter(Boolean);
+          }
+          return item.text ? [String(item.text)] : [];
+        });
+      }
+
+      // Nothing useful extracted – skip this candidate
+      if (!ingredients.length && !steps.length) continue;
+
+      // Servings – can be a number or a string like "4 Portionen"
+      let servings = null;
+      if (candidate.recipeYield) {
+        const yieldVal = Array.isArray(candidate.recipeYield)
+          ? candidate.recipeYield[0]
+          : candidate.recipeYield;
+        const numMatch = String(yieldVal).match(/\d+/);
+        servings = numMatch ? parseInt(numMatch[0], 10) : null;
+      }
+
+      const prepMinutes = parseDuration(candidate.prepTime);
+      // cookTime is preferred; fall back to totalTime (may include prepTime) if cookTime is absent
+      const cookMinutes = parseDuration(candidate.cookTime) || parseDuration(candidate.totalTime);
+
+      return {
+        title: candidate.name || '',
+        ingredients,
+        steps,
+        servings,
+        prepTime: prepMinutes ? `${prepMinutes} min` : null,
+        cookTime: cookMinutes ? `${cookMinutes} min` : null,
+        difficulty: null,
+        cuisine: Array.isArray(candidate.recipeCuisine)
+          ? candidate.recipeCuisine[0] || null
+          : candidate.recipeCuisine || null,
+        category: Array.isArray(candidate.recipeCategory)
+          ? candidate.recipeCategory[0] || null
+          : candidate.recipeCategory || null,
+        tags: [],
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Fetch the raw HTML of a URL via the `fetchRecipeHtml` Cloud Function.
+ * This bypasses CORS restrictions by performing the request server-side.
+ *
+ * @param {string} url - URL to fetch
+ * @returns {Promise<string>} Raw HTML content
+ */
+async function fetchRecipeHtml(url) {
+  const fetchHtml = httpsCallable(functions, 'fetchRecipeHtml');
+  const result = await fetchHtml({ url });
+  return result.data.html;
+}
+
+/**
+ * Import a recipe from any regular URL using a multi-step fallback chain:
+ *
+ *  1. Fetch page HTML and parse Schema.org Recipe JSON-LD → direct mapping, no AI
+ *  2. If no JSON-LD → extract plain text and send to Gemini Text API
+ *  3. If both fail → capture screenshot and run Gemini Vision API (existing flow)
+ *
+ * @param {string} url - The recipe URL to import
+ * @param {Function} [onProgress] - Optional progress callback (0–100)
+ * @returns {Promise<Object>} Structured recipe data
+ */
+export async function importRecipeFromUrl(url, onProgress = null) {
+  if (onProgress) onProgress(10);
+
+  // ── Step 1 & 2: Try to fetch HTML and parse structured data ───────────────
+  let html = null;
+  try {
+    if (onProgress) onProgress(15);
+    html = await fetchRecipeHtml(url);
+  } catch (fetchErr) {
+    console.warn('fetchRecipeHtml failed, falling back to screenshot:', fetchErr.message);
+  }
+
+  if (html) {
+    // Step 1: JSON-LD
+    if (onProgress) onProgress(30);
+    try {
+      const jsonLdResult = parseJsonLdRecipe(html);
+      if (jsonLdResult) {
+        if (onProgress) onProgress(100);
+        return jsonLdResult;
+      }
+    } catch (jsonLdErr) {
+      console.warn('JSON-LD parsing error:', jsonLdErr.message);
+    }
+
+    // Step 2: Text + Gemini Text API
+    if (onProgress) onProgress(40);
+    try {
+      const cleanedText = extractTextFromHtml(html);
+      if (cleanedText && cleanedText.trim()) {
+        const aiResult = await processHtmlWithGemini(
+          cleanedText,
+          'de',
+          onProgress ? (p) => onProgress(40 + Math.round(p * 0.55)) : null,
+        );
+        if (onProgress) onProgress(100);
+        return {
+          title: aiResult.title || '',
+          ingredients: aiResult.ingredients || [],
+          steps: aiResult.steps || [],
+          servings: aiResult.servings || null,
+          cookTime: aiResult.prepTime || aiResult.cookTime || null,
+          difficulty: aiResult.difficulty || null,
+          cuisine: aiResult.cuisine || null,
+          category: aiResult.category || null,
+          tags: aiResult.tags || [],
+        };
+      }
+    } catch (textAiErr) {
+      console.warn('Text+Gemini failed, falling back to screenshot:', textAiErr.message);
+    }
+  }
+
+  // ── Step 3: Screenshot + Vision API fallback ─────────────────────────────
+  if (onProgress) onProgress(70);
+  const screenshotBase64 = await captureWebsiteScreenshot(url, (prog) => {
+    if (onProgress) onProgress(70 + Math.round(prog * 0.3));
+  });
+  return await recognizeRecipeWithAI(screenshotBase64, {
+    language: 'de',
+    provider: 'gemini',
+    onProgress: onProgress ? (p) => onProgress(70 + Math.round(p * 0.3)) : null,
+  });
 }
 
 /**

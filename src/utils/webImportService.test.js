@@ -29,7 +29,7 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramReelUrl, importInstagramReel } from './webImportService';
+import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl } from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 import { httpsCallable } from 'firebase/functions';
@@ -652,5 +652,352 @@ describe('importInstagramReel', () => {
     httpsCallable.mockReturnValue(mockCallable);
 
     await expect(importInstagramReel(validReelUrl)).rejects.toThrow(/kein ergebnis/i);
+  });
+});
+
+// --------------------------------------------------------------------------
+// parseJsonLdRecipe
+// --------------------------------------------------------------------------
+
+describe('parseJsonLdRecipe', () => {
+  function buildRecipePage(jsonLd) {
+    return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+</head>
+<body><h1>Test</h1></body>
+</html>`;
+  }
+
+  test('extracts a basic Schema.org Recipe with string instructions', () => {
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      name: 'Veganes Naan',
+      recipeIngredient: ['300 g Mehl', '200 ml Kokosjoghurt'],
+      recipeInstructions: ['Mehl sieben.', 'Joghurt unterrühren.'],
+      recipeYield: '4',
+      prepTime: 'PT15M',
+      cookTime: 'PT20M',
+      recipeCuisine: 'Indisch',
+      recipeCategory: 'Beilage',
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result).not.toBeNull();
+    expect(result.title).toBe('Veganes Naan');
+    expect(result.ingredients).toEqual(['300 g Mehl', '200 ml Kokosjoghurt']);
+    expect(result.steps).toEqual(['Mehl sieben.', 'Joghurt unterrühren.']);
+    expect(result.servings).toBe(4);
+    expect(result.prepTime).toBe('15 min');
+    expect(result.cookTime).toBe('20 min');
+    expect(result.cuisine).toBe('Indisch');
+    expect(result.category).toBe('Beilage');
+  });
+
+  test('extracts instructions from HowToStep objects', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Pasta',
+      recipeIngredient: ['400 g Nudeln'],
+      recipeInstructions: [
+        { '@type': 'HowToStep', text: 'Wasser kochen.' },
+        { '@type': 'HowToStep', text: 'Nudeln hinzufügen.' },
+      ],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result).not.toBeNull();
+    expect(result.steps).toEqual(['Wasser kochen.', 'Nudeln hinzufügen.']);
+  });
+
+  test('extracts instructions from HowToSection with nested HowToStep objects', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Kuchen',
+      recipeIngredient: ['200 g Mehl'],
+      recipeInstructions: [
+        {
+          '@type': 'HowToSection',
+          name: 'Teig',
+          itemListElement: [
+            { '@type': 'HowToStep', text: 'Mehl sieben.' },
+            { '@type': 'HowToStep', text: 'Butter hinzufügen.' },
+          ],
+        },
+      ],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result).not.toBeNull();
+    expect(result.steps).toEqual(['Mehl sieben.', 'Butter hinzufügen.']);
+  });
+
+  test('handles @graph arrays', () => {
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': 'WebPage', name: 'Page' },
+        {
+          '@type': 'Recipe',
+          name: 'Rezept aus Graph',
+          recipeIngredient: ['1 Ei'],
+          recipeInstructions: ['Ei kochen.'],
+        },
+      ],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result).not.toBeNull();
+    expect(result.title).toBe('Rezept aus Graph');
+    expect(result.ingredients).toEqual(['1 Ei']);
+  });
+
+  test('handles @type as an array', () => {
+    const jsonLd = {
+      '@type': ['Recipe', 'CreativeWork'],
+      name: 'Multi-type Rezept',
+      recipeIngredient: ['2 Tomaten'],
+      recipeInstructions: ['Tomaten schneiden.'],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result).not.toBeNull();
+    expect(result.title).toBe('Multi-type Rezept');
+  });
+
+  test('parses ISO 8601 durations including hours', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Langsames Schmorgericht',
+      recipeIngredient: ['500 g Rindfleisch'],
+      recipeInstructions: ['Schmoren.'],
+      prepTime: 'PT1H30M',
+      cookTime: 'PT2H',
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result.prepTime).toBe('90 min');
+    expect(result.cookTime).toBe('120 min');
+  });
+
+  test('returns null when no Recipe JSON-LD is found', () => {
+    const html = '<!DOCTYPE html><html><head></head><body>Kein Rezept</body></html>';
+    expect(parseJsonLdRecipe(html)).toBeNull();
+  });
+
+  test('returns null when JSON-LD has no ingredients or steps', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Leeres Rezept',
+      recipeIngredient: [],
+      recipeInstructions: [],
+    };
+    expect(parseJsonLdRecipe(buildRecipePage(jsonLd))).toBeNull();
+  });
+
+  test('returns null for invalid HTML', () => {
+    expect(parseJsonLdRecipe('')).toBeNull();
+  });
+
+  test('returns null when JSON-LD contains invalid JSON', () => {
+    const html = `<html><head><script type="application/ld+json">{invalid json}</script></head></html>`;
+    expect(parseJsonLdRecipe(html)).toBeNull();
+  });
+
+  test('extracts recipeYield with surrounding text', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Brot',
+      recipeIngredient: ['500 g Mehl'],
+      recipeInstructions: ['Backen.'],
+      recipeYield: '8 Scheiben',
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result.servings).toBe(8);
+  });
+
+  test('handles recipeYield as an array', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Kekse',
+      recipeIngredient: ['200 g Zucker'],
+      recipeInstructions: ['Backen.'],
+      recipeYield: ['24 Kekse'],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result.servings).toBe(24);
+  });
+
+  test('handles recipeCuisine and recipeCategory as arrays', () => {
+    const jsonLd = {
+      '@type': 'Recipe',
+      name: 'Fusion',
+      recipeIngredient: ['1 Tomate'],
+      recipeInstructions: ['Schneiden.'],
+      recipeCuisine: ['Mediterran', 'Asiatisch'],
+      recipeCategory: ['Hauptgericht', 'Salat'],
+    };
+
+    const result = parseJsonLdRecipe(buildRecipePage(jsonLd));
+
+    expect(result.cuisine).toBe('Mediterran');
+    expect(result.category).toBe('Hauptgericht');
+  });
+});
+
+// --------------------------------------------------------------------------
+// importRecipeFromUrl
+// --------------------------------------------------------------------------
+
+describe('importRecipeFromUrl', () => {
+  const mockAiResult = {
+    title: 'Spaghetti Carbonara',
+    ingredients: ['400g Spaghetti', '200g Pancetta'],
+    steps: ['Nudeln kochen', 'Sauce zubereiten'],
+    servings: 4,
+    prepTime: null,
+    cookTime: '30 min',
+    difficulty: 3,
+    cuisine: 'Italienisch',
+    category: 'Hauptgericht',
+    tags: [],
+  };
+
+  const recipeJsonLd = {
+    '@type': 'Recipe',
+    name: 'Veganes Naan',
+    recipeIngredient: ['300 g Mehl', '200 ml Kokosjoghurt'],
+    recipeInstructions: ['Teig kneten.', 'In der Pfanne backen.'],
+    recipeYield: '4',
+    prepTime: 'PT15M',
+  };
+
+  const htmlWithJsonLd = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<title>Veganes Naan</title>
+<script type="application/ld+json">${JSON.stringify(recipeJsonLd)}</script>
+</head>
+<body><h1>Veganes Naan</h1></body>
+</html>`;
+
+  const htmlWithoutJsonLd = `<!DOCTYPE html>
+<html lang="de">
+<head><title>Rezept</title></head>
+<body><h1>Pasta</h1><p>Kochwasser salzen. Nudeln 8 Minuten kochen.</p></body>
+</html>`;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
+    processHtmlWithGemini.mockResolvedValue(mockAiResult);
+    HTMLCanvasElement.prototype.getContext.mockReturnValue({
+      fillStyle: '', fillRect: jest.fn(), fillText: jest.fn(),
+      measureText: jest.fn().mockReturnValue({ width: 0 }), font: '',
+    });
+    HTMLCanvasElement.prototype.toDataURL.mockReturnValue('data:image/png;base64,mockcanvas');
+  });
+
+  test('returns JSON-LD data directly when a Schema.org Recipe is found', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithJsonLd } });
+    httpsCallable.mockReturnValue(mockFetchCallable);
+
+    const result = await importRecipeFromUrl('https://example.com/rezept');
+
+    expect(httpsCallable).toHaveBeenCalledWith({}, 'fetchRecipeHtml');
+    expect(result.title).toBe('Veganes Naan');
+    expect(result.ingredients).toEqual(['300 g Mehl', '200 ml Kokosjoghurt']);
+    expect(result.steps).toEqual(['Teig kneten.', 'In der Pfanne backen.']);
+    expect(result.servings).toBe(4);
+    expect(result.prepTime).toBe('15 min');
+    // Should NOT call Gemini when JSON-LD is found
+    expect(processHtmlWithGemini).not.toHaveBeenCalled();
+    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+  });
+
+  test('falls back to text+Gemini when no JSON-LD Recipe is present', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
+    httpsCallable.mockReturnValue(mockFetchCallable);
+
+    const result = await importRecipeFromUrl('https://example.com/rezept');
+
+    expect(processHtmlWithGemini).toHaveBeenCalledWith(
+      expect.any(String),
+      'de',
+      null,
+    );
+    expect(result.title).toBe('Spaghetti Carbonara');
+    // Should NOT call screenshot
+    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+  });
+
+  test('falls back to screenshot+vision when both HTML steps fail', async () => {
+    // fetchRecipeHtml fails
+    const mockFetchCallable = jest.fn().mockRejectedValue(new Error('Network error'));
+    httpsCallable.mockImplementation((_, name) => {
+      if (name === 'fetchRecipeHtml') return mockFetchCallable;
+      // captureWebsiteScreenshot CF
+      return jest.fn().mockResolvedValue({ data: { screenshot: 'data:image/jpeg;base64,screen' } });
+    });
+
+    const result = await importRecipeFromUrl('https://example.com/rezept');
+
+    expect(recognizeRecipeWithAI).toHaveBeenCalled();
+    expect(result.title).toBe('Spaghetti Carbonara');
+  });
+
+  test('falls back to screenshot+vision when text+Gemini also fails', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
+    processHtmlWithGemini.mockRejectedValue(new Error('AI error'));
+
+    httpsCallable.mockImplementation((_, name) => {
+      if (name === 'fetchRecipeHtml') return mockFetchCallable;
+      return jest.fn().mockResolvedValue({ data: { screenshot: 'data:image/jpeg;base64,screen' } });
+    });
+
+    const result = await importRecipeFromUrl('https://example.com/rezept');
+
+    expect(recognizeRecipeWithAI).toHaveBeenCalled();
+    expect(result.title).toBe('Spaghetti Carbonara');
+  });
+
+  test('reports progress during JSON-LD import', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithJsonLd } });
+    httpsCallable.mockReturnValue(mockFetchCallable);
+
+    const progressValues = [];
+    await importRecipeFromUrl('https://example.com/rezept', (p) => progressValues.push(p));
+
+    expect(progressValues.length).toBeGreaterThanOrEqual(2);
+    expect(progressValues[0]).toBeGreaterThan(0);
+    expect(progressValues[progressValues.length - 1]).toBe(100);
+  });
+
+  test('maps aiResult fields correctly when using text+Gemini path', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
+    httpsCallable.mockReturnValue(mockFetchCallable);
+    processHtmlWithGemini.mockResolvedValue({
+      ...mockAiResult,
+      prepTime: '20 min',
+      cookTime: null,
+    });
+
+    const result = await importRecipeFromUrl('https://example.com/rezept');
+
+    expect(result.cookTime).toBe('20 min');
+    expect(result.cuisine).toBe('Italienisch');
+    expect(result.tags).toEqual([]);
   });
 });

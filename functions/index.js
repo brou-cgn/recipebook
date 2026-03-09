@@ -1105,6 +1105,105 @@ exports.scrapeInstagramReel = onCall(
 );
 
 /**
+ * Cloud Function: Fetch Recipe HTML
+ * Fetches the raw HTML of a given URL server-side to bypass CORS restrictions.
+ * Uses a simple HTTP GET request (no Puppeteer) so that structured data like
+ * JSON-LD and visible page text can be extracted on the client.
+ *
+ * Input data:
+ * - url: The URL to fetch
+ *
+ * Returns: { html: string } — raw HTML content (max 500 KB)
+ */
+exports.fetchRecipeHtml = onCall(
+    {
+      maxInstances: 10,
+      memory: '256MiB',
+      timeoutSeconds: 30,
+    },
+    async (request) => {
+      const {url} = request.data;
+
+      // Authentication check
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to use web import',
+        );
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
+
+      // Validate URL
+      if (!url || typeof url !== 'string') {
+        throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
+      }
+      try {
+        const urlObj = new URL(url);
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
+        }
+      } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        throw new HttpsError('invalid-argument', 'Invalid URL format');
+      }
+
+      // Rate limiting (shared with other AI endpoints)
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      if (!rateLimitResult.allowed) {
+        const limit = getRateLimit(isAdmin, isAuthenticated);
+        throw new HttpsError(
+            'resource-exhausted',
+            `Rate limit exceeded: maximum ${limit} requests per day`,
+        );
+      }
+
+      console.log(`fetchRecipeHtml request from user ${userId} for URL: ${url}`);
+
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+          },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(20000),
+        });
+
+        if (!response.ok) {
+          throw new HttpsError(
+              'internal',
+              `Failed to fetch URL: HTTP ${response.status}`,
+          );
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
+          throw new HttpsError(
+              'invalid-argument',
+              'URL does not return an HTML page',
+          );
+        }
+
+        const html = await response.text();
+        // Limit size to avoid payload issues
+        return {html: html.slice(0, MAX_HTML_SIZE)};
+      } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        console.error(`fetchRecipeHtml failed for user ${userId}:`, error);
+        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+          throw new HttpsError('deadline-exceeded', 'Website took too long to respond');
+        }
+        throw new HttpsError('internal', 'Failed to fetch page HTML: ' + error.message);
+      }
+    },
+);
+
+/**
  * Cloud Function: Capture Website Screenshot
  * This is a callable function that captures a screenshot of a website
  *
