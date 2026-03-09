@@ -99,7 +99,7 @@ export function applyTileSizePreference(size) {
 }
 
 // Standard-Prompt für KI-Rezepterkennung (optimiert)
-export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON.
+export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON. Extrahiere nur das Rezept, ignoriere Kommentare, Likes, UI‑Text. Erfinde keine Zutaten/Mengen/Temperaturen.
 
 Bitte gib das Ergebnis im folgenden JSON-Format zurück:
 {
@@ -224,8 +224,7 @@ export async function getSettings() {
       // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
       const needsMigration =
         !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
-        !aiRecipePrompt.includes('Wandle Brüche in Dezimalzahlen um'); // New check
+        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}');
 
       if (needsMigration) {
         console.warn(
