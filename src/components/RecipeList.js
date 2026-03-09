@@ -94,8 +94,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
   const userCanEdit = canEditRecipes(currentUser);
 
-  // Group recipes by parent first
-  const allRecipeGroups = groupRecipesByParent(recipes);
+  // Group recipes by parent first, memoized so the reference is stable between renders
+  const allRecipeGroups = useMemo(() => groupRecipesByParent(recipes), [recipes]);
 
   // Filter and sort recipe groups with memoization for performance
   const recipeGroups = useMemo(() => {
@@ -115,8 +115,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
     }
 
-    // Sort groups by selected sort mode
-    return filteredGroups.sort((a, b) => {
+    // Sort groups by selected sort mode (use spread to avoid mutating source array)
+    return [...filteredGroups].sort((a, b) => {
       const recipeA = a.primaryRecipe;
       const recipeB = b.primaryRecipe;
 
@@ -308,7 +308,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         <div
           className="sort-swiper-track"
           style={{
-            transform: `translateX(calc(50% - ${activeSortIndex * SWIPER_ITEM_OUTER_WIDTH + SWIPER_ITEM_OUTER_WIDTH / 2}px))`
+            transform: `translateX(calc(50vw - ${activeSortIndex * SWIPER_ITEM_OUTER_WIDTH + SWIPER_ITEM_OUTER_WIDTH / 2}px))`
           }}
         >
           {SORT_MODES.map((mode) => (
