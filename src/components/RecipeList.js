@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -7,14 +7,29 @@ import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/c
 import { isBase64Image } from '../utils/imageUtils';
 import RecipeRating from './RecipeRating';
 
+const SORT_MODES = [
+  { id: 'trending', label: 'Im Trend' },
+  { id: 'alphabetical', label: 'Alphabetisch' },
+];
+
+const SWIPER_ITEM_OUTER_WIDTH = 152; // 140px item + 2×6px margin
+
+function getTimestampMs(ts) {
+  if (!ts) return 0;
+  if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+  return new Date(ts).getTime();
+}
+
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [sortMode, setSortMode] = useState('trending');
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [buttonIcons, setButtonIcons] = useState({
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
+  const touchStartX = useRef(null);
   
   // Load all users once on mount
   useEffect(() => {
@@ -100,13 +115,35 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
     }
 
-    // Sort groups alphabetically by the primary recipe's title
+    // Sort groups by selected sort mode
     return filteredGroups.sort((a, b) => {
-      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
-      return titleA.localeCompare(titleB);
+      const recipeA = a.primaryRecipe;
+      const recipeB = b.primaryRecipe;
+
+      if (sortMode === 'trending') {
+        // 1. View count descending
+        const viewCountA = recipeA?.viewCount || 0;
+        const viewCountB = recipeB?.viewCount || 0;
+        if (viewCountA !== viewCountB) return viewCountB - viewCountA;
+        // 2. Title alphabetical A–Z
+        const titleA = recipeA?.title?.toLowerCase() || '';
+        const titleB = recipeB?.title?.toLowerCase() || '';
+        const titleCompare = titleA.localeCompare(titleB);
+        if (titleCompare !== 0) return titleCompare;
+        // 3. Creation date, newest first
+        return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
+      } else {
+        // alphabetical
+        // 1. Title alphabetical A–Z
+        const titleA = recipeA?.title?.toLowerCase() || '';
+        const titleB = recipeB?.title?.toLowerCase() || '';
+        const titleCompare = titleA.localeCompare(titleB);
+        if (titleCompare !== 0) return titleCompare;
+        // 2. Creation date, newest first
+        return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
+      }
     });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm]);
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, sortMode]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
@@ -122,6 +159,25 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     const author = allUsers.find(u => u.id === authorId);
     if (!author) return null;
     return author.vorname;
+  };
+
+  const activeSortIndex = SORT_MODES.findIndex(m => m.id === sortMode);
+
+  const handleSwiperTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleSwiperTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 50) {
+      if (delta > 0 && activeSortIndex < SORT_MODES.length - 1) {
+        setSortMode(SORT_MODES[activeSortIndex + 1].id);
+      } else if (delta < 0 && activeSortIndex > 0) {
+        setSortMode(SORT_MODES[activeSortIndex - 1].id);
+      }
+    }
+    touchStartX.current = null;
   };
 
   return (
@@ -242,6 +298,31 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           })}
         </div>
       )}
+
+      <div
+        className="sort-swiper"
+        onTouchStart={handleSwiperTouchStart}
+        onTouchEnd={handleSwiperTouchEnd}
+        aria-label="Sortierung wählen"
+      >
+        <div
+          className="sort-swiper-track"
+          style={{
+            transform: `translateX(calc(50% - ${activeSortIndex * SWIPER_ITEM_OUTER_WIDTH + SWIPER_ITEM_OUTER_WIDTH / 2}px))`
+          }}
+        >
+          {SORT_MODES.map((mode) => (
+            <button
+              key={mode.id}
+              className={`sort-swiper-item${sortMode === mode.id ? ' active' : ''}`}
+              onClick={() => setSortMode(mode.id)}
+              aria-pressed={sortMode === mode.id}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
