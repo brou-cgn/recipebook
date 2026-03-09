@@ -26,6 +26,10 @@ jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: () => Promise.resolve([]),
 }));
 
+jest.mock('../utils/recipeCallsFirestore', () => ({
+  getRecipeCalls: () => Promise.resolve([]),
+}));
+
 const mockRecipes = [
   {
     id: '1',
