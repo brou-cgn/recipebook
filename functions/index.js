@@ -1226,11 +1226,9 @@ exports.captureWebsiteScreenshot = onCall(
         }
 
         // If URL has a fragment (e.g. #recipe), scroll to that element
-        let hasFragment = false;
         try {
           const urlObj = new URL(url);
           if (urlObj.hash) {
-            hasFragment = true;
             const elementId = urlObj.hash.substring(1);
             await page.evaluate((id) => {
               const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
@@ -1251,10 +1249,10 @@ exports.captureWebsiteScreenshot = onCall(
           // No h1 found – take screenshot anyway
         }
 
-        // Take screenshot: viewport-only when a fragment is present, full page otherwise
+        // Take screenshot
         const screenshot = await page.screenshot({ 
           encoding: 'base64',
-          fullPage: !hasFragment,
+          fullPage: true,
           type: 'jpeg',
           quality: 80,
         });
