@@ -129,13 +129,13 @@ WICHTIGE REGELN:
 2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
 3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
 4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
-5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, Esslöffel statt EL, Teelöffel statt TL)
+5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, Esslöffel statt EL, Teelöffel statt TL). Wandle Brüche in Dezimalzahlen um (z.B. "1/2" wird zu "0,5", "1 1/2" wird zu "1,5").
 6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
 7. Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
 **Verfügbare Kulinarik-Typen:**
 {{CUISINE_TYPES}}
 Wenn kein Fleisch oder Fisch enthalten ist, setze zusätzlich **immer** "Vegetarisch".
-Wenn keine tierischen Produkte enthalten sind (z.B. Butter, Fleisch, Fisch, Eier usw.), setze zusätzlich **immer** "Vegan".
+Wenn keine tierischen Produkte enthalten sind (z.B. Butter, Fleisch, Fisch, Eier usw.), setze zusätzlich **immer** "Vegetarisch" und "Vegan".
 **Verfügbare Speisekategorien:**
 {{MEAL_CATEGORIES}}
 Wenn das Rezept zu keiner dieser Kategorien passt, wähle die nächstliegende oder lasse das Feld leer. Mehrfachauswahlen sind möglich
@@ -221,13 +221,15 @@ export async function getSettings() {
 
       let aiRecipePrompt = settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
 
-      // Migration: if the stored prompt is missing required placeholders, reset to default
-      if (
+      // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
+      const needsMigration =
         !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}')
-      ) {
+        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
+        !aiRecipePrompt.includes('Wandle Brüche in Dezimalzahlen um'); // New check
+
+      if (needsMigration) {
         console.warn(
-          'AI prompt in Firestore is missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT'
+          'AI prompt in Firestore is outdated or missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT'
         );
         aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
         // Asynchronously update Firestore (fire-and-forget, does not block getSettings)
