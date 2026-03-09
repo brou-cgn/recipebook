@@ -1266,7 +1266,7 @@ exports.captureWebsiteScreenshot = onCall(
         // Take screenshot
         const screenshot = await page.screenshot({ 
           encoding: 'base64',
-          fullPage: !hasFragment,
+          fullPage: true,
           type: 'jpeg',
           quality: 80,
         });
