@@ -15,8 +15,6 @@ const SORT_MODES = [
   { id: 'score', label: 'Nach Bewertung' },
 ];
 
-const MIN_SWIPE_CLICK_PX = 5; // movements larger than this swallow the subsequent click
-
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 function isNewRecipe(recipe) {
@@ -56,88 +54,72 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
   const [recipeCalls, setRecipeCalls] = useState([]);
-  const [trackOffset, setTrackOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [swiperExpanded, setSwiperExpanded] = useState(false);
+  const [previewMode, setPreviewMode] = useState(null);
   const swiperRef = useRef(null);
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
-  const trackOffsetRef = useRef(0);
-  const dragStartOffsetRef = useRef(0);
-  const itemRefs = useRef({});
+  const hasMovedRef = useRef(false);
 
-  const centerItem = useCallback((modeId) => {
-    const el = itemRefs.current[modeId];
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width === 0) return; // layout not computed yet (JSDOM / first paint)
-    const itemCenter = rect.left + rect.width / 2;
-    const screenCenter = window.innerWidth / 2;
-    const adjustment = screenCenter - itemCenter;
-    const newOffset = trackOffsetRef.current + adjustment;
-    trackOffsetRef.current = newOffset;
-    setTrackOffset(newOffset);
-  }, []);
-
+  // Collapse swiper when user clicks/touches outside of it
   useEffect(() => {
-    centerItem(sortMode);
-  }, [sortMode, centerItem]);
+    if (!swiperExpanded) return;
+    const handleOutside = (e) => {
+      if (swiperRef.current && !swiperRef.current.contains(e.target)) {
+        setSwiperExpanded(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+    };
+  }, [swiperExpanded]);
 
   const handleSwiperTouchStart = useCallback((e) => {
     touchStartXRef.current = e.touches[0].clientX;
     didSwipeRef.current = false;
-    dragStartOffsetRef.current = trackOffsetRef.current;
-    setIsDragging(true);
+    hasMovedRef.current = false;
+    setPreviewMode(null);
   }, []);
 
   const handleSwiperTouchMove = useCallback((e) => {
     if (touchStartXRef.current === null) return;
     const deltaX = e.touches[0].clientX - touchStartXRef.current;
-    const newOffset = dragStartOffsetRef.current + deltaX;
-    trackOffsetRef.current = newOffset;
-    setTrackOffset(newOffset);
+    if (Math.abs(deltaX) > 10 && !hasMovedRef.current) {
+      setSwiperExpanded(true);
+      hasMovedRef.current = true;
+    }
+
+    if (swiperRef.current) {
+      const touch = e.touches[0];
+      const buttons = swiperRef.current.querySelectorAll('.sort-swiper-item');
+      let hoveredMode = null;
+      buttons.forEach(button => {
+        const rect = button.getBoundingClientRect();
+        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          hoveredMode = button.getAttribute('data-mode-id');
+        }
+      });
+      setPreviewMode(hoveredMode);
+    }
   }, []);
 
   const handleSwiperTouchEnd = useCallback((e) => {
     if (touchStartXRef.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
     touchStartXRef.current = null;
-    setIsDragging(false);
 
-    if (window.innerWidth > 0) {
-      // Real browser: snap to item nearest screen centre.
-      // Check if layout is available (JSDOM returns zero-sized rects).
-      const hasLayout = SORT_MODES.some(mode => {
-        const el = itemRefs.current[mode.id];
-        return el && el.getBoundingClientRect().width > 0;
-      });
-      if (hasLayout) {
-        const screenCenter = window.innerWidth / 2;
-        let closestId = null;
-        let closestDist = Infinity;
-        SORT_MODES.forEach(mode => {
-          const el = itemRefs.current[mode.id];
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const itemCenter = rect.left + rect.width / 2;
-          const dist = Math.abs(itemCenter - screenCenter);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestId = mode.id;
-          }
-        });
-        if (closestId) {
-          didSwipeRef.current = Math.abs(deltaX) > MIN_SWIPE_CLICK_PX;
-          if (closestId !== sortMode) {
-            setSortMode(closestId);
-          } else {
-            centerItem(closestId);
-          }
-        }
-        return;
-      }
+    if (previewMode) {
+      didSwipeRef.current = true;
+      setSortMode(previewMode);
+      setPreviewMode(null);
+      setSwiperExpanded(false);
+      return;
     }
 
-    // Fallback: layout not available (JSDOM / zero-sized rects) – use delta
     if (Math.abs(deltaX) >= 50) {
       didSwipeRef.current = true;
       setSortMode((prev) => {
@@ -148,8 +130,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           return SORT_MODES[(currentIndex - 1 + SORT_MODES.length) % SORT_MODES.length].id;
         }
       });
+      setSwiperExpanded(false);
     }
-  }, [sortMode, centerItem]);
+  }, [previewMode]);
 
   const handleSwiperItemClick = useCallback((e, modeId) => {
     e.stopPropagation();
@@ -157,8 +140,17 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       didSwipeRef.current = false;
       return;
     }
-    setSortMode(modeId);
-  }, []);
+    if (!swiperExpanded) {
+      setSwiperExpanded(true);
+    } else {
+      setSortMode(modeId);
+      setSwiperExpanded(false);
+    }
+  }, [swiperExpanded]);
+
+  const handleSwiperContainerClick = useCallback(() => {
+    if (!swiperExpanded) setSwiperExpanded(true);
+  }, [swiperExpanded]);
 
   // Load all recipe calls once on mount for trending sort
   useEffect(() => {
@@ -482,26 +474,25 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       )}
 
       <div
-        className={`sort-swiper${isDragging ? ' dragging' : ''}`}
+        className={`sort-swiper${swiperExpanded ? ' expanded' : ''}`}
         aria-label="Sortierung wählen"
         ref={swiperRef}
         onTouchStart={handleSwiperTouchStart}
         onTouchMove={handleSwiperTouchMove}
         onTouchEnd={handleSwiperTouchEnd}
+        onClick={handleSwiperContainerClick}
       >
-        <div
-          className="sort-swiper-track"
-          style={{ transform: `translateX(${trackOffset}px)` }}
-        >
+        <div className="sort-swiper-track">
           {SORT_MODES.map((mode) => (
             <button
               key={mode.id}
               data-mode-id={mode.id}
-              ref={el => { itemRefs.current[mode.id] = el; }}
-              className={`sort-swiper-item${sortMode === mode.id ? ' active' : ''}`}
+              className={`sort-swiper-item${
+                (previewMode === mode.id || (!previewMode && sortMode === mode.id)) ? ' active' : ''
+              }`}
               onClick={(e) => handleSwiperItemClick(e, mode.id)}
               aria-pressed={sortMode === mode.id}
-              tabIndex={0}
+              tabIndex={swiperExpanded || mode.id === sortMode ? 0 : -1}
             >
               {mode.label}
             </button>
