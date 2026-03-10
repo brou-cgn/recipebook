@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -151,6 +151,24 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const handleSwiperContainerClick = useCallback(() => {
     if (!swiperExpanded) setSwiperExpanded(true);
   }, [swiperExpanded]);
+
+  // Keep the active pill horizontally centered on screen when the swiper is expanded
+  useLayoutEffect(() => {
+    const swiper = swiperRef.current;
+    if (!swiper) return;
+    if (!swiperExpanded) {
+      swiper.style.transform = '';
+      return;
+    }
+    const activeId = previewMode || sortMode;
+    const activeButton = swiper.querySelector(`[data-mode-id="${activeId}"]`);
+    if (!activeButton) return;
+    const swiperWidth = swiper.offsetWidth;
+    const activeLeft = activeButton.offsetLeft;
+    const activeWidth = activeButton.offsetWidth;
+    const offset = swiperWidth / 2 - (activeLeft + activeWidth / 2);
+    swiper.style.transform = `translateX(calc(-50% + ${offset}px))`;
+  }, [swiperExpanded, sortMode, previewMode]);
 
   // Load all recipe calls once on mount for trending sort
   useEffect(() => {
