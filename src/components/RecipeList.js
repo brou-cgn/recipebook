@@ -12,7 +12,15 @@ const SORT_MODES = [
   { id: 'trending', label: 'Im Trend' },
   { id: 'alphabetical', label: 'Alphabetisch' },
   { id: 'score', label: 'Nach Score' },
+  { id: 'new', label: 'Neue Rezepte' },
 ];
+
+const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+function isNewRecipe(recipe) {
+  const ts = getTimestampMs(recipe?.createdAt);
+  return ts > 0 && Date.now() - ts <= ONE_MONTH_MS;
+}
 
 const SCORE_M = 5; // Minimum number of ratings for full weighting in Bayesian score
 const SWIPER_ITEM_TOTAL = 154; // 130px item + 2×12px margin = total slot width for scroll math
@@ -222,6 +230,13 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       ? allRecipeGroups.filter(group => group.allRecipes.some(r => favoriteIds.includes(r.id)))
       : allRecipeGroups;
 
+    // Filter to only recipes from the last month when in "new" mode
+    if (sortMode === 'new') {
+      filteredGroups = filteredGroups.filter(group =>
+        group.allRecipes.some(r => isNewRecipe(r))
+      );
+    }
+
     // Filter by search term
     if (searchTerm && searchTerm.trim()) {
       const lowerSearchTerm = searchTerm.toLowerCase();
@@ -275,6 +290,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         if (scoreA !== scoreB) return scoreB - scoreA;
         // 2+3. Title alphabetical A–Z, then newest first
         return compareTitleAndDate(recipeA, recipeB);
+      } else if (sortMode === 'new') {
+        // 1. Newest first (createdAt descending)
+        const dateA = getTimestampMs(recipeA?.createdAt);
+        const dateB = getTimestampMs(recipeB?.createdAt);
+        if (dateA !== dateB) return dateB - dateA;
+        // 2. Alphabetical A–Z
+        const titleA = recipeA?.title?.toLowerCase() || '';
+        const titleB = recipeB?.title?.toLowerCase() || '';
+        return titleA.localeCompare(titleB);
       } else {
         // alphabetical: title A–Z, then newest first
         return compareTitleAndDate(recipeA, recipeB);
@@ -427,10 +451,12 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       
       {recipeGroups.length === 0 ? (
         <div className="empty-state">
-          <p>{showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
+          <p>{showFavoritesOnly ? 'Keine favorisierten Rezepte!' : sortMode === 'new' ? 'Keine neuen Rezepte!' : 'Noch keine Rezepte!'}</p>
           <p className="empty-hint">
             {showFavoritesOnly 
-              ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
+              ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden'
+              : sortMode === 'new'
+              ? 'Im letzten Monat wurden keine neuen Rezepte hinzugefügt.'
               : 'Das kannst du ändern, lege direkt ein Rezept an.'}
           </p>
         </div>
@@ -450,6 +476,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               >
                 {isFavorite && (
                   <div className="favorite-badge">★</div>
+                )}
+                {isNewRecipe(recipe) && (
+                  <div className="new-badge">Neu</div>
                 )}
 
                 {recipe.image && (

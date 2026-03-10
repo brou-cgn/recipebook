@@ -60,7 +60,7 @@ describe('RecipeList - Sort Swiper', () => {
     mockGetRecipeCalls.mockResolvedValue([]);
   });
 
-  test('renders sort swiper with "Im Trend", "Alphabetisch" and "Nach Score" options', async () => {
+  test('renders sort swiper with "Im Trend", "Alphabetisch", "Nach Score" and "Neue Rezepte" options', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -75,6 +75,7 @@ describe('RecipeList - Sort Swiper', () => {
     expect(await screen.findByText('Im Trend')).toBeInTheDocument();
     expect(screen.getByText('Alphabetisch')).toBeInTheDocument();
     expect(screen.getByText('Nach Score')).toBeInTheDocument();
+    expect(screen.getByText('Neue Rezepte')).toBeInTheDocument();
   });
 
   test('"Im Trend" is active by default', async () => {
@@ -473,5 +474,131 @@ describe('RecipeList - Sort Swiper', () => {
     // the older recipe (January, id '1', kulinarik 'Older').
     const tags = Array.from(document.querySelectorAll('.kulinarik-tag')).map(el => el.textContent);
     expect(tags).toEqual(['Newer', 'Older']);
+  });
+
+  describe('"Neue Rezepte" mode', () => {
+    const now = Date.now();
+    const recentDate = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();   // 5 days ago
+    const olderDate  = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();  // 10 days ago
+    const oldDate    = new Date(now - 45 * 24 * 60 * 60 * 1000).toISOString();  // 45 days ago (> 1 month)
+
+    const newRecipes = [
+      { id: '1', title: 'Banana Bread', ingredients: [], steps: [], createdAt: olderDate, authorId: 'u1' },
+      { id: '2', title: 'Apple Pie',    ingredients: [], steps: [], createdAt: recentDate, authorId: 'u1' },
+      { id: '3', title: 'Zebra Cake',   ingredients: [], steps: [], createdAt: oldDate,   authorId: 'u1' },
+    ];
+
+    test('clicking "Neue Rezepte" switches to new mode and marks it active', async () => {
+      render(
+        <RecipeList
+          recipes={newRecipes}
+          onSelectRecipe={() => {}}
+          onAddRecipe={() => {}}
+          categoryFilter=""
+          currentUser={{ id: 'u1' }}
+          searchTerm=""
+        />
+      );
+
+      await screen.findByText('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
+
+      expect(screen.getByText('Neue Rezepte')).toHaveClass('active');
+      expect(screen.getByText('Im Trend')).not.toHaveClass('active');
+    });
+
+    test('"Neue Rezepte" mode only shows recipes from the last 30 days', async () => {
+      render(
+        <RecipeList
+          recipes={newRecipes}
+          onSelectRecipe={() => {}}
+          onAddRecipe={() => {}}
+          categoryFilter=""
+          currentUser={{ id: 'u1' }}
+          searchTerm=""
+        />
+      );
+
+      await screen.findByText('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
+
+      const cards = document.querySelectorAll('.recipe-card h3');
+      const titles = Array.from(cards).map(c => c.textContent);
+      // Only Apple Pie (5 days) and Banana Bread (10 days) are within 30 days
+      expect(titles).toContain('Apple Pie');
+      expect(titles).toContain('Banana Bread');
+      expect(titles).not.toContain('Zebra Cake');
+    });
+
+    test('"Neue Rezepte" mode sorts by createdAt descending, then alphabetically', async () => {
+      const sameDay = new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString();
+      const recipes = [
+        { id: '1', title: 'Zucchini Soup', ingredients: [], steps: [], createdAt: olderDate, authorId: 'u1' },
+        { id: '2', title: 'Apple Cake',    ingredients: [], steps: [], createdAt: sameDay,   authorId: 'u1' },
+        { id: '3', title: 'Avocado Toast', ingredients: [], steps: [], createdAt: sameDay,   authorId: 'u1' },
+      ];
+
+      render(
+        <RecipeList
+          recipes={recipes}
+          onSelectRecipe={() => {}}
+          onAddRecipe={() => {}}
+          categoryFilter=""
+          currentUser={{ id: 'u1' }}
+          searchTerm=""
+        />
+      );
+
+      await screen.findByText('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
+
+      const cards = document.querySelectorAll('.recipe-card h3');
+      const titles = Array.from(cards).map(c => c.textContent);
+      // Apple Cake and Avocado Toast share the same date → alphabetical
+      // Zucchini Soup is older → last
+      expect(titles).toEqual(['Apple Cake', 'Avocado Toast', 'Zucchini Soup']);
+    });
+
+    test('"Neue Rezepte" mode shows "Neu" badge on new recipe cards', async () => {
+      render(
+        <RecipeList
+          recipes={newRecipes}
+          onSelectRecipe={() => {}}
+          onAddRecipe={() => {}}
+          categoryFilter=""
+          currentUser={{ id: 'u1' }}
+          searchTerm=""
+        />
+      );
+
+      await screen.findByText('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
+
+      const newBadges = document.querySelectorAll('.new-badge');
+      // Only the 2 recipes within 30 days should have the badge
+      expect(newBadges.length).toBe(2);
+    });
+
+    test('"Neue Rezepte" mode shows empty state when no recipes are from the last month', async () => {
+      const onlyOldRecipes = [
+        { id: '1', title: 'Old Cake', ingredients: [], steps: [], createdAt: oldDate, authorId: 'u1' },
+      ];
+
+      render(
+        <RecipeList
+          recipes={onlyOldRecipes}
+          onSelectRecipe={() => {}}
+          onAddRecipe={() => {}}
+          categoryFilter=""
+          currentUser={{ id: 'u1' }}
+          searchTerm=""
+        />
+      );
+
+      await screen.findByText('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
+
+      expect(await screen.findByText('Keine neuen Rezepte!')).toBeInTheDocument();
+    });
   });
 });
