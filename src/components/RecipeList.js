@@ -61,6 +61,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
   const hasMovedRef = useRef(false);
+  const isInitialScrollRef = useRef(false);
 
   // Collapse swiper when user clicks/touches outside of it
   useEffect(() => {
@@ -86,6 +87,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     const activeBtn = track.querySelector('.sort-swiper-item.active');
     if (!activeBtn) return;
     const scrollLeft = activeBtn.offsetLeft - (track.offsetWidth - activeBtn.offsetWidth) / 2;
+    isInitialScrollRef.current = true;
     track.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'instant' });
   }, [swiperExpanded]);
 
@@ -96,6 +98,10 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     let scrollTimer = null;
 
     const handleScrollEnd = () => {
+      if (isInitialScrollRef.current) {
+        isInitialScrollRef.current = false;
+        return;
+      }
       const center = track.scrollLeft + track.offsetWidth / 2;
       const buttons = Array.from(track.querySelectorAll('.sort-swiper-item'));
       let closestMode = null;
@@ -114,9 +120,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       }
     };
 
+    if ('onscrollend' in track) {
+      track.addEventListener('scrollend', handleScrollEnd);
+      return () => {
+        track.removeEventListener('scrollend', handleScrollEnd);
+      };
+    }
+
     const handleScroll = () => {
+      if (isInitialScrollRef.current) {
+        isInitialScrollRef.current = false;
+        return;
+      }
       clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(handleScrollEnd, 150);
+      scrollTimer = setTimeout(handleScrollEnd, 350);
     };
 
     track.addEventListener('scroll', handleScroll, { passive: true });
@@ -135,6 +152,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
 
   const handleSwiperTouchMove = useCallback((e) => {
     if (touchStartXRef.current === null) return;
+    if (swiperExpanded) return;
     const deltaX = e.touches[0].clientX - touchStartXRef.current;
     if (Math.abs(deltaX) > 10 && !hasMovedRef.current) {
       setSwiperExpanded(true);
@@ -154,7 +172,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
       setPreviewMode(hoveredMode);
     }
-  }, []);
+  }, [swiperExpanded]);
 
   const handleSwiperTouchEnd = useCallback((e) => {
     if (touchStartXRef.current === null) return;
@@ -166,6 +184,10 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       setSortMode(previewMode);
       setPreviewMode(null);
       setSwiperExpanded(false);
+      return;
+    }
+
+    if (swiperExpanded && hasMovedRef.current) {
       return;
     }
 
@@ -181,7 +203,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
       setSwiperExpanded(false);
     }
-  }, [previewMode]);
+  }, [previewMode, swiperExpanded]);
 
   const handleSwiperItemClick = useCallback((e, modeId) => {
     e.stopPropagation();
