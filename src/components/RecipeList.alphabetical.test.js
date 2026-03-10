@@ -27,7 +27,11 @@ jest.mock('../utils/userFavorites', () => ({
 }));
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
-  getRecipeCalls: () => Promise.resolve([]),
+  getRecipeCalls: () => Promise.resolve([
+    { id: 'call-1', recipeId: '1', timestamp: new Date().toISOString() },
+    { id: 'call-2', recipeId: '2', timestamp: new Date().toISOString() },
+    { id: 'call-3', recipeId: '3', timestamp: new Date().toISOString() },
+  ]),
 }));
 
 const mockRecipes = [

@@ -3,6 +3,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecipeList from './RecipeList';
 
+const THIRTY_ONE_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
+
 jest.mock('../utils/userManagement', () => ({
   canEditRecipes: jest.fn(() => false),
   getUsers: () => Promise.resolve([]),
@@ -95,7 +97,17 @@ describe('RecipeList - Sort Swiper', () => {
     expect(screen.getByText('Alphabetisch')).not.toHaveClass('active');
   });
 
-  test('trending mode sorts recipes by viewCount descending', async () => {
+  test('trending mode sorts recipes by recent call count descending', async () => {
+    const now = new Date().toISOString();
+    mockGetRecipeCalls.mockResolvedValueOnce([
+      { id: 'call-1', recipeId: '2', timestamp: now }, // Apple Pie – 3 calls
+      { id: 'call-2', recipeId: '2', timestamp: now },
+      { id: 'call-3', recipeId: '2', timestamp: now },
+      { id: 'call-4', recipeId: '1', timestamp: now }, // Banana Bread – 2 calls
+      { id: 'call-5', recipeId: '1', timestamp: now },
+      { id: 'call-6', recipeId: '3', timestamp: now }, // Zebra Cake – 1 call
+    ]);
+
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -111,7 +123,7 @@ describe('RecipeList - Sort Swiper', () => {
 
     const cards = document.querySelectorAll('.recipe-card h3');
     const titles = Array.from(cards).map(c => c.textContent);
-    // viewCount: Apple Pie=200, Banana Bread=100, Zebra Cake=50
+    // recent calls: Apple Pie=3, Banana Bread=2, Zebra Cake=1
     expect(titles).toEqual(['Apple Pie', 'Banana Bread', 'Zebra Cake']);
   });
 
@@ -168,6 +180,11 @@ describe('RecipeList - Sort Swiper', () => {
       { id: '1', title: 'Zebra Cake', ingredients: [], steps: [], viewCount: 10, createdAt: '2024-01-01T00:00:00Z', authorId: 'u1' },
       { id: '2', title: 'Apple Pie', ingredients: [], steps: [], viewCount: 10, createdAt: '2024-01-01T00:00:00Z', authorId: 'u1' },
     ];
+    const now = new Date().toISOString();
+    mockGetRecipeCalls.mockResolvedValueOnce([
+      { id: 'call-1', recipeId: '1', timestamp: now }, // Zebra Cake – 1 recent call
+      { id: 'call-2', recipeId: '2', timestamp: now }, // Apple Pie – 1 recent call
+    ]);
     render(
       <RecipeList
         recipes={recipesEqualViews}
@@ -182,11 +199,21 @@ describe('RecipeList - Sort Swiper', () => {
     await screen.findByText('Apple Pie');
     const cards = document.querySelectorAll('.recipe-card h3');
     const titles = Array.from(cards).map(c => c.textContent);
-    // Same viewCount → alphabetical fallback
+    // Same recent call count → alphabetical fallback
     expect(titles).toEqual(['Apple Pie', 'Zebra Cake']);
   });
 
   test('clicking "Im Trend" after "Alphabetisch" resets to trending sort', async () => {
+    const now = new Date().toISOString();
+    mockGetRecipeCalls.mockResolvedValue([
+      { id: 'call-1', recipeId: '2', timestamp: now }, // Apple Pie – 3 calls
+      { id: 'call-2', recipeId: '2', timestamp: now },
+      { id: 'call-3', recipeId: '2', timestamp: now },
+      { id: 'call-4', recipeId: '1', timestamp: now }, // Banana Bread – 2 calls
+      { id: 'call-5', recipeId: '1', timestamp: now },
+      { id: 'call-6', recipeId: '3', timestamp: now }, // Zebra Cake – 1 call
+    ]);
+
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -212,16 +239,17 @@ describe('RecipeList - Sort Swiper', () => {
 
     const cards = document.querySelectorAll('.recipe-card h3');
     const titles = Array.from(cards).map(c => c.textContent);
-    // viewCount: Apple Pie=200, Banana Bread=100, Zebra Cake=50
+    // recent calls: Apple Pie=3, Banana Bread=2, Zebra Cake=1
     expect(titles).toEqual(['Apple Pie', 'Banana Bread', 'Zebra Cake']);
   });
 
   test('trending mode sorts recipes by recipeCalls count from all users', async () => {
+    const now = new Date().toISOString();
     mockGetRecipeCalls.mockResolvedValueOnce([
-      { id: 'call-1', recipeId: '3' }, // Zebra Cake – 3 calls
-      { id: 'call-2', recipeId: '3' },
-      { id: 'call-3', recipeId: '3' },
-      { id: 'call-4', recipeId: '1' }, // Banana Bread – 1 call
+      { id: 'call-1', recipeId: '3', timestamp: now }, // Zebra Cake – 3 calls
+      { id: 'call-2', recipeId: '3', timestamp: now },
+      { id: 'call-3', recipeId: '3', timestamp: now },
+      { id: 'call-4', recipeId: '1', timestamp: now }, // Banana Bread – 1 call
     ]);
 
     render(
@@ -239,8 +267,60 @@ describe('RecipeList - Sort Swiper', () => {
 
     const cards = document.querySelectorAll('.recipe-card h3');
     const titles = Array.from(cards).map(c => c.textContent);
-    // Zebra Cake=3 calls, Banana Bread=1 call, Apple Pie=0 calls
-    expect(titles).toEqual(['Zebra Cake', 'Banana Bread', 'Apple Pie']);
+    // Zebra Cake=3 recent calls, Banana Bread=1 recent call, Apple Pie=0 recent calls (hidden)
+    expect(titles).toEqual(['Zebra Cake', 'Banana Bread']);
+  });
+
+  test('trending mode hides recipes with no calls in the last 30 days', async () => {
+    const oldDate = new Date(Date.now() - THIRTY_ONE_DAYS_MS).toISOString();
+    mockGetRecipeCalls.mockResolvedValueOnce([
+      { id: 'call-1', recipeId: '1', timestamp: oldDate }, // Banana Bread – only an old call
+    ]);
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Keine Trend-Rezepte!');
+    const cards = document.querySelectorAll('.recipe-card h3');
+    expect(cards).toHaveLength(0);
+  });
+
+  test('trending mode only counts calls from the last 30 days for sorting', async () => {
+    const now = new Date().toISOString();
+    const oldDate = new Date(Date.now() - THIRTY_ONE_DAYS_MS).toISOString();
+    mockGetRecipeCalls.mockResolvedValueOnce([
+      { id: 'call-1', recipeId: '1', timestamp: now },    // Banana Bread – 1 recent call
+      { id: 'call-2', recipeId: '2', timestamp: oldDate }, // Apple Pie – only old call (hidden)
+      { id: 'call-3', recipeId: '2', timestamp: oldDate },
+      { id: 'call-4', recipeId: '3', timestamp: now },    // Zebra Cake – 2 recent calls
+      { id: 'call-5', recipeId: '3', timestamp: now },
+    ]);
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Zebra Cake');
+    const cards = document.querySelectorAll('.recipe-card h3');
+    const titles = Array.from(cards).map(c => c.textContent);
+    // Zebra Cake=2 recent calls, Banana Bread=1 recent call; Apple Pie has no recent calls → hidden
+    expect(titles).toEqual(['Zebra Cake', 'Banana Bread']);
+    expect(titles).not.toContain('Apple Pie');
   });
 
   test('swiper is compact (no expanded class) by default', async () => {

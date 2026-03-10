@@ -4,6 +4,9 @@ import RecipeList from './RecipeList';
 import * as userFavorites from '../utils/userFavorites';
 import { DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 
+// Mock RecipeRating to avoid crypto.randomUUID() issues in the test environment
+jest.mock('./RecipeRating', () => () => null);
+
 // Mock the user management utility
 jest.mock('../utils/userManagement', () => ({
   canEditRecipes: jest.fn(() => true),
@@ -23,9 +26,13 @@ jest.mock('../utils/customLists', () => ({
   }
 }));
 
+// Provide recent calls for all recipe IDs used in this test file so that
+// trending mode (the default sort) shows recipe cards.
+const recentTimestamp = new Date().toISOString();
 jest.mock('../utils/recipeCallsFirestore', () => ({
-  getRecipeCalls: () => Promise.resolve([]),
+  getRecipeCalls: jest.fn(),
 }));
+const mockGetRecipeCalls = jest.requireMock('../utils/recipeCallsFirestore').getRecipeCalls;
 
 const mockRecipes = [
   {
@@ -43,6 +50,17 @@ const mockRecipes = [
     speisekategorie: 'Main Course'
   }
 ];
+
+// Default mock: return recent calls for all recipe IDs used in this file
+beforeEach(() => {
+  mockGetRecipeCalls.mockResolvedValue([
+    { id: 'call-1', recipeId: '1', timestamp: recentTimestamp },
+    { id: 'call-2', recipeId: '2', timestamp: recentTimestamp },
+    { id: 'call-3', recipeId: 'recipe-1', timestamp: recentTimestamp },
+    { id: 'call-4', recipeId: 'recipe-2', timestamp: recentTimestamp },
+    { id: 'call-5', recipeId: 'recipe-3', timestamp: recentTimestamp },
+  ]);
+});
 
 describe('RecipeList - Dynamic Heading', () => {
   test('shows "Rezepte" when no filters are active', () => {
@@ -232,7 +250,7 @@ describe('RecipeList - Version Display Order', () => {
     jest.restoreAllMocks();
   });
 
-  test('displays original recipe when no versions exist', () => {
+  test('displays original recipe when no versions exist', async () => {
     render(
       <RecipeList
         recipes={[originalRecipe]}
@@ -242,10 +260,10 @@ describe('RecipeList - Version Display Order', () => {
       />
     );
 
-    expect(screen.getByText('Original Recipe')).toBeInTheDocument();
+    expect(await screen.findByText('Original Recipe')).toBeInTheDocument();
   });
 
-  test('displays own version first when user has created a version', () => {
+  test('displays own version first when user has created a version', async () => {
     const recipes = [originalRecipe, version1, version2];
     
     render(
@@ -258,7 +276,7 @@ describe('RecipeList - Version Display Order', () => {
     );
 
     // Should display the current user's version (version2) which comes first in sorted order
-    expect(screen.getByText('Version 2 by Current User')).toBeInTheDocument();
+    expect(await screen.findByText('Version 2 by Current User')).toBeInTheDocument();
   });
 
   test('displays favorited version first when user has favorited a version', async () => {
@@ -287,7 +305,7 @@ describe('RecipeList - Version Display Order', () => {
     });
   });
 
-  test('displays original recipe first when no favorite or own version exists', () => {
+  test('displays original recipe first when no favorite or own version exists', async () => {
     const recipes = [originalRecipe, version1];
     const otherUser = { id: 'user-other', vorname: 'Other', nachname: 'User' };
     
@@ -301,7 +319,7 @@ describe('RecipeList - Version Display Order', () => {
     );
 
     // Should display the original recipe (version 0) which comes first
-    expect(screen.getByText('Original Recipe')).toBeInTheDocument();
+    expect(await screen.findByText('Original Recipe')).toBeInTheDocument();
   });
 });
 
@@ -370,7 +388,7 @@ describe('RecipeList - Version Count Display', () => {
     expect(versionCount).not.toBeInTheDocument();
   });
 
-  test('displays version count for recipe with multiple versions', () => {
+  test('displays version count for recipe with multiple versions', async () => {
     render(
       <RecipeList
         recipes={[mockRecipe2, mockRecipe2Version]}
@@ -381,12 +399,14 @@ describe('RecipeList - Version Count Display', () => {
     );
 
     // Verify the footer version count is displayed (badge is removed)
-    const versionCount = document.querySelector('.version-count');
-    expect(versionCount).toBeInTheDocument();
-    expect(versionCount).toHaveTextContent('2 Versionen');
+    await waitFor(() => {
+      const versionCount = document.querySelector('.version-count');
+      expect(versionCount).toBeInTheDocument();
+      expect(versionCount).toHaveTextContent('2 Versionen');
+    });
   });
 
-  test('version count has correct CSS class for orange color', () => {
+  test('version count has correct CSS class for orange color', async () => {
     render(
       <RecipeList
         recipes={[mockRecipe2, mockRecipe2Version]}
@@ -396,9 +416,11 @@ describe('RecipeList - Version Count Display', () => {
       />
     );
 
-    const versionCount = document.querySelector('.version-count');
-    expect(versionCount).toBeInTheDocument();
-    expect(versionCount).toHaveClass('version-count');
+    await waitFor(() => {
+      const versionCount = document.querySelector('.version-count');
+      expect(versionCount).toBeInTheDocument();
+      expect(versionCount).toHaveClass('version-count');
+    });
   });
 
   test('displays author name when present', async () => {
@@ -684,7 +706,7 @@ describe('RecipeList - Kulinarik Display', () => {
     jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
   });
 
-  test('displays kulinarik tags when recipe has kulinarik', () => {
+  test('displays kulinarik tags when recipe has kulinarik', async () => {
     const recipesWithKulinarik = [
       {
         id: '1',
@@ -701,7 +723,7 @@ describe('RecipeList - Kulinarik Display', () => {
       />
     );
 
-    expect(screen.getByText('Italienisch')).toBeInTheDocument();
+    expect(await screen.findByText('Italienisch')).toBeInTheDocument();
     expect(screen.getByText('Mediterran')).toBeInTheDocument();
   });
 
