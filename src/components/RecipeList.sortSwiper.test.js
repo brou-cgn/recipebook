@@ -554,7 +554,7 @@ describe('RecipeList - Sort Swiper', () => {
     expect(labels).toEqual(['Alphabetisch', 'Im Trend', 'Neue Rezepte', 'Nach Bewertung']);
   });
 
-  test('clicking "Nach Score" switches to score sort and shows it active', async () => {
+  test('clicking "Nach Bewertung" switches to score sort and shows it active', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
