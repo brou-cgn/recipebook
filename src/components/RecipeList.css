@@ -361,39 +361,26 @@
   }
 }
 
-/* Sort Swiper – full-width carousel with centred active option */
+/* Sort Swiper – collapsed by default, shows only active option */
 .sort-swiper {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: grab;
-  user-select: none;
-  touch-action: pan-x;
-}
-
-.sort-swiper.dragging {
-  cursor: grabbing;
+  cursor: pointer;
 }
 
 .sort-swiper-track {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 50px;
   white-space: nowrap;
-  will-change: transform;
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.sort-swiper.dragging .sort-swiper-track {
-  transition: none;
 }
 
 .sort-swiper-item {
@@ -407,7 +394,20 @@
   border-radius: 50px;
   white-space: nowrap;
   user-select: none;
-  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: background 0.2s ease, color 0.2s ease, max-width 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+  max-width: 200px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+/* Collapsed state: hide non-active items */
+.sort-swiper:not(.expanded) .sort-swiper-item:not(.active) {
+  max-width: 0;
+  opacity: 0;
+  padding-left: 0;
+  padding-right: 0;
+  pointer-events: none;
 }
 
 .sort-swiper-item.active {
@@ -426,5 +426,5 @@
 
 /* Add bottom padding so the swiper doesn't overlap recipe cards */
 .recipe-list-container {
-  padding-bottom: 60px;
+  padding-bottom: 80px;
 }
