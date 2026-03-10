@@ -450,6 +450,70 @@ describe('RecipeList - Sort Swiper', () => {
     expect(screen.getByText('Im Trend')).toHaveClass('active');
   });
 
+  test('touchMove > 10px expands the swiper automatically', async () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Im Trend');
+    const swiper = document.querySelector('.sort-swiper');
+    expect(swiper).not.toHaveClass('expanded');
+    fireEvent.touchStart(swiper, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(swiper, { touches: [{ clientX: 115 }] }); // delta +15 > 10px threshold
+    expect(swiper).toHaveClass('expanded');
+  });
+
+  test('touchMove <= 10px does not expand the swiper', async () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Im Trend');
+    const swiper = document.querySelector('.sort-swiper');
+    expect(swiper).not.toHaveClass('expanded');
+    fireEvent.touchStart(swiper, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(swiper, { touches: [{ clientX: 108 }] }); // delta +8 ≤ 10px threshold
+    expect(swiper).not.toHaveClass('expanded');
+  });
+
+  test('touch + move + swipe >= 50px changes sort mode and collapses in one gesture', async () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        categoryFilter=""
+        currentUser={{ id: 'user-1' }}
+        searchTerm=""
+      />
+    );
+
+    await screen.findByText('Im Trend');
+    const swiper = document.querySelector('.sort-swiper');
+    expect(swiper).not.toHaveClass('expanded');
+    // Start touch, move to expand, then swipe left >= 50px to change mode
+    fireEvent.touchStart(swiper, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(swiper, { touches: [{ clientX: 185 }] }); // expand
+    expect(swiper).toHaveClass('expanded');
+    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 100 }] }); // delta -100 → swipe left → Neue Rezepte
+    expect(screen.getByText('Neue Rezepte')).toHaveClass('active');
+    expect(swiper).not.toHaveClass('expanded');
+  });
+
   test('only the active option is visible by default; all options appear in the DOM', async () => {
     render(
       <RecipeList

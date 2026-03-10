@@ -58,6 +58,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const swiperRef = useRef(null);
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
+  const hasMovedRef = useRef(false);
 
   // Collapse swiper when user clicks/touches outside of it
   useEffect(() => {
@@ -78,6 +79,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const handleSwiperTouchStart = useCallback((e) => {
     touchStartXRef.current = e.touches[0].clientX;
     didSwipeRef.current = false;
+    hasMovedRef.current = false;
+  }, []);
+
+  const handleSwiperTouchMove = useCallback((e) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    if (Math.abs(deltaX) > 10 && !hasMovedRef.current) {
+      setSwiperExpanded(true);
+      hasMovedRef.current = true;
+    }
   }, []);
 
   const handleSwiperTouchEnd = useCallback((e) => {
@@ -442,6 +453,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         aria-label="Sortierung wählen"
         ref={swiperRef}
         onTouchStart={handleSwiperTouchStart}
+        onTouchMove={handleSwiperTouchMove}
         onTouchEnd={handleSwiperTouchEnd}
         onClick={handleSwiperContainerClick}
       >
