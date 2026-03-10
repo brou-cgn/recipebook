@@ -443,10 +443,6 @@
   display: none;
 }
 
-.sort-swiper-item.active .sort-swiper-dot {
-  display: none;
-}
-
 /* Long-press popup menu */
 .sort-swiper-longpress-menu {
   position: fixed;
