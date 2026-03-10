@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -54,7 +54,68 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
   const [recipeCalls, setRecipeCalls] = useState([]);
-  
+  const [swiperExpanded, setSwiperExpanded] = useState(false);
+  const swiperRef = useRef(null);
+  const touchStartXRef = useRef(null);
+  const didSwipeRef = useRef(false);
+
+  // Collapse swiper when user clicks/touches outside of it
+  useEffect(() => {
+    if (!swiperExpanded) return;
+    const handleOutside = (e) => {
+      if (swiperRef.current && !swiperRef.current.contains(e.target)) {
+        setSwiperExpanded(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+    };
+  }, [swiperExpanded]);
+
+  const handleSwiperTouchStart = useCallback((e) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    didSwipeRef.current = false;
+  }, []);
+
+  const handleSwiperTouchEnd = useCallback((e) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (Math.abs(deltaX) >= 50) {
+      didSwipeRef.current = true;
+      setSortMode((prev) => {
+        const currentIndex = SORT_MODES.findIndex(m => m.id === prev);
+        if (deltaX < 0) {
+          return SORT_MODES[(currentIndex + 1) % SORT_MODES.length].id;
+        } else {
+          return SORT_MODES[(currentIndex - 1 + SORT_MODES.length) % SORT_MODES.length].id;
+        }
+      });
+      setSwiperExpanded(false);
+    }
+  }, []);
+
+  const handleSwiperItemClick = useCallback((e, modeId) => {
+    e.stopPropagation();
+    if (didSwipeRef.current) {
+      didSwipeRef.current = false;
+      return;
+    }
+    if (!swiperExpanded) {
+      setSwiperExpanded(true);
+    } else {
+      setSortMode(modeId);
+      setSwiperExpanded(false);
+    }
+  }, [swiperExpanded]);
+
+  const handleSwiperContainerClick = useCallback(() => {
+    if (!swiperExpanded) setSwiperExpanded(true);
+  }, [swiperExpanded]);
+
   // Load all recipe calls once on mount for trending sort
   useEffect(() => {
     const loadRecipeCalls = async () => {
@@ -377,16 +438,21 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       )}
 
       <div
-        className="sort-swiper"
+        className={`sort-swiper${swiperExpanded ? ' expanded' : ''}`}
         aria-label="Sortierung wählen"
+        ref={swiperRef}
+        onTouchStart={handleSwiperTouchStart}
+        onTouchEnd={handleSwiperTouchEnd}
+        onClick={handleSwiperContainerClick}
       >
         <div className="sort-swiper-track">
           {SORT_MODES.map((mode) => (
             <button
               key={mode.id}
               className={`sort-swiper-item${sortMode === mode.id ? ' active' : ''}`}
-              onClick={() => setSortMode(mode.id)}
+              onClick={(e) => handleSwiperItemClick(e, mode.id)}
               aria-pressed={sortMode === mode.id}
+              tabIndex={swiperExpanded || mode.id === sortMode ? 0 : -1}
             >
               {mode.label}
             </button>

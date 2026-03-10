@@ -361,13 +361,14 @@
   }
 }
 
-/* Sort Swiper – single pill with all options visible */
+/* Sort Swiper – collapsed by default, shows only active option */
 .sort-swiper {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  cursor: pointer;
 }
 
 .sort-swiper-track {
@@ -394,7 +395,19 @@
   white-space: nowrap;
   user-select: none;
   touch-action: manipulation;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, max-width 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
+  max-width: 200px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+/* Collapsed state: hide non-active items */
+.sort-swiper:not(.expanded) .sort-swiper-item:not(.active) {
+  max-width: 0;
+  opacity: 0;
+  padding-left: 0;
+  padding-right: 0;
+  pointer-events: none;
 }
 
 .sort-swiper-item.active {
