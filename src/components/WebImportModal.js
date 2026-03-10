@@ -173,12 +173,12 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
                 {isInstagramReelUrl(url)
                   ? (progress < 70
                       ? 'Extrahiere Caption und Kommentare...'
-                      : '🤖 Analysiere Rezept...')
+                      : 'Analysiere Rezept...')
                   : (progress < 30
                       ? 'Analysiere Website-Struktur...'
                       : progress < 40
                         ? 'Extrahiere Rezeptdaten...'
-                        : '🤖 Analysiere Rezept...')}
+                        : 'Analysiere Rezept...')}
               </p>
               <div className="progress-container">
                 <div className="progress-bar">
