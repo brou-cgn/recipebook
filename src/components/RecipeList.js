@@ -17,6 +17,9 @@ const SORT_MODES = [
 
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
+// Must match the CSS `gap` on `.sort-swiper-track` in RecipeList.css (in pixels)
+const SWIPER_ITEM_GAP = 2;
+
 function isNewRecipe(recipe) {
   const ts = getTimestampMs(recipe?.createdAt);
   return ts > 0 && Date.now() - ts <= ONE_MONTH_MS;
@@ -60,6 +63,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
   const hasMovedRef = useRef(false);
+  const trackOffsetRef = useRef(0);   // current translateX (px) applied to the swiper track
+  const trackStartOffsetRef = useRef(0); // snapshot of trackOffsetRef (px) at each touchStart
+  const isTouchingRef = useRef(false);
 
   // Collapse swiper when user clicks/touches outside of it
   useEffect(() => {
@@ -77,11 +83,41 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
   }, [swiperExpanded]);
 
+  // Center the track so that the given mode's item is horizontally centered
+  const centerTrackOnMode = useCallback((modeId) => {
+    if (!swiperRef.current) return;
+    const track = swiperRef.current.querySelector('.sort-swiper-track');
+    if (!track) return;
+    const items = track.querySelectorAll('.sort-swiper-item');
+    const activeIndex = SORT_MODES.findIndex(m => m.id === modeId);
+    if (activeIndex === -1 || !items[activeIndex]) return;
+    const swiperWidth = swiperRef.current.offsetWidth;
+    let offsetLeft = 0;
+    for (let i = 0; i < activeIndex; i++) {
+      offsetLeft += items[i].offsetWidth + SWIPER_ITEM_GAP;
+    }
+    offsetLeft += items[activeIndex].offsetWidth / 2;
+    const translateX = swiperWidth / 2 - offsetLeft;
+    trackOffsetRef.current = translateX;
+    track.style.transition = ''; // restore CSS-defined transition after drag was disabled
+    track.style.transform = `translateX(${translateX}px)`;
+  }, []);
+
+  // Re-center the track whenever the active mode changes (but not during an active touch gesture)
+  useEffect(() => {
+    if (isTouchingRef.current) return;
+    if (!swiperExpanded) return;
+    centerTrackOnMode(previewMode || sortMode);
+  }, [sortMode, previewMode, swiperExpanded, centerTrackOnMode]);
+
   const handleSwiperTouchStart = useCallback((e) => {
     touchStartXRef.current = e.touches[0].clientX;
     didSwipeRef.current = false;
     hasMovedRef.current = false;
+    isTouchingRef.current = true;
     setPreviewMode(null);
+    // Snapshot the current track offset so we can move it incrementally
+    trackStartOffsetRef.current = trackOffsetRef.current;
   }, []);
 
   const handleSwiperTouchMove = useCallback((e) => {
@@ -92,18 +128,35 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       hasMovedRef.current = true;
     }
 
-    if (swiperRef.current) {
-      const touch = e.touches[0];
-      const buttons = swiperRef.current.querySelectorAll('.sort-swiper-item');
-      let hoveredMode = null;
-      buttons.forEach(button => {
-        const rect = button.getBoundingClientRect();
-        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-          hoveredMode = button.getAttribute('data-mode-id');
-        }
-      });
-      setPreviewMode(hoveredMode);
+    if (swiperRef.current && hasMovedRef.current) {
+      const track = swiperRef.current.querySelector('.sort-swiper-track');
+      // Move the track with the finger (no transition while dragging)
+      const newOffset = trackStartOffsetRef.current + deltaX;
+      trackOffsetRef.current = newOffset;
+      track.style.transition = 'none';
+      track.style.transform = `translateX(${newOffset}px)`;
+
+      // Determine which item is closest to the swiper's horizontal center.
+      // Skip this when layout is unavailable (e.g. jsdom where offsetWidth returns 0)
+      // so that the direction-based fallback in touchEnd still works in tests.
+      const swiperWidth = swiperRef.current.offsetWidth;
+      if (swiperWidth > 0) {
+        const swiperRect = swiperRef.current.getBoundingClientRect();
+        const swiperCenter = swiperRect.left + swiperWidth / 2;
+        const items = track.querySelectorAll('.sort-swiper-item');
+        let closestMode = null;
+        let closestDist = Infinity;
+        items.forEach(item => {
+          const rect = item.getBoundingClientRect();
+          const itemCenter = (rect.left + rect.right) / 2;
+          const dist = Math.abs(itemCenter - swiperCenter);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestMode = item.getAttribute('data-mode-id');
+          }
+        });
+        setPreviewMode(closestMode);
+      }
     }
   }, []);
 
@@ -111,6 +164,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     if (touchStartXRef.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
     touchStartXRef.current = null;
+    isTouchingRef.current = false;
 
     if (previewMode) {
       didSwipeRef.current = true;

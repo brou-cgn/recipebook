@@ -861,8 +861,14 @@ describe('RecipeList - Sort Swiper', () => {
       await screen.findByText('Im Trend');
       const swiper = document.querySelector('.sort-swiper');
 
-      // Mock getBoundingClientRect so button for 'Alphabetisch' (data-mode-id="alphabetical")
-      // covers x: 0-100, y: 0-50
+      // Give the swiper a non-zero width so the carousel center-proximity logic activates.
+      // swiperCenter = 0 (getBoundingClientRect default left) + 300/2 = 150
+      Object.defineProperty(swiper, 'offsetWidth', { value: 300, configurable: true });
+
+      // Mock getBoundingClientRect so 'Alphabetisch' (data-mode-id="alphabetical")
+      // has its center at x=50 — distance 100 from swiperCenter (150).
+      // All other buttons remain at the jsdom default (center 0, distance 150),
+      // so 'Alphabetisch' is closest to the swiper center.
       const alphabeticalBtn = swiper.querySelector('[data-mode-id="alphabetical"]');
       jest.spyOn(alphabeticalBtn, 'getBoundingClientRect').mockReturnValue({
         left: 0, right: 100, top: 0, bottom: 50,
@@ -873,7 +879,7 @@ describe('RecipeList - Sort Swiper', () => {
       fireEvent.touchMove(swiper, { touches: [{ clientX: 185, clientY: 25 }] });
       expect(swiper).toHaveClass('expanded');
 
-      // Move finger over the 'Alphabetisch' button area
+      // Move finger — track moves so 'Alphabetisch' is closest to swiper center
       fireEvent.touchMove(swiper, { touches: [{ clientX: 50, clientY: 25 }] });
 
       // 'Alphabetisch' should be shown as active (preview), 'Im Trend' should not be active
@@ -896,6 +902,9 @@ describe('RecipeList - Sort Swiper', () => {
       await screen.findByText('Im Trend');
       const swiper = document.querySelector('.sort-swiper');
 
+      // Give the swiper a non-zero width so the carousel center-proximity logic activates.
+      Object.defineProperty(swiper, 'offsetWidth', { value: 300, configurable: true });
+
       const alphabeticalBtn = swiper.querySelector('[data-mode-id="alphabetical"]');
       jest.spyOn(alphabeticalBtn, 'getBoundingClientRect').mockReturnValue({
         left: 0, right: 100, top: 0, bottom: 50,
@@ -903,7 +912,7 @@ describe('RecipeList - Sort Swiper', () => {
 
       fireEvent.touchStart(swiper, { touches: [{ clientX: 200, clientY: 25 }] });
       fireEvent.touchMove(swiper, { touches: [{ clientX: 185, clientY: 25 }] });
-      // Move over 'Alphabetisch' button
+      // Move so 'Alphabetisch' is closest to swiper center
       fireEvent.touchMove(swiper, { touches: [{ clientX: 50, clientY: 25 }] });
 
       // Release finger — previewMode ('alphabetical') should be committed
