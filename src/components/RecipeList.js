@@ -57,6 +57,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [swiperExpanded, setSwiperExpanded] = useState(false);
   const [previewMode, setPreviewMode] = useState(null);
   const swiperRef = useRef(null);
+  const trackRef = useRef(null);
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
   const hasMovedRef = useRef(false);
@@ -74,6 +75,54 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     return () => {
       document.removeEventListener('mousedown', handleOutside);
       document.removeEventListener('touchstart', handleOutside);
+    };
+  }, [swiperExpanded]);
+
+  // When the swiper expands, instantly scroll the active item to the center of the track
+  useEffect(() => {
+    if (!swiperExpanded || !trackRef.current) return;
+    const track = trackRef.current;
+    if (typeof track.scrollTo !== 'function') return;
+    const activeBtn = track.querySelector('.sort-swiper-item.active');
+    if (!activeBtn) return;
+    const scrollLeft = activeBtn.offsetLeft - (track.offsetWidth - activeBtn.offsetWidth) / 2;
+    track.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'instant' });
+  }, [swiperExpanded]);
+
+  // After native scroll-snap settles, commit the centered item as the new sort mode
+  useEffect(() => {
+    if (!swiperExpanded || !trackRef.current) return;
+    const track = trackRef.current;
+    let scrollTimer = null;
+
+    const handleScrollEnd = () => {
+      const center = track.scrollLeft + track.offsetWidth / 2;
+      const buttons = Array.from(track.querySelectorAll('.sort-swiper-item'));
+      let closestMode = null;
+      let minDist = Infinity;
+      buttons.forEach(btn => {
+        const btnCenter = btn.offsetLeft + btn.offsetWidth / 2;
+        const dist = Math.abs(btnCenter - center);
+        if (dist < minDist) {
+          minDist = dist;
+          closestMode = btn.getAttribute('data-mode-id');
+        }
+      });
+      if (closestMode) {
+        setSortMode(closestMode);
+        setSwiperExpanded(false);
+      }
+    };
+
+    const handleScroll = () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(handleScrollEnd, 150);
+    };
+
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      track.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimer);
     };
   }, [swiperExpanded]);
 
@@ -482,7 +531,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         onTouchEnd={handleSwiperTouchEnd}
         onClick={handleSwiperContainerClick}
       >
-        <div className="sort-swiper-track">
+        <div className="sort-swiper-track" ref={trackRef}>
           {SORT_MODES.map((mode) => (
             <button
               key={mode.id}

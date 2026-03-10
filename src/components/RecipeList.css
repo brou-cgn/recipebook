@@ -371,6 +371,13 @@
   cursor: pointer;
 }
 
+/* Expanded state: constrain the window so the track can overflow and scroll */
+.sort-swiper.expanded {
+  max-width: min(300px, 92vw);
+  overflow: hidden;
+  cursor: default;
+}
+
 .sort-swiper-track {
   display: flex;
   align-items: center;
@@ -383,9 +390,30 @@
   white-space: nowrap;
 }
 
+/* Expanded track: enable CSS scroll-snap carousel */
+.sort-swiper.expanded .sort-swiper-track {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.sort-swiper.expanded .sort-swiper-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Spacers before the first and after the last item so they can scroll to center */
+.sort-swiper.expanded .sort-swiper-track::before,
+.sort-swiper.expanded .sort-swiper-track::after {
+  content: '';
+  flex: 0 0 calc(50% - 70px);
+}
+
 .sort-swiper-item {
   position: relative;
   z-index: 0;
+  flex-shrink: 0;
+  scroll-snap-align: center;
   padding: 7px 14px;
   font-size: 0.8rem;
   font-weight: 600;
