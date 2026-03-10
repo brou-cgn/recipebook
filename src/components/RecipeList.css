@@ -369,8 +369,6 @@
   transform: translateX(-50%);
   z-index: 100;
   cursor: pointer;
-  overflow: hidden;
-  width: min(90%, 320px);
 }
 
 .sort-swiper-track {
@@ -383,8 +381,6 @@
   -webkit-backdrop-filter: blur(12px);
   border-radius: 50px;
   white-space: nowrap;
-  width: max-content;
-  transition: transform 0.3s ease;
 }
 
 .sort-swiper-item {
