@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecipeList from './RecipeList';
 
@@ -340,7 +340,7 @@ describe('RecipeList - Sort Swiper', () => {
     expect(swiper).not.toHaveClass('expanded');
   });
 
-  test('swiper gains expanded class on touch start', async () => {
+  test('all sort options are always visible in the pill', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -354,11 +354,15 @@ describe('RecipeList - Sort Swiper', () => {
 
     await screen.findByText('Im Trend');
     const swiper = document.querySelector('.sort-swiper');
-    fireEvent.touchStart(swiper);
-    expect(swiper).toHaveClass('expanded');
+    expect(swiper).not.toHaveClass('expanded');
+    // All options are always visible in the pill
+    expect(swiper).toContainElement(screen.getByText('Alphabetisch'));
+    expect(swiper).toContainElement(screen.getByText('Im Trend'));
+    expect(swiper).toContainElement(screen.getByText('Neue Rezepte'));
+    expect(swiper).toContainElement(screen.getByText('Nach Score'));
   });
 
-  test('swiper loses expanded class after touch end delay', async () => {
+  test('options appear in correct order: Alphabetisch, Im Trend, Neue Rezepte, Nach Score', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -370,25 +374,10 @@ describe('RecipeList - Sort Swiper', () => {
       />
     );
 
-    // Wait for component to finish async loading with real timers
     await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-
-    // Switch to fake timers after async loading is done
-    jest.useFakeTimers();
-
-    fireEvent.touchStart(swiper);
-    expect(swiper).toHaveClass('expanded');
-
-    fireEvent.touchEnd(swiper);
-
-    // Advance past the 500ms collapse delay and flush React state updates
-    act(() => {
-      jest.advanceTimersByTime(500);
-    });
-    expect(swiper).not.toHaveClass('expanded');
-
-    jest.useRealTimers();
+    const buttons = document.querySelectorAll('.sort-swiper-item');
+    const labels = Array.from(buttons).map(b => b.textContent);
+    expect(labels).toEqual(['Alphabetisch', 'Im Trend', 'Neue Rezepte', 'Nach Score']);
   });
 
   test('clicking "Nach Score" switches to score sort and shows it active', async () => {

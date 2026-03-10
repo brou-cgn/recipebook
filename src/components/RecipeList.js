@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -9,10 +9,10 @@ import RecipeRating from './RecipeRating';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
 
 const SORT_MODES = [
-  { id: 'trending', label: 'Im Trend' },
   { id: 'alphabetical', label: 'Alphabetisch' },
-  { id: 'score', label: 'Nach Score' },
+  { id: 'trending', label: 'Im Trend' },
   { id: 'new', label: 'Neue Rezepte' },
+  { id: 'score', label: 'Nach Score' },
 ];
 
 const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -23,10 +23,6 @@ function isNewRecipe(recipe) {
 }
 
 const SCORE_M = 5; // Minimum number of ratings for full weighting in Bayesian score
-const SWIPER_ITEM_TOTAL = 154; // 130px item + 2×12px margin = total slot width for scroll math
-const SCROLL_SNAP_THRESHOLD = 5; // px – minimum distance before programmatic scroll is triggered
-const HAPTIC_SNAP_MS = 10; // vibration duration on snap/menu open (ms)
-const HAPTIC_HOVER_MS = 5; // vibration duration on long-press option hover (ms)
 
 function getTimestampMs(ts) {
   if (!ts) return 0;
@@ -58,23 +54,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
   const [recipeCalls, setRecipeCalls] = useState([]);
-  const trackRef = useRef(null);
-  const itemRefs = useRef([]);
-  const scrollEndTimer = useRef(null);
-  const longPressTimer = useRef(null);
-  const longPressMenuOpenRef = useRef(false);
-  const highlightedModeRef = useRef(null);
-  const touchMoved = useRef(false);
-  const sortModeRef = useRef('trending');
-  const swiperRef = useRef(null);
-  const isDragging = useRef(false);
-  const dragStartX = useRef(0);
-  const dragStartScrollLeft = useRef(0);
-
-  const [longPressMenuVisible, setLongPressMenuVisible] = useState(false);
-  const [highlightedMode, setHighlightedMode] = useState(null);
-  const [swiperExpanded, setSwiperExpanded] = useState(false);
-  const collapseTimerRef = useRef(null);
   
   // Load all recipe calls once on mount for trending sort
   useEffect(() => {
@@ -141,76 +120,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     loadFavorites();
   }, [currentUser?.id]);
 
-  // Keep sortModeRef in sync for use in non-reactive callbacks
-  useEffect(() => {
-    sortModeRef.current = sortMode;
-  }, [sortMode]);
-
-  // Sync sortMode → scroll position and update progressive scaling
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    const idx = SORT_MODES.findIndex(m => m.id === sortMode);
-    const targetScroll = idx * SWIPER_ITEM_TOTAL;
-    if (typeof track.scrollTo === 'function' && Math.abs(track.scrollLeft - targetScroll) > SCROLL_SNAP_THRESHOLD) {
-      track.scrollTo({ left: targetScroll, behavior: 'smooth' });
-    }
-    SORT_MODES.forEach((_, i) => {
-      const item = itemRefs.current[i];
-      if (!item) return;
-      const distance = Math.abs(track.scrollLeft - i * SWIPER_ITEM_TOTAL);
-      const normalized = Math.min(distance / SWIPER_ITEM_TOTAL, 1);
-      item.style.transform = `scale(${1 - normalized * 0.3})`;
-      item.style.opacity = Math.max(0.4, 1 - normalized * 0.6);
-    });
-  }, [sortMode]);
-
-  // Attach non-passive touchmove listener for long-press menu navigation
-  useEffect(() => {
-    const swiper = swiperRef.current;
-    if (!swiper) return;
-    const handleTouchMoveDirect = (e) => {
-      if (!longPressMenuOpenRef.current) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      const el = document.elementFromPoint(touch.clientX, touch.clientY);
-      const menuItem = el?.closest('[data-mode-id]');
-      if (menuItem) {
-        const modeId = menuItem.dataset.modeId;
-        if (modeId && modeId !== highlightedModeRef.current) {
-          navigator.vibrate?.(HAPTIC_HOVER_MS);
-          highlightedModeRef.current = modeId;
-          setHighlightedMode(modeId);
-        }
-      }
-    };
-    swiper.addEventListener('touchmove', handleTouchMoveDirect, { passive: false });
-    return () => swiper.removeEventListener('touchmove', handleTouchMoveDirect);
-  }, []);
-
-  // Clean up collapse timer on unmount to prevent state updates on unmounted component
-  useEffect(() => {
-    return () => clearTimeout(collapseTimerRef.current);
-  }, []);
-
-  // Mouse drag support for desktop
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging.current || !trackRef.current) return;
-      trackRef.current.scrollLeft = dragStartScrollLeft.current + (dragStartX.current - e.clientX);
-    };
-    const handleMouseUp = () => {
-      isDragging.current = false;
-      collapseTimerRef.current = setTimeout(() => setSwiperExpanded(false), 500);
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
-  
   // Generate dynamic heading based on filters
   const getHeading = () => {
     if (activePrivateListName) {
@@ -347,81 +256,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     return author.vorname;
   };
 
-  const activeSortIndex = SORT_MODES.findIndex(m => m.id === sortMode);
-
-  // Scroll handler: progressive scaling + debounced snap detection
-  const handleTrackScroll = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    const scrollLeft = track.scrollLeft;
-    SORT_MODES.forEach((_, i) => {
-      const item = itemRefs.current[i];
-      if (!item) return;
-      const distance = Math.abs(scrollLeft - i * SWIPER_ITEM_TOTAL);
-      const normalized = Math.min(distance / SWIPER_ITEM_TOTAL, 1);
-      item.style.transform = `scale(${1 - normalized * 0.3})`;
-      item.style.opacity = Math.max(0.4, 1 - normalized * 0.6);
-    });
-    clearTimeout(scrollEndTimer.current);
-    scrollEndTimer.current = setTimeout(() => {
-      const newIdx = Math.max(0, Math.min(SORT_MODES.length - 1, Math.round(track.scrollLeft / SWIPER_ITEM_TOTAL)));
-      const newMode = SORT_MODES[newIdx].id;
-      if (newMode !== sortModeRef.current) {
-        navigator.vibrate?.(HAPTIC_SNAP_MS);
-        setSortMode(newMode);
-      }
-    }, 100);
-  };
-
-  // Touch start: expand swiper and begin long-press timer
-  const handleSwiperTouchStart = () => {
-    clearTimeout(collapseTimerRef.current);
-    setSwiperExpanded(true);
-    touchMoved.current = false;
-    clearTimeout(longPressTimer.current);
-    longPressTimer.current = setTimeout(() => {
-      if (!touchMoved.current) {
-        longPressMenuOpenRef.current = true;
-        highlightedModeRef.current = sortModeRef.current;
-        navigator.vibrate?.(HAPTIC_SNAP_MS);
-        setHighlightedMode(sortModeRef.current);
-        setLongPressMenuVisible(true);
-      }
-    }, 500);
-  };
-
-  // Touch move (React synthetic): cancel long-press on significant move
-  const handleSwiperTouchMoveReact = () => {
-    if (!longPressMenuOpenRef.current) {
-      touchMoved.current = true;
-      clearTimeout(longPressTimer.current);
-    }
-  };
-
-  // Touch end: commit long-press selection and schedule swiper collapse
-  const handleSwiperTouchEnd = () => {
-    clearTimeout(longPressTimer.current);
-    if (longPressMenuOpenRef.current) {
-      if (highlightedModeRef.current) {
-        setSortMode(highlightedModeRef.current);
-      }
-      setLongPressMenuVisible(false);
-      longPressMenuOpenRef.current = false;
-      setHighlightedMode(null);
-      highlightedModeRef.current = null;
-    }
-    collapseTimerRef.current = setTimeout(() => setSwiperExpanded(false), 500);
-  };
-
-  // Mouse down: start drag for desktop and expand swiper
-  const handleTrackMouseDown = (e) => {
-    clearTimeout(collapseTimerRef.current);
-    setSwiperExpanded(true);
-    isDragging.current = true;
-    dragStartX.current = e.clientX;
-    dragStartScrollLeft.current = trackRef.current?.scrollLeft ?? 0;
-  };
-
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
@@ -543,48 +377,21 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       )}
 
       <div
-        className={`sort-swiper${swiperExpanded ? ' expanded' : ''}`}
-        ref={swiperRef}
-        onTouchStart={handleSwiperTouchStart}
-        onTouchMove={handleSwiperTouchMoveReact}
-        onTouchEnd={handleSwiperTouchEnd}
+        className="sort-swiper"
         aria-label="Sortierung wählen"
       >
-        <div
-          className="sort-swiper-track"
-          ref={trackRef}
-          onScroll={handleTrackScroll}
-          onMouseDown={handleTrackMouseDown}
-        >
-          <div className="sort-swiper-spacer" aria-hidden="true" />
-          {SORT_MODES.map((mode, index) => (
+        <div className="sort-swiper-track">
+          {SORT_MODES.map((mode) => (
             <button
               key={mode.id}
-              ref={el => { itemRefs.current[index] = el; }}
               className={`sort-swiper-item${sortMode === mode.id ? ' active' : ''}`}
               onClick={() => setSortMode(mode.id)}
               aria-pressed={sortMode === mode.id}
             >
               {mode.label}
-              <span className="sort-swiper-dot" aria-hidden="true" />
             </button>
           ))}
-          <div className="sort-swiper-spacer" aria-hidden="true" />
         </div>
-        {longPressMenuVisible && (
-          <div className="sort-swiper-longpress-menu" role="menu" aria-label="Sortieroption wählen">
-            {SORT_MODES.map((mode) => (
-              <div
-                key={mode.id}
-                className={`sort-swiper-longpress-item${highlightedMode === mode.id ? ' highlighted' : ''}`}
-                data-mode-id={mode.id}
-                role="menuitem"
-              >
-                {mode.label}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
