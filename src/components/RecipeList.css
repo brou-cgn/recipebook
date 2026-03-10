@@ -428,7 +428,7 @@
 }
 
 .sort-swiper-item.active {
-  color: white;
+  color: #FFD60A;
   font-size: 0.95rem;
 }
 
@@ -438,20 +438,13 @@
   border-radius: 4px;
 }
 
-/* Yellow dot indicator under active item */
+/* Yellow dot indicator under active item - hidden */
 .sort-swiper-dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #FFD60A;
-  margin: 4px auto 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  display: none;
 }
 
 .sort-swiper-item.active .sort-swiper-dot {
-  opacity: 1;
+  display: none;
 }
 
 /* Long-press popup menu */
