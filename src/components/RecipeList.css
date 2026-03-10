@@ -381,7 +381,6 @@
   -webkit-backdrop-filter: blur(12px);
   border-radius: 50px;
   white-space: nowrap;
-  will-change: transform;
 }
 
 .sort-swiper-item {
@@ -441,26 +440,6 @@
 .sort-swiper-item:focus-visible {
   outline: 2px solid rgba(255, 221, 0, 0.8);
   outline-offset: 2px;
-}
-
-/* Fixed position indicator – always at the center of the swiper, never moves with the track */
-.sort-swiper-indicator {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 70px;
-  border: 1.5px solid rgba(255, 221, 0, 0.35);
-  border-radius: 50px;
-  pointer-events: none;
-  z-index: 2;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.sort-swiper.expanded .sort-swiper-indicator {
-  opacity: 1;
 }
 
 /* Add bottom padding so the swiper doesn't overlap recipe cards */

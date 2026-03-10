@@ -57,11 +57,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [swiperExpanded, setSwiperExpanded] = useState(false);
   const [previewMode, setPreviewMode] = useState(null);
   const swiperRef = useRef(null);
-  const trackRef = useRef(null);
   const touchStartXRef = useRef(null);
   const didSwipeRef = useRef(false);
   const hasMovedRef = useRef(false);
-  const baseTrackOffsetRef = useRef(0);
 
   // Collapse swiper when user clicks/touches outside of it
   useEffect(() => {
@@ -84,12 +82,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     didSwipeRef.current = false;
     hasMovedRef.current = false;
     setPreviewMode(null);
-    if (trackRef.current) {
-      const transform = trackRef.current.style.transform;
-      const match = transform.match(/translateX\((-?[\d.]+)px\)/);
-      baseTrackOffsetRef.current = match ? parseFloat(match[1]) : 0;
-      trackRef.current.style.transition = 'none';
-    }
   }, []);
 
   const handleSwiperTouchMove = useCallback((e) => {
@@ -113,21 +105,12 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
       setPreviewMode(hoveredMode);
     }
-
-    // Translate track in real-time for carousel drag feel
-    if (trackRef.current && hasMovedRef.current) {
-      trackRef.current.style.transform = `translateX(${baseTrackOffsetRef.current + deltaX}px)`;
-    }
   }, []);
 
   const handleSwiperTouchEnd = useCallback((e) => {
     if (touchStartXRef.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
     touchStartXRef.current = null;
-
-    if (trackRef.current) {
-      trackRef.current.style.transition = 'transform 0.3s ease';
-    }
 
     if (previewMode) {
       didSwipeRef.current = true;
@@ -148,16 +131,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         }
       });
       setSwiperExpanded(false);
-    } else if (swiperExpanded && trackRef.current && swiperRef.current) {
-      // Small drag: snap track back to current active item
-      const activeId = previewMode || sortMode;
-      const activeButton = trackRef.current.querySelector(`[data-mode-id="${activeId}"]`);
-      if (activeButton) {
-        const offset = swiperRef.current.offsetWidth / 2 - (activeButton.offsetLeft + activeButton.offsetWidth / 2);
-        trackRef.current.style.transform = `translateX(${offset}px)`;
-      }
     }
-  }, [previewMode, swiperExpanded, sortMode]);
+  }, [previewMode]);
 
   const handleSwiperItemClick = useCallback((e, modeId) => {
     e.stopPropagation();
@@ -177,27 +152,22 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     if (!swiperExpanded) setSwiperExpanded(true);
   }, [swiperExpanded]);
 
-  // Keep the active pill horizontally centered on screen when the swiper is expanded.
-  // The container (.sort-swiper) position never changes — only the track translates,
-  // so the position indicator stays fixed at the same spot during swiping.
+  // Keep the active pill horizontally centered on screen when the swiper is expanded
   useLayoutEffect(() => {
-    const track = trackRef.current;
     const swiper = swiperRef.current;
-    if (!track || !swiper) return;
+    if (!swiper) return;
     if (!swiperExpanded) {
-      track.style.transform = '';
+      swiper.style.transform = '';
       return;
     }
-    // Don't override the track position while a drag is in progress
-    if (touchStartXRef.current !== null) return;
     const activeId = previewMode || sortMode;
-    const activeButton = track.querySelector(`[data-mode-id="${activeId}"]`);
+    const activeButton = swiper.querySelector(`[data-mode-id="${activeId}"]`);
     if (!activeButton) return;
     const swiperWidth = swiper.offsetWidth;
     const activeLeft = activeButton.offsetLeft;
     const activeWidth = activeButton.offsetWidth;
     const offset = swiperWidth / 2 - (activeLeft + activeWidth / 2);
-    track.style.transform = `translateX(${offset}px)`;
+    swiper.style.transform = `translateX(calc(-50% + ${offset}px))`;
   }, [swiperExpanded, sortMode, previewMode]);
 
   // Load all recipe calls once on mount for trending sort
@@ -530,7 +500,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         onTouchEnd={handleSwiperTouchEnd}
         onClick={handleSwiperContainerClick}
       >
-        <div className="sort-swiper-track" ref={trackRef}>
+        <div className="sort-swiper-track">
           {SORT_MODES.map((mode) => (
             <button
               key={mode.id}
@@ -546,7 +516,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             </button>
           ))}
         </div>
-        <div className="sort-swiper-indicator" aria-hidden="true" />
       </div>
     </div>
   );
