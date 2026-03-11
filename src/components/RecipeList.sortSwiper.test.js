@@ -60,7 +60,7 @@ describe('RecipeList - Sort Swiper', () => {
     mockGetRecipeCalls.mockResolvedValue([]);
   });
 
-  test('renders sort swiper with "Im Trend", "Alphabetisch" and "Nach Bewertung" options', async () => {
+  test('renders sort swiper with "Im Trend" and "Alphabetisch" options', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -74,7 +74,6 @@ describe('RecipeList - Sort Swiper', () => {
 
     expect(await screen.findByText('Im Trend')).toBeInTheDocument();
     expect(screen.getByText('Alphabetisch')).toBeInTheDocument();
-    expect(screen.getByText('Nach Bewertung')).toBeInTheDocument();
   });
 
   test('"Im Trend" is active by default', async () => {
@@ -308,170 +307,5 @@ describe('RecipeList - Sort Swiper', () => {
     expect(swiper).not.toHaveClass('expanded');
 
     jest.useRealTimers();
-  });
-
-  test('clicking "Nach Bewertung" switches to score sort and shows it active', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Nach Bewertung');
-    fireEvent.click(screen.getByText('Nach Bewertung'));
-
-    expect(screen.getByText('Nach Bewertung')).toHaveClass('active');
-    expect(screen.getByText('Im Trend')).not.toHaveClass('active');
-    expect(screen.getByText('Alphabetisch')).not.toHaveClass('active');
-  });
-
-  test('score mode sorts recipes by Bayesian score descending', async () => {
-    const ratedRecipes = [
-      {
-        id: '1',
-        title: 'High Rated',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 5,
-        ratingCount: 20,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-      },
-      {
-        id: '2',
-        title: 'Low Rated',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 2,
-        ratingCount: 20,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-      },
-      {
-        id: '3',
-        title: 'Medium Rated',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 3.5,
-        ratingCount: 20,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-      },
-    ];
-
-    render(
-      <RecipeList
-        recipes={ratedRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'u1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Nach Bewertung');
-    fireEvent.click(screen.getByText('Nach Bewertung'));
-
-    await screen.findByText('High Rated');
-    const cards = document.querySelectorAll('.recipe-card h3');
-    const titles = Array.from(cards).map(c => c.textContent);
-    expect(titles).toEqual(['High Rated', 'Medium Rated', 'Low Rated']);
-  });
-
-  test('score mode falls back to alphabetical when scores are equal', async () => {
-    const equalScoreRecipes = [
-      {
-        id: '1',
-        title: 'Zebra Soup',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 4,
-        ratingCount: 10,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-      },
-      {
-        id: '2',
-        title: 'Apple Strudel',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 4,
-        ratingCount: 10,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-      },
-    ];
-
-    render(
-      <RecipeList
-        recipes={equalScoreRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'u1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Nach Bewertung');
-    fireEvent.click(screen.getByText('Nach Bewertung'));
-
-    await screen.findByText('Apple Strudel');
-    const cards = document.querySelectorAll('.recipe-card h3');
-    const titles = Array.from(cards).map(c => c.textContent);
-    expect(titles).toEqual(['Apple Strudel', 'Zebra Soup']);
-  });
-
-  test('score mode falls back to createdAt when scores and titles are equal', async () => {
-    const equalScoreTitleRecipes = [
-      {
-        id: '1',
-        title: 'Pasta',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 4,
-        ratingCount: 10,
-        createdAt: '2024-01-01T00:00:00Z',
-        authorId: 'u1',
-        kulinarik: ['Older'],
-      },
-      {
-        id: '2',
-        title: 'Pasta',
-        ingredients: [],
-        steps: [],
-        ratingAvg: 4,
-        ratingCount: 10,
-        createdAt: '2024-06-01T00:00:00Z',
-        authorId: 'u1',
-        kulinarik: ['Newer'],
-      },
-    ];
-
-    render(
-      <RecipeList
-        recipes={equalScoreTitleRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'u1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Nach Bewertung');
-    fireEvent.click(screen.getByText('Nach Bewertung'));
-
-    // Both cards have the title 'Pasta'; use kulinarik tags to verify order.
-    // The newer recipe (June, id '2', kulinarik 'Newer') must appear before
-    // the older recipe (January, id '1', kulinarik 'Older').
-    const tags = Array.from(document.querySelectorAll('.kulinarik-tag')).map(el => el.textContent);
-    expect(tags).toEqual(['Newer', 'Older']);
   });
 });

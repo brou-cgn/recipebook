@@ -11,10 +11,8 @@ import { getRecipeCalls } from '../utils/recipeCallsFirestore';
 const SORT_MODES = [
   { id: 'trending', label: 'Im Trend' },
   { id: 'alphabetical', label: 'Alphabetisch' },
-  { id: 'score', label: 'Nach Score' },
 ];
 
-const SCORE_M = 5; // Minimum number of ratings for full weighting in Bayesian score
 const SWIPER_ITEM_TOTAL = 154; // 130px item + 2×12px margin = total slot width for scroll math
 const SCROLL_SNAP_THRESHOLD = 5; // px – minimum distance before programmatic scroll is triggered
 const HAPTIC_SNAP_MS = 10; // vibration duration on snap/menu open (ms)
@@ -233,29 +231,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
     }
 
-    // Compute global average rating C for Bayesian score (across all recipe groups)
-    const ratedRecipes = allRecipeGroups
-      .map(g => g.primaryRecipe)
-      .filter(r => r && r.ratingCount > 0 && r.ratingAvg != null);
-    const globalAvgC = ratedRecipes.length > 0
-      ? ratedRecipes.reduce((sum, r) => sum + r.ratingAvg, 0) / ratedRecipes.length
-      : 0;
-
-    const getBayesianScore = (recipe) => {
-      const v = recipe?.ratingCount || 0;
-      const R = recipe?.ratingAvg || 0;
-      return (v / (v + SCORE_M)) * R + (SCORE_M / (v + SCORE_M)) * globalAvgC;
-    };
-
-    // Shared tiebreaker: alphabetical A–Z, then newest first
-    const compareTitleAndDate = (recipeA, recipeB) => {
-      const titleA = recipeA?.title?.toLowerCase() || '';
-      const titleB = recipeB?.title?.toLowerCase() || '';
-      const titleCompare = titleA.localeCompare(titleB);
-      if (titleCompare !== 0) return titleCompare;
-      return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
-    };
-
     // Sort groups by selected sort mode (use spread to avoid mutating source array)
     return [...filteredGroups].sort((a, b) => {
       const recipeA = a.primaryRecipe;
@@ -266,18 +241,22 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         const groupViewCountA = a.allRecipes.reduce((sum, r) => sum + (viewCountMap[r.id] || 0), 0);
         const groupViewCountB = b.allRecipes.reduce((sum, r) => sum + (viewCountMap[r.id] || 0), 0);
         if (groupViewCountA !== groupViewCountB) return groupViewCountB - groupViewCountA;
-        // 2+3. Title alphabetical A–Z, then newest first
-        return compareTitleAndDate(recipeA, recipeB);
-      } else if (sortMode === 'score') {
-        // 1. Bayesian score descending (highest first)
-        const scoreA = getBayesianScore(recipeA);
-        const scoreB = getBayesianScore(recipeB);
-        if (scoreA !== scoreB) return scoreB - scoreA;
-        // 2+3. Title alphabetical A–Z, then newest first
-        return compareTitleAndDate(recipeA, recipeB);
+        // 2. Title alphabetical A–Z
+        const titleA = recipeA?.title?.toLowerCase() || '';
+        const titleB = recipeB?.title?.toLowerCase() || '';
+        const titleCompare = titleA.localeCompare(titleB);
+        if (titleCompare !== 0) return titleCompare;
+        // 3. Creation date, newest first
+        return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
       } else {
-        // alphabetical: title A–Z, then newest first
-        return compareTitleAndDate(recipeA, recipeB);
+        // alphabetical
+        // 1. Title alphabetical A–Z
+        const titleA = recipeA?.title?.toLowerCase() || '';
+        const titleB = recipeB?.title?.toLowerCase() || '';
+        const titleCompare = titleA.localeCompare(titleB);
+        if (titleCompare !== 0) return titleCompare;
+        // 2. Creation date, newest first
+        return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
       }
     });
   }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, sortMode, viewCountMap]);
