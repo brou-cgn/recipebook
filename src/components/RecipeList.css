@@ -352,122 +352,50 @@
   bottom: 20px;
   left: 0;
   width: 100%;
+  overflow: visible;
   z-index: 100;
+  padding: 8px 0;
   pointer-events: none;
 }
 
 .sort-swiper-track {
   display: flex;
-  align-items: flex-start;
-  overflow-x: scroll;
-  scroll-snap-type: x mandatory;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  pointer-events: all;
-  cursor: grab;
-  padding: 6px 0 8px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.sort-swiper-track::-webkit-scrollbar {
-  display: none;
-}
-
-.sort-swiper-spacer {
-  /* Allows first and last items to be centered in the scroll viewport.
-     Width = 50% - (ITEM_WIDTH/2 + ITEM_MARGIN) = 50% - (65 + 12) = 50% - 77px.
-     Update this if ITEM_WIDTH (130px) or ITEM_MARGIN (12px) changes. */
-  flex: 0 0 calc(50% - 77px);
+  transition: transform 0.3s ease;
+  pointer-events: none;
 }
 
 .sort-swiper-item {
-  flex: 0 0 130px;
+  flex: 0 0 140px;
+  height: 40px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 0 0;
-  font-size: 0.875rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.45);
-  background: none;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(64, 44, 28, 0.65);
   border: none;
-  margin: 0 12px;
+  margin: 0 6px;
+  transition: all 0.3s ease;
   user-select: none;
   white-space: nowrap;
-  scroll-snap-align: center;
-  transition: color 0.25s ease;
-  will-change: transform, opacity;
-  touch-action: manipulation;
+  pointer-events: all;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .sort-swiper-item.active {
   color: white;
-  font-size: 0.95rem;
+  background: #DF7A00;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .sort-swiper-item:focus-visible {
-  outline: 2px solid rgba(255, 221, 0, 0.8);
-  outline-offset: 4px;
-  border-radius: 4px;
-}
-
-/* Yellow dot indicator under active item */
-.sort-swiper-dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #FFD60A;
-  margin: 4px auto 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.sort-swiper-item.active .sort-swiper-dot {
-  opacity: 1;
-}
-
-/* Long-press popup menu */
-.sort-swiper-longpress-menu {
-  position: fixed;
-  bottom: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 8px;
-  background: rgba(30, 30, 30, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  min-width: 180px;
-  z-index: 101;
-}
-
-.sort-swiper-longpress-item {
-  padding: 10px 20px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
-  text-align: center;
-  border-radius: 10px;
-  transition: background 0.1s ease, color 0.1s ease;
-  user-select: none;
-}
-
-.sort-swiper-longpress-item.highlighted {
-  background: rgba(255, 214, 10, 0.2);
-  color: #FFD60A;
-  font-weight: 700;
+  outline: 2px solid white;
+  outline-offset: 2px;
 }
 
 /* Add bottom padding so the swiper doesn't overlap recipe cards */
