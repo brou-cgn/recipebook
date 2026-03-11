@@ -723,6 +723,61 @@ describe('RecipeForm - Category Image Integration', () => {
     });
   });
 
+  test('uses category image as title image when updating recipe without image', async () => {
+    const { getImageForCategories } = require('../utils/categoryImages');
+    getImageForCategories.mockResolvedValue('data:image/png;base64,category-image');
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    const existingRecipeWithoutImage = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      kulinarik: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      image: '',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipeWithoutImage}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Submit form without uploading an image
+    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+
+    // Wait for async operations to complete
+    await waitFor(() => {
+      // Check that getImageForCategories was called with the selected category
+      expect(getImageForCategories).toHaveBeenCalledWith(['Main Course']);
+
+      // Check that onSave was called with the category image
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'recipe-1',
+          image: 'data:image/png;base64,category-image',
+          speisekategorie: ['Main Course'],
+        })
+      );
+    });
+  });
+
   test('does not use category image when recipe already has title image', async () => {
     const { getImageForCategories } = require('../utils/categoryImages');
     getImageForCategories.mockResolvedValue('data:image/png;base64,category-image');

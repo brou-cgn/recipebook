@@ -547,10 +547,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       return;
     }
 
-    // Auto-populate title image from category images if creating new recipe without title image
+    // Auto-populate title image from category images if recipe has no title image
     let finalImage = image.trim();
-    if (!recipe && !finalImage && speisekategorie.length > 0) {
-      // New recipe without title image - try to get image from category
+    if (!finalImage && speisekategorie.length > 0) {
+      // Recipe without title image (new or update) - try to get image from category
       const categoryImage = await getImageForCategories(speisekategorie);
       if (categoryImage) {
         finalImage = categoryImage;
