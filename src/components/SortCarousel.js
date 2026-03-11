@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import './SortCarousel.css';
 
 export const SORT_OPTIONS = [
@@ -11,7 +11,8 @@ export const SORT_OPTIONS = [
 const SWIPE_THRESHOLD = 30; // px — minimum swipe distance to trigger a sort change (fallback)
 const LONG_PRESS_DELAY = 300; // ms — hold time required to expand via long press
 const HORIZONTAL_SWIPE_MIN = 10; // px — minimum horizontal movement to detect a swipe
-const ITEM_WIDTH_CSS = 'var(--sort-item-width, 120px)';
+const ITEM_WIDTH_CSS = 'var(--sort-item-width, 160px)';
+const FALLBACK_ITEM_WIDTH = 160; // used in JSDOM where measurements return 0
 
 function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChange }) {
   const [expanded, setExpanded] = useState(false);
@@ -27,16 +28,21 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     longPressTimer: null,
     isExpanded: false,
     isDragging: false,
+    dragStartX: null, // set when dragging begins, to avoid a jump at gesture start
   });
 
   const activeIndex = SORT_OPTIONS.findIndex(o => o.id === activeSort);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
+
+  // Stores the measured max item width; used as fallback in onTouchEnd snap logic
+  const measuredWidthRef = useRef(0);
 
   const selectIndex = useCallback((idx) => {
     const clamped = (idx + SORT_OPTIONS.length) % SORT_OPTIONS.length;
     if (onSortChange) onSortChange(SORT_OPTIONS[clamped].id);
     gestureRef.current.isExpanded = false;
     gestureRef.current.isDragging = false;
+    gestureRef.current.dragStartX = null;
     setExpanded(false);
     setIsDragging(false);
     setDragOffset(0);
@@ -47,6 +53,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     gestureRef.current.isDragging = false;
     gestureRef.current.startX = null;
     gestureRef.current.startY = null;
+    gestureRef.current.dragStartX = null;
     setExpanded(false);
     setIsDragging(false);
     setDragOffset(0);
@@ -67,6 +74,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
       }, LONG_PRESS_DELAY);
     } else {
       gestureRef.current.isDragging = true;
+      gestureRef.current.dragStartX = touch.clientX;
       setIsDragging(true);
       setDragOffset(0);
     }
@@ -88,20 +96,22 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
         }
         gestureRef.current.isExpanded = true;
         gestureRef.current.isDragging = true;
+        gestureRef.current.dragStartX = touch.clientX;
         setExpanded(true);
         setIsDragging(true);
-        setDragOffset(deltaX);
+        setDragOffset(0);
       }
       return;
     }
 
     if (gestureRef.current.isDragging) {
-      setDragOffset(deltaX);
+      setDragOffset(touch.clientX - gestureRef.current.dragStartX);
     } else {
       // First movement after long-press expansion — start tracking drag
       gestureRef.current.isDragging = true;
+      gestureRef.current.dragStartX = touch.clientX;
       setIsDragging(true);
-      setDragOffset(deltaX);
+      setDragOffset(0);
     }
   }, []);
 
@@ -114,13 +124,14 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     if (gestureRef.current.startX === null) return;
 
     const touch = e.changedTouches[0];
-    const delta = touch.clientX - gestureRef.current.startX;
+    const delta = touch.clientX - (gestureRef.current.dragStartX ?? gestureRef.current.startX);
     const wasExpanded = gestureRef.current.isExpanded;
 
     gestureRef.current.startX = null;
     gestureRef.current.startY = null;
     gestureRef.current.isDragging = false;
     gestureRef.current.isExpanded = false;
+    gestureRef.current.dragStartX = null;
     setIsDragging(false);
 
     if (!wasExpanded) {
@@ -156,13 +167,13 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     }
 
     // Fallback for JSDOM (getBoundingClientRect returns zero-width rects):
-    // use drag delta with CSS variable fallback width of 120px
-    const FALLBACK_ITEM_WIDTH = 120;
+    // use drag delta with the dynamically measured item width (or fallback)
+    const itemWidth = measuredWidthRef.current || FALLBACK_ITEM_WIDTH;
     if (delta < -SWIPE_THRESHOLD) {
-      const steps = Math.max(1, Math.round(-delta / FALLBACK_ITEM_WIDTH));
+      const steps = Math.max(1, Math.round(-delta / itemWidth));
       selectIndex(safeIndex + steps);
     } else if (delta > SWIPE_THRESHOLD) {
-      const steps = Math.max(1, Math.round(delta / FALLBACK_ITEM_WIDTH));
+      const steps = Math.max(1, Math.round(delta / itemWidth));
       selectIndex(safeIndex - steps);
     } else {
       // No sort change — just collapse
@@ -197,6 +208,24 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
   // Keep a stable ref to onExpandChange so the effect doesn't re-run on every render
   const onExpandChangeRef = useRef(onExpandChange);
   useEffect(() => { onExpandChangeRef.current = onExpandChange; });
+
+  // After mount, measure all items and set --sort-item-width so the carousel and pill
+  // are wide enough to display the longest option label without clipping.
+  useLayoutEffect(() => {
+    if (!trackRef.current || !carouselRef.current) return;
+    const items = trackRef.current.querySelectorAll('.sort-carousel-item');
+    let maxWidth = 0;
+    items.forEach(item => {
+      const w = Math.max(item.scrollWidth, item.offsetWidth);
+      if (w > maxWidth) maxWidth = w;
+    });
+    if (maxWidth === 0) maxWidth = FALLBACK_ITEM_WIDTH; // JSDOM returns 0
+    measuredWidthRef.current = maxWidth;
+    carouselRef.current.style.setProperty('--sort-item-width', maxWidth + 'px');
+    items.forEach(item => {
+      item.style.width = maxWidth + 'px';
+    });
+  }, []);
 
   // Pixel-accurate translateX: shift by safeIndex item-widths, then apply live drag offset
   const translateX = expanded ? dragOffset : 0;

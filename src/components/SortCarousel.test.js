@@ -2,9 +2,17 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
 
-// Helper: fire a complete touch gesture (touchStart → touchMove → touchEnd)
+// Helper: fire a complete touch gesture (touchStart → [expand step] → touchMove → touchEnd).
+// For swipes larger than 10 px, an intermediate touchMove at startX ± 11 px triggers
+// expansion so that dragStartX is set before the final position is reached.
 function simulateTouchSwipe(element, startX, endX, startY = 100, endY = 100) {
   fireEvent.touchStart(element, { touches: [{ clientX: startX, clientY: startY }] });
+  if (Math.abs(endX - startX) > 10) {
+    // Intermediate move that crosses the HORIZONTAL_SWIPE_MIN threshold (10 px),
+    // setting dragStartX to this position before the finger reaches endX.
+    const expandX = endX < startX ? startX - 11 : startX + 11;
+    fireEvent.touchMove(element, { touches: [{ clientX: expandX, clientY: startY }] });
+  }
   fireEvent.touchMove(element, { touches: [{ clientX: endX, clientY: endY }] });
   fireEvent.touchEnd(element, { changedTouches: [{ clientX: endX, clientY: endY }] });
 }
@@ -93,8 +101,8 @@ describe('SortCarousel', () => {
     const { container } = render(
       <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
     );
-    // swipe -400px: 400/120 ≈ 3.33 → rounds to 3 steps from 'alphabetical' → 'rating'
-    simulateTouchSwipe(container.firstChild, 500, 100);
+    // swipe left ~500 px from drag origin (after expansion step): 489/160 ≈ 3.06 → 3 steps from 'alphabetical' → 'rating'
+    simulateTouchSwipe(container.firstChild, 600, 100);
     expect(handleChange).toHaveBeenCalledWith('rating');
   });
 
@@ -103,8 +111,8 @@ describe('SortCarousel', () => {
     const { container } = render(
       <SortCarousel activeSort="rating" onSortChange={handleChange} />
     );
-    // 'rating' is index 3; 400/120 ≈ 3 steps back → index 0 → 'alphabetical'
-    simulateTouchSwipe(container.firstChild, 100, 500);
+    // swipe right ~500 px from drag origin (after expansion step): 489/160 ≈ 3.06 → 3 steps back → index 0 → 'alphabetical'
+    simulateTouchSwipe(container.firstChild, 100, 600);
     expect(handleChange).toHaveBeenCalledWith('alphabetical');
   });
 
@@ -125,6 +133,21 @@ describe('SortCarousel', () => {
     );
     simulateTouchSwipe(container.firstChild, 200, 205); // 5 px — below expand threshold
     expect(container.firstChild).not.toHaveClass('sort-carousel--expanded');
+  });
+
+  test('initial dragOffset on expansion is 0 (no visual jump)', () => {
+    const { container } = render(
+      <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
+    );
+    const track = container.firstChild.querySelector('.sort-carousel-track');
+    const transformBefore = track.style.transform;
+    // Trigger expansion via horizontal swipe (deltaX = 15 > 10 px threshold)
+    fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 115, clientY: 100 }] });
+    // Carousel should be expanded…
+    expect(container.firstChild).toHaveClass('sort-carousel--expanded');
+    // …but the track transform must not have shifted (dragOffset = 0, no visual jump)
+    expect(track.style.transform).toBe(transformBefore);
   });
 
   test('keyboard: Enter expands the carousel', () => {
