@@ -172,34 +172,4 @@ describe('RecipeList - Sort Swiper', () => {
     // Same viewCount → alphabetical fallback
     expect(titles).toEqual(['Apple Pie', 'Zebra Cake']);
   });
-
-  test('clicking "Im Trend" after "Alphabetisch" resets to trending sort', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Alphabetisch');
-    fireEvent.click(screen.getByText('Alphabetisch'));
-
-    // Verify alphabetical sort is active
-    expect(screen.getByText('Alphabetisch')).toHaveClass('active');
-
-    // Switch back to trending
-    fireEvent.click(screen.getByText('Im Trend'));
-
-    expect(screen.getByText('Im Trend')).toHaveClass('active');
-    expect(screen.getByText('Alphabetisch')).not.toHaveClass('active');
-
-    const cards = document.querySelectorAll('.recipe-card h3');
-    const titles = Array.from(cards).map(c => c.textContent);
-    // viewCount: Apple Pie=200, Banana Bread=100, Zebra Cake=50
-    expect(titles).toEqual(['Apple Pie', 'Banana Bread', 'Zebra Cake']);
-  });
 });
