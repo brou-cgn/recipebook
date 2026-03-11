@@ -195,7 +195,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               ★ Favoriten
             </button>
           </div>
-          <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
+          {currentUser?.sortCarousel && (
+            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
+          )}
           {userCanEdit && activePrivateListId ? (
             <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>
               + Privates Rezept hinzufügen

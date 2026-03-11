@@ -741,3 +741,73 @@ describe('RecipeList - Kulinarik Display', () => {
     expect(screen.queryByText(/Schritte/)).not.toBeInTheDocument();
   });
 });
+
+describe('RecipeList - SortCarousel Visibility', () => {
+  const recipes = [
+    { id: '1', title: 'Recipe A' },
+  ];
+
+  beforeEach(() => {
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('shows SortCarousel when user has sortCarousel permission', () => {
+    const userWithPermission = {
+      id: 'user-1',
+      role: 'admin',
+      sortCarousel: true,
+    };
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={userWithPermission}
+      />
+    );
+
+    expect(document.querySelector('.sort-carousel')).toBeInTheDocument();
+  });
+
+  test('hides SortCarousel when user does not have sortCarousel permission', () => {
+    const userWithoutPermission = {
+      id: 'user-2',
+      role: 'read',
+      sortCarousel: false,
+    };
+
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={userWithoutPermission}
+      />
+    );
+
+    expect(document.querySelector('.sort-carousel')).not.toBeInTheDocument();
+  });
+
+  test('hides SortCarousel when no user is logged in', () => {
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={null}
+      />
+    );
+
+    expect(document.querySelector('.sort-carousel')).not.toBeInTheDocument();
+  });
+});

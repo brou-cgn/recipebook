@@ -220,7 +220,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen und Nährwert-Abbruch haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch und Sortier-Karussell haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -233,11 +233,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Rezepteimport</th>
                   <th>Bew. löschen</th>
                   <th>NW-Abbruch</th>
+                  <th>Sortier-Karussell</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false };
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -306,6 +307,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.abortCalc ? 'Nährwert-Abbruch deaktivieren' : 'Nährwert-Abbruch aktivieren'}
                         >
                           {perms.abortCalc ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.sortCarousel ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'sortCarousel', perms.sortCarousel)}
+                          title={perms.sortCarousel ? 'Sortier-Karussell deaktivieren' : 'Sortier-Karussell aktivieren'}
+                        >
+                          {perms.sortCarousel ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>

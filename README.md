@@ -63,6 +63,23 @@ Administrator → Edit → Comment → Read → Guest
 - Only **Administrators** can delete recipes
 - Only **Administrators** can manage users and permissions
 
+### Feature-Level Permissions
+
+In addition to the role hierarchy, individual features can be enabled or disabled per role through the permissions table in User Management. Administrators can configure the following features per role:
+
+| Feature            | Description                                                   |
+|--------------------|---------------------------------------------------------------|
+| **Fotoscan**       | Allows scanning recipes from photos using OCR/AI              |
+| **Webimport**      | Allows importing recipes from external web pages              |
+| **App-Aufrufe**    | Access to app-call data statistics                            |
+| **Menüpunkt**      | Visibility of the app-calls menu entry                        |
+| **Rezepteimport**  | Allows importing recipes from external sources                |
+| **Bew. löschen**   | Allows deleting recipe ratings                                |
+| **NW-Abbruch**     | Allows aborting nutritional value calculations                |
+| **Sortier-Karussell** | Shows the sort carousel button in the recipe overview      |
+
+By default, all features are enabled for the Administrator role and disabled for all other roles.
+
 ### Getting Started
 
 #### First User Setup

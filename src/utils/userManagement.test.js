@@ -1340,6 +1340,16 @@ describe('User Management Utilities', () => {
       });
     });
 
+    test('should have sortCarousel enabled for admin', () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].sortCarousel).toBe(true);
+    });
+
+    test('should have sortCarousel disabled for non-admin roles', () => {
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].sortCarousel).toBe(false);
+      });
+    });
+
     test('should include all assignable roles', () => {
       [ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
         expect(ROLE_PERMISSIONS_DEFAULT).toHaveProperty(role);
