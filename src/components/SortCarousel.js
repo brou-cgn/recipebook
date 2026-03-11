@@ -8,13 +8,25 @@ export const SORT_OPTIONS = [
   { id: 'rating',       label: 'Nach Bewertung' },
 ];
 
-const SWIPE_THRESHOLD = 50; // px
+const SWIPE_THRESHOLD = 50; // px — minimum swipe distance to trigger a sort change
+const LONG_PRESS_DELAY = 300; // ms — hold time required to expand via long press
+const HORIZONTAL_SWIPE_MIN = 10; // px — minimum horizontal movement to detect a swipe
+const ITEM_WIDTH_CSS = 'var(--sort-item-width, 160px)';
 
 function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const [expanded, setExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
-  const dragStart = useRef(null);
   const trackRef = useRef(null);
+
+  // Ref holds mutable gesture state for synchronous access inside event handlers
+  const gestureRef = useRef({
+    startX: null,
+    startY: null,
+    longPressTimer: null,
+    isExpanded: false,
+    isDragging: false,
+  });
 
   const activeIndex = SORT_OPTIONS.findIndex(o => o.id === activeSort);
   const safeIndex = activeIndex >= 0 ? activeIndex : 0;
@@ -22,31 +34,99 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const selectIndex = useCallback((idx) => {
     const clamped = (idx + SORT_OPTIONS.length) % SORT_OPTIONS.length;
     if (onSortChange) onSortChange(SORT_OPTIONS[clamped].id);
+    gestureRef.current.isExpanded = false;
+    gestureRef.current.isDragging = false;
     setExpanded(false);
+    setIsDragging(false);
+    setDragOffset(0);
   }, [onSortChange]);
 
-  // --- pointer events (mouse + touch) ---
-  const onPointerDown = useCallback((e) => {
-    if (!expanded) {
-      setExpanded(true);
-      return;
-    }
-    dragStart.current = e.touches ? e.touches[0].clientX : e.clientX;
+  const collapse = useCallback(() => {
+    gestureRef.current.isExpanded = false;
+    gestureRef.current.isDragging = false;
+    gestureRef.current.startX = null;
+    gestureRef.current.startY = null;
+    setExpanded(false);
+    setIsDragging(false);
     setDragOffset(0);
-  }, [expanded]);
-
-  const onPointerMove = useCallback((e) => {
-    if (dragStart.current === null) return;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    setDragOffset(clientX - dragStart.current);
   }, []);
 
-  const onPointerUp = useCallback((e) => {
-    if (dragStart.current === null) return;
-    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-    const delta = clientX - dragStart.current;
-    dragStart.current = null;
+  // --- Touch events (mobile-only) ---
+  const onTouchStart = useCallback((e) => {
+    const touch = e.touches[0];
+    gestureRef.current.startX = touch.clientX;
+    gestureRef.current.startY = touch.clientY;
+
+    if (!gestureRef.current.isExpanded) {
+      // Expand after a long press (finger held without significant movement)
+      gestureRef.current.longPressTimer = setTimeout(() => {
+        gestureRef.current.longPressTimer = null;
+        gestureRef.current.isExpanded = true;
+        setExpanded(true);
+      }, LONG_PRESS_DELAY);
+    } else {
+      gestureRef.current.isDragging = true;
+      setIsDragging(true);
+      setDragOffset(0);
+    }
+  }, []);
+
+  const onTouchMove = useCallback((e) => {
+    if (gestureRef.current.startX === null) return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - gestureRef.current.startX;
+    const deltaY = touch.clientY - gestureRef.current.startY;
+
+    if (!gestureRef.current.isExpanded) {
+      // Expand immediately on a clear horizontal swipe
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > HORIZONTAL_SWIPE_MIN) {
+        if (gestureRef.current.longPressTimer) {
+          clearTimeout(gestureRef.current.longPressTimer);
+          gestureRef.current.longPressTimer = null;
+        }
+        gestureRef.current.isExpanded = true;
+        gestureRef.current.isDragging = true;
+        setExpanded(true);
+        setIsDragging(true);
+        setDragOffset(deltaX);
+      }
+      return;
+    }
+
+    if (gestureRef.current.isDragging) {
+      setDragOffset(deltaX);
+    } else {
+      // First movement after long-press expansion — start tracking drag
+      gestureRef.current.isDragging = true;
+      setIsDragging(true);
+      setDragOffset(deltaX);
+    }
+  }, []);
+
+  const onTouchEnd = useCallback((e) => {
+    if (gestureRef.current.longPressTimer) {
+      clearTimeout(gestureRef.current.longPressTimer);
+      gestureRef.current.longPressTimer = null;
+    }
+
+    if (gestureRef.current.startX === null) return;
+
+    const touch = e.changedTouches[0];
+    const delta = touch.clientX - gestureRef.current.startX;
+    const wasExpanded = gestureRef.current.isExpanded;
+
+    gestureRef.current.startX = null;
+    gestureRef.current.startY = null;
+    gestureRef.current.isDragging = false;
+    gestureRef.current.isExpanded = false;
+    setIsDragging(false);
     setDragOffset(0);
+
+    if (!wasExpanded) {
+      // Tap without expansion (< 300 ms, no horizontal swipe) — do nothing
+      return;
+    }
 
     // Try real item widths; fall back to threshold-based approach in JSDOM
     let itemWidth = 0;
@@ -63,12 +143,12 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     } else if (delta > threshold) {
       selectIndex(safeIndex - 1);
     } else {
-      // No change in sort but still collapse
+      // No sort change — just collapse
       setExpanded(false);
     }
   }, [safeIndex, selectIndex]);
 
-  // Keyboard navigation
+  // Keyboard navigation (accessibility / screen-reader support)
   const onKeyDown = useCallback((e) => {
     if (!expanded) {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -84,36 +164,32 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
       e.preventDefault();
       selectIndex(safeIndex + 1);
     } else if (e.key === 'Escape') {
-      setExpanded(false);
+      collapse();
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      setExpanded(false);
+      collapse();
     }
-  }, [expanded, safeIndex, selectIndex]);
+  }, [expanded, safeIndex, selectIndex, collapse]);
 
-  // translateX so the active item is always at the center of the track
+  // Pixel-accurate translateX: shift by safeIndex item-widths, then apply live drag offset
   const translateX = expanded ? dragOffset : 0;
 
   return (
     <div
-      className={`sort-carousel${expanded ? ' sort-carousel--expanded' : ''}`}
+      className={`sort-carousel${expanded ? ' sort-carousel--expanded' : ''}${isDragging ? ' sort-carousel--dragging' : ''}`}
       role="listbox"
       aria-label="Sortierung"
       aria-expanded={expanded}
       tabIndex={0}
       onKeyDown={onKeyDown}
-      onMouseDown={onPointerDown}
-      onTouchStart={onPointerDown}
-      onMouseMove={onPointerMove}
-      onTouchMove={onPointerMove}
-      onMouseUp={onPointerUp}
-      onMouseLeave={onPointerUp}
-      onTouchEnd={onPointerUp}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <div
         className="sort-carousel-track"
         ref={trackRef}
-        style={{ transform: `translateX(calc(-${safeIndex * 100}% + ${translateX}px))` }}
+        style={{ transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${translateX}px))` }}
       >
         {SORT_OPTIONS.map((option, idx) => (
           <div
@@ -121,16 +197,6 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
             className={`sort-carousel-item${idx === safeIndex ? ' sort-carousel-item--active' : ''}`}
             role="option"
             aria-selected={idx === safeIndex}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (expanded && idx !== safeIndex) {
-                selectIndex(idx);
-              } else if (!expanded) {
-                setExpanded(true);
-              } else {
-                setExpanded(false);
-              }
-            }}
           >
             {option.label}
           </div>
