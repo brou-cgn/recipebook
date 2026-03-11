@@ -82,6 +82,27 @@
   color: rgba(255, 255, 255, 0);
 }
 
+/* ─── Collapsed pill ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  /* Transparent inner pill with silver border + glow, visible only when collapsed */
+  .sort-carousel:not(.sort-carousel--expanded)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* 12px narrower and 8px shorter than the carousel → 6px gap on each side */
+    width: calc(var(--sort-item-width, 165px) - 12px);
+    height: calc(100% - 8px);
+    border-radius: 25px;
+    background: transparent;
+    border: 1px solid rgba(192, 192, 192, 0.5);
+    box-shadow: 0 0 6px rgba(192, 192, 192, 0.25);
+    pointer-events: none;
+  }
+}
+
 /* ─── Indicator dots ─────────────────────────────────────────────────────────── */
 
 /* Hidden on desktop */
