@@ -56,12 +56,6 @@ const mockRecipes = [
   },
 ];
 
-// Helper: expand the swiper, then click an option to select it
-function selectSortMode(label) {
-  fireEvent.click(document.querySelector('.sort-swiper'));
-  fireEvent.click(screen.getByText(label));
-}
-
 describe('RecipeList - Sort Swiper', () => {
   beforeEach(() => {
     // resetMocks: true clears jest.fn() implementations between tests, so re-apply the default
@@ -146,7 +140,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Alphabetisch');
-    selectSortMode('Alphabetisch');
+    fireEvent.click(screen.getByText('Alphabetisch'));
 
     expect(screen.getByText('Alphabetisch')).toHaveClass('active');
     expect(screen.getByText('Im Trend')).not.toHaveClass('active');
@@ -173,7 +167,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Alphabetisch');
-    selectSortMode('Alphabetisch');
+    fireEvent.click(screen.getByText('Alphabetisch'));
 
     await screen.findAllByText('Soup');
     const cards = document.querySelectorAll('.recipe-card h3');
@@ -232,13 +226,13 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Alphabetisch');
-    selectSortMode('Alphabetisch');
+    fireEvent.click(screen.getByText('Alphabetisch'));
 
     // Verify alphabetical sort is active
     expect(screen.getByText('Alphabetisch')).toHaveClass('active');
 
     // Switch back to trending
-    selectSortMode('Im Trend');
+    fireEvent.click(screen.getByText('Im Trend'));
 
     expect(screen.getByText('Im Trend')).toHaveClass('active');
     expect(screen.getByText('Alphabetisch')).not.toHaveClass('active');
@@ -346,111 +340,7 @@ describe('RecipeList - Sort Swiper', () => {
     expect(swiper).not.toHaveClass('expanded');
   });
 
-  test('clicking the swiper expands it (adds expanded class)', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    fireEvent.click(swiper);
-    expect(swiper).toHaveClass('expanded');
-  });
-
-  test('selecting an option collapses the swiper', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    // Expand
-    fireEvent.click(swiper);
-    expect(swiper).toHaveClass('expanded');
-    // Select an option
-    fireEvent.click(screen.getByText('Alphabetisch'));
-    expect(swiper).not.toHaveClass('expanded');
-  });
-
-  test('swipe left changes to next sort mode and collapses', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    // Default active is "trending" (index 1 in SORT_MODES: Alphabetisch, Im Trend, Neue Rezepte, Nach Bewertung)
-    expect(screen.getByText('Im Trend')).toHaveClass('active');
-    // Swipe left (next mode: Neue Rezepte)
-    fireEvent.touchStart(swiper, { touches: [{ clientX: 200 }] });
-    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 100 }] }); // delta -100 → left
-    expect(screen.getByText('Neue Rezepte')).toHaveClass('active');
-    expect(swiper).not.toHaveClass('expanded');
-  });
-
-  test('swipe right changes to previous sort mode and collapses', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    // Default active is "trending" (index 1). Swipe right → prev → Alphabetisch (index 0)
-    fireEvent.touchStart(swiper, { touches: [{ clientX: 100 }] });
-    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 200 }] }); // delta +100 → right
-    expect(screen.getByText('Alphabetisch')).toHaveClass('active');
-    expect(swiper).not.toHaveClass('expanded');
-  });
-
-  test('small touch movement (< 50px) does not trigger swipe', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    fireEvent.touchStart(swiper, { touches: [{ clientX: 100 }] });
-    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 130 }] }); // delta +30 → not a swipe
-    // Sort mode should remain "Im Trend"
-    expect(screen.getByText('Im Trend')).toHaveClass('active');
-  });
-
-  test('only the active option is visible by default; all options appear in the DOM', async () => {
+  test('all sort options are always visible in the pill', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -465,7 +355,7 @@ describe('RecipeList - Sort Swiper', () => {
     await screen.findByText('Im Trend');
     const swiper = document.querySelector('.sort-swiper');
     expect(swiper).not.toHaveClass('expanded');
-    // All option buttons are present in the DOM (non-active ones hidden via CSS)
+    // All options are always visible in the pill
     expect(swiper).toContainElement(screen.getByText('Alphabetisch'));
     expect(swiper).toContainElement(screen.getByText('Im Trend'));
     expect(swiper).toContainElement(screen.getByText('Neue Rezepte'));
@@ -503,7 +393,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Nach Bewertung');
-    selectSortMode('Nach Bewertung');
+    fireEvent.click(screen.getByText('Nach Bewertung'));
 
     expect(screen.getByText('Nach Bewertung')).toHaveClass('active');
     expect(screen.getByText('Im Trend')).not.toHaveClass('active');
@@ -556,7 +446,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Nach Bewertung');
-    selectSortMode('Nach Bewertung');
+    fireEvent.click(screen.getByText('Nach Bewertung'));
 
     await screen.findByText('High Rated');
     const cards = document.querySelectorAll('.recipe-card h3');
@@ -600,7 +490,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Nach Bewertung');
-    selectSortMode('Nach Bewertung');
+    fireEvent.click(screen.getByText('Nach Bewertung'));
 
     await screen.findByText('Apple Strudel');
     const cards = document.querySelectorAll('.recipe-card h3');
@@ -646,7 +536,7 @@ describe('RecipeList - Sort Swiper', () => {
     );
 
     await screen.findByText('Nach Bewertung');
-    selectSortMode('Nach Bewertung');
+    fireEvent.click(screen.getByText('Nach Bewertung'));
 
     // Both cards have the title 'Pasta'; use kulinarik tags to verify order.
     // The newer recipe (June, id '2', kulinarik 'Newer') must appear before
@@ -680,7 +570,7 @@ describe('RecipeList - Sort Swiper', () => {
       );
 
       await screen.findByText('Neue Rezepte');
-      selectSortMode('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
 
       expect(screen.getByText('Neue Rezepte')).toHaveClass('active');
       expect(screen.getByText('Im Trend')).not.toHaveClass('active');
@@ -699,7 +589,7 @@ describe('RecipeList - Sort Swiper', () => {
       );
 
       await screen.findByText('Neue Rezepte');
-      selectSortMode('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
 
       const cards = document.querySelectorAll('.recipe-card h3');
       const titles = Array.from(cards).map(c => c.textContent);
@@ -729,7 +619,7 @@ describe('RecipeList - Sort Swiper', () => {
       );
 
       await screen.findByText('Neue Rezepte');
-      selectSortMode('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
 
       const cards = document.querySelectorAll('.recipe-card h3');
       const titles = Array.from(cards).map(c => c.textContent);
@@ -751,7 +641,7 @@ describe('RecipeList - Sort Swiper', () => {
       );
 
       await screen.findByText('Neue Rezepte');
-      selectSortMode('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
 
       const newBadges = document.querySelectorAll('.new-badge');
       // Only the 2 recipes within 30 days should have the badge
@@ -775,7 +665,7 @@ describe('RecipeList - Sort Swiper', () => {
       );
 
       await screen.findByText('Neue Rezepte');
-      selectSortMode('Neue Rezepte');
+      fireEvent.click(screen.getByText('Neue Rezepte'));
 
       expect(await screen.findByText('Keine neuen Rezepte!')).toBeInTheDocument();
     });
