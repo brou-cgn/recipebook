@@ -6,7 +6,6 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import RecipeRating from './RecipeRating';
-import { getRecipeCalls } from '../utils/recipeCallsFirestore';
 
 const SORT_MODES = [
   { id: 'trending', label: 'Im Trend' },
@@ -30,23 +29,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [buttonIcons, setButtonIcons] = useState({
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
-  const [recipeCalls, setRecipeCalls] = useState([]);
   const touchStartX = useRef(null);
-
-  // Load all recipe calls once on mount for trending sort
-  useEffect(() => {
-    const loadRecipeCalls = async () => {
-      try {
-        const calls = await getRecipeCalls();
-        setRecipeCalls(calls);
-      } catch (error) {
-        console.error('Error loading recipe calls:', error);
-        setRecipeCalls([]);
-      }
-    };
-    loadRecipeCalls();
-  }, []);
-
+  
   // Load all users once on mount
   useEffect(() => {
     const loadUsers = async () => {
@@ -113,17 +97,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   // Group recipes by parent first, memoized so the reference is stable between renders
   const allRecipeGroups = useMemo(() => groupRecipesByParent(recipes), [recipes]);
 
-  // Build a map of recipeId -> total call count from all users
-  const viewCountMap = useMemo(() => {
-    const map = {};
-    recipeCalls.forEach(call => {
-      if (call.recipeId) {
-        map[call.recipeId] = (map[call.recipeId] || 0) + 1;
-      }
-    });
-    return map;
-  }, [recipeCalls]);
-
   // Filter and sort recipe groups with memoization for performance
   const recipeGroups = useMemo(() => {
     // Filter groups based on favorites if enabled
@@ -148,10 +121,10 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       const recipeB = b.primaryRecipe;
 
       if (sortMode === 'trending') {
-        // 1. View count descending (sum across all recipes in each group)
-        const groupViewCountA = a.allRecipes.reduce((sum, r) => sum + (viewCountMap[r.id] || 0), 0);
-        const groupViewCountB = b.allRecipes.reduce((sum, r) => sum + (viewCountMap[r.id] || 0), 0);
-        if (groupViewCountA !== groupViewCountB) return groupViewCountB - groupViewCountA;
+        // 1. View count descending
+        const viewCountA = recipeA?.viewCount || 0;
+        const viewCountB = recipeB?.viewCount || 0;
+        if (viewCountA !== viewCountB) return viewCountB - viewCountA;
         // 2. Title alphabetical A–Z
         const titleA = recipeA?.title?.toLowerCase() || '';
         const titleB = recipeB?.title?.toLowerCase() || '';
@@ -170,7 +143,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         return getTimestampMs(recipeB?.createdAt) - getTimestampMs(recipeA?.createdAt);
       }
     });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, sortMode, viewCountMap]);
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, sortMode]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
