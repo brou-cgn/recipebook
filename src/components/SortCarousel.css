@@ -65,15 +65,11 @@
   text-align: center;
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
   white-space: nowrap;
   border-radius: 25px;
   transition: color 0.25s ease, transform 0.25s ease;
   pointer-events: none;
-}
-
-.sort-carousel-item--active {
-  color: #ffffff;
 }
 
 /* Subtle scale-up for the active item when expanded */
