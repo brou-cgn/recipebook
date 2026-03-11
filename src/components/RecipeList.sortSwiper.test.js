@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecipeList from './RecipeList';
 
@@ -490,7 +490,7 @@ describe('RecipeList - Sort Swiper', () => {
     expect(swiper).not.toHaveClass('expanded');
   });
 
-  test('touch + move expands swiper; touchEnd in expanded state defers to scroll-snap (stays expanded)', async () => {
+  test('touch + move + swipe >= 50px changes sort mode and collapses in one gesture', async () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -505,64 +505,13 @@ describe('RecipeList - Sort Swiper', () => {
     await screen.findByText('Im Trend');
     const swiper = document.querySelector('.sort-swiper');
     expect(swiper).not.toHaveClass('expanded');
-    // Start touch, move to expand
+    // Start touch, move to expand, then swipe left >= 50px to change mode
     fireEvent.touchStart(swiper, { touches: [{ clientX: 200 }] });
     fireEvent.touchMove(swiper, { touches: [{ clientX: 185 }] }); // expand
     expect(swiper).toHaveClass('expanded');
-    // touchEnd after expanding should not collapse the swiper or change the mode —
-    // the CSS scroll-snap / scroll-end handler is now responsible for that
-    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 100 }] });
-    expect(screen.getByText('Im Trend')).toHaveClass('active');
-    expect(swiper).toHaveClass('expanded');
-  });
-
-  test('scroll-end detection collapses swiper and commits the snapped mode', async () => {
-    jest.useFakeTimers();
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    // Expand the swiper via click
-    const swiper = document.querySelector('.sort-swiper');
-    fireEvent.click(swiper);
-    expect(swiper).toHaveClass('expanded');
-
-    const track = document.querySelector('.sort-swiper-track');
-
-    // In JSDOM, scrollTo() does not fire scroll events, so isInitialScrollRef stays true.
-    // The first fireEvent.scroll() mimics the initial-scroll signal and is ignored by the guard.
-    fireEvent.scroll(track);
-
-    // Mock the track geometry so "Neue Rezepte" is closest to the track centre.
-    // In JSDOM all layout properties are 0, so set offsetLeft=0 to make it the closest.
-    const neueRezepteBtn = track.querySelector('[data-mode-id="new"]');
-    Object.defineProperty(neueRezepteBtn, 'offsetLeft', { value: 0, configurable: true });
-    Object.defineProperty(neueRezepteBtn, 'offsetWidth', { value: 100, configurable: true });
-    ['alphabetical', 'trending', 'score'].forEach(id => {
-      const btn = track.querySelector(`[data-mode-id="${id}"]`);
-      Object.defineProperty(btn, 'offsetLeft', { value: 1000, configurable: true });
-      Object.defineProperty(btn, 'offsetWidth', { value: 100, configurable: true });
-    });
-
-    // Simulate the user's actual scroll after the initial-scroll guard has been cleared
-    fireEvent.scroll(track);
-    // Advance past the 350ms debounce, wrapped in act() so React flushes state updates
-    act(() => {
-      jest.advanceTimersByTime(400);
-    });
-
+    fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 100 }] }); // delta -100 → swipe left → Neue Rezepte
     expect(screen.getByText('Neue Rezepte')).toHaveClass('active');
     expect(swiper).not.toHaveClass('expanded');
-
-    jest.useRealTimers();
   });
 
   test('only the active option is visible by default; all options appear in the DOM', async () => {
@@ -897,7 +846,7 @@ describe('RecipeList - Sort Swiper', () => {
   });
 
   describe('previewMode during touchMove', () => {
-    test('touchMove in expanded state does not set previewMode (native scroll-snap owns the gesture)', async () => {
+    test('touchMove over a button sets that button as active (preview)', async () => {
       render(
         <RecipeList
           recipes={mockRecipes}
@@ -924,15 +873,15 @@ describe('RecipeList - Sort Swiper', () => {
       fireEvent.touchMove(swiper, { touches: [{ clientX: 185, clientY: 25 }] });
       expect(swiper).toHaveClass('expanded');
 
-      // Further touchMove while expanded: should early-return so previewMode is not set
+      // Move finger over the 'Alphabetisch' button area
       fireEvent.touchMove(swiper, { touches: [{ clientX: 50, clientY: 25 }] });
 
-      // 'Im Trend' (sortMode) should still be active — no previewMode was applied
-      expect(screen.getByText('Im Trend')).toHaveClass('active');
-      expect(screen.getByText('Alphabetisch')).not.toHaveClass('active');
+      // 'Alphabetisch' should be shown as active (preview), 'Im Trend' should not be active
+      expect(screen.getByText('Alphabetisch')).toHaveClass('active');
+      expect(screen.getByText('Im Trend')).not.toHaveClass('active');
     });
 
-    test('touchEnd in expanded state with movement does not collapse swiper (scroll-snap owns it)', async () => {
+    test('touchEnd commits previewMode and collapses swiper', async () => {
       render(
         <RecipeList
           recipes={mockRecipes}
@@ -953,16 +902,15 @@ describe('RecipeList - Sort Swiper', () => {
       });
 
       fireEvent.touchStart(swiper, { touches: [{ clientX: 200, clientY: 25 }] });
-      fireEvent.touchMove(swiper, { touches: [{ clientX: 185, clientY: 25 }] }); // expand
-      // Further touchMove while expanded (early-returns, no previewMode)
+      fireEvent.touchMove(swiper, { touches: [{ clientX: 185, clientY: 25 }] });
+      // Move over 'Alphabetisch' button
       fireEvent.touchMove(swiper, { touches: [{ clientX: 50, clientY: 25 }] });
 
-      // Release — because swiper is expanded and hasMoved is true, the old delta logic is skipped
+      // Release finger — previewMode ('alphabetical') should be committed
       fireEvent.touchEnd(swiper, { changedTouches: [{ clientX: 50, clientY: 25 }] });
 
-      // Sort mode unchanged, swiper still expanded (waiting for scroll-snap to settle)
-      expect(screen.getByText('Im Trend')).toHaveClass('active');
-      expect(swiper).toHaveClass('expanded');
+      expect(screen.getByText('Alphabetisch')).toHaveClass('active');
+      expect(swiper).not.toHaveClass('expanded');
     });
 
     test('touchStart resets previewMode', async () => {
