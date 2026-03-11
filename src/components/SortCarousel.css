@@ -7,13 +7,17 @@
 
 @media (max-width: 480px) {
   .sort-carousel {
-    position: relative;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
     display: inline-flex;
     align-items: center;
     overflow: hidden;
     /* Collapsed: exactly as wide as one item */
     max-width: var(--sort-item-width);
-    --sort-item-width: 140px;
+    --sort-item-width: 165px;
     border-radius: 25px;
     background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -55,8 +59,8 @@
 /* ─── Items ─────────────────────────────────────────────────────────────────── */
 
 .sort-carousel-item {
-  flex: 0 0 var(--sort-item-width, 140px);
-  width: var(--sort-item-width, 140px);
+  flex: 0 0 var(--sort-item-width, 165px);
+  width: var(--sort-item-width, 165px);
   padding: 0.65rem 1.25rem;
   text-align: center;
   font-size: 0.9rem;
