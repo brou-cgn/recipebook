@@ -2,15 +2,18 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import SortCarousel, { SORT_OPTIONS } from './SortCarousel';
 
-// Helper: fire a complete touch gesture (touchStart → [expand step] → touchMove → touchEnd).
-// For swipes larger than 10 px, an intermediate touchMove at startX ± 11 px triggers
-// expansion so that dragStartX is set before the final position is reached.
+// Helper: fire a complete touch gesture (touchStart → [expand step] → [drag-start step] → touchMove → touchEnd).
+// For swipes larger than 10 px, two intermediate touchMove events are fired:
+// 1. at startX ± 11 px to trigger expansion (crosses HORIZONTAL_SWIPE_MIN),
+// 2. at the same position again so the next event becomes the first movement after
+//    expansion, which starts drag tracking (sets dragStartX).
 function simulateTouchSwipe(element, startX, endX, startY = 100, endY = 100) {
   fireEvent.touchStart(element, { touches: [{ clientX: startX, clientY: startY }] });
   if (Math.abs(endX - startX) > 10) {
-    // Intermediate move that crosses the HORIZONTAL_SWIPE_MIN threshold (10 px),
-    // setting dragStartX to this position before the finger reaches endX.
     const expandX = endX < startX ? startX - 11 : startX + 11;
+    // First intermediate: triggers expansion (crosses HORIZONTAL_SWIPE_MIN threshold)
+    fireEvent.touchMove(element, { touches: [{ clientX: expandX, clientY: startY }] });
+    // Second intermediate: first movement after expansion — starts drag tracking
     fireEvent.touchMove(element, { touches: [{ clientX: expandX, clientY: startY }] });
   }
   fireEvent.touchMove(element, { touches: [{ clientX: endX, clientY: endY }] });
@@ -73,7 +76,11 @@ describe('SortCarousel', () => {
       <SortCarousel activeSort="alphabetical" onSortChange={() => {}} />
     );
     fireEvent.touchStart(container.firstChild, { touches: [{ clientX: 200, clientY: 100 }] });
+    // First move crosses HORIZONTAL_SWIPE_MIN: expands, but dragging has NOT started yet
     fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 215, clientY: 100 }] });
+    expect(container.firstChild).not.toHaveClass('sort-carousel--dragging');
+    // Second move: first movement after expansion — drag tracking begins
+    fireEvent.touchMove(container.firstChild, { touches: [{ clientX: 220, clientY: 100 }] });
     expect(container.firstChild).toHaveClass('sort-carousel--dragging');
   });
 

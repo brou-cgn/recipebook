@@ -95,10 +95,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
           gestureRef.current.longPressTimer = null;
         }
         gestureRef.current.isExpanded = true;
-        gestureRef.current.isDragging = true;
-        gestureRef.current.dragStartX = touch.clientX;
         setExpanded(true);
-        setIsDragging(true);
         setDragOffset(0);
       }
       return;
