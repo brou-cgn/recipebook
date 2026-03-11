@@ -313,6 +313,14 @@
     padding: 0;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     min-width: auto;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.3s ease,
+                box-shadow 0.3s ease;
+  }
+
+  /* Slide the filter button off-screen to the left when the sort carousel expands */
+  .filter-button--carousel-expanded {
+    transform: translateX(calc(-100% - 25px));
   }
 
   .filter-button:hover {

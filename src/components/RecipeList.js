@@ -44,6 +44,7 @@ function sortRecipeGroups(groups, sortType) {
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [activeSort, setActiveSort] = useState('alphabetical');
+  const [carouselExpanded, setCarouselExpanded] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
@@ -163,7 +164,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           <div className="filter-group">
             {onOpenFilterPage && (
               <button 
-                className="filter-button"
+                className={`filter-button${carouselExpanded ? ' filter-button--carousel-expanded' : ''}`}
                 onClick={onOpenFilterPage}
                 title="Weitere Filter"
               >
@@ -196,7 +197,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             </button>
           </div>
           {currentUser?.sortCarousel && (
-            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
+            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} onExpandChange={setCarouselExpanded} />
           )}
           {userCanEdit && activePrivateListId ? (
             <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>

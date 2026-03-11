@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import './SortCarousel.css';
 
 export const SORT_OPTIONS = [
@@ -13,7 +13,7 @@ const LONG_PRESS_DELAY = 300; // ms — hold time required to expand via long pr
 const HORIZONTAL_SWIPE_MIN = 10; // px — minimum horizontal movement to detect a swipe
 const ITEM_WIDTH_CSS = 'var(--sort-item-width, 165px)';
 
-function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
+function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChange }) {
   const [expanded, setExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -173,38 +173,57 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     }
   }, [expanded, safeIndex, selectIndex, collapse]);
 
+  // Keep a stable ref to onExpandChange so the effect doesn't re-run on every render
+  const onExpandChangeRef = useRef(onExpandChange);
+  useEffect(() => { onExpandChangeRef.current = onExpandChange; });
+
   // Pixel-accurate translateX: shift by safeIndex item-widths, then apply live drag offset
   const translateX = expanded ? dragOffset : 0;
 
+  // Notify parent whenever the expanded state changes
+  useEffect(() => {
+    if (onExpandChangeRef.current) onExpandChangeRef.current(expanded);
+  }, [expanded]);
+
   return (
-    <div
-      className={`sort-carousel${expanded ? ' sort-carousel--expanded' : ''}${isDragging ? ' sort-carousel--dragging' : ''}`}
-      role="listbox"
-      aria-label="Sortierung"
-      aria-expanded={expanded}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <>
       <div
-        className="sort-carousel-track"
-        ref={trackRef}
-        style={{ transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${translateX}px))` }}
+        className={`sort-carousel${expanded ? ' sort-carousel--expanded' : ''}${isDragging ? ' sort-carousel--dragging' : ''}`}
+        role="listbox"
+        aria-label="Sortierung"
+        aria-expanded={expanded}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
+        <div
+          className="sort-carousel-track"
+          ref={trackRef}
+          style={{ transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${translateX}px))` }}
+        >
+          {SORT_OPTIONS.map((option, idx) => (
+            <div
+              key={option.id}
+              className={`sort-carousel-item${idx === safeIndex ? ' sort-carousel-item--active' : ''}`}
+              role="option"
+              aria-selected={idx === safeIndex}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="sort-carousel-indicator" aria-hidden="true">
         {SORT_OPTIONS.map((option, idx) => (
-          <div
+          <span
             key={option.id}
-            className={`sort-carousel-item${idx === safeIndex ? ' sort-carousel-item--active' : ''}`}
-            role="option"
-            aria-selected={idx === safeIndex}
-          >
-            {option.label}
-          </div>
+            className={`sort-carousel-dot${idx === safeIndex ? ' sort-carousel-dot--active' : ''}`}
+          />
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
