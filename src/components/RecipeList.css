@@ -350,8 +350,8 @@
 .sort-swiper {
   position: fixed;
   bottom: 20px;
-  left: 20px;
-  right: 20px;
+  left: 0;
+  width: 100%;
   z-index: 100;
   pointer-events: none;
 }
@@ -370,7 +370,6 @@
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: 18px;
 }
 
 .sort-swiper-track::-webkit-scrollbar {
