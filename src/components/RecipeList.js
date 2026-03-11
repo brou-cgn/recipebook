@@ -6,9 +6,11 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import RecipeRating from './RecipeRating';
+import SortCarousel from './SortCarousel';
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [activeSort, setActiveSort] = useState('alphabetical');
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
@@ -100,13 +102,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       });
     }
 
-    // Sort groups alphabetically by the primary recipe's title
-    return filteredGroups.sort((a, b) => {
-      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
-      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
-      return titleA.localeCompare(titleB);
-    });
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm]);
+    // Sort groups based on active sort option
+    return sortRecipeGroups(filteredGroups, activeSort);
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order
@@ -114,6 +112,39 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     const sortedVersions = sortRecipeVersions(group.allRecipes, currentUser?.id, (userId, recipeId) => favoriteIds.includes(recipeId), recipes);
     const topRecipe = sortedVersions[0] || group.primaryRecipe;
     onSelectRecipe(topRecipe);
+  };
+
+  const sortRecipeGroups = (groups, sortType) => {
+    const sorted = [...groups];
+    if (sortType === 'alphabetical') {
+      sorted.sort((a, b) => {
+        const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
+        const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+        return titleA.localeCompare(titleB);
+      });
+    } else if (sortType === 'newest') {
+      sorted.sort((a, b) => {
+        const toMs = (ts) => {
+          if (!ts) return 0;
+          if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+          return new Date(ts).getTime();
+        };
+        return toMs(b.primaryRecipe?.createdAt) - toMs(a.primaryRecipe?.createdAt);
+      });
+    } else if (sortType === 'rating') {
+      sorted.sort((a, b) => {
+        const ratingA = a.primaryRecipe?.ratingAvg || 0;
+        const ratingB = b.primaryRecipe?.ratingAvg || 0;
+        return ratingB - ratingA;
+      });
+    } else if (sortType === 'trending') {
+      sorted.sort((a, b) => {
+        const countA = a.primaryRecipe?.ratingCount || 0;
+        const countB = b.primaryRecipe?.ratingCount || 0;
+        return countB - countA;
+      });
+    }
+    return sorted;
   };
 
   // Helper function to get author name
@@ -164,6 +195,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               ★ Favoriten
             </button>
           </div>
+          <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
           {userCanEdit && activePrivateListId ? (
             <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>
               + Privates Rezept hinzufügen

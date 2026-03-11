@@ -1,0 +1,91 @@
+/* ─── SortCarousel ─────────────────────────────────────────────────────────── */
+
+.sort-carousel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  /* Collapsed: exactly as wide as one item */
+  max-width: var(--sort-item-width, 160px);
+  border-radius: 25px;
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  user-select: none;
+  touch-action: pan-y;
+  outline: none;
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s ease;
+}
+
+.sort-carousel:focus-visible {
+  box-shadow: 0 0 0 3px rgba(223, 122, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Expanded: reveal neighbours on both sides */
+.sort-carousel--expanded {
+  max-width: calc(var(--sort-item-width, 160px) * 3 + 2rem);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+}
+
+.sort-carousel--expanded:active {
+  cursor: grabbing;
+}
+
+/* ─── Track ─────────────────────────────────────────────────────────────────── */
+
+.sort-carousel-track {
+  display: flex;
+  /* Items don't shrink; track can scroll freely */
+  flex-wrap: nowrap;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* While dragging, disable the CSS transition so it follows the finger instantly */
+.sort-carousel--dragging .sort-carousel-track {
+  transition: none;
+}
+
+/* ─── Items ─────────────────────────────────────────────────────────────────── */
+
+.sort-carousel-item {
+  flex: 0 0 var(--sort-item-width, 160px);
+  width: var(--sort-item-width, 160px);
+  padding: 0.65rem 1.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  border-radius: 25px;
+  transition: color 0.25s ease, transform 0.25s ease;
+  pointer-events: none; /* clicks handled on the container while collapsed */
+}
+
+.sort-carousel--expanded .sort-carousel-item {
+  pointer-events: auto;
+}
+
+.sort-carousel-item--active {
+  color: #ffffff;
+}
+
+/* Subtle scale-up for the active item */
+.sort-carousel--expanded .sort-carousel-item--active {
+  transform: scale(1.05);
+}
+
+/* Non-active items fade more in collapsed state (they're clipped anyway) */
+.sort-carousel:not(.sort-carousel--expanded) .sort-carousel-item:not(.sort-carousel-item--active) {
+  color: rgba(255, 255, 255, 0);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .sort-carousel {
+    --sort-item-width: 140px;
+  }
+}
