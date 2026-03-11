@@ -287,8 +287,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         // 1. Bayesian score descending (highest first)
         const scoreA = getBayesianScore(recipeA);
         const scoreB = getBayesianScore(recipeB);
-        const scoreDiff = scoreB - scoreA;
-        if (Math.abs(scoreDiff) > 1e-9) return scoreDiff;
+        if (scoreA !== scoreB) return scoreB - scoreA;
         // 2+3. Title alphabetical A–Z, then newest first
         return compareTitleAndDate(recipeA, recipeB);
       } else if (sortMode === 'new') {
