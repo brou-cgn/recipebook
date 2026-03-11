@@ -11,7 +11,7 @@ export const SORT_OPTIONS = [
 const SWIPE_THRESHOLD = 50; // px — minimum swipe distance to trigger a sort change
 const LONG_PRESS_DELAY = 300; // ms — hold time required to expand via long press
 const HORIZONTAL_SWIPE_MIN = 10; // px — minimum horizontal movement to detect a swipe
-const ITEM_WIDTH_CSS = 'var(--sort-item-width, 160px)';
+const ITEM_WIDTH_CSS = 'var(--sort-item-width, 165px)';
 
 function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const [expanded, setExpanded] = useState(false);
@@ -139,9 +139,11 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
 
     const threshold = itemWidth > 0 ? itemWidth / 2 : SWIPE_THRESHOLD;
     if (delta < -threshold) {
-      selectIndex(safeIndex + 1);
+      const steps = itemWidth > 0 ? Math.max(1, Math.round(-delta / itemWidth)) : 1;
+      selectIndex(safeIndex + steps);
     } else if (delta > threshold) {
-      selectIndex(safeIndex - 1);
+      const steps = itemWidth > 0 ? Math.max(1, Math.round(delta / itemWidth)) : 1;
+      selectIndex(safeIndex - steps);
     } else {
       // No sort change — just collapse
       setExpanded(false);

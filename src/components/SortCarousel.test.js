@@ -9,6 +9,16 @@ function simulateTouchSwipe(element, startX, endX, startY = 100, endY = 100) {
   fireEvent.touchEnd(element, { changedTouches: [{ clientX: endX, clientY: endY }] });
 }
 
+// Helper: mock the first carousel item's getBoundingClientRect to return a known width
+function mockItemWidth(container, width) {
+  const items = container.firstChild
+    .querySelector('.sort-carousel-track')
+    .querySelectorAll('.sort-carousel-item');
+  jest.spyOn(items[0], 'getBoundingClientRect').mockReturnValue({
+    width, height: 40, top: 0, left: 0, right: width, bottom: 40,
+  });
+}
+
 describe('SortCarousel', () => {
   test('renders the active option label', () => {
     render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
@@ -76,6 +86,30 @@ describe('SortCarousel', () => {
     );
     simulateTouchSwipe(container.firstChild, 100, 200); // +100 px > threshold
     expect(handleChange).toHaveBeenCalledWith('alphabetical');
+  });
+
+  test('multi-step swipe left skips multiple options based on item width', () => {
+    const handleChange = jest.fn();
+    const { container } = render(
+      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
+    );
+    // Mock item width to 165px so a 400px swipe = ~2.4 items → Math.round = 2 steps
+    mockItemWidth(container, 165);
+    // swipe -400px: 400/165 ≈ 2.42 → rounds to 2 steps from 'alphabetical' → 'newest'
+    simulateTouchSwipe(container.firstChild, 500, 100);
+    expect(handleChange).toHaveBeenCalledWith('newest');
+  });
+
+  test('multi-step swipe right skips multiple options based on item width', () => {
+    const handleChange = jest.fn();
+    const { container } = render(
+      <SortCarousel activeSort="rating" onSortChange={handleChange} />
+    );
+    // Mock item width to 165px so a 400px swipe right = ~2.4 items → 2 steps back from 'rating'
+    mockItemWidth(container, 165);
+    // 'rating' is index 3; 2 steps back → index 1 → 'trending'
+    simulateTouchSwipe(container.firstChild, 100, 500);
+    expect(handleChange).toHaveBeenCalledWith('trending');
   });
 
   test('short swipe collapses without changing sort', () => {
