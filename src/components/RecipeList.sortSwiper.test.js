@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecipeList from './RecipeList';
 
@@ -239,73 +239,5 @@ describe('RecipeList - Sort Swiper', () => {
     const titles = Array.from(cards).map(c => c.textContent);
     // Zebra Cake=3 calls, Banana Bread=1 call, Apple Pie=0 calls
     expect(titles).toEqual(['Zebra Cake', 'Banana Bread', 'Apple Pie']);
-  });
-
-  test('swiper is compact (no expanded class) by default', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    expect(swiper).not.toHaveClass('expanded');
-  });
-
-  test('swiper gains expanded class on touch start', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-    fireEvent.touchStart(swiper);
-    expect(swiper).toHaveClass('expanded');
-  });
-
-  test('swiper loses expanded class after touch end delay', async () => {
-    render(
-      <RecipeList
-        recipes={mockRecipes}
-        onSelectRecipe={() => {}}
-        onAddRecipe={() => {}}
-        categoryFilter=""
-        currentUser={{ id: 'user-1' }}
-        searchTerm=""
-      />
-    );
-
-    // Wait for component to finish async loading with real timers
-    await screen.findByText('Im Trend');
-    const swiper = document.querySelector('.sort-swiper');
-
-    // Switch to fake timers after async loading is done
-    jest.useFakeTimers();
-
-    fireEvent.touchStart(swiper);
-    expect(swiper).toHaveClass('expanded');
-
-    fireEvent.touchEnd(swiper);
-
-    // Advance past the 500ms collapse delay and flush React state updates
-    act(() => {
-      jest.advanceTimersByTime(500);
-    });
-    expect(swiper).not.toHaveClass('expanded');
-
-    jest.useRealTimers();
   });
 });

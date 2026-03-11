@@ -350,16 +350,10 @@
 .sort-swiper {
   position: fixed;
   bottom: 20px;
-  left: calc(50% - 77px);
-  right: calc(50% - 77px);
-  z-index: 100;
-  pointer-events: none;
-  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sort-swiper.expanded {
   left: 20px;
   right: 20px;
+  z-index: 100;
+  pointer-events: none;
 }
 
 .sort-swiper-track {
