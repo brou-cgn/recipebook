@@ -60,7 +60,7 @@
 
 /* Smooth track transition nur nach Messung und wenn nicht gedraggt wird */
 .sort-carousel--measured .sort-carousel-track {
-  transition: transform 0.18s ease-out;
+  transition: none;
 }
 
 /* While dragging, disable the CSS transition so the track follows the finger instantly */
