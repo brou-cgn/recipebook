@@ -3,40 +3,69 @@ import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import RecipeRating from './RecipeRating';
 import SortCarousel from './SortCarousel';
+import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 
-function sortRecipeGroups(groups, sortType) {
+function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
+  const toMs = (ts) => {
+    if (!ts) return 0;
+    if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+    return new Date(ts).getTime();
+  };
+
   const sorted = [...groups];
+
   if (sortType === 'alphabetical') {
     sorted.sort((a, b) => {
       const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
       const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      const cmp = titleA.localeCompare(titleB);
+      if (cmp !== 0) return cmp;
+      return toMs(a.primaryRecipe?.createdAt) - toMs(b.primaryRecipe?.createdAt);
+    });
+    return sorted;
+  } else if (sortType === 'newest') {
+    const days = sortSettings?.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const filtered = sorted.filter(g => toMs(g.primaryRecipe?.createdAt) >= cutoff);
+    filtered.sort((a, b) => {
+      const dateDiff = toMs(b.primaryRecipe?.createdAt) - toMs(a.primaryRecipe?.createdAt);
+      if (dateDiff !== 0) return dateDiff;
+      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
+      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
       return titleA.localeCompare(titleB);
     });
-  } else if (sortType === 'newest') {
-    sorted.sort((a, b) => {
-      const toMs = (ts) => {
-        if (!ts) return 0;
-        if (typeof ts.toDate === 'function') return ts.toDate().getTime();
-        return new Date(ts).getTime();
-      };
-      return toMs(b.primaryRecipe?.createdAt) - toMs(a.primaryRecipe?.createdAt);
-    });
+    return filtered;
   } else if (sortType === 'rating') {
-    sorted.sort((a, b) => {
-      const ratingA = a.primaryRecipe?.ratingAvg || 0;
-      const ratingB = b.primaryRecipe?.ratingAvg || 0;
-      return ratingB - ratingA;
-    });
+    const m = sortSettings?.ratingMinVotes ?? DEFAULT_RATING_MIN_VOTES;
+    const recipesWithRatings = groups.filter(g => (g.primaryRecipe?.ratingCount || 0) > 0);
+    const C = recipesWithRatings.length > 0
+      ? recipesWithRatings.reduce((sum, g) => sum + (g.primaryRecipe?.ratingAvg || 0), 0) / recipesWithRatings.length
+      : 0;
+    const score = (recipe) => {
+      const v = recipe?.ratingCount || 0;
+      const R = recipe?.ratingAvg || 0;
+      return (v / (v + m)) * R + (m / (v + m)) * C;
+    };
+    sorted.sort((a, b) => score(b.primaryRecipe) - score(a.primaryRecipe));
+    return sorted;
   } else if (sortType === 'trending') {
-    sorted.sort((a, b) => {
-      const countA = a.primaryRecipe?.ratingCount || 0;
-      const countB = b.primaryRecipe?.ratingCount || 0;
-      return countB - countA;
+    const minViews = sortSettings?.trendingMinViews ?? DEFAULT_TRENDING_MIN_VIEWS;
+    const getViewCount = (g) => viewCounts?.get(g.primaryRecipe?.id) || 0;
+    const filtered = sorted.filter(g => getViewCount(g) >= minViews);
+    filtered.sort((a, b) => {
+      const countDiff = getViewCount(b) - getViewCount(a);
+      if (countDiff !== 0) return countDiff;
+      const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
+      const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
+      const cmp = titleA.localeCompare(titleB);
+      if (cmp !== 0) return cmp;
+      return toMs(a.primaryRecipe?.createdAt) - toMs(b.primaryRecipe?.createdAt);
     });
+    return filtered;
   }
   return sorted;
 }
@@ -51,6 +80,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [buttonIcons, setButtonIcons] = useState({
     filterButton: DEFAULT_BUTTON_ICONS.filterButton
   });
+  const [sortSettings, setSortSettings] = useState(null);
+  const [viewCounts, setViewCounts] = useState(null);
   
   // Load all users once on mount
   useEffect(() => {
@@ -89,6 +120,46 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
     loadButtonIcons();
   }, []);
+
+  // Load sort settings on mount
+  useEffect(() => {
+    const loadSortSettings = async () => {
+      try {
+        const settings = await getSortSettings();
+        setSortSettings(settings);
+      } catch (error) {
+        console.error('Error loading sort settings:', error);
+      }
+    };
+    loadSortSettings();
+  }, []);
+
+  // Load recent view counts when trending sort is active and settings are loaded
+  useEffect(() => {
+    if (activeSort !== 'trending' || sortSettings === null) return;
+    let cancelled = false;
+    const days = sortSettings.trendingDays ?? DEFAULT_TRENDING_DAYS;
+    const loadViewCounts = async () => {
+      try {
+        const calls = await getRecentRecipeCalls(days);
+        if (cancelled) return;
+        const counts = new Map();
+        calls.forEach(call => {
+          if (call.recipeId) {
+            counts.set(call.recipeId, (counts.get(call.recipeId) || 0) + 1);
+          }
+        });
+        setViewCounts(counts);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading view counts:', error);
+          setViewCounts(new Map());
+        }
+      }
+    };
+    loadViewCounts();
+    return () => { cancelled = true; };
+  }, [activeSort, sortSettings]);
 
   // Load favorite IDs when user changes or recipes change
   useEffect(() => {
@@ -137,8 +208,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     }
 
     // Sort groups based on active sort option
-    return sortRecipeGroups(filteredGroups, activeSort);
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort]);
+    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts);
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order

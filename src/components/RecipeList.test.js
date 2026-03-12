@@ -18,9 +18,24 @@ jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({
     filterButton: '⚙'
   }),
+  getSortSettings: () => Promise.resolve({
+    trendingDays: 30,
+    trendingMinViews: 5,
+    newRecipeDays: 30,
+    ratingMinVotes: 5,
+  }),
   DEFAULT_BUTTON_ICONS: {
     filterButton: '⚙'
-  }
+  },
+  DEFAULT_TRENDING_DAYS: 30,
+  DEFAULT_TRENDING_MIN_VIEWS: 5,
+  DEFAULT_NEW_RECIPE_DAYS: 30,
+  DEFAULT_RATING_MIN_VOTES: 5,
+}));
+
+// Mock recipeCallsFirestore
+jest.mock('../utils/recipeCallsFirestore', () => ({
+  getRecentRecipeCalls: () => Promise.resolve([]),
 }));
 
 const mockRecipes = [

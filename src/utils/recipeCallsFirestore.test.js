@@ -12,6 +12,7 @@ const mockAddDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockQuery = jest.fn((...args) => args);
 const mockOrderBy = jest.fn((...args) => args);
+const mockWhere = jest.fn((...args) => args);
 const mockServerTimestamp = jest.fn(() => 'mock-timestamp');
 
 jest.mock('firebase/firestore', () => ({
@@ -20,10 +21,12 @@ jest.mock('firebase/firestore', () => ({
   getDocs: (...args) => mockGetDocs(...args),
   query: (...args) => mockQuery(...args),
   orderBy: (...args) => mockOrderBy(...args),
-  serverTimestamp: () => mockServerTimestamp()
+  where: (...args) => mockWhere(...args),
+  serverTimestamp: () => mockServerTimestamp(),
+  Timestamp: { fromDate: (date) => ({ toDate: () => date, _isMock: true }) }
 }));
 
-import { logRecipeCall, getRecipeCalls } from './recipeCallsFirestore';
+import { logRecipeCall, getRecipeCalls, getRecentRecipeCalls } from './recipeCallsFirestore';
 
 const { collection: mockCollection } = jest.requireMock('firebase/firestore');
 
@@ -157,6 +160,39 @@ describe('getRecipeCalls', () => {
     mockGetDocs.mockResolvedValue({ docs: [] });
 
     const result = await getRecipeCalls();
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('getRecentRecipeCalls', () => {
+  it('queries with a where timestamp filter', async () => {
+    const mockDocs = [
+      { id: 'call-1', data: () => ({ recipeId: 'r1', recipeTitle: 'Rezept A', timestamp: 'ts1' }) }
+    ];
+    mockGetDocs.mockResolvedValue({ docs: mockDocs });
+
+    const result = await getRecentRecipeCalls(7);
+
+    expect(mockWhere).toHaveBeenCalledWith('timestamp', '>=', expect.anything());
+    expect(mockOrderBy).toHaveBeenCalledWith('timestamp', 'desc');
+    expect(result).toEqual([
+      { id: 'call-1', recipeId: 'r1', recipeTitle: 'Rezept A', timestamp: 'ts1' }
+    ]);
+  });
+
+  it('returns empty array if getDocs fails', async () => {
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    const result = await getRecentRecipeCalls(30);
+
+    expect(result).toEqual([]);
+  });
+
+  it('returns empty array when no calls in the time window', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] });
+
+    const result = await getRecentRecipeCalls(30);
 
     expect(result).toEqual([]);
   });

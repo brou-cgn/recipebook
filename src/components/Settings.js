@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -209,6 +209,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Tile size state
   const [tileSize, setTileSize] = useState(getTileSizePreference);
 
+  // Sort/filter settings state
+  const [trendingDays, setTrendingDays] = useState(DEFAULT_TRENDING_DAYS);
+  const [trendingMinViews, setTrendingMinViews] = useState(DEFAULT_TRENDING_MIN_VIEWS);
+  const [newRecipeDays, setNewRecipeDays] = useState(DEFAULT_NEW_RECIPE_DAYS);
+  const [ratingMinVotes, setRatingMinVotes] = useState(DEFAULT_RATING_MIN_VOTES);
+
   // Role permissions state (for abortCalc permission check)
   const [rolePermissions, setRolePermissions] = useState(null);
 
@@ -231,6 +237,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const timelineCookEventIcon = await getTimelineCookEventBubbleIcon();
       const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
+      const sortSettings = await getSortSettings();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -245,6 +252,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setTimelineCookEventBubbleIcon(timelineCookEventIcon);
       setTimelineCookEventDefaultImage(timelineCookEventImg);
       setAiPrompt(aiRecipePrompt);
+      setTrendingDays(sortSettings.trendingDays);
+      setTrendingMinViews(sortSettings.trendingMinViews);
+      setNewRecipeDays(sortSettings.newRecipeDays);
+      setRatingMinVotes(sortSettings.ratingMinVotes);
     };
     loadSettings();
   }, []);
@@ -404,6 +415,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveTimelineCookEventBubbleIcon(timelineCookEventBubbleIcon);
       saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
+      await saveSortSettings({ trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes });
 
       // Apply favicon changes immediately
       updateFavicon(faviconImage);
@@ -2687,6 +2699,82 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   <span className="tile-size-label">Groß</span>
                   <span className="tile-size-desc">Weniger Kacheln pro Zeile</span>
                 </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Sortier- und Filter-Einstellungen</h3>
+              <p className="section-description">
+                Konfigurieren Sie die Parameter für die Karussell-Sortieroptionen in der Rezeptübersicht.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <h4>Im Trend</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="trendingDays">Zeitfenster in Tagen (X):</label>
+                    <input
+                      id="trendingDays"
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={trendingDays}
+                      onChange={(e) => {
+                        const val = e.target.valueAsNumber;
+                        if (!isNaN(val) && val >= 1) setTrendingDays(val);
+                      }}
+                    />
+                    <span className="sort-settings-hint">Nur Aufrufe der letzten X Tage werden gezählt.</span>
+                  </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="trendingMinViews">Mindestaufrufe (Y):</label>
+                    <input
+                      id="trendingMinViews"
+                      type="number"
+                      min="0"
+                      value={trendingMinViews}
+                      onChange={(e) => {
+                        const val = e.target.valueAsNumber;
+                        if (!isNaN(val) && val >= 0) setTrendingMinViews(val);
+                      }}
+                    />
+                    <span className="sort-settings-hint">Rezepte mit weniger als Y Aufrufen werden ausgeblendet.</span>
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>Neue Rezepte</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="newRecipeDays">Zeitfenster in Tagen (X):</label>
+                    <input
+                      id="newRecipeDays"
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={newRecipeDays}
+                      onChange={(e) => {
+                        const val = e.target.valueAsNumber;
+                        if (!isNaN(val) && val >= 1) setNewRecipeDays(val);
+                      }}
+                    />
+                    <span className="sort-settings-hint">Nur Rezepte, die in den letzten X Tagen erstellt wurden, werden angezeigt.</span>
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>Nach Bewertung</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="ratingMinVotes">Mindestanzahl Bewertungen (m):</label>
+                    <input
+                      id="ratingMinVotes"
+                      type="number"
+                      min="1"
+                      value={ratingMinVotes}
+                      onChange={(e) => {
+                        const val = e.target.valueAsNumber;
+                        if (!isNaN(val) && val >= 1) setRatingMinVotes(val);
+                      }}
+                    />
+                    <span className="sort-settings-hint">Dämpfungsparameter für den Bewertungs-Score: Score = (v/(v+m))·R + (m/(v+m))·C</span>
+                  </div>
+                </div>
               </div>
             </div>
 

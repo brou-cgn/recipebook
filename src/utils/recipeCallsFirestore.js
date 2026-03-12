@@ -20,7 +20,9 @@ import {
   getDocs,
   orderBy,
   query,
-  serverTimestamp
+  serverTimestamp,
+  where,
+  Timestamp
 } from 'firebase/firestore';
 
 /**
@@ -58,6 +60,28 @@ export const getRecipeCalls = async () => {
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Error fetching recipe calls:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch recipe calls from the last N days, ordered by most recent first
+ * @param {number} days - Number of days to look back
+ * @returns {Promise<Array>} Array of recipe call objects within the time window
+ */
+export const getRecentRecipeCalls = async (days = 30) => {
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const q = query(
+      collection(db, 'recipeCalls'),
+      where('timestamp', '>=', Timestamp.fromDate(cutoff)),
+      orderBy('timestamp', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching recent recipe calls:', error);
     return [];
   }
 };

@@ -1566,3 +1566,55 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Sort settings section */
+.sort-settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sort-settings-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e9ecef;
+}
+
+.sort-settings-group h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #402C1C;
+}
+
+.sort-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.sort-settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.sort-settings-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.sort-settings-field input[type="number"] {
+  width: 100px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.sort-settings-hint {
+  font-size: 0.78rem;
+  color: #888;
+  line-height: 1.3;
+}

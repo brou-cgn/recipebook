@@ -67,6 +67,12 @@ export const DEFAULT_CONVERSION_TABLE = [
 export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
+// Sort settings defaults
+export const DEFAULT_TRENDING_DAYS = 30;
+export const DEFAULT_TRENDING_MIN_VIEWS = 5;
+export const DEFAULT_NEW_RECIPE_DAYS = 30;
+export const DEFAULT_RATING_MIN_VOTES = 5;
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -257,7 +263,11 @@ export async function getSettings() {
         timelineMenuDefaultImage: settings.timelineMenuDefaultImage || null,
         timelineCookEventDefaultImage: settings.timelineCookEventDefaultImage || null,
         aiRecipePrompt,
-        autoShareOnCreate: settings.autoShareOnCreate ?? false
+        autoShareOnCreate: settings.autoShareOnCreate ?? false,
+        trendingDays: settings.trendingDays ?? DEFAULT_TRENDING_DAYS,
+        trendingMinViews: settings.trendingMinViews ?? DEFAULT_TRENDING_MIN_VIEWS,
+        newRecipeDays: settings.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS,
+        ratingMinVotes: settings.ratingMinVotes ?? DEFAULT_RATING_MIN_VOTES,
       };
       
       return settingsCache;
@@ -282,7 +292,11 @@ export async function getSettings() {
       timelineMenuDefaultImage: null,
       timelineCookEventDefaultImage: null,
       aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
-      autoShareOnCreate: false
+      autoShareOnCreate: false,
+      trendingDays: DEFAULT_TRENDING_DAYS,
+      trendingMinViews: DEFAULT_TRENDING_MIN_VIEWS,
+      newRecipeDays: DEFAULT_NEW_RECIPE_DAYS,
+      ratingMinVotes: DEFAULT_RATING_MIN_VOTES,
     };
     
     // Create the settings document
@@ -312,7 +326,11 @@ export async function getSettings() {
       timelineMenuDefaultImage: null,
       timelineCookEventDefaultImage: null,
       aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
-      autoShareOnCreate: false
+      autoShareOnCreate: false,
+      trendingDays: DEFAULT_TRENDING_DAYS,
+      trendingMinViews: DEFAULT_TRENDING_MIN_VIEWS,
+      newRecipeDays: DEFAULT_NEW_RECIPE_DAYS,
+      ratingMinVotes: DEFAULT_RATING_MIN_VOTES,
     };
   }
 }
@@ -922,6 +940,45 @@ export async function saveAutoShareOnCreate(value) {
     }
   } catch (error) {
     console.error('Error saving autoShareOnCreate setting:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get sort/filter settings (trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes)
+ * @returns {Promise<Object>} Promise resolving to sort settings object
+ */
+export async function getSortSettings() {
+  const settings = await getSettings();
+  return {
+    trendingDays: settings.trendingDays ?? DEFAULT_TRENDING_DAYS,
+    trendingMinViews: settings.trendingMinViews ?? DEFAULT_TRENDING_MIN_VIEWS,
+    newRecipeDays: settings.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS,
+    ratingMinVotes: settings.ratingMinVotes ?? DEFAULT_RATING_MIN_VOTES,
+  };
+}
+
+/**
+ * Save sort/filter settings to Firestore
+ * @param {Object} sortSettings - Object with trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes
+ * @returns {Promise<void>}
+ */
+export async function saveSortSettings(sortSettings) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    const update = {};
+    if (sortSettings.trendingDays !== undefined) update.trendingDays = sortSettings.trendingDays;
+    if (sortSettings.trendingMinViews !== undefined) update.trendingMinViews = sortSettings.trendingMinViews;
+    if (sortSettings.newRecipeDays !== undefined) update.newRecipeDays = sortSettings.newRecipeDays;
+    if (sortSettings.ratingMinVotes !== undefined) update.ratingMinVotes = sortSettings.ratingMinVotes;
+    await updateDoc(settingsRef, update);
+
+    // Update cache
+    if (settingsCache) {
+      Object.assign(settingsCache, update);
+    }
+  } catch (error) {
+    console.error('Error saving sort settings:', error);
     throw error;
   }
 }
