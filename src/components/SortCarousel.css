@@ -107,7 +107,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     /* 12px narrower and 8px shorter than the carousel → 6px gap on each side */
-    width: calc(100% - 12px);
+    width: calc(var(--sort-max-item-width, 160px) - 12px);
     height: calc(100% - 8px);
     border-radius: 25px;
     background: transparent;
