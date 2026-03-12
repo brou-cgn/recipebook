@@ -176,39 +176,15 @@
   .sort-carousel--expanded::before {
     filter: drop-shadow(0 0 5px rgba(255,255,255,0.22))
             drop-shadow(0 0 10px rgba(255,255,255,0.12));
-  }  
+    animation: cameraGlowPulse 1.8s ease-in-out infinite;
+  }
+  
+  @keyframes cameraGlowPulse {
+    0%, 100% {
+      opacity: 0.92;
+    }
+    50% {
+      opacity: 1;
+    }  
 }
 
-/* ─── Indicator dots ─────────────────────────────────────────────────────────── 
-
-.sort-carousel-indicator {
-  display: none;
-}
-
-@media (max-width: 480px) {
-  .sort-carousel-indicator {
-    position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1001;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-  }
-
-  .sort-carousel-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(64, 44, 28, 0.35);
-    transition: background 0.25s ease, transform 0.25s ease;
-  }
-
-  .sort-carousel-dot--active {
-    background: #402C1C;
-    transform: scale(1.4);
-  }
-} */
