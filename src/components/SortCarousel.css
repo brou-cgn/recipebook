@@ -87,7 +87,7 @@
 
 /* Subtle scale-up for the active item when expanded */
 .sort-carousel--expanded .sort-carousel-item--active {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 /* Non-active items are invisible in collapsed state (they're clipped anyway) */
