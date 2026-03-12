@@ -9,6 +9,15 @@ import RecipeRating from './RecipeRating';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 
+export function isNewRecipe(recipe, sortSettings) {
+  if (!recipe?.createdAt) return false;
+  const days = sortSettings?.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const ts = recipe.createdAt;
+  const ms = typeof ts?.toDate === 'function' ? ts.toDate().getTime() : new Date(ts).getTime();
+  return ms >= cutoff;
+}
+
 function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
   const toMs = (ts) => {
     if (!ts) return 0;
@@ -307,6 +316,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
               >
                 {isFavorite && (
                   <div className="favorite-badge">★</div>
+                )}
+                {isNewRecipe(recipe, sortSettings) && (
+                  <div className="new-badge">Neu</div>
                 )}
 
                 {recipe.image && (
