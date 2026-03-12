@@ -18,7 +18,7 @@ const LONG_PRESS_DELAY = 300;
 const HORIZONTAL_SWIPE_MIN = 10;
 const SWIPE_THRESHOLD = 30;
 const FALLBACK_ITEM_WIDTH = 160;
-const ITEM_WIDTH_CSS = 'var(--sort-item-width, 160px)';
+//const ITEM_WIDTH_CSS = 'var(--sort-item-width, 160px)';
 
 function clampLoop(index, length) {
   return ((index % length) + length) % length;
@@ -35,6 +35,9 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
 
   // Layout-Werte bewusst als Refs, damit ResizeObserver keine Re-Render-Flut auslöst
   const itemWidthRef = useRef(FALLBACK_ITEM_WIDTH);
+  // BROU 12.03.2026
+  const containerWidthRef = useRef(FALLBACK_ITEM_WIDTH);
+  const [, forceLayoutTick] = useState(0);
 
   const onExpandChangeRef = useRef(onExpandChange);
 
@@ -94,7 +97,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
 
   // --- Messung ---
 
-  const applyMeasurementsToDom = useCallback(() => {
+  /*const applyMeasurementsToDom = useCallback(() => {
     const carouselEl = carouselRef.current;
     const trackEl = trackRef.current;
     if (!carouselEl || !trackEl) return;
@@ -121,6 +124,38 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     });
 
     setIsMeasured(true);
+  }, []);*/
+  const applyMeasurementsToDom = useCallback(() => {
+    const carouselEl = carouselRef.current;
+    const trackEl = trackRef.current;
+    if (!carouselEl || !trackEl) return;
+
+    const items = trackEl.querySelectorAll('.sort-carousel-item');
+    if (!items.length) return;
+
+    let maxWidth = 0;
+    items.forEach((item) => {
+      const width = Math.max(item.scrollWidth, item.offsetWidth);
+      if (width > maxWidth) maxWidth = width;
+    });
+
+    if (!maxWidth) maxWidth = FALLBACK_ITEM_WIDTH;
+
+    carouselEl.style.setProperty('--sort-item-width', `${maxWidth}px`);
+
+    items.forEach((item) => {
+      item.style.width = `${maxWidth}px`;
+      item.style.minWidth = `${maxWidth}px`;
+      item.style.maxWidth = `${maxWidth}px`;
+    });
+
+    const containerWidth = carouselEl.getBoundingClientRect().width || maxWidth;
+
+    itemWidthRef.current = maxWidth;
+    containerWidthRef.current = containerWidth;
+
+    setIsMeasured(true);
+    forceLayoutTick((v) => v + 1);
   }, []);
 
   useLayoutEffect(() => {
@@ -318,8 +353,15 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
   // Collapsed & expanded ohne Drag: CSS calc() — synchron mit dem Layout, kein Timing-Problem
   // Beim aktiven Dragging: Pixel-basiert für exaktes Finger-Tracking
   // Note: dragOffset=0 is used in both branches to ensure consistent transform string format
-  const trackStyle = { transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${dragOffset}px))` };
+  //const trackStyle = { transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${dragOffset}px))` };
+  const itemWidth = itemWidthRef.current || FALLBACK_ITEM_WIDTH;
+  const containerWidth = containerWidthRef.current || itemWidth;
+  const centerOffset = (containerWidth - itemWidth) / 2;
 
+  const trackStyle = {
+    transform: `translateX(${centerOffset - safeIndex * itemWidth + dragOffset}px)`,
+  };
+  
   return (
     <>
       <div
