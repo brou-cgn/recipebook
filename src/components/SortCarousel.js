@@ -207,7 +207,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
         return;
       }
 
-      setDragOffset((touch.clientX - gestureRef.current.dragStartX) * 0.4);
+      setDragOffset((touch.clientX - gestureRef.current.dragStartX) * 1.5);
     },
     [beginExpandedDrag, clearLongPressTimer]
   );
