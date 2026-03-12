@@ -146,8 +146,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
   // --- Touch-Gesten ---
 
   const beginExpandedDrag = useCallback((clientX) => {
-    gestureViewportWidthRef.current =
-      carouselRef.current?.getBoundingClientRect().width || null;
+    gestureViewportWidthRef.current = null;
     
     gestureRef.current.isExpanded = true;
     gestureRef.current.isDragging = true;
