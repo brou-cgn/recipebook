@@ -18,7 +18,11 @@
     /* Collapsed: exactly as wide as one item (set dynamically by JS)
     max-width: var(--sort-carousel-visible-width); */
     border-radius: 25px;
-    background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(64,44,28,0.85) 0%,
+      rgba(26,26,26,0.85) 100%
+    );
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     user-select: none;
     /* Allow vertical page-scroll while JS handles horizontal swipes */
