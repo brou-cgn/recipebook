@@ -167,10 +167,19 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
       gestureRef.current.startY = touch.clientY;
 
       if (!gestureRef.current.isExpanded) {
+        const startX = touch.clientX;
+      
         gestureRef.current.longPressTimer = setTimeout(() => {
           gestureRef.current.longPressTimer = null;
           gestureRef.current.isExpanded = true;
+          gestureRef.current.isDragging = true;
+          gestureRef.current.dragStartX = startX;
+      
+          gestureViewportWidthRef.current = null;
+      
           setExpanded(true);
+          setIsDragging(true);
+          setDragOffset(0);
         }, LONG_PRESS_DELAY);
       } else {
         beginExpandedDrag(touch.clientX);
@@ -347,7 +356,7 @@ const currentViewportWidth =
     (safeIndex * activeWidth + activeWidth / 2);
   
   const trackStyle = {
-    transform: `translateX(${viewportCenter - activeCenter + dragOffset}px)`,
+    transform: `translate3d(${viewportCenter - activeCenter + dragOffset}px, 0, 0)`,
   };
   
   return (
