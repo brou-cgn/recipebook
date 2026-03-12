@@ -323,7 +323,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
   // Note: dragOffset=0 is used in both branches to ensure consistent transform string format
   //const trackStyle = { transform: `translateX(calc(${-safeIndex} * ${ITEM_WIDTH_CSS} + ${dragOffset}px))` };
 
-  const activeMetric = itemMetricsRef.current?.[safeIndex];
+  /*const activeMetric = itemMetricsRef.current?.[safeIndex];
   
   const activeWidth = activeMetric?.width ?? FALLBACK_ITEM_WIDTH;
   
@@ -339,8 +339,29 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
 
   const trackStyle = {
     transform: `translateX(${viewportCenter - activeCenter + dragOffset}px)`,
+  }; */
+  const activeMetric = itemMetricsRef.current?.[safeIndex];
+  const activeWidth = activeMetric?.width ?? FALLBACK_ITEM_WIDTH;
+  
+  const targetExpandedWidth = Math.min(window.innerWidth * 0.85, 320);
+  const carouselStyle = {
+    width: expanded ? `${targetExpandedWidth}px` : `${activeWidth}px`,
   };
-
+  
+  const currentViewportWidth =
+    carouselRef.current?.getBoundingClientRect().width ||
+    (expanded ? targetExpandedWidth : activeWidth);
+  
+  const viewportCenter = currentViewportWidth / 2;
+  
+  const activeCenter =
+    activeMetric?.center ??
+    (safeIndex * activeWidth + activeWidth / 2);
+  
+  const trackStyle = {
+    transform: `translateX(${viewportCenter - activeCenter + dragOffset}px)`,
+  };
+    
   const carouselStyle = {
     width: expanded ? 'min(320px, 85vw)' : `${activeWidth}px`,
   };
