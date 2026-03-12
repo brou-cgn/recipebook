@@ -21,8 +21,8 @@
     border-radius: 25px;
     background: linear-gradient(
       135deg,
-      rgba(64,44,28,0.85) 0%,
-      rgba(26,26,26,0.85) 100%
+      rgba(40, 40, 40, 0.92) 0%,
+      rgba(20, 20, 20, 0.94) 100%
     );
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     user-select: none;
