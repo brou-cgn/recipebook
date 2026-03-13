@@ -63,7 +63,7 @@
   color: #DF7A00;
   border: 2px solid #ddd;
   border-color: #DF7A00;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 0.75rem;
   border-radius: 25px;
   font-size: 0.95rem;
   font-weight: 600;
@@ -72,12 +72,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.favorites-filter-button:hover,
+/*.favorites-filter-button:hover,
 .view-mode-button:hover {
   background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
+}*/
 
 .favorites-filter-button.active,
 .view-mode-button.active {
