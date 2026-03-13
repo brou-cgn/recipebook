@@ -2804,10 +2804,10 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl) {
         : 'Ein leckeres Rezept aus brouBook'),
   );
 
-  // Priority: imageThumbnail (pre-generated) > imageUrl > image (base64) > logo
+  // Priority: imageThumbnail (pre-generated) > imageUrl > image > logo
   let rawImage = recipe.imageThumbnail || recipe.imageUrl || '';
 
-  if (!rawImage && recipe.image && recipe.image.startsWith('data:image/')) {
+  if (!rawImage && recipe.image) {
     rawImage = recipe.image;
   }
 
@@ -2899,15 +2899,41 @@ exports.shareRecipe = onRequest(
         const recipeDoc = snapshot.docs[0];
         const recipe = recipeDoc.data();
 
-        // Lazy thumbnail generation: if no thumbnail exists yet but a base64
-        // image is stored, generate a small JPEG thumbnail (≤ 1200×630 px) and
-        // persist it so subsequent shares are instant.
-        if (!recipe.imageThumbnail && recipe.image &&
-            recipe.image.startsWith('data:image/')) {
+        // Lazy thumbnail generation: if no thumbnail exists yet but an image
+        // is stored (Base64 or Firebase Storage URL), generate a small JPEG
+        // thumbnail (≤ 1200×630 px) and persist it so subsequent shares are
+        // instant.
+        if (!recipe.imageThumbnail && recipe.image) {
           try {
-            const thumbnail = await generateThumbnail(recipe.image);
-            await recipeDoc.ref.update({imageThumbnail: thumbnail});
-            recipe.imageThumbnail = thumbnail;
+            let thumbnail;
+
+            if (recipe.image.startsWith('data:image/')) {
+              // Existing Base64 logic
+              thumbnail = await generateThumbnail(recipe.image);
+            } else if (recipe.image.startsWith(
+                'https://firebasestorage.googleapis.com/')) {
+              // New: Download from Storage and generate thumbnail
+              const response = await fetch(recipe.image);
+              if (!response.ok) {
+                throw new Error(
+                    `shareRecipe: failed to fetch image (${response.status})`);
+              }
+              const arrayBuffer = await response.arrayBuffer();
+              const imageBuffer = Buffer.from(arrayBuffer);
+
+              const thumbnailBuffer = await sharp(imageBuffer)
+                  .resize(1200, 630, {fit: 'inside', withoutEnlargement: true})
+                  .jpeg({quality: 80})
+                  .toBuffer();
+
+              thumbnail =
+                  `data:image/jpeg;base64,${thumbnailBuffer.toString('base64')}`;
+            }
+
+            if (thumbnail) {
+              await recipeDoc.ref.update({imageThumbnail: thumbnail});
+              recipe.imageThumbnail = thumbnail;
+            }
           } catch (thumbErr) {
             console.warn('shareRecipe: thumbnail generation failed:', thumbErr);
           }
