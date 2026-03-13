@@ -197,7 +197,8 @@ describe('RecipeList - Neu badge', () => {
       expect(screen.getByText('Neu')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('★')).toBeInTheDocument();
+    const starElements = screen.getAllByText('★');
+    expect(starElements.some(el => el.classList.contains('favorite-badge'))).toBe(true);
     expect(screen.getByText('Neu')).toBeInTheDocument();
   });
 
