@@ -350,6 +350,33 @@
   .filter-button:active {
     transform: scale(1);
   }
+
+  /* Mobile: Favorites button overlays the filter button at same fixed position */
+  .favorites-filter-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1101;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 1.4rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    min-width: auto;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.3s ease,
+                box-shadow 0.3s ease;
+  }
+
+  .favorites-filter-button .fav-label {
+    display: none;
+  }
+
+  .favorites-filter-button:hover,
+  .favorites-filter-button.active:hover {
+    transform: scale(1.1);
+  }
 }
 
 @media (max-width: 480px) {
