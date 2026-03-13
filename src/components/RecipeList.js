@@ -79,9 +79,13 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
   return sorted;
 }
 
+const SORT_STORAGE_KEY = 'recipebook_active_sort';
+
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [activeSort, setActiveSort] = useState('alphabetical');
+  const [activeSort, setActiveSort] = useState(
+    () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
+  );
   const [carouselExpanded, setCarouselExpanded] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -92,6 +96,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
   
+  // Persist carousel sort selection
+  useEffect(() => {
+    sessionStorage.setItem(SORT_STORAGE_KEY, activeSort);
+  }, [activeSort]);
+
   // Load all users once on mount
   useEffect(() => {
     const loadUsers = async () => {

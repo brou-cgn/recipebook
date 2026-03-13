@@ -826,3 +826,71 @@ describe('RecipeList - SortCarousel Visibility', () => {
     expect(document.querySelector('.sort-carousel')).not.toBeInTheDocument();
   });
 });
+
+describe('RecipeList - SortCarousel persistence', () => {
+  const recipes = [{ id: '1', title: 'Recipe A' }];
+  const userWithPermission = { id: 'user-1', role: 'admin', sortCarousel: true };
+  const SORT_STORAGE_KEY = 'recipebook_active_sort';
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+    jest.restoreAllMocks();
+  });
+
+  test('defaults to alphabetical when sessionStorage is empty', () => {
+    const { container } = render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={userWithPermission}
+      />
+    );
+
+    const carousel = container.querySelector('.sort-carousel');
+    expect(carousel).toBeInTheDocument();
+    const activeItem = carousel.querySelector('.sort-carousel-item--active');
+    expect(activeItem).toHaveTextContent('Alphabetisch');
+  });
+
+  test('restores sort selection from sessionStorage on mount', () => {
+    sessionStorage.setItem(SORT_STORAGE_KEY, 'newest');
+
+    const { container } = render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={userWithPermission}
+      />
+    );
+
+    const carousel = container.querySelector('.sort-carousel');
+    expect(carousel).toBeInTheDocument();
+    const activeItem = carousel.querySelector('.sort-carousel-item--active');
+    expect(activeItem).toHaveTextContent('Neue Rezepte');
+  });
+
+  test('saves sort selection to sessionStorage after mount', () => {
+    render(
+      <RecipeList
+        recipes={recipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        currentUser={userWithPermission}
+      />
+    );
+
+    expect(sessionStorage.getItem(SORT_STORAGE_KEY)).toBe('alphabetical');
+  });
+});
