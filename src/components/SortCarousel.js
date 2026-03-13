@@ -221,18 +221,12 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
       if (!gestureRef.current.isExpanded) {
         const startX = touch.clientX;
       
-        gestureRef.current.longPressTimer = setTimeout(() => {
-          gestureRef.current.longPressTimer = null;
-          gestureRef.current.isExpanded = true;
-          gestureRef.current.isDragging = true;
-          gestureRef.current.dragStartX = startX;
-      
-          gestureViewportWidthRef.current = null;
-      
-          expandWithFrozenViewport();
-          setIsDragging(true);
-          setDragOffset(0);
-        }, LONG_PRESS_DELAY);
+          gestureRef.current.longPressTimer = setTimeout(() => {
+            gestureRef.current.longPressTimer = null;
+            gestureRef.current.isExpanded = true;
+            expandWithFrozenViewport();
+          }, LONG_PRESS_DELAY);
+        
       } else {
         beginExpandedDrag(touch.clientX);
       }
@@ -368,7 +362,9 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     effectiveCarouselWidth;
   
   const currentViewportWidth =
-    gestureViewportWidthRef.current || liveViewportWidth;
+    isDragging && gestureViewportWidthRef.current
+      ? gestureViewportWidthRef.current
+      : liveViewportWidth;
   
   const viewportCenter = currentViewportWidth / 2;
   
