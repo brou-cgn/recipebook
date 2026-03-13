@@ -2785,10 +2785,11 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl) {
   let rawImage = recipe.imageUrl || '';
 
   // If no imageUrl but base64 image exists, check if it's reasonably sized
+  const MAX_BASE64_IMAGE_SIZE = 100000; // 100 KB – larger images cause issues with social media crawlers
   if (!rawImage && recipe.image && recipe.image.startsWith('data:image/')) {
     // Base64 images work in some social media platforms but not all
     // Only use if less than 100KB to avoid issues
-    if (recipe.image.length < 100000) {
+    if (recipe.image.length < MAX_BASE64_IMAGE_SIZE) {
       rawImage = recipe.image;
     }
   }
