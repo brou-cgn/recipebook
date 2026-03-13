@@ -479,6 +479,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const getShareUrl = () => {
+    const projectId = process.env.REACT_APP_FIREBASE_PROJECT_ID;
+    if (projectId) {
+      return `https://${projectId}.web.app/share/${recipe.shareId}`;
+    }
+    // Fallback when project ID is not configured
     const base = window.location.href.split('#')[0];
     return `${base}#share/${recipe.shareId}`;
   };

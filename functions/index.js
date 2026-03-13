@@ -2733,3 +2733,148 @@ exports.createUserProfile = onCall(
     },
 );
 
+/**
+ * Regular expression that matches known social media crawler User-Agent strings.
+ * Used by shareRecipe to decide whether to serve OG meta-tag HTML or redirect.
+ */
+const CRAWLER_UA_REGEX =
+  /bot|crawler|spider|crawling|facebookexternalhit|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|pinterest/i;
+
+/**
+ * Allowed UUID v4 pattern for shareId values stored by crypto.randomUUID().
+ * Rejects any shareId that doesn't look like a UUID, preventing path traversal
+ * and other injection attempts before the value reaches Firestore or HTML output.
+ */
+const SHARE_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Escapes HTML special characters to prevent XSS in generated HTML.
+ * @param {*} text - Value to escape
+ * @return {string} Escaped string safe for use in HTML attributes and text
+ */
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return String(text).replace(/[&<>"']/g, (m) => map[m]);
+}
+
+/**
+ * Generates an HTML page with dynamic Open Graph meta-tags for a recipe.
+ * Regular browsers are redirected immediately to the React app via meta-refresh
+ * and a script tag. Social media crawlers read the meta-tags and stop.
+ *
+ * @param {Object} recipe - Firestore recipe data
+ * @param {string} shareId - The share identifier (validated UUID)
+ * @param {string} functionUrl - Canonical URL of this page (used for og:url)
+ * @return {string} Full HTML document
+ */
+function generateRecipeShareHtml(recipe, shareId, functionUrl) {
+  const title = escapeHtml(recipe.title || 'Rezept');
+  const description = escapeHtml(
+      recipe.description ||
+      (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0
+        ? recipe.ingredients.slice(0, 5).map((i) => String(i)).join(', ')
+        : 'Ein leckeres Rezept aus brouBook'),
+  );
+  // Only use http(s) URLs for the image to prevent javascript: URI injection.
+  const rawImage = recipe.imageUrl || '';
+  const imageUrl = escapeHtml(
+      /^https?:\/\//i.test(rawImage)
+        ? rawImage
+        : 'https://brou-cgn.github.io/recipebook/logo512.png',
+  );
+  const canonicalUrl = escapeHtml(functionUrl);
+  // shareId is a validated UUID so it is safe to interpolate directly.
+  const appUrl = `https://brou-cgn.github.io/recipebook/#share/${shareId}`;
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${imageUrl}">
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(appUrl)}">
+  <title>${title} - brouBook</title>
+</head>
+<body>
+  <p>Wird weitergeleitet&#8230;</p>
+  <script>window.location.href = ${JSON.stringify(appUrl)};</script>
+</body>
+</html>`;
+}
+
+/**
+ * HTTPS function that serves dynamic Open Graph meta-tags for recipe share links.
+ *
+ * - Social media crawlers (Facebook, WhatsApp, Twitter, etc.) receive an HTML
+ *   page with og:title, og:description, og:image and og:url populated from the
+ *   shared recipe's Firestore document.
+ * - Regular browsers are redirected immediately to the React app.
+ *
+ * Firebase Hosting rewrites /share/** to this function, giving share URLs of
+ * the form: https://<project>.web.app/share/<shareId>
+ */
+exports.shareRecipe = onRequest(
+    {cors: false, region: 'us-central1'},
+    async (req, res) => {
+      // Extract shareId from the URL path (/share/<shareId>) or query string.
+      const pathParts = req.path.replace(/^\/+/, '').split('/');
+      const shareId = (
+        pathParts[pathParts.length - 1] ||
+        req.query.id ||
+        ''
+      ).trim();
+
+      // Validate that shareId matches the UUID v4 format used by crypto.randomUUID().
+      if (!shareId || !SHARE_ID_REGEX.test(shareId)) {
+        res.status(400).send('Invalid or missing share ID');
+        return;
+      }
+
+      const userAgent = req.get('user-agent') || '';
+      const isCrawler = CRAWLER_UA_REGEX.test(userAgent);
+
+      const canonicalUrl = `${req.protocol}://${req.hostname}/share/${shareId}`;
+
+      if (!isCrawler) {
+        res.redirect(302, `https://brou-cgn.github.io/recipebook/#share/${shareId}`);
+        return;
+      }
+
+      try {
+        const db = admin.firestore();
+        const snapshot = await db
+            .collection('recipes')
+            .where('shareId', '==', shareId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+          res.status(404).send('Rezept nicht gefunden');
+          return;
+        }
+
+        const recipe = snapshot.docs[0].data();
+        const html = generateRecipeShareHtml(recipe, shareId, canonicalUrl);
+        res.status(200).set('Content-Type', 'text/html; charset=utf-8').send(html);
+      } catch (error) {
+        console.error('shareRecipe: error loading recipe:', error);
+        res.status(500).send('Fehler beim Laden des Rezepts');
+      }
+    },
+);
+

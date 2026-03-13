@@ -53,6 +53,11 @@
         "region": "us-central1"
       },
       {
+        "source": "/share/**",
+        "function": "shareRecipe",
+        "region": "us-central1"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
