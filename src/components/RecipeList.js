@@ -245,6 +245,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     return author.vorname;
   };
 
+  const targetExpandedWidth = Math.min(window.innerWidth * 0.85, 320);
+  const collapsedWidth = 160; // oder später dynamisch aus dem Carousel ableiten
+  const widthDelta = targetExpandedWidth - collapsedWidth;
+  const filterShift = carouselExpanded ? -(widthDelta / 2) : 0;
+  
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
@@ -253,7 +258,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           <div className="filter-group">
             {onOpenFilterPage && (
               <button 
-                className={`filter-button${carouselExpanded ? ' filter-button--carousel-expanded' : ''}`}
+                className="filter-button"
+                style={{ transform: `translateX(${filterShift}px)` }}
                 onClick={onOpenFilterPage}
                 title="Weitere Filter"
               >
