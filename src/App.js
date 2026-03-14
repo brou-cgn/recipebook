@@ -20,6 +20,7 @@ import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
 import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
 import UniversalImportModal from './components/UniversalImportModal';
+import SplashScreen from './components/SplashScreen';
 import { 
   loginUser, 
   logoutUser, 
@@ -194,6 +195,7 @@ function App() {
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -295,6 +297,13 @@ function App() {
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
+
+  // Hide splash screen once auth loading is complete
+  useEffect(() => {
+    if (!authLoading) {
+      setShowSplash(false);
+    }
+  }, [authLoading]);
 
   // Load all users when current user is authenticated (for admin features)
   useEffect(() => {
@@ -952,47 +961,48 @@ function App() {
 
   // Show loading state while checking auth
   if (authLoading) {
-    return (
-      <div className="App">
-        <Header />
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          Laden...
-        </div>
-      </div>
-    );
+    return <SplashScreen visible={showSplash} />;
   }
 
   // If accessing a share URL, show SharePage (no login required)
   if (sharePageId) {
     return (
-      <div className="App">
-        <Header />
-        <SharePage
-          shareId={sharePageId}
-          currentUser={currentUser}
-        />
-      </div>
+      <>
+        <SplashScreen visible={showSplash} />
+        <div className="App">
+          <Header />
+          <SharePage
+            shareId={sharePageId}
+            currentUser={currentUser}
+          />
+        </div>
+      </>
     );
   }
 
   // If accessing a menu share URL, show MenuSharePage (no login required)
   if (menuSharePageId) {
     return (
-      <div className="App">
-        <Header />
-        <MenuSharePage
-          shareId={menuSharePageId}
-          currentUser={currentUser}
-        />
-      </div>
+      <>
+        <SplashScreen visible={showSplash} />
+        <div className="App">
+          <Header />
+          <MenuSharePage
+            shareId={menuSharePageId}
+            currentUser={currentUser}
+          />
+        </div>
+      </>
     );
   }
 
   // If user is not logged in, show login/register view
   if (!currentUser) {
     return (
-      <div className="App">
-        <Header />
+      <>
+        <SplashScreen visible={showSplash} />
+        <div className="App">
+          <Header />
         {pendingWebimportUrl && (
           <div style={{
             background: '#E3F2FD',
@@ -1020,12 +1030,15 @@ function App() {
           />
         )}
       </div>
+      </>
     );
   }
 
   return (
-    <div className="App">
-      <Header 
+    <>
+      <SplashScreen visible={showSplash} />
+      <div className="App">
+        <Header 
         onSettingsClick={handleOpenSettings}
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -1205,6 +1218,7 @@ function App() {
         />
       )}
     </div>
+    </>
   );
 }
 
