@@ -84,7 +84,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         <h2>Meine Menüs</h2>
         <div className="menu-list-actions">
           <button 
-            className={`favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
+            className={`menu-favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             title={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
           >
@@ -119,7 +119,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
               >
                 <div className="menu-card-badges">
                   {isFavorite && (
-                    <div className="favorite-badge favorite-active">★</div>
+                    <div className="menu-favorite-badge favorite-active">★</div>
                   )}
                 </div>
                 <div className="menu-card-content">

@@ -401,7 +401,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                       onClick={() => onSelectRecipe(recipe)}
                     >
                       {isRecipeFav && (
-                        <div className="favorite-badge">★</div>
+                        <div className="menu-recipe-favorite-badge">★</div>
                       )}
                       {recipe.image && (
                         <div className="recipe-image">

@@ -341,7 +341,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             )}
             <button 
               ref={favButtonRef}
-              className={`favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
+              className={`recipe-favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
               onClick={() => { if (!longPressed.current) setShowFavoritesOnly(prev => !prev); }}
               onTouchStart={handleFavTouchStart}
               onTouchEnd={handleFavTouchEnd}
@@ -391,7 +391,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 onClick={() => handleRecipeClick(group)}
               >
                 {isFavorite && (
-                  <div className="favorite-badge">★</div>
+                  <div className="recipe-favorite-badge">★</div>
                 )}
                 {isNewRecipe(recipe, sortSettings) && (
                   <div className="new-badge">Neu</div>

@@ -302,7 +302,7 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.favorite-badge {
+.menu-recipe-favorite-badge {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
