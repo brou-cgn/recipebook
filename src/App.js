@@ -39,7 +39,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference, getSettings } from './utils/customLists';
+import { applyTileSizePreference, getSettings, getButtonIcons } from './utils/customLists';
 import { getCategoryImages } from './utils/categoryImages';
 import { isBase64Image } from './utils/imageUtils';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
@@ -323,33 +323,45 @@ function App() {
     }
   }, [authLoading, currentUser]);
 
-  // Preload recipe and category images after recipes are loaded, then mark resources ready
+  // Preload visible icons (category images + button icons) after recipes are loaded, then mark resources ready.
+  // Full recipe image loading is not required – only the icons visible in the recipe overview.
+  // The splash screen closes as soon as icons are loaded or after 10 seconds at the latest.
   useEffect(() => {
     if (!currentUser || !recipesLoaded) return;
     if (splashPreloadDoneRef.current) return;
     splashPreloadDoneRef.current = true;
 
-    const MAX_PRELOAD_MS = 5000;
+    const MAX_PRELOAD_MS = 10000;
     let cancelled = false;
+
+    const markReady = () => {
+      if (!cancelled) {
+        setResourcesReady(true);
+      }
+    };
+
+    // Absolute 10-second safety timeout – guarantees the splash always closes
+    const absoluteTimeout = setTimeout(markReady, MAX_PRELOAD_MS);
 
     const doPreload = async () => {
       try {
-        const imageUrls = [];
+        const iconUrls = [];
 
-        // Collect HTTP recipe images (base64 images are already in memory)
-        recipes.forEach(r => {
-          if (r.image && !isBase64Image(r.image)) imageUrls.push(r.image);
-        });
-
-        // Collect category images
+        // Collect category images (the visible icons in the recipe overview)
         const catImages = await getCategoryImages();
         catImages.forEach(cat => {
-          if (cat.image && !isBase64Image(cat.image)) imageUrls.push(cat.image);
+          if (cat.image && !isBase64Image(cat.image)) iconUrls.push(cat.image);
         });
 
-        if (imageUrls.length > 0) {
+        // Collect custom button icons shown in the recipe overview header
+        const icons = await getButtonIcons();
+        Object.values(icons).forEach(icon => {
+          if (icon && !isBase64Image(icon)) iconUrls.push(icon);
+        });
+
+        if (iconUrls.length > 0) {
           const imgRefs = [];
-          const loadPromises = imageUrls.map(src => new Promise(resolve => {
+          const loadPromises = iconUrls.map(src => new Promise(resolve => {
             const img = new window.Image();
             imgRefs.push(img);
             img.onload = resolve;
@@ -367,16 +379,18 @@ function App() {
           });
         }
       } catch (err) {
-        console.error('Error preloading images for splash screen:', err);
+        console.error('Error preloading icons for splash screen:', err);
       } finally {
-        if (!cancelled) {
-          setResourcesReady(true);
-        }
+        clearTimeout(absoluteTimeout);
+        markReady();
       }
     };
 
     doPreload();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(absoluteTimeout);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, recipesLoaded]);
 
