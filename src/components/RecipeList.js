@@ -97,7 +97,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [buttonIcons, setButtonIcons] = useState({
-    filterButton: DEFAULT_BUTTON_ICONS.filterButton
+    filterButton: DEFAULT_BUTTON_ICONS.filterButton,
+    addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
+    addPrivateRecipe: DEFAULT_BUTTON_ICONS.addPrivateRecipe,
   });
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
@@ -343,6 +345,36 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 ))}
               </select>
             )}
+            {userCanEdit && (
+              <>
+                <button
+                  className="add-icon-button"
+                  onClick={() => onAddRecipe()}
+                  title="Rezept hinzufügen"
+                  aria-label="Rezept hinzufügen"
+                >
+                  {isBase64Image(buttonIcons.addRecipe) ? (
+                    <img src={buttonIcons.addRecipe} alt="Rezept hinzufügen" className="button-icon-image" />
+                  ) : (
+                    buttonIcons.addRecipe
+                  )}
+                </button>
+                {activePrivateListId && (
+                  <button
+                    className="add-icon-button"
+                    onClick={() => onAddRecipe(activePrivateListId)}
+                    title="Privates Rezept hinzufügen"
+                    aria-label="Privates Rezept hinzufügen"
+                  >
+                    {isBase64Image(buttonIcons.addPrivateRecipe) ? (
+                      <img src={buttonIcons.addPrivateRecipe} alt="Privates Rezept hinzufügen" className="button-icon-image" />
+                    ) : (
+                      buttonIcons.addPrivateRecipe
+                    )}
+                  </button>
+                )}
+              </>
+            )}
             <button 
               ref={favButtonRef}
               className={`recipe-favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
@@ -359,15 +391,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           </div>
           {currentUser?.sortCarousel && (
             <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} onExpandChange={setCarouselExpanded} />
-          )}
-          {userCanEdit && activePrivateListId ? (
-            <button className="add-button" onClick={() => onAddRecipe(activePrivateListId)}>
-              + Privates Rezept hinzufügen
-            </button>
-          ) : userCanEdit && (
-            <button className="add-button" onClick={() => onAddRecipe()}>
-              + Rezept hinzufügen
-            </button>
           )}
         </div>
       </div>

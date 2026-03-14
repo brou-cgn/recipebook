@@ -202,7 +202,9 @@ export const DEFAULT_BUTTON_ICONS = {
   bringButton: '🛍️',
   timerStart: '⏱',
   timerStop: '⏹',
-  cookDate: '📅'
+  cookDate: '📅',
+  addRecipe: '➕',
+  addPrivateRecipe: '🔒'
 };
 
 // Cache for settings to avoid repeated Firestore reads
