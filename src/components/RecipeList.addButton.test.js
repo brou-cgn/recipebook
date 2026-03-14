@@ -14,7 +14,9 @@ jest.mock('../utils/customLists', () => ({
     mealCategories: ['Appetizer', 'Main Course', 'Dessert']
   }),
   getButtonIcons: () => Promise.resolve({
-    filterButton: '⚙'
+    filterButton: '⚙',
+    addRecipe: '➕',
+    addPrivateRecipe: '🔒',
   }),
   getSortSettings: () => Promise.resolve({
     trendingDays: 30,
@@ -23,7 +25,9 @@ jest.mock('../utils/customLists', () => ({
     ratingMinVotes: 5,
   }),
   DEFAULT_BUTTON_ICONS: {
-    filterButton: '⚙'
+    filterButton: '⚙',
+    addRecipe: '➕',
+    addPrivateRecipe: '🔒',
   },
   DEFAULT_TRENDING_DAYS: 30,
   DEFAULT_TRENDING_MIN_VIEWS: 5,
@@ -116,7 +120,7 @@ describe('RecipeList - Add Button Visibility', () => {
       />
     );
 
-    const btn = await screen.findByRole('button', { name: /\+ Rezept hinzufügen/i });
+    const btn = await screen.findByRole('button', { name: /Rezept hinzufügen/i });
     fireEvent.click(btn);
     expect(onAddRecipe).toHaveBeenCalledWith();
   });
