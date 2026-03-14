@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import './SplashScreen.css';
 
-function SplashScreen({ visible }) {
+function SplashScreen({ visible, logoUrl, appTitle, slogan }) {
   const [fadingOut, setFadingOut] = useState(false);
   const [gone, setGone] = useState(false);
+
+  const logoSrc = logoUrl || '/logo192.png';
+  const titleText = appTitle || 'brouBook';
+  const sloganText = slogan || 'Unsere besten Momente';
 
   useEffect(() => {
     if (!visible) {
@@ -26,12 +30,12 @@ function SplashScreen({ visible }) {
     >
       <div className="splash-content">
         <img
-          src="/logo192.png"
-          alt="brouBook Logo"
+          src={logoSrc}
+          alt={`${titleText} Logo`}
           className="splash-logo"
         />
-        <h1 className="splash-title">brouBook</h1>
-        <p className="splash-slogan">Unsere besten Momente</p>
+        <h1 className="splash-title">{titleText}</h1>
+        <p className="splash-slogan">{sloganText}</p>
       </div>
     </div>
   );
