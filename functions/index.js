@@ -2804,12 +2804,8 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl) {
         : 'Ein leckeres Rezept aus brouBook'),
   );
 
-  // Priority: imageThumbnail (pre-generated) > imageUrl > image > logo
-  let rawImage = recipe.imageThumbnail || recipe.imageUrl || '';
-
-  if (!rawImage && recipe.image) {
-    rawImage = recipe.image;
-  }
+  // ALWAYS use thumbnail for sharing - never send original image
+  const rawImage = recipe.imageThumbnail || '';
 
   const imageUrl = escapeHtml(
       rawImage && /^(https?:\/\/|data:image\/)/i.test(rawImage)
