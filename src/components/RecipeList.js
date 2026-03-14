@@ -232,7 +232,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     }
     if (longPressed.current) {
       e.preventDefault();
-      longPressed.current = false;
+      // Reset verzögert, damit der onClick-Guard noch greift
+      // falls preventDefault() den synthetischen Click nicht unterdrückt
+      setTimeout(() => {
+        longPressed.current = false;
+      }, 400);
     }
   };
 
