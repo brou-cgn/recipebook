@@ -2748,6 +2748,9 @@ const CRAWLER_UA_REGEX =
  */
 const SHARE_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Fallback OG image URL used when no recipe thumbnail and no custom app logo exist. */
+const STATIC_FALLBACK_LOGO_URL = 'https://brou-cgn.github.io/recipebook/logo512.png';
+
 /**
  * Escapes HTML special characters to prevent XSS in generated HTML.
  * @param {*} text - Value to escape
@@ -2793,9 +2796,10 @@ async function generateThumbnail(base64Image) {
  * @param {Object} recipe - Firestore recipe data
  * @param {string} shareId - The share identifier (validated UUID)
  * @param {string} functionUrl - Canonical URL of this page (used for og:url)
+ * @param {string} defaultLogoUrl - Fallback image URL when the recipe has no thumbnail
  * @return {string} Full HTML document
  */
-function generateRecipeShareHtml(recipe, shareId, functionUrl) {
+function generateRecipeShareHtml(recipe, shareId, functionUrl, defaultLogoUrl = STATIC_FALLBACK_LOGO_URL) {
   const title = escapeHtml(recipe.title || 'Rezept');
   const description = escapeHtml(
       recipe.description ||
@@ -2813,7 +2817,7 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl) {
                    : '';
 
   const imageUrl = escapeHtml(
-      rawImage || 'https://brou-cgn.github.io/recipebook/logo512.png',
+      rawImage || defaultLogoUrl,
   );
   const canonicalUrl = escapeHtml(functionUrl);
   // shareId is a validated UUID so it is safe to interpolate directly.
@@ -2974,7 +2978,20 @@ exports.shareRecipe = onRequest(
           }
         }
 
-        const html = generateRecipeShareHtml(recipe, shareId, canonicalUrl);
+        // Load the custom app logo URL from settings (uploaded via the Settings UI).
+        // Fall back to the static logo if no custom logo has been configured.
+        let defaultLogoUrl = STATIC_FALLBACK_LOGO_URL;
+        try {
+          const settingsDoc = await db.doc('settings/app').get();
+          const settingsData = settingsDoc.data();
+          if (settingsData?.appLogoImageUrl) {
+            defaultLogoUrl = settingsData.appLogoImageUrl;
+          }
+        } catch (settingsErr) {
+          console.warn('shareRecipe: failed to load settings for logo fallback:', settingsErr);
+        }
+
+        const html = generateRecipeShareHtml(recipe, shareId, canonicalUrl, defaultLogoUrl);
         res.status(200).set('Content-Type', 'text/html; charset=utf-8').send(html);
       } catch (error) {
         console.error('shareRecipe: error loading recipe:', error);

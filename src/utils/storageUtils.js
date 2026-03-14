@@ -106,6 +106,56 @@ export async function deleteRecipeImage(imageUrl) {
   }
 }
 
+/** Fixed Storage path for the app logo used in social-media share previews. */
+const APP_LOGO_STORAGE_PATH = 'settings/appLogo.png';
+
+/**
+ * Upload the app logo (as a Base64 data-URL) to Firebase Storage at a fixed
+ * path so that social-media crawlers can access it via a public HTTPS URL.
+ *
+ * @param {string} base64Image - Base64 data-URL of the image (e.g. "data:image/png;base64,…")
+ * @returns {Promise<string>} Public download URL
+ */
+export async function uploadAppLogoToStorage(base64Image) {
+  if (!base64Image) {
+    throw new Error('No image provided');
+  }
+
+  try {
+    // Convert the data-URL to a Blob for upload
+    const response = await fetch(base64Image);
+    const blob = await response.blob();
+
+    const storageRef = ref(storage, APP_LOGO_STORAGE_PATH);
+    const snapshot = await uploadBytes(storageRef, blob, {
+      contentType: blob.type || 'image/png',
+      cacheControl: 'public, max-age=86400',
+    });
+
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading app logo to Firebase Storage:', error);
+    throw new Error('Failed to upload app logo. Please try again.');
+  }
+}
+
+/**
+ * Delete the app logo from Firebase Storage.
+ * Errors are logged but not re-thrown so that logo removal never blocks saving.
+ *
+ * @returns {Promise<void>}
+ */
+export async function deleteAppLogoFromStorage() {
+  try {
+    const storageRef = ref(storage, APP_LOGO_STORAGE_PATH);
+    await deleteObject(storageRef);
+  } catch (error) {
+    // The file might not exist yet – that's fine.
+    console.warn('Could not delete app logo from Storage:', error);
+  }
+}
+
 /**
  * Check if a URL is a Firebase Storage URL
  * @param {string} imageUrl - The URL to check

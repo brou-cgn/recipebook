@@ -566,6 +566,35 @@ export async function saveAppLogoImage(imageBase64) {
 }
 
 /**
+ * Get the public app logo URL (used for social-media share previews) from Firestore.
+ * @returns {Promise<string|null>} Promise resolving to the public HTTPS URL or null
+ */
+export async function getAppLogoImageUrl() {
+  const settings = await getSettings();
+  return settings.appLogoImageUrl || null;
+}
+
+/**
+ * Save the public app logo URL to Firestore.
+ * @param {string|null} url - Public HTTPS URL (from Firebase Storage) or null to clear
+ * @returns {Promise<void>}
+ */
+export async function saveAppLogoImageUrl(url) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { appLogoImageUrl: url || null });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.appLogoImageUrl = url || null;
+    }
+  } catch (error) {
+    console.error('Error saving app logo image URL:', error);
+    throw error;
+  }
+}
+
+/**
  * Get the favicon text from Firestore or return default
  * @returns {Promise<string>} Promise resolving to favicon text
  */

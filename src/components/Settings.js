@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
 import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
+import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import {
   DndContext,
@@ -147,6 +148,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // App logo state
   const [appLogoImage, setAppLogoImage] = useState(null);
+  const [appLogoImageUrl, setAppLogoImageUrl] = useState(null);
   const [uploadingAppLogo, setUploadingAppLogo] = useState(false);
 
   // Button icons state
@@ -231,6 +233,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const faviconImg = await getFaviconImage();
       const faviconTxt = await getFaviconText();
       const appLogoImg = await getAppLogoImage();
+      const appLogoUrl = await getAppLogoImageUrl();
       const icons = await getButtonIcons();
       const catImages = await getCategoryImages();
       const timelineIcon = await getTimelineBubbleIcon();
@@ -247,6 +250,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setFaviconImage(faviconImg);
       setFaviconText(faviconTxt);
       setAppLogoImage(appLogoImg);
+      setAppLogoImageUrl(appLogoUrl);
       setButtonIcons({ ...DEFAULT_BUTTON_ICONS, ...icons });
       setTimelineBubbleIcon(timelineIcon);
       setTimelineMenuBubbleIcon(timelineMenuIcon);
@@ -410,6 +414,29 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveFaviconImage(faviconImage);
       saveFaviconText(faviconText);
       saveAppLogoImage(appLogoImage);
+
+      // Upload app logo to Firebase Storage so social-media crawlers can access it
+      // via a public HTTPS URL, then persist that URL in Firestore.
+      if (appLogoImage && appLogoImage.startsWith('data:')) {
+        try {
+          const url = await uploadAppLogoToStorage(appLogoImage);
+          setAppLogoImageUrl(url);
+          await saveAppLogoImageUrl(url);
+        } catch (storageErr) {
+          console.warn('Could not upload app logo to Storage:', storageErr);
+          // Don't abort the overall save – the base64 is still saved to Firestore.
+        }
+      } else if (!appLogoImage && appLogoImageUrl) {
+        // Logo was removed – clean up Storage and clear the URL.
+        try {
+          await deleteAppLogoFromStorage();
+          setAppLogoImageUrl(null);
+          await saveAppLogoImageUrl(null);
+        } catch (storageErr) {
+          console.warn('Could not delete app logo from Storage:', storageErr);
+        }
+      }
+
       saveButtonIcons(buttonIcons);
       saveTimelineBubbleIcon(timelineBubbleIcon);
       saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
