@@ -12,6 +12,10 @@ function SplashScreen({ visible, logoUrl, appTitle, slogan }) {
   useEffect(() => {
     if (!visible) {
       setFadingOut(true);
+      // Fallback: remove the element after the CSS transition duration (0.5s) plus a small buffer,
+      // in case onTransitionEnd is not fired by the browser.
+      const timer = setTimeout(() => setGone(true), 700);
+      return () => clearTimeout(timer);
     }
   }, [visible]);
 
