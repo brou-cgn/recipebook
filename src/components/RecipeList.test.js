@@ -894,3 +894,51 @@ describe('RecipeList - SortCarousel persistence', () => {
     expect(sessionStorage.getItem(SORT_STORAGE_KEY)).toBe('alphabetical');
   });
 });
+
+describe('RecipeList - Filter Button Visibility', () => {
+  beforeEach(() => {
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('filter button is at extended position when component first mounts', () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+      />
+    );
+
+    const filterButton = screen.getByTitle('Weitere Filter');
+    expect(filterButton.style.transform).toContain('translateY(-76px)');
+  });
+
+  test('filter button hides after touching outside it', () => {
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+      />
+    );
+
+    const filterButton = screen.getByTitle('Weitere Filter');
+    expect(filterButton.style.transform).toContain('translateY(-76px)');
+
+    // Simulate a touch/click outside both the filter button and fav button
+    fireEvent.mouseDown(document.body);
+
+    expect(filterButton.style.transform).not.toContain('translateY(-76px)');
+  });
+});

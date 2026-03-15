@@ -84,7 +84,7 @@ const LONG_PRESS_DELAY_MS = 500;
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [filterVisible, setFilterVisible] = useState(false);
+  const [filterVisible, setFilterVisible] = useState(true);
   const longPressTimer = useRef(null);
   const longPressed = useRef(false);
   const filterButtonRef = useRef(null);
