@@ -418,6 +418,19 @@
   .recipe-favorites-filter-button.active:hover {
     transform: scale(1.1);
   }
+
+  /* Mobile: Add recipe button fixed at bottom right, mirrors fav button on the left */
+  .add-icon-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1101;
+    width: 56px;
+    height: 56px;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.3s ease,
+                box-shadow 0.3s ease;
+  }
 }
 
 @media (max-width: 480px) {

@@ -310,6 +310,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const filterTransform = filterVisible
     ? `translateX(${filterShift}px) translateY(-76px)`
     : `translateX(${filterShift}px)`;
+  const addShift = carouselExpanded ? window.innerWidth : 0;
   
   return (
     <div className="recipe-list-container">
@@ -350,6 +351,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 {!activePrivateListId && (
                   <button
                     className="add-icon-button"
+                    style={{ transform: `translateX(${addShift}px)` }}
                     onClick={() => onAddRecipe()}
                     title="Rezept hinzufügen"
                     aria-label="Rezept hinzufügen"
@@ -364,6 +366,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 {activePrivateListId && (
                   <button
                     className="add-icon-button"
+                    style={{ transform: `translateX(${addShift}px)` }}
                     onClick={() => onAddRecipe(activePrivateListId)}
                     title="Privates Rezept hinzufügen"
                     aria-label="Privates Rezept hinzufügen"
