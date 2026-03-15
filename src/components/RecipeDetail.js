@@ -69,6 +69,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const missingSavedRef = useRef(false);
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
+  const [alarmRunning, setAlarmRunning] = useState(false);
+  const [alarmLabel, setAlarmLabel] = useState('');
+  const alarmIntervalRef = useRef(null);
+  const alarmCtxRef = useRef(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -614,30 +618,82 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  function playTimerDoneSound() {
+  function playRadarPattern(ctx) {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.3, 0.6].forEach(offset => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.25);
-        osc.start(ctx.currentTime + offset);
-        osc.stop(ctx.currentTime + offset + 0.25);
-      });
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      // Ascending sweep: 800 Hz → 1800 Hz over 0.3s
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.linearRampToValueAtTime(1800, now + 0.3);
+      // Descending sweep: 1800 Hz → 800 Hz over 0.2s
+      osc.frequency.linearRampToValueAtTime(800, now + 0.5);
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.setValueAtTime(0.5, now + 0.5);
+      gain.gain.linearRampToValueAtTime(0, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+
+      // Second harmonic for a more piercing sound
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1600, now);
+      osc2.frequency.linearRampToValueAtTime(3600, now + 0.3);
+      osc2.frequency.linearRampToValueAtTime(1600, now + 0.5);
+      gain2.gain.setValueAtTime(0.2, now);
+      gain2.gain.setValueAtTime(0.2, now + 0.5);
+      gain2.gain.linearRampToValueAtTime(0, now + 0.6);
+      osc2.start(now);
+      osc2.stop(now + 0.6);
     } catch (_) {
       // Audio API not available – silently ignore
     }
   }
 
-  function notifyTimerDone(label) {
-    playTimerDoneSound();
+  function startAlarmLoop(label) {
+    // Only one alarm at a time
+    if (alarmIntervalRef.current) return;
+
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      alarmCtxRef.current = ctx;
+      playRadarPattern(ctx);
+      alarmIntervalRef.current = setInterval(() => {
+        playRadarPattern(ctx);
+      }, 1000);
+    } catch (_) {
+      // Audio API not available – silently ignore
+    }
+
+    setAlarmLabel(label);
+    setAlarmRunning(true);
+
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('⏰ Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
     }
+  }
+
+  function stopAlarm() {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+    if (alarmCtxRef.current) {
+      try { alarmCtxRef.current.close(); } catch (_) {}
+      alarmCtxRef.current = null;
+    }
+    setAlarmRunning(false);
+    setAlarmLabel('');
+  }
+
+  function notifyTimerDone(label) {
+    startAlarmLoop(label);
   }
 
   function requestNotificationPermission() {
@@ -759,6 +815,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const intervals = timerIntervalsRef.current;
     return () => {
       Object.values(intervals).forEach(id => clearInterval(id));
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+      }
+      if (alarmCtxRef.current) {
+        try { alarmCtxRef.current.close(); } catch (_) {}
+      }
     };
   }, []);
 
@@ -1782,6 +1844,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Einkaufsliste erstellen
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {alarmRunning && (
+        <div className="alarm-modal-overlay">
+          <div className="alarm-modal" role="dialog" aria-modal="true">
+            <div className="alarm-modal-icon">⏰</div>
+            <h2 className="alarm-modal-title">Timer abgelaufen!</h2>
+            <p className="alarm-modal-label">{alarmLabel}</p>
+            <button className="alarm-modal-stop-btn" onClick={stopAlarm}>
+              OK
+            </button>
           </div>
         </div>
       )}

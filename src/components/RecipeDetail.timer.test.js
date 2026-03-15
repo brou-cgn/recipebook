@@ -36,6 +36,13 @@ jest.mock('../utils/customLists', () => ({
     timerStart: '⏱',
     timerStop: '⏹',
   }),
+  getTimelineBubbleIcon: () => Promise.resolve(null),
+  getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
+  getTimelineCookEventDefaultImage: () => Promise.resolve(null),
+  DEFAULT_BUTTON_ICONS: {
+    ratingHeartEmpty: '♡',
+    ratingHeartFilled: '♥',
+  },
 }));
 
 jest.mock('../utils/recipeLinks', () => ({
@@ -58,6 +65,34 @@ const mockRecipe = {
 
 const currentUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
 
+// Mock AudioContext for alarm tests
+const mockOscillatorStop = jest.fn();
+const mockOscillatorStart = jest.fn();
+const mockOscillatorConnect = jest.fn();
+const mockGainConnect = jest.fn();
+const mockFrequency = { setValueAtTime: jest.fn(), linearRampToValueAtTime: jest.fn() };
+const mockGainValue = { setValueAtTime: jest.fn(), linearRampToValueAtTime: jest.fn() };
+const mockCtxClose = jest.fn();
+
+function createMockAudioContext() {
+  return {
+    currentTime: 0,
+    close: mockCtxClose,
+    createOscillator: jest.fn(() => ({
+      connect: mockOscillatorConnect,
+      start: mockOscillatorStart,
+      stop: mockOscillatorStop,
+      type: 'sine',
+      frequency: mockFrequency,
+    })),
+    createGain: jest.fn(() => ({
+      connect: mockGainConnect,
+      gain: mockGainValue,
+    })),
+    destination: {},
+  };
+}
+
 function enterCookingMode() {
   const icon = document.querySelector('.overlay-cooking-mode-static');
   fireEvent.click(icon);
@@ -69,6 +104,8 @@ beforeEach(() => {
     writable: true,
     value: { request: jest.fn().mockResolvedValue({ release: jest.fn().mockResolvedValue(undefined) }) },
   });
+  window.AudioContext = jest.fn().mockImplementation(createMockAudioContext);
+  window.webkitAudioContext = undefined;
   jest.useFakeTimers();
 });
 
@@ -276,5 +313,63 @@ describe('RecipeDetail - Step Timer', () => {
 
     // 2 Stunden = 7200 seconds → should display 2:00:00
     expect(document.querySelector('.step-timer-time').textContent).toBe('2:00:00');
+  });
+});
+
+describe('RecipeDetail - Alarm Modal', () => {
+  const renderWithTimer = () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    enterCookingMode();
+    // Start and run 10-minute timer to completion
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+    act(() => { jest.advanceTimersByTime(600 * 1000); });
+  };
+
+  test('alarm modal appears when timer finishes', () => {
+    renderWithTimer();
+    expect(document.querySelector('.alarm-modal-overlay')).toBeInTheDocument();
+    expect(document.querySelector('.alarm-modal')).toBeInTheDocument();
+  });
+
+  test('alarm modal displays the timer label', () => {
+    renderWithTimer();
+    const label = document.querySelector('.alarm-modal-label');
+    expect(label).toBeInTheDocument();
+    expect(label.textContent).toMatch(/10 Minuten/i);
+  });
+
+  test('alarm modal has a stop/OK button', () => {
+    renderWithTimer();
+    const btn = document.querySelector('.alarm-modal-stop-btn');
+    expect(btn).toBeInTheDocument();
+    expect(btn.textContent).toBe('OK');
+  });
+
+  test('clicking stop button closes the alarm modal', () => {
+    renderWithTimer();
+    expect(document.querySelector('.alarm-modal-overlay')).toBeInTheDocument();
+    fireEvent.click(document.querySelector('.alarm-modal-stop-btn'));
+    expect(document.querySelector('.alarm-modal-overlay')).toBeNull();
+  });
+
+  test('AudioContext is created when timer finishes', () => {
+    renderWithTimer();
+    expect(window.AudioContext).toHaveBeenCalled();
+  });
+
+  test('alarm interval is cleared when stop button is clicked', () => {
+    const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+    renderWithTimer();
+    fireEvent.click(document.querySelector('.alarm-modal-stop-btn'));
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    clearIntervalSpy.mockRestore();
   });
 });

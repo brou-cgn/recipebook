@@ -1552,3 +1552,81 @@ difficulty-stars .star {
   cursor: pointer;
   accent-color: #7a5c3a;
 }
+
+/* ===== Alarm Modal ===== */
+.alarm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.alarm-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem 2.5rem;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 340px;
+  width: 90%;
+  animation: alarm-pop-in 0.2s ease-out;
+}
+
+@keyframes alarm-pop-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.alarm-modal-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.alarm-modal-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #d32f2f;
+  margin: 0 0 0.5rem;
+}
+
+.alarm-modal-label {
+  font-size: 1rem;
+  color: #555;
+  margin: 0 0 1.5rem;
+}
+
+.alarm-modal-stop-btn {
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.85rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.alarm-modal-stop-btn:hover,
+.alarm-modal-stop-btn:active {
+  background: #b71c1c;
+}
+
+@media (max-width: 480px) {
+  .alarm-modal {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .alarm-modal-title {
+    font-size: 1.2rem;
+  }
+
+  .alarm-modal-stop-btn {
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+  }
+}
