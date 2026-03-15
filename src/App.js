@@ -323,6 +323,13 @@ function App() {
     }
   }, [authLoading, currentUser]);
 
+  // Unconditional 10-second absolute fallback: close the splash no matter what state the app is in.
+  // This guarantees the splash screen is never permanently visible even if Firestore is slow or fails.
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 10000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Preload visible icons (category images + button icons) after recipes are loaded, then mark resources ready.
   // Full recipe image loading is not required – only the icons visible in the recipe overview.
   // The splash screen closes as soon as icons are loaded or after 10 seconds at the latest.
