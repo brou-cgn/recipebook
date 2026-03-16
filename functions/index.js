@@ -2820,8 +2820,13 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl, defaultLogoUrl = 
       rawImage || defaultLogoUrl,
   );
   const canonicalUrl = escapeHtml(functionUrl);
+  // Derive the app base URL from the canonical function URL so the redirect
+  // always targets the same Firebase Hosting domain that served the share link.
+  // e.g. https://project.web.app/share/<id> → https://project.web.app/
+  const parsedUrl = new URL(functionUrl);
+  const appBaseUrl = `${parsedUrl.protocol}//${parsedUrl.host}/`;
   // shareId is a validated UUID so it is safe to interpolate directly.
-  const appUrl = `https://brou-cgn.github.io/recipebook/#share/${shareId}`;
+  const appUrl = `${appBaseUrl}#share/${shareId}`;
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -2882,7 +2887,7 @@ exports.shareRecipe = onRequest(
       const canonicalUrl = `${req.protocol}://${req.hostname}/share/${shareId}`;
 
       if (!isCrawler) {
-        res.redirect(302, `https://brou-cgn.github.io/recipebook/#share/${shareId}`);
+        res.redirect(302, `${req.protocol}://${req.hostname}/#share/${shareId}`);
         return;
       }
 
