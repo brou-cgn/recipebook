@@ -28,11 +28,11 @@
 }
 
 .recipe-rating-detail-summary .rating-heart-icon {
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 
 .rating-detail-summary-text {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #555;
   font-weight: 500;
 }
@@ -44,7 +44,7 @@
 }
 
 .rating-heart-icon {
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
@@ -58,7 +58,7 @@
 }
 
 .rating-text {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #666;
   font-weight: 500;
 }
@@ -81,7 +81,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1;
   transition: transform 0.15s ease, color 0.15s ease;
   color: #DF7A00;
@@ -105,7 +105,7 @@
 }
 
 .rating-summary-text {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #555;
   font-weight: 500;
   white-space: nowrap;
