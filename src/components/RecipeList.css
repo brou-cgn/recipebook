@@ -44,6 +44,7 @@
   background-repeat: no-repeat;
   background-position: right 1rem center;
   padding-right: 2.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .category-filter-select:hover {
@@ -68,6 +69,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .recipe-favorites-filter-button.active,
@@ -135,6 +137,7 @@
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .add-button:active {
