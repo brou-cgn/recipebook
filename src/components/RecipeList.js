@@ -323,7 +323,23 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   return (
     <div className="recipe-list-container">
       <div className="recipe-list-header">
-        <h2>{getHeading()}</h2>
+        <div className="recipe-list-title-area">
+          <h2>{getHeading()}</h2>
+          {onCategoryFilterChange && (
+            <select
+              className="category-filter-arrow"
+              value={categoryFilter}
+              onChange={(e) => onCategoryFilterChange(e.target.value)}
+              title="Nach Kategorie filtern"
+              aria-label="Kategorie filtern"
+            >
+              <option value="">Alle Kategorien</option>
+              {customLists.mealCategories.map((category) => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className="recipe-list-actions">
           <div className="filter-group">
             {onOpenFilterPage && (
@@ -348,19 +364,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   )
                 )}
               </button>
-            )}
-            {onCategoryFilterChange && (
-              <select
-                className="category-filter-select"
-                value={categoryFilter}
-                onChange={(e) => onCategoryFilterChange(e.target.value)}
-                title="Nach Kategorie filtern"
-              >
-                <option value="">Alle Kategorien</option>
-                {customLists.mealCategories.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
             )}
             {userCanEdit && (
               <>
