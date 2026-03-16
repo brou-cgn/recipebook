@@ -213,7 +213,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
         filterButtonRef.current && !filterButtonRef.current.contains(e.target) &&
         favButtonRef.current && !favButtonRef.current.contains(e.target)
       ) {
-        setFilterVisible(false);
+        requestAnimationFrame(() => {
+          setFilterVisible(false);
+        });
       }
     };
     document.addEventListener('touchstart', handleOutsideTouch, { passive: true });
