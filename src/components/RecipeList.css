@@ -89,6 +89,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.18s ease-out,
+              opacity 0.35s ease,
               background 0.3s ease,
               box-shadow 0.3s ease;
   display: flex;
