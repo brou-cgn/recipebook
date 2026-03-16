@@ -353,6 +353,9 @@
 
   .filter-button.filter-visible {
     opacity:0.85;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.3s ease,
+                box-shadow 0.3s ease;
   }
 
   /* Mobile: Favorites button overlays the filter button at same fixed position */
