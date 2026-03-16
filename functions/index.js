@@ -3005,3 +3005,143 @@ exports.shareRecipe = onRequest(
     },
 );
 
+/**
+ * HTTPS function that returns shared recipe data as JSON.
+ * Used by the frontend SharePage to load recipes without requiring
+ * Firebase Authentication (the Admin SDK bypasses Security Rules).
+ *
+ * GET /api/shared-recipe/<shareId> → JSON recipe data
+ */
+exports.getSharedRecipe = onRequest(
+    {cors: true, region: 'us-central1'},
+    async (req, res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+      }
+
+      if (req.method !== 'GET') {
+        res.status(405).send('Method not allowed');
+        return;
+      }
+
+      const pathParts = req.path.replace(/^\/+/, '').split('/');
+      const shareId = pathParts[pathParts.length - 1] || '';
+
+      if (!shareId || !SHARE_ID_REGEX.test(shareId)) {
+        res.status(400).json({error: 'Invalid or missing share ID'});
+        return;
+      }
+
+      try {
+        const db = admin.firestore();
+        const snapshot = await db.collection('recipes')
+            .where('shareId', '==', shareId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+          res.status(404).json({error: 'Recipe not found'});
+          return;
+        }
+
+        const recipeDoc = snapshot.docs[0];
+        const recipe = recipeDoc.data();
+
+        res.status(200).json({
+          id: recipeDoc.id,
+          ...recipe,
+          image: recipe.imageThumbnail &&
+                 (recipe.imageThumbnail.startsWith('http://') ||
+                  recipe.imageThumbnail.startsWith('https://'))
+                 ? recipe.imageThumbnail
+                 : recipe.image,
+        });
+      } catch (error) {
+        console.error('getSharedRecipe error:', error);
+        res.status(500).json({error: 'Internal server error'});
+      }
+    },
+);
+
+/**
+ * HTTPS function that returns shared menu data (including associated recipes) as JSON.
+ * Used by the frontend MenuSharePage to load menus without requiring
+ * Firebase Authentication (the Admin SDK bypasses Security Rules).
+ *
+ * GET /api/shared-menu/<shareId> → JSON { menu, recipes }
+ */
+exports.getSharedMenu = onRequest(
+    {cors: true, region: 'us-central1'},
+    async (req, res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+      }
+
+      if (req.method !== 'GET') {
+        res.status(405).send('Method not allowed');
+        return;
+      }
+
+      const pathParts = req.path.replace(/^\/+/, '').split('/');
+      const shareId = pathParts[pathParts.length - 1] || '';
+
+      if (!shareId || !SHARE_ID_REGEX.test(shareId)) {
+        res.status(400).json({error: 'Invalid or missing share ID'});
+        return;
+      }
+
+      try {
+        const db = admin.firestore();
+        const menuSnapshot = await db.collection('menus')
+            .where('shareId', '==', shareId)
+            .limit(1)
+            .get();
+
+        if (menuSnapshot.empty) {
+          res.status(404).json({error: 'Menu not found'});
+          return;
+        }
+
+        const menuDoc = menuSnapshot.docs[0];
+        const menu = {id: menuDoc.id, ...menuDoc.data()};
+
+        const recipeIds = [];
+        if (menu.sections && menu.sections.length > 0) {
+          menu.sections.forEach((section) => {
+            if (section.recipeIds) recipeIds.push(...section.recipeIds);
+          });
+        } else if (menu.recipeIds) {
+          recipeIds.push(...menu.recipeIds);
+        }
+
+        const uniqueIds = [...new Set(recipeIds)];
+        const recipes = [];
+        for (let i = 0; i < uniqueIds.length; i += 30) {
+          const batch = uniqueIds.slice(i, i + 30);
+          const promises = batch.map((id) => db.collection('recipes').doc(id).get());
+          const docs = await Promise.all(promises);
+          docs.forEach((docSnap) => {
+            if (docSnap.exists) {
+              recipes.push({id: docSnap.id, ...docSnap.data()});
+            }
+          });
+        }
+
+        res.status(200).json({menu, recipes});
+      } catch (error) {
+        console.error('getSharedMenu error:', error);
+        res.status(500).json({error: 'Internal server error'});
+      }
+    },
+);
+

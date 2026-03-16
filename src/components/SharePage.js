@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './SharePage.css';
-import { getRecipeByShareId } from '../utils/recipeFirestore';
 import RecipeDetail from './RecipeDetail';
 
 function SharePage({ shareId, currentUser }) {
@@ -11,10 +10,16 @@ function SharePage({ shareId, currentUser }) {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const found = await getRecipeByShareId(shareId);
-      if (found) {
-        setRecipe(found);
-      } else {
+      try {
+        const response = await fetch(`/api/shared-recipe/${shareId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setRecipe(data);
+        } else {
+          setNotFound(true);
+        }
+      } catch (error) {
+        console.error('Error loading shared recipe:', error);
         setNotFound(true);
       }
       setLoading(false);
