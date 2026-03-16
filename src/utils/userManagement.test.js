@@ -1350,6 +1350,16 @@ describe('User Management Utilities', () => {
       });
     });
 
+    test('should have editLists enabled for admin', () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].editLists).toBe(true);
+    });
+
+    test('should have editLists disabled for non-admin roles', () => {
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].editLists).toBe(false);
+      });
+    });
+
     test('should include all assignable roles', () => {
       [ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
         expect(ROLE_PERMISSIONS_DEFAULT).toHaveProperty(role);

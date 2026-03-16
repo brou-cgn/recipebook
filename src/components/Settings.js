@@ -37,7 +37,10 @@ function getSortableItemStyle(transform, transition, isDragging) {
   };
 }
 
-function SortableListItem({ id, label, onRemove }) {
+function SortableListItem({ id, label, onRemove, onRename }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+
   const {
     attributes,
     listeners,
@@ -48,6 +51,27 @@ function SortableListItem({ id, label, onRemove }) {
   } = useSortable({ id });
 
   const style = getSortableItemStyle(transform, transition, isDragging);
+
+  const handleEditStart = () => {
+    setEditValue(label);
+    setIsEditing(true);
+  };
+
+  const handleEditConfirm = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== label) {
+      onRename(label, trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleEditConfirm();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
 
   return (
     <div ref={setNodeRef} style={style} className={`list-item ${isDragging ? 'dragging' : ''}`}>
@@ -60,7 +84,22 @@ function SortableListItem({ id, label, onRemove }) {
       >
         ⋮⋮
       </button>
-      <span>{label}</span>
+      {isEditing ? (
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleEditConfirm}
+          onKeyDown={handleEditKeyDown}
+          autoFocus
+          className="list-item-edit-input"
+        />
+      ) : (
+        <span>{label}</span>
+      )}
+      {onRename && !isEditing && (
+        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
+      )}
       <button className="remove-btn" onClick={onRemove} title="Entfernen">✕</button>
     </div>
   );
@@ -134,6 +173,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [activeTab, setActiveTab] = useState(currentUser?.role === ROLES.MODERATOR ? 'lists' : 'general'); // 'general', 'lists', or 'users'
   const isAdmin = isCurrentUserAdmin();
   const isModerator = currentUser?.role === ROLES.MODERATOR;
+
+  // Pending renames for cuisine types and meal categories (to propagate to recipes on save)
+  const [pendingCuisineRenames, setPendingCuisineRenames] = useState([]);
+  const [pendingCategoryRenames, setPendingCategoryRenames] = useState([]);
   
   // Category images state
   const [categoryImages, setCategoryImages] = useState([]);
@@ -219,8 +262,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newRecipeDays, setNewRecipeDays] = useState(DEFAULT_NEW_RECIPE_DAYS);
   const [ratingMinVotes, setRatingMinVotes] = useState(DEFAULT_RATING_MIN_VOTES);
 
-  // Role permissions state (for abortCalc permission check)
+  // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
+
+  // Whether the current user can rename cuisine types and meal categories
+  const canEditLists = isAdmin || rolePermissions?.[currentUser?.role]?.editLists === true;
 
   // Active calculations abort state
   const [abortingCalcId, setAbortingCalcId] = useState(null);
@@ -407,6 +453,34 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     }
   };
 
+  /**
+   * Propagate renames of a recipe field (kulinarik or speisekategorie) to all affected recipes.
+   * @param {Array<{from: string, to: string}>} renames - Pending renames
+   * @param {string} field - Recipe field name ('kulinarik' or 'speisekategorie')
+   * @param {Function} clearRenames - State setter to clear the pending renames
+   */
+  const propagateRenames = async (renames, field, clearRenames) => {
+    const effective = renames.filter(r => r.from !== r.to);
+    if (effective.length === 0 || !onUpdateRecipe) return;
+    const recipesToUpdate = allRecipes.filter(recipe => {
+      const values = Array.isArray(recipe[field])
+        ? recipe[field]
+        : recipe[field] ? [recipe[field]] : [];
+      return effective.some(({ from }) => values.includes(from));
+    });
+    for (const recipe of recipesToUpdate) {
+      const values = Array.isArray(recipe[field])
+        ? recipe[field]
+        : recipe[field] ? [recipe[field]] : [];
+      const updated = values.map(v => {
+        const rename = effective.find(r => r.from === v);
+        return rename ? rename.to : v;
+      });
+      await onUpdateRecipe(recipe.id, { [field]: updated });
+    }
+    clearRenames([]);
+  };
+
   const handleSave = async () => {
     try {
       await saveCustomLists(lists);
@@ -446,6 +520,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveTileSizePreference(tileSize);
       await saveSortSettings({ trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes });
 
+      // Propagate cuisine type renames to all affected recipes
+      await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
+
+      // Propagate meal category renames to all affected recipes
+      await propagateRenames(pendingCategoryRenames, 'speisekategorie', setPendingCategoryRenames);
+
       // Apply favicon changes immediately
       updateFavicon(faviconImage);
       updatePageTitle(faviconText);
@@ -478,6 +558,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       try {
         const defaultLists = await resetCustomLists();
         setLists(defaultLists);
+        setPendingCuisineRenames([]);
+        setPendingCategoryRenames([]);
         alert('Listen auf Standardwerte zurückgesetzt!');
       } catch (error) {
         console.error('Fehler beim Zurücksetzen der Listen:', error);
@@ -503,6 +585,24 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     });
   };
 
+  const renameCuisine = (oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    setLists(prev => ({
+      ...prev,
+      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c)
+    }));
+    setPendingCuisineRenames(prev => {
+      const existingIdx = prev.findIndex(r => r.to === oldName);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { from: updated[existingIdx].from, to: trimmed };
+        return updated;
+      }
+      return [...prev, { from: oldName, to: trimmed }];
+    });
+  };
+
   const addCategory = () => {
     if (newCategory.trim() && !lists.mealCategories.includes(newCategory.trim())) {
       setLists({
@@ -517,6 +617,24 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     setLists({
       ...lists,
       mealCategories: lists.mealCategories.filter(c => c !== category)
+    });
+  };
+
+  const renameCategory = (oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === trimmed) return;
+    setLists(prev => ({
+      ...prev,
+      mealCategories: prev.mealCategories.map(c => c === oldName ? trimmed : c)
+    }));
+    setPendingCategoryRenames(prev => {
+      const existingIdx = prev.findIndex(r => r.to === oldName);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { from: updated[existingIdx].from, to: trimmed };
+        return updated;
+      }
+      return [...prev, { from: oldName, to: trimmed }];
     });
   };
 
@@ -2945,7 +3063,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <SortableContext items={lists.cuisineTypes} strategy={verticalListSortingStrategy}>
               <div className="list-items">
                 {lists.cuisineTypes.map((cuisine) => (
-                  <SortableListItem key={cuisine} id={cuisine} label={cuisine} onRemove={() => removeCuisine(cuisine)} />
+                  <SortableListItem key={cuisine} id={cuisine} label={cuisine} onRemove={() => removeCuisine(cuisine)} onRename={canEditLists ? renameCuisine : undefined} />
                 ))}
               </div>
             </SortableContext>
@@ -2968,7 +3086,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <SortableContext items={lists.mealCategories} strategy={verticalListSortingStrategy}>
               <div className="list-items">
                 {lists.mealCategories.map((category) => (
-                  <SortableListItem key={category} id={category} label={category} onRemove={() => removeCategory(category)} />
+                  <SortableListItem key={category} id={category} label={category} onRemove={() => removeCategory(category)} onRename={canEditLists ? renameCategory : undefined} />
                 ))}
               </div>
             </SortableContext>
