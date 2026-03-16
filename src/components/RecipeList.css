@@ -106,6 +106,22 @@
   transform: scale(1);
 }
 
+.filter-button.has-active-filters {
+  position: relative;
+}
+
+.filter-button.has-active-filters::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #DF7A00;
+  border: 2px solid white;
+}
+
 .add-button {
   background: white;
   color: white;
@@ -356,6 +372,12 @@
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
                 background 0.3s ease,
                 box-shadow 0.3s ease;
+  }
+
+  .filter-button.has-active-filters::after {
+    top: 2px;
+    right: 2px;
+    border-color: white;
   }
 
   /* Mobile: Favorites button overlays the filter button at same fixed position */

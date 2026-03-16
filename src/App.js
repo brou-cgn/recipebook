@@ -1295,6 +1295,7 @@ function App() {
             onOpenFilterPage={handleOpenFilterPage}
             activePrivateListName={activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || null}
+            activeFilters={recipeFilters}
           />
         </>
       )}

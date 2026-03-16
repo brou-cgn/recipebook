@@ -82,7 +82,12 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId, activeFilters }) {
+  const hasActiveFilters = !!(activeFilters && (
+    activeFilters.selectedGroup ||
+    activeFilters.selectedCuisines?.length > 0 ||
+    activeFilters.selectedAuthors?.length > 0
+  ));
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [filterVisible, setFilterVisible] = useState(true);
   const longPressTimer = useRef(null);
@@ -321,7 +326,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             {onOpenFilterPage && (
               <button 
                 ref={filterButtonRef}
-                className={`filter-button ${filterVisible ? 'filter-visible' : ''}`}
+                className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''}`}
                 style={{ transform: filterTransform }}
                 onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
                 title="Weitere Filter"
