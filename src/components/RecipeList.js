@@ -321,7 +321,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             {onOpenFilterPage && (
               <button 
                 ref={filterButtonRef}
-                className="filter-button"
+                className={`filter-button ${filterVisible ? 'filter-visible' : ''}`}
                 style={{ transform: filterTransform }}
                 onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
                 title="Weitere Filter"
