@@ -1062,12 +1062,7 @@ function App() {
     clearSharedDataFromDB();
   };
 
-  // Show loading state while checking auth
-  if (authLoading) {
-    return <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />;
-  }
-
-  // If accessing a share URL, show SharePage (no login required)
+  // If accessing a share URL, show SharePage immediately (no login required, no splash screen)
   if (sharePageId) {
     return (
       <div className="App">
@@ -1080,7 +1075,7 @@ function App() {
     );
   }
 
-  // If accessing a menu share URL, show MenuSharePage (no login required)
+  // If accessing a menu share URL, show MenuSharePage immediately (no login required, no splash screen)
   if (menuSharePageId) {
     return (
       <div className="App">
@@ -1091,6 +1086,11 @@ function App() {
         />
       </div>
     );
+  }
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />;
   }
 
   // If user is not logged in, show login/register view
