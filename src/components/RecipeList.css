@@ -81,6 +81,11 @@
   font-size: 1rem;
 }
 
+.category-filter-arrow:focus,
+.category-filter-arrow:focus-visible {
+  outline: none;
+}
+
 .recipe-favorites-filter-button,
 .view-mode-button {
   background: white;
