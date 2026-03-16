@@ -1319,6 +1319,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         {stepText}
                       </div>
                       <div className="step-counter">
+                        {index === totalSteps - 1 && currentUser && (
+                          <button
+                            className="step-heute-gekocht-btn"
+                            onClick={e => { e.stopPropagation(); setShowCookDateModal(true); }}
+                            aria-label="Heute gekocht"
+                          >
+                            Heute gekocht
+                          </button>
+                        )}
                         Schritt {index + 1} von {totalSteps}
                       </div>
                       {/* Progress bar at bottom – spans full card width */}

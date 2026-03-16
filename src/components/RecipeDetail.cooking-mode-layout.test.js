@@ -33,17 +33,72 @@ jest.mock('../utils/customLists', () => ({
     cuisineTypes: [],
     mealCategories: [],
     units: [],
+    conversionTable: [],
   }),
   getButtonIcons: () => Promise.resolve({
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
-    scanImage: '📷'
+    scanImage: '📷',
+    timerStart: '⏱',
+    timerStop: '⏹',
+    cookDate: '📅',
   }),
+  getTimelineBubbleIcon: () => Promise.resolve(null),
+  getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
+  getTimelineCookEventDefaultImage: () => Promise.resolve(null),
+  addMissingConversionEntries: jest.fn(() => Promise.resolve()),
+  DEFAULT_BUTTON_ICONS: {
+    cookingMode: '👨‍🍳',
+    cookingModeAlt: '👨‍🍳',
+    importRecipe: '📥',
+    scanImage: '📷',
+    webImport: '🌐',
+    closeButton: '✕',
+    closeButtonAlt: '✕',
+    menuCloseButton: '✕',
+    filterButton: '⚙',
+    filterButtonActive: '🔽',
+    copyLink: '📋',
+    nutritionEmpty: '➕',
+    nutritionFilled: '🥦',
+    ratingHeartEmpty: '♡',
+    ratingHeartFilled: '♥',
+    privateListBack: '✕',
+    shoppingList: '🛒',
+    bringButton: '🛍️',
+    timerStart: '⏱',
+    timerStop: '⏹',
+    cookDate: '📅',
+    addRecipe: '➕',
+    addPrivateRecipe: '🔒',
+  },
 }));
 
 jest.mock('../utils/recipeLinks', () => ({
   decodeRecipeLink: () => null,
 }));
+
+jest.mock('../utils/recipeCookDates', () => ({
+  setCookDate: jest.fn(() => Promise.resolve(true)),
+  getAllCookDates: jest.fn(() => Promise.resolve([])),
+  deleteCookDate: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('../utils/recipeRatings', () => ({
+  getUserRating: jest.fn(() => Promise.resolve(null)),
+  getUserRatingData: jest.fn(() => Promise.resolve(null)),
+  rateRecipe: jest.fn(() => Promise.resolve()),
+  getAllRatings: jest.fn(() => Promise.resolve([])),
+  getAverageRating: jest.fn(() => Promise.resolve({ average: 0, count: 0 })),
+  deleteRating: jest.fn(() => Promise.resolve()),
+  subscribeToRatingSummary: jest.fn(() => () => {}),
+  getGuestId: jest.fn(() => 'guest-id'),
+  getRaterKey: jest.fn(() => 'rater-key'),
+}));
+
+jest.mock('./RecipeRating', () => () => <div data-testid="recipe-rating-mock" />);
+
+jest.mock('./CookDateModal', () => () => <div className="cook-date-modal" data-testid="cook-date-modal-mock" />);
 
 describe('RecipeDetail - Cooking Mode Layout', () => {
   const mockRecipe = {
@@ -295,5 +350,85 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     // Second card should now be active
     expect(stepCards[1]).toHaveClass('active');
     expect(stepCards[0]).not.toHaveClass('active');
+  });
+
+  test('"Heute gekocht" button appears only on the last step card', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    const stepCards = document.querySelectorAll('.step-card');
+    expect(stepCards.length).toBe(3);
+
+    // Button should NOT be on the first two cards
+    expect(stepCards[0].querySelector('.step-heute-gekocht-btn')).toBeNull();
+    expect(stepCards[1].querySelector('.step-heute-gekocht-btn')).toBeNull();
+
+    // Button SHOULD be on the last card
+    const lastCardBtn = stepCards[2].querySelector('.step-heute-gekocht-btn');
+    expect(lastCardBtn).toBeInTheDocument();
+    expect(lastCardBtn).toHaveTextContent('Heute gekocht');
+  });
+
+  test('"Heute gekocht" button opens CookDateModal', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    // CookDateModal should not be visible yet
+    expect(document.querySelector('.cook-date-modal')).toBeNull();
+
+    // Click the button on the last step card
+    const stepCards = document.querySelectorAll('.step-card');
+    const lastCardBtn = stepCards[2].querySelector('.step-heute-gekocht-btn');
+    fireEvent.click(lastCardBtn);
+
+    // CookDateModal should now be visible
+    expect(document.querySelector('.cook-date-modal')).toBeInTheDocument();
+  });
+
+  test('"Heute gekocht" button is not shown when user is not logged in', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={null}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    const stepCards = document.querySelectorAll('.step-card');
+    expect(stepCards[2].querySelector('.step-heute-gekocht-btn')).toBeNull();
   });
 });
