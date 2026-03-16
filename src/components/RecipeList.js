@@ -382,7 +382,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             )}
             <button 
               ref={favButtonRef}
-              className={`recipe-favorites-filter-button ${showFavoritesOnly ? 'active' : ''} ${filterVisible ? 'filter-visible' : ''}`}
+              className={`recipe-favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
               style={{ transform: `translateX(${filterShift}px)` }}
               onClick={() => { if (!longPressed.current) setShowFavoritesOnly(prev => !prev); }}
               onTouchStart={handleFavTouchStart}
