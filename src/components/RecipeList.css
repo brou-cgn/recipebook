@@ -449,7 +449,6 @@
 @media (max-width: 480px) {
   .recipe-list-header {
     flex-direction: column;
-    gap: 1rem;
     align-items: stretch;
   }
   
