@@ -25,7 +25,7 @@ import { isBase64Image } from '../utils/imageUtils';
  */
 function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, canDeleteCookDates = false, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [cookDates, setCookDates] = useState([]);
