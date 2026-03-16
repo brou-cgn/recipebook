@@ -103,6 +103,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [buttonIcons, setButtonIcons] = useState({
     filterButton: DEFAULT_BUTTON_ICONS.filterButton,
+    filterButtonActive: DEFAULT_BUTTON_ICONS.filterButtonActive,
     addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
     addPrivateRecipe: DEFAULT_BUTTON_ICONS.addPrivateRecipe,
   });
@@ -333,10 +334,18 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
                 title="Weitere Filter"
               >
-                {isBase64Image(buttonIcons.filterButton) ? (
-                  <img src={buttonIcons.filterButton} alt="Filter" className="button-icon-image" />
+                {hasActiveFilters ? (
+                  isBase64Image(buttonIcons.filterButtonActive) ? (
+                    <img src={buttonIcons.filterButtonActive} alt="Filter aktiv" className="button-icon-image" />
+                  ) : (
+                    buttonIcons.filterButtonActive
+                  )
                 ) : (
-                  buttonIcons.filterButton
+                  isBase64Image(buttonIcons.filterButton) ? (
+                    <img src={buttonIcons.filterButton} alt="Filter" className="button-icon-image" />
+                  ) : (
+                    buttonIcons.filterButton
+                  )
                 )}
               </button>
             )}

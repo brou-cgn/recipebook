@@ -192,6 +192,7 @@ export const DEFAULT_BUTTON_ICONS = {
   closeButtonAlt: '✕',
   menuCloseButton: '✕',
   filterButton: '⚙',
+  filterButtonActive: '🔽',
   copyLink: '📋',
   nutritionEmpty: '➕',
   nutritionFilled: '🥦',
