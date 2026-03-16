@@ -1836,6 +1836,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 </div>
 
                 <div className="button-icon-item">
+                  <label htmlFor="filterButtonActiveIcon">Filter-Button mit aktiven Filtern (Rezeptübersicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.filterButtonActive) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="filterButtonActiveIcon"
+                          value={buttonIcons.filterButtonActive}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, filterButtonActive: e.target.value })}
+                          placeholder="z.B. 🔽"
+                          maxLength={10}
+                        />
+                        <label htmlFor="filterButtonActiveIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'filterButtonActive' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="filterButtonActiveIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('filterButtonActive', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'filterButtonActive'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('filterButtonActive')}
+                          title="Bild entfernen"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, filterButtonActive: DEFAULT_BUTTON_ICONS.filterButtonActive })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.filterButtonActive) ? (
+                        <img src={buttonIcons.filterButtonActive} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.filterButtonActive}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
                   <label htmlFor="addRecipeIcon">Rezept-hinzufügen-Button (Rezeptübersicht):</label>
                   <div className="button-icon-input-group">
                     {!isBase64Image(buttonIcons.addRecipe) ? (

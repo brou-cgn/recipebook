@@ -688,6 +688,78 @@ describe('RecipeList - Filter Button Icon', () => {
     expect(imgInButton).toHaveAttribute('src', mockBase64);
     expect(imgInButton).toHaveAttribute('alt', 'Filter');
   });
+
+  test('renders filterButtonActive emoji when filters are active', async () => {
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽'
+    });
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        activeFilters={{ selectedGroup: 'Vorspeisen' }}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toBeInTheDocument();
+    expect(filterButton).toHaveTextContent('🔽');
+    const imgInButton = filterButton.querySelector('img');
+    expect(imgInButton).toBeNull();
+  });
+
+  test('renders filterButton emoji when no filters are active', async () => {
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽'
+    });
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        activeFilters={{}}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toBeInTheDocument();
+    expect(filterButton).toHaveTextContent('⚙');
+    const imgInButton = filterButton.querySelector('img');
+    expect(imgInButton).toBeNull();
+  });
+
+  test('renders filterButtonActive image when filters are active and icon is base64', async () => {
+    const mockBase64Active = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: mockBase64Active
+    });
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        activeFilters={{ selectedGroup: 'Hauptgerichte' }}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toBeInTheDocument();
+    const imgInButton = filterButton.querySelector('img');
+    expect(imgInButton).toBeInTheDocument();
+    expect(imgInButton).toHaveAttribute('src', mockBase64Active);
+    expect(imgInButton).toHaveAttribute('alt', 'Filter aktiv');
+  });
 });
 
 describe('RecipeList - Kulinarik Display', () => {
