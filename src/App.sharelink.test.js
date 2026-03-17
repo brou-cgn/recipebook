@@ -5,16 +5,9 @@ import App from './App';
 // Preserve original location.hash
 const originalHash = window.location.hash;
 
-// Mock fetch so the share pages stay in loading state during tests
-// (fetch never resolves, keeping loading=true)
-beforeEach(() => {
-  jest.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
-});
-
 afterEach(() => {
   window.location.hash = originalHash;
   localStorage.clear();
-  jest.restoreAllMocks();
 });
 
 describe('Shared Link Routing – no SplashScreen', () => {

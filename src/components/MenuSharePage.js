@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './SharePage.css';
+import { getMenuByShareId } from '../utils/menuFirestore';
+import { getRecipesByIds } from '../utils/recipeFirestore';
 import MenuDetail from './MenuDetail';
 import RecipeDetail from './RecipeDetail';
 
@@ -13,17 +15,26 @@ function MenuSharePage({ shareId, currentUser }) {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      try {
-        const response = await fetch(`/api/shared-menu/${shareId}`);
-        if (response.ok) {
-          const data = await response.json();
-          setMenu(data.menu);
-          setRecipes(data.recipes || []);
-        } else {
-          setNotFound(true);
+      const found = await getMenuByShareId(shareId);
+      if (found) {
+        setMenu(found);
+        // Extract all recipe IDs from the menu sections or legacy recipeIds
+        const recipeIds = [];
+        if (found.sections && found.sections.length > 0) {
+          found.sections.forEach(section => {
+            if (section.recipeIds) {
+              recipeIds.push(...section.recipeIds);
+            }
+          });
+        } else if (found.recipeIds) {
+          recipeIds.push(...found.recipeIds);
         }
-      } catch (error) {
-        console.error('Error loading shared menu:', error);
+        // Fetch the associated recipes (deduplicated)
+        if (recipeIds.length > 0) {
+          const fetchedRecipes = await getRecipesByIds([...new Set(recipeIds)]);
+          setRecipes(fetchedRecipes);
+        }
+      } else {
         setNotFound(true);
       }
       setLoading(false);

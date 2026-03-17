@@ -58,16 +58,6 @@
         "region": "us-central1"
       },
       {
-        "source": "/api/shared-recipe/**",
-        "function": "getSharedRecipe",
-        "region": "us-central1"
-      },
-      {
-        "source": "/api/shared-menu/**",
-        "function": "getSharedMenu",
-        "region": "us-central1"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
