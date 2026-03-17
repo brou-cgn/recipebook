@@ -63,6 +63,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [cookDateIcon, setCookDateIcon] = useState('📅');
   const [conversionTable, setConversionTable] = useState([]);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
+  const [cookDateModalPrefillToday, setCookDateModalPrefillToday] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
@@ -1322,7 +1323,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         {index === totalSteps - 1 && currentUser && (
                           <button
                             className="step-heute-gekocht-btn"
-                            onClick={e => { e.stopPropagation(); setShowCookDateModal(true); }}
+                            onClick={e => { e.stopPropagation(); setCookDateModalPrefillToday(true); setShowCookDateModal(true); }}
                             aria-label="Heute gekocht"
                           >
                             Heute gekocht
@@ -1497,7 +1498,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {currentUser && !currentUser.isGuest && (
                   <button
                     className="cook-date-button"
-                    onClick={() => setShowCookDateModal(true)}
+                    onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
                     title="Kochdatum erfassen"
                     aria-label="Kochdatum erfassen"
                   >
@@ -1785,6 +1786,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           timelineCookEventBubbleIcon={timelineCookEventBubbleIcon}
           timelineCookEventDefaultImage={timelineCookEventDefaultImage}
           canDeleteCookDates={currentUser?.deleteRating === true}
+          prefillToday={cookDateModalPrefillToday}
           onClose={() => setShowCookDateModal(false)}
         />
       )}

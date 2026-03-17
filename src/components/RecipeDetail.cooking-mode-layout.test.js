@@ -98,7 +98,9 @@ jest.mock('../utils/recipeRatings', () => ({
 
 jest.mock('./RecipeRating', () => () => <div data-testid="recipe-rating-mock" />);
 
-jest.mock('./CookDateModal', () => () => <div className="cook-date-modal" data-testid="cook-date-modal-mock" />);
+jest.mock('./CookDateModal', () => ({ prefillToday }) => (
+  <div className="cook-date-modal" data-testid="cook-date-modal-mock" data-prefill-today={String(prefillToday ?? false)} />
+));
 
 describe('RecipeDetail - Cooking Mode Layout', () => {
   const mockRecipe = {
@@ -430,5 +432,54 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
 
     const stepCards = document.querySelectorAll('.step-card');
     expect(stepCards[2].querySelector('.step-heute-gekocht-btn')).toBeNull();
+  });
+
+  test('CookDateModal opened from cooking mode last step has prefillToday=true', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Activate cooking mode
+    const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+    fireEvent.click(staticIcon);
+
+    // Click "Heute gekocht" on the last step
+    const stepCards = document.querySelectorAll('.step-card');
+    const lastCardBtn = stepCards[2].querySelector('.step-heute-gekocht-btn');
+    fireEvent.click(lastCardBtn);
+
+    const modal = document.querySelector('.cook-date-modal');
+    expect(modal).toBeInTheDocument();
+    expect(modal.getAttribute('data-prefill-today')).toBe('true');
+  });
+
+  test('CookDateModal opened from recipe detail view has prefillToday=false', () => {
+    setMockWindowWidth(400);
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    // Click the cook-date-button in the detail view (not in cooking mode)
+    const cookDateButton = document.querySelector('.cook-date-button');
+    fireEvent.click(cookDateButton);
+
+    const modal = document.querySelector('.cook-date-modal');
+    expect(modal).toBeInTheDocument();
+    expect(modal.getAttribute('data-prefill-today')).toBe('false');
   });
 });

@@ -20,12 +20,13 @@ import { isBase64Image } from '../utils/imageUtils';
  * @param {string}   [props.timelineCookEventBubbleIcon] - Bubble icon for the "Gekocht am" marker
  * @param {string}   [props.timelineCookEventDefaultImage] - Default image for cooking events when no recipe image is available
  * @param {boolean}  [props.canDeleteCookDates]          - Whether the current user may delete "Gekocht am" entries
+ * @param {boolean}  [props.prefillToday]               - Whether to pre-fill the date input with today's date
  * @param {Function} [props.onSaved]                    - Optionally called with the new Date when saved
  * @param {Function} props.onClose                     - Called when the modal should close
  */
-function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, canDeleteCookDates = false, onSaved, onClose }) {
+function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, recipeCreatedAt, recipeImage, timelineBubbleIcon = null, timelineCookEventBubbleIcon = null, timelineCookEventDefaultImage = null, canDeleteCookDates = false, prefillToday = false, onSaved, onClose }) {
   const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [selectedDate, setSelectedDate] = useState(prefillToday ? todayStr : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [cookDates, setCookDates] = useState([]);
