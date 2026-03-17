@@ -377,8 +377,7 @@ function App() {
 
     doPreload();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, recipesLoaded]);
+  }, [currentUser, recipesLoaded, recipes]);
 
   // Hide splash screen once auth is done and all resources are ready
   useEffect(() => {
