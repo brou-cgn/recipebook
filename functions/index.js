@@ -2887,6 +2887,7 @@ exports.shareRecipe = onRequest(
       const canonicalUrl = `${req.protocol}://${req.hostname}/share/${shareId}`;
 
       if (!isCrawler) {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
         res.redirect(302, `${req.protocol}://${req.hostname}/#share/${shareId}`);
         return;
       }
