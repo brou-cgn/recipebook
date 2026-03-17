@@ -1070,26 +1070,32 @@ function App() {
   // If accessing a share URL, show SharePage (no login required)
   if (sharePageId) {
     return (
-      <div className="App">
-        <Header />
-        <SharePage
-          shareId={sharePageId}
-          currentUser={currentUser}
-        />
-      </div>
+      <>
+        <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+        <div className="App">
+          <Header />
+          <SharePage
+            shareId={sharePageId}
+            currentUser={currentUser}
+          />
+        </div>
+      </>
     );
   }
 
   // If accessing a menu share URL, show MenuSharePage (no login required)
   if (menuSharePageId) {
     return (
-      <div className="App">
-        <Header />
-        <MenuSharePage
-          shareId={menuSharePageId}
-          currentUser={currentUser}
-        />
-      </div>
+      <>
+        <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+        <div className="App">
+          <Header />
+          <MenuSharePage
+            shareId={menuSharePageId}
+            currentUser={currentUser}
+          />
+        </div>
+      </>
     );
   }
 
