@@ -52,4 +52,25 @@ describe('Shared Link Routing – no SplashScreen', () => {
     expect(screen.queryByText('Rezept wird geladen…')).not.toBeInTheDocument();
     expect(screen.queryByText('Menü wird geladen…')).not.toBeInTheDocument();
   });
+
+  test('does not show SplashScreen when ?webimport= deep link is present', () => {
+    const originalLocation = window.location;
+    try {
+      delete window.location;
+      window.location = {
+        ...originalLocation,
+        search: '?webimport=https%3A%2F%2Fexample.com%2Frecipe',
+        hash: '',
+        pathname: '/',
+        href: 'http://localhost/?webimport=https%3A%2F%2Fexample.com%2Frecipe',
+      };
+
+      render(<App />);
+
+      // The SplashScreen slogan must NOT be present – the splash must be bypassed
+      expect(screen.queryByText('Unsere besten Momente')).not.toBeInTheDocument();
+    } finally {
+      window.location = originalLocation;
+    }
+  });
 });

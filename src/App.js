@@ -197,7 +197,13 @@ function App() {
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Skip splash for webimport deep links (?webimport=...) — share/menu-share links
+    // are handled by early-return guards below, so no check needed here for those.
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('webimport')) return false;
+    return true;
+  });
   const [splashSettings, setSplashSettings] = useState({ logoUrl: null, appTitle: null, slogan: null });
   const [resourcesReady, setResourcesReady] = useState(false);
   const splashPreloadDoneRef = useRef(false);
