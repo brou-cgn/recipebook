@@ -39,9 +39,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference, getSettings } from './utils/customLists';
-import { getCategoryImages } from './utils/categoryImages';
-import { isBase64Image } from './utils/imageUtils';
+import { applyTileSizePreference } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import {
   subscribeToRecipes,
@@ -198,9 +196,6 @@ function App() {
   const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
-  const [splashSettings, setSplashSettings] = useState({ logoUrl: null, appTitle: null, slogan: null });
-  const [resourcesReady, setResourcesReady] = useState(false);
-  const splashPreloadDoneRef = useRef(false);
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,88 +298,12 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Load splash screen settings (logo, title, slogan) on mount
+  // Hide splash screen once auth loading is complete
   useEffect(() => {
-    getSettings().then(settings => {
-      setSplashSettings({
-        logoUrl: settings.appLogoImage || null,
-        appTitle: settings.faviconText || null,
-        slogan: settings.headerSlogan || null,
-      });
-    }).catch((err) => {
-      console.error('Error loading splash screen settings:', err);
-    });
-  }, []);
-
-  // When auth resolves with no user, mark resources ready immediately
-  useEffect(() => {
-    if (!authLoading && !currentUser) {
-      setResourcesReady(true);
-    }
-  }, [authLoading, currentUser]);
-
-  // Preload recipe and category images after recipes are loaded, then mark resources ready
-  useEffect(() => {
-    if (!currentUser || !recipesLoaded) return;
-    if (splashPreloadDoneRef.current) return;
-    splashPreloadDoneRef.current = true;
-
-    const MAX_PRELOAD_MS = 5000;
-    let cancelled = false;
-
-    const doPreload = async () => {
-      try {
-        const imageUrls = [];
-
-        // Collect HTTP recipe images (base64 images are already in memory)
-        recipes.forEach(r => {
-          if (r.image && !isBase64Image(r.image)) imageUrls.push(r.image);
-        });
-
-        // Collect category images
-        const catImages = await getCategoryImages();
-        catImages.forEach(cat => {
-          if (cat.image && !isBase64Image(cat.image)) imageUrls.push(cat.image);
-        });
-
-        if (imageUrls.length > 0) {
-          const imgRefs = [];
-          const loadPromises = imageUrls.map(src => new Promise(resolve => {
-            const img = new window.Image();
-            imgRefs.push(img);
-            img.onload = resolve;
-            img.onerror = resolve;
-            img.src = src;
-          }));
-          await Promise.race([
-            Promise.allSettled(loadPromises),
-            new Promise(resolve => setTimeout(resolve, MAX_PRELOAD_MS)),
-          ]);
-          // Clean up image references
-          imgRefs.forEach(img => {
-            img.onload = null;
-            img.onerror = null;
-          });
-        }
-      } catch (err) {
-        console.error('Error preloading images for splash screen:', err);
-      } finally {
-        if (!cancelled) {
-          setResourcesReady(true);
-        }
-      }
-    };
-
-    doPreload();
-    return () => { cancelled = true; };
-  }, [currentUser, recipesLoaded, recipes]);
-
-  // Hide splash screen once auth is done and all resources are ready
-  useEffect(() => {
-    if (!authLoading && resourcesReady) {
+    if (!authLoading) {
       setShowSplash(false);
     }
-  }, [authLoading, resourcesReady]);
+  }, [authLoading]);
 
   // Load all users when current user is authenticated (for admin features)
   useEffect(() => {
@@ -1042,14 +961,14 @@ function App() {
 
   // Show loading state while checking auth
   if (authLoading) {
-    return <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />;
+    return <SplashScreen visible={showSplash} />;
   }
 
   // If accessing a share URL, show SharePage (no login required)
   if (sharePageId) {
     return (
       <>
-        <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+        <SplashScreen visible={showSplash} />
         <div className="App">
           <Header />
           <SharePage
@@ -1065,7 +984,7 @@ function App() {
   if (menuSharePageId) {
     return (
       <>
-        <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+        <SplashScreen visible={showSplash} />
         <div className="App">
           <Header />
           <MenuSharePage
@@ -1081,7 +1000,7 @@ function App() {
   if (!currentUser) {
     return (
       <>
-        <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+        <SplashScreen visible={showSplash} />
         <div className="App">
           <Header />
         {pendingWebimportUrl && (
@@ -1117,7 +1036,7 @@ function App() {
 
   return (
     <>
-      <SplashScreen visible={showSplash} logoUrl={splashSettings.logoUrl} appTitle={splashSettings.appTitle} slogan={splashSettings.slogan} />
+      <SplashScreen visible={showSplash} />
       <div className="App">
         <Header 
         onSettingsClick={handleOpenSettings}
