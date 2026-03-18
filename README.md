@@ -1,5 +1,7 @@
 # RecipeBook 🍳
 
+[![Node.js Compatibility](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml/badge.svg)](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml)
+
 A Progressive Web App (PWA) for managing your favorite recipes. Built with React and optimized for mobile devices.
 
 ## Features
@@ -540,6 +542,40 @@ To allow images to load from Firebase Storage, you need to configure CORS:
 4. Apply CORS config: `gsutil cors set storage-cors.json gs://broubook.firebasestorage.app`
 
 To verify: `gsutil cors get gs://broubook.firebasestorage.app`
+
+## Testing Node.js Updates
+
+The project uses a GitHub Actions workflow to verify compatibility with multiple Node.js versions before upgrading.
+
+### Node.js Version Requirements
+
+| Component | Required Version |
+| --- | --- |
+| React App | any (currently tested with Node 18, 20, 22) |
+| Firebase Functions | Node 20 (exact) |
+
+### Running the Compatibility Workflow
+
+**Manual trigger** – go to [Actions → Test Node.js Compatibility](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml) and click *Run workflow*. You can optionally specify a Node.js version to focus on.
+
+**Automatic trigger** – the workflow runs automatically on:
+- Pull requests targeting `main`
+- Pushes to branches named `node-update/**` or `upgrade/**`
+
+### Local Compatibility Check
+
+Run the compatibility script locally before opening a PR:
+
+```bash
+node scripts/test-node-compatibility.js
+```
+
+The script checks:
+- Whether the running Node.js version satisfies the `engines` field in each `package.json`
+- Outdated/deprecated packages (`npm outdated`)
+- High-severity vulnerabilities (`npm audit`)
+
+Exit code `0` means everything is fine; exit code `1` means there are problems.
 
 ## Contributing
 
