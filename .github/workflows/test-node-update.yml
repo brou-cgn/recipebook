@@ -6,7 +6,7 @@ on:
       node-version:
         description: 'Node.js version to test'
         required: false
-        default: '20'
+        default: '24'
   pull_request:
     branches:
       - main
@@ -16,24 +16,20 @@ on:
       - 'upgrade/**'
 
 jobs:
-  test-react-app:
-    name: Test React App (Node ${{ matrix.node-version }})
+  test:
+    name: Test (Node 24)
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      matrix:
-        node-version: [18, 20, 22]
-      fail-fast: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ github.event.inputs.node-version || '24' }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -47,41 +43,7 @@ jobs:
           CI: true
         run: npm test -- --watchAll=false --passWithNoTests
 
-      - name: Test build
-        env:
-          CI: false
-        run: npm run build
-
-      - name: Upload build artifact
-        if: matrix.node-version == 20
-        uses: actions/upload-artifact@v4
-        with:
-          name: react-build
-          path: build/
-          retention-days: 1
-
-  test-firebase-functions:
-    name: Test Firebase Functions (Node ${{ matrix.node-version }})
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        node-version: [18, 20, 22]
-      fail-fast: false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-          cache-dependency-path: functions/package-lock.json
-
-      - name: Install functions dependencies
+      - name: Install Firebase Functions dependencies
         working-directory: functions
         run: npm ci
 
@@ -93,33 +55,6 @@ jobs:
         working-directory: functions
         run: node --check index.js
 
-      - name: Check package.json engine requirements
-        run: node scripts/test-node-compatibility.js
-
-  integration-test:
-    name: Integration Test (Node 20)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    needs: [test-react-app, test-firebase-functions]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ github.event.inputs.node-version || '20' }}
-          cache: 'npm'
-
-      - name: Install React app dependencies
-        run: npm ci
-
-      - name: Install Firebase Functions dependencies
-        working-directory: functions
-        run: npm ci
-
       - name: Run compatibility check
         run: node scripts/test-node-compatibility.js
 
@@ -127,6 +62,13 @@ jobs:
         env:
           CI: false
         run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: build/
+          retention-days: 1
 
       - name: Summary
         if: always()
