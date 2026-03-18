@@ -111,7 +111,7 @@ WICHTIGE REGELN:
 2. Zahlen: portionen, zubereitungszeit, kochzeit und schwierigkeit müssen reine Zahlen sein (kein Text!)
 3. Zubereitungsschritte: Jeder Schritt sollte eine vollständige, klare Anweisung sein
 4. Fehlende Informationen: Wenn eine Information nicht lesbar oder nicht vorhanden ist, verwende null oder lasse das Array leer
-5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter, Esslöffel statt EL, Teelöffel statt TL). Wandle Brüche in Dezimalzahlen um (z.B. "1/2" wird zu "0,5", "1 1/2" wird zu "1,5").
+5. Einheiten: Standardisiere Einheiten (g statt Gramm, ml statt Milliliter). Verwende IMMER "Esslöffel" statt "EL" und "Teelöffel" statt "TL" – schreibe die Einheit NIE als Abkürzung (z.B. "2 Esslöffel Olivenöl", "1 Teelöffel Salz"). Wandle Brüche in Dezimalzahlen um (z.B. "1/2" wird zu "0,5", "1 1/2" wird zu "1,5").
 6. Tags: Füge nur Tags hinzu, die explizit im Rezept erwähnt werden oder eindeutig aus den Zutaten ableitbar sind
 7. Wähle für die Felder "kulinarik" und "kategorie" **NUR** Werte aus diesen Listen:
 **Verfügbare Kulinarik-Typen:**
@@ -375,6 +375,26 @@ function validateImageData(imageBase64) {
 }
 
 /**
+ * Normalizes ingredient unit abbreviations to their full German names.
+ * Replaces standalone "EL"/"El" with "Esslöffel" and "TL"/"Tl" with "Teelöffel".
+ * Acts as a safety net when Gemini ignores the prompt instruction to use full unit names.
+ *
+ * @param {string[]} ingredients - Array of ingredient strings
+ * @returns {string[]} Normalized ingredient strings
+ */
+function normalizeIngredientUnits(ingredients) {
+  if (!Array.isArray(ingredients)) return ingredients;
+  return ingredients.map((ingredient) => {
+    if (typeof ingredient !== 'string') return ingredient;
+    return ingredient
+      .replace(/\bEL\b/g, 'Esslöffel')
+      .replace(/\bEl\b/g, 'Esslöffel')
+      .replace(/\bTL\b/g, 'Teelöffel')
+      .replace(/\bTl\b/g, 'Teelöffel');
+  });
+}
+
+/**
  * Call Gemini API to analyze recipe image
  * @param {string} base64Data - Pure base64 image data (no prefix)
  * @param {string} mimeType - Image MIME type
@@ -498,7 +518,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
         cuisine: recipeData.kulinarik || '',
         category: recipeData.kategorie || '',
         tags: recipeData.tags || [],
-        ingredients: recipeData.zutaten || [],
+        ingredients: normalizeIngredientUnits(recipeData.zutaten || []),
         steps: recipeData.zubereitung || [],
         notes: recipeData.notizen || '',
         confidence: 95,
@@ -515,7 +535,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
         cuisine: recipeData.cuisine || '',
         category: recipeData.category || '',
         tags: recipeData.tags || [],
-        ingredients: recipeData.ingredients || [],
+        ingredients: normalizeIngredientUnits(recipeData.ingredients || []),
         steps: recipeData.steps || [],
         notes: recipeData.notes || '',
         confidence: 95,
@@ -747,7 +767,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
       cuisine: recipeData.kulinarik || recipeData.cuisine || '',
       category: recipeData.kategorie || recipeData.category || '',
       tags: recipeData.tags || [],
-      ingredients: recipeData.zutaten || recipeData.ingredients || [],
+      ingredients: normalizeIngredientUnits(recipeData.zutaten || recipeData.ingredients || []),
       steps: recipeData.zubereitung || recipeData.steps || [],
       notes: recipeData.notizen || recipeData.notes || '',
       confidence: 95,
