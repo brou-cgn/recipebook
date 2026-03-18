@@ -789,9 +789,9 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                 </button>
                 <button
                   className="new-scan-button"
-                  onClick={handleReset}
+                  onClick={() => setStep('upload')}
                 >
-                  ↩ Zurück
+                  Zurück
                 </button>
               </div>
             </div>
