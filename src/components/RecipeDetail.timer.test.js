@@ -41,6 +41,7 @@ jest.mock('../utils/customLists', () => ({
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
   DEFAULT_BUTTON_ICONS: {
     ratingHeartEmpty: '♡',
+    ratingHeartEmptyModal: '♡',
     ratingHeartFilled: '♥',
   },
 }));

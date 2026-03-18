@@ -197,6 +197,7 @@ export const DEFAULT_BUTTON_ICONS = {
   nutritionEmpty: '➕',
   nutritionFilled: '🥦',
   ratingHeartEmpty: '🤍',
+  ratingHeartEmptyModal: '♡',
   ratingHeartFilled: '♥',
   privateListBack: '✕',
   shoppingList: '🛒',

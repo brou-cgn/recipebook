@@ -208,7 +208,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     copyLink: '📋',
     nutritionEmpty: '➕',
     nutritionFilled: '🥦',
-    ratingHeartEmpty: '♡',
+    ratingHeartEmpty: '🤍',
+    ratingHeartEmptyModal: '♡',
     ratingHeartFilled: '♥',
     privateListBack: '✕',
     shoppingList: '🛒',
@@ -2228,6 +2229,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.ratingHeartEmpty} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.ratingHeartEmpty}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="ratingHeartEmptyModalIcon">Bewertungsherz-Icon im Modal (leer, keine Bewertung abgegeben):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.ratingHeartEmptyModal) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="ratingHeartEmptyModalIcon"
+                          value={buttonIcons.ratingHeartEmptyModal}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartEmptyModal: e.target.value })}
+                          placeholder="z.B. ♡"
+                          maxLength={10}
+                        />
+                        <label htmlFor="ratingHeartEmptyModalIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'ratingHeartEmptyModal' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="ratingHeartEmptyModalIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('ratingHeartEmptyModal', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'ratingHeartEmptyModal'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('ratingHeartEmptyModal')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartEmptyModal: DEFAULT_BUTTON_ICONS.ratingHeartEmptyModal })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.ratingHeartEmptyModal) ? (
+                        <img src={buttonIcons.ratingHeartEmptyModal} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.ratingHeartEmptyModal}</span>
                       )}
                     </div>
                   </div>

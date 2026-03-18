@@ -26,7 +26,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   const [saved, setSaved] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [allRatings, setAllRatings] = useState([]);
-  const [heartEmptyIcon, setHeartEmptyIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+  const [heartEmptyIcon, setHeartEmptyIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartEmptyModal);
   const [heartFilledIcon, setHeartFilledIcon] = useState(DEFAULT_BUTTON_ICONS.ratingHeartFilled);
 
   const isGuest = !currentUser || currentUser.isGuest;
@@ -34,7 +34,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   // Load configurable heart icons
   useEffect(() => {
     getButtonIcons().then((icons) => {
-      setHeartEmptyIcon(icons.ratingHeartEmpty || DEFAULT_BUTTON_ICONS.ratingHeartEmpty);
+      setHeartEmptyIcon(icons.ratingHeartEmptyModal || DEFAULT_BUTTON_ICONS.ratingHeartEmptyModal);
       setHeartFilledIcon(icons.ratingHeartFilled || DEFAULT_BUTTON_ICONS.ratingHeartFilled);
     });
   }, []);
