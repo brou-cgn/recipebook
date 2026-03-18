@@ -53,7 +53,7 @@
 }
 
 .rating-heart-icon.empty {
-  color: #DF7A00;
+  color: #ccc;
   opacity: 1;
 }
 
@@ -84,13 +84,17 @@
   font-size: 1rem;
   line-height: 1;
   transition: transform 0.15s ease, color 0.15s ease;
-  color: #DF7A00;
+  color: #ccc;
   opacity: 1;
 }
 
 .rating-heart-btn.filled {
   color: #DF7A00;
   opacity: 1;
+}
+
+.rating-heart-btn.empty {
+  color: #ccc;
 }
 
 .rating-heart-btn:hover:not(:disabled),

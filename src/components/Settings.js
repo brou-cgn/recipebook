@@ -2187,7 +2187,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           id="ratingHeartEmptyIcon"
                           value={buttonIcons.ratingHeartEmpty}
                           onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartEmpty: e.target.value })}
-                          placeholder="z.B. ♡"
+                          placeholder="z.B. 🤍"
                           maxLength={10}
                         />
                         <label htmlFor="ratingHeartEmptyIconFile" className="upload-icon-btn" title="Bild hochladen">
