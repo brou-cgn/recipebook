@@ -911,6 +911,7 @@ describe('RecipeForm - OCR Scan Integration', () => {
     expect(ocrInput).toBeInTheDocument();
     expect(ocrInput).toHaveAttribute('type', 'file');
     expect(ocrInput).toHaveAttribute('accept', 'image/jpeg,image/jpg,image/png');
+    expect(ocrInput).toHaveAttribute('multiple');
   });
 
   test('does not show OCR scan button when editing existing recipe', () => {

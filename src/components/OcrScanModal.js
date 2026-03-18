@@ -8,8 +8,11 @@ import { recognizeRecipeWithAI } from '../utils/aiOcrService';
 
 const MAX_CAMERA_PHOTOS = 10;
 
-function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
-  const [step, setStep] = useState(initialImage ? 'scan' : 'upload'); // 'upload', 'scan', 'edit', 'ai-result', 'batch-processing'
+// initialImage: single image that triggers immediate OCR (takes precedence over initialImages)
+// initialImages: array of base64 images to pre-fill the image-preview step
+function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [] }) {
+  // initialImage starts OCR immediately; initialImages shows the preview step; neither → upload step
+  const [step, setStep] = useState(initialImage ? 'scan' : (initialImages.length > 0 ? 'image-preview' : 'upload')); // 'upload', 'scan', 'edit', 'ai-result', 'batch-processing', 'image-preview'
   // imageBase64 tracks the current image but OCR functions receive it directly as parameter
   // This state is maintained for potential future features (e.g., image preview, retry)
   // eslint-disable-next-line no-unused-vars
@@ -26,7 +29,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const [remainingScans, setRemainingScans] = useState(null);
   const [aiFailed, setAiFailed] = useState(false);
   const [lastImageForRetry, setLastImageForRetry] = useState(null);
-  const [uploadedImages, setUploadedImages] = useState([]);
+  const [uploadedImages, setUploadedImages] = useState(initialImages.length > 0 ? [...initialImages] : []);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [allOcrResults, setAllOcrResults] = useState([]);
   const [capturedPhotos, setCapturedPhotos] = useState([]);

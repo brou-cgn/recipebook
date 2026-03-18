@@ -199,7 +199,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [showImportModal, setShowImportModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [showWebImportModal, setShowWebImportModal] = useState(false);
-  const [ocrImageBase64, setOcrImageBase64] = useState('');
+  const [ocrImagesBase64, setOcrImagesBase64] = useState([]);
   const [customLists, setCustomLists] = useState({
     cuisineTypes: [],
     mealCategories: [],
@@ -670,12 +670,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   };
 
   const handleOcrImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
     try {
-      const base64 = await fileToBase64(file);
-      setOcrImageBase64(base64);
+      const base64s = await Promise.all(files.map(f => fileToBase64(f)));
+      setOcrImagesBase64(base64s);
       setShowOcrModal(true);
     } catch (error) {
       alert('Fehler beim Hochladen des Bildes: ' + error.message);
@@ -687,12 +687,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     handleImport(ocrRecipe);
     // Close the OCR modal
     setShowOcrModal(false);
-    setOcrImageBase64('');
+    setOcrImagesBase64([]);
   };
 
   const handleOcrCancel = () => {
     setShowOcrModal(false);
-    setOcrImageBase64('');
+    setOcrImagesBase64([]);
   };
 
   const handleWebImport = (webRecipe) => {
@@ -782,6 +782,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                   type="file"
                   id="ocrImageUpload"
                   accept="image/jpeg,image/jpg,image/png"
+                  multiple
                   onChange={handleOcrImageUpload}
                   disabled={aiOcrLimitReached}
                   style={{ display: 'none' }}
@@ -1168,7 +1169,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <OcrScanModal
           onImport={handleOcrScan}
           onCancel={handleOcrCancel}
-          initialImage={ocrImageBase64}
+          initialImages={ocrImagesBase64}
         />
       )}
 
