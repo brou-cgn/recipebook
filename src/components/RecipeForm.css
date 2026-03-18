@@ -334,6 +334,18 @@
   border-color: #402C1C;
 }
 
+.form-list-item input.recipe-link-input {
+  background-color: #f0f7ff;
+  border-color: #90c2f7;
+  color: #1a5fa8;
+  cursor: default;
+}
+
+.form-list-item input.recipe-link-input:focus {
+  border-color: #90c2f7;
+  outline: none;
+}
+
 .form-list-item textarea {
   resize: none;
   min-height: 60px;

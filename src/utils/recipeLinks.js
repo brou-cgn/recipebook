@@ -69,3 +69,17 @@ export const startsWithHash = (text) => {
   const trimmed = text.trim();
   return trimmed !== '' && trimmed.startsWith('#');
 };
+
+/**
+ * Check if ingredient text contains # that could trigger recipe typeahead
+ * Returns true when text contains # but is NOT yet a complete recipe link
+ * This allows triggering the typeahead even when there is a quantity prefix
+ * Examples: "#" → true, "200ml #" → true, "1 Teil #Tom" → true
+ *           "#recipe:abc:Name" → false (already complete), "200g Mehl" → false
+ */
+export const containsHashForTypeahead = (text) => {
+  if (!text || typeof text !== 'string') {
+    return false;
+  }
+  return text.includes('#') && !isRecipeLink(text);
+};

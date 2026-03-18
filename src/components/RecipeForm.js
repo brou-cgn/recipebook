@@ -7,7 +7,7 @@ import { getCustomLists } from '../utils/customLists';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing } from '../utils/ingredientUtils';
-import { encodeRecipeLink, startsWithHash } from '../utils/recipeLinks';
+import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
@@ -51,6 +51,14 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
   const isHeading = typeof item === 'object' && item.type === 'heading';
   const text = typeof item === 'object' ? item.text : item;
 
+  // Decode recipe links to show a human-readable name in the edit view
+  const recipeLink = !isHeading ? decodeRecipeLink(text) : null;
+  const displayValue = recipeLink
+    ? recipeLink.quantityPrefix
+      ? `${recipeLink.quantityPrefix} ${recipeLink.recipeName}`
+      : recipeLink.recipeName
+    : text;
+
   return (
     <div
       ref={setNodeRef}
@@ -68,10 +76,12 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
       </button>
       <input
         type="text"
-        value={text}
+        value={displayValue}
+        readOnly={!!recipeLink}
         onChange={(e) => onChange(index, e.target.value)}
         placeholder={isHeading ? 'Zwischenüberschrift' : `Zutat ${index + 1}`}
-        className={isHeading ? 'heading-input' : ''}
+        className={`${isHeading ? 'heading-input' : ''} ${recipeLink ? 'recipe-link-input' : ''}`}
+        title={recipeLink ? `Verlinktes Rezept: ${recipeLink.recipeName}` : undefined}
       />
       <button
         type="button"
@@ -364,7 +374,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setIngredients(newIngredients);
     
     // Check if user is typing # to trigger recipe typeahead (only for ingredient type)
-    if (currentItem.type === 'ingredient' && startsWithHash(value)) {
+    if (currentItem.type === 'ingredient' && containsHashForTypeahead(value)) {
       setTypeaheadIngredientIndex(index);
       setShowTypeahead(true);
     } else {

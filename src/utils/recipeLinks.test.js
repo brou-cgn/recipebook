@@ -3,7 +3,8 @@ import {
   decodeRecipeLink, 
   isRecipeLink, 
   extractRecipeLinks,
-  startsWithHash 
+  startsWithHash,
+  containsHashForTypeahead
 } from './recipeLinks';
 
 describe('recipeLinks utilities', () => {
@@ -162,6 +163,32 @@ describe('recipeLinks utilities', () => {
       expect(startsWithHash('has # in middle')).toBe(false);
       expect(startsWithHash('')).toBe(false);
       expect(startsWithHash(null)).toBe(false);
+    });
+  });
+
+  describe('containsHashForTypeahead', () => {
+    test('returns true for string starting with #', () => {
+      expect(containsHashForTypeahead('#')).toBe(true);
+      expect(containsHashForTypeahead('#Tom')).toBe(true);
+    });
+
+    test('returns true for strings with # after a quantity prefix', () => {
+      expect(containsHashForTypeahead('200ml #')).toBe(true);
+      expect(containsHashForTypeahead('1 Teil #Tom')).toBe(true);
+      expect(containsHashForTypeahead('50g #')).toBe(true);
+    });
+
+    test('returns false for complete recipe links (typeahead already resolved)', () => {
+      expect(containsHashForTypeahead('#recipe:abc123:Tomatensoße')).toBe(false);
+      expect(containsHashForTypeahead('1 Teil #recipe:abc123:Pizzateig')).toBe(false);
+      expect(containsHashForTypeahead('50g #recipe:xyz:Tomatensoße')).toBe(false);
+    });
+
+    test('returns false for strings without #', () => {
+      expect(containsHashForTypeahead('200g Mehl')).toBe(false);
+      expect(containsHashForTypeahead('regular ingredient')).toBe(false);
+      expect(containsHashForTypeahead('')).toBe(false);
+      expect(containsHashForTypeahead(null)).toBe(false);
     });
   });
 });
