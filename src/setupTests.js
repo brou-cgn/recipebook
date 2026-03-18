@@ -4,6 +4,12 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
+// Polyfill for setImmediate – required for @grpc/grpc-js compatibility on Node.js 24
+if (typeof globalThis.setImmediate === 'undefined') {
+  globalThis.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
+  globalThis.clearImmediate = (id) => clearTimeout(id);
+}
+
 // Mock Firebase environment variables for tests
 process.env.REACT_APP_FIREBASE_API_KEY = 'test-api-key';
 process.env.REACT_APP_FIREBASE_AUTH_DOMAIN = 'test.firebaseapp.com';

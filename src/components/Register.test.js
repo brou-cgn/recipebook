@@ -36,8 +36,8 @@ describe('Register Component', () => {
     fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: 'Max' } });
     fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: 'Mustermann' } });
     fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: 'max@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'password456' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'SecurePass12!' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'SecurePass45!' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
@@ -58,7 +58,7 @@ describe('Register Component', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
-    expect(screen.getByText(/mindestens 6 Zeichen/i)).toBeInTheDocument();
+    expect(screen.getByText(/mindestens 12 Zeichen/i)).toBeInTheDocument();
     expect(mockOnRegister).not.toHaveBeenCalled();
   });
 
@@ -70,8 +70,8 @@ describe('Register Component', () => {
     fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: 'Max' } });
     fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: 'Mustermann' } });
     fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: 'max@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'SecurePass12!' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'SecurePass12!' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
@@ -79,24 +79,24 @@ describe('Register Component', () => {
       vorname: 'Max',
       nachname: 'Mustermann',
       email: 'max@example.com',
-      password: 'password123'
+      password: 'SecurePass12!'
     });
   });
 
-  test('displays success message and switches to login after successful registration', () => {
-    mockOnRegister.mockReturnValue({ success: true, message: 'Registrierung erfolgreich!' });
+  test('displays success message and switches to login after successful registration', async () => {
+    mockOnRegister.mockResolvedValue({ success: true, message: 'Registrierung erfolgreich!' });
 
     render(<Register onRegister={mockOnRegister} onSwitchToLogin={mockOnSwitchToLogin} />);
     
     fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: 'Max' } });
     fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: 'Mustermann' } });
     fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: 'max@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'SecurePass12!' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'SecurePass12!' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
-    expect(screen.getByText(/Registrierung erfolgreich!/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Registrierung erfolgreich!/i)).toBeInTheDocument());
     
     // Fast-forward time by 2 seconds
     jest.advanceTimersByTime(2000);
@@ -104,8 +104,8 @@ describe('Register Component', () => {
     expect(mockOnSwitchToLogin).toHaveBeenCalled();
   });
 
-  test('displays error message on failed registration', () => {
-    mockOnRegister.mockReturnValue({ 
+  test('displays error message on failed registration', async () => {
+    mockOnRegister.mockResolvedValue({ 
       success: false, 
       message: 'Diese E-Mail-Adresse ist bereits registriert.' 
     });
@@ -115,12 +115,12 @@ describe('Register Component', () => {
     fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: 'Max' } });
     fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: 'Mustermann' } });
     fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: 'existing@example.com' } });
-    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: 'SecurePass12!' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: 'SecurePass12!' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
-    expect(screen.getByText(/bereits registriert/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/bereits registriert/i)).toBeInTheDocument());
   });
 
   test('switches to login view when login button is clicked', () => {
@@ -141,8 +141,8 @@ describe('Register Component', () => {
     fireEvent.change(screen.getByLabelText(/Vorname/i), { target: { value: '  Max  ' } });
     fireEvent.change(screen.getByLabelText(/Nachname/i), { target: { value: '  Mustermann  ' } });
     fireEvent.change(screen.getByLabelText(/E-Mail-Adresse/i), { target: { value: '  max@example.com  ' } });
-    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: '  password123  ' } });
-    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: '  password123  ' } });
+    fireEvent.change(screen.getByLabelText(/Passwort \* \(mind/i), { target: { value: '  SecurePass12!  ' } });
+    fireEvent.change(screen.getByLabelText(/Passwort bestätigen/i), { target: { value: '  SecurePass12!  ' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
@@ -151,7 +151,7 @@ describe('Register Component', () => {
       vorname: 'Max',
       nachname: 'Mustermann',
       email: 'max@example.com',
-      password: '  password123  '
+      password: '  SecurePass12!  '
     });
   });
 });

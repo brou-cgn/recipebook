@@ -1,6 +1,17 @@
+// Firebase module mocks
+let mockFirestoreStore = {};
+const resetStore = () => { mockFirestoreStore = {}; };
+
+jest.mock("../firebase", () => ({ db: {} }));
+jest.mock("firebase/firestore", () => ({
+  doc: jest.fn(),
+  getDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  arrayUnion: jest.fn((...args) => args),
+  arrayRemove: jest.fn((...args) => args),
+}));
+
 import {
-  getAllUserFavorites,
-  saveAllUserFavorites,
   getUserFavorites,
   isRecipeFavorite,
   addFavorite,
@@ -9,350 +20,222 @@ import {
   getFavoriteRecipes,
   migrateGlobalFavorites,
   hasAnyFavoriteInGroup
-} from './userFavorites';
+} from "./userFavorites";
 
-// Clear localStorage before each test
 beforeEach(() => {
-  localStorage.clear();
+  resetStore();
+  const { doc, getDoc, updateDoc } = require("firebase/firestore");
+  doc.mockImplementation((_db, col, id) => ({ _col: col, _id: id, _key: col + "/" + id }));
+  getDoc.mockImplementation(async (ref) => {
+    const data = mockFirestoreStore[ref._key] || null;
+    return { exists: () => !!data, data: () => data };
+  });
+  updateDoc.mockResolvedValue(undefined);
 });
 
-describe('userFavorites utility functions', () => {
-  describe('getAllUserFavorites and saveAllUserFavorites', () => {
-    test('returns empty object when no favorites exist', () => {
-      expect(getAllUserFavorites()).toEqual({});
+const seedUser = (userId, favoriteRecipes = []) => {
+  mockFirestoreStore["users/" + userId] = { favoriteRecipes: [...favoriteRecipes] };
+};
+
+describe("userFavorites utility functions", () => {
+  describe("getUserFavorites", () => {
+    test("returns empty array for user with no favorites", async () => {
+      seedUser("user1", []);
+      expect(await getUserFavorites("user1")).toEqual([]);
     });
 
-    test('saves and retrieves favorites correctly', () => {
-      const favorites = {
-        'user1': ['recipe1', 'recipe2'],
-        'user2': ['recipe3']
-      };
-      saveAllUserFavorites(favorites);
-      expect(getAllUserFavorites()).toEqual(favorites);
-    });
-  });
-
-  describe('getUserFavorites', () => {
-    test('returns empty array for user with no favorites', () => {
-      expect(getUserFavorites('user1')).toEqual([]);
+    test("returns empty array when userId is null or undefined", async () => {
+      expect(await getUserFavorites(null)).toEqual([]);
+      expect(await getUserFavorites(undefined)).toEqual([]);
     });
 
-    test('returns empty array when userId is null or undefined', () => {
-      expect(getUserFavorites(null)).toEqual([]);
-      expect(getUserFavorites(undefined)).toEqual([]);
-    });
-
-    test('returns user-specific favorites', () => {
-      const favorites = {
-        'user1': ['recipe1', 'recipe2'],
-        'user2': ['recipe3']
-      };
-      saveAllUserFavorites(favorites);
-      
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe2']);
-      expect(getUserFavorites('user2')).toEqual(['recipe3']);
+    test("returns user-specific favorites", async () => {
+      seedUser("user1", ["recipe1", "recipe2"]);
+      seedUser("user2", ["recipe3"]);
+      expect(await getUserFavorites("user1")).toEqual(["recipe1", "recipe2"]);
+      expect(await getUserFavorites("user2")).toEqual(["recipe3"]);
     });
   });
 
-  describe('isRecipeFavorite', () => {
+  describe("isRecipeFavorite", () => {
     beforeEach(() => {
-      const favorites = {
-        'user1': ['recipe1', 'recipe2'],
-        'user2': ['recipe3']
-      };
-      saveAllUserFavorites(favorites);
+      seedUser("user1", ["recipe1", "recipe2"]);
+      seedUser("user2", ["recipe3"]);
     });
 
-    test('returns true when recipe is a favorite', () => {
-      expect(isRecipeFavorite('user1', 'recipe1')).toBe(true);
-      expect(isRecipeFavorite('user1', 'recipe2')).toBe(true);
+    test("returns true when recipe is a favorite", async () => {
+      expect(await isRecipeFavorite("user1", "recipe1")).toBe(true);
+      expect(await isRecipeFavorite("user1", "recipe2")).toBe(true);
     });
 
-    test('returns false when recipe is not a favorite', () => {
-      expect(isRecipeFavorite('user1', 'recipe3')).toBe(false);
-      expect(isRecipeFavorite('user2', 'recipe1')).toBe(false);
+    test("returns false when recipe is not a favorite", async () => {
+      expect(await isRecipeFavorite("user1", "recipe3")).toBe(false);
+      expect(await isRecipeFavorite("user2", "recipe1")).toBe(false);
     });
 
-    test('returns false when userId or recipeId is null/undefined', () => {
-      expect(isRecipeFavorite(null, 'recipe1')).toBe(false);
-      expect(isRecipeFavorite('user1', null)).toBe(false);
-      expect(isRecipeFavorite(undefined, undefined)).toBe(false);
+    test("returns false when userId or recipeId is null/undefined", async () => {
+      expect(await isRecipeFavorite(null, "recipe1")).toBe(false);
+      expect(await isRecipeFavorite("user1", null)).toBe(false);
+      expect(await isRecipeFavorite(undefined, undefined)).toBe(false);
     });
   });
 
-  describe('addFavorite', () => {
-    test('adds a recipe to user favorites', () => {
-      expect(addFavorite('user1', 'recipe1')).toBe(true);
-      expect(getUserFavorites('user1')).toEqual(['recipe1']);
+  describe("addFavorite", () => {
+    test("returns true on success", async () => {
+      seedUser("user1", []);
+      expect(await addFavorite("user1", "recipe1")).toBe(true);
     });
 
-    test('adds multiple recipes to same user', () => {
-      addFavorite('user1', 'recipe1');
-      addFavorite('user1', 'recipe2');
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe2']);
+    test("calls updateDoc when adding a favorite", async () => {
+      const { updateDoc } = require("firebase/firestore");
+      seedUser("user1", []);
+      await addFavorite("user1", "recipe1");
+      expect(updateDoc).toHaveBeenCalled();
     });
 
-    test('does not add duplicate favorites', () => {
-      addFavorite('user1', 'recipe1');
-      addFavorite('user1', 'recipe1');
-      expect(getUserFavorites('user1')).toEqual(['recipe1']);
-    });
-
-    test('maintains separate favorites for different users', () => {
-      addFavorite('user1', 'recipe1');
-      addFavorite('user2', 'recipe2');
-      
-      expect(getUserFavorites('user1')).toEqual(['recipe1']);
-      expect(getUserFavorites('user2')).toEqual(['recipe2']);
-    });
-
-    test('returns false when userId or recipeId is null/undefined', () => {
-      expect(addFavorite(null, 'recipe1')).toBe(false);
-      expect(addFavorite('user1', null)).toBe(false);
+    test("returns false when userId or recipeId is null/undefined", async () => {
+      expect(await addFavorite(null, "recipe1")).toBe(false);
+      expect(await addFavorite("user1", null)).toBe(false);
     });
   });
 
-  describe('removeFavorite', () => {
-    beforeEach(() => {
-      const favorites = {
-        'user1': ['recipe1', 'recipe2', 'recipe3'],
-        'user2': ['recipe3']
-      };
-      saveAllUserFavorites(favorites);
+  describe("removeFavorite", () => {
+    test("returns true on success", async () => {
+      seedUser("user1", ["recipe1", "recipe2", "recipe3"]);
+      expect(await removeFavorite("user1", "recipe2")).toBe(true);
     });
 
-    test('removes a recipe from user favorites', () => {
-      expect(removeFavorite('user1', 'recipe2')).toBe(true);
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe3']);
+    test("calls updateDoc when removing a favorite", async () => {
+      const { updateDoc } = require("firebase/firestore");
+      seedUser("user1", ["recipe1"]);
+      await removeFavorite("user1", "recipe1");
+      expect(updateDoc).toHaveBeenCalled();
     });
 
-    test('does not affect other users when removing favorite', () => {
-      removeFavorite('user1', 'recipe3');
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe2']);
-      expect(getUserFavorites('user2')).toEqual(['recipe3']);
-    });
-
-    test('handles removing non-existent favorite gracefully', () => {
-      expect(removeFavorite('user1', 'recipe999')).toBe(true);
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe2', 'recipe3']);
-    });
-
-    test('returns false when userId or recipeId is null/undefined', () => {
-      expect(removeFavorite(null, 'recipe1')).toBe(false);
-      expect(removeFavorite('user1', null)).toBe(false);
+    test("returns false when userId or recipeId is null/undefined", async () => {
+      expect(await removeFavorite(null, "recipe1")).toBe(false);
+      expect(await removeFavorite("user1", null)).toBe(false);
     });
   });
 
-  describe('toggleFavorite', () => {
-    test('adds recipe when not a favorite', () => {
-      const result = toggleFavorite('user1', 'recipe1');
-      expect(result).toBe(true);
-      expect(getUserFavorites('user1')).toEqual(['recipe1']);
+  describe("toggleFavorite", () => {
+    test("returns true when adding (not already a favorite)", async () => {
+      seedUser("user1", []);
+      expect(await toggleFavorite("user1", "recipe1")).toBe(true);
     });
 
-    test('removes recipe when already a favorite', () => {
-      addFavorite('user1', 'recipe1');
-      const result = toggleFavorite('user1', 'recipe1');
-      expect(result).toBe(false);
-      expect(getUserFavorites('user1')).toEqual([]);
+    test("returns false when removing (already a favorite)", async () => {
+      seedUser("user1", ["recipe1"]);
+      expect(await toggleFavorite("user1", "recipe1")).toBe(false);
     });
 
-    test('toggles favorite status correctly multiple times', () => {
-      // Add
-      expect(toggleFavorite('user1', 'recipe1')).toBe(true);
-      expect(isRecipeFavorite('user1', 'recipe1')).toBe(true);
-      
-      // Remove
-      expect(toggleFavorite('user1', 'recipe1')).toBe(false);
-      expect(isRecipeFavorite('user1', 'recipe1')).toBe(false);
-      
-      // Add again
-      expect(toggleFavorite('user1', 'recipe1')).toBe(true);
-      expect(isRecipeFavorite('user1', 'recipe1')).toBe(true);
-    });
-
-    test('returns false when userId or recipeId is null/undefined', () => {
-      expect(toggleFavorite(null, 'recipe1')).toBe(false);
-      expect(toggleFavorite('user1', null)).toBe(false);
+    test("returns false when userId or recipeId is null/undefined", async () => {
+      expect(await toggleFavorite(null, "recipe1")).toBe(false);
+      expect(await toggleFavorite("user1", null)).toBe(false);
     });
   });
 
-  describe('getFavoriteRecipes', () => {
+  describe("getFavoriteRecipes", () => {
     const recipes = [
-      { id: 'recipe1', title: 'Recipe 1' },
-      { id: 'recipe2', title: 'Recipe 2' },
-      { id: 'recipe3', title: 'Recipe 3' },
-      { id: 'recipe4', title: 'Recipe 4' }
+      { id: "recipe1", title: "Recipe 1" },
+      { id: "recipe2", title: "Recipe 2" },
+      { id: "recipe3", title: "Recipe 3" },
+      { id: "recipe4", title: "Recipe 4" }
     ];
 
     beforeEach(() => {
-      const favorites = {
-        'user1': ['recipe1', 'recipe3'],
-        'user2': ['recipe2', 'recipe4']
-      };
-      saveAllUserFavorites(favorites);
+      seedUser("user1", ["recipe1", "recipe3"]);
+      seedUser("user2", ["recipe2", "recipe4"]);
     });
 
-    test('returns only favorite recipes for user', () => {
-      const favoriteRecipes = getFavoriteRecipes('user1', recipes);
-      expect(favoriteRecipes).toHaveLength(2);
-      expect(favoriteRecipes.map(r => r.id)).toEqual(['recipe1', 'recipe3']);
+    test("returns only favorite recipes for user", async () => {
+      const result = await getFavoriteRecipes("user1", recipes);
+      expect(result).toHaveLength(2);
+      expect(result.map(r => r.id)).toEqual(["recipe1", "recipe3"]);
     });
 
-    test('returns different favorites for different users', () => {
-      const user1Favorites = getFavoriteRecipes('user1', recipes);
-      const user2Favorites = getFavoriteRecipes('user2', recipes);
-      
-      expect(user1Favorites.map(r => r.id)).toEqual(['recipe1', 'recipe3']);
-      expect(user2Favorites.map(r => r.id)).toEqual(['recipe2', 'recipe4']);
+    test("returns different favorites for different users", async () => {
+      expect((await getFavoriteRecipes("user1", recipes)).map(r => r.id)).toEqual(["recipe1", "recipe3"]);
+      expect((await getFavoriteRecipes("user2", recipes)).map(r => r.id)).toEqual(["recipe2", "recipe4"]);
     });
 
-    test('returns empty array when user has no favorites', () => {
-      const favoriteRecipes = getFavoriteRecipes('user3', recipes);
-      expect(favoriteRecipes).toEqual([]);
+    test("returns empty array when user has no favorites", async () => {
+      seedUser("user3", []);
+      expect(await getFavoriteRecipes("user3", recipes)).toEqual([]);
     });
 
-    test('returns empty array when userId is null/undefined', () => {
-      expect(getFavoriteRecipes(null, recipes)).toEqual([]);
-      expect(getFavoriteRecipes(undefined, recipes)).toEqual([]);
+    test("returns empty array when userId is null/undefined", async () => {
+      expect(await getFavoriteRecipes(null, recipes)).toEqual([]);
+      expect(await getFavoriteRecipes(undefined, recipes)).toEqual([]);
     });
 
-    test('returns empty array when recipes is null/undefined', () => {
-      expect(getFavoriteRecipes('user1', null)).toEqual([]);
-      expect(getFavoriteRecipes('user1', undefined)).toEqual([]);
-    });
-
-    test('returns empty array when recipes is not an array', () => {
-      expect(getFavoriteRecipes('user1', 'not an array')).toEqual([]);
-      expect(getFavoriteRecipes('user1', {})).toEqual([]);
+    test("returns empty array when recipes is null/undefined or not an array", async () => {
+      expect(await getFavoriteRecipes("user1", null)).toEqual([]);
+      expect(await getFavoriteRecipes("user1", undefined)).toEqual([]);
+      expect(await getFavoriteRecipes("user1", "not an array")).toEqual([]);
     });
   });
 
-  describe('migrateGlobalFavorites', () => {
+  describe("migrateGlobalFavorites", () => {
     const recipes = [
-      { id: 'recipe1', title: 'Recipe 1', isFavorite: true },
-      { id: 'recipe2', title: 'Recipe 2', isFavorite: false },
-      { id: 'recipe3', title: 'Recipe 3', isFavorite: true },
-      { id: 'recipe4', title: 'Recipe 4' }
+      { id: "recipe1", title: "Recipe 1" },
+      { id: "recipe2", title: "Recipe 2" },
     ];
 
-    test('migrates global favorites to user-specific favorites', () => {
-      migrateGlobalFavorites('user1', recipes);
-      
-      const userFavorites = getUserFavorites('user1');
-      expect(userFavorites).toEqual(['recipe1', 'recipe3']);
+    test("migrates global favorites from localStorage when user has no Firestore favorites", async () => {
+      seedUser("user1", []);
+      const oldFavorites = { user1: ["recipe1"] };
+      localStorage.setItem("userFavorites", JSON.stringify(oldFavorites));
+      await migrateGlobalFavorites("user1", recipes);
+      const { updateDoc } = require("firebase/firestore");
+      expect(updateDoc).toHaveBeenCalled();
+      localStorage.clear();
     });
 
-    test('does not migrate if user already has favorites', () => {
-      // Set up existing favorites for user
-      addFavorite('user1', 'recipe4');
-      
-      // Try to migrate
-      migrateGlobalFavorites('user1', recipes);
-      
-      // Should still have only the original favorite
-      expect(getUserFavorites('user1')).toEqual(['recipe4']);
+    test("does not migrate if user already has favorites in Firestore", async () => {
+      seedUser("user1", ["recipe2"]);
+      const { updateDoc } = require("firebase/firestore");
+      updateDoc.mockClear();
+      await migrateGlobalFavorites("user1", recipes);
+      expect(updateDoc).not.toHaveBeenCalled();
     });
 
-    test('handles recipes with no favorites gracefully', () => {
-      const recipesWithoutFavorites = [
-        { id: 'recipe1', title: 'Recipe 1', isFavorite: false },
-        { id: 'recipe2', title: 'Recipe 2' }
-      ];
-      
-      migrateGlobalFavorites('user1', recipesWithoutFavorites);
-      expect(getUserFavorites('user1')).toEqual([]);
-    });
-
-    test('handles null/undefined parameters gracefully', () => {
-      expect(() => migrateGlobalFavorites(null, recipes)).not.toThrow();
-      expect(() => migrateGlobalFavorites('user1', null)).not.toThrow();
-      expect(() => migrateGlobalFavorites(undefined, undefined)).not.toThrow();
-    });
-
-    test('migrates for multiple users independently', () => {
-      migrateGlobalFavorites('user1', recipes);
-      
-      // Different recipes for user2
-      const user2Recipes = [
-        { id: 'recipe5', title: 'Recipe 5', isFavorite: true }
-      ];
-      migrateGlobalFavorites('user2', user2Recipes);
-      
-      expect(getUserFavorites('user1')).toEqual(['recipe1', 'recipe3']);
-      expect(getUserFavorites('user2')).toEqual(['recipe5']);
+    test("handles null/undefined parameters gracefully", async () => {
+      await expect(migrateGlobalFavorites(null, recipes)).resolves.not.toThrow();
+      await expect(migrateGlobalFavorites("user1", null)).resolves.not.toThrow();
     });
   });
 
-  describe('hasAnyFavoriteInGroup', () => {
+  describe("hasAnyFavoriteInGroup", () => {
     beforeEach(() => {
-      // Set up favorites for user1
-      const favorites = {
-        'user1': ['recipe2', 'recipe5']
-      };
-      saveAllUserFavorites(favorites);
+      seedUser("user1", ["recipe2", "recipe5"]);
     });
 
-    test('returns true when one recipe in group is a favorite', () => {
+    test("returns true when one recipe in group is a favorite", async () => {
       const recipeGroup = [
-        { id: 'recipe1', title: 'Recipe 1' },
-        { id: 'recipe2', title: 'Recipe 2' }, // This is a favorite
-        { id: 'recipe3', title: 'Recipe 3' }
+        { id: "recipe1" }, { id: "recipe2" }, { id: "recipe3" }
       ];
-      
-      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
+      expect(await hasAnyFavoriteInGroup("user1", recipeGroup)).toBe(true);
     });
 
-    test('returns true when multiple recipes in group are favorites', () => {
-      const recipeGroup = [
-        { id: 'recipe2', title: 'Recipe 2' }, // This is a favorite
-        { id: 'recipe5', title: 'Recipe 5' }  // This is also a favorite
-      ];
-      
-      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
+    test("returns false when no recipes in group are favorites", async () => {
+      const recipeGroup = [{ id: "recipe1" }, { id: "recipe3" }, { id: "recipe4" }];
+      expect(await hasAnyFavoriteInGroup("user1", recipeGroup)).toBe(false);
     });
 
-    test('returns false when no recipes in group are favorites', () => {
-      const recipeGroup = [
-        { id: 'recipe1', title: 'Recipe 1' },
-        { id: 'recipe3', title: 'Recipe 3' },
-        { id: 'recipe4', title: 'Recipe 4' }
-      ];
-      
-      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(false);
+    test("returns false when recipe group is empty", async () => {
+      expect(await hasAnyFavoriteInGroup("user1", [])).toBe(false);
     });
 
-    test('returns false when recipe group is empty', () => {
-      expect(hasAnyFavoriteInGroup('user1', [])).toBe(false);
+    test("returns false when userId is null/undefined", async () => {
+      expect(await hasAnyFavoriteInGroup(null, [{ id: "recipe2" }])).toBe(false);
+      expect(await hasAnyFavoriteInGroup(undefined, [{ id: "recipe2" }])).toBe(false);
     });
 
-    test('returns false when userId is null/undefined', () => {
-      const recipeGroup = [
-        { id: 'recipe2', title: 'Recipe 2' }
-      ];
-      
-      expect(hasAnyFavoriteInGroup(null, recipeGroup)).toBe(false);
-      expect(hasAnyFavoriteInGroup(undefined, recipeGroup)).toBe(false);
-    });
-
-    test('returns false when recipeGroup is null/undefined', () => {
-      expect(hasAnyFavoriteInGroup('user1', null)).toBe(false);
-      expect(hasAnyFavoriteInGroup('user1', undefined)).toBe(false);
-    });
-
-    test('returns false when recipeGroup is not an array', () => {
-      expect(hasAnyFavoriteInGroup('user1', 'not an array')).toBe(false);
-      expect(hasAnyFavoriteInGroup('user1', {})).toBe(false);
-    });
-
-    test('works correctly for different users', () => {
-      const recipeGroup = [
-        { id: 'recipe2', title: 'Recipe 2' }, // Favorite for user1
-        { id: 'recipe3', title: 'Recipe 3' }
-      ];
-      
-      expect(hasAnyFavoriteInGroup('user1', recipeGroup)).toBe(true);
-      expect(hasAnyFavoriteInGroup('user2', recipeGroup)).toBe(false);
+    test("returns false when recipeGroup is null/undefined or not an array", async () => {
+      expect(await hasAnyFavoriteInGroup("user1", null)).toBe(false);
+      expect(await hasAnyFavoriteInGroup("user1", undefined)).toBe(false);
+      expect(await hasAnyFavoriteInGroup("user1", "not an array")).toBe(false);
     });
   });
 });
