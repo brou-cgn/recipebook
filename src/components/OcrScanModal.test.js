@@ -52,7 +52,7 @@ describe('OcrScanModal', () => {
     expect(screen.getByText('Rezept scannen')).toBeInTheDocument();
     expect(screen.getByText(/Fotografieren Sie ein Rezept/i)).toBeInTheDocument();
     expect(screen.getByText('📷 Kamera starten')).toBeInTheDocument();
-    expect(screen.getByText(/Bild(er) hochladen/i)).toBeInTheDocument();
+    expect(screen.getByText('📁 Bild(er) hochladen')).toBeInTheDocument();
   });
 
   test('cancel button calls onCancel', () => {
@@ -73,7 +73,7 @@ describe('OcrScanModal', () => {
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
-  test('file upload triggers scanning directly', async () => {
+  test('file upload shows preview step before scanning', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
     
@@ -87,12 +87,20 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
 
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // OCR should start automatically after upload and show results
+    // Preview step should appear first
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+
+    // Start analysis
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
+
+    // OCR should complete and show results
     await waitFor(() => {
       expect(screen.getByText('Test Recipe')).toBeInTheDocument();
     }, { timeout: OCR_TIMEOUT });
@@ -130,9 +138,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Übernehmen')).toBeInTheDocument();
@@ -167,9 +181,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Übernehmen')).toBeInTheDocument();
@@ -205,9 +225,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Original Text')).toBeInTheDocument();
@@ -233,7 +259,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -251,9 +277,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText(/OCR fehlgeschlagen/i)).toBeInTheDocument();
@@ -273,9 +305,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Übernehmen')).toBeInTheDocument();
@@ -309,9 +347,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     // Wait for OCR to complete and results to show
     await waitFor(() => {
@@ -342,9 +386,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(recognizeRecipeWithAI).toHaveBeenCalled();
@@ -376,7 +426,7 @@ describe('OcrScanModal', () => {
     );
 
     // Should skip upload step and start scanning immediately
-    expect(screen.queryByText(/Bild(er) hochladen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('📁 Bild(er) hochladen')).not.toBeInTheDocument();
     
     // Wait for OCR to be called with the initial image
     await waitFor(() => {
@@ -399,9 +449,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     // Should show error when AI OCR fails
     await waitFor(() => {
@@ -418,7 +474,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -438,7 +494,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -471,11 +527,17 @@ describe('OcrScanModal', () => {
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
     // Upload file
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // Should display AI result immediately (no intermediate scanning state)
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
+
+    // Should display AI result after analysis
     await waitFor(() => {
       expect(screen.getByText('AI-erkanntes Rezept')).toBeInTheDocument();
       expect(screen.getByText(/200g Pasta/i)).toBeInTheDocument();
@@ -504,9 +566,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Testrezept')).toBeInTheDocument();
@@ -549,9 +617,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Veganer Salat')).toBeInTheDocument();
@@ -587,9 +661,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Veggie Burger')).toBeInTheDocument();
@@ -623,9 +703,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Kuchen')).toBeInTheDocument();
@@ -653,9 +739,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText(/OCR fehlgeschlagen.*API quota exceeded/i)).toBeInTheDocument();
@@ -671,9 +763,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText(/Mit Standard-OCR fortfahren/i)).toBeInTheDocument();
@@ -696,9 +794,15 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
+    const fileInput = screen.getByLabelText('📁 Bild(er) hochladen');
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Wait for preview step and start analysis
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
 
     await waitFor(() => {
       expect(screen.getByText('Test Recipe')).toBeInTheDocument();

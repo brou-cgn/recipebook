@@ -35,6 +35,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const initialScanTriggered = useRef(false);
+  const addMoreInputRef = useRef(null);
 
   // When initialImage is provided, start OCR automatically
   // We only want this to run once on mount, not when performOcr changes
@@ -52,87 +53,56 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
       videoRef.current.srcObject = streamRef.current;
     }
   }, [cameraActive]);
-  // Handle file upload
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setError('');
-    try {
-      const base64 = await fileToBase64(file);
-      setImageBase64(base64);
-      setStep('scan');
-      await performOcr(base64);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Handle multi-file upload (batch mode)
+  // Handle file upload (single or multiple) – shows preview before analysis
   const handleMultiFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
-    if (files.length === 1) {
-      handleFileUpload(e);
-      return;
-    }
+    e.target.value = '';
 
     setError('');
-    setUploadedImages(files);
+    try {
+      const base64s = await Promise.all(files.map(f => fileToBase64(f)));
+      setUploadedImages(prev => [...prev, ...base64s]);
+      setStep('image-preview');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Add more images to an existing selection in the preview step
+  const handleAddMoreImages = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    e.target.value = '';
+
+    setError('');
+    try {
+      const base64s = await Promise.all(files.map(f => fileToBase64(f)));
+      setUploadedImages(prev => [...prev, ...base64s]);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Remove a single image from the preview selection
+  const handleRemoveUploadedImage = (index) => {
+    setUploadedImages(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length === 0) {
+        setStep('upload');
+      }
+      return next;
+    });
+  };
+
+  // Start analysis on all selected uploaded images
+  const startUploadedAnalysis = async () => {
+    if (uploadedImages.length === 0) return;
+    const images = [...uploadedImages];
     setCurrentImageIndex(0);
     setAllOcrResults([]);
     setStep('batch-processing');
-    await processBatchImages(files);
-  };
-
-  // Process multiple images sequentially
-  const processBatchImages = async (files) => {
-    const results = [];
-
-    for (let i = 0; i < files.length; i++) {
-      setCurrentImageIndex(i);
-      setScanProgress(0);
-
-      try {
-        const base64 = await fileToBase64(files[i]);
-
-        if (ocrMode === 'ai') {
-          const result = await recognizeRecipeWithAI(base64, {
-            language,
-            provider: 'gemini',
-            onProgress: (progress) => setScanProgress(progress)
-          });
-          results.push(result);
-        } else {
-          const langCode = language === 'de' ? 'deu' : 'eng';
-          const result = await recognizeText(base64, langCode,
-            (progress) => setScanProgress(progress)
-          );
-          results.push({ text: result.text });
-        }
-      } catch (err) {
-        console.error(`Error processing image ${i + 1}:`, err);
-        results.push({ error: err.message });
-      }
-    }
-
-    setAllOcrResults(results);
-
-    try {
-      const merged = mergeOcrResults(results, ocrMode);
-
-      if (ocrMode === 'ai') {
-        setAiResult(merged);
-        setStep('ai-result');
-      } else {
-        setOcrText(merged.text);
-        setStep('edit');
-      }
-    } catch (err) {
-      setError(err.message);
-      setStep('upload');
-    }
+    await processBase64Batch(images);
   };
 
   // Combine multiple OCR results into one recipe
@@ -304,6 +274,12 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
             provider: 'gemini',
             onProgress: (progress) => setScanProgress(progress)
           });
+
+          // Update remaining scans if provided by the Cloud Function
+          if (result.remainingScans !== undefined) {
+            setRemainingScans(result.remainingScans);
+          }
+
           results.push(result);
         } else {
           const langCode = language === 'de' ? 'deu' : 'eng';
@@ -319,6 +295,24 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
     }
 
     setAllOcrResults(results);
+
+    const allFailed = results.every(r => r.error);
+    if (allFailed) {
+      // Use the first individual error message (consistent with single-image performOcr)
+      const firstError = results[0]?.error || 'Unbekannter Fehler';
+      const isQuotaError = firstError.includes('Tageslimit') ||
+        firstError.includes('resource-exhausted') ||
+        firstError.includes('quota');
+      setError('OCR fehlgeschlagen: ' + firstError);
+      if (ocrMode === 'ai') {
+        setAiFailed(true);
+        setLastImageForRetry(base64Images[0]);
+      }
+      if (!isQuotaError) {
+        setStep('upload');
+      }
+      return;
+    }
 
     try {
       const merged = mergeOcrResults(results, ocrMode);
@@ -739,6 +733,64 @@ function OcrScanModal({ onImport, onCancel, initialImage = '' }) {
               )}
 
               <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </div>
+          )}
+
+          {/* Image Preview Step – review & extend selection before analysis */}
+          {step === 'image-preview' && (
+            <div className="image-preview-section">
+              <p className="ocr-instructions">
+                {uploadedImages.length} Bild{uploadedImages.length !== 1 ? 'er' : ''} ausgewählt – Weitere hinzufügen oder Analyse starten
+              </p>
+
+              <div className="image-preview-grid">
+                {uploadedImages.map((src, index) => (
+                  <div key={index} className="image-preview-item">
+                    <img
+                      src={src}
+                      alt={`Bild ${index + 1}`}
+                      className="image-preview-thumb"
+                    />
+                    <button
+                      className="image-preview-remove"
+                      onClick={() => handleRemoveUploadedImage(index)}
+                      aria-label={`Bild ${index + 1} entfernen`}
+                      title="Bild entfernen"
+                    >
+                      ✕
+                    </button>
+                    <span className="image-preview-number">{index + 1}</span>
+                  </div>
+                ))}
+
+                <label className="image-preview-add" title="Weitere Bilder hinzufügen">
+                  <span>+</span>
+                  <input
+                    ref={addMoreInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    multiple
+                    onChange={handleAddMoreImages}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+
+              <div className="image-preview-actions">
+                <button
+                  className="start-analysis-button"
+                  onClick={startUploadedAnalysis}
+                  aria-label={`Analyse starten für ${uploadedImages.length} Bild${uploadedImages.length !== 1 ? 'er' : ''}`}
+                >
+                  ✓ Analyse starten ({uploadedImages.length})
+                </button>
+                <button
+                  className="new-scan-button"
+                  onClick={handleReset}
+                >
+                  ↩ Zurück
+                </button>
+              </div>
             </div>
           )}
 
