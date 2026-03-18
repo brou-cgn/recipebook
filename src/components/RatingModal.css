@@ -100,7 +100,7 @@
   padding: 0.6rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 1rem; /* ≥16px prevents Safari from auto-zooming on focus */
   font-family: inherit;
   resize: vertical;
   min-height: 80px;
@@ -164,7 +164,7 @@
   padding: 0.6rem 0.75rem;
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 1rem; /* ≥16px prevents Safari from auto-zooming on focus */
   font-family: inherit;
   color: #333;
   transition: border-color 0.2s ease;

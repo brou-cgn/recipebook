@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './RatingModal.css';
 import { rateRecipe, getUserRatingData, subscribeToRatingSummary, getAllRatings, deleteRating } from '../utils/recipeRatings';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+
+// iOS Safari: reset any zoom triggered by focusing on input fields.
+// Temporarily adding maximum-scale=1.0 forces Safari to snap back to scale 1.
+function resetSafariZoom() {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const prev = meta.content;
+  meta.content = prev + ', maximum-scale=1.0';
+  setTimeout(() => { meta.content = prev; }, 300);
+}
 
 /**
  * RatingModal component
@@ -74,7 +84,10 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
       await rateRecipe(recipeId, selectedRating, currentUser, comment, guestName.trim() || null);
       setSaved(true);
       getAllRatings(recipeId).then(setAllRatings);
-      setTimeout(onClose, 600);
+      setTimeout(() => {
+        resetSafariZoom();
+        onClose();
+      }, 600);
     } catch (error) {
       console.error('Error saving rating:', error);
       setIsSubmitting(false);
@@ -92,6 +105,11 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
 
   const activeRating = hoveredRating || selectedRating || 0;
 
+  const handleClose = useCallback(() => {
+    resetSafariZoom();
+    onClose();
+  }, [onClose]);
+
   const renderHeartIcon = (filled) => {
     const icon = filled ? heartFilledIcon : heartEmptyIcon;
     if (isBase64Image(icon)) {
@@ -107,11 +125,11 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
   };
 
   return (
-    <div className="rating-modal-overlay" onClick={onClose}>
+    <div className="rating-modal-overlay" onClick={handleClose}>
       <div className="rating-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rating-modal-header">
           <h2 className="rating-modal-title">Rezept bewerten</h2>
-          <button className="rating-modal-close" onClick={onClose} aria-label="Schließen">✕</button>
+          <button className="rating-modal-close" onClick={handleClose} aria-label="Schließen">✕</button>
         </div>
         <div className="rating-modal-body">
           {count > 0 && (
@@ -185,7 +203,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
           )}
         </div>
         <div className="rating-modal-footer">
-          <button className="rating-modal-cancel-btn" onClick={onClose}>Abbrechen</button>
+          <button className="rating-modal-cancel-btn" onClick={handleClose}>Abbrechen</button>
           <button
             className="rating-modal-save-btn"
             onClick={handleSave}
