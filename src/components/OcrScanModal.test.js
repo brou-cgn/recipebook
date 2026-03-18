@@ -52,7 +52,7 @@ describe('OcrScanModal', () => {
     expect(screen.getByText('Rezept scannen')).toBeInTheDocument();
     expect(screen.getByText(/Fotografieren Sie ein Rezept/i)).toBeInTheDocument();
     expect(screen.getByText('📷 Kamera starten')).toBeInTheDocument();
-    expect(screen.getByText('📁 Bild hochladen')).toBeInTheDocument();
+    expect(screen.getByText(/Bild(er) hochladen/i)).toBeInTheDocument();
   });
 
   test('cancel button calls onCancel', () => {
@@ -87,7 +87,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
 
     fireEvent.change(fileInput, { target: { files: [file] } });
@@ -130,7 +130,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -167,7 +167,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -205,7 +205,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -233,7 +233,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -251,7 +251,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -273,7 +273,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -309,7 +309,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -342,7 +342,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -376,7 +376,7 @@ describe('OcrScanModal', () => {
     );
 
     // Should skip upload step and start scanning immediately
-    expect(screen.queryByText('📁 Bild hochladen')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bild(er) hochladen/i)).not.toBeInTheDocument();
     
     // Wait for OCR to be called with the initial image
     await waitFor(() => {
@@ -399,7 +399,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -418,7 +418,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -438,7 +438,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -471,7 +471,7 @@ describe('OcrScanModal', () => {
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
     // Upload file
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -504,7 +504,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -549,7 +549,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -587,7 +587,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -623,7 +623,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -653,7 +653,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -671,7 +671,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -696,7 +696,7 @@ describe('OcrScanModal', () => {
 
     render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
 
-    const fileInput = screen.getByLabelText('📁 Bild hochladen');
+    const fileInput = screen.getByLabelText(/Bild(er) hochladen/i);
     const file = new File(['test'], 'test.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 

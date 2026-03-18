@@ -177,7 +177,7 @@ describe('GroupList', () => {
     expect(screen.queryByRole('button', { name: /schließen/i })).not.toBeInTheDocument();
   });
 
-  it('close button is inside group-list-title-row next to the heading', () => {
+  it('close button is inside group-list-header next to the heading', () => {
     const { container } = render(
       <GroupList
         groups={[]}
@@ -188,13 +188,13 @@ describe('GroupList', () => {
         onBack={jest.fn()}
       />
     );
-    const titleRow = container.querySelector('.group-list-title-row');
+    const titleRow = container.querySelector('.group-list-header');
     expect(titleRow).toBeInTheDocument();
     const closeBtn = titleRow.querySelector('.group-list-close-btn');
     expect(closeBtn).toBeInTheDocument();
   });
 
-  it('close button is not inside group-list-header-actions', () => {
+  it('close button is not inside group-list-actions', () => {
     const { container } = render(
       <GroupList
         groups={[]}
@@ -205,7 +205,7 @@ describe('GroupList', () => {
         onBack={jest.fn()}
       />
     );
-    const actions = container.querySelector('.group-list-header-actions');
+    const actions = container.querySelector('.group-list-actions');
     expect(actions).toBeInTheDocument();
     const closeBtnInActions = actions.querySelector('.group-list-close-btn');
     expect(closeBtnInActions).not.toBeInTheDocument();

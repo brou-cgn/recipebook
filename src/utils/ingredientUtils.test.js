@@ -360,7 +360,6 @@ describe('convertIngredientUnits', () => {
     expect(converted).toEqual(['500 ml Milch']);
   });
 
-  test('records missing entry for unknown unit+ingredient and returns name only', () => {
   test('converts cl to ml (standard metric)', () => {
     const { converted } = convertIngredientUnits(['3 cl Zitronensaft'], []);
     expect(converted).toEqual(['30 ml Zitronensaft']);
