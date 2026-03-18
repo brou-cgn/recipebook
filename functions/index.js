@@ -2804,7 +2804,7 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl, defaultLogoUrl = 
   const description = escapeHtml(
       recipe.description ||
       (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0
-        ? recipe.ingredients.slice(0, 5).map((i) => String(i)).join(', ')
+        ? recipe.ingredients.slice(0, 5).map((i) => (typeof i === 'object' && i !== null && i.text ? i.text : String(i))).join(', ')
         : 'Ein leckeres Rezept aus brouBook'),
   );
 
