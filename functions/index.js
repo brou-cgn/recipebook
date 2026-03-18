@@ -2789,6 +2789,27 @@ async function generateThumbnail(base64Image) {
 }
 
 /**
+ * Decode a recipe reference from ingredient text.
+ * Format: [quantity] #recipe:{recipeId}:{recipeName}
+ * Returns null if text is not a recipe link.
+ */
+function decodeRecipeLink(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string') {
+    return null;
+  }
+  const match = ingredient.match(/^([^#]*?)\s*#recipe:([^:]+):(.+)$/);
+  if (match) {
+    const quantityPrefix = match[1].trim();
+    return {
+      recipeId: match[2],
+      recipeName: match[3],
+      quantityPrefix: quantityPrefix || null,
+    };
+  }
+  return null;
+}
+
+/**
  * Generates an HTML page with dynamic Open Graph meta-tags for a recipe.
  * Regular browsers are redirected immediately to the React app via meta-refresh
  * and a script tag. Social media crawlers read the meta-tags and stop.
@@ -2804,7 +2825,16 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl, defaultLogoUrl = 
   const description = escapeHtml(
       recipe.description ||
       (Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0
-        ? recipe.ingredients.slice(0, 5).map((i) => (typeof i === 'object' && i !== null && i.text ? i.text : String(i))).join(', ')
+        ? recipe.ingredients.slice(0, 5).map((i) => {
+            const text = typeof i === 'object' && i !== null && i.text ? i.text : String(i);
+            const recipeLink = decodeRecipeLink(text);
+            if (recipeLink) {
+              return recipeLink.quantityPrefix
+                ? `${recipeLink.quantityPrefix} ${recipeLink.recipeName}`
+                : recipeLink.recipeName;
+            }
+            return text;
+          }).join(', ')
         : 'Ein leckeres Rezept aus brouBook'),
   );
 
