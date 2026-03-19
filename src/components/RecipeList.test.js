@@ -1013,4 +1013,30 @@ describe('RecipeList - Filter Button Visibility', () => {
 
     expect(filterButton.style.transform).not.toContain('translateY(-76px)');
   });
+
+  test('calls onOpenSearch after a long press on the favorites button', () => {
+    jest.useFakeTimers();
+    const onOpenSearch = jest.fn();
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        onOpenSearch={onOpenSearch}
+      />
+    );
+
+    const favButton = screen.getByTitle('Nur Favoriten anzeigen');
+    fireEvent.touchStart(favButton);
+
+    // Fast-forward past the long press threshold
+    jest.advanceTimersByTime(600);
+
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+
+    fireEvent.touchEnd(favButton);
+    jest.useRealTimers();
+  });
 });

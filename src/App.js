@@ -196,6 +196,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
+  const headerRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
   const [recipeFilters, setRecipeFilters] = useState({
@@ -924,6 +925,10 @@ function App() {
     setSearchTerm(term);
   };
 
+  const handleOpenSearch = () => {
+    headerRef.current?.openSearch();
+  };
+
   const handleOpenFilterPage = () => {
     setIsFilterPageOpen(true);
   };
@@ -1030,7 +1035,8 @@ function App() {
   return (
     <div className="App">
       <Header 
-      onSettingsClick={handleOpenSettings}
+        ref={headerRef}
+        onSettingsClick={handleOpenSettings}
         currentView={currentView}
         onViewChange={handleViewChange}
         categoryFilter={categoryFilter}
@@ -1187,6 +1193,7 @@ function App() {
             currentUser={currentUser}
             searchTerm={searchTerm}
             onOpenFilterPage={handleOpenFilterPage}
+            onOpenSearch={handleOpenSearch}
             activePrivateListName={activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || null}
             activeFilters={recipeFilters}

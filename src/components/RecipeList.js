@@ -82,7 +82,7 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, activePrivateListName, activePrivateListId, activeFilters }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, activePrivateListName, activePrivateListId, activeFilters }) {
   const hasActiveFilters = !!(activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -232,6 +232,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     longPressTimer.current = setTimeout(() => {
       longPressed.current = true;
       setFilterVisible(true);
+      onOpenSearch?.();
     }, LONG_PRESS_DELAY_MS);
   };
 

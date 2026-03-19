@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { createRef, act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Header from './Header';
 
@@ -196,5 +196,32 @@ describe('Header - FAQ Kochschule Modal', () => {
     fireEvent.click(screen.getByText('Kochschule'));
 
     expect(screen.getByText('Abschnitt ohne Beschreibung')).toBeInTheDocument();
+  });
+});
+
+describe('Header - openSearch imperative handle', () => {
+  test('openSearch() via ref opens the search input', () => {
+    const ref = createRef();
+    render(
+      <Header
+        ref={ref}
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onSearchChange={() => {}}
+      />
+    );
+
+    // Search input should not be visible initially
+    expect(screen.queryByPlaceholderText('Rezepte durchsuchen...')).not.toBeInTheDocument();
+
+    // Call openSearch via ref
+    act(() => {
+      ref.current.openSearch();
+    });
+
+    // Search input should now be visible
+    expect(screen.getByPlaceholderText('Rezepte durchsuchen...')).toBeInTheDocument();
   });
 });
