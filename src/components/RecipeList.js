@@ -82,7 +82,7 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, activePrivateListName, activePrivateListId, activeFilters }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onSearchChange, onOpenFilterPage, activePrivateListName, activePrivateListId, activeFilters }) {
   const hasActiveFilters = !!(activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -93,7 +93,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const longPressTimer = useRef(null);
   const longPressed = useRef(false);
   const filterButtonRef = useRef(null);
-  const searchButtonRef = useRef(null);
+  const searchInputRef = useRef(null);
   const favButtonRef = useRef(null);
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
@@ -214,7 +214,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       if (
         filterButtonRef.current && !filterButtonRef.current.contains(e.target) &&
         favButtonRef.current && !favButtonRef.current.contains(e.target) &&
-        (searchButtonRef.current === null || !searchButtonRef.current.contains(e.target))
+        (searchInputRef.current === null || !searchInputRef.current.contains(e.target))
       ) {
         requestAnimationFrame(() => {
           setFilterVisible(false);
@@ -368,17 +368,30 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 )}
               </button>
             )}
-            {onOpenSearch && (
-              <button
-                ref={searchButtonRef}
-                className={`mobile-search-button ${filterVisible ? 'filter-visible' : ''}`}
+            {onSearchChange && (
+              <div
+                ref={searchInputRef}
+                className={`mobile-search-input-container ${filterVisible ? 'filter-visible' : ''}`}
                 style={{ transform: filterTransform }}
-                onClick={() => { setFilterVisible(false); onOpenSearch(); }}
-                title="Suche"
-                aria-label="Suche öffnen"
               >
-                🔍
-              </button>
+                <input
+                  type="text"
+                  className="mobile-search-input"
+                  value={searchTerm || ''}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Suche…"
+                  aria-label="Rezepte suchen"
+                />
+                {searchTerm && (
+                  <button
+                    className="mobile-search-clear"
+                    onClick={() => onSearchChange('')}
+                    aria-label="Suche löschen"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             )}
             {userCanEdit && (
               <>

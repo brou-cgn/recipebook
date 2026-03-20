@@ -1024,7 +1024,7 @@ describe('RecipeList - Filter Button Visibility', () => {
     jest.useRealTimers();
   });
 
-  test('search button appears with slide-up transform after a long press on the favorites button', () => {
+  test('search input field appears with slide-up transform after a long press on the favorites button', () => {
     jest.useFakeTimers();
 
     render(
@@ -1033,25 +1033,25 @@ describe('RecipeList - Filter Button Visibility', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         onOpenFilterPage={() => {}}
-        onOpenSearch={() => {}}
+        onSearchChange={() => {}}
       />
     );
 
-    // filterVisible starts as true, so the search button is immediately in the extended position
-    const searchButton = screen.getByTitle('Suche');
-    expect(searchButton.style.transform).toContain('translateY(-76px)');
+    // filterVisible starts as true, so the search input is immediately in the extended position
+    const searchContainer = document.querySelector('.mobile-search-input-container');
+    expect(searchContainer.style.transform).toContain('translateY(-76px)');
 
-    // Long press fav button keeps both buttons visible
+    // Long press fav button keeps both visible
     const favButton = screen.getByTitle('Nur Favoriten anzeigen');
     fireEvent.touchStart(favButton);
     jest.advanceTimersByTime(600);
-    expect(searchButton.style.transform).toContain('translateY(-76px)');
+    expect(searchContainer.style.transform).toContain('translateY(-76px)');
 
     jest.useRealTimers();
   });
 
-  test('clicking the search button calls onOpenSearch', () => {
-    const onOpenSearch = jest.fn();
+  test('typing in the search input calls onSearchChange', () => {
+    const onSearchChange = jest.fn();
 
     render(
       <RecipeList
@@ -1059,17 +1059,37 @@ describe('RecipeList - Filter Button Visibility', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         onOpenFilterPage={() => {}}
-        onOpenSearch={onOpenSearch}
+        onSearchChange={onSearchChange}
       />
     );
 
-    const searchButton = screen.getByTitle('Suche');
-    fireEvent.click(searchButton);
+    const searchInput = screen.getByPlaceholderText('Suche…');
+    fireEvent.change(searchInput, { target: { value: 'Pasta' } });
 
-    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenCalledWith('Pasta');
   });
 
-  test('search button does not render when onOpenSearch is not provided', () => {
+  test('clear button calls onSearchChange with empty string', () => {
+    const onSearchChange = jest.fn();
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        searchTerm="Pasta"
+        onSearchChange={onSearchChange}
+      />
+    );
+
+    const clearButton = screen.getByLabelText('Suche löschen');
+    fireEvent.click(clearButton);
+
+    expect(onSearchChange).toHaveBeenCalledWith('');
+  });
+
+  test('search input does not render when onSearchChange is not provided', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -1079,24 +1099,24 @@ describe('RecipeList - Filter Button Visibility', () => {
       />
     );
 
-    expect(screen.queryByTitle('Suche')).toBeNull();
+    expect(document.querySelector('.mobile-search-input-container')).toBeNull();
   });
 
-  test('search button has same transform as filter button (same animation)', () => {
+  test('search input has same transform as filter button (same animation)', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         onOpenFilterPage={() => {}}
-        onOpenSearch={() => {}}
+        onSearchChange={() => {}}
       />
     );
 
     const filterButton = screen.getByTitle('Weitere Filter');
-    const searchButton = screen.getByTitle('Suche');
+    const searchContainer = document.querySelector('.mobile-search-input-container');
 
-    // Both buttons should have the same transform value
-    expect(filterButton.style.transform).toBe(searchButton.style.transform);
+    // Both should have the same transform value
+    expect(filterButton.style.transform).toBe(searchContainer.style.transform);
   });
 });
