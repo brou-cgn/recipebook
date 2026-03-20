@@ -123,7 +123,7 @@
   object-fit: contain;
 }
 
-.mobile-search-input-container {
+.mobile-search-button {
   display: none;
 }
 
@@ -387,53 +387,40 @@
     border-color: white;
   }
 
-  /* Mobile: Search input field fixed at bottom, next to the filter button */
+  /* Mobile: Search button fixed at bottom, next to the filter button */
   /* left = filter left (20px) + filter width (56px) + gap (10px) */
-  .mobile-search-input-container {
+  .mobile-search-button {
     display: flex;
-    align-items: center;
     position: fixed;
     bottom: 20px;
     left: calc(20px + 56px + 10px);
     z-index: 1100;
     background: white;
+    color: #666;
     border: 1px solid #ddd;
-    border-radius: 28px;
     opacity: 0;
-    width: calc(100vw - 20px - 56px - 10px - 20px);
+    width: 56px;
     height: 56px;
-    padding: 0 12px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 1.4rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    min-width: auto;
     transition: transform 0.18s ease-out,
-                opacity 0.35s ease;
-    box-sizing: border-box;
+                opacity 0.35s ease,
+                background 0.3s ease,
+                box-shadow 0.3s ease;
   }
 
-  .mobile-search-input-container.filter-visible {
+  .mobile-search-button.filter-visible {
     opacity: 0.85;
   }
 
-  .mobile-search-input {
-    flex: 1;
-    border: none;
-    outline: none;
-    background: transparent;
-    font-size: 1rem;
-    color: #333;
-    min-width: 0;
-  }
-
-  .mobile-search-clear {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #999;
-    font-size: 1rem;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+  .mobile-search-button:active {
+    transform: scale(1);
   }
 
   /* Mobile: Favorites button overlays the filter button at same fixed position */
