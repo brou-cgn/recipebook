@@ -1192,8 +1192,8 @@ function App() {
             onCategoryFilterChange={handleCategoryFilterChange}
             currentUser={currentUser}
             searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
             onOpenFilterPage={handleOpenFilterPage}
+            onOpenSearch={handleOpenSearch}
             activePrivateListName={activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || null}
             activeFilters={recipeFilters}
