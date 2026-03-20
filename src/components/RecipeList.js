@@ -317,7 +317,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const collapsedWidth = 160; // oder später dynamisch aus dem Carousel ableiten
   const widthDelta = targetExpandedWidth - collapsedWidth;
   const filterShift = carouselExpanded ? -(widthDelta / 2) : 0;
-  const filterTransform = filterVisible
+  const isMobile = window.innerWidth <= 768;
+  const filterTransform = (filterVisible && isMobile)
     ? `translateX(${filterShift}px) translateY(-76px)`
     : `translateX(${filterShift}px)`;
   const addShift = carouselExpanded ? window.innerWidth : 0;

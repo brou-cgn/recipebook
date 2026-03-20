@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import RecipeList from './RecipeList';
 import * as userFavorites from '../utils/userFavorites';
 import { DEFAULT_BUTTON_ICONS } from '../utils/customLists';
@@ -968,7 +968,12 @@ describe('RecipeList - SortCarousel persistence', () => {
 });
 
 describe('RecipeList - Filter Button Visibility', () => {
+  let originalInnerWidth;
+
   beforeEach(() => {
+    originalInnerWidth = window.innerWidth;
+    // Simulate mobile viewport so filter button uses translateY animation
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
     jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
     jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
       filterButton: '⚙',
@@ -978,10 +983,11 @@ describe('RecipeList - Filter Button Visibility', () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: originalInnerWidth });
     jest.restoreAllMocks();
   });
 
-  test('filter button is at extended position when component first mounts', () => {
+  test('filter button is at extended position when component first mounts (mobile)', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -995,7 +1001,8 @@ describe('RecipeList - Filter Button Visibility', () => {
     expect(filterButton.style.transform).toContain('translateY(-76px)');
   });
 
-  test('filter button hides after touching outside it', () => {
+  test('filter button hides after touching outside it (mobile)', () => {
+    jest.useFakeTimers();
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -1010,8 +1017,11 @@ describe('RecipeList - Filter Button Visibility', () => {
 
     // Simulate a touch/click outside both the filter button and fav button
     fireEvent.mouseDown(document.body);
+    // requestAnimationFrame is polyfilled as setTimeout in jsdom; flush it
+    act(() => { jest.runAllTimers(); });
 
     expect(filterButton.style.transform).not.toContain('translateY(-76px)');
+    jest.useRealTimers();
   });
 
   test('search button appears with slide-up transform after a long press on the favorites button', () => {
