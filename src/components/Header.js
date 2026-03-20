@@ -192,8 +192,6 @@ const Header = forwardRef(function Header({
                       value={searchTerm}
                       onChange={handleSearchChange}
                       onKeyDown={handleSearchKeyDown}
-                      inputMode="search"
-                      enterKeyHint="search"
                     />
                     {searchTerm && (
                       <button 
