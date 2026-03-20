@@ -1451,20 +1451,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   </div>
                   {hasMultiple && (
                     <>
-                      <button
-                        className="carousel-nav carousel-nav--prev"
-                        onClick={() => scrollToCarouselIndex(Math.max(0, safeIndex - 1))}
-                        aria-label="Vorheriges Bild"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        className="carousel-nav carousel-nav--next"
-                        onClick={() => scrollToCarouselIndex(Math.min(orderedImages.length - 1, safeIndex + 1))}
-                        aria-label="Nächstes Bild"
-                      >
-                        ›
-                      </button>
                       <div className="carousel-dots">
                         {orderedImages.map((_, dotIdx) => (
                           <button
