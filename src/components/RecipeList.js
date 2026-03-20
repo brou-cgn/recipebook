@@ -8,6 +8,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import RecipeRating from './RecipeRating';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import RecipeImageCarousel from './RecipeImageCarousel';
 
 export function isNewRecipe(recipe, sortSettings) {
   if (!recipe?.createdAt) return false;
@@ -483,12 +484,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 )}
 
                 {(recipe.image || (Array.isArray(recipe.images) && recipe.images.length > 0)) && (() => {
-                    const defaultImg = Array.isArray(recipe.images) && recipe.images.length > 0
-                      ? (recipe.images.find(img => img.isDefault) || recipe.images[0])
-                      : { url: recipe.image };
+                    const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
+                      ? recipe.images
+                      : [{ url: recipe.image, isDefault: true }];
+                    const orderedImages = [
+                      ...allImages.filter(img => img.isDefault),
+                      ...allImages.filter(img => !img.isDefault),
+                    ];
                     return (
-                      <div className="recipe-image">
-                        <img src={defaultImg.url} alt={recipe.title} />
+                      <div className="recipe-image" onClick={(e) => e.stopPropagation()}>
+                        <RecipeImageCarousel
+                          images={orderedImages}
+                          altText={recipe.title}
+                          onImageClick={() => handleRecipeClick(group)}
+                        />
                       </div>
                     );
                   })()}

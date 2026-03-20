@@ -528,6 +528,47 @@
   background: white;
 }
 
+/* Desktop arrow navigation for detail-view carousel */
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.carousel-arrow:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.carousel-arrow--prev {
+  left: 0.5rem;
+}
+
+.carousel-arrow--next {
+  right: 0.5rem;
+}
+
+/* Hide arrows on mobile */
+@media (max-width: 480px) {
+  .carousel-arrow {
+    display: none;
+  }
+}
+
 .image-overlay-actions {
   position: absolute;
   top: 0;

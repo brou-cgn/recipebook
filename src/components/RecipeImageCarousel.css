@@ -1,0 +1,108 @@
+/* ===== RecipeImageCarousel ===== */
+
+.recipe-image-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+/* Film-strip track */
+.ric-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.ric-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ric-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+}
+
+.ric-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Dot indicators */
+.ric-dots {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.ric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+  pointer-events: auto;
+}
+
+.ric-dot--active {
+  background: white;
+}
+
+/* Arrow navigation buttons */
+.ric-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.ric-arrow:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.ric-arrow--prev {
+  left: 0.5rem;
+}
+
+.ric-arrow--next {
+  right: 0.5rem;
+}
+
+/* Hide arrows on mobile */
+@media (max-width: 480px) {
+  .ric-arrow {
+    display: none;
+  }
+}

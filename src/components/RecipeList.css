@@ -261,6 +261,7 @@
   height: 200px;
   overflow: hidden;
   background: #f0f0f0;
+  position: relative;
 }
 
 .recipe-image img {
