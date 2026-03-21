@@ -95,6 +95,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [addPressed, setAddPressed] = useState(false);
   const longPressTimer = useRef(null);
   const longPressed = useRef(false);
+  const filterLongPressTimer = useRef(null);
+  const filterLongPressed = useRef(false);
   const filterButtonRef = useRef(null);
   const searchButtonRef = useRef(null);
   const favButtonRef = useRef(null);
@@ -264,6 +266,37 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     longPressed.current = false;
   };
 
+  const handleFilterTouchStart = () => {
+    filterLongPressed.current = false;
+    filterLongPressTimer.current = setTimeout(() => {
+      filterLongPressed.current = true;
+    }, LONG_PRESS_DELAY_MS);
+  };
+
+  const handleFilterTouchEnd = (e) => {
+    if (filterLongPressTimer.current) {
+      clearTimeout(filterLongPressTimer.current);
+      filterLongPressTimer.current = null;
+    }
+    // Prevent the synthetic click event from also firing on mobile browsers
+    e.preventDefault();
+    setFilterVisible(false);
+    if (filterLongPressed.current) {
+      filterLongPressed.current = false;
+      onOpenFilterPage?.();
+    } else {
+      onOpenSearch?.();
+    }
+  };
+
+  const handleFilterTouchCancel = () => {
+    if (filterLongPressTimer.current) {
+      clearTimeout(filterLongPressTimer.current);
+      filterLongPressTimer.current = null;
+    }
+    filterLongPressed.current = false;
+  };
+
   // Generate dynamic heading based on filters
   const getHeading = () => {
     if (activePrivateListName) {
@@ -354,6 +387,9 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 ref={filterButtonRef}
                 className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''}`}
                 style={{ transform: filterTransform }}
+                onTouchStart={handleFilterTouchStart}
+                onTouchEnd={handleFilterTouchEnd}
+                onTouchCancel={handleFilterTouchCancel}
                 onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
                 title="Weitere Filter"
               >

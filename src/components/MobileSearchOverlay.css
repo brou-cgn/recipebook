@@ -1,20 +1,44 @@
-/* MobileSearchOverlay – full-screen search panel that slides up from below */
+/* MobileSearchOverlay – bottom-anchored search panel that slides up from below */
+
+/* ─── Full-screen dimming backdrop ─────────────────────────────────────── */
 
 .mobile-search-overlay {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: #f2f2f7; /* iOS-style light grey background */
+  background: rgba(0, 0, 0, 0.45);
+  /* Fade-in for the backdrop */
+  animation: mso-backdrop-in 0.2s ease both;
+}
+
+@keyframes mso-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Search panel (results + input bar) ───────────────────────────────── */
+
+.mobile-search-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0; /* overridden by JS when keyboard is visible */
   display: flex;
   flex-direction: column;
+  /* Cap height so the panel never covers the full screen */
+  max-height: 80vh;
+  background: #f2f2f7;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18);
   /* Slide up animation */
-  animation: mso-slide-up 0.25s cubic-bezier(0.32, 0, 0.67, 0) both;
+  animation: mso-slide-up 0.28s cubic-bezier(0.32, 0, 0.67, 0) both;
 }
 
 @keyframes mso-slide-up {
   from {
     transform: translateY(100%);
-    opacity: 0.6;
+    opacity: 0.7;
   }
   to {
     transform: translateY(0);
@@ -22,147 +46,27 @@
   }
 }
 
-/* ─── Top bar ──────────────────────────────────────────────────────────── */
-
-.mobile-search-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 12px 12px;
-  background: #f2f2f7;
-}
-
-/* The pill-shaped search input container */
-.mobile-search-input-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 0 8px;
-  min-height: 48px;
-  gap: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.mobile-search-icon {
-  display: flex;
-  align-items: center;
-  color: #8e8e93;
-  flex-shrink: 0;
-  padding: 0 4px;
-}
-
-.mobile-search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  /* 16px prevents iOS auto-zoom on focus */
-  font-size: 16px;
-  line-height: 1.4;
-  color: #1c1c1e;
-  caret-color: #007aff;
-  /* Remove built-in search-cancel button in WebKit */
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.mobile-search-input::placeholder {
-  color: #8e8e93;
-}
-
-/* Remove default X in WebKit search inputs */
-.mobile-search-input::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-/* Clear (×) button inside input wrapper */
-.mobile-search-clear-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background: #c7c7cc;
-  color: #ffffff;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  min-width: 24px;
-  /* Keep tap target comfortable */
-  touch-action: manipulation;
-}
-
-.mobile-search-clear-btn:focus-visible {
-  outline: 2px solid #007aff;
-  outline-offset: 2px;
-}
-
-/* Microphone button */
-.mobile-search-mic-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: transparent;
-  color: #8e8e93;
-  cursor: default;
-  padding: 0;
-  flex-shrink: 0;
-  touch-action: manipulation;
-  /* Disabled mic – keep visible as per design but not interactive */
-  opacity: 0.6;
-}
-
-/* Circular X (close) button outside the input pill */
-.mobile-search-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  border-radius: 50%;
-  border: none;
-  background: #e5e5ea;
-  color: #1c1c1e;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  font-size: 1rem;
-  touch-action: manipulation;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.mobile-search-close-btn:focus-visible {
-  outline: 2px solid #007aff;
-  outline-offset: 2px;
-}
-
-.mobile-search-close-btn:active {
-  background: #d1d1d6;
-}
-
-/* ─── Results list ─────────────────────────────────────────────────────── */
+/* ─── Results list (scrollable, sits above the input bar) ──────────────── */
 
 .mobile-search-results {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 4px 0 16px;
+  /* Push the empty-state message down a bit */
+  padding: 8px 0 4px;
+  /* Scrollbar hidden on iOS, subtle on Android */
+  scrollbar-width: none;
+}
+
+.mobile-search-results::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-search-no-results {
   text-align: center;
   color: #8e8e93;
   font-size: 1rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   padding: 0 1rem;
 }
 
@@ -218,3 +122,104 @@
   text-overflow: ellipsis;
   max-width: 100px;
 }
+
+/* ─── Search bar row (fixed at the bottom of the panel) ────────────────── */
+
+.mobile-search-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  background: #f2f2f7;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  /* Safe-area inset for notched iPhones handled in JS via visualViewport */
+  flex-shrink: 0;
+}
+
+/* Pill-shaped input wrapper */
+.mobile-search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 0 8px;
+  min-height: 48px;
+  gap: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-search-icon {
+  display: flex;
+  align-items: center;
+  color: #8e8e93;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.mobile-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  /* 16px prevents iOS auto-zoom on focus */
+  font-size: 16px;
+  line-height: 1.4;
+  color: #1c1c1e;
+  caret-color: #007aff;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.mobile-search-input::placeholder {
+  color: #8e8e93;
+}
+
+/* Remove the native × button in WebKit search inputs */
+.mobile-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Clear (×) button inside the pill */
+.mobile-search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #c7c7cc;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  min-width: 24px;
+  touch-action: manipulation;
+}
+
+.mobile-search-clear-btn:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+/* "Abbrechen" button outside the pill */
+.mobile-search-cancel-btn {
+  border: none;
+  background: transparent;
+  color: #007aff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.mobile-search-cancel-btn:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
