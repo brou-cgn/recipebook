@@ -93,6 +93,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [filterVisible, setFilterVisible] = useState(true);
   const [favPressed, setFavPressed] = useState(false);
   const [addPressed, setAddPressed] = useState(false);
+  const [filterPressed, setFilterPressed] = useState(false);
   const longPressTimer = useRef(null);
   const longPressed = useRef(false);
   const filterLongPressTimer = useRef(null);
@@ -267,6 +268,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   };
 
   const handleFilterTouchStart = () => {
+    setFilterPressed(true);
     filterLongPressed.current = false;
     filterLongPressTimer.current = setTimeout(() => {
       filterLongPressed.current = true;
@@ -274,11 +276,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   };
 
   const handleFilterTouchEnd = (e) => {
+    setFilterPressed(false);
     if (filterLongPressTimer.current) {
       clearTimeout(filterLongPressTimer.current);
       filterLongPressTimer.current = null;
     }
-    // Prevent the synthetic click event from also firing on mobile browsers
     e.preventDefault();
     setFilterVisible(false);
     if (filterLongPressed.current) {
@@ -290,6 +292,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   };
 
   const handleFilterTouchCancel = () => {
+    setFilterPressed(false);
     if (filterLongPressTimer.current) {
       clearTimeout(filterLongPressTimer.current);
       filterLongPressTimer.current = null;
@@ -385,12 +388,15 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             {onOpenFilterPage && (
               <button 
                 ref={filterButtonRef}
-                className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''}`}
-                style={{ transform: filterTransform }}
+                className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
+                style={{ '--filter-transform': filterTransform }}
                 onTouchStart={handleFilterTouchStart}
                 onTouchEnd={handleFilterTouchEnd}
                 onTouchCancel={handleFilterTouchCancel}
                 onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
+                onMouseDown={() => setFilterPressed(true)}
+                onMouseUp={() => setFilterPressed(false)}
+                onMouseLeave={() => setFilterPressed(false)}
                 title="Weitere Filter"
               >
                 {hasActiveFilters ? (
