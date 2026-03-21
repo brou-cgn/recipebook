@@ -1141,7 +1141,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {shareLoading ? '…' : '↑ Teilen'}
               </button>
             )}
-            {isRecipePublic && recipe.shareId && (
+            {recipe.shareId && (
               <button
                 className="share-copy-url-button"
                 onClick={handleCopyShareUrl}
@@ -1472,7 +1472,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {shareLoading ? '…' : '↑ Teilen'}
                   </button>
                 )}
-                {isRecipePublic && recipe.shareId && (
+                {recipe.shareId && (
                   <button
                     className="share-copy-url-button"
                     onClick={handleCopyShareUrl}

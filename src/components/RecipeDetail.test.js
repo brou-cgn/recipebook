@@ -1268,6 +1268,27 @@ describe('RecipeDetail - Share Button Visibility', () => {
     expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
   });
 
+  test('shows copy link button for private recipe with shareId', () => {
+    const privateSharedRecipe = {
+      ...baseRecipe,
+      shareId: 'some-share-id',
+      groupId: 'private-group-123',
+      publishedToPublic: false,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={privateSharedRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
+  });
+
   test('clicking copy link button uses navigator.share when available', async () => {
     const originalShare = navigator.share;
     const shareMock = jest.fn().mockResolvedValue(undefined);
