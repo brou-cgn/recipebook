@@ -2064,6 +2064,76 @@ exports.sendGroupInvitationEmail = onCall(
 );
 
 /**
+ * Firestore trigger: automatically add a newly registered user to all private groups
+ * they were previously invited to by email.
+ * Triggered when a new document is created in the 'users' collection.
+ */
+exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
+    {
+      document: 'users/{userId}',
+    },
+    async (event) => {
+      const userId = event.params.userId;
+      const newUser = event.data ? event.data.data() : null;
+      if (!newUser) {
+        console.error('processGroupInvitationsOnUserRegistration: no user data in event');
+        return;
+      }
+
+      const userEmail = newUser.email;
+      if (!userEmail) {
+        console.log('processGroupInvitationsOnUserRegistration: user has no email, skipping');
+        return;
+      }
+
+      const normalizedEmail = userEmail.trim().toLowerCase();
+      const db = admin.firestore();
+
+      // Find all groups where this email is listed in invitedEmails
+      const groupsSnapshot = await db.collection('groups')
+          .where('invitedEmails', 'array-contains', normalizedEmail)
+          .get();
+
+      if (groupsSnapshot.empty) {
+        console.log(`processGroupInvitationsOnUserRegistration: no pending group invitations for ${normalizedEmail}`);
+        return;
+      }
+
+      // Add the user to each group and remove the email from invitedEmails using a batch write
+      const batch = db.batch();
+      groupsSnapshot.forEach((groupDoc) => {
+        const groupData = groupDoc.data();
+        const updatedMemberIds = [...new Set([...(groupData.memberIds || []), userId])];
+        const updatedInvitedEmails = (groupData.invitedEmails || []).filter(
+            (e) => e.trim().toLowerCase() !== normalizedEmail
+        );
+        batch.update(groupDoc.ref, {
+          memberIds: updatedMemberIds,
+          invitedEmails: updatedInvitedEmails,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`processGroupInvitationsOnUserRegistration: adding user ${userId} to group ${groupDoc.id}`);
+      });
+
+      await batch.commit();
+      console.log(`processGroupInvitationsOnUserRegistration: processed ${groupsSnapshot.size} group(s) for ${normalizedEmail}`);
+
+      // Mark the invitation as processed if a corresponding record exists.
+      // The 'invitations' collection tracks invitation emails sent to unregistered
+      // addresses (one document per email, keyed by normalized email address).
+      const invitationRef = db.collection('invitations').doc(normalizedEmail);
+      const invitationSnap = await invitationRef.get();
+      if (invitationSnap.exists) {
+        await invitationRef.update({
+          processedAt: admin.firestore.FieldValue.serverTimestamp(),
+          processedUserId: userId,
+        });
+        console.log(`processGroupInvitationsOnUserRegistration: invitation marked as processed for ${normalizedEmail}`);
+      }
+    },
+);
+
+/**
  * Firestore trigger: send email notification to all admins when a new user registers.
  * Triggered when a new document is created in the 'users' collection.
  * Requires the following Firebase secrets to be set:

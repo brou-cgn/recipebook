@@ -143,6 +143,21 @@ describe('GroupDetail – add member feature', () => {
     });
   });
 
+  it('normalizes invited email to lowercase before storing', async () => {
+    const onUpdateGroup = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} onUpdateGroup={onUpdateGroup} />);
+    fireEvent.click(screen.getByRole('button', { name: /Mitglied hinzufügen/i }));
+
+    fireEvent.change(screen.getByLabelText('Einladung per E-Mail'), { target: { value: 'New@Example.COM' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Hinzufügen$/i }));
+
+    await waitFor(() => {
+      expect(onUpdateGroup).toHaveBeenCalledWith('grp1', expect.objectContaining({
+        invitedEmails: expect.arrayContaining(['new@example.com']),
+      }));
+    });
+  });
+
   it('shows success message and closes the panel after adding a member', async () => {
     const onUpdateGroup = jest.fn().mockResolvedValue(undefined);
     render(<GroupDetail {...defaultProps} onUpdateGroup={onUpdateGroup} />);
