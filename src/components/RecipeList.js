@@ -94,6 +94,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [favPressed, setFavPressed] = useState(false);
   const longPressTimer = useRef(null);
   const longPressed = useRef(false);
+  const filterLongPressTimer = useRef(null);
+  const filterLongPressed = useRef(false);
   const filterButtonRef = useRef(null);
   const searchButtonRef = useRef(null);
   const favButtonRef = useRef(null);
@@ -263,6 +265,36 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     longPressed.current = false;
   };
 
+  const handleFilterTouchStart = () => {
+    filterLongPressed.current = false;
+    filterLongPressTimer.current = setTimeout(() => {
+      filterLongPressed.current = true;
+      setFilterVisible(false);
+      onOpenFilterPage();
+    }, LONG_PRESS_DELAY_MS);
+  };
+
+  const handleFilterTouchEnd = (e) => {
+    if (filterLongPressTimer.current) {
+      clearTimeout(filterLongPressTimer.current);
+      filterLongPressTimer.current = null;
+    }
+    if (filterLongPressed.current) {
+      e.preventDefault();
+      setTimeout(() => {
+        filterLongPressed.current = false;
+      }, 400);
+    }
+  };
+
+  const handleFilterTouchCancel = () => {
+    if (filterLongPressTimer.current) {
+      clearTimeout(filterLongPressTimer.current);
+      filterLongPressTimer.current = null;
+    }
+    filterLongPressed.current = false;
+  };
+
   // Generate dynamic heading based on filters
   const getHeading = () => {
     if (activePrivateListName) {
@@ -353,7 +385,20 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 ref={filterButtonRef}
                 className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''}`}
                 style={{ transform: filterTransform }}
-                onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
+                onClick={() => {
+                  if (!filterLongPressed.current) {
+                    setFilterVisible(false);
+                    if (window.innerWidth <= 768 && onOpenSearch) {
+                      onOpenSearch();
+                    } else {
+                      onOpenFilterPage();
+                    }
+                  }
+                }}
+                onTouchStart={handleFilterTouchStart}
+                onTouchEnd={handleFilterTouchEnd}
+                onTouchCancel={handleFilterTouchCancel}
+                onContextMenu={(e) => e.preventDefault()}
                 title="Weitere Filter"
               >
                 {hasActiveFilters ? (
