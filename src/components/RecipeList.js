@@ -99,7 +99,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const filterLongPressTimer = useRef(null);
   const filterLongPressed = useRef(false);
   const filterButtonRef = useRef(null);
-  const searchButtonRef = useRef(null);
   const favButtonRef = useRef(null);
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
@@ -219,8 +218,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     const handleOutsideTouch = (e) => {
       if (
         filterButtonRef.current && !filterButtonRef.current.contains(e.target) &&
-        favButtonRef.current && !favButtonRef.current.contains(e.target) &&
-        (searchButtonRef.current === null || !searchButtonRef.current.contains(e.target))
+        favButtonRef.current && !favButtonRef.current.contains(e.target)
       ) {
         requestAnimationFrame(() => {
           setFilterVisible(false);
@@ -412,18 +410,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                     buttonIcons.filterButton
                   )
                 )}
-              </button>
-            )}
-            {onOpenSearch && (
-              <button
-                ref={searchButtonRef}
-                className={`mobile-search-button ${filterVisible ? 'filter-visible' : ''}`}
-                style={{ transform: filterTransform }}
-                onClick={() => { setFilterVisible(false); onOpenSearch(); }}
-                title="Suche"
-                aria-label="Suche öffnen"
-              >
-                🔍
               </button>
             )}
             {userCanEdit && (

@@ -131,10 +131,6 @@
   object-fit: contain;
 }
 
-.mobile-search-button {
-  display: none;
-}
-
 .filter-button.has-active-filters {
   background: #DF7A00;
   border: 1px solid #DF7A00;
@@ -411,42 +407,6 @@
     top: 2px;
     right: 2px;
     border-color: white;
-  }
-
-  /* Mobile: Search button fixed at bottom, next to the filter button */
-  /* left = filter left (20px) + filter width (56px) + gap (10px) */
-  .mobile-search-button {
-    display: flex;
-    position: fixed;
-    bottom: 20px;
-    left: calc(20px + 56px + 10px);
-    z-index: 1100;
-    background: white;
-    color: #666;
-    border: 1px solid #ddd;
-    opacity: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    padding: 0;
-    font-size: 1.4rem;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    min-width: auto;
-    transition: transform 0.18s ease-out,
-                opacity 0.35s ease,
-                background 0.3s ease,
-                box-shadow 0.3s ease;
-  }
-
-  .mobile-search-button.filter-visible {
-    opacity: 0.85;
-  }
-
-  .mobile-search-button:active {
-    transform: scale(1);
   }
 
   /* Mobile: Favorites button overlays the filter button at same fixed position */
