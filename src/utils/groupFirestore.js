@@ -10,7 +10,8 @@
  *   - memberRoles: { [userId]: string }  // placeholder for future role management
  */
 
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import {
   collection,
   doc,
@@ -227,4 +228,18 @@ export const getGroup = async (groupId) => {
     console.error('Error getting group:', error);
     return null;
   }
+};
+
+/**
+ * Send an invitation email to a new email address added to a private list.
+ * The Cloud Function checks whether the address is already registered or has
+ * already received an invitation. An invitation is only sent once per address.
+ *
+ * @param {string} email - The email address to invite
+ * @returns {Promise<{success: boolean, alreadyRegistered: boolean, alreadyInvited: boolean}>}
+ */
+export const sendGroupInvitation = async (email) => {
+  const sendInvitation = httpsCallable(functions, 'sendGroupInvitationEmail');
+  const result = await sendInvitation({ email });
+  return result.data;
 };

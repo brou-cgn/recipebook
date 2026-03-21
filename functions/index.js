@@ -1944,6 +1944,126 @@ function escapeHtml(str) {
 }
 
 /**
+ * Cloud Function: Send an invitation email to a new email address added to a private list.
+ * Checks whether the address is already registered or has already received an invitation.
+ * If neither, sends an invitation email and records the sent invitation in Firestore.
+ *
+ * Input data:
+ * - email: The email address to invite
+ *
+ * Returns: { success: boolean, alreadyRegistered: boolean, alreadyInvited: boolean }
+ */
+exports.sendGroupInvitationEmail = onCall(
+    {
+      maxInstances: 10,
+      secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+    },
+    async (request) => {
+      const callerAuth = request.auth;
+      if (!callerAuth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'Sie müssen angemeldet sein, um Einladungen zu versenden.'
+        );
+      }
+
+      const {email} = request.data;
+
+      if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        throw new HttpsError('invalid-argument', 'Ungültige E-Mail-Adresse.');
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const db = admin.firestore();
+
+      // Check if the email address is already registered as a user
+      try {
+        await admin.auth().getUserByEmail(normalizedEmail);
+        // User exists – no invitation needed
+        return {success: true, alreadyRegistered: true, alreadyInvited: false};
+      } catch (authError) {
+        if (authError.code !== 'auth/user-not-found') {
+          console.error('sendGroupInvitationEmail: error checking Firebase Auth:', authError);
+          throw new HttpsError('internal', 'Fehler bei der Benutzerprüfung.');
+        }
+        // auth/user-not-found → proceed
+      }
+
+      // Check if an invitation has already been sent for this address
+      const invitationRef = db.collection('invitations').doc(normalizedEmail);
+      const invitationSnap = await invitationRef.get();
+      if (invitationSnap.exists) {
+        return {success: true, alreadyRegistered: false, alreadyInvited: true};
+      }
+
+      // Send the invitation email
+      const smtpHostVal = smtpHost.value();
+      const smtpPortVal = smtpPort.value();
+      const smtpUserVal = smtpUser.value();
+      const smtpPasswordVal = smtpPassword.value();
+      const smtpFromVal = smtpFrom.value();
+
+      if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
+        console.warn('sendGroupInvitationEmail: SMTP secrets not fully configured – skipping email');
+        throw new HttpsError('unavailable', 'E-Mail-Versand ist momentan nicht konfiguriert.');
+      }
+
+      const registrationUrl = 'https://brou-cgn.github.io/recipebook/';
+
+      const transporter = nodemailer.createTransport({
+        host: smtpHostVal,
+        port: parseInt(smtpPortVal || '587', 10),
+        secure: parseInt(smtpPortVal || '587', 10) === 465,
+        auth: {
+          user: smtpUserVal,
+          pass: smtpPasswordVal,
+        },
+      });
+
+      const safeEmail = escapeHtml(normalizedEmail);
+      const safeUrl = escapeHtml(registrationUrl);
+
+      const mailOptions = {
+        from: smtpFromVal,
+        to: normalizedEmail,
+        subject: 'Einladung zur Nutzung von Recipebook',
+        text:
+          `Hallo!\n\n` +
+          `Du wurdest eingeladen, Recipebook zu nutzen. Bitte registriere dich über den folgenden Link, ` +
+          `um Zugriff auf die private Liste zu erhalten.\n\n` +
+          `${registrationUrl}\n\n` +
+          `Bei Fragen antworte gerne auf diese Mail.\n\n` +
+          `Viele Grüße,\n` +
+          `Dein Recipebook-Team`,
+        html:
+          `<p>Hallo!</p>` +
+          `<p>Du wurdest eingeladen, Recipebook zu nutzen. Bitte registriere dich über den folgenden Link, ` +
+          `um Zugriff auf die private Liste zu erhalten.</p>` +
+          `<p><a href="${safeUrl}">Registrierung starten</a></p>` +
+          `<p>Bei Fragen antworte gerne auf diese Mail.</p>` +
+          `<p>Viele Grüße,<br>Dein Recipebook-Team</p>`,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`sendGroupInvitationEmail: invitation sent to ${normalizedEmail}`);
+      } catch (mailError) {
+        console.error('sendGroupInvitationEmail: error sending email:', mailError);
+        throw new HttpsError('internal', 'Fehler beim Versenden der Einladungs-E-Mail.');
+      }
+
+      // Record the sent invitation so it is only sent once
+      await invitationRef.set({
+        email: normalizedEmail,
+        sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        sentBy: callerAuth.uid,
+      });
+
+      return {success: true, alreadyRegistered: false, alreadyInvited: false};
+    },
+);
+
+/**
  * Firestore trigger: send email notification to all admins when a new user registers.
  * Triggered when a new document is created in the 'users' collection.
  * Requires the following Firebase secrets to be set:

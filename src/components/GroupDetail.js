@@ -3,6 +3,7 @@ import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient } from '../utils/ingredientUtils';
+import { sendGroupInvitation } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
 
 /**
@@ -119,11 +120,24 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       setAddMemberIds([]);
       setInviteEmail('');
       setShowAddMember(false);
-      setAddMemberSuccess(
-        hasEmail && !hasSelections
-          ? `Einladung an ${emailTrimmed} wurde gespeichert.`
-          : 'Mitglied(er) erfolgreich hinzugefügt.'
-      );
+
+      if (hasEmail) {
+        try {
+          const inviteResult = await sendGroupInvitation(emailTrimmed);
+          if (inviteResult.alreadyRegistered) {
+            setAddMemberSuccess(`${emailTrimmed} ist bereits registriert und wurde zur Liste hinzugefügt.`);
+          } else if (inviteResult.alreadyInvited) {
+            setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert. Eine Einladungs-E-Mail wurde bereits früher versandt.`);
+          } else {
+            setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert und eine Einladungs-E-Mail versendet.`);
+          }
+        } catch (inviteErr) {
+          console.error('Error sending invitation email:', inviteErr);
+          setAddMemberSuccess(`Einladung an ${emailTrimmed} wurde gespeichert, aber die Einladungs-E-Mail konnte nicht versendet werden.`);
+        }
+      } else {
+        setAddMemberSuccess('Mitglied(er) erfolgreich hinzugefügt.');
+      }
     } catch (err) {
       setAddMemberError('Fehler beim Hinzufügen. Bitte erneut versuchen.');
     } finally {
