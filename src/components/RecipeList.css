@@ -178,6 +178,7 @@
 
 .add-icon-button:active {
   background: white;
+  outline: none;
 }
 
 .add-icon-button .button-icon-image {
@@ -478,6 +479,10 @@
   .add-icon-button.pressed {
   transform: translateX(var(--add-shift, 0px)) scale(1.12);
   box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
   }
 }
 
