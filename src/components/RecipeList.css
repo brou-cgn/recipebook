@@ -477,7 +477,7 @@
   }
   
   .add-icon-button.pressed {
-  transform: translateX(var(--add-shift, 0px)) scale(1.12);
+  transform: translateX(var(--add-shift, 0px)) scale(1.15);
   box-shadow: 0 8px 18px rgba(0,0,0,0.3);
   -webkit-tap-highlight-color: transparent;
   -webkit-appearance: none;
