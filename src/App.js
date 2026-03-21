@@ -20,6 +20,7 @@ import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
 import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
 import UniversalImportModal from './components/UniversalImportModal';
+import MobileSearchOverlay from './components/MobileSearchOverlay';
 import { 
   loginUser, 
   logoutUser, 
@@ -199,6 +200,7 @@ function App() {
   const headerRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
@@ -926,7 +928,12 @@ function App() {
   };
 
   const handleOpenSearch = () => {
-    headerRef.current?.openSearch();
+    // On mobile (≤768px) open the fullscreen overlay; on desktop use the header search
+    if (window.innerWidth <= 768) {
+      setIsMobileSearchOpen(true);
+    } else {
+      headerRef.current?.openSearch();
+    }
   };
 
   const handleOpenFilterPage = () => {
@@ -1216,6 +1223,15 @@ function App() {
           onCancel={handleUniversalImportCancel}
         />
       )}
+      <MobileSearchOverlay
+        isOpen={isMobileSearchOpen}
+        onClose={() => setIsMobileSearchOpen(false)}
+        recipes={recipes}
+        onSelectRecipe={(recipe) => {
+          setIsMobileSearchOpen(false);
+          handleSelectRecipe(recipe);
+        }}
+      />
     </div>
   );
 }
