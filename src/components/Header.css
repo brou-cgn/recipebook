@@ -489,36 +489,14 @@
     display: none;
   }
 
+  .search-container {
+    display: none;
+  }
+
   .hamburger-dropdown {
     right: 0;
     left: auto;
     min-width: 280px;
-  }
-
-  .search-input {
-    width: 200px;
-    font-size: 1rem;
-  }
-
-  .search-input-container {
-    position: fixed;
-    top: 0.5rem;
-    right: 0.5rem;
-    left: auto;
-    transform: none;
-    animation: slideInMobile 0.2s ease-out forwards;
-    z-index: 200;
-  }
-
-  @keyframes slideInMobile {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 }
 
