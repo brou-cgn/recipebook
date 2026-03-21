@@ -1119,6 +1119,7 @@ function App() {
         <AppCallsPage
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
+          recipes={recipes}
         />
       ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage

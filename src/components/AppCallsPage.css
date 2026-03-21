@@ -108,6 +108,33 @@
   color: #333;
 }
 
+.app-calls-share-btn {
+  padding: 6px 14px;
+  background: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.app-calls-share-btn:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.app-calls-share-btn:disabled {
+  background: #e57373;
+  cursor: not-allowed;
+}
+
+.app-calls-share-error {
+  display: block;
+  margin-top: 4px;
+  color: #d32f2f;
+  font-size: 12px;
+}
+
 @media (max-width: 768px) {
   .app-calls-table {
     font-size: 12px;
