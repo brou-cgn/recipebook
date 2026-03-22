@@ -273,6 +273,26 @@
   display: none;
 }
 
+/* ─── Autorenkarussell single-row carousel (below cuisine filter) ─────────── */
+
+.mobile-search-author-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 4px 12px 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.mobile-search-author-grid::-webkit-scrollbar {
+  display: none;
+}
+
 .mobile-search-filter-pill {
   display: inline-flex;
   align-items: center;

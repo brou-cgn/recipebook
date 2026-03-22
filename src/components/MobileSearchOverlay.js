@@ -402,10 +402,10 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
           </div>
         )}
 
-        {/* Autorenfilter – two-row horizontal carousel below the cuisine filter */}
+        {/* Autorenfilter – single-row horizontal carousel below the cuisine filter */}
         {/* Active (selected) pills are always shown first (leftmost) in the carousel */}
         {orderedAuthorPills.length > 0 && (
-          <div className="mobile-search-cuisine-grid">
+          <div className="mobile-search-author-grid">
             {orderedAuthorPills.map((author) => (
               <button
                 key={author.id}
