@@ -257,11 +257,17 @@ function App() {
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
-  // Name of the currently selected private list filter (if any)
+  // Name of the currently selected private list filter (if any).
+  // Falls back to the single selectedPrivateList from the search overlay when no group filter is set.
   const activePrivateListName = useMemo(() => {
-    if (!recipeFilters.selectedGroup) return undefined;
-    return groups.find(g => g.id === recipeFilters.selectedGroup)?.name;
-  }, [groups, recipeFilters.selectedGroup]);
+    if (recipeFilters.selectedGroup) {
+      return groups.find(g => g.id === recipeFilters.selectedGroup)?.name;
+    }
+    if (recipeFilters.selectedPrivateLists.length === 1) {
+      return groups.find(g => g.id === recipeFilters.selectedPrivateLists[0])?.name;
+    }
+    return undefined;
+  }, [groups, recipeFilters.selectedGroup, recipeFilters.selectedPrivateLists]);
 
   // Recipes belonging to the currently selected group
   const selectedGroupRecipes = useMemo(() => {
@@ -1276,7 +1282,7 @@ function App() {
             onOpenSearch={handleOpenSearch}
             onClearSearch={handleClearSearch}
             activePrivateListName={activePrivateListName}
-            activePrivateListId={recipeFilters.selectedGroup || null}
+            activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
             activeFilters={recipeFilters}
             onClearCuisineFilter={handleClearCuisineFilter}
             showFavoritesOnly={showFavoritesOnly}

@@ -490,6 +490,42 @@ describe('MobileSearchOverlay – private list carousel', () => {
     expect(listPills[0].textContent).toBe('Vegane Liste');
     expect(listPills[0]).toHaveClass('active');
   });
+
+  test('clicking a second private list pill deselects the first (single-select)', () => {
+    const onPrivateListFilterChange = jest.fn();
+    renderOverlay({
+      currentUser: loggedInUser,
+      privateLists: mockPrivateLists,
+      onPrivateListFilterChange,
+    });
+
+    fireEvent.click(screen.getByText('Lieblingsrezepte'));
+    expect(onPrivateListFilterChange).toHaveBeenCalledWith(['pl1']);
+
+    fireEvent.click(screen.getByText('Familienrezepte'));
+    expect(onPrivateListFilterChange).toHaveBeenCalledWith(['pl2']);
+
+    // Only the second pill should be active
+    expect(screen.getByText('Lieblingsrezepte')).not.toHaveClass('active');
+    expect(screen.getByText('Familienrezepte')).toHaveClass('active');
+  });
+
+  test('clicking the active private list pill deselects it', () => {
+    const onPrivateListFilterChange = jest.fn();
+    renderOverlay({
+      currentUser: loggedInUser,
+      privateLists: mockPrivateLists,
+      onPrivateListFilterChange,
+    });
+
+    fireEvent.click(screen.getByText('Lieblingsrezepte'));
+    expect(onPrivateListFilterChange).toHaveBeenCalledWith(['pl1']);
+
+    fireEvent.click(screen.getByText('Lieblingsrezepte'));
+    expect(onPrivateListFilterChange).toHaveBeenCalledWith([]);
+
+    expect(screen.getByText('Lieblingsrezepte')).not.toHaveClass('active');
+  });
 });
 
 describe('MobileSearchOverlay – pre-populated search term', () => {

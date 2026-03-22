@@ -259,9 +259,8 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
   const handlePrivateListPillClick = (listId) => {
     setSelectedPrivateLists((prev) => {
       const isSelected = prev.includes(listId);
-      const newValue = isSelected
-        ? prev.filter((l) => l !== listId)
-        : [...prev, listId];
+      // Single-select: deselect if already active, otherwise select only this one
+      const newValue = isSelected ? [] : [listId];
       onPrivateListFilterChange?.(newValue);
       return newValue;
     });
