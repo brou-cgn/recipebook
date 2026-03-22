@@ -557,3 +557,60 @@
 .search-active-clear:hover {
   background: #1648c4;
 }
+
+.cuisine-filter-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+  padding: 6px 10px 6px 12px;
+  background: #f0faf0;
+  border: 1px solid #b7dfb7;
+  border-radius: 20px;
+  width: fit-content;
+  max-width: 100%;
+  animation: search-indicator-in 0.2s ease both;
+}
+
+.cuisine-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #276727;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.cuisine-filter-label svg {
+  flex-shrink: 0;
+  color: #276727;
+}
+
+.cuisine-filter-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #276727;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.cuisine-filter-clear:focus-visible {
+  outline: 2px solid #276727;
+  outline-offset: 2px;
+}
+
+.cuisine-filter-clear:hover {
+  background: #1e521e;
+}

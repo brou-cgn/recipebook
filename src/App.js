@@ -966,6 +966,10 @@ function App() {
     setIsFilterPageOpen(false);
   };
 
+  const handleClearCuisineFilter = () => {
+    setRecipeFilters(prev => ({ ...prev, selectedCuisines: [] }));
+  };
+
   const handleCancelFilterPage = () => {
     setIsFilterPageOpen(false);
   };
@@ -1227,6 +1231,7 @@ function App() {
             activePrivateListName={activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || null}
             activeFilters={recipeFilters}
+            onClearCuisineFilter={handleClearCuisineFilter}
           />
         </>
       )}
