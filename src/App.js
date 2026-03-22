@@ -175,6 +175,17 @@ function matchesGroupFilter(recipe, selectedGroup, groups) {
   return Array.isArray(group?.recipeIds) && group.recipeIds.includes(recipe.id);
 }
 
+// Helper function to check if a recipe belongs to any of the selected private lists
+// (selected via the Search Overlay private list pills)
+function matchesPrivateListsFilter(recipe, selectedPrivateLists, groups) {
+  if (!selectedPrivateLists || selectedPrivateLists.length === 0) return true;
+  return selectedPrivateLists.some((listId) => {
+    if (recipe.groupId === listId) return true;
+    const group = groups && groups.find(g => g.id === listId);
+    return Array.isArray(group?.recipeIds) && group.recipeIds.includes(recipe.id);
+  });
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -1252,7 +1263,8 @@ function App() {
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
-              matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups)
+              matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
+              matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
