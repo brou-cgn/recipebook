@@ -249,15 +249,38 @@ describe('expandCuisineSelection', () => {
     expect(result).toEqual(['Italienisch']);
   });
 
-  test('expands parent group to all its children', () => {
+  test('expands parent group to the group name itself and all its children', () => {
     const result = expandCuisineSelection(['Asiatische Küche'], cuisineGroups);
-    expect(result).toEqual(expect.arrayContaining(['Japanisch', 'Thailändisch', 'Chinesisch']));
-    expect(result).toHaveLength(3);
+    expect(result).toEqual(expect.arrayContaining(['Asiatische Küche', 'Japanisch', 'Thailändisch', 'Chinesisch']));
+    expect(result).toHaveLength(4);
   });
 
   test('combines expanded parent children with selected leaf types', () => {
     const result = expandCuisineSelection(['Asiatische Küche', 'Deutsch'], cuisineGroups);
-    expect(result).toEqual(expect.arrayContaining(['Japanisch', 'Thailändisch', 'Chinesisch', 'Deutsch']));
+    expect(result).toEqual(expect.arrayContaining(['Asiatische Küche', 'Japanisch', 'Thailändisch', 'Chinesisch', 'Deutsch']));
+  });
+
+  test('recursively expands nested groups', () => {
+    const nestedGroups = [
+      { name: 'Alle asiatischen', children: ['Ostasiatisch', 'Südostasiatisch'] },
+      { name: 'Ostasiatisch', children: ['Japanisch', 'Chinesisch'] },
+      { name: 'Südostasiatisch', children: ['Thailändisch', 'Vietnamesisch'] },
+    ];
+    const result = expandCuisineSelection(['Alle asiatischen'], nestedGroups);
+    expect(result).toEqual(expect.arrayContaining([
+      'Alle asiatischen', 'Ostasiatisch', 'Südostasiatisch', 'Japanisch', 'Chinesisch', 'Thailändisch', 'Vietnamesisch',
+    ]));
+    expect(result).toHaveLength(7);
+  });
+
+  test('handles circular references without infinite loop', () => {
+    const circularGroups = [
+      { name: 'Gruppe A', children: ['Gruppe B'] },
+      { name: 'Gruppe B', children: ['Gruppe A'] },
+    ];
+    const result = expandCuisineSelection(['Gruppe A'], circularGroups);
+    expect(result).toEqual(expect.arrayContaining(['Gruppe A', 'Gruppe B']));
+    expect(result).toHaveLength(2);
   });
 
   test('deduplicates when a child is selected both directly and via parent', () => {

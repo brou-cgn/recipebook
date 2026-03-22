@@ -76,27 +76,35 @@ export const DEFAULT_CUISINE_GROUPS = [];
 
 /**
  * Expand a list of selected cuisine names by replacing any parent group names with their
- * child types. Used during recipe filtering so that selecting a parent group matches all
- * recipes whose `kulinarik` contains one of its children.
+ * child types. Handles nested (multi-level) group structures recursively.
+ * When a group name is selected, the group name itself and all its descendant types are
+ * included, so that recipes tagged directly with the group or any of its sub-types match.
  *
  * @param {string[]} selectedCuisines - Selected cuisine/group names from the filter UI
  * @param {Array<{name: string, children: string[]}>} cuisineGroups - Configured cuisine groups
- * @returns {string[]} Expanded list containing only leaf (non-parent) cuisine names
+ * @returns {string[]} Expanded list of cuisine names including the selected items and all their descendants
  */
 export function expandCuisineSelection(selectedCuisines, cuisineGroups) {
   if (!selectedCuisines || selectedCuisines.length === 0) return [];
   if (!cuisineGroups || cuisineGroups.length === 0) return selectedCuisines;
 
+  const groupMap = new Map(cuisineGroups.map(g => [g.name, g.children || []]));
   const expanded = new Set();
-  for (const selected of selectedCuisines) {
-    const group = cuisineGroups.find(g => g.name === selected);
-    if (group) {
-      for (const child of group.children) {
-        expanded.add(child);
+  const visited = new Set();
+
+  function expandName(name) {
+    if (visited.has(name)) return;
+    visited.add(name);
+    expanded.add(name);
+    if (groupMap.has(name)) {
+      for (const child of groupMap.get(name)) {
+        expandName(child);
       }
-    } else {
-      expanded.add(selected);
     }
+  }
+
+  for (const selected of selectedCuisines) {
+    expandName(selected);
   }
   return [...expanded];
 }
