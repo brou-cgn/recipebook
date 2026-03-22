@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
+import { setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 
 /**
  * Tagesmenü page – shows recipe cards as a swipeable Tinder-style stack.
@@ -17,13 +18,14 @@ import RecipeImageCarousel from './RecipeImageCarousel';
  * @param {Array}    props.recipes           - All recipes visible to the user
  * @param {Array}    props.allUsers          - All users (to resolve author names)
  * @param {Function} props.onSelectRecipe    - Called with a recipe when its card is tapped
+ * @param {Object}   props.currentUser       - The currently logged-in user
  */
 
 const SWIPE_THRESHOLD = 80;   // px drag distance to trigger a swipe
 const DIRECTION_THRESHOLD = 5; // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;       // how many cards are rendered in the stack
 
-function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe }) {
+function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, currentUser }) {
   const [selectedListId, setSelectedListId] = useState(
     interactiveLists.length > 0 ? interactiveLists[0].id : null
   );
@@ -55,6 +57,21 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe }) {
 
   // Active gesture tracking (ref to avoid stale closure issues)
   const gestureRef = useRef(null);
+
+  // Tracks the swipe direction and recipe for the currently flying card so that
+  // handleTransitionEnd can record the flag after the animation completes.
+  const pendingSwipeRef = useRef(null);
+
+  // Refs that mirror the current top recipe and selected list so pointer-event
+  // handlers (which have empty dependency arrays) can still read the latest values.
+  const topRecipeRef = useRef(null);
+  const selectedListRef = useRef(null);
+  useEffect(() => {
+    topRecipeRef.current = listRecipes[currentIndex] ?? null;
+  }, [listRecipes, currentIndex]);
+  useEffect(() => {
+    selectedListRef.current = selectedList;
+  }, [selectedList]);
 
   const getAuthorName = (authorId) => {
     if (!authorId || !allUsers) return '';
@@ -120,10 +137,20 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe }) {
     if (absDx >= SWIPE_THRESHOLD && absDx >= absDy) {
       // Horizontal swipe — fly card off to the side
       const targetX = (dx > 0 ? 1 : -1) * window.innerWidth * 1.5;
+      pendingSwipeRef.current = {
+        direction: dx > 0 ? 'right' : 'left',
+        recipe: topRecipeRef.current,
+        list: selectedListRef.current,
+      };
       setDragOffset({ x: targetX, y: dy });
       setCardPhase('flying');
     } else if (dy <= -SWIPE_THRESHOLD && absDy > absDx) {
       // Upward swipe — fly card off to the top
+      pendingSwipeRef.current = {
+        direction: 'up',
+        recipe: topRecipeRef.current,
+        list: selectedListRef.current,
+      };
       setDragOffset({ x: dx, y: -window.innerHeight * 1.5 });
       setCardPhase('flying');
     } else {
@@ -145,13 +172,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe }) {
 
   const handleTransitionEnd = useCallback(() => {
     if (cardPhase === 'flying') {
+      // Record the swipe flag before advancing to the next card
+      const swipe = pendingSwipeRef.current;
+      pendingSwipeRef.current = null;
+      if (swipe && currentUser?.id && swipe.list?.id && swipe.recipe?.id) {
+        const flagMap = { right: 'geparkt', left: 'archiv', up: 'kandidat' };
+        const flag = flagMap[swipe.direction];
+        if (flag) {
+          setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag);
+        }
+      }
       setCurrentIndex((prev) => prev + 1);
       setDragOffset({ x: 0, y: 0 });
       setCardPhase('idle');
     } else if (cardPhase === 'snap') {
       setCardPhase('idle');
     }
-  }, [cardPhase]);
+  }, [cardPhase, currentUser]);
 
   // ---- Derived values -------------------------------------------------
 
