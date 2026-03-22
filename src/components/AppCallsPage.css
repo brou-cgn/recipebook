@@ -150,3 +150,129 @@
     font-size: 13px;
   }
 }
+
+/* Kulinariktypen tab styles */
+.cuisine-proposal-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cuisine-proposal-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.cuisine-proposal-input:focus {
+  outline: none;
+  border-color: #d32f2f;
+}
+
+.cuisine-proposal-group-select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.cuisine-proposal-group-select:focus {
+  outline: none;
+  border-color: #d32f2f;
+}
+
+.cuisine-proposal-edit-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d32f2f;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.cuisine-proposal-edit-input:focus {
+  outline: none;
+}
+
+.cuisine-proposal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cuisine-proposal-edit-btn {
+  padding: 5px 12px;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.cuisine-proposal-edit-btn:hover {
+  background: #e0e0e0;
+}
+
+.cuisine-proposal-release-btn {
+  padding: 5px 12px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.cuisine-proposal-release-btn:hover:not(:disabled) {
+  background: #1b5e20;
+}
+
+.cuisine-proposal-release-btn:disabled {
+  background: #81c784;
+  cursor: not-allowed;
+}
+
+.cuisine-proposal-cancel-btn {
+  padding: 5px 12px;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.cuisine-proposal-cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.cuisine-proposal-no-group {
+  color: #bbb;
+}
+
+.cuisine-proposal-duplicate-error {
+  color: #d32f2f;
+  font-size: 13px;
+  margin: -16px 0 16px;
+}
+
+@media (max-width: 768px) {
+  .cuisine-proposal-form {
+    flex-direction: column;
+  }
+
+  .cuisine-proposal-input,
+  .cuisine-proposal-group-select {
+    width: 100%;
+  }
+}
