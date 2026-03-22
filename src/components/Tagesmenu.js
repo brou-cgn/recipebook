@@ -21,9 +21,11 @@ import { setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
  * @param {Object}   props.currentUser       - The currently logged-in user
  */
 
-const SWIPE_THRESHOLD = 80;   // px drag distance to trigger a swipe
-const DIRECTION_THRESHOLD = 5; // px of movement before we decide drag direction
-const STACK_VISIBLE = 3;       // how many cards are rendered in the stack
+const SWIPE_THRESHOLD = 50;           // px drag distance to trigger a swipe
+const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe even if short
+const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
+const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
+const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
 
 function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, currentUser }) {
   const [selectedListId, setSelectedListId] = useState(
@@ -79,13 +81,39 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return user ? user.vorname : '';
   };
 
-  // ---- Pointer handlers (applied only to the top card) ----------------
+  // Lock page scroll while this view is shown – the only allowed motion is card swiping.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscrollBehavior = document.body.style.overscrollBehavior;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
+    return () => {
+      // Read the locked scroll position before restoring styles
+      const lockedScrollY = parseInt(document.body.style.top || '0', 10) * -1;
+      document.body.style.overflow = prevOverflow;
+      document.body.style.overscrollBehavior = prevOverscrollBehavior;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      window.scrollTo(0, lockedScrollY);
+    };
+  }, []);
 
   const handlePointerDown = useCallback((e) => {
     if (cardPhase === 'flying') return;
     gestureRef.current = {
       startX: e.clientX,
       startY: e.clientY,
+      startTime: Date.now(),
       pointerId: e.pointerId,
       decided: false,      // whether we've chosen a drag direction yet
       active: false,       // whether this element has captured the pointer
@@ -134,7 +162,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    if (absDx >= SWIPE_THRESHOLD && absDx >= absDy) {
+    // Compute gesture velocity so short fast flicks also trigger a swipe
+    const duration = Date.now() - g.startTime;
+    const velocity = duration > 0 ? Math.sqrt(dx * dx + dy * dy) / duration : 0;
+    const isFastSwipe = velocity >= SWIPE_VELOCITY_THRESHOLD;
+
+    if ((absDx >= SWIPE_THRESHOLD || (isFastSwipe && absDx > MIN_FAST_SWIPE_DISTANCE)) && absDx >= absDy) {
       // Horizontal swipe — fly card off to the side
       const targetX = (dx > 0 ? 1 : -1) * window.innerWidth * 1.5;
       pendingSwipeRef.current = {
@@ -144,7 +177,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       };
       setDragOffset({ x: targetX, y: dy });
       setCardPhase('flying');
-    } else if (dy <= -SWIPE_THRESHOLD && absDy > absDx) {
+    } else if (dy < 0 && absDy > absDx && (absDy >= SWIPE_THRESHOLD || (isFastSwipe && absDy > MIN_FAST_SWIPE_DISTANCE))) {
       // Upward swipe — fly card off to the top
       pendingSwipeRef.current = {
         direction: 'up',

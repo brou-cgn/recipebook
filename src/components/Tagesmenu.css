@@ -8,6 +8,7 @@
   /* fill the viewport below the sticky header */
   height: calc(100dvh - 60px);
   overflow: hidden;
+  overscroll-behavior: none;
   background: #f5f5f5;
 }
 
@@ -60,6 +61,8 @@
   overflow: hidden;
   /* extra bottom padding so the back-card peek is visible */
   padding: 12px 12px 28px;
+  /* prevent page scrolling/bouncing while the user swipes cards */
+  touch-action: none;
 }
 
 /* ---- individual card in the stack --------------------------------- */
