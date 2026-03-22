@@ -32,20 +32,26 @@ function incrementCuisineUsage(cuisineName) {
 }
 
 /**
+ * Compute recipe counts per kulinarik type from the given recipe list.
+ */
+function computeRecipeCounts(recipes) {
+  const counts = {};
+  (recipes || []).forEach((recipe) => {
+    const kulinarik = Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [];
+    kulinarik.forEach((k) => {
+      counts[k] = (counts[k] || 0) + 1;
+    });
+  });
+  return counts;
+}
+
+/**
  * Compute the top cuisine type pills from the given recipes.
  * Sorts by: usage frequency (localStorage) desc, then recipe count desc.
  * Returns at most MAX_CUISINE_TYPE_PILLS entries.
  */
-function computeTopCuisineTypes(recipes, cuisineTypes) {
+function computeTopCuisineTypes(recipeCounts, cuisineTypes) {
   if (!cuisineTypes || cuisineTypes.length === 0) return [];
-  const recipeList = recipes || [];
-  const recipeCounts = {};
-  recipeList.forEach((recipe) => {
-    const kulinarik = Array.isArray(recipe.kulinarik) ? recipe.kulinarik : [];
-    kulinarik.forEach((k) => {
-      recipeCounts[k] = (recipeCounts[k] || 0) + 1;
-    });
-  });
   const usageCounts = getCuisineUsageCounts();
   return cuisineTypes
     .filter((type) => recipeCounts[type] > 0)
@@ -184,9 +190,14 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     inputRef.current?.focus();
   };
 
+  const recipeCounts = useMemo(
+    () => computeRecipeCounts(recipes),
+    [recipes]
+  );
+
   const topCuisineTypes = useMemo(
-    () => computeTopCuisineTypes(recipes, cuisineTypes),
-    [recipes, cuisineTypes]
+    () => computeTopCuisineTypes(recipeCounts, cuisineTypes),
+    [recipeCounts, cuisineTypes]
     // Note: getCuisineUsageCounts() is read inside computeTopCuisineTypes from localStorage.
     // The sort order is intentionally computed once per overlay open (when recipes/cuisineTypes change),
     // and will reflect updated usage counts the next time the overlay opens.
@@ -214,8 +225,32 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
   const visibleCuisinePills = useMemo(() => {
     if (!debouncedTerm) return allCuisinePills;
     const lower = debouncedTerm.toLowerCase();
-    return allCuisinePills.filter((name) => name.toLowerCase().includes(lower));
-  }, [allCuisinePills, debouncedTerm]);
+
+    const matchingTypes = topCuisineTypes.filter((name) => name.toLowerCase().includes(lower));
+    const matchingGroups = (cuisineGroups || []).map((g) => g.name).filter((name) => name.toLowerCase().includes(lower));
+
+    if (matchingTypes.length >= MAX_CUISINE_TYPE_PILLS) {
+      return [...matchingTypes, ...matchingGroups];
+    }
+
+    // Fewer than MAX_CUISINE_TYPE_PILLS cuisine types match; supplement from the full list
+    const shownSet = new Set([...topCuisineTypes, ...(cuisineGroups || []).map((g) => g.name)]);
+    const usageCounts = getCuisineUsageCounts();
+    const additional = (cuisineTypes || [])
+      .filter((type) =>
+        !shownSet.has(type) &&
+        type.toLowerCase().includes(lower) &&
+        (recipeCounts[type] || 0) > 0
+      )
+      .sort((a, b) => {
+        const usageDiff = (usageCounts[b] || 0) - (usageCounts[a] || 0);
+        if (usageDiff !== 0) return usageDiff;
+        return (recipeCounts[b] || 0) - (recipeCounts[a] || 0);
+      })
+      .slice(0, MAX_CUISINE_TYPE_PILLS - matchingTypes.length);
+
+    return [...matchingTypes, ...additional, ...matchingGroups];
+  }, [allCuisinePills, debouncedTerm, topCuisineTypes, cuisineTypes, cuisineGroups, recipeCounts]);
 
   if (!isOpen) return null;
 
