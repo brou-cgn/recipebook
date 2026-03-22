@@ -8,6 +8,7 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
   const [selectedAuthors, setSelectedAuthors] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [cuisineGroups, setCuisineGroups] = useState([]);
   const [expandedSections, setExpandedSections] = useState(() => {
     const defaults = { group: true, cuisine: true, author: true, status: true };
     try {
@@ -41,8 +42,10 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
       try {
         const lists = await getCustomLists();
         setAvailableCategories(lists.cuisineTypes || []);
+        setCuisineGroups(lists.cuisineGroups || []);
       } catch (error) {
         setAvailableCategories([]);
+        setCuisineGroups([]);
       }
     };
     loadCategories();
@@ -105,6 +108,22 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
     onApply(filters);
   };
 
+  // Compute the set of child cuisine types that belong to any group
+  const childrenInGroups = new Set(
+    cuisineGroups.flatMap(g => g.children || [])
+  );
+
+  // Names used as group (parent) headers
+  const parentGroupNames = new Set(cuisineGroups.map(g => g.name));
+
+  // Cuisine types not belonging to any group (not a child, not a parent name) shown as individual items
+  const ungroupedTypes = availableCategories.filter(
+    c => !childrenInGroups.has(c) && !parentGroupNames.has(c)
+  );
+
+  // Determine if any cuisine filter is active (for the section dot indicator)
+  const hasCuisineFilter = selectedCuisines.length > 0;
+
   return (
     <div className="filter-modal-overlay" onClick={onCancel}>
       <div
@@ -158,7 +177,7 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
           </div>
         )}
 
-        {availableCategories.length > 0 && (
+        {(cuisineGroups.length > 0 || availableCategories.length > 0) && (
           <div className="filter-section">
             <button
               className="filter-section-header"
@@ -167,14 +186,38 @@ function FilterPage({ currentFilters, onApply, onCancel, availableAuthors, isAdm
             >
               <span className="filter-section-title">
                 Kulinarik
-                {selectedCuisines.length > 0 && <span className="filter-section-active-dot" aria-hidden="true" />}
+                {hasCuisineFilter && <span className="filter-section-active-dot" aria-hidden="true" />}
               </span>
               <span className="filter-section-arrow">{expandedSections.cuisine ? '▲' : '▼'}</span>
             </button>
             {expandedSections.cuisine && (
               <div className="filter-section-content">
                 <div className="filter-checkbox-grid">
-                  {availableCategories.map(category => (
+                  {cuisineGroups.map(group => (
+                    <React.Fragment key={group.name}>
+                      <label className="filter-checkbox-label filter-cuisine-group-label">
+                        <input
+                          type="checkbox"
+                          value={group.name}
+                          checked={selectedCuisines.includes(group.name)}
+                          onChange={() => handleCuisineToggle(group.name)}
+                        />
+                        <strong>{group.name}</strong>
+                      </label>
+                      {(group.children || []).map(child => (
+                        <label key={child} className="filter-checkbox-label filter-cuisine-child-label">
+                          <input
+                            type="checkbox"
+                            value={child}
+                            checked={selectedCuisines.includes(child)}
+                            onChange={() => handleCuisineToggle(child)}
+                          />
+                          {child}
+                        </label>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                  {ungroupedTypes.map(category => (
                     <label key={category} className="filter-checkbox-label">
                       <input
                         type="checkbox"

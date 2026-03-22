@@ -39,7 +39,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference } from './utils/customLists';
+import { applyTileSizePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import {
   subscribeToRecipes,
@@ -149,13 +149,15 @@ function matchesDraftFilter(recipe, showDrafts) {
   return true;
 }
 
-// Helper function to check if a recipe matches the cuisine (Kulinarik) filter
-function matchesCuisineFilter(recipe, selectedCuisines) {
+// Helper function to check if a recipe matches the cuisine (Kulinarik) filter.
+// selectedCuisines may include parent group names which are expanded to their children.
+function matchesCuisineFilter(recipe, selectedCuisines, cuisineGroups) {
   if (!selectedCuisines || selectedCuisines.length === 0) return true;
+  const expanded = expandCuisineSelection(selectedCuisines, cuisineGroups || []);
   if (Array.isArray(recipe.kulinarik)) {
-    return selectedCuisines.some(c => recipe.kulinarik.includes(c));
+    return expanded.some(c => recipe.kulinarik.includes(c));
   }
-  return selectedCuisines.includes(recipe.kulinarik);
+  return expanded.includes(recipe.kulinarik);
 }
 
 // Helper function to check if a recipe matches the author filter
@@ -201,6 +203,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [cuisineGroups, setCuisineGroups] = useState([]);
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
@@ -353,6 +356,15 @@ function App() {
   // Apply tile size preference on mount
   useEffect(() => {
     applyTileSizePreference();
+  }, []);
+
+  // Load cuisine groups for hierarchical filter expansion
+  useEffect(() => {
+    getCustomLists().then(lists => {
+      setCuisineGroups(lists.cuisineGroups || []);
+    }).catch(() => {
+      setCuisineGroups([]);
+    });
   }, []);
 
   // Detect Web Share Target: read shared data from IndexedDB when URL param is present
@@ -1199,7 +1211,7 @@ function App() {
             recipes={recipes.filter(recipe => 
               matchesCategoryFilter(recipe, categoryFilter) && 
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
-              matchesCuisineFilter(recipe, recipeFilters.selectedCuisines) &&
+              matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
               matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups)
             )}

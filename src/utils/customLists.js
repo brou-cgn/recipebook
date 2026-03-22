@@ -67,6 +67,55 @@ export const DEFAULT_CONVERSION_TABLE = [
 export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
+/**
+ * Default cuisine groups – each entry defines a parent type with its child types.
+ * Parent types cannot be assigned directly to recipes; they group child types for filtering.
+ * @type {Array<{name: string, children: string[]}>}
+ */
+export const DEFAULT_CUISINE_GROUPS = [];
+
+/**
+ * Expand a list of selected cuisine names by replacing any parent group names with their
+ * child types. Used during recipe filtering so that selecting a parent group matches all
+ * recipes whose `kulinarik` contains one of its children.
+ *
+ * @param {string[]} selectedCuisines - Selected cuisine/group names from the filter UI
+ * @param {Array<{name: string, children: string[]}>} cuisineGroups - Configured cuisine groups
+ * @returns {string[]} Expanded list containing only leaf (non-parent) cuisine names
+ */
+export function expandCuisineSelection(selectedCuisines, cuisineGroups) {
+  if (!selectedCuisines || selectedCuisines.length === 0) return [];
+  if (!cuisineGroups || cuisineGroups.length === 0) return selectedCuisines;
+
+  const expanded = new Set();
+  for (const selected of selectedCuisines) {
+    const group = cuisineGroups.find(g => g.name === selected);
+    if (group) {
+      for (const child of group.children) {
+        expanded.add(child);
+      }
+    } else {
+      expanded.add(selected);
+    }
+  }
+  return [...expanded];
+}
+
+/**
+ * Returns the set of parent (group) cuisine type names.
+ * @param {Array<{name: string, children: string[]}>} cuisineGroups
+ * @returns {Set<string>}
+ */
+export function getParentCuisineNames(cuisineGroups) {
+  const names = new Set();
+  if (Array.isArray(cuisineGroups)) {
+    for (const g of cuisineGroups) {
+      names.add(g.name);
+    }
+  }
+  return names;
+}
+
 // Sort settings defaults
 export const DEFAULT_TRENDING_DAYS = 30;
 export const DEFAULT_TRENDING_MIN_VIEWS = 5;
@@ -250,6 +299,7 @@ export async function getSettings() {
       // Ensure all fields exist for backward compatibility
       settingsCache = {
         cuisineTypes: settings.cuisineTypes || DEFAULT_CUISINE_TYPES,
+        cuisineGroups: settings.cuisineGroups || DEFAULT_CUISINE_GROUPS,
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
@@ -280,6 +330,7 @@ export async function getSettings() {
     // No settings document exists, return and create defaults
     const defaultSettings = {
       cuisineTypes: DEFAULT_CUISINE_TYPES,
+      cuisineGroups: DEFAULT_CUISINE_GROUPS,
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
@@ -314,6 +365,7 @@ export async function getSettings() {
     // Return defaults on error
     return {
       cuisineTypes: DEFAULT_CUISINE_TYPES,
+      cuisineGroups: DEFAULT_CUISINE_GROUPS,
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
@@ -351,6 +403,7 @@ export async function getCustomLists() {
   
   return {
     cuisineTypes: settings.cuisineTypes ?? DEFAULT_CUISINE_TYPES,
+    cuisineGroups: settings.cuisineGroups ?? DEFAULT_CUISINE_GROUPS,
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
@@ -386,6 +439,7 @@ export async function saveCustomLists(lists) {
 export async function resetCustomLists() {
   const defaultLists = {
     cuisineTypes: DEFAULT_CUISINE_TYPES,
+    cuisineGroups: DEFAULT_CUISINE_GROUPS,
     mealCategories: DEFAULT_MEAL_CATEGORIES,
     units: DEFAULT_UNITS,
     portionUnits: DEFAULT_PORTION_UNITS,

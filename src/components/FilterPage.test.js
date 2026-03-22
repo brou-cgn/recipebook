@@ -5,9 +5,10 @@ import FilterPage from './FilterPage';
 
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
-  getCustomLists: () => Promise.resolve({
-    cuisineTypes: ['Italienisch', 'Asiatisch', 'Deutsch']
-  })
+  getCustomLists: jest.fn(() => Promise.resolve({
+    cuisineTypes: ['Italienisch', 'Asiatisch', 'Deutsch'],
+    cuisineGroups: []
+  }))
 }));
 
 describe('FilterPage', () => {
@@ -22,6 +23,12 @@ describe('FilterPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    // Reset to default (no groups)
+    const customListsMock = require('../utils/customLists');
+    customListsMock.getCustomLists.mockResolvedValue({
+      cuisineTypes: ['Italienisch', 'Asiatisch', 'Deutsch'],
+      cuisineGroups: []
+    });
   });
 
   test('renders filter page with all options', () => {
@@ -522,5 +529,91 @@ describe('FilterPage', () => {
 
     const statusHeader = screen.getByRole('button', { name: /rezept-status/i });
     expect(statusHeader).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+describe('FilterPage - Cuisine Groups (hierarchical filter)', () => {
+  const mockOnApply = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+    // Override the module mock to return groups
+    const customListsMock = require('../utils/customLists');
+    customListsMock.getCustomLists.mockResolvedValue({
+      cuisineTypes: ['Japanisch', 'Thailändisch', 'Italienisch', 'Deutsch', 'Vegetarisch'],
+      cuisineGroups: [
+        { name: 'Asiatische Küche', children: ['Japanisch', 'Thailändisch'] },
+        { name: 'Europäische Küche', children: ['Italienisch', 'Deutsch'] },
+      ],
+    });
+  });
+
+  test('renders parent group names in the cuisine filter', async () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Asiatische Küche')).toBeInTheDocument();
+      expect(screen.getByText('Europäische Küche')).toBeInTheDocument();
+    });
+  });
+
+  test('renders child types under their parent groups', async () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Japanisch')).toBeInTheDocument();
+      expect(screen.getByText('Thailändisch')).toBeInTheDocument();
+      expect(screen.getByText('Italienisch')).toBeInTheDocument();
+      expect(screen.getByText('Deutsch')).toBeInTheDocument();
+    });
+  });
+
+  test('renders ungrouped types separately', async () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Vegetarisch')).toBeInTheDocument();
+    });
+  });
+
+  test('selecting a parent group name includes it in applied filters', async () => {
+    render(
+      <FilterPage
+        currentFilters={{ showDrafts: 'all' }}
+        onApply={mockOnApply}
+        onCancel={mockOnCancel}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('checkbox', { name: /Asiatische Küche/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Asiatische Küche/i }));
+    fireEvent.click(screen.getByText('Anwenden'));
+
+    expect(mockOnApply).toHaveBeenCalledWith(expect.objectContaining({
+      selectedCuisines: ['Asiatische Küche'],
+    }));
   });
 });

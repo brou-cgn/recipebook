@@ -268,3 +268,14 @@ select.filter-select:not([multiple]) {
     width: 100%;
   }
 }
+
+.filter-cuisine-group-label {
+  font-weight: 600;
+  border-left: 3px solid #402C1C;
+}
+
+.filter-cuisine-child-label {
+  margin-left: 16px;
+  font-size: 0.9em;
+  opacity: 0.9;
+}

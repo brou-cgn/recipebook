@@ -22,6 +22,8 @@ import {
   DEFAULT_UNITS,
   DEFAULT_PORTION_UNITS,
   DEFAULT_CONVERSION_TABLE,
+  expandCuisineSelection,
+  getParentCuisineNames,
 } from './customLists';
 import { getDoc, updateDoc, doc } from 'firebase/firestore';
 
@@ -225,5 +227,71 @@ describe('getCustomLists – default fallbacks', () => {
     const lists = await getCustomLists();
 
     expect(lists.customUnits).toEqual([]);
+  });
+});
+
+describe('expandCuisineSelection', () => {
+  const cuisineGroups = [
+    { name: 'Asiatische Küche', children: ['Japanisch', 'Thailändisch', 'Chinesisch'] },
+    { name: 'Europäische Küche', children: ['Italienisch', 'Deutsch'] },
+  ];
+
+  test('returns empty array when selectedCuisines is empty', () => {
+    expect(expandCuisineSelection([], cuisineGroups)).toEqual([]);
+  });
+
+  test('returns empty array when selectedCuisines is null', () => {
+    expect(expandCuisineSelection(null, cuisineGroups)).toEqual([]);
+  });
+
+  test('passes through leaf types unchanged', () => {
+    const result = expandCuisineSelection(['Italienisch'], cuisineGroups);
+    expect(result).toEqual(['Italienisch']);
+  });
+
+  test('expands parent group to all its children', () => {
+    const result = expandCuisineSelection(['Asiatische Küche'], cuisineGroups);
+    expect(result).toEqual(expect.arrayContaining(['Japanisch', 'Thailändisch', 'Chinesisch']));
+    expect(result).toHaveLength(3);
+  });
+
+  test('combines expanded parent children with selected leaf types', () => {
+    const result = expandCuisineSelection(['Asiatische Küche', 'Deutsch'], cuisineGroups);
+    expect(result).toEqual(expect.arrayContaining(['Japanisch', 'Thailändisch', 'Chinesisch', 'Deutsch']));
+  });
+
+  test('deduplicates when a child is selected both directly and via parent', () => {
+    const result = expandCuisineSelection(['Asiatische Küche', 'Japanisch'], cuisineGroups);
+    const japanischCount = result.filter(c => c === 'Japanisch').length;
+    expect(japanischCount).toBe(1);
+  });
+
+  test('returns leaf types unchanged when cuisineGroups is empty', () => {
+    const result = expandCuisineSelection(['Italienisch', 'Deutsch'], []);
+    expect(result).toEqual(['Italienisch', 'Deutsch']);
+  });
+
+  test('returns leaf types unchanged when cuisineGroups is null', () => {
+    const result = expandCuisineSelection(['Italienisch'], null);
+    expect(result).toEqual(['Italienisch']);
+  });
+});
+
+describe('getParentCuisineNames', () => {
+  test('returns empty set when cuisineGroups is empty', () => {
+    expect(getParentCuisineNames([])).toEqual(new Set());
+  });
+
+  test('returns set of parent names', () => {
+    const groups = [
+      { name: 'Asiatische Küche', children: ['Japanisch'] },
+      { name: 'Europäische Küche', children: ['Italienisch'] },
+    ];
+    const result = getParentCuisineNames(groups);
+    expect(result).toEqual(new Set(['Asiatische Küche', 'Europäische Küche']));
+  });
+
+  test('returns empty set when cuisineGroups is null', () => {
+    expect(getParentCuisineNames(null)).toEqual(new Set());
   });
 });

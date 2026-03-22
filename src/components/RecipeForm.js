@@ -1075,9 +1075,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             }}
             size={Math.min(customLists.cuisineTypes.length, 8)}
           >
-            {customLists.cuisineTypes.map((cuisine) => (
-              <option key={cuisine} value={cuisine}>{cuisine}</option>
-            ))}
+            {customLists.cuisineTypes
+              .filter(cuisine => {
+                const groups = customLists.cuisineGroups || [];
+                return !groups.some(g => g.name === cuisine);
+              })
+              .map((cuisine) => (
+                <option key={cuisine} value={cuisine}>{cuisine}</option>
+              ))}
           </select>
           {kulinarik.length > 0 && (
             <div className="selected-items">

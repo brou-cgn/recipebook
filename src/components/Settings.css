@@ -1655,3 +1655,67 @@
   color: #888;
   line-height: 1.3;
 }
+
+/* Cuisine groups management */
+.cuisine-group-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #faf8f6;
+}
+
+.cuisine-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cuisine-group-header strong {
+  font-size: 0.95rem;
+  color: #402C1C;
+}
+
+.cuisine-group-children {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cuisine-group-child-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ece5de;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85rem;
+  color: #402C1C;
+}
+
+.remove-child-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 0.75rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.remove-child-btn:hover {
+  color: #c0392b;
+}
+
+.cuisine-group-add-child {
+  font-size: 0.85rem;
+  padding: 3px 6px;
+  border: 1px dashed #c8b8a2;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #402C1C;
+}

@@ -153,6 +153,7 @@ function renderBoldText(text) {
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
   const [lists, setLists] = useState({
     cuisineTypes: [],
+    cuisineGroups: [],
     mealCategories: [],
     units: [],
     portionUnits: [],
@@ -173,6 +174,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [activeTab, setActiveTab] = useState(currentUser?.role === ROLES.MODERATOR ? 'lists' : 'general'); // 'general', 'lists', or 'users'
   const isAdmin = isCurrentUserAdmin();
   const isModerator = currentUser?.role === ROLES.MODERATOR;
+
+  // New cuisine group state (for adding a new parent group)
+  const [newGroupName, setNewGroupName] = useState('');
 
   // Pending renames for cuisine types and meal categories (to propagate to recipes on save)
   const [pendingCuisineRenames, setPendingCuisineRenames] = useState([]);
@@ -612,6 +616,48 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       });
       setNewCategory('');
     }
+  };
+
+  // Cuisine groups management
+  const addCuisineGroup = () => {
+    const name = newGroupName.trim();
+    if (!name) return;
+    const groups = lists.cuisineGroups || [];
+    if (groups.some(g => g.name === name)) return;
+    setLists(prev => ({
+      ...prev,
+      cuisineGroups: [...groups, { name, children: [] }]
+    }));
+    setNewGroupName('');
+  };
+
+  const removeCuisineGroup = (groupName) => {
+    setLists(prev => ({
+      ...prev,
+      cuisineGroups: (prev.cuisineGroups || []).filter(g => g.name !== groupName)
+    }));
+  };
+
+  const addChildToGroup = (groupName, childName) => {
+    setLists(prev => ({
+      ...prev,
+      cuisineGroups: (prev.cuisineGroups || []).map(g =>
+        g.name === groupName && !g.children.includes(childName)
+          ? { ...g, children: [...g.children, childName] }
+          : g
+      )
+    }));
+  };
+
+  const removeChildFromGroup = (groupName, childName) => {
+    setLists(prev => ({
+      ...prev,
+      cuisineGroups: (prev.cuisineGroups || []).map(g =>
+        g.name === groupName
+          ? { ...g, children: g.children.filter(c => c !== childName) }
+          : g
+      )
+    }));
   };
 
   const removeCategory = (category) => {
@@ -3183,6 +3229,61 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </div>
             </SortableContext>
           </DndContext>
+        </div>
+
+        <div className="settings-section">
+          <h3>Kulinarik-Gruppen</h3>
+          <p className="section-description">
+            Übergeordnete Kulinariktypen für die Suchfilterung. Untergeordnete Typen müssen aus der Liste der Kulinarik-Typen ausgewählt werden. Übergeordnete Typen können nicht direkt Rezepten zugeordnet werden.
+          </p>
+          <div className="list-input">
+            <input
+              type="text"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && addCuisineGroup()}
+              placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
+            />
+            <button onClick={addCuisineGroup}>Hinzufügen</button>
+          </div>
+          <div className="list-items">
+            {(lists.cuisineGroups || []).map(group => (
+              <div key={group.name} className="cuisine-group-item">
+                <div className="cuisine-group-header">
+                  <strong>{group.name}</strong>
+                  <button className="remove-btn" onClick={() => removeCuisineGroup(group.name)} title="Gruppe entfernen">✕</button>
+                </div>
+                <div className="cuisine-group-children">
+                  {group.children.map(child => (
+                    <span key={child} className="cuisine-group-child-tag">
+                      {child}
+                      <button
+                        className="remove-child-btn"
+                        onClick={() => removeChildFromGroup(group.name, child)}
+                        title="Untertyp entfernen"
+                        aria-label={`${child} aus Gruppe entfernen`}
+                      >✕</button>
+                    </span>
+                  ))}
+                  <select
+                    className="cuisine-group-add-child"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) addChildToGroup(group.name, e.target.value);
+                    }}
+                    aria-label={`Untertyp zu ${group.name} hinzufügen`}
+                  >
+                    <option value="">+ Untertyp hinzufügen...</option>
+                    {lists.cuisineTypes
+                      .filter(c => !group.children.includes(c))
+                      .map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="settings-section">
