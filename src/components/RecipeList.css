@@ -80,7 +80,6 @@
   outline: none;
 }
 
-.recipe-favorites-filter-button,
 .view-mode-button {
   background: white;
   color: #1A1A1A;
@@ -94,7 +93,6 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.recipe-favorites-filter-button.active,
 .view-mode-button.active {
   background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
   color: white;
@@ -363,9 +361,9 @@
     position: fixed;
     bottom: 20px;
     left: 20px;
-    z-index: 1100;
+    z-index: 1101;
     color: white;
-    opacity: 0;
+    opacity: 0.85;
     width: 56px;
     height: 56px;
     min-width: 56px;
@@ -383,7 +381,6 @@
     will-change: transform;
     transform: var(--filter-transform, translateX(0));
     transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-                opacity 0.35s ease,
                 background 0.15s ease,
                 box-shadow 0.15s ease;
   }
@@ -393,56 +390,14 @@
     box-shadow: 0 8px 18px rgba(0,0,0,0.3);
   }
 
-  /* Slide the filter button off-screen to the left when the sort carousel expands */
-
   .filter-button:active {
     outline: none;
-  }
-
-  .filter-button.filter-visible {
-    opacity:0.85;
   }
 
   .filter-button.has-active-filters::after {
     top: 2px;
     right: 2px;
     border-color: white;
-  }
-
-  /* Mobile: Favorites button overlays the filter button at same fixed position */
-  .recipe-favorites-filter-button {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 1101;
-    width: 56px;
-    height: 56px;
-    min-width: 56px;
-    max-width: 56px;
-    border-radius: 50%;
-    padding: 0;
-    font-size: 1.4rem;
-    opacity: 0.85;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    will-change: transform;
-    transform: translateX(var(--fav-shift, 0px));
-    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
-                background 0.15s ease,
-                box-shadow 0.15s ease;
-  }
-
-  .recipe-favorites-filter-button.pressed {
-    transform: translateX(var(--fav-shift, 0px)) scale(1.15);
-    box-shadow: 0 6px 14px rgba(0,0,0,0.25);
-  }
-  
-  .recipe-favorites-filter-button .fav-label {
-    display: none;
   }
 
   /* Mobile: Add recipe button fixed at bottom right, mirrors fav button on the left */
