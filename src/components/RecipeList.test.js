@@ -744,6 +744,15 @@ describe('RecipeList - Filter Button Icon', () => {
 describe('RecipeList - Kulinarik Display', () => {
   beforeEach(() => {
     jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   test('displays kulinarik tags when recipe has kulinarik', () => {
@@ -785,6 +794,79 @@ describe('RecipeList - Kulinarik Display', () => {
 
     const kulinarikDiv = document.querySelector('.recipe-kulinarik');
     expect(kulinarikDiv).not.toBeInTheDocument();
+  });
+
+  test('limits kulinarik tags to 5 and shows "+N weitere" for the rest', () => {
+    const recipesWithManyKulinarik = [
+      {
+        id: '1',
+        title: 'Test Recipe',
+        kulinarik: ['Italienisch', 'Mediterran', 'Asiatisch', 'Mexikanisch', 'Griechisch', 'Französisch', 'Japanisch'],
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithManyKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Italienisch')).toBeInTheDocument();
+    expect(screen.getByText('Mediterran')).toBeInTheDocument();
+    expect(screen.getByText('Asiatisch')).toBeInTheDocument();
+    expect(screen.getByText('Mexikanisch')).toBeInTheDocument();
+    expect(screen.getByText('Griechisch')).toBeInTheDocument();
+    expect(screen.queryByText('Französisch')).not.toBeInTheDocument();
+    expect(screen.queryByText('Japanisch')).not.toBeInTheDocument();
+    expect(screen.getByText('+2 weitere')).toBeInTheDocument();
+  });
+
+  test('shows exactly 5 kulinarik tags without "+N weitere" when there are exactly 5', () => {
+    const recipesWithFiveKulinarik = [
+      {
+        id: '1',
+        title: 'Test Recipe',
+        kulinarik: ['Italienisch', 'Mediterran', 'Asiatisch', 'Mexikanisch', 'Griechisch'],
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithFiveKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    expect(screen.getByText('Italienisch')).toBeInTheDocument();
+    expect(screen.getByText('Mediterran')).toBeInTheDocument();
+    expect(screen.getByText('Asiatisch')).toBeInTheDocument();
+    expect(screen.getByText('Mexikanisch')).toBeInTheDocument();
+    expect(screen.getByText('Griechisch')).toBeInTheDocument();
+    expect(screen.queryByText(/\+\d+ weitere/)).not.toBeInTheDocument();
+  });
+
+  test('applies kulinarik-tag-more class to the overflow indicator', () => {
+    const recipesWithManyKulinarik = [
+      {
+        id: '1',
+        title: 'Test Recipe',
+        kulinarik: ['Italienisch', 'Mediterran', 'Asiatisch', 'Mexikanisch', 'Griechisch', 'Französisch'],
+      }
+    ];
+
+    render(
+      <RecipeList
+        recipes={recipesWithManyKulinarik}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+      />
+    );
+
+    const moreTag = screen.getByText('+1 weitere');
+    expect(moreTag).toHaveClass('kulinarik-tag-more');
   });
 
   test('does not show ingredient or step counts', () => {

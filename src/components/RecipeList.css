@@ -287,6 +287,8 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.25rem;
+  overflow: hidden;
+  max-height: 3.2rem;
 }
 
 .kulinarik-tag {
@@ -297,6 +299,10 @@
   padding: 0.15rem 0.6rem;
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+.kulinarik-tag-more {
+  background: linear-gradient(135deg, #888 0%, #555 100%);
 }
 
 .recipe-footer {

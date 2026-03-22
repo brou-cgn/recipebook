@@ -513,9 +513,21 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
                     <div className="recipe-kulinarik">
                       {Array.isArray(recipe.kulinarik)
-                        ? recipe.kulinarik.map((k, i) => (
-                            <span key={i} className="kulinarik-tag">{k}</span>
-                          ))
+                        ? (() => {
+                            const MAX_TAGS = 5;
+                            const displayed = recipe.kulinarik.slice(0, MAX_TAGS);
+                            const remaining = recipe.kulinarik.length - MAX_TAGS;
+                            return (
+                              <>
+                                {displayed.map((k, i) => (
+                                  <span key={i} className="kulinarik-tag">{k}</span>
+                                ))}
+                                {remaining > 0 && (
+                                  <span className="kulinarik-tag kulinarik-tag-more">+{remaining} weitere</span>
+                                )}
+                              </>
+                            );
+                          })()
                         : <span className="kulinarik-tag">{recipe.kulinarik}</span>
                       }
                     </div>
