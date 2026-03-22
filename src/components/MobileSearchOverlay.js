@@ -1,25 +1,42 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './MobileSearchOverlay.css';
 import { fuzzyFilter } from '../utils/fuzzySearch';
+import { getUserFavorites } from '../utils/userFavorites';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
 // a head-start before the keyboard appears, preventing a jarring layout jump.
 const FOCUS_DELAY_MS = 120;
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   // panelBottom tracks how far from the bottom of the screen the panel sits
   // (= 0 normally, > 0 when the software keyboard is visible on iOS)
   const [panelBottom, setPanelBottom] = useState(0);
   const inputRef = useRef(null);
 
-  // Reset search when overlay opens/closes
+  // Load favorite IDs when currentUser changes
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (currentUser?.id) {
+        const ids = await getUserFavorites(currentUser.id);
+        setFavoriteIds(ids);
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+    loadFavorites();
+  }, [currentUser?.id]);
+
+  // Reset search and favorites filter when overlay opens/closes
   useEffect(() => {
     if (isOpen) {
       setSearchTerm('');
       setDebouncedTerm('');
+      setShowFavoritesOnly(false);
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, FOCUS_DELAY_MS);
@@ -72,8 +89,12 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     };
   }, [isOpen]);
 
+  const baseRecipes = showFavoritesOnly
+    ? (recipes || []).filter((r) => favoriteIds.includes(r.id))
+    : (recipes || []);
+
   const filteredRecipes = fuzzyFilter(
-    recipes || [],
+    baseRecipes,
     debouncedTerm,
     (recipe) => recipe.title || ''
   );
@@ -122,7 +143,12 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             <p className="mobile-search-hint">Suchbegriff eingeben …</p>
           )}
           {debouncedTerm && filteredRecipes.length === 0 && (
-            <p className="mobile-search-no-results">Keine Rezepte gefunden</p>
+            <p className="mobile-search-no-results">
+              {showFavoritesOnly ? 'Kein Favorit gefunden' : 'Keine Rezepte gefunden'}
+            </p>
+          )}
+          {!debouncedTerm && filteredRecipes.length === 0 && showFavoritesOnly && (
+            <p className="mobile-search-no-results">Keine favorisierten Rezepte</p>
           )}
           {filteredRecipes.length > 0 && (
             <div className="mobile-search-tiles-grid">
@@ -152,6 +178,16 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
               ))}
             </div>
           )}
+          <div className="mobile-search-filter-pills">
+            <button
+              className={`mobile-search-filter-pill${showFavoritesOnly ? ' active' : ''}`}
+              onClick={() => setShowFavoritesOnly((prev) => !prev)}
+              aria-pressed={showFavoritesOnly}
+              title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
+            >
+              ★ Favoriten
+            </button>
+          </div>
         </div>
 
         {/* Search bar – anchored to the bottom of the panel, just above keyboard */}

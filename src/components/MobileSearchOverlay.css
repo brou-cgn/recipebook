@@ -236,6 +236,47 @@
   outline-offset: 2px;
 }
 
+/* ─── Favorites filter pill row ────────────────────────────────────────── */
+
+.mobile-search-filter-pills {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+
+.mobile-search-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(64, 44, 28, 0.3);
+  background: #ffffff;
+  color: #402C1C;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+
+.mobile-search-filter-pill:active {
+  transform: scale(0.95);
+}
+
+.mobile-search-filter-pill.active {
+  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.mobile-search-filter-pill:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
 /* "Abbrechen" button outside the pill */
 .mobile-search-cancel-btn {
   border: none;
