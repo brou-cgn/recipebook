@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import './GroupCreateDialog.css';
+import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 
 /**
  * Dialog for creating a new private group.
  * @param {Object} props
  * @param {Array}  props.allUsers - All users available for member selection
  * @param {Object} props.currentUser - The current authenticated user
- * @param {Function} props.onSave - Called with { name, memberIds, memberRoles } when saving
+ * @param {Function} props.onSave - Called with { name, memberIds, memberRoles, listKind } when saving
  * @param {Function} props.onCancel - Called when dialog is dismissed
  */
 function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
   const [name, setName] = useState('');
+  const [listKind, setListKind] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,11 +33,15 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
       setError('Bitte gib einen Listennamen ein.');
       return;
     }
+    if (!listKind) {
+      setError('Bitte wähle eine Art der Liste aus.');
+      return;
+    }
     setSaving(true);
     try {
       // Owner is always a member; selectedMemberIds already excludes the owner
       const memberIds = [currentUser.id, ...selectedMemberIds];
-      await onSave({ name: name.trim(), memberIds, memberRoles: {} });
+      await onSave({ name: name.trim(), memberIds, memberRoles: {}, listKind });
     } catch (err) {
       setError('Fehler beim Erstellen der Liste. Bitte erneut versuchen.');
       setSaving(false);
@@ -62,6 +68,23 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
               maxLength={80}
               autoFocus
             />
+          </div>
+
+          <div className="group-dialog-field">
+            <label htmlFor="group-list-kind">Art *</label>
+            <select
+              id="group-list-kind"
+              value={listKind}
+              onChange={(e) => setListKind(e.target.value)}
+              required
+            >
+              <option value="">– Bitte auswählen –</option>
+              {LIST_KIND_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {otherUsers.length > 0 && (

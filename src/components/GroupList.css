@@ -135,6 +135,18 @@
   color: #6a1b9a;
 }
 
+.group-list-kind-indicator {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  margin-left: 0.4rem;
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
 .group-card-meta {
   display: flex;
   gap: 1rem;
