@@ -88,3 +88,143 @@ describe('MobileSearchOverlay – cuisine group children in search', () => {
     expect(screen.getByText('Europäische Küche')).toBeInTheDocument();
   });
 });
+
+describe('MobileSearchOverlay – dynamic cuisine type expansion on search', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('adds extra matching cuisine types when search reduces visible count below max', async () => {
+    // 7 cuisine types, each with at least 1 recipe. Only the top 5 appear by default.
+    // When user types "isch", only some of the top-5 match, so the remainder should
+    // be filled from the full sorted list.
+    const extendedCuisineTypes = [
+      'Französisch', 'Spanisch', 'Japanisch', 'Mexikanisch', 'Indisch',
+      'Griechisch', 'Türkisch',
+    ];
+    const extendedRecipes = extendedCuisineTypes.map((k, i) => ({
+      id: String(i + 1),
+      title: `Rezept ${i + 1}`,
+      kulinarik: [k],
+    }));
+
+    render(
+      <MobileSearchOverlay
+        isOpen={true}
+        onClose={jest.fn()}
+        recipes={extendedRecipes}
+        onSelectRecipe={jest.fn()}
+        onSearch={jest.fn()}
+        currentUser={null}
+        cuisineTypes={extendedCuisineTypes}
+        cuisineGroups={[]}
+        onCuisineFilterChange={jest.fn()}
+      />
+    );
+
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'isch' } });
+
+    // All 7 types contain "isch", so up to MAX_CUISINE_TYPE_PILLS (5) should appear
+    // even though only a subset are in the initial top-5.
+    await waitFor(() => {
+      const pills = screen.getAllByRole('button', { name: /isch/i });
+      expect(pills.length).toBeGreaterThanOrEqual(5);
+    });
+  });
+
+  test('does not exceed MAX_CUISINE_TYPE_PILLS from dynamic expansion alone', async () => {
+    const extendedCuisineTypes = [
+      'Französisch', 'Spanisch', 'Japanisch', 'Mexikanisch', 'Indisch',
+      'Griechisch', 'Türkisch',
+    ];
+    const extendedRecipes = extendedCuisineTypes.map((k, i) => ({
+      id: String(i + 1),
+      title: `Rezept ${i + 1}`,
+      kulinarik: [k],
+    }));
+
+    render(
+      <MobileSearchOverlay
+        isOpen={true}
+        onClose={jest.fn()}
+        recipes={extendedRecipes}
+        onSelectRecipe={jest.fn()}
+        onSearch={jest.fn()}
+        currentUser={null}
+        cuisineTypes={extendedCuisineTypes}
+        cuisineGroups={[]}
+        onCuisineFilterChange={jest.fn()}
+      />
+    );
+
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'isch' } });
+
+    await waitFor(() => {
+      const pills = screen.getAllByRole('button', { name: /isch/i });
+      // Exactly 5 cuisine type pills (the cancel button does not match /isch/)
+      expect(pills.length).toBe(5);
+    });
+  });
+
+  test('shows all matching types when fewer than max match the search', async () => {
+    // Only 2 cuisine types, both matching the search – both should be shown.
+    const fewCuisineTypes = ['Griechisch', 'Türkisch'];
+    const fewRecipes = fewCuisineTypes.map((k, i) => ({
+      id: String(i + 1),
+      title: `Rezept ${i + 1}`,
+      kulinarik: [k],
+    }));
+
+    render(
+      <MobileSearchOverlay
+        isOpen={true}
+        onClose={jest.fn()}
+        recipes={fewRecipes}
+        onSelectRecipe={jest.fn()}
+        onSearch={jest.fn()}
+        currentUser={null}
+        cuisineTypes={fewCuisineTypes}
+        cuisineGroups={[]}
+        onCuisineFilterChange={jest.fn()}
+      />
+    );
+
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'isch' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Griechisch')).toBeInTheDocument();
+      expect(screen.getByText('Türkisch')).toBeInTheDocument();
+    });
+  });
+
+  test('cuisine types without recipes are not added by dynamic expansion', async () => {
+    // 'Spanisch' has no recipes → should not appear even though it matches 'isch'
+    const types = ['Griechisch', 'Spanisch'];
+    const recipesOnlyGreek = [{ id: '1', title: 'Tzatziki', kulinarik: ['Griechisch'] }];
+
+    render(
+      <MobileSearchOverlay
+        isOpen={true}
+        onClose={jest.fn()}
+        recipes={recipesOnlyGreek}
+        onSelectRecipe={jest.fn()}
+        onSearch={jest.fn()}
+        currentUser={null}
+        cuisineTypes={types}
+        cuisineGroups={[]}
+        onCuisineFilterChange={jest.fn()}
+      />
+    );
+
+    const input = screen.getByRole('searchbox');
+    fireEvent.change(input, { target: { value: 'isch' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Griechisch')).toBeInTheDocument();
+      expect(screen.queryByText('Spanisch')).not.toBeInTheDocument();
+    });
+  });
+});

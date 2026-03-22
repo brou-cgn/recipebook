@@ -32,11 +32,10 @@ function incrementCuisineUsage(cuisineName) {
 }
 
 /**
- * Compute the top cuisine type pills from the given recipes.
- * Sorts by: usage frequency (localStorage) desc, then recipe count desc.
- * Returns at most MAX_CUISINE_TYPE_PILLS entries.
+ * Compute all cuisine types sorted by usage frequency (localStorage) desc,
+ * then recipe count desc. Only includes types that have at least one recipe.
  */
-function computeTopCuisineTypes(recipes, cuisineTypes) {
+function computeAllSortedCuisineTypes(recipes, cuisineTypes) {
   if (!cuisineTypes || cuisineTypes.length === 0) return [];
   const recipeList = recipes || [];
   const recipeCounts = {};
@@ -53,8 +52,16 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
       const usageDiff = (usageCounts[b] || 0) - (usageCounts[a] || 0);
       if (usageDiff !== 0) return usageDiff;
       return (recipeCounts[b] || 0) - (recipeCounts[a] || 0);
-    })
-    .slice(0, MAX_CUISINE_TYPE_PILLS);
+    });
+}
+
+/**
+ * Compute the top cuisine type pills from the given recipes.
+ * Sorts by: usage frequency (localStorage) desc, then recipe count desc.
+ * Returns at most MAX_CUISINE_TYPE_PILLS entries.
+ */
+function computeTopCuisineTypes(recipes, cuisineTypes) {
+  return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
 function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange }) {
@@ -192,6 +199,13 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     // and will reflect updated usage counts the next time the overlay opens.
   );
 
+  // Full sorted list (without the MAX_CUISINE_TYPE_PILLS cap) used to dynamically
+  // expand search results when the filtered count drops below the cap.
+  const allSortedCuisineTypes = useMemo(
+    () => computeAllSortedCuisineTypes(recipes, cuisineTypes),
+    [recipes, cuisineTypes]
+  );
+
   const handleCuisinePillClick = (cuisineName) => {
     setSelectedCuisines((prev) => {
       const isSelected = prev.includes(cuisineName);
@@ -216,11 +230,16 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     const lower = debouncedTerm.toLowerCase();
     const result = [];
     const seen = new Set();
+    const groupNames = new Set((cuisineGroups || []).map((g) => g.name));
+    let cuisineTypeCount = 0;
     allCuisinePills.forEach((name) => {
       if (name.toLowerCase().includes(lower)) {
         if (!seen.has(name)) {
           result.push(name);
           seen.add(name);
+          if (!groupNames.has(name)) {
+            cuisineTypeCount++;
+          }
         }
         // If this is a cuisine group, also show its child types
         const group = (cuisineGroups || []).find((g) => g.name === name);
@@ -229,13 +248,27 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             if (!seen.has(child)) {
               result.push(child);
               seen.add(child);
+              cuisineTypeCount++;
             }
           });
         }
       }
     });
+    // If fewer than MAX_CUISINE_TYPE_PILLS cuisine type pills matched, dynamically
+    // add further matching types from the full sorted list (sorted by usage frequency
+    // and recipe count) to keep the list as helpful as possible.
+    if (cuisineTypeCount < MAX_CUISINE_TYPE_PILLS) {
+      for (const type of allSortedCuisineTypes) {
+        if (cuisineTypeCount >= MAX_CUISINE_TYPE_PILLS) break;
+        if (!seen.has(type) && type.toLowerCase().includes(lower)) {
+          result.push(type);
+          seen.add(type);
+          cuisineTypeCount++;
+        }
+      }
+    }
     return result;
-  }, [allCuisinePills, debouncedTerm, cuisineGroups]);
+  }, [allCuisinePills, debouncedTerm, cuisineGroups, allSortedCuisineTypes]);
 
   if (!isOpen) return null;
 
