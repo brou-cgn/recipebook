@@ -3,6 +3,7 @@ import './GroupList.css';
 import GroupCreateDialog from './GroupCreateDialog';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 
 /**
  * Lists the groups the current user belongs to.
@@ -106,6 +107,11 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                   <div className="group-card-content">
                     <h3>{group.name}</h3>
                     <span className="group-type-indicator private">Privat</span>
+                    {group.listKind && (
+                      <span className="group-list-kind-indicator">
+                        {LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}
+                      </span>
+                    )}
                     <div className="group-card-meta">
                       <span>{(group.memberIds || []).length} Mitglied(er)</span>
                       {ownerName && (

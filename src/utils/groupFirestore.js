@@ -8,6 +8,7 @@
  *   - name: string
  *   - memberIds: string[]
  *   - memberRoles: { [userId]: string }  // placeholder for future role management
+ *   - listKind: "interactive" | "classic" | null (null for groups created before this attribute was introduced)
  */
 
 import { db, functions } from '../firebase';
@@ -30,6 +31,15 @@ import {
 import { removeUndefinedFields } from './firestoreUtils';
 
 export const PUBLIC_GROUP_NAME = 'Öffentlich';
+
+/**
+ * Available options for the "Art" (kind) attribute of private lists.
+ * Used in both list creation and display.
+ */
+export const LIST_KIND_OPTIONS = [
+  { value: 'interactive', label: 'Interaktive Liste' },
+  { value: 'classic', label: 'Klassische Sammlung' },
+];
 
 /**
  * Ensure a system-wide "public" group exists. Creates it if missing.
@@ -114,7 +124,7 @@ export const getGroups = async (userId) => {
 
 /**
  * Add a new private group to Firestore
- * @param {Object} groupData - Group data (name, memberIds, memberRoles)
+ * @param {Object} groupData - Group data (name, memberIds, memberRoles, listKind)
  * @param {string} ownerId - ID of the user creating the group
  * @returns {Promise<Object>} Promise resolving to the created group with ID
  */
@@ -126,6 +136,7 @@ export const addGroup = async (groupData, ownerId) => {
       ownerId,
       memberIds: Array.isArray(groupData.memberIds) ? [...new Set([ownerId, ...groupData.memberIds])] : [ownerId],
       memberRoles: groupData.memberRoles || {},
+      listKind: groupData.listKind || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
