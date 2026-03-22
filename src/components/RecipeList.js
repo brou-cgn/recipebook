@@ -83,13 +83,23 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange }) {
   const hasActiveFilters = !!(activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0
   ));
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [internalShowFavoritesOnly, setInternalShowFavoritesOnly] = useState(false);
+  const isControlled = showFavoritesOnlyProp !== undefined;
+  const showFavoritesOnly = isControlled ? showFavoritesOnlyProp : internalShowFavoritesOnly;
+  const setShowFavoritesOnly = (value) => {
+    const newValue = typeof value === 'function' ? value(showFavoritesOnly) : value;
+    if (isControlled) {
+      onShowFavoritesOnlyChange?.(newValue);
+    } else {
+      setInternalShowFavoritesOnly(newValue);
+    }
+  };
   const [filterVisible, setFilterVisible] = useState(true);
   const [favPressed, setFavPressed] = useState(false);
   const [addPressed, setAddPressed] = useState(false);

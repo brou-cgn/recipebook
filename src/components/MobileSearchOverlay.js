@@ -8,7 +8,7 @@ const DEBOUNCE_DELAY_MS = 200;
 // a head-start before the keyboard appears, preventing a jarring layout jump.
 const FOCUS_DELAY_MS = 120;
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -36,13 +36,13 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     if (isOpen) {
       setSearchTerm('');
       setDebouncedTerm('');
-      setShowFavoritesOnly(false);
+      setShowFavoritesOnly(showFavoritesOnlyProp ?? false);
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, FOCUS_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, showFavoritesOnlyProp]);
 
   // Debounce search term
   useEffect(() => {
@@ -181,7 +181,11 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
           <div className="mobile-search-filter-pills">
             <button
               className={`mobile-search-filter-pill${showFavoritesOnly ? ' active' : ''}`}
-              onClick={() => setShowFavoritesOnly((prev) => !prev)}
+              onClick={() => {
+                const newValue = !showFavoritesOnly;
+                setShowFavoritesOnly(newValue);
+                onFavoritesToggle?.(newValue);
+              }}
               aria-pressed={showFavoritesOnly}
               title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
             >

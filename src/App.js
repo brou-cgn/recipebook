@@ -203,6 +203,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPageOpen, setIsFilterPageOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
@@ -1233,6 +1234,8 @@ function App() {
             activePrivateListId={recipeFilters.selectedGroup || null}
             activeFilters={recipeFilters}
             onClearCuisineFilter={handleClearCuisineFilter}
+            showFavoritesOnly={showFavoritesOnly}
+            onShowFavoritesOnlyChange={setShowFavoritesOnly}
           />
         </>
       )}
@@ -1262,6 +1265,8 @@ function App() {
           handleSelectRecipe(recipe);
         }}
         onSearch={handleApplySearch}
+        showFavoritesOnly={showFavoritesOnly}
+        onFavoritesToggle={setShowFavoritesOnly}
       />
     </div>
   );
