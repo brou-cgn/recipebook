@@ -46,19 +46,11 @@
   }
 }
 
-/* ─── Results tiles area (scrollable, sits above the input bar) ─────────── */
+/* ─── Results tiles area (single row carousel, sits above the input bar) ─── */
 
 .mobile-search-results {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   padding: 12px 12px 4px;
-  /* Scrollbar hidden on iOS, subtle on Android */
-  scrollbar-width: none;
-}
-
-.mobile-search-results::-webkit-scrollbar {
-  display: none;
 }
 
 .mobile-search-hint {
@@ -77,24 +69,42 @@
   padding: 0 1rem;
 }
 
-/* ─── Tiles grid ────────────────────────────────────────────────────────── */
+/* ─── Tiles carousel (single horizontal row) ────────────────────────────── */
 
 .mobile-search-tiles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.mobile-search-tiles-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-search-tile {
+  flex: 0 0 auto;
+  /* Panel has 12px padding on each side (24px) + 2 gaps × 8px (16px) = 40px total.
+     Divide by 3.3 so ~3 full tiles are visible with a peek of the 4th to hint scrollability. */
+  width: calc((100vw - 40px) / 3.3);
+  max-width: 105px;
+  min-width: 72px;
+  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #ffffff;
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
   text-align: center;
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
   touch-action: manipulation;
@@ -133,7 +143,7 @@
 }
 
 .mobile-search-tile-title {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #1c1c1e;
   line-height: 1.3;
