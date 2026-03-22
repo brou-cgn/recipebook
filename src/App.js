@@ -1222,6 +1222,7 @@ function App() {
           recipes={recipes}
           allUsers={allUsers}
           onSelectRecipe={handleSelectRecipe}
+          currentUser={currentUser}
         />
       ) : currentView === 'kueche' ? (
         <Kueche
