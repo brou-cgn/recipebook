@@ -275,6 +275,63 @@ describe('MobileSearchOverlay – cuisine pills stay active when favorites toggl
   });
 });
 
+describe('MobileSearchOverlay – author pills filtered by search term', () => {
+  const mockAuthors = [
+    { id: 'u1', name: 'Alice' },
+    { id: 'u2', name: 'Bob' },
+    { id: 'u3', name: 'Charlie' },
+  ];
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('shows all authors when search term is empty', () => {
+    renderOverlay({ availableAuthors: mockAuthors, onAuthorFilterChange: jest.fn() });
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.getByText('Charlie')).toBeInTheDocument();
+  });
+
+  test('filters authors to match the search term', async () => {
+    renderOverlay({ availableAuthors: mockAuthors, onAuthorFilterChange: jest.fn() });
+    const input = screen.getByRole('searchbox');
+
+    fireEvent.change(input, { target: { value: 'ali' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice')).toBeInTheDocument();
+      expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+      expect(screen.queryByText('Charlie')).not.toBeInTheDocument();
+    });
+  });
+
+  test('author filtering is case-insensitive', async () => {
+    renderOverlay({ availableAuthors: mockAuthors, onAuthorFilterChange: jest.fn() });
+    const input = screen.getByRole('searchbox');
+
+    fireEvent.change(input, { target: { value: 'BOB' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+    });
+  });
+
+  test('shows no author pills when no author matches the search term', async () => {
+    renderOverlay({ availableAuthors: mockAuthors, onAuthorFilterChange: jest.fn() });
+    const input = screen.getByRole('searchbox');
+
+    fireEvent.change(input, { target: { value: 'xyz' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Alice')).not.toBeInTheDocument();
+      expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+      expect(screen.queryByText('Charlie')).not.toBeInTheDocument();
+    });
+  });
+});
+
 describe('MobileSearchOverlay – active cuisine pills shown leftmost', () => {
   beforeEach(() => {
     localStorage.clear();

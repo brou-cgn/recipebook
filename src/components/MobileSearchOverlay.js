@@ -299,13 +299,17 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     return [...active, ...inactive];
   }, [visibleCuisinePills, selectedCuisines]);
 
-  // Author pills: active (selected) authors shown first
+  // Author pills: filtered by search term, active (selected) authors shown first
   const orderedAuthorPills = useMemo(() => {
-    const authors = availableAuthors || [];
+    let authors = availableAuthors || [];
+    if (debouncedTerm) {
+      const lower = debouncedTerm.toLowerCase();
+      authors = authors.filter((a) => a.name.toLowerCase().includes(lower));
+    }
     const active = authors.filter((a) => selectedAuthors.includes(a.id));
     const inactive = authors.filter((a) => !selectedAuthors.includes(a.id));
     return [...active, ...inactive];
-  }, [availableAuthors, selectedAuthors]);
+  }, [availableAuthors, selectedAuthors, debouncedTerm]);
 
   if (!isOpen) return null;
 
