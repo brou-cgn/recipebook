@@ -88,7 +88,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     setAddMemberError('');
     setAddMemberSuccess('');
 
-    const emailTrimmed = inviteEmail.trim();
+    const emailTrimmed = inviteEmail.trim().toLowerCase();
     const hasSelections = addMemberIds.length > 0;
     const hasEmail = emailTrimmed.length > 0;
 
