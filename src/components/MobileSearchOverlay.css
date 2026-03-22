@@ -254,10 +254,9 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 4px 12px 8px;
-  /* Show at most two pill rows. Each pill is ~32px tall (6px padding × 2 + ~20px line height).
-     max-height = 2 rows × pill height + 1 gap between rows = 2×32 + 8 = 72px */
-  max-height: 72px;
-  overflow: hidden;
+  /* Allow up to ~30% of the viewport height; scroll vertically if more types exist */
+  max-height: 30vh;
+  overflow-y: auto;
   flex-shrink: 0;
 }
 
