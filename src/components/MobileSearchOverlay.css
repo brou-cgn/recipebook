@@ -256,9 +256,11 @@
   gap: 8px;
   padding: 4px 12px 8px;
   /* Limit to exactly 2 rows; excess pills overflow into a horizontal carousel.
-     Pill height ≈ 34 px (12 px vertical padding + 3 px border + ~19 px text).
-     Two rows + one 8 px gap = 76 px. */
-  max-height: 76px;
+     Pill height = 12 px vertical padding + 3 px border + ~17 px line-height
+                 ≈ 32 px. Two rows + one 8 px gap = 72 px (content area).
+     Because box-sizing: border-box applies globally, the container padding
+     (4 px top + 8 px bottom = 12 px) must be added: 72 + 12 = 84 px. */
+  max-height: 84px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
