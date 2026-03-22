@@ -83,7 +83,7 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, activePrivateListName, activePrivateListId, activeFilters }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters }) {
   const hasActiveFilters = !!(activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -480,14 +480,39 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
           )}
         </div>
       </div>
+
+      {searchTerm && searchTerm.trim() && (
+        <div className="search-active-indicator">
+          <span className="search-active-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            {searchTerm.trim()}
+          </span>
+          {onClearSearch && (
+            <button
+              className="search-active-clear"
+              onClick={onClearSearch}
+              aria-label="Suche zurücksetzen"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
       
       {recipeGroups.length === 0 ? (
         <div className="empty-state">
-          <p>{showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
+          <p>{searchTerm && searchTerm.trim() ? 'Keine Rezepte gefunden!' : showFavoritesOnly ? 'Keine favorisierten Rezepte!' : 'Noch keine Rezepte!'}</p>
           <p className="empty-hint">
-            {showFavoritesOnly 
-              ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
-              : 'Das kannst du ändern, lege direkt ein Rezept an.'}
+            {searchTerm && searchTerm.trim()
+              ? `Für "${searchTerm.trim()}" wurden keine passenden Rezepte gefunden.`
+              : showFavoritesOnly 
+                ? 'Markieren Sie Rezepte als Favoriten, um sie schnell zu finden' 
+                : 'Das kannst du ändern, lege direkt ein Rezept an.'}
           </p>
         </div>
       ) : (
