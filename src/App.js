@@ -927,6 +927,15 @@ function App() {
     setSearchTerm(term);
   };
 
+  const handleApplySearch = (term) => {
+    setSearchTerm(term);
+    setIsMobileSearchOpen(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+  };
+
   const handleOpenSearch = () => {
     // On mobile (≤768px) open the fullscreen overlay; on desktop use the header search
     if (window.innerWidth <= 768) {
@@ -1202,6 +1211,7 @@ function App() {
             searchTerm={searchTerm}
             onOpenFilterPage={handleOpenFilterPage}
             onOpenSearch={handleOpenSearch}
+            onClearSearch={handleClearSearch}
             activePrivateListName={activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || null}
             activeFilters={recipeFilters}
@@ -1232,6 +1242,7 @@ function App() {
           setIsMobileSearchOpen(false);
           handleSelectRecipe(recipe);
         }}
+        onSearch={handleApplySearch}
       />
     </div>
   );

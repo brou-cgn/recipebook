@@ -7,7 +7,7 @@ const DEBOUNCE_DELAY_MS = 200;
 // a head-start before the keyboard appears, preventing a jarring layout jump.
 const FOCUS_DELAY_MS = 120;
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   // panelBottom tracks how far from the bottom of the screen the panel sits
@@ -85,7 +85,11 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe }) {
 
   const handleInputKeyDown = (e) => {
     if (e.key === 'Enter') {
-      if (filteredRecipes.length > 0) {
+      const term = debouncedTerm || searchTerm;
+      if (term && onSearch) {
+        onSearch(term);
+        onClose();
+      } else if (filteredRecipes.length > 0) {
         handleSelect(filteredRecipes[0]);
       }
     }
