@@ -103,11 +103,11 @@ function renderKulinarikTags(kulinarik) {
 }
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenFilterPage, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange }) {
-  const hasActiveFilters = !!(activeFilters && (
+  const hasActiveFilters = !!(showFavoritesOnlyProp || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0
-  ));
+  )));
   const [internalShowFavoritesOnly, setInternalShowFavoritesOnly] = useState(false);
   const isControlled = showFavoritesOnlyProp !== undefined;
   const showFavoritesOnly = isControlled ? showFavoritesOnlyProp : internalShowFavoritesOnly;

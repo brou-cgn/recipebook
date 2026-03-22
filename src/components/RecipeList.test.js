@@ -739,6 +739,54 @@ describe('RecipeList - Filter Button Icon', () => {
     expect(imgInButton).toHaveAttribute('src', mockBase64Active);
     expect(imgInButton).toHaveAttribute('alt', 'Filter aktiv');
   });
+
+  test('shows filterButtonActive when showFavoritesOnly is true', async () => {
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽'
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        activeFilters={{}}
+        showFavoritesOnly={true}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toHaveClass('has-active-filters');
+    expect(filterButton).toHaveTextContent('🔽');
+  });
+
+  test('shows filterButton (inactive) when showFavoritesOnly is false and no other filters', async () => {
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽'
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onOpenFilterPage={() => {}}
+        activeFilters={{}}
+        showFavoritesOnly={false}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).not.toHaveClass('has-active-filters');
+    expect(filterButton).toHaveTextContent('⚙');
+  });
 });
 
 describe('RecipeList - Kulinarik Display', () => {

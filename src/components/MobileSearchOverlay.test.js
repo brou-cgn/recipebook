@@ -228,3 +228,49 @@ describe('MobileSearchOverlay – dynamic cuisine type expansion on search', () 
     });
   });
 });
+
+describe('MobileSearchOverlay – cuisine pills stay active when favorites toggled', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    const { expandCuisineSelection } = require('../utils/customLists');
+    expandCuisineSelection.mockImplementation((selected) => selected);
+  });
+
+  test('cuisine pill remains active after favorites pill is toggled on', () => {
+    const onFavoritesToggle = jest.fn();
+    renderOverlay({ onFavoritesToggle });
+
+    // Click a cuisine pill to select it
+    const cuisinePill = screen.getByText('Japanische Küche');
+    fireEvent.click(cuisinePill);
+    expect(cuisinePill).toHaveClass('active');
+
+    // Now toggle favorites on
+    const favoritesPill = screen.getByText('★ Favoriten');
+    fireEvent.click(favoritesPill);
+    expect(favoritesPill).toHaveClass('active');
+
+    // Cuisine pill should still be active
+    expect(cuisinePill).toHaveClass('active');
+  });
+
+  test('multiple cuisine pills remain active after favorites pill is toggled', () => {
+    renderOverlay();
+
+    // Select two cuisine pills
+    const japanPill = screen.getByText('Japanische Küche');
+    const itaPill = screen.getByText('Italienische Küche');
+    fireEvent.click(japanPill);
+    fireEvent.click(itaPill);
+    expect(japanPill).toHaveClass('active');
+    expect(itaPill).toHaveClass('active');
+
+    // Toggle favorites
+    const favoritesPill = screen.getByText('★ Favoriten');
+    fireEvent.click(favoritesPill);
+
+    // Both cuisine pills should still be active
+    expect(japanPill).toHaveClass('active');
+    expect(itaPill).toHaveClass('active');
+  });
+});
