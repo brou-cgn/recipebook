@@ -18,6 +18,7 @@ import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
 import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
+import Tagesmenu from './components/Tagesmenu';
 import UniversalImportModal from './components/UniversalImportModal';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import { 
@@ -1022,6 +1023,19 @@ function App() {
     [groups, currentUser]
   );
 
+  // Interactive lists are private groups with listKind === 'interactive' that the
+  // current user owns or is a member of.
+  const interactiveLists = useMemo(
+    () => groups.filter(
+      (g) =>
+        g.type === 'private' &&
+        g.listKind === 'interactive' &&
+        (g.ownerId === currentUser?.id ||
+          (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)))
+    ),
+    [groups, currentUser]
+  );
+
   const handleUniversalImport = (recipe) => {
     setShowUniversalImport(false);
     setSharedData({ images: [], title: '', text: '', url: '' });
@@ -1125,6 +1139,7 @@ function App() {
         onLogout={handleLogout}
         visible={headerVisible}
         onSearchChange={handleSearchChange}
+        interactiveLists={interactiveLists}
       />
       {isSettingsOpen ? (
         <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
@@ -1200,6 +1215,13 @@ function App() {
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
           recipes={recipes}
+        />
+      ) : currentView === 'tagesmenu' ? (
+        <Tagesmenu
+          interactiveLists={interactiveLists}
+          recipes={recipes}
+          allUsers={allUsers}
+          onSelectRecipe={handleSelectRecipe}
         />
       ) : currentView === 'kueche' ? (
         <Kueche

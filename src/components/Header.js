@@ -29,7 +29,8 @@ const Header = forwardRef(function Header({
   onLogout,
   onUserManagement,
   visible = true,
-  onSearchChange
+  onSearchChange,
+  interactiveLists = []
 }, ref) {
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [appLogoImage, setAppLogoImage] = useState(null);
@@ -241,6 +242,14 @@ const Header = forwardRef(function Header({
                       >
                         Küche
                       </button>
+                      {interactiveLists.length > 0 && (
+                        <button
+                          className={`menu-item ${currentView === 'tagesmenu' ? 'active' : ''}`}
+                          onClick={() => handleViewChangeInternal('tagesmenu')}
+                        >
+                          Tagesmenü
+                        </button>
+                      )}
                     </div>
                   )}
                   {visibleFaqs.length > 0 && (
