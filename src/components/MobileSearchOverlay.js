@@ -351,7 +351,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
           </button>
         </div>
 
-        {/* Kulinariktypen – two-row wrapped grid below the favorites filter */}
+        {/* Kulinariktypen – two-row horizontal carousel below the favorites filter */}
         {visibleCuisinePills.length > 0 && (
           <div className="mobile-search-cuisine-grid">
             {visibleCuisinePills.map((name) => (

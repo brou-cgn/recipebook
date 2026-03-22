@@ -246,18 +246,29 @@
   flex-shrink: 0;
 }
 
-/* ─── Kulinariktypen two-row grid (below favorites filter) ──────────────── */
+/* ─── Kulinariktypen two-row carousel (below favorites filter) ───────────── */
 
 .mobile-search-cuisine-grid {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 8px;
   padding: 4px 12px 8px;
-  /* Allow up to ~30% of the viewport height; scroll vertically if more types exist */
-  max-height: 30vh;
-  overflow-y: auto;
+  /* Limit to exactly 2 rows; excess pills overflow into a horizontal carousel.
+     Pill height ≈ 34 px (12 px vertical padding + 3 px border + ~19 px text).
+     Two rows + one 8 px gap = 76 px. */
+  max-height: 76px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
   flex-shrink: 0;
+}
+
+.mobile-search-cuisine-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-search-filter-pill {
