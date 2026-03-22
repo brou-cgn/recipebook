@@ -232,33 +232,8 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
         className="mobile-search-panel"
         style={{ bottom: panelBottom }}
       >
-        {/* Tiles grid – displayed in the upper portion of the panel */}
+        {/* Tiles carousel – displayed at the top of the panel */}
         <div className="mobile-search-results" role="listbox" aria-label="Suchergebnisse">
-          <div className="mobile-search-filter-pills">
-            <button
-              className={`mobile-search-filter-pill${showFavoritesOnly ? ' active' : ''}`}
-              onClick={() => {
-                const newValue = !showFavoritesOnly;
-                setShowFavoritesOnly(newValue);
-                onFavoritesToggle?.(newValue);
-              }}
-              aria-pressed={showFavoritesOnly}
-              title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
-            >
-              ★ Favoriten
-            </button>
-            {visibleCuisinePills.map((name) => (
-              <button
-                key={name}
-                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
-                onClick={() => handleCuisinePillClick(name)}
-                aria-pressed={selectedCuisines.includes(name)}
-                title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
           {!debouncedTerm && !showFavoritesOnly && selectedCuisines.length === 0 && (
             <p className="mobile-search-hint">Suchbegriff eingeben …</p>
           )}
@@ -302,6 +277,39 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             </div>
           )}
         </div>
+
+        {/* Favorites filter – directly below the carousel */}
+        <div className="mobile-search-favorites-row">
+          <button
+            className={`mobile-search-filter-pill${showFavoritesOnly ? ' active' : ''}`}
+            onClick={() => {
+              const newValue = !showFavoritesOnly;
+              setShowFavoritesOnly(newValue);
+              onFavoritesToggle?.(newValue);
+            }}
+            aria-pressed={showFavoritesOnly}
+            title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
+          >
+            ★ Favoriten
+          </button>
+        </div>
+
+        {/* Kulinariktypen – two-row wrapped grid below the favorites filter */}
+        {visibleCuisinePills.length > 0 && (
+          <div className="mobile-search-cuisine-grid">
+            {visibleCuisinePills.map((name) => (
+              <button
+                key={name}
+                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCuisines.includes(name) ? ' active' : ''}`}
+                onClick={() => handleCuisinePillClick(name)}
+                aria-pressed={selectedCuisines.includes(name)}
+                title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Search bar – anchored to the bottom of the panel, just above keyboard */}
         <div className="mobile-search-bar-row">

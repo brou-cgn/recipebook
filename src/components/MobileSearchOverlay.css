@@ -236,22 +236,29 @@
   outline-offset: 2px;
 }
 
-/* ─── Favorites filter pill row ────────────────────────────────────────── */
+/* ─── Favorites filter row (standalone, below carousel) ────────────────── */
 
-.mobile-search-filter-pills {
+.mobile-search-favorites-row {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 8px;
-  padding: 8px 0 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  align-items: center;
+  padding: 8px 12px 4px;
+  flex-shrink: 0;
 }
 
-.mobile-search-filter-pills::-webkit-scrollbar {
-  display: none;
+/* ─── Kulinariktypen two-row grid (below favorites filter) ──────────────── */
+
+.mobile-search-cuisine-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 12px 8px;
+  /* Show at most two pill rows. Each pill is ~32px tall (6px padding × 2 + ~20px line height).
+     max-height = 2 rows × pill height + 1 gap between rows = 2×32 + 8 = 72px */
+  max-height: 72px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .mobile-search-filter-pill {
