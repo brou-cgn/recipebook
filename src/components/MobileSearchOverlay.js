@@ -139,7 +139,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       >
         {/* Tiles grid – displayed in the upper portion of the panel */}
         <div className="mobile-search-results" role="listbox" aria-label="Suchergebnisse">
-          {!debouncedTerm && (
+          {!debouncedTerm && !showFavoritesOnly && (
             <p className="mobile-search-hint">Suchbegriff eingeben …</p>
           )}
           {debouncedTerm && filteredRecipes.length === 0 && (
