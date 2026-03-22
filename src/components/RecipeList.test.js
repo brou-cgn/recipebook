@@ -76,12 +76,9 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter=""
+        showFavoritesOnly={true}
       />
     );
-    
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Rezepte')).toBeInTheDocument();
   });
@@ -106,12 +103,9 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Main Course"
+        showFavoritesOnly={true}
       />
     );
-    
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Main Course')).toBeInTheDocument();
   });
@@ -136,12 +130,9 @@ describe('RecipeList - Dynamic Heading', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         categoryFilter="Appetizer"
+        showFavoritesOnly={true}
       />
     );
-    
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
     
     expect(screen.getByText('Meine Appetizer')).toBeInTheDocument();
   });
@@ -520,6 +511,7 @@ describe('RecipeList - Favorites Filter with Versions', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         currentUser={currentUser}
+        showFavoritesOnly={true}
       />
     );
 
@@ -527,10 +519,6 @@ describe('RecipeList - Favorites Filter with Versions', () => {
     await waitFor(() => {
       expect(userFavorites.getUserFavorites).toHaveBeenCalled();
     });
-
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
 
     // The recipe group should be displayed because variation1 is favorited
     // The top recipe shown should be variation1 (the favorited one)
@@ -551,6 +539,7 @@ describe('RecipeList - Favorites Filter with Versions', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         currentUser={currentUser}
+        showFavoritesOnly={true}
       />
     );
 
@@ -558,10 +547,6 @@ describe('RecipeList - Favorites Filter with Versions', () => {
     await waitFor(() => {
       expect(userFavorites.getUserFavorites).toHaveBeenCalled();
     });
-
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
 
     // No recipes should be shown
     expect(screen.getByText('Keine favorisierten Rezepte!')).toBeInTheDocument();
@@ -581,6 +566,7 @@ describe('RecipeList - Favorites Filter with Versions', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         currentUser={currentUser}
+        showFavoritesOnly={true}
       />
     );
 
@@ -588,10 +574,6 @@ describe('RecipeList - Favorites Filter with Versions', () => {
     await waitFor(() => {
       expect(userFavorites.getUserFavorites).toHaveBeenCalled();
     });
-
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
 
     // The recipe group should be displayed and show the original (which is favorited)
     await waitFor(() => {
@@ -611,6 +593,7 @@ describe('RecipeList - Favorites Filter with Versions', () => {
         onSelectRecipe={() => {}}
         onAddRecipe={() => {}}
         currentUser={currentUser}
+        showFavoritesOnly={true}
       />
     );
 
@@ -618,10 +601,6 @@ describe('RecipeList - Favorites Filter with Versions', () => {
     await waitFor(() => {
       expect(userFavorites.getUserFavorites).toHaveBeenCalled();
     });
-
-    // Click the favorites filter button to activate it
-    const favoritesButton = screen.getByTitle('Nur Favoriten anzeigen');
-    fireEvent.click(favoritesButton);
 
     // The recipe group should be displayed
     // The top recipe could be either one based on sorting logic, but the group should exist
@@ -972,7 +951,7 @@ describe('RecipeList - Filter Button Visibility', () => {
 
   beforeEach(() => {
     originalInnerWidth = window.innerWidth;
-    // Simulate mobile viewport so filter button uses translateY animation
+    // Simulate mobile viewport
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
     jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
     jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
@@ -987,7 +966,7 @@ describe('RecipeList - Filter Button Visibility', () => {
     jest.restoreAllMocks();
   });
 
-  test('filter button is at extended position when component first mounts (mobile)', () => {
+  test('filter button is always visible when component mounts (mobile)', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -998,11 +977,11 @@ describe('RecipeList - Filter Button Visibility', () => {
     );
 
     const filterButton = screen.getByTitle('Weitere Filter');
-    expect(filterButton.style.transform).toContain('translateY(-76px)');
+    expect(filterButton).toBeInTheDocument();
+    expect(filterButton.style.transform).not.toContain('translateY(-76px)');
   });
 
-  test('filter button hides after touching outside it (mobile)', () => {
-    jest.useFakeTimers();
+  test('filter button remains visible after touching outside it (mobile)', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -1013,15 +992,14 @@ describe('RecipeList - Filter Button Visibility', () => {
     );
 
     const filterButton = screen.getByTitle('Weitere Filter');
-    expect(filterButton.style.transform).toContain('translateY(-76px)');
+    expect(filterButton).toBeInTheDocument();
 
-    // Simulate a touch/click outside both the filter button and fav button
+    // Simulate a touch/click outside the filter button
     fireEvent.mouseDown(document.body);
-    // requestAnimationFrame is polyfilled as setTimeout in jsdom; flush it
-    act(() => { jest.runAllTimers(); });
 
+    // Filter button should still be visible (always visible, not hidden by outside touch)
+    expect(filterButton).toBeInTheDocument();
     expect(filterButton.style.transform).not.toContain('translateY(-76px)');
-    jest.useRealTimers();
   });
 
 });

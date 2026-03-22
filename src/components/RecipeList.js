@@ -100,16 +100,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       setInternalShowFavoritesOnly(newValue);
     }
   };
-  const [filterVisible, setFilterVisible] = useState(true);
-  const [favPressed, setFavPressed] = useState(false);
   const [addPressed, setAddPressed] = useState(false);
   const [filterPressed, setFilterPressed] = useState(false);
-  const longPressTimer = useRef(null);
-  const longPressed = useRef(false);
   const filterLongPressTimer = useRef(null);
   const filterLongPressed = useRef(false);
   const filterButtonRef = useRef(null);
-  const favButtonRef = useRef(null);
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
   );
@@ -222,59 +217,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     loadFavorites();
   }, [currentUser?.id]);
   
-  // Hide filter button when touching outside it and the favorites button
-  useEffect(() => {
-    if (!filterVisible) return;
-    const handleOutsideTouch = (e) => {
-      if (
-        filterButtonRef.current && !filterButtonRef.current.contains(e.target) &&
-        favButtonRef.current && !favButtonRef.current.contains(e.target)
-      ) {
-        requestAnimationFrame(() => {
-          setFilterVisible(false);
-        });
-      }
-    };
-    document.addEventListener('touchstart', handleOutsideTouch, { passive: true });
-    document.addEventListener('mousedown', handleOutsideTouch);
-    return () => {
-      document.removeEventListener('touchstart', handleOutsideTouch);
-      document.removeEventListener('mousedown', handleOutsideTouch);
-    };
-  }, [filterVisible]);
-
-  const handleFavTouchStart = () => {
-    setFavPressed(true);
-    longPressed.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressed.current = true;
-      setFilterVisible(true);
-    }, LONG_PRESS_DELAY_MS);
-  };
-
-  const handleFavTouchEnd = (e) => {
-    setFavPressed(false);
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    if (longPressed.current) {
-      e.preventDefault();
-      setTimeout(() => {
-        longPressed.current = false;
-      }, 400);
-    }
-  };
-
-  const handleFavTouchCancel = () => {
-    setFavPressed(false);
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    longPressed.current = false;
-  };
-
   const handleFilterTouchStart = () => {
     setFilterPressed(true);
     filterLongPressed.current = false;
@@ -290,7 +232,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       filterLongPressTimer.current = null;
     }
     e.preventDefault();
-    setFilterVisible(false);
     if (filterLongPressed.current) {
       filterLongPressed.current = false;
       onOpenFilterPage?.();
@@ -365,10 +306,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const collapsedWidth = 160; // oder später dynamisch aus dem Carousel ableiten
   const widthDelta = targetExpandedWidth - collapsedWidth;
   const filterShift = carouselExpanded ? -(widthDelta / 2) : 0;
-  const isMobile = window.innerWidth <= 768;
-  const filterTransform = (filterVisible && isMobile)
-    ? `translateX(${filterShift}px) translateY(-76px)`
-    : `translateX(${filterShift}px)`;
+  const filterTransform = `translateX(${filterShift}px)`;
   const addShift = carouselExpanded ? window.innerWidth : 0;
   
   return (
@@ -396,12 +334,12 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             {onOpenFilterPage && (
               <button 
                 ref={filterButtonRef}
-                className={`filter-button ${filterVisible ? 'filter-visible' : ''} ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
+                className={`filter-button ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
                 style={{ '--filter-transform': filterTransform }}
                 onTouchStart={handleFilterTouchStart}
                 onTouchEnd={handleFilterTouchEnd}
                 onTouchCancel={handleFilterTouchCancel}
-                onClick={() => { setFilterVisible(false); onOpenFilterPage(); }}
+                onClick={() => { onOpenFilterPage(); }}
                 onMouseDown={() => setFilterPressed(true)}
                 onMouseUp={() => setFilterPressed(false)}
                 onMouseLeave={() => setFilterPressed(false)}
@@ -468,22 +406,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 )}
               </>
             )}
-            <button 
-              ref={favButtonRef}
-              className={`recipe-favorites-filter-button ${showFavoritesOnly ? 'active' : ''} ${favPressed ? 'pressed' : ''}`}
-              style={{ '--fav-shift': `${filterShift}px` }}
-              onClick={() => { if (!longPressed.current) setShowFavoritesOnly(prev => !prev); }}
-              onTouchStart={handleFavTouchStart}
-              onTouchEnd={handleFavTouchEnd}
-              onTouchCancel={handleFavTouchCancel}
-              onMouseDown={() => setFavPressed(true)}
-              onMouseUp={() => setFavPressed(false)}
-              onMouseLeave={() => setFavPressed(false)}
-              onContextMenu={(e) => e.preventDefault()}
-              title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
-            >
-              ★<span className="fav-label"> Favoriten</span>
-            </button>
           </div>
           {currentUser?.sortCarousel && (
             <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} onExpandChange={setCarouselExpanded} />
