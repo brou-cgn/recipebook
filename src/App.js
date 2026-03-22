@@ -978,6 +978,17 @@ function App() {
     setRecipeFilters(prev => ({ ...prev, selectedCuisines: newSelectedCuisines }));
   };
 
+  const handleAuthorFilterChangeFromSearch = (newSelectedAuthors) => {
+    setRecipeFilters(prev => ({ ...prev, selectedAuthors: newSelectedAuthors }));
+  };
+
+  const availableAuthorsForSearch = useMemo(
+    () => allUsers
+      .filter(u => recipes.some(r => r.authorId === u.id))
+      .map(u => ({ id: u.id, name: u.vorname })),
+    [allUsers, recipes]
+  );
+
   const handleCancelFilterPage = () => {
     setIsFilterPageOpen(false);
   };
@@ -1278,6 +1289,9 @@ function App() {
         cuisineGroups={cuisineGroups}
         onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
         selectedCuisines={recipeFilters.selectedCuisines}
+        availableAuthors={availableAuthorsForSearch}
+        onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
+        selectedAuthors={recipeFilters.selectedAuthors}
       />
     </div>
   );

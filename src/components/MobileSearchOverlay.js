@@ -64,12 +64,13 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
   return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [selectedCuisines, setSelectedCuisines] = useState([]);
+  const [selectedAuthors, setSelectedAuthors] = useState([]);
   // panelBottom tracks how far from the bottom of the screen the panel sits
   // (= 0 normally, > 0 when the software keyboard is visible on iOS)
   const [panelBottom, setPanelBottom] = useState(0);
@@ -78,6 +79,8 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
   // it without re-triggering every time the parent filter changes.
   const selectedCuisinesPropRef = useRef(selectedCuisinesProp);
   selectedCuisinesPropRef.current = selectedCuisinesProp;
+  const selectedAuthorsPropRef = useRef(selectedAuthorsProp);
+  selectedAuthorsPropRef.current = selectedAuthorsProp;
 
   // Load favorite IDs when currentUser changes
   useEffect(() => {
@@ -99,6 +102,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       setDebouncedTerm('');
       setShowFavoritesOnly(showFavoritesOnlyProp ?? false);
       setSelectedCuisines(selectedCuisinesPropRef.current ?? []);
+      setSelectedAuthors(selectedAuthorsPropRef.current ?? []);
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, FOCUS_DELAY_MS);
@@ -163,8 +167,11 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
         return expanded.some((c) => kulinarik.includes(c));
       });
     }
+    if (selectedAuthors.length > 0) {
+      list = list.filter((r) => selectedAuthors.includes(r.authorId));
+    }
     return list;
-  }, [recipes, showFavoritesOnly, favoriteIds, selectedCuisines, cuisineGroups]);
+  }, [recipes, showFavoritesOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors]);
 
   const filteredRecipes = fuzzyFilter(
     baseRecipes,
@@ -220,6 +227,17 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
         incrementCuisineUsage(cuisineName);
       }
       onCuisineFilterChange?.(newValue);
+      return newValue;
+    });
+  };
+
+  const handleAuthorPillClick = (authorId) => {
+    setSelectedAuthors((prev) => {
+      const isSelected = prev.includes(authorId);
+      const newValue = isSelected
+        ? prev.filter((a) => a !== authorId)
+        : [...prev, authorId];
+      onAuthorFilterChange?.(newValue);
       return newValue;
     });
   };
@@ -280,6 +298,14 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     const inactive = visibleCuisinePills.filter((name) => !selectedCuisines.includes(name));
     return [...active, ...inactive];
   }, [visibleCuisinePills, selectedCuisines]);
+
+  // Author pills: active (selected) authors shown first
+  const orderedAuthorPills = useMemo(() => {
+    const authors = availableAuthors || [];
+    const active = authors.filter((a) => selectedAuthors.includes(a.id));
+    const inactive = authors.filter((a) => !selectedAuthors.includes(a.id));
+    return [...active, ...inactive];
+  }, [availableAuthors, selectedAuthors]);
 
   if (!isOpen) return null;
 
@@ -371,6 +397,24 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
                 title={selectedCuisines.includes(name) ? 'Filter aufheben' : `Nach ${name} filtern`}
               >
                 {name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Autorenfilter – two-row horizontal carousel below the cuisine filter */}
+        {/* Active (selected) pills are always shown first (leftmost) in the carousel */}
+        {orderedAuthorPills.length > 0 && (
+          <div className="mobile-search-cuisine-grid">
+            {orderedAuthorPills.map((author) => (
+              <button
+                key={author.id}
+                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedAuthors.includes(author.id) ? ' active' : ''}`}
+                onClick={() => handleAuthorPillClick(author.id)}
+                aria-pressed={selectedAuthors.includes(author.id)}
+                title={selectedAuthors.includes(author.id) ? 'Filter aufheben' : `Nach ${author.name} filtern`}
+              >
+                {author.name}
               </button>
             ))}
           </div>
