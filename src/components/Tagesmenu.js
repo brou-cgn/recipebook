@@ -363,33 +363,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       : memberIds;
   }, [selectedList]);
 
-  // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
-  // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
-  // The current user's own pending swipes are excluded from nᵢ so that the
-  // stack is only ended by what *other* members have already voted — the
-  // current user's swipes themselves drive the score up during swiping.
-  // Returns 0 when disabled (null threshold) or when there are no other members,
-  // which safely leaves the allSwiped threshold check false.
-  const candidateScore = useMemo(() => {
-    if (maxKandidatenSchwelle === null || listMemberIds.length === 0) return 0;
-    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
-    if (otherMemberIds.length === 0) return 0;
-    return allListRecipes.reduce((sum, recipe) => {
-      const swipedCount = otherMemberIds.filter(
-        (uid) => allMembersFlags[uid]?.[recipe.id] !== undefined
-      ).length;
-      const ni = otherMemberIds.length - swipedCount;
-      return sum + 1 / (1 + ni);
-    }, 0);
-  }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser]);
-
-  const allSwiped =
-    allListRecipes.length > 0 &&
-    (listRecipes.length === 0 ||
-      currentIndex >= listRecipes.length ||
-      (maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle));
-  const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
-
   // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
   const groupStatusByRecipeId = useMemo(() => {
     if (listMemberIds.length <= 1) return {};
@@ -402,6 +375,39 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     );
     return result;
   }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
+
+  // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
+  // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
+  // Only recipes that the current user has already swiped AND whose group status
+  // is "kandidat" (consensus reached across members) are included in the sum.
+  // Missing swipes from other members are treated optimistically as "kandidat",
+  // but weighted down by factor 1/(1+nᵢ) to reflect the uncertainty.
+  // Returns 0 when disabled (null threshold) or when there are no other members,
+  // which safely leaves the allSwiped threshold check false.
+  const candidateScore = useMemo(() => {
+    if (maxKandidatenSchwelle === null || listMemberIds.length === 0) return 0;
+    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
+    if (otherMemberIds.length === 0) return 0;
+    const swipedCandidateRecipes = allListRecipes.filter((recipe) => {
+      const hasSwipedByCurrentUser = allMembersFlags[currentUser?.id]?.[recipe.id] !== undefined;
+      const groupStatus = groupStatusByRecipeId[recipe.id];
+      return hasSwipedByCurrentUser && groupStatus === 'kandidat';
+    });
+    return swipedCandidateRecipes.reduce((sum, recipe) => {
+      const swipedCount = otherMemberIds.filter(
+        (uid) => allMembersFlags[uid]?.[recipe.id] !== undefined
+      ).length;
+      const ni = otherMemberIds.length - swipedCount;
+      return sum + 1 / (1 + ni);
+    }, 0);
+  }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser, groupStatusByRecipeId]);
+
+  const allSwiped =
+    allListRecipes.length > 0 &&
+    (listRecipes.length === 0 ||
+      currentIndex >= listRecipes.length ||
+      (maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle));
+  const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // How far along the swipe are we (0–1) – used to animate background cards
   const dragProgress = Math.min(
