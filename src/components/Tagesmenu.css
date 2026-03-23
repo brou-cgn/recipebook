@@ -227,6 +227,96 @@
   background: #c1121f;
 }
 
+/* ---- results view after all cards are swiped ---------------------- */
+
+.tagesmenu-container--results {
+  overflow-y: auto;
+}
+
+.tagesmenu-results {
+  padding: 1.25rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tagesmenu-results-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #888888;
+}
+
+.tagesmenu-results-header p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tagesmenu-results-group-title {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.tagesmenu-results-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.6rem;
+}
+
+.tagesmenu-results-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tagesmenu-results-tile:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tagesmenu-results-tile-image {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.tagesmenu-results-tile-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tagesmenu-results-tile-name {
+  margin: 0;
+  padding: 0.35rem 0.5rem 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 /* ---- filter button (bottom-left, only shown when > 1 interactive list) -- */
 
 .tagesmenu-filter-btn {

@@ -45,11 +45,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Reset swipe index when the user switches lists
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Maps recipeId → 'kandidat' | 'geparkt' | 'archiv' for the current session
+  const [swipeResults, setSwipeResults] = useState({});
+
   const prevListIdRef = useRef(selectedListId);
   useEffect(() => {
     if (prevListIdRef.current !== selectedListId) {
       prevListIdRef.current = selectedListId;
       setCurrentIndex(0);
+      setSwipeResults({});
     }
   }, [selectedListId]);
 
@@ -215,11 +220,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       // Record the swipe flag before advancing to the next card
       const swipe = pendingSwipeRef.current;
       pendingSwipeRef.current = null;
-      if (swipe && currentUser?.id && swipe.list?.id && swipe.recipe?.id) {
+      if (swipe && swipe.recipe?.id) {
         const flagMap = { right: 'geparkt', left: 'archiv', up: 'kandidat' };
         const flag = flagMap[swipe.direction];
         if (flag) {
-          setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag);
+          if (currentUser?.id && swipe.list?.id) {
+            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag);
+          }
+          setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
       }
       setJustSwiped(true);
@@ -262,22 +270,71 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // ---- Render ---------------------------------------------------------
 
   return (
-    <div className="tagesmenu-container">
+    <div className={`tagesmenu-container${allSwiped ? ' tagesmenu-container--results' : ''}`}>
       {listRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon">🍽️</span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
         </div>
       ) : allSwiped ? (
-        <div className="tagesmenu-empty">
-          <span className="tagesmenu-empty-icon">✅</span>
-          <p>Alle Rezepte angesehen!</p>
-          <button
-            className="tagesmenu-restart-btn"
-            onClick={() => setCurrentIndex(0)}
-          >
-            Nochmal ansehen
-          </button>
+        <div className="tagesmenu-results">
+          <div className="tagesmenu-results-header">
+            <span className="tagesmenu-empty-icon">✅</span>
+            <p>Alle Rezepte angesehen!</p>
+            <button
+              className="tagesmenu-restart-btn"
+              onClick={() => {
+                setCurrentIndex(0);
+                setSwipeResults({});
+              }}
+            >
+              Nochmal ansehen
+            </button>
+          </div>
+
+          {[
+            { label: 'Kandidat', icon: '⭐', flag: 'kandidat' },
+            { label: 'Für später', icon: '🕒', flag: 'geparkt' },
+            { label: 'Archiviert', icon: '🗄️', flag: 'archiv' },
+          ].map(({ label, icon, flag }) => {
+            const group = listRecipes.filter((r) => swipeResults[r.id] === flag);
+            if (group.length === 0) return null;
+            return (
+              <div key={flag} className="tagesmenu-results-group">
+                <h3 className="tagesmenu-results-group-title">{icon} {label}</h3>
+                <div className="tagesmenu-results-tiles">
+                  {group.map((recipe) => {
+                    const allImages =
+                      Array.isArray(recipe.images) && recipe.images.length > 0
+                        ? recipe.images
+                        : recipe.image
+                        ? [{ url: recipe.image, isDefault: true }]
+                        : [];
+                    const orderedImages = [
+                      ...allImages.filter((img) => img.isDefault),
+                      ...allImages.filter((img) => !img.isDefault),
+                    ];
+                    return (
+                      <button
+                        key={recipe.id}
+                        className="tagesmenu-results-tile"
+                        onClick={() => onSelectRecipe(recipe)}
+                      >
+                        <div className="tagesmenu-results-tile-image">
+                          {orderedImages.length > 0 ? (
+                            <img src={orderedImages[0].url} alt={recipe.title} />
+                          ) : (
+                            <span>🍽️</span>
+                          )}
+                        </div>
+                        <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="tagesmenu-stack">

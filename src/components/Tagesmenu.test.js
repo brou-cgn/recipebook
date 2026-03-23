@@ -48,6 +48,8 @@ function getReactProps(element) {
   return key ? element[key] : null;
 }
 
+const TRANSITION_EVENT = { propertyName: 'transform' };
+
 /** Simulate a full left-swipe gesture by calling the handlers directly. */
 function swipeLeft(element) {
   const props = getReactProps(element);
@@ -61,6 +63,44 @@ function swipeLeft(element) {
   });
   act(() => {
     props.onPointerUp({ clientX: 100, clientY: 300, pointerId: 1, currentTarget: element });
+  });
+}
+
+/** Simulate a full right-swipe gesture. */
+function swipeRight(element) {
+  const props = getReactProps(element);
+  if (!props) throw new Error('No React props found on element');
+  act(() => {
+    props.onPointerDown({ clientX: 200, clientY: 300, pointerId: 1, currentTarget: element });
+  });
+  act(() => {
+    props.onPointerMove({ clientX: 300, clientY: 300, pointerId: 1, currentTarget: element });
+  });
+  act(() => {
+    props.onPointerUp({ clientX: 300, clientY: 300, pointerId: 1, currentTarget: element });
+  });
+}
+
+/** Simulate a full up-swipe gesture. */
+function swipeUp(element) {
+  const props = getReactProps(element);
+  if (!props) throw new Error('No React props found on element');
+  act(() => {
+    props.onPointerDown({ clientX: 200, clientY: 300, pointerId: 1, currentTarget: element });
+  });
+  act(() => {
+    props.onPointerMove({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: element });
+  });
+  act(() => {
+    props.onPointerUp({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: element });
+  });
+}
+
+/** Complete the flying animation for the top card. */
+function finishSwipeAnimation(element) {
+  act(() => {
+    const props = getReactProps(element);
+    props.onTransitionEnd?.(TRANSITION_EVENT);
   });
 }
 
@@ -82,12 +122,7 @@ describe('Tagesmenu – swipe card consistency', () => {
 
     const topCard = document.querySelector('.tagesmenu-card-top');
     swipeLeft(topCard);
-
-    // Trigger the CSS transition-end callback that advances the card index
-    act(() => {
-      const props = getReactProps(topCard);
-      props.onTransitionEnd?.();
-    });
+    finishSwipeAnimation(topCard);
 
     // Rezept 2 was behind Rezept 1 and must now be the top card
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
@@ -100,11 +135,7 @@ describe('Tagesmenu – swipe card consistency', () => {
 
       const topCard = document.querySelector('.tagesmenu-card-top');
       swipeLeft(topCard);
-
-      act(() => {
-        const props = getReactProps(topCard);
-        props.onTransitionEnd?.();
-      });
+      finishSwipeAnimation(topCard);
 
       // Right after the swipe (before the RAF fires) background cards must have
       // transition: none so they do NOT animate back to their smaller stacked sizes.
@@ -125,5 +156,115 @@ describe('Tagesmenu – swipe card consistency', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('Tagesmenu – completion tile view', () => {
+  /** Swipe all three recipes and complete the animations. */
+  function swipeAllCards(swipeActions) {
+    swipeActions.forEach((swipeFn) => {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeFn(topCard);
+      finishSwipeAnimation(topCard);
+    });
+  }
+
+  test('shows tile view after all cards are swiped', () => {
+    renderMenu();
+    swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+  });
+
+  test('groups swiped-left recipes under Archiviert', () => {
+    renderMenu();
+    swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
+
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveTextContent('Archiviert');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('groups swiped-right recipes under Für später', () => {
+    renderMenu();
+    swipeAllCards([swipeRight, swipeRight, swipeRight]);
+
+    const group = document.querySelector('.tagesmenu-results-group');
+    expect(group).toHaveTextContent('Für später');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('groups swiped-up recipes under Kandidat', () => {
+    renderMenu();
+    swipeAllCards([swipeUp, swipeUp, swipeUp]);
+
+    const group = document.querySelector('.tagesmenu-results-group');
+    expect(group).toHaveTextContent('Kandidat');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('shows multiple groups when different swipe directions are used', () => {
+    renderMenu();
+    swipeAllCards([swipeUp, swipeRight, swipeLeft]);
+
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toHaveTextContent('Kandidat');
+    expect(groups[1]).toHaveTextContent('Für später');
+    expect(groups[2]).toHaveTextContent('Archiviert');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('tiles display recipe titles', () => {
+    renderMenu();
+    swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
+
+    const tiles = document.querySelectorAll('.tagesmenu-results-tile');
+    const tileTexts = Array.from(tiles).map((t) =>
+      t.querySelector('.tagesmenu-results-tile-name')?.textContent
+    );
+    expect(tileTexts).toEqual(
+      expect.arrayContaining(['Rezept 1', 'Rezept 2', 'Rezept 3'])
+    );
+  });
+
+  test('clicking restart resets to card stack view', () => {
+    renderMenu();
+    swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
+
+    // Results view should be visible
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    // Click restart
+    const restartBtn = document.querySelector('.tagesmenu-restart-btn');
+    act(() => { restartBtn.click(); });
+
+    // Card stack should be back
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+    // Tile groups should be cleared after restart
+    expect(document.querySelectorAll('.tagesmenu-results-group')).toHaveLength(0);
+  });
+
+  test('tile click triggers onSelectRecipe with the correct recipe', () => {
+    const onSelectRecipe = jest.fn();
+    render(
+      <Tagesmenu
+        interactiveLists={[list]}
+        recipes={recipes}
+        allUsers={[]}
+        onSelectRecipe={onSelectRecipe}
+        currentUser={currentUser}
+      />
+    );
+    swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
+
+    const firstTile = document.querySelector('.tagesmenu-results-tile');
+    act(() => { firstTile.click(); });
+
+    expect(onSelectRecipe).toHaveBeenCalledTimes(1);
+    expect(onSelectRecipe).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
   });
 });
