@@ -7,6 +7,8 @@ let mockActiveFlagsValue = {};
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
+  getAllMembersSwipeFlags: () => Promise.resolve({}),
+  computeGroupRecipeStatus: () => 'kandidat',
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -14,6 +16,12 @@ jest.mock('../utils/customLists', () => ({
     statusValidityDaysKandidat: null,
     statusValidityDaysGeparkt: null,
     statusValidityDaysArchiv: null,
+  }),
+  getGroupStatusThresholds: () => Promise.resolve({
+    groupThresholdKandidatMinKandidat: 50,
+    groupThresholdKandidatMaxArchiv: 50,
+    groupThresholdArchivMinArchiv: 50,
+    groupThresholdArchivMaxKandidat: 50,
   }),
   getButtonIcons: () => Promise.resolve({
     swipeRight: '👍',
@@ -130,8 +138,8 @@ function finishSwipeAnimation(element) {
 }
 
 describe('Tagesmenu – swipe card consistency', () => {
-  test('initial render shows the first recipe as the top card', () => {
-    renderMenu();
+  test('initial render shows the first recipe as the top card', async () => {
+    await act(async () => { renderMenu(); });
 
     const topCard = document.querySelector('.tagesmenu-card-top');
     expect(topCard).not.toBeNull();
@@ -142,8 +150,8 @@ describe('Tagesmenu – swipe card consistency', () => {
     expect(allCards).toHaveLength(3);
   });
 
-  test('after swiping, the card that was second becomes the new top card', () => {
-    renderMenu();
+  test('after swiping, the card that was second becomes the new top card', async () => {
+    await act(async () => { renderMenu(); });
 
     const topCard = document.querySelector('.tagesmenu-card-top');
     swipeLeft(topCard);
@@ -153,10 +161,10 @@ describe('Tagesmenu – swipe card consistency', () => {
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
   });
 
-  test('background card transitions are suppressed immediately after a swipe (justSwiped)', () => {
+  test('background card transitions are suppressed immediately after a swipe (justSwiped)', async () => {
     jest.useFakeTimers();
     try {
-      renderMenu();
+      await act(async () => { renderMenu(); });
 
       const topCard = document.querySelector('.tagesmenu-card-top');
       swipeLeft(topCard);
@@ -194,16 +202,16 @@ describe('Tagesmenu – completion tile view', () => {
     });
   }
 
-  test('shows tile view after all cards are swiped', () => {
-    renderMenu();
+  test('shows tile view after all cards are swiped', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
 
-  test('groups swiped-left recipes under Archiviert', () => {
-    renderMenu();
+  test('groups swiped-left recipes under Archiviert', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     const groups = document.querySelectorAll('.tagesmenu-results-group');
@@ -212,8 +220,8 @@ describe('Tagesmenu – completion tile view', () => {
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 
-  test('groups swiped-right recipes under Für später', () => {
-    renderMenu();
+  test('groups swiped-right recipes under Für später', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeRight, swipeRight, swipeRight]);
 
     const group = document.querySelector('.tagesmenu-results-group');
@@ -221,8 +229,8 @@ describe('Tagesmenu – completion tile view', () => {
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 
-  test('groups swiped-up recipes under Kandidat', () => {
-    renderMenu();
+  test('groups swiped-up recipes under Kandidat', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeUp, swipeUp, swipeUp]);
 
     const group = document.querySelector('.tagesmenu-results-group');
@@ -230,8 +238,8 @@ describe('Tagesmenu – completion tile view', () => {
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 
-  test('shows multiple groups when different swipe directions are used', () => {
-    renderMenu();
+  test('shows multiple groups when different swipe directions are used', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeUp, swipeRight, swipeLeft]);
 
     const groups = document.querySelectorAll('.tagesmenu-results-group');
@@ -242,8 +250,8 @@ describe('Tagesmenu – completion tile view', () => {
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 
-  test('tiles display recipe titles', () => {
-    renderMenu();
+  test('tiles display recipe titles', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     const tiles = document.querySelectorAll('.tagesmenu-results-tile');
@@ -255,8 +263,8 @@ describe('Tagesmenu – completion tile view', () => {
     );
   });
 
-  test('results view has no restart button', () => {
-    renderMenu();
+  test('results view has no restart button', async () => {
+    await act(async () => { renderMenu(); });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     // Results view should be visible
@@ -266,17 +274,19 @@ describe('Tagesmenu – completion tile view', () => {
     expect(document.querySelector('.tagesmenu-restart-btn')).toBeNull();
   });
 
-  test('tile click triggers onSelectRecipe with the correct recipe', () => {
+  test('tile click triggers onSelectRecipe with the correct recipe', async () => {
     const onSelectRecipe = jest.fn();
-    render(
-      <Tagesmenu
-        interactiveLists={[list]}
-        recipes={recipes}
-        allUsers={[]}
-        onSelectRecipe={onSelectRecipe}
-        currentUser={currentUser}
-      />
-    );
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={recipes}
+          allUsers={[]}
+          onSelectRecipe={onSelectRecipe}
+          currentUser={currentUser}
+        />
+      );
+    });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     const firstTile = document.querySelector('.tagesmenu-results-tile');
@@ -296,6 +306,19 @@ describe('Tagesmenu – pre-existing active flags', () => {
     mockActiveFlagsValue = {};
   });
 
+  test('no swipe card is shown before active flags are loaded', async () => {
+    // Do NOT await – check the synchronous state before the promise resolves
+    renderMenu();
+
+    // While flags are still loading, neither the swipe stack nor the results
+    // view should be visible, preventing any flash of recipe cards.
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+
+    // Flush pending async operations so the component can unmount cleanly
+    await act(async () => {});
+  });
+
   test('shows tile view immediately when all recipes already have active flags', async () => {
     mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
 
@@ -313,6 +336,20 @@ describe('Tagesmenu – pre-existing active flags', () => {
     expect(groups[1]).toHaveTextContent('Für später');
     expect(groups[2]).toHaveTextContent('Archiviert');
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('shows only un-swiped recipes when some flags are pre-existing', async () => {
+    // r1 already has a flag; only r2 and r3 should appear in the swipe stack
+    mockActiveFlagsValue = { r1: 'kandidat' };
+
+    await act(async () => {
+      renderMenu();
+    });
+
+    // The swipe stack should show r2 as the top card (r1 is filtered out)
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    expect(topCard).not.toBeNull();
+    expect(topCard).toHaveTextContent('Rezept 2');
   });
 
   test('tile view includes pre-flagged recipes alongside current-session swipes', async () => {

@@ -46,6 +46,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Active swipe flags from Firestore (non-expired), used to filter the stack
   const [activeFlags, setActiveFlags] = useState({});
 
+  // True once the initial active-flags fetch for the current list has resolved.
+  // Prevents showing swipe cards before we know which recipes are already flagged.
+  const [flagsLoaded, setFlagsLoaded] = useState(false);
+
   // Configured validity durations (number of days or null for permanent)
   const [statusValiditySettings, setStatusValiditySettings] = useState({
     statusValidityDaysKandidat: null,
@@ -94,6 +98,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setSwipeResults({});
       setActiveFlags({});
       setAllMembersFlags({});
+      setFlagsLoaded(false);
     }
   }, [selectedListId]);
 
@@ -118,9 +123,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     if (!currentUser?.id || !selectedListId) {
       setActiveFlags({});
+      setFlagsLoaded(true);
       return;
     }
-    getActiveSwipeFlags(currentUser.id, selectedListId).then(setActiveFlags).catch(() => {});
+    setFlagsLoaded(false);
+    getActiveSwipeFlags(currentUser.id, selectedListId)
+      .then((flags) => { setActiveFlags(flags); setFlagsLoaded(true); })
+      .catch(() => { setFlagsLoaded(true); });
   }, [currentUser, selectedListId]);
 
   // Load all members' swipe flags for group status determination.
@@ -392,6 +401,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           <span className="tagesmenu-empty-icon">🍽️</span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
         </div>
+      ) : !flagsLoaded ? (
+        null
       ) : allSwiped ? (
         <div className="tagesmenu-results">
           {/* Group status section – only shown for lists with multiple members */}
