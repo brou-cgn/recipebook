@@ -2,9 +2,11 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 
+let mockActiveFlagsValue = {};
+
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
-  getActiveSwipeFlags: () => Promise.resolve({}),
+  getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -289,5 +291,71 @@ describe('Tagesmenu – completion tile view', () => {
 
     expect(onSelectRecipe).toHaveBeenCalledTimes(1);
     expect(onSelectRecipe).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
+  });
+});
+
+describe('Tagesmenu – pre-existing active flags', () => {
+  beforeEach(() => {
+    mockActiveFlagsValue = {};
+  });
+
+  afterEach(() => {
+    mockActiveFlagsValue = {};
+  });
+
+  test('shows tile view immediately when all recipes already have active flags', async () => {
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
+
+    await act(async () => {
+      renderMenu();
+    });
+
+    // No swipeable cards remain → tile view should be shown
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toHaveTextContent('Kandidat');
+    expect(groups[1]).toHaveTextContent('Für später');
+    expect(groups[2]).toHaveTextContent('Archiviert');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+
+  test('tile view includes pre-flagged recipes alongside current-session swipes', async () => {
+    // r1 already has a flag from a previous session; r2 and r3 are new
+    mockActiveFlagsValue = { r1: 'kandidat' };
+
+    await act(async () => {
+      renderMenu();
+    });
+
+    // Only r2 and r3 are in the swipe stack; swipe them both left (archiv)
+    function swipeCardLeft() {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      const propsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+      const props = topCard[propsKey];
+      act(() => { props.onPointerDown({ clientX: 200, clientY: 300, pointerId: 1, currentTarget: topCard }); });
+      act(() => { props.onPointerMove({ clientX: 100, clientY: 300, pointerId: 1, currentTarget: topCard }); });
+      act(() => { props.onPointerUp({ clientX: 100, clientY: 300, pointerId: 1, currentTarget: topCard }); });
+      // Re-read props after the state update so we get the updated handleTransitionEnd
+      act(() => {
+        const freshPropsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+        topCard[freshPropsKey].onTransitionEnd?.({ propertyName: 'transform' });
+      });
+    }
+
+    swipeCardLeft(); // swipe r2 left → archiv
+    swipeCardLeft(); // swipe r3 left → archiv
+
+    // Tile view should now show all 3 recipes:
+    // r1 (kandidat from activeFlags) + r2, r3 (archiv from current-session swipeResults)
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toHaveTextContent('Kandidat');
+    expect(groups[1]).toHaveTextContent('Archiviert');
+    expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
 });

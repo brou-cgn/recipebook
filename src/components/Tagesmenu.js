@@ -60,15 +60,19 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     swipeUp: DEFAULT_BUTTON_ICONS.swipeUp,
   });
 
-  const listRecipes = useMemo(() => {
+  // All recipes belonging to the selected list, regardless of active flags
+  const allListRecipes = useMemo(() => {
     if (!selectedList) return [];
     const groupRecipeIds = Array.isArray(selectedList.recipeIds) ? selectedList.recipeIds : [];
     return recipes.filter(
-      (r) =>
-        (r.groupId === selectedList.id || groupRecipeIds.includes(r.id)) &&
-        !activeFlags[r.id]
+      (r) => r.groupId === selectedList.id || groupRecipeIds.includes(r.id)
     );
-  }, [recipes, selectedList, activeFlags]);
+  }, [recipes, selectedList]);
+
+  // Recipes still available for swiping (those without an active flag)
+  const listRecipes = useMemo(() => {
+    return allListRecipes.filter((r) => !activeFlags[r.id]);
+  }, [allListRecipes, activeFlags]);
 
   const prevListIdRef = useRef(selectedListId);
   useEffect(() => {
@@ -293,7 +297,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // ---- Derived values -------------------------------------------------
 
-  const allSwiped = listRecipes.length > 0 && currentIndex >= listRecipes.length;
+  const allSwiped = allListRecipes.length > 0 && (listRecipes.length === 0 || currentIndex >= listRecipes.length);
   const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // How far along the swipe are we (0–1) – used to animate background cards
@@ -323,7 +327,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   return (
     <div className={`tagesmenu-container${allSwiped ? ' tagesmenu-container--results' : ''}`}>
-      {listRecipes.length === 0 ? (
+      {allListRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon">🍽️</span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
@@ -349,7 +353,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             { label: 'Für später', icon: '🕒', flag: 'geparkt' },
             { label: 'Archiviert', icon: '🗄️', flag: 'archiv' },
           ].map(({ label, icon, flag }) => {
-            const group = listRecipes.filter((r) => swipeResults[r.id] === flag);
+            const group = allListRecipes.filter((r) => {
+              const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
+              return combinedFlag === flag;
+            });
             if (group.length === 0) return null;
             return (
               <div key={flag} className="tagesmenu-results-group">
