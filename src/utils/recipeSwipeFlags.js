@@ -7,22 +7,19 @@
  *   - listId:    string  – the interactive list the recipe was shown in
  *   - recipeId:  string  – the recipe that was swiped
  *   - flag:      'geparkt' | 'archiv' | 'kandidat'
- *   - expiresAt: Timestamp | null  – null means no expiry (used for 'archiv')
+ *   - expiresAt: Timestamp | null  – null means no expiry (permanent)
  *   - createdAt: Timestamp
  *
  * Swipe directions:
- *   - Right → 'geparkt'  for 30 days
- *   - Left  → 'archiv'   (no expiry)
- *   - Up    → 'kandidat' for 7 days
+ *   - Right → 'geparkt'
+ *   - Left  → 'archiv'
+ *   - Up    → 'kandidat'
  *
  * Flags are internal only and must not be displayed in the UI.
  */
 
 import { db } from '../firebase';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-
-const GEPARKT_DAYS = 30;
-const KANDIDAT_DAYS = 7;
+import { doc, setDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 
 /**
  * Build a deterministic Firestore document ID for a flag.
@@ -53,17 +50,16 @@ const timestampInDays = (days) => {
  * @param {string} listId   - ID of the interactive list
  * @param {string} recipeId - ID of the recipe that was swiped
  * @param {'geparkt'|'archiv'|'kandidat'} flag - The flag to set
+ * @param {number|null} [validityDays] - Number of days until the flag expires, or null/undefined for permanent
  * @returns {Promise<boolean>} true if saved successfully
  */
-export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag) => {
+export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validityDays) => {
   if (!userId || !listId || !recipeId || !flag) return false;
   if (!['geparkt', 'archiv', 'kandidat'].includes(flag)) return false;
 
   let expiresAt = null;
-  if (flag === 'geparkt') {
-    expiresAt = timestampInDays(GEPARKT_DAYS);
-  } else if (flag === 'kandidat') {
-    expiresAt = timestampInDays(KANDIDAT_DAYS);
+  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
+    expiresAt = timestampInDays(validityDays);
   }
 
   try {
@@ -80,5 +76,41 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag) => {
   } catch (error) {
     console.error('Error setting recipe swipe flag:', error);
     return false;
+  }
+};
+
+/**
+ * Load all active (non-expired) swipe flags for a given user and list.
+ * A flag is active if expiresAt is null (permanent) or expiresAt is in the future.
+ *
+ * @param {string} userId  - ID of the current user
+ * @param {string} listId  - ID of the interactive list
+ * @returns {Promise<Object>} Map of recipeId → flag for all active flags
+ */
+export const getActiveSwipeFlags = async (userId, listId) => {
+  if (!userId || !listId) return {};
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('userId', '==', userId),
+      where('listId', '==', listId)
+    );
+    const snapshot = await getDocs(q);
+    const now = Date.now();
+    const activeFlags = {};
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const expired =
+        data.expiresAt !== null &&
+        data.expiresAt !== undefined &&
+        data.expiresAt.toMillis() <= now;
+      if (!expired) {
+        activeFlags[data.recipeId] = data.flag;
+      }
+    });
+    return activeFlags;
+  } catch (error) {
+    console.error('Error loading active swipe flags:', error);
+    return {};
   }
 };

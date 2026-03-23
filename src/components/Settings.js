@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -267,6 +267,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newRecipeDays, setNewRecipeDays] = useState(DEFAULT_NEW_RECIPE_DAYS);
   const [ratingMinVotes, setRatingMinVotes] = useState(DEFAULT_RATING_MIN_VOTES);
 
+  // Status validity settings for Tagesmenü swipe flags ('' = permanent, positive integer string = days)
+  const [statusValidityDaysKandidat, setStatusValidityDaysKandidat] = useState('');
+  const [statusValidityDaysGeparkt, setStatusValidityDaysGeparkt] = useState('');
+  const [statusValidityDaysArchiv, setStatusValidityDaysArchiv] = useState('');
+
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
 
@@ -291,6 +296,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const timelineCookEventImg = await getTimelineCookEventDefaultImage();
       const aiRecipePrompt = await getAIRecipePrompt();
       const sortSettings = await getSortSettings();
+      const statusValidity = await getStatusValiditySettings();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -310,6 +316,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setTrendingMinViews(sortSettings.trendingMinViews);
       setNewRecipeDays(sortSettings.newRecipeDays);
       setRatingMinVotes(sortSettings.ratingMinVotes);
+      setStatusValidityDaysKandidat(statusValidity.statusValidityDaysKandidat != null ? String(statusValidity.statusValidityDaysKandidat) : '');
+      setStatusValidityDaysGeparkt(statusValidity.statusValidityDaysGeparkt != null ? String(statusValidity.statusValidityDaysGeparkt) : '');
+      setStatusValidityDaysArchiv(statusValidity.statusValidityDaysArchiv != null ? String(statusValidity.statusValidityDaysArchiv) : '');
     };
     loadSettings();
   }, []);
@@ -521,6 +530,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
       await saveSortSettings({ trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes });
+      await saveStatusValiditySettings({
+        statusValidityDaysKandidat: statusValidityDaysKandidat !== '' ? parseInt(statusValidityDaysKandidat, 10) : null,
+        statusValidityDaysGeparkt: statusValidityDaysGeparkt !== '' ? parseInt(statusValidityDaysGeparkt, 10) : null,
+        statusValidityDaysArchiv: statusValidityDaysArchiv !== '' ? parseInt(statusValidityDaysArchiv, 10) : null,
+      });
 
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
@@ -3132,6 +3146,84 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       }}
                     />
                     <span className="sort-settings-hint">Dämpfungsparameter für den Bewertungs-Score: Score = (v/(v+m))·R + (m/(v+m))·C</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Tagesmenü – Status-Gültigkeitsdauer</h3>
+              <p className="section-description">
+                Konfigurieren Sie, wie lange ein Rezept nach dem Swipen in einer privaten Liste den jeweiligen Status behält. Leeres Feld bedeutet: Status bleibt permanent erhalten.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <h4>⭐ Kandidat</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="statusValidityDaysKandidat">Gültigkeitsdauer (Tage):</label>
+                    <input
+                      id="statusValidityDaysKandidat"
+                      type="number"
+                      min="1"
+                      placeholder="∞ permanent"
+                      value={statusValidityDaysKandidat}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setStatusValidityDaysKandidat('');
+                        } else {
+                          const val = parseInt(raw, 10);
+                          if (!isNaN(val) && val >= 1) setStatusValidityDaysKandidat(String(val));
+                        }
+                      }}
+                    />
+                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>🕒 Geparkt</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="statusValidityDaysGeparkt">Gültigkeitsdauer (Tage):</label>
+                    <input
+                      id="statusValidityDaysGeparkt"
+                      type="number"
+                      min="1"
+                      placeholder="∞ permanent"
+                      value={statusValidityDaysGeparkt}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setStatusValidityDaysGeparkt('');
+                        } else {
+                          const val = parseInt(raw, 10);
+                          if (!isNaN(val) && val >= 1) setStatusValidityDaysGeparkt(String(val));
+                        }
+                      }}
+                    />
+                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>🗄️ Archiv</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="statusValidityDaysArchiv">Gültigkeitsdauer (Tage):</label>
+                    <input
+                      id="statusValidityDaysArchiv"
+                      type="number"
+                      min="1"
+                      placeholder="∞ permanent"
+                      value={statusValidityDaysArchiv}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setStatusValidityDaysArchiv('');
+                        } else {
+                          const val = parseInt(raw, 10);
+                          if (!isNaN(val) && val >= 1) setStatusValidityDaysArchiv(String(val));
+                        }
+                      }}
+                    />
+                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
                   </div>
                 </div>
               </div>

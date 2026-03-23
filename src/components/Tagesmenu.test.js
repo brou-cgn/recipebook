@@ -4,6 +4,15 @@ import Tagesmenu from './Tagesmenu';
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
+  getActiveSwipeFlags: () => Promise.resolve({}),
+}));
+
+jest.mock('../utils/customLists', () => ({
+  getStatusValiditySettings: () => Promise.resolve({
+    statusValidityDaysKandidat: null,
+    statusValidityDaysGeparkt: null,
+    statusValidityDaysArchiv: null,
+  }),
 }));
 
 beforeAll(() => {

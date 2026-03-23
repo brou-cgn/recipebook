@@ -10,25 +10,37 @@ jest.mock('../firebase', () => ({
 // Mock Firestore functions
 const mockSetDoc = jest.fn();
 const mockDoc = jest.fn();
+const mockGetDocs = jest.fn();
+const mockCollection = jest.fn();
+const mockQuery = jest.fn();
+const mockWhere = jest.fn();
 const mockTimestampNow = jest.fn();
 const mockTimestampFromMillis = jest.fn((ms) => ({ _ms: ms, _isMock: true }));
 
 jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
+  getDocs: (...args) => mockGetDocs(...args),
+  collection: (...args) => mockCollection(...args),
+  query: (...args) => mockQuery(...args),
+  where: (...args) => mockWhere(...args),
   Timestamp: {
     now: () => mockTimestampNow(),
     fromMillis: (ms) => mockTimestampFromMillis(ms),
   },
 }));
 
-import { setRecipeSwipeFlag } from './recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags } from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockDoc.mockReturnValue('mock-doc-ref');
   mockTimestampNow.mockReturnValue('mock-now');
   mockSetDoc.mockResolvedValue(undefined);
+  mockGetDocs.mockResolvedValue({ forEach: jest.fn() });
+  mockCollection.mockReturnValue('mock-collection-ref');
+  mockQuery.mockReturnValue('mock-query-ref');
+  mockWhere.mockReturnValue('mock-where-ref');
 });
 
 describe('setRecipeSwipeFlag', () => {
@@ -62,9 +74,9 @@ describe('setRecipeSwipeFlag', () => {
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
-  it('sets geparkt flag with 30-day expiry', async () => {
+  it('sets geparkt flag with custom validity days', async () => {
     const before = Date.now();
-    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt');
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', 14);
     const after = Date.now();
 
     expect(result).toBe(true);
@@ -81,14 +93,32 @@ describe('setRecipeSwipeFlag', () => {
     expect(data.recipeId).toBe('recipe-1');
     expect(data.createdAt).toBe('mock-now');
 
-    // expiresAt should be ~30 days from now
+    // expiresAt should be ~14 days from now
     const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
-    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    expect(expiresMs).toBeGreaterThanOrEqual(before + thirtyDays);
-    expect(expiresMs).toBeLessThanOrEqual(after + thirtyDays);
+    const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + fourteenDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + fourteenDays);
   });
 
-  it('sets archiv flag with no expiry (null)', async () => {
+  it('sets geparkt flag with no expiry when validityDays is null', async () => {
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', null);
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.flag).toBe('geparkt');
+    expect(data.expiresAt).toBeNull();
+  });
+
+  it('sets geparkt flag with no expiry when validityDays is omitted', async () => {
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt');
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.flag).toBe('geparkt');
+    expect(data.expiresAt).toBeNull();
+  });
+
+  it('sets archiv flag with no expiry (null) by default', async () => {
     const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv');
 
     expect(result).toBe(true);
@@ -97,9 +127,24 @@ describe('setRecipeSwipeFlag', () => {
     expect(data.expiresAt).toBeNull();
   });
 
-  it('sets kandidat flag with 7-day expiry', async () => {
+  it('sets archiv flag with expiry when validityDays is provided', async () => {
     const before = Date.now();
-    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'kandidat');
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv', 30);
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.flag).toBe('archiv');
+
+    const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + thirtyDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + thirtyDays);
+  });
+
+  it('sets kandidat flag with custom validity days', async () => {
+    const before = Date.now();
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'kandidat', 3);
     const after = Date.now();
 
     expect(result).toBe(true);
@@ -107,9 +152,18 @@ describe('setRecipeSwipeFlag', () => {
     expect(data.flag).toBe('kandidat');
 
     const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    expect(expiresMs).toBeGreaterThanOrEqual(before + sevenDays);
-    expect(expiresMs).toBeLessThanOrEqual(after + sevenDays);
+    const threeDays = 3 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + threeDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + threeDays);
+  });
+
+  it('sets kandidat flag with no expiry when validityDays is null', async () => {
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'kandidat', null);
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.flag).toBe('kandidat');
+    expect(data.expiresAt).toBeNull();
   });
 
   it('uses a deterministic composite document ID (userId_listId_recipeId)', async () => {
@@ -123,7 +177,7 @@ describe('setRecipeSwipeFlag', () => {
   });
 
   it('overwrites an existing flag by calling setDoc (not addDoc)', async () => {
-    await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt');
+    await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', 14);
     await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv');
 
     // Both calls should target the same document ID
@@ -137,11 +191,73 @@ describe('setRecipeSwipeFlag', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockSetDoc.mockRejectedValue(new Error('Firestore error'));
 
-    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt');
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', 14);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error setting recipe swipe flag:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('getActiveSwipeFlags', () => {
+  it('returns empty object when userId is missing', async () => {
+    const result = await getActiveSwipeFlags('', 'list-1');
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns empty object when listId is missing', async () => {
+    const result = await getActiveSwipeFlags('user-1', '');
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns flags without expiry (permanent) as active', async () => {
+    mockGetDocs.mockResolvedValue({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: null }) });
+      },
+    });
+
+    const result = await getActiveSwipeFlags('user-1', 'list-1');
+    expect(result).toEqual({ 'recipe-1': 'archiv' });
+  });
+
+  it('returns flags with future expiresAt as active', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    mockGetDocs.mockResolvedValue({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-2', flag: 'kandidat', expiresAt: { toMillis: () => futureMs } }) });
+      },
+    });
+
+    const result = await getActiveSwipeFlags('user-1', 'list-1');
+    expect(result).toEqual({ 'recipe-2': 'kandidat' });
+  });
+
+  it('excludes flags with past expiresAt (expired)', async () => {
+    const pastMs = Date.now() - 1000;
+    mockGetDocs.mockResolvedValue({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-3', flag: 'geparkt', expiresAt: { toMillis: () => pastMs } }) });
+      },
+    });
+
+    const result = await getActiveSwipeFlags('user-1', 'list-1');
+    expect(result).toEqual({});
+  });
+
+  it('returns empty object and logs error when getDocs fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    const result = await getActiveSwipeFlags('user-1', 'list-1');
+    expect(result).toEqual({});
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error loading active swipe flags:',
       expect.any(Error)
     );
     consoleSpy.mockRestore();
