@@ -262,20 +262,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   return (
     <div className="tagesmenu-container">
-      {interactiveLists.length > 1 && (
-        <div className="tagesmenu-list-selector">
-          {interactiveLists.map((list) => (
-            <button
-              key={list.id}
-              className={`tagesmenu-list-tab${list.id === selectedListId ? ' active' : ''}`}
-              onClick={() => setSelectedListId(list.id)}
-            >
-              {list.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {listRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon">🍽️</span>
