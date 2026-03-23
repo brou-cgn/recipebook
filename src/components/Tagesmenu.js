@@ -102,6 +102,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setActiveFlags({});
       setAllMembersFlags({});
       setFlagsLoaded(false);
+      // Reload the global threshold setting to ensure it is not lost during list switches
+      getMaxKandidatenSchwelle().then(setMaxKandidatenSchwelle).catch(() => {});
     }
   }, [selectedListId]);
 
@@ -151,31 +153,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setAllMembersFlags({});
       return;
     }
-    // DEBUG LOGS START
-    console.log('🔍 Loading flags for members:', allMemberIds);
-    console.log('🔍 List ID:', selectedListId);
-    console.log('🔍 Current user ID:', currentUser?.id);
-    // DEBUG LOGS END
-
     getAllMembersSwipeFlags(selectedListId, allMemberIds).then((flags) => {
-      // DEBUG LOGS START
-      console.log('📦 Loaded allMembersFlags:', flags);
-      console.log('📊 Number of members with flags:', Object.keys(flags).length);
-
-      // Show the number of swipes for each member
-      Object.entries(flags).forEach(([userId, userFlags]) => {
-        console.log(`  User ${userId}: ${Object.keys(userFlags).length} swipes`);
-        // Show the first 3 swipes as an example
-        Object.entries(userFlags).slice(0, 3).forEach(([recipeId, flag]) => {
-          console.log(`    Recipe ${recipeId}: ${flag}`);
-        });
-      });
-      // DEBUG LOGS END
-
       setAllMembersFlags(flags);
-    }).catch((error) => {
-      console.error('❌ Error loading allMembersFlags:', error);
-    });
+    }).catch(() => {});
   }, [selectedListId, selectedList, currentUser]);
 
   // Drag / animation state
@@ -414,43 +394,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const groupStatusByRecipeId = useMemo(() => {
     if (listMemberIds.length <= 1) return {};
 
-    // DEBUG LOGS START
-    console.log('🧮 Computing group status...');
-    console.log('  Members:', listMemberIds);
-    console.log('  Total recipes:', allListRecipes.length);
-    console.log('  Thresholds:', groupThresholds);
-    // DEBUG LOGS END
-
     const result = Object.fromEntries(
       allListRecipes.map((r) => {
         const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds);
-
-        // DEBUG LOGS START
-        // Show details for each recipe with a computed status
-        if (status) {
-          console.log(`  ✅ Recipe "${r.title}" (${r.id}): ${status}`);
-          // Show the individual member votes
-          listMemberIds.forEach(memberId => {
-            const flag = allMembersFlags[memberId]?.[r.id];
-            console.log(`    Member ${memberId}: ${flag || 'NOT SWIPED'}`);
-          });
-        }
-        // DEBUG LOGS END
-
         return [r.id, status];
       })
     );
-
-    // DEBUG LOGS START
-    const kandidatCount = Object.values(result).filter(s => s === 'kandidat').length;
-    const archivCount = Object.values(result).filter(s => s === 'archiv').length;
-    const noStatusCount = Object.values(result).filter(s => s === null).length;
-    console.log(`📊 Group Status Summary:`);
-    console.log(`  Kandidat: ${kandidatCount}`);
-    console.log(`  Archiv: ${archivCount}`);
-    console.log(`  No Status: ${noStatusCount}`);
-    // DEBUG LOGS END
-
     return result;
   }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
 

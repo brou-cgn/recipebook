@@ -479,4 +479,70 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
+
+  test('threshold is preserved and reloaded when switching between lists', async () => {
+    // List 1: threshold set, all recipes voted → results shown immediately
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' } };
+
+    const list1 = {
+      id: 'list1',
+      name: 'Liste 1',
+      listKind: 'interactive',
+      recipeIds: [],
+      ownerId: 'user1',
+      memberIds: ['user2'],
+    };
+    const list2 = {
+      id: 'list2',
+      name: 'Liste 2',
+      listKind: 'interactive',
+      recipeIds: [],
+      ownerId: 'user1',
+      memberIds: ['user2'],
+    };
+    const recipesForBothLists = [
+      { id: 'r1', title: 'Rezept 1', groupId: 'list1' },
+      { id: 'r2', title: 'Rezept 2', groupId: 'list1' },
+      { id: 'r3', title: 'Rezept 3', groupId: 'list1' },
+      { id: 'r4', title: 'Rezept 4', groupId: 'list2' },
+    ];
+
+    const { container } = await act(async () =>
+      render(
+        <Tagesmenu
+          interactiveLists={[list1, list2]}
+          recipes={recipesForBothLists}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      )
+    );
+
+    // List 1 starts selected; all recipes voted → results view due to threshold
+    expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    // Open the filter overlay and switch to list 2
+    const filterBtn = container.querySelector('.tagesmenu-filter-btn');
+    await act(async () => { filterBtn.click(); });
+
+    const pills = container.querySelectorAll('.mobile-search-filter-pill');
+    // Second pill = list2
+    await act(async () => { pills[1].click(); });
+
+    // List 2 has r4 not voted by user2 → score 1/(1+1) = 0.5 < threshold 2 → stack shown
+    expect(container.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(container.querySelector('.tagesmenu-results')).toBeNull();
+
+    // Open overlay again and switch back to list 1
+    // Note: the active list (list2) is shown first in the overlay, so list1 is at index 1
+    const filterBtn2 = container.querySelector('.tagesmenu-filter-btn');
+    await act(async () => { filterBtn2.click(); });
+
+    const pills2 = container.querySelectorAll('.mobile-search-filter-pill');
+    await act(async () => { pills2[1].click(); });
+
+    expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+  });
 });
