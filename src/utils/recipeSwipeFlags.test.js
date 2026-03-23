@@ -30,7 +30,7 @@ jest.mock('firebase/firestore', () => ({
   },
 }));
 
-import { setRecipeSwipeFlag, getActiveSwipeFlags } from './recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus } from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -261,5 +261,129 @@ describe('getActiveSwipeFlags', () => {
       expect.any(Error)
     );
     consoleSpy.mockRestore();
+  });
+});
+
+describe('getAllMembersSwipeFlags', () => {
+  it('returns empty object when listId is missing', async () => {
+    const result = await getAllMembersSwipeFlags('', ['user-1', 'user-2']);
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns empty object when memberIds is empty', async () => {
+    const result = await getAllMembersSwipeFlags('list-1', []);
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns flags per userId for all members', async () => {
+    mockGetDocs
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: null }) });
+        },
+      })
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: null }) });
+        },
+      });
+
+    const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
+    expect(result).toEqual({
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'archiv' },
+    });
+  });
+
+  it('returns empty flags map for a member with no swipes', async () => {
+    mockGetDocs
+      .mockResolvedValueOnce({ forEach: jest.fn() })
+      .mockResolvedValueOnce({ forEach: jest.fn() });
+
+    const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
+    expect(result).toEqual({ 'user-1': {}, 'user-2': {} });
+  });
+});
+
+describe('computeGroupRecipeStatus', () => {
+  const defaultThresholds = {
+    groupThresholdKandidatMinKandidat: 50,
+    groupThresholdKandidatMaxArchiv: 50,
+    groupThresholdArchivMinArchiv: 50,
+    groupThresholdArchivMaxKandidat: 50,
+  };
+
+  it('returns null when memberIds is empty', () => {
+    const result = computeGroupRecipeStatus([], {}, 'recipe-1', defaultThresholds);
+    expect(result).toBeNull();
+  });
+
+  it('treats missing swipe as kandidat', () => {
+    // Single member, no swipe → treated as kandidat → 100% kandidat, 0% archiv → Kandidat
+    const result = computeGroupRecipeStatus(['user-1'], {}, 'recipe-1', defaultThresholds);
+    expect(result).toBe('kandidat');
+  });
+
+  it('returns kandidat when all members voted kandidat', () => {
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'kandidat' },
+    };
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds);
+    expect(result).toBe('kandidat');
+  });
+
+  it('returns archiv when all members voted archiv', () => {
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'archiv' },
+      'user-2': { 'recipe-1': 'archiv' },
+    };
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds);
+    expect(result).toBe('archiv');
+  });
+
+  it('returns null when votes are split equally (neither threshold met)', () => {
+    // 50% kandidat, 50% archiv with max archiv for kandidat = 50%: borderline case, archiv% = 50 <= 50 AND kandidat% = 50 >= 50 → kandidat
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'archiv' },
+    };
+    // With custom thresholds where max archiv for kandidat is 30%: 50% archiv > 30% → not kandidat, 50% archiv >= 50% AND 50% kandidat > 50% maxKandidat → not archiv
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 70,
+      groupThresholdKandidatMaxArchiv: 30,
+      groupThresholdArchivMinArchiv: 70,
+      groupThresholdArchivMaxKandidat: 30,
+    };
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', strictThresholds);
+    expect(result).toBeNull();
+  });
+
+  it('uses default thresholds when thresholds param is missing', () => {
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+    };
+    // No thresholds passed – should fall back to defaults (50/50/50/50)
+    const result = computeGroupRecipeStatus(['user-1'], allMembersFlags, 'recipe-1', null);
+    expect(result).toBe('kandidat');
+  });
+
+  it('geparkt votes are neither kandidat nor archiv and reduce the effective pool', () => {
+    // 1 kandidat, 1 geparkt, 1 archiv → 33% kandidat, 33% archiv
+    // With default 50% thresholds: neither 33% >= 50% (kandidat min) nor 33% >= 50% (archiv min)
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'geparkt' },
+      'user-3': { 'recipe-1': 'archiv' },
+    };
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      defaultThresholds
+    );
+    expect(result).toBeNull();
   });
 });

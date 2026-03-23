@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags } from '../utils/recipeSwipeFlags';
-import { getStatusValiditySettings, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
+import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
@@ -53,6 +53,18 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     statusValidityDaysArchiv: null,
   });
 
+  // Group status thresholds for shared status determination across all list members
+  const [groupThresholds, setGroupThresholds] = useState({
+    groupThresholdKandidatMinKandidat: 50,
+    groupThresholdKandidatMaxArchiv: 50,
+    groupThresholdArchivMinArchiv: 50,
+    groupThresholdArchivMaxKandidat: 50,
+  });
+
+  // All members' swipe flags for the selected list (used for group status determination)
+  // Map of userId → { recipeId → flag }
+  const [allMembersFlags, setAllMembersFlags] = useState({});
+
   // Configurable swipe badge icons loaded from settings
   const [swipeIcons, setSwipeIcons] = useState({
     swipeRight: DEFAULT_BUTTON_ICONS.swipeRight,
@@ -81,12 +93,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setCurrentIndex(0);
       setSwipeResults({});
       setActiveFlags({});
+      setAllMembersFlags({});
     }
   }, [selectedListId]);
 
   // Load status validity settings once on mount
   useEffect(() => {
     getStatusValiditySettings().then(setStatusValiditySettings).catch(() => {});
+    getGroupStatusThresholds().then(setGroupThresholds).catch(() => {});
   }, []);
 
   // Load configurable swipe icons once on mount
@@ -108,6 +122,24 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     }
     getActiveSwipeFlags(currentUser.id, selectedListId).then(setActiveFlags).catch(() => {});
   }, [currentUser, selectedListId]);
+
+  // Load all members' swipe flags for group status determination.
+  // Reloads whenever the selected list or its members change.
+  useEffect(() => {
+    if (!selectedListId || !selectedList) {
+      setAllMembersFlags({});
+      return;
+    }
+    const memberIds = Array.isArray(selectedList.memberIds) ? selectedList.memberIds : [];
+    const allMemberIds = selectedList.ownerId
+      ? [...new Set([selectedList.ownerId, ...memberIds])]
+      : memberIds;
+    if (allMemberIds.length === 0) {
+      setAllMembersFlags({});
+      return;
+    }
+    getAllMembersSwipeFlags(selectedListId, allMemberIds).then(setAllMembersFlags).catch(() => {});
+  }, [selectedListId, selectedList]);
 
   // Drag / animation state
   // cardPhase: 'idle' | 'dragging' | 'snap' | 'flying'
@@ -282,6 +314,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               kandidat: statusValiditySettings.statusValidityDaysKandidat,
             };
             setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, validityDaysMap[flag]);
+            // Keep allMembersFlags in sync with the current user's new swipe
+            setAllMembersFlags((prev) => ({
+              ...prev,
+              [currentUser.id]: {
+                ...(prev[currentUser.id] || {}),
+                [swipe.recipe.id]: flag,
+              },
+            }));
           }
           setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
@@ -299,6 +339,26 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   const allSwiped = allListRecipes.length > 0 && (listRecipes.length === 0 || currentIndex >= listRecipes.length);
   const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
+
+  // Full list of member IDs (owner + members) for group status computation
+  const listMemberIds = useMemo(() => {
+    if (!selectedList) return [];
+    const memberIds = Array.isArray(selectedList.memberIds) ? selectedList.memberIds : [];
+    return selectedList.ownerId
+      ? [...new Set([selectedList.ownerId, ...memberIds])]
+      : memberIds;
+  }, [selectedList]);
+
+  // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
+  const groupStatusByRecipeId = useMemo(() => {
+    if (listMemberIds.length <= 1) return {};
+    return Object.fromEntries(
+      allListRecipes.map((r) => [
+        r.id,
+        computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds),
+      ])
+    );
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
 
   // How far along the swipe are we (0–1) – used to animate background cards
   const dragProgress = Math.min(
@@ -334,10 +394,64 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         </div>
       ) : allSwiped ? (
         <div className="tagesmenu-results">
+          {/* Group status section – only shown for lists with multiple members */}
+          {listMemberIds.length > 1 && (() => {
+            const groupStatusGroups = [
+              { label: '⭐ Kandidat', flag: 'kandidat' },
+              { label: '🗄️ Archiviert', flag: 'archiv' },
+            ].map(({ label, flag }) => ({
+              label,
+              flag,
+              group: allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === flag),
+            })).filter(({ group }) => group.length > 0);
+
+            if (groupStatusGroups.length === 0) return null;
+            return (
+              <>
+                <h2 className="tagesmenu-results-section-title">Gemeinsamer Status</h2>
+                {groupStatusGroups.map(({ label, flag, group }) => (
+                  <div key={`group-${flag}`} className="tagesmenu-results-group">
+                    <h3 className="tagesmenu-results-group-title">{label}</h3>
+                    <div className="tagesmenu-results-tiles">
+                      {group.map((recipe) => {
+                        const allImages =
+                          Array.isArray(recipe.images) && recipe.images.length > 0
+                            ? recipe.images
+                            : recipe.image
+                            ? [{ url: recipe.image, isDefault: true }]
+                            : [];
+                        const orderedImages = [
+                          ...allImages.filter((img) => img.isDefault),
+                          ...allImages.filter((img) => !img.isDefault),
+                        ];
+                        return (
+                          <button
+                            key={recipe.id}
+                            className="tagesmenu-results-tile"
+                            onClick={() => onSelectRecipe(recipe)}
+                          >
+                            <div className="tagesmenu-results-tile-image">
+                              {orderedImages.length > 0 ? (
+                                <img src={orderedImages[0].url} alt={recipe.title} />
+                              ) : (
+                                <span>🍽️</span>
+                              )}
+                            </div>
+                            <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <h2 className="tagesmenu-results-section-title">Meine Auswahl</h2>
+              </>
+            );
+          })()}
           {[
-            { label: 'Kandidat', flag: 'kandidat' },
-            { label: 'Für später', flag: 'geparkt' },
-            { label: 'Archiviert', flag: 'archiv' },
+            { label: '⭐ Kandidat', flag: 'kandidat' },
+            { label: '🕒 Für später', flag: 'geparkt' },
+            { label: '🗄️ Archiviert', flag: 'archiv' },
           ].map(({ label, flag }) => {
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];

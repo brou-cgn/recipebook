@@ -135,6 +135,12 @@ export const DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT = null;
 export const DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT = null;
 export const DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV = null;
 
+// Group status threshold defaults for shared status determination in interactive lists (%)
+export const DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT = 50;
+export const DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV = 50;
+export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV = 50;
+export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -341,6 +347,10 @@ export async function getSettings() {
         statusValidityDaysKandidat: settings.statusValidityDaysKandidat ?? DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
         statusValidityDaysGeparkt: settings.statusValidityDaysGeparkt ?? DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
         statusValidityDaysArchiv: settings.statusValidityDaysArchiv ?? DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
+        groupThresholdKandidatMinKandidat: settings.groupThresholdKandidatMinKandidat ?? DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT,
+        groupThresholdKandidatMaxArchiv: settings.groupThresholdKandidatMaxArchiv ?? DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
+        groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
+        groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       };
       
       return settingsCache;
@@ -374,6 +384,10 @@ export async function getSettings() {
       statusValidityDaysKandidat: DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
       statusValidityDaysGeparkt: DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
       statusValidityDaysArchiv: DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
+      groupThresholdKandidatMinKandidat: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT,
+      groupThresholdKandidatMaxArchiv: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
+      groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
+      groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
     };
     
     // Create the settings document
@@ -412,6 +426,10 @@ export async function getSettings() {
       statusValidityDaysKandidat: DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
       statusValidityDaysGeparkt: DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
       statusValidityDaysArchiv: DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
+      groupThresholdKandidatMinKandidat: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT,
+      groupThresholdKandidatMaxArchiv: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
+      groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
+      groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
     };
   }
 }
@@ -1135,6 +1153,53 @@ export async function saveStatusValiditySettings(statusValiditySettings) {
     }
   } catch (error) {
     console.error('Error saving status validity settings:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get group status thresholds for shared status determination in interactive lists.
+ * @returns {Promise<Object>} Promise resolving to group status threshold settings
+ */
+export async function getGroupStatusThresholds() {
+  const settings = await getSettings();
+  return {
+    groupThresholdKandidatMinKandidat: settings.groupThresholdKandidatMinKandidat ?? DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT,
+    groupThresholdKandidatMaxArchiv: settings.groupThresholdKandidatMaxArchiv ?? DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
+    groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
+    groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
+  };
+}
+
+/**
+ * Save group status thresholds for shared status determination in interactive lists.
+ * @param {Object} thresholds - Object with groupThreshold* fields (numbers 0–100)
+ * @returns {Promise<void>}
+ */
+export async function saveGroupStatusThresholds(thresholds) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    const update = {};
+    if (thresholds.groupThresholdKandidatMinKandidat !== undefined) {
+      update.groupThresholdKandidatMinKandidat = thresholds.groupThresholdKandidatMinKandidat;
+    }
+    if (thresholds.groupThresholdKandidatMaxArchiv !== undefined) {
+      update.groupThresholdKandidatMaxArchiv = thresholds.groupThresholdKandidatMaxArchiv;
+    }
+    if (thresholds.groupThresholdArchivMinArchiv !== undefined) {
+      update.groupThresholdArchivMinArchiv = thresholds.groupThresholdArchivMinArchiv;
+    }
+    if (thresholds.groupThresholdArchivMaxKandidat !== undefined) {
+      update.groupThresholdArchivMaxKandidat = thresholds.groupThresholdArchivMaxKandidat;
+    }
+    await updateDoc(settingsRef, update);
+
+    // Update cache
+    if (settingsCache) {
+      Object.assign(settingsCache, update);
+    }
+  } catch (error) {
+    console.error('Error saving group status thresholds:', error);
     throw error;
   }
 }

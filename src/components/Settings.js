@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -276,6 +276,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [statusValidityDaysGeparkt, setStatusValidityDaysGeparkt] = useState('');
   const [statusValidityDaysArchiv, setStatusValidityDaysArchiv] = useState('');
 
+  // Group status thresholds for shared status determination in interactive lists (0–100)
+  const [groupThresholdKandidatMinKandidat, setGroupThresholdKandidatMinKandidat] = useState(DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT);
+  const [groupThresholdKandidatMaxArchiv, setGroupThresholdKandidatMaxArchiv] = useState(DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV);
+  const [groupThresholdArchivMinArchiv, setGroupThresholdArchivMinArchiv] = useState(DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV);
+  const [groupThresholdArchivMaxKandidat, setGroupThresholdArchivMaxKandidat] = useState(DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT);
+
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
 
@@ -301,6 +307,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const aiRecipePrompt = await getAIRecipePrompt();
       const sortSettings = await getSortSettings();
       const statusValidity = await getStatusValiditySettings();
+      const groupThresholds = await getGroupStatusThresholds();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -323,6 +330,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setStatusValidityDaysKandidat(statusValidity.statusValidityDaysKandidat != null ? String(statusValidity.statusValidityDaysKandidat) : '');
       setStatusValidityDaysGeparkt(statusValidity.statusValidityDaysGeparkt != null ? String(statusValidity.statusValidityDaysGeparkt) : '');
       setStatusValidityDaysArchiv(statusValidity.statusValidityDaysArchiv != null ? String(statusValidity.statusValidityDaysArchiv) : '');
+      setGroupThresholdKandidatMinKandidat(groupThresholds.groupThresholdKandidatMinKandidat);
+      setGroupThresholdKandidatMaxArchiv(groupThresholds.groupThresholdKandidatMaxArchiv);
+      setGroupThresholdArchivMinArchiv(groupThresholds.groupThresholdArchivMinArchiv);
+      setGroupThresholdArchivMaxKandidat(groupThresholds.groupThresholdArchivMaxKandidat);
     };
     loadSettings();
   }, []);
@@ -538,6 +549,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         statusValidityDaysKandidat: statusValidityDaysKandidat !== '' ? parseInt(statusValidityDaysKandidat, 10) : null,
         statusValidityDaysGeparkt: statusValidityDaysGeparkt !== '' ? parseInt(statusValidityDaysGeparkt, 10) : null,
         statusValidityDaysArchiv: statusValidityDaysArchiv !== '' ? parseInt(statusValidityDaysArchiv, 10) : null,
+      });
+      await saveGroupStatusThresholds({
+        groupThresholdKandidatMinKandidat,
+        groupThresholdKandidatMaxArchiv,
+        groupThresholdArchivMinArchiv,
+        groupThresholdArchivMaxKandidat,
       });
 
       // Propagate cuisine type renames to all affected recipes
@@ -1136,6 +1153,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   const handleRemoveTimelineCookEventDefaultImage = () => {
     setTimelineCookEventDefaultImage(null);
+  };
+
+  const handlePercentChange = (setter) => (e) => {
+    const val = e.target.valueAsNumber;
+    if (!isNaN(val) && val >= 0 && val <= 100) setter(val);
   };
 
   return (
@@ -3399,6 +3421,69 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       }}
                     />
                     <span className="sort-settings-hint">{STATUS_VALIDITY_HINT}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Tagesmenü – Gemeinsame Statusermittlung</h3>
+              <p className="section-description">
+                Konfigurieren Sie die Grenzwerte für die gemeinsame Statusermittlung in interaktiven Listen mit mehreren Mitgliedern. Fehlt der Swipe eines Mitglieds, wird dieser als "Kandidaten"-Swipe gewertet.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <h4>⭐ Kandidat</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="groupThresholdKandidatMinKandidat">Minimum Kandidaten-Swipes (%):</label>
+                    <input
+                      id="groupThresholdKandidatMinKandidat"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={groupThresholdKandidatMinKandidat}
+                      onChange={handlePercentChange(setGroupThresholdKandidatMinKandidat)}
+                    />
+                    <span className="sort-settings-hint">Ein Rezept gilt als gemeinsamer Kandidat, wenn mindestens X % der Mitglieder "Kandidat" geswipet haben.</span>
+                  </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="groupThresholdKandidatMaxArchiv">Maximum Archiv-Swipes (%):</label>
+                    <input
+                      id="groupThresholdKandidatMaxArchiv"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={groupThresholdKandidatMaxArchiv}
+                      onChange={handlePercentChange(setGroupThresholdKandidatMaxArchiv)}
+                    />
+                    <span className="sort-settings-hint">Ein Rezept gilt als gemeinsamer Kandidat, wenn höchstens Y % der Mitglieder "Archiv" geswipet haben.</span>
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>🗄️ Archiv</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="groupThresholdArchivMinArchiv">Minimum Archiv-Swipes (%):</label>
+                    <input
+                      id="groupThresholdArchivMinArchiv"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={groupThresholdArchivMinArchiv}
+                      onChange={handlePercentChange(setGroupThresholdArchivMinArchiv)}
+                    />
+                    <span className="sort-settings-hint">Ein Rezept wird gemeinsam archiviert, wenn mindestens X % der Mitglieder "Archiv" geswipet haben.</span>
+                  </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="groupThresholdArchivMaxKandidat">Maximum Kandidaten-Swipes (%):</label>
+                    <input
+                      id="groupThresholdArchivMaxKandidat"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={groupThresholdArchivMaxKandidat}
+                      onChange={handlePercentChange(setGroupThresholdArchivMaxKandidat)}
+                    />
+                    <span className="sort-settings-hint">Ein Rezept wird gemeinsam archiviert, wenn höchstens Y % der Mitglieder "Kandidat" geswipet haben.</span>
                   </div>
                 </div>
               </div>

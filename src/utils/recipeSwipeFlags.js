@@ -114,3 +114,75 @@ export const getActiveSwipeFlags = async (userId, listId) => {
     return {};
   }
 };
+
+/**
+ * Load all active (non-expired) swipe flags for all specified members of a list.
+ * Used for group status determination across all list members.
+ *
+ * @param {string} listId      - ID of the interactive list
+ * @param {string[]} memberIds - Array of user IDs (all list members including owner)
+ * @returns {Promise<Object>} Map of userId → { recipeId → flag } for all active flags
+ */
+export const getAllMembersSwipeFlags = async (listId, memberIds) => {
+  if (!listId || !Array.isArray(memberIds) || memberIds.length === 0) return {};
+  try {
+    const results = await Promise.all(
+      memberIds.map(async (userId) => {
+        const flags = await getActiveSwipeFlags(userId, listId);
+        return { userId, flags };
+      })
+    );
+    return Object.fromEntries(results.map(({ userId, flags }) => [userId, flags]));
+  } catch (error) {
+    console.error('Error loading all members swipe flags:', error);
+    return {};
+  }
+};
+
+/**
+ * Compute the shared group status for a single recipe based on all list members' swipes.
+ * Members who have not yet swiped are treated as having voted 'kandidat'.
+ *
+ * @param {string[]} memberIds       - All member user IDs of the list
+ * @param {Object}   allMembersFlags - Map of userId → { recipeId → flag }
+ * @param {string}   recipeId        - ID of the recipe to evaluate
+ * @param {Object}   thresholds      - Threshold configuration:
+ *   - groupThresholdKandidatMinKandidat {number} Min % of kandidat votes for Kandidat status
+ *   - groupThresholdKandidatMaxArchiv   {number} Max % of archiv votes for Kandidat status
+ *   - groupThresholdArchivMinArchiv     {number} Min % of archiv votes for Archiv status
+ *   - groupThresholdArchivMaxKandidat   {number} Max % of kandidat votes for Archiv status
+ * @returns {'kandidat'|'archiv'|null} Group status, or null if no threshold is met
+ */
+export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, thresholds) {
+  if (!Array.isArray(memberIds) || memberIds.length === 0) return null;
+
+  let kandidatCount = 0;
+  let archivCount = 0;
+
+  for (const uid of memberIds) {
+    const flag = allMembersFlags[uid]?.[recipeId] ?? 'kandidat';
+    if (flag === 'kandidat') kandidatCount++;
+    else if (flag === 'archiv') archivCount++;
+  }
+
+  const total = memberIds.length;
+  const kandidatPct = (kandidatCount / total) * 100;
+  const archivPct = (archivCount / total) * 100;
+
+  const {
+    groupThresholdKandidatMinKandidat = 50,
+    groupThresholdKandidatMaxArchiv = 50,
+    groupThresholdArchivMinArchiv = 50,
+    groupThresholdArchivMaxKandidat = 50,
+  } = thresholds || {};
+
+  if (kandidatPct >= groupThresholdKandidatMinKandidat && archivPct <= groupThresholdKandidatMaxArchiv) {
+    return 'kandidat';
+  }
+
+  if (archivPct >= groupThresholdArchivMinArchiv && kandidatPct <= groupThresholdArchivMaxKandidat) {
+    return 'archiv';
+  }
+
+  return null;
+}

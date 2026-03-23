@@ -270,6 +270,15 @@
   color: #1a1a1a;
 }
 
+.tagesmenu-results-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #402C1C;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f0ebe3;
+}
+
 .tagesmenu-results-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
