@@ -119,6 +119,11 @@ export const getActiveSwipeFlags = async (userId, listId) => {
  * Load all active (non-expired) swipe flags for all specified members of a list.
  * Used for group status determination across all list members.
  *
+ * Uses a single query filtered by listId so that all members' flags are fetched
+ * in one round-trip. Requires the Firestore security rule for recipeSwipeFlags to
+ * allow list members to read each other's flags (i.e. any authenticated user who
+ * is the owner or a member of the list may read all flags for that list).
+ *
  * @param {string} listId      - ID of the interactive list
  * @param {string[]} memberIds - Array of user IDs (all list members including owner)
  * @returns {Promise<Object>} Map of userId → { recipeId → flag } for all active flags
@@ -126,13 +131,30 @@ export const getActiveSwipeFlags = async (userId, listId) => {
 export const getAllMembersSwipeFlags = async (listId, memberIds) => {
   if (!listId || !Array.isArray(memberIds) || memberIds.length === 0) return {};
   try {
-    const results = await Promise.all(
-      memberIds.map(async (userId) => {
-        const flags = await getActiveSwipeFlags(userId, listId);
-        return { userId, flags };
-      })
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId)
     );
-    return Object.fromEntries(results.map(({ userId, flags }) => [userId, flags]));
+    const snapshot = await getDocs(q);
+    const now = Date.now();
+
+    // Initialise every known member with an empty flags map
+    const result = Object.fromEntries(memberIds.map((id) => [id, {}]));
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      // Skip documents for users outside the expected member list
+      if (!memberIds.includes(data.userId)) return;
+      const expired =
+        data.expiresAt !== null &&
+        data.expiresAt !== undefined &&
+        data.expiresAt.toMillis() <= now;
+      if (!expired) {
+        result[data.userId][data.recipeId] = data.flag;
+      }
+    });
+
+    return result;
   } catch (error) {
     console.error('Error loading all members swipe flags:', error);
     return {};

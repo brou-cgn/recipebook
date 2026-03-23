@@ -277,18 +277,19 @@ describe('getAllMembersSwipeFlags', () => {
     expect(mockGetDocs).not.toHaveBeenCalled();
   });
 
+  it('uses a single query by listId to fetch all members flags at once', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
+    await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
+    expect(mockGetDocs).toHaveBeenCalledTimes(1);
+  });
+
   it('returns flags per userId for all members', async () => {
-    mockGetDocs
-      .mockResolvedValueOnce({
-        forEach: (cb) => {
-          cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: null }) });
-        },
-      })
-      .mockResolvedValueOnce({
-        forEach: (cb) => {
-          cb({ data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: null }) });
-        },
-      });
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: null }) });
+        cb({ data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: null }) });
+      },
+    });
 
     const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
     expect(result).toEqual({
@@ -298,12 +299,46 @@ describe('getAllMembersSwipeFlags', () => {
   });
 
   it('returns empty flags map for a member with no swipes', async () => {
-    mockGetDocs
-      .mockResolvedValueOnce({ forEach: jest.fn() })
-      .mockResolvedValueOnce({ forEach: jest.fn() });
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
 
     const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
     expect(result).toEqual({ 'user-1': {}, 'user-2': {} });
+  });
+
+  it('ignores flags from users not in the memberIds list', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-3', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: null }) });
+      },
+    });
+
+    const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
+    expect(result).toEqual({ 'user-1': {}, 'user-2': {} });
+  });
+
+  it('excludes expired flags', async () => {
+    const pastMs = Date.now() - 1000;
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: { toMillis: () => pastMs } }) });
+      },
+    });
+
+    const result = await getAllMembersSwipeFlags('list-1', ['user-1']);
+    expect(result).toEqual({ 'user-1': {} });
+  });
+
+  it('returns empty object and logs error when getDocs fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    const result = await getAllMembersSwipeFlags('list-1', ['user-1', 'user-2']);
+    expect(result).toEqual({});
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error loading all members swipe flags:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
   });
 });
 
