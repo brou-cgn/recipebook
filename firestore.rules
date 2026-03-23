@@ -171,7 +171,7 @@ service cloud.firestore {
       // Returns true when the requesting user is the owner or a member of the given interactive list.
       // This allows list members to read each other's swipe flags for group status computation.
       function isListMemberOf(listId) {
-        let listDoc = get(/databases/$(database)/documents/customLists/$(listId));
+        let listDoc = get(/databases/$(database)/documents/groups/$(listId));
         return listDoc.data.ownerId == request.auth.uid
             || ('memberIds' in listDoc.data && request.auth.uid in listDoc.data.memberIds);
       }
