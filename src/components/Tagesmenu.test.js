@@ -3,11 +3,13 @@ import { render, act } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 
 let mockActiveFlagsValue = {};
+let mockAllMembersFlagsValue = {};
+let mockMaxKandidatenSchwelle = null;
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
-  getAllMembersSwipeFlags: () => Promise.resolve({}),
+  getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
   computeGroupRecipeStatus: () => 'kandidat',
 }));
 
@@ -23,6 +25,7 @@ jest.mock('../utils/customLists', () => ({
     groupThresholdArchivMinArchiv: 50,
     groupThresholdArchivMaxKandidat: 50,
   }),
+  getMaxKandidatenSchwelle: () => Promise.resolve(mockMaxKandidatenSchwelle),
   getButtonIcons: () => Promise.resolve({
     swipeRight: '👍',
     swipeLeft: '👎',
@@ -300,10 +303,12 @@ describe('Tagesmenu – completion tile view', () => {
 describe('Tagesmenu – pre-existing active flags', () => {
   beforeEach(() => {
     mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
   });
 
   afterEach(() => {
     mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
   });
 
   test('no swipe card is shown before active flags are loaded', async () => {
@@ -387,5 +392,91 @@ describe('Tagesmenu – pre-existing active flags', () => {
     expect(groups[0]).toHaveTextContent('Kandidat');
     expect(groups[1]).toHaveTextContent('Archiviert');
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
+  });
+});
+
+describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () => {
+  // Two-member list: user1 = current swiper (owner), user2 = other member.
+  // The score is computed from user2's votes only (current user excluded).
+  const listWithTwoMembers = {
+    id: 'list1',
+    name: 'Test Liste',
+    listKind: 'interactive',
+    recipeIds: [],
+    ownerId: 'user1',
+    memberIds: ['user2'],
+  };
+
+  function renderMenuWithTwoMembers(recipeList = recipes) {
+    return render(
+      <Tagesmenu
+        interactiveLists={[listWithTwoMembers]}
+        recipes={recipeList}
+        allUsers={[]}
+        onSelectRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+  }
+
+  beforeEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+  });
+
+  afterEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+  });
+
+  test('swipe stack is not ended early when threshold is null (disabled)', async () => {
+    // user2 has voted all recipes → S = 3 * 1/(1+0) = 3 if threshold applied,
+    // but threshold = null so no early termination.
+    mockMaxKandidatenSchwelle = null;
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' } };
+
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+  });
+
+  test('stack ends immediately when other members have voted all recipes (current user excluded from formula)', async () => {
+    // user2 has voted all 3 recipes → otherMembers (user2) have ni=0 for every recipe
+    // S = 3 * 1/(1+0) = 3; threshold = 2 → 3 >= 2 → stack ends immediately
+    // user1/currentUser has not swiped anything but their missing votes are excluded
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' } };
+
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+  });
+
+  test('stack stays open when other member has not yet voted (S < threshold)', async () => {
+    // user2 has not voted any recipe → ni=1 for each (1 other member, none swiped)
+    // S = 3 * 1/(1+1) = 1.5; threshold = 2 → 1.5 < 2 → stack continues
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {}; // user2 has no votes yet
+
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+  });
+
+  test('stack ends when other member has voted partially and S exactly meets threshold', async () => {
+    // user2 voted r1 and r2 (not r3) → ni: r1=0, r2=0, r3=1
+    // S = 1/(1+0) + 1/(1+0) + 1/(1+1) = 1 + 1 + 0.5 = 2.5; threshold = 2 → 2.5 >= 2 → ends
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat' } };
+
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -282,6 +282,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [groupThresholdArchivMinArchiv, setGroupThresholdArchivMinArchiv] = useState(DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV);
   const [groupThresholdArchivMaxKandidat, setGroupThresholdArchivMaxKandidat] = useState(DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT);
 
+  // Maximum candidate score threshold for ending the swipe stack early ('' = disabled)
+  const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState('');
+
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
 
@@ -308,6 +311,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const sortSettings = await getSortSettings();
       const statusValidity = await getStatusValiditySettings();
       const groupThresholds = await getGroupStatusThresholds();
+      const maxSchwelle = await getMaxKandidatenSchwelle();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -334,6 +338,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setGroupThresholdKandidatMaxArchiv(groupThresholds.groupThresholdKandidatMaxArchiv);
       setGroupThresholdArchivMinArchiv(groupThresholds.groupThresholdArchivMinArchiv);
       setGroupThresholdArchivMaxKandidat(groupThresholds.groupThresholdArchivMaxKandidat);
+      setMaxKandidatenSchwelle(maxSchwelle != null ? String(maxSchwelle) : '');
     };
     loadSettings();
   }, []);
@@ -556,6 +561,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         groupThresholdArchivMinArchiv,
         groupThresholdArchivMaxKandidat,
       });
+      await saveMaxKandidatenSchwelle(maxKandidatenSchwelle !== '' ? parseFloat(maxKandidatenSchwelle) : null);
 
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
@@ -1185,6 +1191,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           >
             Listen & Kategorien
           </button>
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'tagesmenu' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tagesmenu')}
+            >
+              Tagesmenü
+            </button>
+          )}
           {isAdmin && (
             <button
               className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
@@ -3348,6 +3362,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </div>
             </div>
 
+            <div className="settings-actions">
+              <button className="save-button" onClick={handleSave}>
+                Einstellungen speichern
+              </button>
+            </div>
+          </>
+        ) : activeTab === 'tagesmenu' ? (
+          <>
             <div className="settings-section">
               <h3>Tagesmenü – Status-Gültigkeitsdauer</h3>
               <p className="section-description">
@@ -3484,6 +3506,40 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       onChange={handlePercentChange(setGroupThresholdArchivMaxKandidat)}
                     />
                     <span className="sort-settings-hint">Ein Rezept wird gemeinsam archiviert, wenn höchstens Y % der Mitglieder "Kandidat" geswipet haben.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Tagesmenü – Maximale Kandidaten-Schwelle</h3>
+              <p className="section-description">
+                Steuern Sie, wann der Swipe-Stapel automatisch beendet wird. Sobald der Kandidaten-Score S den Grenzwert erreicht oder überschreitet, wird der Stapel abgeschlossen.
+                Der Score berechnet sich als S&nbsp;=&nbsp;∑&nbsp;1/(1+n<sub>i</sub>), wobei n<sub>i</sub> die Anzahl der offenen Votings des i-ten Rezepts ist.
+                Leeres Feld bedeutet: kein automatischer Abbruch.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <div className="sort-settings-field">
+                    <label htmlFor="maxKandidatenSchwelle">Maximaler Kandidaten-Grenzwert:</label>
+                    <input
+                      id="maxKandidatenSchwelle"
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      placeholder="∞ kein Limit"
+                      value={maxKandidatenSchwelle}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setMaxKandidatenSchwelle('');
+                        } else {
+                          const val = parseFloat(raw);
+                          if (!isNaN(val) && val >= 0.1) setMaxKandidatenSchwelle(String(val));
+                        }
+                      }}
+                    />
+                    <span className="sort-settings-hint">Sobald S ≥ Grenzwert, wird der Swipe-Stapel beendet. Leer = kein automatischer Abbruch.</span>
                   </div>
                 </div>
               </div>

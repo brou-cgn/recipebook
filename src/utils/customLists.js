@@ -141,6 +141,10 @@ export const DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV = 50;
 export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV = 50;
 export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
 
+// Maximum candidate score threshold for ending the swipe stack early (null = disabled)
+// S = Σ 1/(1+nᵢ) where nᵢ = number of open votings for recipe i
+export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -1200,6 +1204,37 @@ export async function saveGroupStatusThresholds(thresholds) {
     }
   } catch (error) {
     console.error('Error saving group status thresholds:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the maximum candidate score threshold for ending the swipe stack early.
+ * Returns null if the feature is disabled (no threshold).
+ * @returns {Promise<number|null>} Promise resolving to the threshold value or null
+ */
+export async function getMaxKandidatenSchwelle() {
+  const settings = await getSettings();
+  return settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE;
+}
+
+/**
+ * Save the maximum candidate score threshold to Firestore.
+ * Pass null to disable the threshold.
+ * @param {number|null} value - The threshold value or null to disable
+ * @returns {Promise<void>}
+ */
+export async function saveMaxKandidatenSchwelle(value) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { maxKandidatenSchwelle: value });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.maxKandidatenSchwelle = value;
+    }
+  } catch (error) {
+    console.error('Error saving max kandidaten schwelle:', error);
     throw error;
   }
 }

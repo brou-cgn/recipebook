@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
 import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
-import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
@@ -65,6 +65,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     groupThresholdArchivMaxKandidat: 50,
   });
 
+  // Maximum candidate score threshold for ending the swipe stack early (null = disabled)
+  const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
+
   // All members' swipe flags for the selected list (used for group status determination)
   // Map of userId → { recipeId → flag }
   const [allMembersFlags, setAllMembersFlags] = useState({});
@@ -106,6 +109,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     getStatusValiditySettings().then(setStatusValiditySettings).catch(() => {});
     getGroupStatusThresholds().then(setGroupThresholds).catch(() => {});
+    getMaxKandidatenSchwelle().then(setMaxKandidatenSchwelle).catch(() => {});
   }, []);
 
   // Load configurable swipe icons once on mount
@@ -370,9 +374,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // ---- Derived values -------------------------------------------------
 
-  const allSwiped = allListRecipes.length > 0 && (listRecipes.length === 0 || currentIndex >= listRecipes.length);
-  const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
-
   // Full list of member IDs (owner + members) for group status computation
   const listMemberIds = useMemo(() => {
     if (!selectedList) return [];
@@ -381,6 +382,33 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       ? [...new Set([selectedList.ownerId, ...memberIds])]
       : memberIds;
   }, [selectedList]);
+
+  // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
+  // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
+  // The current user's own pending swipes are excluded from nᵢ so that the
+  // stack is only ended by what *other* members have already voted — the
+  // current user's swipes themselves drive the score up during swiping.
+  // Returns 0 when disabled (null threshold) or when there are no other members,
+  // which safely leaves the allSwiped threshold check false.
+  const candidateScore = useMemo(() => {
+    if (maxKandidatenSchwelle === null || listMemberIds.length === 0) return 0;
+    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
+    if (otherMemberIds.length === 0) return 0;
+    return allListRecipes.reduce((sum, recipe) => {
+      const swipedCount = otherMemberIds.filter(
+        (uid) => allMembersFlags[uid]?.[recipe.id] !== undefined
+      ).length;
+      const ni = otherMemberIds.length - swipedCount;
+      return sum + 1 / (1 + ni);
+    }, 0);
+  }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser]);
+
+  const allSwiped =
+    allListRecipes.length > 0 &&
+    (listRecipes.length === 0 ||
+      currentIndex >= listRecipes.length ||
+      (maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle));
+  const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
   const groupStatusByRecipeId = useMemo(() => {
