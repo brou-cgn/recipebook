@@ -158,10 +158,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       console.log('📦 Loaded allMembersFlags:', flags);
       console.log('📊 Number of members with flags:', Object.keys(flags).length);
 
-      // Zeige für jeden Member die Anzahl der Swipes
+      // Show the number of swipes for each member
       Object.entries(flags).forEach(([userId, userFlags]) => {
         console.log(`  User ${userId}: ${Object.keys(userFlags).length} swipes`);
-        // Zeige die ersten 3 Swipes als Beispiel
+        // Show the first 3 swipes as an example
         Object.entries(userFlags).slice(0, 3).forEach(([recipeId, flag]) => {
           console.log(`    Recipe ${recipeId}: ${flag}`);
         });
@@ -398,10 +398,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds);
 
         // DEBUG LOGS START
-        // Zeige Details für jedes Rezept mit Status
+        // Show details for each recipe with a computed status
         if (status) {
           console.log(`  ✅ Recipe "${r.title}" (${r.id}): ${status}`);
-          // Zeige die Votes der einzelnen Members
+          // Show the individual member votes
           listMemberIds.forEach(memberId => {
             const flag = allMembersFlags[memberId]?.[r.id];
             console.log(`    Member ${memberId}: ${flag || 'NOT SWIPED'}`);
