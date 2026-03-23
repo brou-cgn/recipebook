@@ -385,18 +385,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
   // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
-  // Returns 0 when disabled (null threshold) or when the list has no members,
+  // The current user's own pending swipes are excluded from nᵢ so that the
+  // stack is only ended by what *other* members have already voted — the
+  // current user's swipes themselves drive the score up during swiping.
+  // Returns 0 when disabled (null threshold) or when there are no other members,
   // which safely leaves the allSwiped threshold check false.
   const candidateScore = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length === 0) return 0;
+    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
+    if (otherMemberIds.length === 0) return 0;
     return allListRecipes.reduce((sum, recipe) => {
-      const swipedCount = listMemberIds.filter(
+      const swipedCount = otherMemberIds.filter(
         (uid) => allMembersFlags[uid]?.[recipe.id] !== undefined
       ).length;
-      const ni = listMemberIds.length - swipedCount;
+      const ni = otherMemberIds.length - swipedCount;
       return sum + 1 / (1 + ni);
     }, 0);
-  }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle]);
+  }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser]);
 
   const allSwiped =
     allListRecipes.length > 0 &&
