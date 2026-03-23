@@ -287,68 +287,6 @@
   gap: 1.5rem;
 }
 
-.recipe-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.recipe-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.menu-recipe-favorite-badge {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: #DF7A00;
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  z-index: 1;
-}
-
-.recipe-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background: #f0f0f0;
-}
-
-.recipe-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.recipe-card-content {
-  padding: 1rem;
-}
-
-.recipe-card-content h3 {
-  margin: 0 0 0.75rem 0;
-  color: #333;
-  font-size: 1.15rem;
-}
-
-.recipe-meta {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: #666;
-}
-
 @media (max-width: 768px) {
   .recipes-grid {
     grid-template-columns: repeat(auto-fill, minmax(var(--tile-size-min, 250px), 1fr));

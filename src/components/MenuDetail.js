@@ -9,6 +9,7 @@ import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import ShoppingListModal from './ShoppingListModal';
+import RecipeCard from './RecipeCard';
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
@@ -65,6 +66,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     if (!author) return null;
     return author.vorname;
   }, [menu.authorId, allUsers]);
+
+  const getRecipeAuthorName = (recipe) => {
+    if (!recipe.authorId || !allUsers || allUsers.length === 0) return null;
+    const author = allUsers.find(u => u.id === recipe.authorId);
+    return author ? author.vorname : null;
+  };
 
   const formattedMenuDate = useMemo(() => {
     if (menu.menuDate) {
@@ -395,27 +402,14 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                 {section.recipes.map((recipe) => {
                   const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
                   return (
-                    <div
+                    <RecipeCard
                       key={recipe.id}
-                      className="recipe-card"
+                      recipe={recipe}
                       onClick={() => onSelectRecipe(recipe)}
-                    >
-                      {isRecipeFav && (
-                        <div className="menu-recipe-favorite-badge">★</div>
-                      )}
-                      {recipe.image && (
-                        <div className="recipe-image">
-                          <img src={recipe.image} alt={recipe.title} />
-                        </div>
-                      )}
-                      <div className="recipe-card-content">
-                        <h3>{recipe.title}</h3>
-                        <div className="recipe-meta">
-                          <span>{recipe.ingredients?.length || 0} Zutaten</span>
-                          <span>{recipe.steps?.length || 0} Schritte</span>
-                        </div>
-                      </div>
-                    </div>
+                      isFavorite={isRecipeFav}
+                      authorName={getRecipeAuthorName(recipe)}
+                      currentUser={currentUser}
+                    />
                   );
                 })}
               </div>

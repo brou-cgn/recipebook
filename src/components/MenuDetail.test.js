@@ -2,6 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MenuDetail from './MenuDetail';
 
+jest.mock('./RecipeCard', () => function MockRecipeCard({ recipe, onClick, isFavorite }) {
+  return (
+    <div data-testid="recipe-card" onClick={onClick}>
+      {isFavorite && <span data-testid="fav-badge">★</span>}
+      <span>{recipe.title}</span>
+    </div>
+  );
+});
+
 jest.mock('./ShoppingListModal', () => function MockShoppingListModal({ items }) {
   return (
     <ul data-testid="shopping-list">

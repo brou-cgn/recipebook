@@ -5,10 +5,9 @@ import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersion
 import { getUserFavorites } from '../utils/userFavorites';
 import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import RecipeRating from './RecipeRating';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
-import RecipeImageCarousel from './RecipeImageCarousel';
+import RecipeCard from './RecipeCard';
 
 export function isNewRecipe(recipe, sortSettings) {
   if (!recipe?.createdAt) return false;
@@ -82,25 +81,6 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
-const MAX_KULINARIK_TAGS = 5;
-
-function renderKulinarikTags(kulinarik) {
-  if (!Array.isArray(kulinarik)) {
-    return <span className="kulinarik-tag">{kulinarik}</span>;
-  }
-  const displayed = kulinarik.slice(0, MAX_KULINARIK_TAGS);
-  const remaining = kulinarik.length - MAX_KULINARIK_TAGS;
-  return (
-    <>
-      {displayed.map((k, i) => (
-        <span key={k} className="kulinarik-tag">{k}</span>
-      ))}
-      {remaining > 0 && (
-        <span className="kulinarik-tag kulinarik-tag-more">+{remaining} weitere</span>
-      )}
-    </>
-  );
-}
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || (activeFilters && (
@@ -453,64 +433,16 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
             const isFavorite = favoriteIds.includes(recipe.id);
             const authorName = getAuthorName(recipe.authorId);
             return (
-              <div
+              <RecipeCard
                 key={recipe.id}
-                className="recipe-card"
+                recipe={recipe}
                 onClick={() => handleRecipeClick(group)}
-              >
-                {isFavorite && (
-                  <div className="recipe-favorite-badge">★</div>
-                )}
-                {isNewRecipe(recipe, sortSettings) && (
-                  <div className="new-badge">Neu</div>
-                )}
-
-                {(recipe.image || (Array.isArray(recipe.images) && recipe.images.length > 0)) && (() => {
-                    const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
-                      ? recipe.images
-                      : [{ url: recipe.image, isDefault: true }];
-                    const orderedImages = [
-                      ...allImages.filter(img => img.isDefault),
-                      ...allImages.filter(img => !img.isDefault),
-                    ];
-                    return (
-                      <div className="recipe-image" onClick={(e) => e.stopPropagation()}>
-                        <RecipeImageCarousel
-                          images={orderedImages}
-                          altText={recipe.title}
-                          onImageClick={() => handleRecipeClick(group)}
-                        />
-                      </div>
-                    );
-                  })()}
-                <div className="recipe-card-content">
-                  <h3>{recipe.title}</h3>
-                  {recipe.kulinarik && (Array.isArray(recipe.kulinarik) ? recipe.kulinarik.length > 0 : recipe.kulinarik.trim().length > 0) && (
-                    <div className="recipe-kulinarik">
-                      {Array.isArray(recipe.kulinarik)
-                        ? renderKulinarikTags(recipe.kulinarik)
-                        : <span className="kulinarik-tag">{recipe.kulinarik}</span>
-                      }
-                    </div>
-                  )}
-                  <div className="recipe-footer">
-                    {authorName && (
-                      <div className="recipe-author">{authorName}</div>
-                    )}
-                    {group.versionCount > 1 && (
-                      <div className="version-count">
-                        {group.versionCount} Versionen
-                      </div>
-                    )}
-                    <RecipeRating
-                      recipeId={recipe.id}
-                      ratingAvg={recipe.ratingAvg}
-                      ratingCount={recipe.ratingCount}
-                      currentUser={currentUser}
-                    />
-                  </div>
-                </div>
-              </div>
+                isFavorite={isFavorite}
+                isNew={isNewRecipe(recipe, sortSettings)}
+                authorName={authorName}
+                versionCount={group.versionCount}
+                currentUser={currentUser}
+              />
             );
           })}
         </div>
