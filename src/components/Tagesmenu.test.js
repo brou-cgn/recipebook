@@ -255,22 +255,15 @@ describe('Tagesmenu – completion tile view', () => {
     );
   });
 
-  test('clicking restart resets to card stack view', () => {
+  test('results view has no restart button', () => {
     renderMenu();
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
 
     // Results view should be visible
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
 
-    // Click restart
-    const restartBtn = document.querySelector('.tagesmenu-restart-btn');
-    act(() => { restartBtn.click(); });
-
-    // Card stack should be back
-    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
-    expect(document.querySelector('.tagesmenu-results')).toBeNull();
-    // Tile groups should be cleared after restart
-    expect(document.querySelectorAll('.tagesmenu-results-group')).toHaveLength(0);
+    // Restart button should not exist
+    expect(document.querySelector('.tagesmenu-restart-btn')).toBeNull();
   });
 
   test('tile click triggers onSelectRecipe with the correct recipe', () => {

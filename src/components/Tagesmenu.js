@@ -334,25 +334,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         </div>
       ) : allSwiped ? (
         <div className="tagesmenu-results">
-          <div className="tagesmenu-results-header">
-            <span className="tagesmenu-empty-icon">✅</span>
-            <p>Alle Rezepte angesehen!</p>
-            <button
-              className="tagesmenu-restart-btn"
-              onClick={() => {
-                setCurrentIndex(0);
-                setSwipeResults({});
-              }}
-            >
-              Nochmal ansehen
-            </button>
-          </div>
-
           {[
-            { label: 'Kandidat', icon: '⭐', flag: 'kandidat' },
-            { label: 'Für später', icon: '🕒', flag: 'geparkt' },
-            { label: 'Archiviert', icon: '🗄️', flag: 'archiv' },
-          ].map(({ label, icon, flag }) => {
+            { label: 'Kandidat', flag: 'kandidat' },
+            { label: 'Für später', flag: 'geparkt' },
+            { label: 'Archiviert', flag: 'archiv' },
+          ].map(({ label, flag }) => {
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
               return combinedFlag === flag;
@@ -360,7 +346,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             if (group.length === 0) return null;
             return (
               <div key={flag} className="tagesmenu-results-group">
-                <h3 className="tagesmenu-results-group-title">{icon} {label}</h3>
+                <h3 className="tagesmenu-results-group-title">{label}</h3>
                 <div className="tagesmenu-results-tiles">
                   {group.map((recipe) => {
                     const allImages =
