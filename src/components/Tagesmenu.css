@@ -126,31 +126,19 @@
   background: rgba(255, 152, 0, 0.1);
 }
 
-/* ---- image area fills remaining space above the info strip -------- */
+/* ---- image area – fixed small height at the top of the card ------- */
 
 .tagesmenu-card-image {
-  flex: 1;
+  height: 180px;
+  flex-shrink: 0;
   overflow: hidden;
-  min-height: 0;
 }
 
-/* make the carousel fill the full image area */
-.tagesmenu-card-image .recipe-image-carousel {
-  height: 100%;
-}
-
-.tagesmenu-card-image .recipe-image-carousel .ric-track {
-  height: 100%;
-}
-
-.tagesmenu-card-image .recipe-image-carousel .ric-slide {
-  height: 100%;
-}
-
-.tagesmenu-card-image .recipe-image-carousel .ric-slide img {
+.tagesmenu-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 /* placeholder when the recipe has no image */
@@ -162,12 +150,14 @@
   font-size: 4rem;
 }
 
-/* ---- info strip at the bottom of each card ----------------------- */
+/* ---- info strip – scrollable, takes remaining card space ----------- */
 
 .tagesmenu-card-info {
+  flex: 1;
+  overflow-y: auto;
   padding: 1rem 1.25rem 1.25rem;
   background: #ffffff;
-  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tagesmenu-card-title {
@@ -197,6 +187,46 @@
   padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+/* ---- ingredients & steps sections inside the card info ------------ */
+
+.tagesmenu-card-section {
+  margin-top: 0.75rem;
+}
+
+.tagesmenu-card-section-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888888;
+}
+
+.tagesmenu-ingredients-list,
+.tagesmenu-steps-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  color: #333333;
+  line-height: 1.5;
+}
+
+.tagesmenu-ingredients-list li,
+.tagesmenu-steps-list li {
+  margin-bottom: 0.2rem;
+}
+
+.tagesmenu-ingredient-heading,
+.tagesmenu-step-heading {
+  list-style: none;
+  margin-left: -1.1rem;
+  margin-top: 0.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #888888;
 }
 
 /* ---- empty state & completion screen ------------------------------ */

@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import RecipeImageCarousel from './RecipeImageCarousel';
 import { setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 
 /**
@@ -81,6 +80,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return user ? user.vorname : '';
   };
 
+  // Returns the display text for an ingredient or step item (string or object format).
+  const getItemText = (item) => (typeof item === 'string' ? item : item.text);
+
   // Lock page scroll while this view is shown – the only allowed motion is card swiping.
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
@@ -117,7 +119,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       pointerId: e.pointerId,
       decided: false,      // whether we've chosen a drag direction yet
       active: false,       // whether this element has captured the pointer
-      inImageArea: !!e.target.closest('.tagesmenu-card-image'),
     };
   }, [cardPhase]);
 
@@ -132,13 +133,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < DIRECTION_THRESHOLD) return; // wait for enough movement
       g.decided = true;
-      const isHorizontal = Math.abs(dx) >= Math.abs(dy);
-      if (isHorizontal && g.inImageArea) {
-        // The user is swiping horizontally inside the image carousel –
-        // cancel card drag and let the carousel's native scroll take over.
-        gestureRef.current = null;
-        return;
-      }
       // We take over this gesture.
       g.active = true;
       e.currentTarget.setPointerCapture(g.pointerId);
@@ -375,18 +369,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                 )}
 
                 {orderedImages.length > 0 ? (
-                  // stopPropagation prevents the card-level onClick from double-firing
-                  // when the user taps inside the carousel (carousel slide also handles clicks).
-                  <div
-                    className="tagesmenu-card-image"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <RecipeImageCarousel
-                      images={orderedImages}
-                      altText={recipe.title}
-                      onImageClick={
-                        isTop && cardPhase === 'idle' ? () => onSelectRecipe(recipe) : undefined
-                      }
+                  <div className="tagesmenu-card-image">
+                    <img
+                      src={orderedImages[0].url}
+                      alt={recipe.title}
+                      onClick={isTop && cardPhase === 'idle' ? () => onSelectRecipe(recipe) : undefined}
                     />
                   </div>
                 ) : (
@@ -418,6 +405,42 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                             )}
                       </div>
                     )}
+
+                  {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 && (
+                    <div className="tagesmenu-card-section">
+                      <h3 className="tagesmenu-card-section-title">Zutaten</h3>
+                      <ul className="tagesmenu-ingredients-list">
+                        {recipe.ingredients.map((item, i) => {
+                          if (typeof item === 'object' && item.type === 'heading') {
+                            return (
+                              <li key={`h-${i}`} className="tagesmenu-ingredient-heading">
+                                {item.text}
+                              </li>
+                            );
+                          }
+                          return <li key={`i-${i}`}>{getItemText(item)}</li>;
+                        })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {Array.isArray(recipe.steps) && recipe.steps.length > 0 && (
+                    <div className="tagesmenu-card-section">
+                      <h3 className="tagesmenu-card-section-title">Zubereitung</h3>
+                      <ol className="tagesmenu-steps-list">
+                        {recipe.steps.map((item, i) => {
+                          if (typeof item === 'object' && item.type === 'heading') {
+                            return (
+                              <li key={`h-${i}`} className="tagesmenu-step-heading">
+                                {item.text}
+                              </li>
+                            );
+                          }
+                          return <li key={`s-${i}`}>{getItemText(item)}</li>;
+                        })}
+                      </ol>
+                    </div>
+                  )}
                 </div>
               </div>
             );
