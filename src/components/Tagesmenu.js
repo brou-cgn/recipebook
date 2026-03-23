@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags } from '../utils/recipeSwipeFlags';
+import { getStatusValiditySettings } from '../utils/customLists';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
 /**
@@ -35,19 +36,31 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   const selectedList = interactiveLists.find((l) => l.id === selectedListId) ?? null;
 
-  const listRecipes = useMemo(() => {
-    if (!selectedList) return [];
-    const groupRecipeIds = Array.isArray(selectedList.recipeIds) ? selectedList.recipeIds : [];
-    return recipes.filter(
-      (r) => r.groupId === selectedList.id || groupRecipeIds.includes(r.id)
-    );
-  }, [recipes, selectedList]);
-
   // Reset swipe index when the user switches lists
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Maps recipeId → 'kandidat' | 'geparkt' | 'archiv' for the current session
   const [swipeResults, setSwipeResults] = useState({});
+
+  // Active swipe flags from Firestore (non-expired), used to filter the stack
+  const [activeFlags, setActiveFlags] = useState({});
+
+  // Configured validity durations (number of days or null for permanent)
+  const [statusValiditySettings, setStatusValiditySettings] = useState({
+    statusValidityDaysKandidat: null,
+    statusValidityDaysGeparkt: null,
+    statusValidityDaysArchiv: null,
+  });
+
+  const listRecipes = useMemo(() => {
+    if (!selectedList) return [];
+    const groupRecipeIds = Array.isArray(selectedList.recipeIds) ? selectedList.recipeIds : [];
+    return recipes.filter(
+      (r) =>
+        (r.groupId === selectedList.id || groupRecipeIds.includes(r.id)) &&
+        !activeFlags[r.id]
+    );
+  }, [recipes, selectedList, activeFlags]);
 
   const prevListIdRef = useRef(selectedListId);
   useEffect(() => {
@@ -55,8 +68,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       prevListIdRef.current = selectedListId;
       setCurrentIndex(0);
       setSwipeResults({});
+      setActiveFlags({});
     }
   }, [selectedListId]);
+
+  // Load status validity settings once on mount
+  useEffect(() => {
+    getStatusValiditySettings().then(setStatusValiditySettings).catch(() => {});
+  }, []);
+
+  // Load active swipe flags from Firestore when user or selected list changes
+  useEffect(() => {
+    if (!currentUser?.id || !selectedListId) {
+      setActiveFlags({});
+      return;
+    }
+    getActiveSwipeFlags(currentUser.id, selectedListId).then(setActiveFlags).catch(() => {});
+  }, [currentUser, selectedListId]);
 
   // Drag / animation state
   // cardPhase: 'idle' | 'dragging' | 'snap' | 'flying'
@@ -225,7 +253,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         const flag = flagMap[swipe.direction];
         if (flag) {
           if (currentUser?.id && swipe.list?.id) {
-            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag);
+            const validityDaysMap = {
+              geparkt: statusValiditySettings.statusValidityDaysGeparkt,
+              archiv: statusValiditySettings.statusValidityDaysArchiv,
+              kandidat: statusValiditySettings.statusValidityDaysKandidat,
+            };
+            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, validityDaysMap[flag]);
           }
           setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
@@ -237,7 +270,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     } else if (cardPhase === 'snap') {
       setCardPhase('idle');
     }
-  }, [cardPhase, currentUser]);
+  }, [cardPhase, currentUser, statusValiditySettings]);
 
   // ---- Derived values -------------------------------------------------
 

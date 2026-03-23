@@ -130,6 +130,11 @@ export const DEFAULT_TRENDING_MIN_VIEWS = 5;
 export const DEFAULT_NEW_RECIPE_DAYS = 30;
 export const DEFAULT_RATING_MIN_VOTES = 5;
 
+// Status validity defaults for Tagesmenü swipe flags (null = permanent)
+export const DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT = null;
+export const DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT = null;
+export const DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV = null;
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -330,6 +335,9 @@ export async function getSettings() {
         trendingMinViews: settings.trendingMinViews ?? DEFAULT_TRENDING_MIN_VIEWS,
         newRecipeDays: settings.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS,
         ratingMinVotes: settings.ratingMinVotes ?? DEFAULT_RATING_MIN_VOTES,
+        statusValidityDaysKandidat: settings.statusValidityDaysKandidat ?? DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
+        statusValidityDaysGeparkt: settings.statusValidityDaysGeparkt ?? DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
+        statusValidityDaysArchiv: settings.statusValidityDaysArchiv ?? DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
       };
       
       return settingsCache;
@@ -360,6 +368,9 @@ export async function getSettings() {
       trendingMinViews: DEFAULT_TRENDING_MIN_VIEWS,
       newRecipeDays: DEFAULT_NEW_RECIPE_DAYS,
       ratingMinVotes: DEFAULT_RATING_MIN_VOTES,
+      statusValidityDaysKandidat: DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
+      statusValidityDaysGeparkt: DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
+      statusValidityDaysArchiv: DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
     };
     
     // Create the settings document
@@ -395,6 +406,9 @@ export async function getSettings() {
       trendingMinViews: DEFAULT_TRENDING_MIN_VIEWS,
       newRecipeDays: DEFAULT_NEW_RECIPE_DAYS,
       ratingMinVotes: DEFAULT_RATING_MIN_VOTES,
+      statusValidityDaysKandidat: DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
+      statusValidityDaysGeparkt: DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
+      statusValidityDaysArchiv: DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
     };
   }
 }
@@ -1074,6 +1088,50 @@ export async function saveSortSettings(sortSettings) {
     }
   } catch (error) {
     console.error('Error saving sort settings:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get status validity settings for Tagesmenü swipe flags
+ * @returns {Promise<Object>} Promise resolving to status validity settings
+ */
+export async function getStatusValiditySettings() {
+  const settings = await getSettings();
+  return {
+    statusValidityDaysKandidat: settings.statusValidityDaysKandidat ?? DEFAULT_STATUS_VALIDITY_DAYS_KANDIDAT,
+    statusValidityDaysGeparkt: settings.statusValidityDaysGeparkt ?? DEFAULT_STATUS_VALIDITY_DAYS_GEPARKT,
+    statusValidityDaysArchiv: settings.statusValidityDaysArchiv ?? DEFAULT_STATUS_VALIDITY_DAYS_ARCHIV,
+  };
+}
+
+/**
+ * Save status validity settings for Tagesmenü swipe flags to Firestore.
+ * Pass null for a field to mark that status as permanent (no expiry).
+ * @param {Object} statusValiditySettings - Object with statusValidityDaysKandidat, statusValidityDaysGeparkt, statusValidityDaysArchiv (number or null)
+ * @returns {Promise<void>}
+ */
+export async function saveStatusValiditySettings(statusValiditySettings) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    const update = {};
+    if (statusValiditySettings.statusValidityDaysKandidat !== undefined) {
+      update.statusValidityDaysKandidat = statusValiditySettings.statusValidityDaysKandidat;
+    }
+    if (statusValiditySettings.statusValidityDaysGeparkt !== undefined) {
+      update.statusValidityDaysGeparkt = statusValiditySettings.statusValidityDaysGeparkt;
+    }
+    if (statusValiditySettings.statusValidityDaysArchiv !== undefined) {
+      update.statusValidityDaysArchiv = statusValiditySettings.statusValidityDaysArchiv;
+    }
+    await updateDoc(settingsRef, update);
+
+    // Update cache
+    if (settingsCache) {
+      Object.assign(settingsCache, update);
+    }
+  } catch (error) {
+    console.error('Error saving status validity settings:', error);
     throw error;
   }
 }
