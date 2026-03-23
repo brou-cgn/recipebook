@@ -168,7 +168,17 @@ service cloud.firestore {
 
     // Recipe swipe flags collection - tracks user swipe actions (kandidat, geparkt, archiv) for Tagesmenü
     match /recipeSwipeFlags/{flagId} {
-      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      // Returns true when the requesting user is the owner or a member of the given interactive list.
+      // This allows list members to read each other's swipe flags for group status computation.
+      function isListMemberOf(listId) {
+        let listDoc = get(/databases/$(database)/documents/customLists/$(listId));
+        return listDoc.data.ownerId == request.auth.uid
+            || ('memberIds' in listDoc.data && request.auth.uid in listDoc.data.memberIds);
+      }
+
+      allow read: if isAuthenticated()
+                  && (request.auth.uid == resource.data.userId
+                      || isListMemberOf(resource.data.listId));
       allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId)
                     || isAdmin();
