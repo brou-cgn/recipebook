@@ -135,6 +135,7 @@ function SortablePortionUnitItem({ id, unit, onRemove }) {
 }
 
 const CATEGORY_ALREADY_ASSIGNED_ERROR = 'Die folgenden Kategorien sind bereits einem anderen Bild zugeordnet: {categories}\n\nBitte wählen Sie andere Kategorien.';
+const STATUS_VALIDITY_HINT = 'Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.';
 
 /**
  * Renders text with **bold** markdown syntax as <strong> elements.
@@ -3177,7 +3178,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         }
                       }}
                     />
-                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
+                    <span className="sort-settings-hint">{STATUS_VALIDITY_HINT}</span>
                   </div>
                 </div>
                 <div className="sort-settings-group">
@@ -3200,7 +3201,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         }
                       }}
                     />
-                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
+                    <span className="sort-settings-hint">{STATUS_VALIDITY_HINT}</span>
                   </div>
                 </div>
                 <div className="sort-settings-group">
@@ -3223,7 +3224,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         }
                       }}
                     />
-                    <span className="sort-settings-hint">Nach X Tagen erscheint das Rezept wieder im Stack. Leer = kein Ablaufdatum.</span>
+                    <span className="sort-settings-hint">{STATUS_VALIDITY_HINT}</span>
                   </div>
                 </div>
               </div>
