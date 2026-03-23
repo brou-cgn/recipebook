@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import MenuList from './MenuList';
 import * as menuFavorites from '../utils/menuFavorites';
 
@@ -115,5 +115,72 @@ describe('MenuList - date sorting', () => {
 
     expect(names[0]).toBe('Menü B'); // menuDate 2024 > menuDate 2020
     expect(names[1]).toBe('Menü A');
+  });
+});
+
+describe('MenuList - dynamic title', () => {
+  const menus = [
+    { id: '1', name: 'Testmenü', menuDate: '2024-01-01', recipeIds: [], isPrivate: false, authorId: 'user1' },
+  ];
+
+  test('shows "Menüs" by default', async () => {
+    render(
+      <MenuList
+        menus={menus}
+        recipes={[]}
+        onSelectMenu={() => {}}
+        onAddMenu={() => {}}
+        onToggleMenuFavorite={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent('Menüs');
+  });
+
+  test('shows "Meine Menüs" when favorites filter is active', async () => {
+    menuFavorites.getUserMenuFavorites.mockResolvedValue(['1']);
+
+    render(
+      <MenuList
+        menus={menus}
+        recipes={[]}
+        onSelectMenu={() => {}}
+        onAddMenu={() => {}}
+        onToggleMenuFavorite={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favButton);
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Menüs');
+  });
+
+  test('reverts to "Menüs" when favorites filter is deactivated', async () => {
+    menuFavorites.getUserMenuFavorites.mockResolvedValue(['1']);
+
+    render(
+      <MenuList
+        menus={menus}
+        recipes={[]}
+        onSelectMenu={() => {}}
+        onAddMenu={() => {}}
+        onToggleMenuFavorite={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
+    fireEvent.click(favButton);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Menüs');
+
+    const allButton = screen.getByTitle('Alle Menüs anzeigen');
+    fireEvent.click(allButton);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Menüs');
   });
 });

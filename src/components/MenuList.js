@@ -100,7 +100,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   return (
     <div className="menu-list-container">
       <div className="menu-list-header">
-        <h2>Meine Menüs</h2>
+        <h2>{showFavoritesOnly ? 'Meine Menüs' : 'Menüs'}</h2>
         <div className="menu-list-actions">
           <button 
             className={`menu-favorites-filter-button ${showFavoritesOnly ? 'active' : ''}`}
