@@ -408,8 +408,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           {/* Group status section – only shown for lists with multiple members */}
           {listMemberIds.length > 1 && (() => {
             const groupStatusGroups = [
-              { label: '⭐ Kandidat', flag: 'kandidat' },
-              { label: '🗄️ Archiviert', flag: 'archiv' },
+              { label: 'Kandidat', flag: 'kandidat' },
+              { label: 'Archiviert', flag: 'archiv' },
             ].map(({ label, flag }) => ({
               label,
               flag,
@@ -460,9 +460,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             );
           })()}
           {[
-            { label: '⭐ Kandidat', flag: 'kandidat' },
-            { label: '🕒 Für später', flag: 'geparkt' },
-            { label: '🗄️ Archiviert', flag: 'archiv' },
+            { label: 'Kandidat', flag: 'kandidat' },
+            { label: 'Für später', flag: 'geparkt' },
+            { label: 'Archiviert', flag: 'archiv' },
           ].map(({ label, flag }) => {
             const group = allListRecipes.filter((r) => {
               const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
