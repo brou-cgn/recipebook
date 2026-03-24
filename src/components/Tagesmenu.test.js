@@ -12,6 +12,7 @@ jest.mock('../utils/recipeSwipeFlags', () => ({
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
   getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
   computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
+  clearExpiryForArchivedRecipe: () => Promise.resolve(true),
 }));
 
 jest.mock('../utils/customLists', () => ({

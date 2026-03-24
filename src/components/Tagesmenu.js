@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
@@ -229,6 +229,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     selectedListRef.current = selectedList;
   }, [selectedList]);
 
+  // Refs that mirror frequently-changing state so handleTransitionEnd (useCallback)
+  // can always read the latest values without being re-created on every render.
+  const allMembersFlagsRef = useRef(allMembersFlags);
+  useEffect(() => { allMembersFlagsRef.current = allMembersFlags; }, [allMembersFlags]);
+  const listMemberIdsRef = useRef([]);
+  const groupThresholdsRef = useRef(groupThresholds);
+
   const getAuthorName = (authorId) => {
     if (!authorId || !allUsers) return '';
     const user = allUsers.find((u) => u.id === authorId);
@@ -377,6 +384,36 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                 [swipe.recipe.id]: flag,
               },
             }));
+
+            // After updating flags, check if all members have voted and group status is permanently 'archiv'.
+            // Use refs to read the latest values without adding them to useCallback dependencies.
+            const currentMemberIds = listMemberIdsRef.current;
+            if (currentMemberIds.length > 1) {
+              const updatedFlags = {
+                ...allMembersFlagsRef.current,
+                [currentUser.id]: {
+                  ...(allMembersFlagsRef.current[currentUser.id] || {}),
+                  [swipe.recipe.id]: flag,
+                },
+              };
+              const allVoted = currentMemberIds.every(
+                (uid) => updatedFlags[uid]?.[swipe.recipe.id] !== undefined
+              );
+              if (allVoted) {
+                const groupStatus = computeGroupRecipeStatus(
+                  currentMemberIds,
+                  updatedFlags,
+                  swipe.recipe.id,
+                  groupThresholdsRef.current,
+                  currentUser.id
+                );
+                if (groupStatus === 'archiv') {
+                  clearExpiryForArchivedRecipe(swipe.list.id, swipe.recipe.id).catch((err) => {
+                    console.error('Failed to clear expiry for permanently archived recipe:', err);
+                  });
+                }
+              }
+            }
           }
           setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
@@ -400,6 +437,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       ? [...new Set([selectedList.ownerId, ...memberIds])]
       : memberIds;
   }, [selectedList]);
+
+  // Keep refs in sync with derived/state values for use in memoised callbacks
+  useEffect(() => { listMemberIdsRef.current = listMemberIds; }, [listMemberIds]);
+  useEffect(() => { groupThresholdsRef.current = groupThresholds; }, [groupThresholds]);
 
   // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
   const groupStatusByRecipeId = useMemo(() => {
@@ -426,6 +467,20 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     });
     return sorted.slice(0, maxKandidatenSchwelle);
   }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId, maxKandidatenSchwelle]);
+
+  // Recipes permanently archived by group consensus: group status is 'archiv' AND all members
+  // have voted. Stored as a Set for O(1) lookup during render.
+  const permanentlyArchivedRecipeIds = useMemo(() => {
+    if (listMemberIds.length <= 1) return new Set();
+    return new Set(
+      allListRecipes
+        .filter((r) => {
+          if (groupStatusByRecipeId[r.id] !== 'archiv') return false;
+          return listMemberIds.every((uid) => allMembersFlags[uid]?.[r.id] !== undefined);
+        })
+        .map((r) => r.id)
+    );
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId]);
 
   // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
   // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
@@ -621,6 +676,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                         className="tagesmenu-results-tile"
                         onClick={() => onSelectRecipe(recipe)}
                       >
+                        {flag === 'archiv' && permanentlyArchivedRecipeIds.has(recipe.id) && (
+                          <div className="tagesmenu-permanent-archive-badge" title="Dauerhaft archiviert">🗄️</div>
+                        )}
                         <div className="tagesmenu-results-tile-image">
                           {orderedImages.length > 0 ? (
                             <img src={orderedImages[0].url} alt={recipe.title} />

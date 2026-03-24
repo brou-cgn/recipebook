@@ -9,6 +9,7 @@ jest.mock('../firebase', () => ({
 
 // Mock Firestore functions
 const mockSetDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
 const mockDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockCollection = jest.fn();
@@ -20,6 +21,7 @@ const mockTimestampFromMillis = jest.fn((ms) => ({ _ms: ms, _isMock: true }));
 jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
+  updateDoc: (...args) => mockUpdateDoc(...args),
   getDocs: (...args) => mockGetDocs(...args),
   collection: (...args) => mockCollection(...args),
   query: (...args) => mockQuery(...args),
@@ -30,13 +32,14 @@ jest.mock('firebase/firestore', () => ({
   },
 }));
 
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus } from './recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockDoc.mockReturnValue('mock-doc-ref');
   mockTimestampNow.mockReturnValue('mock-now');
   mockSetDoc.mockResolvedValue(undefined);
+  mockUpdateDoc.mockResolvedValue(undefined);
   mockGetDocs.mockResolvedValue({ forEach: jest.fn() });
   mockCollection.mockReturnValue('mock-collection-ref');
   mockQuery.mockReturnValue('mock-query-ref');
@@ -520,5 +523,85 @@ describe('computeGroupRecipeStatus', () => {
       'user-1'
     );
     expect(result).toBe('kandidat');
+  });
+});
+
+describe('clearExpiryForArchivedRecipe', () => {
+  it('returns false when listId is missing', async () => {
+    const result = await clearExpiryForArchivedRecipe('', 'recipe-1');
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns false when recipeId is missing', async () => {
+    const result = await clearExpiryForArchivedRecipe('list-1', '');
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('queries flags by listId and recipeId', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
+    await clearExpiryForArchivedRecipe('list-1', 'recipe-1');
+    expect(mockGetDocs).toHaveBeenCalledTimes(1);
+    expect(mockWhere).toHaveBeenCalledWith('listId', '==', 'list-1');
+    expect(mockWhere).toHaveBeenCalledWith('recipeId', '==', 'recipe-1');
+  });
+
+  it('calls updateDoc with expiresAt: null for each matching document', async () => {
+    const mockRef1 = 'mock-ref-1';
+    const mockRef2 = 'mock-ref-2';
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: mockRef1 });
+        cb({ ref: mockRef2 });
+      },
+    });
+
+    const result = await clearExpiryForArchivedRecipe('list-1', 'recipe-1');
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+    expect(mockUpdateDoc).toHaveBeenCalledWith(mockRef1, { expiresAt: null });
+    expect(mockUpdateDoc).toHaveBeenCalledWith(mockRef2, { expiresAt: null });
+  });
+
+  it('returns true when there are no matching documents (no-op)', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
+    const result = await clearExpiryForArchivedRecipe('list-1', 'recipe-1');
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('returns false and logs error when getDocs fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    const result = await clearExpiryForArchivedRecipe('list-1', 'recipe-1');
+
+    expect(result).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error clearing expiry for archived recipe:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('returns false and logs error when updateDoc fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'mock-ref-1' });
+      },
+    });
+    mockUpdateDoc.mockRejectedValue(new Error('Update error'));
+
+    const result = await clearExpiryForArchivedRecipe('list-1', 'recipe-1');
+
+    expect(result).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error clearing expiry for archived recipe:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
   });
 });

@@ -19,7 +19,7 @@
  */
 
 import { db } from '../firebase';
-import { doc, setDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 
 /**
  * Build a deterministic Firestore document ID for a flag.
@@ -228,3 +228,33 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
 
   return null;
 }
+
+/**
+ * Remove the expiry date from all swipe flag documents for a given recipe in a list.
+ * Called when the group status of a recipe is permanently 'archiv' (all members have voted
+ * and the result is 'archiv'), ensuring the recipe stays in the archive indefinitely.
+ *
+ * @param {string} listId    - ID of the interactive list
+ * @param {string} recipeId  - ID of the recipe to permanently archive
+ * @returns {Promise<boolean>} true if all updates succeeded
+ */
+export const clearExpiryForArchivedRecipe = async (listId, recipeId) => {
+  if (!listId || !recipeId) return false;
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId),
+      where('recipeId', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const updates = [];
+    snapshot.forEach((docSnap) => {
+      updates.push(updateDoc(docSnap.ref, { expiresAt: null }));
+    });
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error('Error clearing expiry for archived recipe:', error);
+    return false;
+  }
+};
