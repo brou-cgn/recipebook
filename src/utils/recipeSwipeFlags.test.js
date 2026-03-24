@@ -355,10 +355,16 @@ describe('computeGroupRecipeStatus', () => {
     expect(result).toBeNull();
   });
 
-  it('treats missing swipe as kandidat', () => {
-    // Single member, no swipe → treated as kandidat → 100% kandidat, 0% archiv → Kandidat
+  it('current user missing swipe (before swiping) is treated as archiv → returns archiv with 100% archiv', () => {
+    // Single member (= current user), no swipe → treated as archiv → 100% archiv → Archiv
+    const result = computeGroupRecipeStatus(['user-1'], {}, 'recipe-1', defaultThresholds, 'user-1');
+    expect(result).toBe('archiv');
+  });
+
+  it('without currentUserId, missing swipe is ignored → returns null', () => {
+    // No currentUserId provided: missing swipe of single member is ignored → 0 counted → null
     const result = computeGroupRecipeStatus(['user-1'], {}, 'recipe-1', defaultThresholds);
-    expect(result).toBe('kandidat');
+    expect(result).toBeNull();
   });
 
   it('returns kandidat when all members voted kandidat', () => {
@@ -366,7 +372,7 @@ describe('computeGroupRecipeStatus', () => {
       'user-1': { 'recipe-1': 'kandidat' },
       'user-2': { 'recipe-1': 'kandidat' },
     };
-    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds);
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds, 'user-1');
     expect(result).toBe('kandidat');
   });
 
@@ -375,12 +381,11 @@ describe('computeGroupRecipeStatus', () => {
       'user-1': { 'recipe-1': 'archiv' },
       'user-2': { 'recipe-1': 'archiv' },
     };
-    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds);
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', defaultThresholds, 'user-1');
     expect(result).toBe('archiv');
   });
 
   it('returns null when votes are split equally (neither threshold met)', () => {
-    // 50% kandidat, 50% archiv with max archiv for kandidat = 50%: borderline case, archiv% = 50 <= 50 AND kandidat% = 50 >= 50 → kandidat
     const allMembersFlags = {
       'user-1': { 'recipe-1': 'kandidat' },
       'user-2': { 'recipe-1': 'archiv' },
@@ -392,7 +397,7 @@ describe('computeGroupRecipeStatus', () => {
       groupThresholdArchivMinArchiv: 70,
       groupThresholdArchivMaxKandidat: 30,
     };
-    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', strictThresholds);
+    const result = computeGroupRecipeStatus(['user-1', 'user-2'], allMembersFlags, 'recipe-1', strictThresholds, 'user-1');
     expect(result).toBeNull();
   });
 
@@ -401,7 +406,7 @@ describe('computeGroupRecipeStatus', () => {
       'user-1': { 'recipe-1': 'kandidat' },
     };
     // No thresholds passed – should fall back to defaults (50/50/50/50)
-    const result = computeGroupRecipeStatus(['user-1'], allMembersFlags, 'recipe-1', null);
+    const result = computeGroupRecipeStatus(['user-1'], allMembersFlags, 'recipe-1', null, 'user-1');
     expect(result).toBe('kandidat');
   });
 
@@ -417,8 +422,103 @@ describe('computeGroupRecipeStatus', () => {
       ['user-1', 'user-2', 'user-3'],
       allMembersFlags,
       'recipe-1',
-      defaultThresholds
+      defaultThresholds,
+      'user-1'
     );
     expect(result).toBeNull();
+  });
+
+  // --- New behavior tests for missing-swipe logic ---
+
+  it('2 members, no swipes: current user missing → archiv, other missing → ignored → returns archiv', () => {
+    // Before anyone swipes: current user's missing swipe = archiv, other's missing = ignored
+    // archivCount=1, kandidatCount=0, total=2 → 50% archiv, 0% kandidat → archiv (50>=50, 0<=50)
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2'],
+      {},
+      'recipe-1',
+      defaultThresholds,
+      'user-1'
+    );
+    expect(result).toBe('archiv');
+  });
+
+  it('2 members, other swiped kandidat, current user not yet swiped: kandidat threshold not met', () => {
+    // KANDIDAT_MIN=66, KANDIDAT_MAX_ARCHIV=10
+    // current user: archiv (missing), other: kandidat → 50% kandidat, 50% archiv
+    // → not kandidat (50 < 66) → archiv (50% archiv >= 50 min AND 50% kandidat <= 50 max)
+    const allMembersFlags = { 'user-2': { 'recipe-1': 'kandidat' } };
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 66,
+      groupThresholdKandidatMaxArchiv: 10,
+      groupThresholdArchivMinArchiv: 50,
+      groupThresholdArchivMaxKandidat: 50,
+    };
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2'],
+      allMembersFlags,
+      'recipe-1',
+      strictThresholds,
+      'user-1'
+    );
+    expect(result).toBe('archiv');
+  });
+
+  it('2 members, current user swiped kandidat, other not yet swiped → other treated as kandidat → returns kandidat', () => {
+    // After current user swipes: other missing = kandidat
+    // kandidatCount=2, archivCount=0, total=2 → 100% kandidat → kandidat
+    const allMembersFlags = { 'user-1': { 'recipe-1': 'kandidat' } };
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2'],
+      allMembersFlags,
+      'recipe-1',
+      defaultThresholds,
+      'user-1'
+    );
+    expect(result).toBe('kandidat');
+  });
+
+  it('3 members, 2 others swiped kandidat, current user not yet swiped: archiv blocks threshold', () => {
+    // KANDIDAT_MIN=66, KANDIDAT_MAX_ARCHIV=10
+    // current user: archiv (missing), user-2: kandidat, user-3: kandidat
+    // kandidatCount=2, archivCount=1, total=3 → 66.67% kandidat, 33.33% archiv → 33.33 > 10 → not kandidat
+    const allMembersFlags = {
+      'user-2': { 'recipe-1': 'kandidat' },
+      'user-3': { 'recipe-1': 'kandidat' },
+    };
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 66,
+      groupThresholdKandidatMaxArchiv: 10,
+      groupThresholdArchivMinArchiv: 50,
+      groupThresholdArchivMaxKandidat: 50,
+    };
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      strictThresholds,
+      'user-1'
+    );
+    expect(result).toBeNull();
+  });
+
+  it('3 members, current user swiped geparkt, 2 others not yet swiped → others as kandidat → 66.67% kandidat', () => {
+    // After current user swipes geparkt: other 2 missing = kandidat each
+    // kandidatCount=2, archivCount=0, geparkt ignored, total=3 → 66.67% kandidat
+    const allMembersFlags = { 'user-1': { 'recipe-1': 'geparkt' } };
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 66,
+      groupThresholdKandidatMaxArchiv: 10,
+      groupThresholdArchivMinArchiv: 50,
+      groupThresholdArchivMaxKandidat: 50,
+    };
+    const result = computeGroupRecipeStatus(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      strictThresholds,
+      'user-1'
+    );
+    expect(result).toBe('kandidat');
   });
 });
