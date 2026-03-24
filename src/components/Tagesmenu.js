@@ -593,11 +593,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     </div>
                   </div>
                 )}
-                <h2 className="tagesmenu-results-section-title">Meine Auswahl</h2>
+                {currentUser?.tagesmenuTestmode !== false && (
+                  <h2 className="tagesmenu-results-section-title">Meine Auswahl</h2>
+                )}
               </>
             );
           })()}
-          {[
+          {currentUser?.tagesmenuTestmode !== false && [
             { label: 'Kandidat', flag: 'kandidat' },
             { label: 'Für später', flag: 'geparkt' },
             { label: 'Archiviert', flag: 'archiv' },

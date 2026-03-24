@@ -79,6 +79,8 @@ In addition to the role hierarchy, individual features can be enabled or disable
 | **Bew. löschen**   | Allows deleting recipe ratings and "Gekocht am" (cook date) entries |
 | **NW-Abbruch**     | Allows aborting nutritional value calculations                |
 | **Sortier-Karussell** | Shows the sort carousel button in the recipe overview      |
+| **Listen bearbeiten** | Allows editing interactive lists                           |
+| **Testmodus Tagesmenü** | When enabled, shows the "Meine Auswahl" section in the Tagesmenü results view. When disabled, the section is completely hidden. |
 
 By default, all features are enabled for the Administrator role and disabled for all other roles.
 

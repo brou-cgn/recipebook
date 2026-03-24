@@ -220,7 +220,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell und Listen bearbeiten haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten und Testmodus Tagesmenü haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -235,11 +235,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>NW-Abbruch</th>
                   <th>Sortier-Karussell</th>
                   <th>Listen bearbeiten</th>
+                  <th>Testmodus Tagesmenü</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false };
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -326,6 +327,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.editLists ? 'Listen bearbeiten deaktivieren' : 'Listen bearbeiten aktivieren'}
                         >
                           {perms.editLists ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.tagesmenuTestmode ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'tagesmenuTestmode', perms.tagesmenuTestmode)}
+                          title={perms.tagesmenuTestmode ? 'Testmodus Tagesmenü deaktivieren' : 'Testmodus Tagesmenü aktivieren'}
+                        >
+                          {perms.tagesmenuTestmode ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>

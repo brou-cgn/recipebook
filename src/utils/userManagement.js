@@ -1052,21 +1052,21 @@ export const updateUserWebimport = async (userId, webimport) => {
 };
 
 /**
- * Default role permissions for fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel and editLists features.
+ * Default role permissions for fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists and tagesmenuTestmode features.
  * Admins get all features enabled by default; all other roles start with all disabled.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true },
-  [ROLES.MODERATOR]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false },
-  [ROLES.EDIT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false },
-  [ROLES.COMMENT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false },
-  [ROLES.READ]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false },
+  [ROLES.ADMIN]: { fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true },
+  [ROLES.MODERATOR]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false },
+  [ROLES.EDIT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false },
+  [ROLES.COMMENT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false },
+  [ROLES.READ]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false },
 };
 
 /**
- * Get role-based feature permissions (fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists) from Firestore.
+ * Get role-based feature permissions (fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode) from Firestore.
  * Falls back to ROLE_PERMISSIONS_DEFAULT if no Firestore data exists.
- * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean }
+ * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean, tagesmenuTestmode: boolean }
  */
 export const getRolePermissions = async () => {
   try {
@@ -1089,7 +1089,7 @@ export const getRolePermissions = async () => {
 /**
  * Update a feature permission for a specific role.
  * @param {string} role - Role constant (from ROLES, excluding GUEST)
- * @param {string} feature - Feature name ('fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel' or 'editLists')
+ * @param {string} feature - Feature name ('fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel', 'editLists' or 'tagesmenuTestmode')
  * @param {boolean} value - New boolean value
  * @returns {Promise<{success: boolean, message: string}>} Result object
  */

@@ -1046,3 +1046,124 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     expect(document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten')).toBeNull();
   });
 });
+
+describe('Tagesmenu – Testmodus Tagesmenü permission', () => {
+  const multiMemberList = {
+    id: 'list1',
+    name: 'Test Liste',
+    listKind: 'interactive',
+    recipeIds: [],
+    ownerId: 'user1',
+    memberIds: ['user2'],
+  };
+
+  const allRecipes = [
+    makeRecipe('r1', 'Rezept 1'),
+    makeRecipe('r2', 'Rezept 2'),
+    makeRecipe('r3', 'Rezept 3'),
+  ];
+
+  beforeEach(() => {
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+  });
+
+  test('Meine Auswahl groups are shown when tagesmenuTestmode is true', async () => {
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups.length).toBeGreaterThan(0);
+  });
+
+  test('Meine Auswahl groups are hidden when tagesmenuTestmode is false', async () => {
+    const userWithoutTestmode = { id: 'user1', tagesmenuTestmode: false };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithoutTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const groups = document.querySelectorAll('.tagesmenu-results-group');
+    expect(groups).toHaveLength(0);
+  });
+
+  test('Meine Auswahl heading is hidden when tagesmenuTestmode is false (multi-member list)', async () => {
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' };
+
+    const userWithoutTestmode = { id: 'user1', tagesmenuTestmode: false };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithoutTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
+      .find(el => el.textContent === 'Meine Auswahl');
+    expect(meineAuswahlTitle).toBeUndefined();
+  });
+
+  test('Meine Auswahl heading is shown when tagesmenuTestmode is true (multi-member list)', async () => {
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' };
+
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
+      .find(el => el.textContent === 'Meine Auswahl');
+    expect(meineAuswahlTitle).not.toBeNull();
+  });
+});
