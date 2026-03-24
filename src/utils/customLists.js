@@ -287,6 +287,7 @@ export const DEFAULT_BUTTON_ICONS = {
   menuFavoritesButton: '★',
   tagesmenuFilterButton: '☰',
   tagesmenuZumTagesMenu: '🗓️',
+  tagesmenuMeineAuswahl: '📋',
   cancelRecipe: '✕'
 };
 

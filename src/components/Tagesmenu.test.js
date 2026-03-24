@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, fireEvent } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 
 let mockActiveFlagsValue = {};
@@ -463,16 +463,14 @@ describe('Tagesmenu – pre-existing active flags', () => {
       .find(el => el.textContent === 'Gemeinsamer Status');
     expect(sharedStatusTitle).toBeUndefined();
 
-    // "Meine Auswahl" section should show own kandidat recipes (r1 from activeFlags + r3/r4/r5 swiped)
-    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
-      .find(el => el.textContent === 'Meine Auswahl');
-    expect(meineAuswahlTitle).not.toBeNull();
+    // Meine Auswahl is now in a dedicated view accessible via the bottom-center button
+    // Verify the button is shown (currentUser has no tagesmenuTestmode=false, so button is visible)
+    expect(document.querySelector('.tagesmenu-meine-auswahl-btn')).not.toBeNull();
 
-    // Verify no "Kandidat" group heading appears under "Gemeinsamer Status"
-    const allGroupHeadings = Array.from(document.querySelectorAll('.tagesmenu-results-group-title'))
+    // Verify no "Kandidat" group heading appears in the results view (it belongs in Meine Auswahl view)
+    const resultGroupHeadings = Array.from(document.querySelectorAll('.tagesmenu-results .tagesmenu-results-group-title'))
       .map(el => el.textContent);
-    // "Kandidat" heading only appears once (under "Meine Auswahl"), not as a separate shared-status group
-    expect(allGroupHeadings.filter(h => h === 'Kandidat')).toHaveLength(1);
+    expect(resultGroupHeadings.filter(h => h === 'Kandidat')).toHaveLength(0);
   });
 
   test('Gemeinsamer Status does not show Kandidat group for pre-existing kandidat flags; recipes appear in Meine Auswahl', async () => {
@@ -522,10 +520,14 @@ describe('Tagesmenu – pre-existing active flags', () => {
       .find(el => el.textContent === 'Gemeinsamer Status');
     expect(sharedStatusTitle).toBeUndefined();
 
-    // "Meine Auswahl" section shows all 3 pre-existing kandidat recipes
-    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
-      .find(el => el.textContent === 'Meine Auswahl');
-    expect(meineAuswahlTitle).not.toBeNull();
+    // "Meine Auswahl" is now in a dedicated view accessible via the bottom-center button
+    const meineAuswahlBtn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    expect(meineAuswahlBtn).not.toBeNull();
+
+    // Click the button to open the Meine Auswahl view
+    act(() => { fireEvent.click(meineAuswahlBtn); });
+
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
 
     const meineAuswahlKandidatGroup = Array.from(document.querySelectorAll('.tagesmenu-results-group'))
       .find(el => el.querySelector('.tagesmenu-results-group-title')?.textContent === 'Kandidat');
@@ -1105,6 +1107,15 @@ describe('Tagesmenu – Testmodus Tagesmenü permission', () => {
     });
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    // The Meine Auswahl button should be visible in test mode
+    const meineAuswahlBtn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    expect(meineAuswahlBtn).not.toBeNull();
+
+    // Click the button to open the dedicated Meine Auswahl view
+    act(() => { fireEvent.click(meineAuswahlBtn); });
+
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
     const groups = document.querySelectorAll('.tagesmenu-results-group');
     expect(groups.length).toBeGreaterThan(0);
   });
@@ -1125,6 +1136,9 @@ describe('Tagesmenu – Testmodus Tagesmenü permission', () => {
     });
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    // Button should not be shown when tagesmenuTestmode is false
+    expect(document.querySelector('.tagesmenu-meine-auswahl-btn')).toBeNull();
+    // No groups shown (Meine Auswahl view not accessible without button)
     const groups = document.querySelectorAll('.tagesmenu-results-group');
     expect(groups).toHaveLength(0);
   });
@@ -1153,6 +1167,9 @@ describe('Tagesmenu – Testmodus Tagesmenü permission', () => {
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
 
+    // Button should not be shown when tagesmenuTestmode is false
+    expect(document.querySelector('.tagesmenu-meine-auswahl-btn')).toBeNull();
+    // Meine Auswahl section title should not appear anywhere
     const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
       .find(el => el.textContent === 'Meine Auswahl');
     expect(meineAuswahlTitle).toBeUndefined();
@@ -1182,8 +1199,196 @@ describe('Tagesmenu – Testmodus Tagesmenü permission', () => {
 
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
 
-    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
+    // The Meine Auswahl view is accessible via the bottom-center button in test mode
+    const meineAuswahlBtn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    expect(meineAuswahlBtn).not.toBeNull();
+
+    // Click the button to open the dedicated Meine Auswahl view
+    act(() => { fireEvent.click(meineAuswahlBtn); });
+
+    // The page title "Meine Auswahl" should appear in the dedicated view
+    const meineAuswahlTitle = Array.from(document.querySelectorAll('.tagesmenu-results-page-title'))
       .find(el => el.textContent === 'Meine Auswahl');
     expect(meineAuswahlTitle).not.toBeNull();
+  });
+});
+
+describe('Tagesmenu – Meine Auswahl FAB button', () => {
+  const multiMemberList = {
+    id: 'list1',
+    name: 'Test Liste',
+    listKind: 'interactive',
+    recipeIds: [],
+    ownerId: 'user1',
+    memberIds: ['user2'],
+  };
+
+  const allRecipes = [
+    makeRecipe('r1', 'Rezept 1'),
+    makeRecipe('r2', 'Rezept 2'),
+    makeRecipe('r3', 'Rezept 3'),
+  ];
+
+  beforeEach(() => {
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+  });
+
+  test('button is shown during swipe stack in test mode', async () => {
+    // No active flags → swipe stack is shown (not results)
+    mockActiveFlagsValue = {};
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-meine-auswahl-btn')).not.toBeNull();
+  });
+
+  test('button is NOT shown during swipe stack when tagesmenuTestmode is false', async () => {
+    mockActiveFlagsValue = {};
+    const userWithoutTestmode = { id: 'user1', tagesmenuTestmode: false };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithoutTestmode}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-meine-auswahl-btn')).toBeNull();
+  });
+
+  test('clicking button during swipe stack shows Meine Auswahl view', async () => {
+    mockActiveFlagsValue = {};
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+    // Pre-populate some flags in the active state for the Meine Auswahl view
+    mockActiveFlagsValue = { r1: 'kandidat' };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    const btn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    expect(btn).not.toBeNull();
+
+    act(() => { fireEvent.click(btn); });
+
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+  });
+
+  test('clicking button again from Meine Auswahl view returns to previous view', async () => {
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    // All recipes have flags → results view shown
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    const btn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+
+    // Open Meine Auswahl view
+    act(() => { fireEvent.click(btn); });
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+
+    // Close Meine Auswahl view → results view should return
+    act(() => { fireEvent.click(btn); });
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+  });
+
+  test('Meine Auswahl view shows own groups (Kandidat, Für später, Archiviert)', async () => {
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    const btn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    act(() => { fireEvent.click(btn); });
+
+    const groupTitles = Array.from(document.querySelectorAll('.tagesmenu-meine-auswahl .tagesmenu-results-group-title'))
+      .map(el => el.textContent);
+    expect(groupTitles).toContain('Kandidat');
+    expect(groupTitles).toContain('Für später');
+    expect(groupTitles).toContain('Archiviert');
+  });
+
+  test('Meine Auswahl view groups are separate from Gemeinsame Kandidaten view', async () => {
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'geparkt', r3: 'archiv' };
+    const userWithTestmode = { id: 'user1', tagesmenuTestmode: true };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={userWithTestmode}
+        />
+      );
+    });
+
+    // Results view shows Gemeinsame Kandidaten without Meine Auswahl groups
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).toBeNull();
+
+    // Open Meine Auswahl view → Gemeinsame Kandidaten view hidden
+    const btn = document.querySelector('.tagesmenu-meine-auswahl-btn');
+    act(() => { fireEvent.click(btn); });
+    expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
   });
 });
