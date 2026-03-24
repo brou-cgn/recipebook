@@ -369,7 +369,10 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
       }
       console.log('[buildMenuGridImage] Loading image:', src.substring(0, 80));
       const img = new Image();
-      if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
+      // Set crossOrigin BEFORE setting src to ensure proper CORS handling
+      if (!src.startsWith('data:')) {
+        img.crossOrigin = 'anonymous';
+      }
       img.onload = () => {
         console.log('[buildMenuGridImage] Image loaded successfully:', src.substring(0, 60), `(${img.width}x${img.height})`);
         resolve(img);
