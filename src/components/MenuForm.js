@@ -249,6 +249,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('=== [MenuForm:handleSubmit] START ===');
+    const t0 = performance.now();
+
     if (!name.trim()) {
       alert('Bitte geben Sie einen Menü-Namen ein');
       return;
@@ -261,25 +264,55 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
+    console.log('[MenuForm:handleSubmit] Sections (%d):', sections.length,
+      sections.map(s => ({ name: s.name, recipeIds: s.recipeIds })));
+    console.log('[MenuForm:handleSubmit] Total recipes across sections:', totalRecipes);
+
+    const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
+    console.log('[MenuForm:handleSubmit] All recipe IDs:', allRecipeIds);
+
+    const recipeImageMap = {};
+    for (const id of allRecipeIds) {
+      const r = recipes.find(rec => rec.id === id);
+      if (r) {
+        const img = r.images?.[0]?.url || r.image || null;
+        recipeImageMap[id] = img ? img.substring(0, 80) : '(no image)';
+      } else {
+        recipeImageMap[id] = '(recipe not found)';
+      }
+    }
+    console.log('[MenuForm:handleSubmit] Recipe ID → Image mapping:', recipeImageMap);
+
     setSavingMenu(true);
     try {
-      // Collect all recipe IDs for backward compatibility
-      const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
-
       // ALWAYS auto-generate a grid image from recipe title images to ensure changes are reflected.
       // Note: menu.image (manual upload) is preserved separately and takes precedence in display.
       let gridImage = null;
       try {
+        console.log('[MenuForm:handleSubmit] Fetching category images...');
+        const tCat = performance.now();
         const categoryImages = await getCategoryImages();
-        console.log('[MenuForm] categoryImages loaded:', categoryImages.length);
+        console.log('[MenuForm:handleSubmit] getCategoryImages() done in %.1fms → %d images',
+          performance.now() - tCat, categoryImages.length);
+
+        console.log('[MenuForm:handleSubmit] Calling selectMenuGridImages...');
+        const tSel = performance.now();
         const selectedUrls = selectMenuGridImages(sections, recipes, categoryImages);
-        console.log('[MenuForm] selectedUrls for grid:', selectedUrls.length, selectedUrls.map(u => u.substring(0, 60)));
+        console.log('[MenuForm:handleSubmit] selectMenuGridImages() done in %.1fms → %d URLs',
+          performance.now() - tSel, selectedUrls.length,
+          selectedUrls.map((u, i) => `[${i}] ${u.substring(0, 60)}`));
+
         if (selectedUrls.length > 0) {
+          console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage...');
+          const tGrid = performance.now();
           gridImage = await buildMenuGridImage(selectedUrls);
-          console.log('[MenuForm] gridImage generated:', Boolean(gridImage));
+          console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → gridImage generated: %s',
+            performance.now() - tGrid, Boolean(gridImage));
+        } else {
+          console.warn('[MenuForm:handleSubmit] No URLs selected — skipping grid generation');
         }
       } catch (err) {
-        console.error('Fehler beim Erstellen des Menü-Rasterbilds:', err);
+        console.error('[MenuForm:handleSubmit] Fehler beim Erstellen des Menü-Rasterbilds:', err.message || err, err);
       }
 
       const menuData = {
@@ -293,6 +326,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         sections: sections,
         recipeIds: allRecipeIds // Keep for backward compatibility
       };
+
+      console.log('[MenuForm:handleSubmit] Final menuData:', {
+        id: menuData.id,
+        name: menuData.name,
+        hasImage: Boolean(menuData.image),
+        hasGridImage: Boolean(menuData.gridImage),
+        sectionsCount: menuData.sections.length,
+        recipeIdsCount: menuData.recipeIds.length,
+      });
+      console.log('=== [MenuForm:handleSubmit] END (%.1fms) ===', performance.now() - t0);
 
       onSave(menuData);
     } finally {
