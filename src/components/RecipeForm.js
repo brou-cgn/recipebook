@@ -231,6 +231,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const webImportListPreselected = useRef(false);
   // FAB button pressed state for animation
   const [fabPressed, setFabPressed] = useState(false);
+  // Form ref for FAB button
+  const formRef = useRef(null);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -718,11 +720,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   const handleFabClick = (e) => {
     e.preventDefault();
-    // Trigger form submission by creating a synthetic event
-    const form = e.target.closest('.recipe-form-container')?.querySelector('form');
-    if (form) {
-      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
-      form.dispatchEvent(submitEvent);
+    e.stopPropagation();
+    // Trigger form submission using the form ref
+    if (formRef.current) {
+      formRef.current.requestSubmit();
     }
   };
 
@@ -949,7 +950,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         );
       })()}
 
-      <form className="recipe-form" onSubmit={handleSubmit}>
+      <form ref={formRef} className="recipe-form" onSubmit={handleSubmit}>
         {/* Private list selector - only shown when creating a new recipe */}
         {!recipe && !isCreatingVersion && privateLists.length > 0 && (
           <div className="form-group private-list-selector">

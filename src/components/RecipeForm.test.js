@@ -26,8 +26,42 @@ jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
-    scanImage: '📷'
+    scanImage: '📷',
+    webImport: '🌐',
+    saveRecipe: '💾'
   }),
+  DEFAULT_BUTTON_ICONS: {
+    cookingMode: '👨‍🍳',
+    importRecipe: '📥',
+    scanImage: '📷',
+    webImport: '🌐',
+    saveRecipe: '💾',
+    closeButton: '✕',
+    closeButtonAlt: '✕',
+    menuCloseButton: '✕',
+    filterButton: '⚙',
+    filterButtonActive: '🔽',
+    copyLink: '📋',
+    nutritionEmpty: '➕',
+    nutritionFilled: '🥦',
+    ratingHeartEmpty: '🤍',
+    ratingHeartEmptyModal: '♡',
+    ratingHeartFilled: '♥',
+    privateListBack: '✕',
+    shoppingList: '🛒',
+    bringButton: '🛍️',
+    timerStart: '⏱',
+    timerStop: '⏹',
+    cookDate: '📅',
+    addRecipe: '➕',
+    addMenu: '📋',
+    addPrivateRecipe: '🔒',
+    swipeRight: '👍',
+    swipeLeft: '👎',
+    swipeUp: '⭐',
+    menuFavoritesButton: '★',
+    tagesmenuFilterButton: '☰'
+  }
 }));
 
 jest.mock('../utils/userManagement', () => ({
@@ -64,7 +98,9 @@ jest.mock('../utils/storageUtils', () => ({
 
 jest.mock('../utils/recipeLinks', () => ({
   encodeRecipeLink: jest.fn((id, title) => `#${id}-${title}`),
+  decodeRecipeLink: jest.fn((text) => null), // Returns null for non-recipe-link text
   startsWithHash: (text) => text.startsWith('#'),
+  containsHashForTypeahead: jest.fn(() => false),
 }));
 
 // Mock @dnd-kit modules
