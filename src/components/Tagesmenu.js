@@ -79,6 +79,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     swipeUp: DEFAULT_BUTTON_ICONS.swipeUp,
   });
 
+  // Configurable filter button icon loaded from settings
+  const [filterButtonIcon, setFilterButtonIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
+
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
     if (!selectedList) return [];
@@ -122,6 +125,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         swipeLeft: icons.swipeLeft ?? DEFAULT_BUTTON_ICONS.swipeLeft,
         swipeUp: icons.swipeUp ?? DEFAULT_BUTTON_ICONS.swipeUp,
       });
+      setFilterButtonIcon(icons.tagesmenuFilterButton ?? DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
     }).catch(() => {});
   }, []);
 
@@ -729,11 +733,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           aria-label="Listen filtern"
           title="Listen filtern"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-            <line x1="11" y1="18" x2="13" y2="18" />
-          </svg>
+          {isBase64Image(filterButtonIcon) ? (
+            <img src={filterButtonIcon} alt="Listen filtern" className="button-icon-image" />
+          ) : (
+            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{filterButtonIcon}</span>
+          )}
         </button>
       )}
 

@@ -226,7 +226,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     addPrivateRecipe: '🔒',
     swipeRight: '👍',
     swipeLeft: '👎',
-    swipeUp: '⭐'
+    swipeUp: '⭐',
+    menuFavoritesButton: '★',
+    tagesmenuFilterButton: '☰'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -2045,6 +2047,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 </div>
 
                 <div className="button-icon-item">
+                  <label htmlFor="menuFavoritesButtonIcon">Favoriten-Button (Menüübersicht):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.menuFavoritesButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="menuFavoritesButtonIcon"
+                          value={buttonIcons.menuFavoritesButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuFavoritesButton: e.target.value })}
+                          placeholder="z.B. ★"
+                          maxLength={10}
+                        />
+                        <label htmlFor="menuFavoritesButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'menuFavoritesButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="menuFavoritesButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('menuFavoritesButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'menuFavoritesButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('menuFavoritesButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, menuFavoritesButton: DEFAULT_BUTTON_ICONS.menuFavoritesButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.menuFavoritesButton) ? (
+                        <img src={buttonIcons.menuFavoritesButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.menuFavoritesButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
                   <label htmlFor="addPrivateRecipeIcon">Privates-Rezept-hinzufügen-Button (Rezeptübersicht):</label>
                   <div className="button-icon-input-group">
                     {!isBase64Image(buttonIcons.addPrivateRecipe) ? (
@@ -2779,6 +2838,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.cookDate} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.cookDate}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="tagesmenuFilterButtonIcon">Filter-Button (Tagesmenü):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.tagesmenuFilterButton) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="tagesmenuFilterButtonIcon"
+                          value={buttonIcons.tagesmenuFilterButton}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, tagesmenuFilterButton: e.target.value })}
+                          placeholder="z.B. ☰"
+                          maxLength={10}
+                        />
+                        <label htmlFor="tagesmenuFilterButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'tagesmenuFilterButton' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="tagesmenuFilterButtonIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('tagesmenuFilterButton', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'tagesmenuFilterButton'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('tagesmenuFilterButton')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, tagesmenuFilterButton: DEFAULT_BUTTON_ICONS.tagesmenuFilterButton })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.tagesmenuFilterButton) ? (
+                        <img src={buttonIcons.tagesmenuFilterButton} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.tagesmenuFilterButton}</span>
                       )}
                     </div>
                   </div>

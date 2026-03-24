@@ -11,6 +11,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   const [favPressed, setFavPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({
     addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
+    menuFavoritesButton: DEFAULT_BUTTON_ICONS.menuFavoritesButton,
   });
 
   // Load button icons on mount
@@ -175,7 +176,11 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         title={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
         aria-label={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
       >
-        ★
+        {isBase64Image(buttonIcons.menuFavoritesButton) ? (
+          <img src={buttonIcons.menuFavoritesButton} alt="Favoriten" className="button-icon-image" />
+        ) : (
+          buttonIcons.menuFavoritesButton
+        )}
       </button>
     </div>
   );
