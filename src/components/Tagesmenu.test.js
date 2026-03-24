@@ -394,6 +394,94 @@ describe('Tagesmenu – pre-existing active flags', () => {
     expect(groups[1]).toHaveTextContent('Archiviert');
     expect(document.querySelectorAll('.tagesmenu-results-tile')).toHaveLength(3);
   });
+
+  test('Gemeinsamer Status only shows recipes from current swipe session', async () => {
+    // Setup: 5 recipes total, r1 and r2 have pre-existing flags, r3-r5 are new
+    mockActiveFlagsValue = { r1: 'kandidat', r2: 'archiv' };
+    
+    // Multi-member list to enable "Gemeinsamer Status" section
+    const multiMemberList = {
+      id: 'list1',
+      name: 'Test Liste',
+      listKind: 'interactive',
+      recipeIds: [],
+      ownerId: 'user1',
+      memberIds: ['user2'],
+    };
+
+    // Set up group status: all recipes are considered 'kandidat' by the mock
+    mockAllMembersFlagsValue = {
+      user1: { r3: 'kandidat', r4: 'kandidat', r5: 'kandidat' },
+      user2: { r3: 'kandidat', r4: 'kandidat', r5: 'kandidat' },
+    };
+
+    const allRecipes = [
+      makeRecipe('r1', 'Old Recipe 1'),
+      makeRecipe('r2', 'Old Recipe 2'),
+      makeRecipe('r3', 'New Recipe 3'),
+      makeRecipe('r4', 'New Recipe 4'),
+      makeRecipe('r5', 'New Recipe 5'),
+    ];
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Swipe through all new recipes (r3, r4, r5)
+    function swipeCardUp() {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      if (!topCard) return;
+      const propsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+      const props = topCard[propsKey];
+      act(() => { props.onPointerDown({ clientX: 200, clientY: 300, pointerId: 1, currentTarget: topCard }); });
+      act(() => { props.onPointerMove({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: topCard }); });
+      act(() => { props.onPointerUp({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: topCard }); });
+      act(() => {
+        const freshPropsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+        topCard[freshPropsKey].onTransitionEnd?.({ propertyName: 'transform' });
+      });
+    }
+
+    swipeCardUp(); // swipe r3 up → kandidat
+    swipeCardUp(); // swipe r4 up → kandidat
+    swipeCardUp(); // swipe r5 up → kandidat
+
+    // Results view should be shown
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    // "Gemeinsamer Status" section should exist (for multi-member lists)
+    const sharedStatusTitle = Array.from(document.querySelectorAll('.tagesmenu-results-section-title'))
+      .find(el => el.textContent === 'Gemeinsamer Status');
+    
+    expect(sharedStatusTitle).not.toBeNull();
+
+    // Count recipes in "Gemeinsamer Status" section
+    // Should only show r3, r4, r5 (from current session), NOT r1, r2 (pre-existing flags)
+    const allTiles = document.querySelectorAll('.tagesmenu-results-tile');
+    const sharedStatusKandidatGroup = document.querySelector('.tagesmenu-results-group');
+    const sharedStatusTiles = sharedStatusKandidatGroup.querySelectorAll('.tagesmenu-results-tile');
+    
+    // Should show 3 recipes (r3, r4, r5) in shared status section
+    expect(sharedStatusTiles).toHaveLength(3);
+    
+    // Verify the recipes are the correct ones (new ones, not old ones)
+    const tileNames = Array.from(sharedStatusTiles).map(tile => 
+      tile.querySelector('.tagesmenu-results-tile-name').textContent
+    );
+    expect(tileNames).toContain('New Recipe 3');
+    expect(tileNames).toContain('New Recipe 4');
+    expect(tileNames).toContain('New Recipe 5');
+    expect(tileNames).not.toContain('Old Recipe 1');
+    expect(tileNames).not.toContain('Old Recipe 2');
+  });
 });
 
 describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () => {
