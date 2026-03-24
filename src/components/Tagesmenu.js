@@ -581,17 +581,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               return sorted.slice(0, maxKandidatenSchwelle);
             })();
 
-            const groupStatusGroups = [
-              { label: 'Archiviert', flag: 'archiv' },
-            ].map(({ label, flag }) => ({
-              label,
-              flag,
-              group: allListRecipes.filter((r) => {
-                return groupStatusByRecipeId[r.id] === flag;
-              }),
-            })).filter(({ group }) => group.length > 0);
-
-            if (gemeinsameKandidaten.length === 0 && groupStatusGroups.length === 0) return null;
+            if (gemeinsameKandidaten.length === 0) return null;
             return (
               <>
                 <h2 className="tagesmenu-results-section-title">Gemeinsamer Status</h2>
@@ -603,14 +593,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     </div>
                   </div>
                 )}
-                {groupStatusGroups.map(({ label, flag, group }) => (
-                  <div key={`group-${flag}`} className="tagesmenu-results-group">
-                    <h3 className="tagesmenu-results-group-title">{label}</h3>
-                    <div className="tagesmenu-results-tiles">
-                      {group.map(renderTile)}
-                    </div>
-                  </div>
-                ))}
                 <h2 className="tagesmenu-results-section-title">Meine Auswahl</h2>
               </>
             );
