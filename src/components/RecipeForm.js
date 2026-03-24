@@ -3,7 +3,7 @@ import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
-import { getCustomLists } from '../utils/customLists';
+import { getCustomLists, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
@@ -214,9 +214,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({
-    importRecipe: '📥',
-    scanImage: '📷',
-    webImport: '🌐'
+    importRecipe: DEFAULT_BUTTON_ICONS.importRecipe,
+    scanImage: DEFAULT_BUTTON_ICONS.scanImage,
+    webImport: DEFAULT_BUTTON_ICONS.webImport,
+    saveRecipe: DEFAULT_BUTTON_ICONS.saveRecipe
   });
   const [showTypeahead, setShowTypeahead] = useState(false);
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
@@ -228,6 +229,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
   // Tracks whether the web import default list pre-selection has been applied
   const webImportListPreselected = useRef(false);
+  // FAB button pressed state for animation
+  const [fabPressed, setFabPressed] = useState(false);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -346,9 +349,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const { getButtonIcons } = await import('../utils/customLists');
       const icons = await getButtonIcons();
       setButtonIcons({
-        importRecipe: icons.importRecipe || '📥',
-        scanImage: icons.scanImage || '📷',
-        webImport: icons.webImport || '🌐'
+        importRecipe: icons.importRecipe || DEFAULT_BUTTON_ICONS.importRecipe,
+        scanImage: icons.scanImage || DEFAULT_BUTTON_ICONS.scanImage,
+        webImport: icons.webImport || DEFAULT_BUTTON_ICONS.webImport,
+        saveRecipe: icons.saveRecipe || DEFAULT_BUTTON_ICONS.saveRecipe
       });
     };
     loadCustomLists();
@@ -710,6 +714,24 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
 
     onSave(recipeData);
+  };
+
+  const handleFabClick = (e) => {
+    e.preventDefault();
+    // Trigger form submission by creating a synthetic event
+    const form = e.target.closest('.recipe-form-container')?.querySelector('form');
+    if (form) {
+      const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+      form.dispatchEvent(submitEvent);
+    }
+  };
+
+  const handleFabMouseDown = () => {
+    setFabPressed(true);
+  };
+
+  const handleFabMouseUp = () => {
+    setFabPressed(false);
   };
 
   const handleImport = (importedRecipe) => {
@@ -1322,6 +1344,26 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           inputValue={ingredients[typeaheadIngredientIndex]?.text || ''}
         />
       )}
+
+      {/* FAB Save Button */}
+      <button
+        type="button"
+        className={`save-fab-button ${fabPressed ? 'pressed' : ''}`}
+        onClick={handleFabClick}
+        onMouseDown={handleFabMouseDown}
+        onMouseUp={handleFabMouseUp}
+        onMouseLeave={handleFabMouseUp}
+        onTouchStart={handleFabMouseDown}
+        onTouchEnd={handleFabMouseUp}
+        aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+        title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+      >
+        {isBase64Image(buttonIcons.saveRecipe) ? (
+          <img src={buttonIcons.saveRecipe} alt="Speichern" className="button-icon-image" />
+        ) : (
+          buttonIcons.saveRecipe
+        )}
+      </button>
     </div>
   );
 }

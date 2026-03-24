@@ -280,6 +280,7 @@ export const DEFAULT_BUTTON_ICONS = {
   addRecipe: '➕',
   addMenu: '📋',
   addPrivateRecipe: '🔒',
+  saveRecipe: '💾',
   swipeRight: '👍',
   swipeLeft: '👎',
   swipeUp: '⭐',
