@@ -551,6 +551,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         null
       ) : allSwiped ? (
         <div className="tagesmenu-results">
+          <div className="tagesmenu-results-page-header">
+            <h2 className="tagesmenu-results-page-title">Tagesmenü</h2>
+          </div>
           {/* Group status section – only shown for lists with multiple members */}
           {listMemberIds.length > 1 && (() => {
             // Helper to render a recipe tile (reused across groups)
@@ -599,13 +602,17 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             })();
 
             if (gemeinsameKandidaten.length === 0) return null;
+            const tilesColumnClass =
+              gemeinsameKandidaten.length <= 2
+                ? 'tagesmenu-results-tiles--1col'
+                : gemeinsameKandidaten.length <= 6
+                ? 'tagesmenu-results-tiles--2col'
+                : 'tagesmenu-results-tiles--3col';
             return (
               <>
-                <h2 className="tagesmenu-results-section-title">Gemeinsamer Status</h2>
                 {gemeinsameKandidaten.length > 0 && (
                   <div className="tagesmenu-results-group tagesmenu-results-group--gemeinsame-kandidaten">
-                    <h3 className="tagesmenu-results-group-title">Gemeinsame Kandidaten</h3>
-                    <div className="tagesmenu-results-tiles">
+                    <div className={`tagesmenu-results-tiles ${tilesColumnClass}`}>
                       {gemeinsameKandidaten.map(renderTile)}
                     </div>
                   </div>

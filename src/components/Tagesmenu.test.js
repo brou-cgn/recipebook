@@ -928,7 +928,6 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
     const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
     expect(gemeinsameGroup).not.toBeNull();
-    expect(gemeinsameGroup).toHaveTextContent('Gemeinsame Kandidaten');
     const tiles = gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile');
     expect(tiles).toHaveLength(3);
   });

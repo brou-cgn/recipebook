@@ -264,6 +264,18 @@
   animation: tagesmenu-results-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.tagesmenu-results-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tagesmenu-results-page-title {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
 .tagesmenu-results-header {
   display: flex;
   flex-direction: column;
@@ -297,6 +309,18 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 0.6rem;
+}
+
+.tagesmenu-results-tiles--1col {
+  grid-template-columns: 1fr;
+}
+
+.tagesmenu-results-tiles--2col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tagesmenu-results-tiles--3col {
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .tagesmenu-results-tile {
