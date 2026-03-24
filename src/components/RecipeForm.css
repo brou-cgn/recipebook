@@ -435,6 +435,32 @@
   margin-bottom: 0.75rem;
 }
 
+.input-with-handle {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+.input-with-handle .drag-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+  min-width: 36px;
+  width: 36px;
+}
+
+.input-with-handle input,
+.input-with-handle textarea {
+  flex: 1;
+  padding-left: calc(36px + 0.5rem);
+  width: 100%;
+}
+
 .step-number {
   padding: 0.75rem 0;
   font-weight: 600;
@@ -521,6 +547,43 @@
 .drag-handle:active {
   cursor: grabbing;
   background: #ddd;
+}
+
+/* Context menu styles */
+.context-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1199;
+}
+
+.ingredient-context-menu {
+  position: fixed;
+  z-index: 1200;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.ingredient-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.ingredient-context-menu button:hover {
+  background: #f5f5f5;
 }
 
 .form-list-item.dragging {

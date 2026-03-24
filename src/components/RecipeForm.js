@@ -42,6 +42,10 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     isDragging,
   } = useSortable({ id });
 
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const longPressTimerRef = useRef(null);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -60,39 +64,59 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
       : recipeLink.recipeName
     : text;
 
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setShowContextMenu(true);
+  };
+
+  const startLongPress = (x, y) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenuPos({ x, y });
+      setShowContextMenu(true);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => () => cancelLongPress(), []);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Zutat verschieben"
-      >
-        ⋮⋮
-      </button>
-      <input
-        type="text"
-        value={displayValue}
-        readOnly={!!recipeLink}
-        onChange={(e) => onChange(index, e.target.value)}
-        placeholder={isHeading ? 'Zwischenüberschrift' : `Zutat ${index + 1}`}
-        className={`${isHeading ? 'heading-input' : ''} ${recipeLink ? 'recipe-link-input' : ''}`}
-        title={recipeLink ? `Verlinktes Rezept: ${recipeLink.recipeName}` : undefined}
-      />
-      <button
-        type="button"
-        className="toggle-type-button"
-        onClick={() => onToggleType(index)}
-        title={isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
-        aria-label={isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
-      >
-        {isHeading ? '¶' : 'H'}
-      </button>
+      <div className="input-with-handle">
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Zutat verschieben"
+        >
+          ⋮⋮
+        </button>
+        <input
+          type="text"
+          value={displayValue}
+          readOnly={!!recipeLink}
+          onChange={(e) => onChange(index, e.target.value)}
+          placeholder={isHeading ? 'Zwischenüberschrift' : `Zutat ${index + 1}`}
+          className={`${isHeading ? 'heading-input' : ''} ${recipeLink ? 'recipe-link-input' : ''}`}
+          title={recipeLink ? `Verlinktes Rezept: ${recipeLink.recipeName}` : undefined}
+          onContextMenu={handleContextMenu}
+          onTouchStart={(e) => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchEnd={cancelLongPress}
+          onTouchCancel={cancelLongPress}
+          onTouchMove={cancelLongPress}
+        />
+      </div>
       {canRemove && (
         <button
           type="button"
@@ -101,6 +125,25 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
         >
           ✕
         </button>
+      )}
+      {showContextMenu && (
+        <>
+          <div
+            className="context-menu-backdrop"
+            onClick={() => setShowContextMenu(false)}
+          />
+          <div
+            className="ingredient-context-menu"
+            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+          >
+            <button
+              type="button"
+              onClick={() => { onToggleType(index); setShowContextMenu(false); }}
+            >
+              {isHeading ? 'Als Zutat formatieren' : 'Als Überschrift formatieren'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -116,6 +159,10 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     transition,
     isDragging,
   } = useSortable({ id });
+
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const longPressTimerRef = useRef(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -137,38 +184,58 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     }
   }, [text]);
 
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setShowContextMenu(true);
+  };
+
+  const startLongPress = (x, y) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenuPos({ x, y });
+      setShowContextMenu(true);
+    }, 500);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => () => cancelLongPress(), []);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Schritt verschieben"
-      >
-        ⋮⋮
-      </button>
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => onChange(index, e.target.value)}
-        placeholder={isHeading ? 'Zwischenüberschrift' : `Schritt ${stepNumber}`}
-        rows={isHeading ? '1' : '2'}
-        className={isHeading ? 'heading-input' : ''}
-      />
-      <button
-        type="button"
-        className="toggle-type-button"
-        onClick={() => onToggleType(index)}
-        title={isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
-        aria-label={isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
-      >
-        {isHeading ? '¶' : 'H'}
-      </button>
+      <div className="input-with-handle">
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Schritt verschieben"
+        >
+          ⋮⋮
+        </button>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => onChange(index, e.target.value)}
+          placeholder={isHeading ? 'Zwischenüberschrift' : `Schritt ${stepNumber}`}
+          rows={isHeading ? '1' : '2'}
+          className={isHeading ? 'heading-input' : ''}
+          onContextMenu={handleContextMenu}
+          onTouchStart={(e) => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchEnd={cancelLongPress}
+          onTouchCancel={cancelLongPress}
+          onTouchMove={cancelLongPress}
+        />
+      </div>
       {canRemove && (
         <button
           type="button"
@@ -177,6 +244,25 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
         >
           ✕
         </button>
+      )}
+      {showContextMenu && (
+        <>
+          <div
+            className="context-menu-backdrop"
+            onClick={() => setShowContextMenu(false)}
+          />
+          <div
+            className="ingredient-context-menu"
+            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+          >
+            <button
+              type="button"
+              onClick={() => { onToggleType(index); setShowContextMenu(false); }}
+            >
+              {isHeading ? 'Als Schritt formatieren' : 'Als Überschrift formatieren'}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1066,9 +1152,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           )}
         </div>
 
-        <div className="form-group">
-          <label htmlFor="author">Autor</label>
-          {currentUser?.isAdmin ? (
+        {currentUser?.isAdmin && (
+          <div className="form-group">
+            <label htmlFor="author">Autor</label>
             <select
               id="author"
               value={authorId}
@@ -1080,16 +1166,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 </option>
               ))}
             </select>
-          ) : (
-            <input
-              type="text"
-              id="author"
-              value={`${currentUser?.vorname || ''} ${currentUser?.nachname || ''}`}
-              disabled
-              style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-            />
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="form-row">
           <div className="form-group">
@@ -1324,15 +1402,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             </label>
           </div>
         )}
-
-        <div className="form-actions">
-          <button type="button" className="cancel-button" onClick={onCancel}>
-            Abbrechen
-          </button>
-          <button type="submit" className="save-button">
-            {recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
-          </button>
-        </div>
       </form>
 
       {/* Cancel FAB button - positioned at bottom-left */}

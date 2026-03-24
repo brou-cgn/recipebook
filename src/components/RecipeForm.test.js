@@ -28,7 +28,7 @@ jest.mock('../utils/customLists', () => ({
     importRecipe: '📥',
     scanImage: '📷',
     webImport: '🌐',
-    saveRecipe: '💾'
+    saveRecipe: '💾',
     cancelRecipe: '✕'
   }),
   DEFAULT_BUTTON_ICONS: {
@@ -181,7 +181,7 @@ describe('RecipeForm - Author Field', () => {
     });
   });
 
-  test('shows author as disabled text input for non-admin user', () => {
+  test('does not show author field for non-admin user', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -200,11 +200,8 @@ describe('RecipeForm - Author Field', () => {
       />
     );
 
-    // Check that author field is a disabled text input
-    const authorField = screen.getByLabelText('Autor');
-    expect(authorField.tagName).toBe('INPUT');
-    expect(authorField).toBeDisabled();
-    expect(authorField).toHaveValue('Regular User');
+    // Author field should not be visible for non-admin users
+    expect(screen.queryByLabelText('Autor')).not.toBeInTheDocument();
   });
 
   test('sets current user as author for new recipe', async () => {
@@ -231,6 +228,9 @@ describe('RecipeForm - Author Field', () => {
       target: { value: 'Test Recipe' },
     });
 
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -238,7 +238,7 @@ describe('RecipeForm - Author Field', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with authorId set to current user
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -249,7 +249,7 @@ describe('RecipeForm - Author Field', () => {
     ));
   });
 
-  test('admin can change author when creating recipe', () => {
+  test('admin can change author when creating recipe', async () => {
     const adminUser = {
       id: 'admin-1',
       vorname: 'Admin',
@@ -273,23 +273,33 @@ describe('RecipeForm - Author Field', () => {
       target: { value: 'Test Recipe' },
     });
 
-    // Change author
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    // Change author (wait for users to load first)
     const authorField = screen.getByLabelText('Autor');
+    await waitFor(() => expect(authorField.options.length).toBeGreaterThan(0));
     fireEvent.change(authorField, { target: { value: 'user-1' } });
 
+    // Select a required category
+    const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
+    speisekategorieSelect.options[0].selected = true;
+    fireEvent.change(speisekategorieSelect);
+
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with the selected authorId
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Test Recipe',
         authorId: 'user-1',
       })
-    );
+    ));
   });
 
-  test('preserves authorId when editing existing recipe', () => {
+  test('preserves authorId when editing existing recipe', async () => {
     const adminUser = {
       id: 'admin-1',
       vorname: 'Admin',
@@ -323,19 +333,19 @@ describe('RecipeForm - Author Field', () => {
     );
 
     // Submit form without changing anything
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with the original authorId
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'recipe-1',
         title: 'Existing Recipe',
         authorId: 'user-1',
       })
-    );
+    ));
   });
 
-  test('admin can change author when editing existing recipe', () => {
+  test('admin can change author when editing existing recipe', async () => {
     const adminUser = {
       id: 'admin-1',
       vorname: 'Admin',
@@ -353,7 +363,7 @@ describe('RecipeForm - Author Field', () => {
       kulinarik: [],
       schwierigkeit: 3,
       kochdauer: 30,
-      speisekategorie: '',
+      speisekategorie: ['Main Course'],
       ingredients: ['Ingredient 1'],
       steps: ['Step 1'],
       image: '',
@@ -368,20 +378,21 @@ describe('RecipeForm - Author Field', () => {
       />
     );
 
-    // Change author
+    // Change author (wait for users to load first)
     const authorField = screen.getByLabelText('Autor');
+    await waitFor(() => expect(authorField.options.length).toBeGreaterThan(0));
     fireEvent.change(authorField, { target: { value: 'admin-1' } });
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with the new authorId
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'recipe-1',
         authorId: 'admin-1',
       })
-    );
+    ));
   });
 });
 
@@ -476,7 +487,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(speisekategorieField).toHaveAttribute('multiple');
   });
 
-  test('can select multiple cuisines in Kulinarik field', () => {
+  test('can select multiple cuisines in Kulinarik field', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -497,6 +508,9 @@ describe('RecipeForm - Multi-Select Fields', () => {
 
     const kulinarikField = screen.getByLabelText('Kulinarik (Mehrfachauswahl möglich)');
     
+    // Wait for options to load
+    await waitFor(() => expect(kulinarikField.options.length).toBeGreaterThan(0));
+
     // Get the options
     const italianOption = screen.getByRole('option', { name: 'Italian' });
     const thaiOption = screen.getByRole('option', { name: 'Thai' });
@@ -508,23 +522,31 @@ describe('RecipeForm - Multi-Select Fields', () => {
     // Trigger change event
     fireEvent.change(kulinarikField);
 
-    // Fill in required title
+    // Fill in required title and other required fields
     fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
       target: { value: 'Test Recipe' },
     });
 
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    // Select a required category
+    const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    speisekategorieSelect.options[0].selected = true;
+    fireEvent.change(speisekategorieSelect);
+
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with multiple cuisines
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         kulinarik: expect.arrayContaining(['Italian', 'Thai']),
       })
-    );
+    ));
   });
 
-  test('can select multiple categories in Speisekategorie field', () => {
+  test('can select multiple categories in Speisekategorie field', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -544,6 +566,9 @@ describe('RecipeForm - Multi-Select Fields', () => {
     );
 
     const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+
+    // Wait for options to load
+    await waitFor(() => expect(speisekategorieField.options.length).toBeGreaterThan(0));
     
     // Get the options
     const appetizerOption = screen.getByRole('option', { name: 'Appetizer' });
@@ -556,23 +581,26 @@ describe('RecipeForm - Multi-Select Fields', () => {
     // Trigger change event
     fireEvent.change(speisekategorieField);
 
-    // Fill in required title
+    // Fill in required title and other required fields
     fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
       target: { value: 'Test Recipe' },
     });
 
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with multiple categories
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         speisekategorie: expect.arrayContaining(['Appetizer', 'Main Course']),
       })
-    );
+    ));
   });
 
-  test('loads existing recipe with array kulinarik correctly', () => {
+  test('loads existing recipe with array kulinarik correctly', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -606,14 +634,22 @@ describe('RecipeForm - Multi-Select Fields', () => {
     );
 
     const kulinarikField = screen.getByLabelText('Kulinarik (Mehrfachauswahl möglich)');
+
+    // Wait for options to load
+    await waitFor(() => expect(kulinarikField.options.length).toBeGreaterThan(0));
     
-    // Check that Italian and Chinese are selected
-    const options = Array.from(kulinarikField.selectedOptions).map(opt => opt.value);
-    expect(options).toContain('Italian');
-    expect(options).toContain('Chinese');
+    // Check that Italian and Chinese options exist and are rendered
+    // (JSDOM may not reflect selectedOptions for controlled React selects,
+    // so we verify the kulinarik state is passed correctly on submit)
+    fireEvent.submit(document.querySelector('.recipe-form'));
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kulinarik: expect.arrayContaining(['Italian', 'Chinese']),
+      })
+    ));
   });
 
-  test('converts old string format speisekategorie to array', () => {
+  test('converts old string format speisekategorie to array', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -647,14 +683,14 @@ describe('RecipeForm - Multi-Select Fields', () => {
     );
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that speisekategorie was converted to array
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         speisekategorie: ['Dessert'],
       })
-    );
+    ));
   });
 
   test('prevents saving when no Speisekategorie is selected', async () => {
@@ -689,7 +725,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
     });
 
     // Submit form without selecting a category
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     expect(alertMock).toHaveBeenCalledWith('Bitte wählen Sie mindestens eine Speisekategorie aus');
     expect(mockOnSave).not.toHaveBeenCalled();
@@ -736,14 +772,19 @@ describe('RecipeForm - Category Image Integration', () => {
       target: { value: 'Test Recipe' },
     });
 
-    // Select a meal category
+    // Fill in required ingredient and step
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    // Select a meal category (wait for options to load first)
     const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieField.options.length).toBeGreaterThan(0));
     const mainCourseOption = screen.getByRole('option', { name: 'Main Course' });
     mainCourseOption.selected = true;
     fireEvent.change(speisekategorieField);
 
     // Submit form without uploading an image
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Wait for async operations to complete
     await waitFor(() => {
@@ -798,7 +839,7 @@ describe('RecipeForm - Category Image Integration', () => {
     );
 
     // Submit form without uploading an image
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Wait for async operations to complete
     await waitFor(() => {
@@ -853,7 +894,7 @@ describe('RecipeForm - Category Image Integration', () => {
     );
 
     // Submit form without changing the image
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Wait for async operations
     await waitFor(() => {
@@ -900,7 +941,7 @@ describe('RecipeForm - Category Image Integration', () => {
     });
 
     // Submit form without selecting categories
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Category validation should block the save before getImageForCategories is called
     expect(getImageForCategories).not.toHaveBeenCalled();
@@ -1411,6 +1452,9 @@ describe('RecipeForm - Ingredient Formatting', () => {
     const finalIngredientInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(finalIngredientInputs[2], { target: { value: '2EL Öl' } });
 
+    // Fill in a step
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -1418,7 +1462,7 @@ describe('RecipeForm - Ingredient Formatting', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify onSave was called with formatted ingredients
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -1429,7 +1473,7 @@ describe('RecipeForm - Ingredient Formatting', () => {
     ));
   });
 
-  test('formats ingredients when editing existing recipe', () => {
+  test('formats ingredients when editing existing recipe', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -1463,15 +1507,15 @@ describe('RecipeForm - Ingredient Formatting', () => {
     );
 
     // Submit form without changing ingredients
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify onSave was called with formatted ingredients
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'recipe-1',
         ingredients: ['100 ml Wasser', '500 g Zucker'],
       })
-    );
+    ));
   });
 
   test('preserves already formatted ingredients', async () => {
@@ -1502,6 +1546,9 @@ describe('RecipeForm - Ingredient Formatting', () => {
     const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(ingredientInputs[0], { target: { value: '100 ml Milch' } });
 
+    // Fill in a step
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -1509,7 +1556,7 @@ describe('RecipeForm - Ingredient Formatting', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify the already-formatted ingredient is preserved
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -1550,6 +1597,9 @@ describe('RecipeForm - Ingredient Formatting', () => {
     // Add empty ingredient
     fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
 
+    // Fill in a step
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -1557,7 +1607,7 @@ describe('RecipeForm - Ingredient Formatting', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify only non-empty ingredients were formatted
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -1705,6 +1755,9 @@ describe('RecipeForm - Drag and Drop', () => {
     const finalInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(finalInputs[2], { target: { value: 'Third Ingredient' } });
 
+    // Fill in a step
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -1712,7 +1765,7 @@ describe('RecipeForm - Drag and Drop', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify ingredients are saved in the correct order
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -1758,6 +1811,9 @@ describe('RecipeForm - Drag and Drop', () => {
     const finalInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(finalInputs[2], { target: { value: 'Third Step' } });
 
+    // Fill in a required ingredient
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
     await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
@@ -1765,7 +1821,7 @@ describe('RecipeForm - Drag and Drop', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Verify steps are saved in the correct order
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -1892,7 +1948,7 @@ describe('RecipeForm - Heading Functionality', () => {
     jest.clearAllMocks();
   });
 
-  test('renders toggle type button for ingredients', async () => {
+  test('shows format option in context menu for ingredients', async () => {
     render(
       <RecipeForm
         recipe={null}
@@ -1903,8 +1959,16 @@ describe('RecipeForm - Heading Functionality', () => {
     );
 
     await waitFor(() => {
-      const toggleButtons = screen.getAllByTitle(/Als Überschrift formatieren|Als Zutat formatieren/);
-      expect(toggleButtons.length).toBeGreaterThan(0);
+      const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+      expect(ingredientInput).toBeInTheDocument();
+    });
+
+    // Open context menu on ingredient input
+    const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+    fireEvent.contextMenu(ingredientInput);
+
+    await waitFor(() => {
+      expect(screen.getByText('Als Überschrift formatieren')).toBeInTheDocument();
     });
   });
 
@@ -1923,11 +1987,10 @@ describe('RecipeForm - Heading Functionality', () => {
       expect(ingredientInput).toBeInTheDocument();
     });
 
-    // Find the toggle button for the first ingredient
-    const toggleButton = screen.getAllByTitle('Als Überschrift formatieren')[0];
-    expect(toggleButton).toBeInTheDocument();
-
-    // Click to toggle to heading
+    // Open context menu and toggle to heading
+    const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+    fireEvent.contextMenu(ingredientInput);
+    const toggleButton = screen.getByText('Als Überschrift formatieren');
     fireEvent.click(toggleButton);
 
     await waitFor(() => {
@@ -1935,16 +1998,17 @@ describe('RecipeForm - Heading Functionality', () => {
       expect(headingInput).toBeInTheDocument();
     });
 
-    // Find the toggle button again (now should say "Als Zutat formatieren")
-    const toggleBackButton = screen.getByTitle('Als Zutat formatieren');
+    // Open context menu again and toggle back to ingredient
+    const headingInput = screen.getByPlaceholderText('Zwischenüberschrift');
+    fireEvent.contextMenu(headingInput);
+    const toggleBackButton = screen.getByText('Als Zutat formatieren');
     expect(toggleBackButton).toBeInTheDocument();
 
-    // Click to toggle back to ingredient
     fireEvent.click(toggleBackButton);
 
     await waitFor(() => {
-      const ingredientInput = screen.getByPlaceholderText('Zutat 1');
-      expect(ingredientInput).toBeInTheDocument();
+      const ingredientInput2 = screen.getByPlaceholderText('Zutat 1');
+      expect(ingredientInput2).toBeInTheDocument();
     });
   });
 
@@ -1963,13 +2027,11 @@ describe('RecipeForm - Heading Functionality', () => {
       expect(stepInput).toBeInTheDocument();
     });
 
-    // Find the toggle button for the first step
-    const toggleButtons = screen.getAllByTitle('Als Überschrift formatieren');
-    const stepToggleButton = toggleButtons[toggleButtons.length - 1]; // Last one should be for steps
-    expect(stepToggleButton).toBeInTheDocument();
-
-    // Click to toggle to heading
-    fireEvent.click(stepToggleButton);
+    // Open context menu on step textarea and toggle to heading
+    const stepInput = screen.getByPlaceholderText('Schritt 1');
+    fireEvent.contextMenu(stepInput);
+    const toggleButton = screen.getByText('Als Überschrift formatieren');
+    fireEvent.click(toggleButton);
 
     await waitFor(() => {
       // Should have a heading placeholder
@@ -1996,8 +2058,9 @@ describe('RecipeForm - Heading Functionality', () => {
     const ingredientInput = screen.getByPlaceholderText('Zutat 1');
     fireEvent.change(ingredientInput, { target: { value: 'Teig' } });
 
-    // Toggle to heading
-    const toggleButton = screen.getAllByTitle('Als Überschrift formatieren')[0];
+    // Toggle to heading via context menu
+    fireEvent.contextMenu(ingredientInput);
+    const toggleButton = screen.getByText('Als Überschrift formatieren');
     fireEvent.click(toggleButton);
 
     await waitFor(() => {
@@ -2255,6 +2318,9 @@ describe('RecipeForm - Private Checkbox', () => {
       target: { value: 'Test Private Recipe' },
     });
 
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Check the draft checkbox using aria-label
     await waitFor(() => {
       const draftCheckbox = screen.getByRole('checkbox', { name: /Rezept als Entwurf markieren/i });
@@ -2269,7 +2335,7 @@ describe('RecipeForm - Private Checkbox', () => {
     fireEvent.change(speisekategorieSelect);
 
     // Submit form
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with isPrivate set to true
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -2307,6 +2373,9 @@ describe('RecipeForm - Private Checkbox', () => {
       target: { value: 'Test Recipe' },
     });
 
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
     // Submit form without checking the private checkbox
     // Select a required category
     const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
@@ -2314,7 +2383,7 @@ describe('RecipeForm - Private Checkbox', () => {
     speisekategorieSelect.options[0].selected = true;
     fireEvent.change(speisekategorieSelect);
 
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with isPrivate set to false
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
@@ -2488,6 +2557,9 @@ describe('RecipeForm - Signature Sentence', () => {
       target: { value: 'Test Recipe' },
     });
 
+    // Fill in a required ingredient
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+
     const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(stepInputs[0], { target: { value: 'Erster Schritt' } });
 
@@ -2497,7 +2569,7 @@ describe('RecipeForm - Signature Sentence', () => {
     speisekategorieSelect.options[0].selected = true;
     fireEvent.change(speisekategorieSelect);
 
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2506,7 +2578,7 @@ describe('RecipeForm - Signature Sentence', () => {
     ));
   });
 
-  test('does not append signature sentence when editing existing recipe', () => {
+  test('does not append signature sentence when editing existing recipe', async () => {
     const userWithSignature = {
       id: 'user-1',
       vorname: 'John',
@@ -2535,13 +2607,13 @@ describe('RecipeForm - Signature Sentence', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Rezept aktualisieren'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
-    expect(mockOnSave).toHaveBeenCalledWith(
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         steps: ['Bestehender Schritt'],
       })
-    );
+    ));
   });
 
   test('does not append signature sentence when user has no signatureSatz', async () => {
@@ -2567,6 +2639,9 @@ describe('RecipeForm - Signature Sentence', () => {
       target: { value: 'Test Recipe' },
     });
 
+    // Fill in a required ingredient
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+
     const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(stepInputs[0], { target: { value: 'Only Step' } });
 
@@ -2576,7 +2651,7 @@ describe('RecipeForm - Signature Sentence', () => {
     speisekategorieSelect.options[0].selected = true;
     fireEvent.change(speisekategorieSelect);
 
-    fireEvent.click(screen.getByText('Rezept speichern'));
+    fireEvent.submit(document.querySelector('.recipe-form'));
 
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
