@@ -266,7 +266,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       // Collect all recipe IDs for backward compatibility
       const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
 
-      // ALWAYS auto-generate a grid image from recipe title images to ensure changes are reflected
+      // ALWAYS auto-generate a grid image from recipe title images to ensure changes are reflected.
+      // Note: menu.image (manual upload) is preserved separately and takes precedence in display.
       let gridImage = null;
       try {
         const categoryImages = await getCategoryImages();
