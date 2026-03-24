@@ -3,7 +3,8 @@ import './MenuForm.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
-import { fileToBase64, compressImage } from '../utils/imageUtils';
+import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage } from '../utils/imageUtils';
+import { getCategoryImages } from '../utils/categoryImages';
 import {
   DndContext,
   closestCenter,
@@ -82,6 +83,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [menuImage, setMenuImage] = useState('');
   const [uploadingMenuImage, setUploadingMenuImage] = useState(false);
+  const [savingMenu, setSavingMenu] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -244,7 +246,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setMenuImage('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -259,21 +261,39 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
-    // Collect all recipe IDs for backward compatibility
-    const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
+    setSavingMenu(true);
+    try {
+      // Collect all recipe IDs for backward compatibility
+      const allRecipeIds = sections.reduce((ids, section) => [...ids, ...section.recipeIds], []);
 
-    const menuData = {
-      id: menu?.id,
-      name: name.trim(),
-      description: description.trim(),
-      menuDate: menuDate,
-      image: menuImage,
-      createdBy: menu?.createdBy || currentUser?.id,
-      sections: sections,
-      recipeIds: allRecipeIds // Keep for backward compatibility
-    };
+      // Auto-generate a grid image from recipe title images when no manual image is set.
+      let gridImage = menu?.gridImage || null;
+      try {
+        const categoryImages = await getCategoryImages();
+        const selectedUrls = selectMenuGridImages(sections, recipes, categoryImages);
+        if (selectedUrls.length > 0) {
+          gridImage = await buildMenuGridImage(selectedUrls);
+        }
+      } catch (err) {
+        console.error('Fehler beim Erstellen des Menü-Rasterbilds:', err);
+      }
 
-    onSave(menuData);
+      const menuData = {
+        id: menu?.id,
+        name: name.trim(),
+        description: description.trim(),
+        menuDate: menuDate,
+        image: menuImage,
+        gridImage: gridImage || null,
+        createdBy: menu?.createdBy || currentUser?.id,
+        sections: sections,
+        recipeIds: allRecipeIds // Keep for backward compatibility
+      };
+
+      onSave(menuData);
+    } finally {
+      setSavingMenu(false);
+    }
   };
 
   const handleSearchChange = (sectionIndex, query) => {
@@ -574,11 +594,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="cancel-button" onClick={onCancel}>
+          <button type="button" className="cancel-button" onClick={onCancel} disabled={savingMenu}>
             Abbrechen
           </button>
-          <button type="submit" className="save-button">
-            {menu ? 'Menü aktualisieren' : 'Menü erstellen'}
+          <button type="submit" className="save-button" disabled={savingMenu}>
+            {savingMenu ? 'Speichern...' : (menu ? 'Menü aktualisieren' : 'Menü erstellen')}
           </button>
         </div>
       </form>

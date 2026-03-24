@@ -207,6 +207,203 @@ export function analyzeImageBrightness(imageSrc) {
 }
 
 /**
+ * Get the default display image URL for a recipe.
+ * Prefers the image flagged as default in the images array, then falls back to
+ * the legacy single `image` field.
+ * @param {Object} recipe
+ * @returns {string|null}
+ */
+function getRecipeDefaultImage(recipe) {
+  if (Array.isArray(recipe.images) && recipe.images.length > 0) {
+    const defaultImg = recipe.images.find(img => img.isDefault) || recipe.images[0];
+    return defaultImg?.url || null;
+  }
+  return recipe.image || null;
+}
+
+/**
+ * Select up to maxImages recipe images for a menu grid following these rules:
+ *  1. Prefer recipes whose image is NOT a default category image.
+ *  2. Try to include at least one image from every section (Gang).
+ *  3. Use at most one image per recipe.
+ *  4. Include at most maxImages images overall.
+ *  5. Include fewer images when fewer recipes are available.
+ *
+ * @param {Array<{name: string, recipeIds: string[]}>} sections - Menu sections in display order.
+ * @param {Array<Object>} recipes - Full recipe objects.
+ * @param {Array<{image: string}>} categoryImages - Category images loaded from Firestore.
+ * @param {number} [maxImages=6] - Maximum number of images to return.
+ * @returns {string[]} Array of image URL / base64 strings (length ≤ maxImages).
+ */
+export function selectMenuGridImages(sections, recipes, categoryImages = [], maxImages = 6) {
+  const categoryImageSet = new Set(categoryImages.map(ci => ci.image).filter(Boolean));
+
+  const isCustomImage = (url) => Boolean(url) && !categoryImageSet.has(url);
+
+  const selectedRecipeIds = new Set();
+  const selectedImages = [];
+
+  // First pass: one image per section, preferring custom images.
+  for (const section of sections) {
+    if (selectedImages.length >= maxImages) break;
+
+    const sectionRecipes = section.recipeIds
+      .map(id => recipes.find(r => r.id === id))
+      .filter(Boolean);
+
+    const withCustomImage = sectionRecipes.filter(r => {
+      const img = getRecipeDefaultImage(r);
+      return img && isCustomImage(img) && !selectedRecipeIds.has(r.id);
+    });
+
+    const withAnyImage = sectionRecipes.filter(r => {
+      const img = getRecipeDefaultImage(r);
+      return img && !selectedRecipeIds.has(r.id);
+    });
+
+    const candidates = withCustomImage.length > 0 ? withCustomImage : withAnyImage;
+
+    for (const recipe of candidates) {
+      const img = getRecipeDefaultImage(recipe);
+      if (img) {
+        selectedRecipeIds.add(recipe.id);
+        selectedImages.push(img);
+        break;
+      }
+    }
+  }
+
+  // Second pass: fill remaining slots from all menu recipes not yet selected,
+  // custom images first.
+  const allMenuRecipes = sections
+    .flatMap(s => s.recipeIds)
+    .map(id => recipes.find(r => r.id === id))
+    .filter(Boolean);
+
+  const remaining = [
+    ...allMenuRecipes.filter(r => {
+      const img = getRecipeDefaultImage(r);
+      return img && isCustomImage(img) && !selectedRecipeIds.has(r.id);
+    }),
+    ...allMenuRecipes.filter(r => {
+      const img = getRecipeDefaultImage(r);
+      return img && !isCustomImage(img) && !selectedRecipeIds.has(r.id);
+    }),
+  ];
+
+  for (const recipe of remaining) {
+    if (selectedImages.length >= maxImages) break;
+    const img = getRecipeDefaultImage(recipe);
+    if (img && !selectedRecipeIds.has(recipe.id)) {
+      selectedRecipeIds.add(recipe.id);
+      selectedImages.push(img);
+    }
+  }
+
+  return selectedImages;
+}
+
+/**
+ * Determine the grid column/row layout for a given image count.
+ * @param {number} count
+ * @returns {{cols: number, rows: number}}
+ */
+function getGridLayout(count) {
+  if (count <= 1) return { cols: 1, rows: 1 };
+  if (count === 2) return { cols: 2, rows: 1 };
+  if (count === 3) return { cols: 3, rows: 1 };
+  if (count === 4) return { cols: 2, rows: 2 };
+  return { cols: 3, rows: 2 }; // 5 or 6
+}
+
+/**
+ * Build a grid/mosaic image from up to six image URLs or base64 strings.
+ *
+ * @param {string[]} imageUrls - Image sources (URL or base64 data-URL).
+ * @param {Object}  [options]
+ * @param {number}  [options.width=600]  - Canvas width in px.
+ * @param {number}  [options.height=400] - Canvas height in px.
+ * @param {number}  [options.gap=4]      - Gap between cells in px.
+ * @param {number}  [options.quality=0.8] - JPEG quality (0–1).
+ * @returns {Promise<string|null>} Base64 JPEG data-URL or null when no images provided.
+ */
+export async function buildMenuGridImage(imageUrls, options = {}) {
+  const {
+    width = 600,
+    height = 400,
+    gap = 4,
+    quality = 0.8,
+  } = options;
+
+  if (!imageUrls || imageUrls.length === 0) return null;
+
+  const count = Math.min(imageUrls.length, 6);
+  const urls = imageUrls.slice(0, count);
+  const { cols, rows } = getGridLayout(count);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#e8e8e8';
+  ctx.fillRect(0, 0, width, height);
+
+  const loadImage = (src) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+
+  const images = await Promise.all(urls.map(loadImage));
+
+  const cellW = (width - gap * (cols + 1)) / cols;
+  const cellH = (height - gap * (rows + 1)) / rows;
+
+  for (let i = 0; i < count; i++) {
+    const img = images[i];
+    if (!img) continue;
+
+    let col = i % cols;
+    const row = Math.floor(i / cols);
+
+    // For 5 images the second row has only 2 cells — center them.
+    let xOffset = 0;
+    if (count === 5 && row === 1) {
+      const lastRowCount = count - cols; // 2
+      xOffset = ((cols - lastRowCount) * (cellW + gap)) / 2;
+      col = i - cols; // 0 or 1
+    }
+
+    const x = gap + col * (cellW + gap) + xOffset;
+    const y = gap + row * (cellH + gap);
+
+    // Cover-fit: crop the image to fill the cell without distortion.
+    const imgAspect = img.width / img.height;
+    const cellAspect = cellW / cellH;
+    let srcX, srcY, srcW, srcH;
+    if (imgAspect > cellAspect) {
+      srcH = img.height;
+      srcW = img.height * cellAspect;
+      srcX = (img.width - srcW) / 2;
+      srcY = 0;
+    } else {
+      srcW = img.width;
+      srcH = img.width / cellAspect;
+      srcX = 0;
+      srcY = (img.height - srcH) / 2;
+    }
+
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, x, y, cellW, cellH);
+  }
+
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+/**
  * Resize an image to a specific size (for PWA icons)
  * @param {string} base64 - Base64 encoded image string
  * @param {number} size - Target size in pixels (width and height)
