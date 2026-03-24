@@ -43,8 +43,9 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
   } = useSortable({ id });
 
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
   const longPressTimerRef = useRef(null);
+  const inputRef = useRef(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -66,13 +67,19 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
 
   const handleContextMenu = (e) => {
     e.preventDefault();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+    }
     setShowContextMenu(true);
   };
 
-  const startLongPress = (x, y) => {
+  const startLongPress = () => {
     longPressTimerRef.current = setTimeout(() => {
-      setContextMenuPos({ x, y });
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+      }
       setShowContextMenu(true);
     }, 500);
   };
@@ -92,7 +99,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <div className="input-with-handle">
+      <div className={`input-with-handle${canRemove ? ' has-remove-btn' : ''}`}>
         <button
           type="button"
           className="drag-handle"
@@ -103,6 +110,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           ⋮⋮
         </button>
         <input
+          ref={inputRef}
           type="text"
           value={displayValue}
           readOnly={!!recipeLink}
@@ -111,21 +119,22 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           className={`${isHeading ? 'heading-input' : ''} ${recipeLink ? 'recipe-link-input' : ''}`}
           title={recipeLink ? `Verlinktes Rezept: ${recipeLink.recipeName}` : undefined}
           onContextMenu={handleContextMenu}
-          onTouchStart={(e) => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchStart={() => startLongPress()}
           onTouchEnd={cancelLongPress}
           onTouchCancel={cancelLongPress}
           onTouchMove={cancelLongPress}
         />
+        {canRemove && (
+          <button
+            type="button"
+            className="inline-remove-button"
+            onClick={() => onRemove(index)}
+            aria-label="Zutat entfernen"
+          >
+            ✕
+          </button>
+        )}
       </div>
-      {canRemove && (
-        <button
-          type="button"
-          className="remove-button"
-          onClick={() => onRemove(index)}
-        >
-          ✕
-        </button>
-      )}
       {showContextMenu && (
         <>
           <div
@@ -134,7 +143,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           />
           <div
             className="ingredient-context-menu"
-            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+            style={{ top: contextMenuPos.top, right: contextMenuPos.right }}
           >
             <button
               type="button"
@@ -161,7 +170,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
   } = useSortable({ id });
 
   const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const [contextMenuPos, setContextMenuPos] = useState({ top: 0, right: 0 });
   const longPressTimerRef = useRef(null);
 
   const style = {
@@ -186,13 +195,19 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
 
   const handleContextMenu = (e) => {
     e.preventDefault();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    if (textareaRef.current) {
+      const rect = textareaRef.current.getBoundingClientRect();
+      setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+    }
     setShowContextMenu(true);
   };
 
-  const startLongPress = (x, y) => {
+  const startLongPress = () => {
     longPressTimerRef.current = setTimeout(() => {
-      setContextMenuPos({ x, y });
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setContextMenuPos({ top: rect.top, right: window.innerWidth - rect.right });
+      }
       setShowContextMenu(true);
     }, 500);
   };
@@ -212,7 +227,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <div className="input-with-handle">
+      <div className={`input-with-handle${canRemove ? ' has-remove-btn' : ''}`}>
         <button
           type="button"
           className="drag-handle"
@@ -230,21 +245,22 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           rows={isHeading ? '1' : '2'}
           className={isHeading ? 'heading-input' : ''}
           onContextMenu={handleContextMenu}
-          onTouchStart={(e) => startLongPress(e.touches[0].clientX, e.touches[0].clientY)}
+          onTouchStart={() => startLongPress()}
           onTouchEnd={cancelLongPress}
           onTouchCancel={cancelLongPress}
           onTouchMove={cancelLongPress}
         />
+        {canRemove && (
+          <button
+            type="button"
+            className="inline-remove-button"
+            onClick={() => onRemove(index)}
+            aria-label="Schritt entfernen"
+          >
+            ✕
+          </button>
+        )}
       </div>
-      {canRemove && (
-        <button
-          type="button"
-          className="remove-button"
-          onClick={() => onRemove(index)}
-        >
-          ✕
-        </button>
-      )}
       {showContextMenu && (
         <>
           <div
@@ -253,7 +269,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           />
           <div
             className="ingredient-context-menu"
-            style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+            style={{ top: contextMenuPos.top, right: contextMenuPos.right }}
           >
             <button
               type="button"
@@ -1172,30 +1188,28 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="portionen">Portionen</label>
-            <input
-              type="number"
-              id="portionen"
-              value={portionen}
-              onChange={(e) => setPortionen(e.target.value)}
-              min="1"
-              max="1000"
-              placeholder="4"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="portionUnit">Portionseinheit</label>
-            <select
-              id="portionUnit"
-              value={portionUnitId}
-              onChange={(e) => setPortionUnitId(e.target.value)}
-            >
-              {(customLists.portionUnits || []).map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.singular} / {unit.plural}
-                </option>
-              ))}
-            </select>
+            <div className="portionen-inline">
+              <input
+                type="number"
+                id="portionen"
+                value={portionen}
+                onChange={(e) => setPortionen(e.target.value)}
+                min="1"
+                max="1000"
+                placeholder="4"
+              />
+              <select
+                id="portionUnit"
+                value={portionUnitId}
+                onChange={(e) => setPortionUnitId(e.target.value)}
+              >
+                {(customLists.portionUnits || []).map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.singular} / {unit.plural}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
