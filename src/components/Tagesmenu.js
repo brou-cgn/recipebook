@@ -510,7 +510,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             ].map(({ label, flag }) => ({
               label,
               flag,
-              group: allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === flag),
+              group: allListRecipes.filter((r) => {
+                // Only show recipes from the current swipe session:
+                // - Recipes without active flags (still in the stack), OR
+                // - Recipes swiped during this session
+                const isInCurrentSession = !activeFlags[r.id] || swipeResults[r.id] !== undefined;
+                return isInCurrentSession && groupStatusByRecipeId[r.id] === flag;
+              }),
             })).filter(({ group }) => group.length > 0);
 
             if (groupStatusGroups.length === 0) return null;
