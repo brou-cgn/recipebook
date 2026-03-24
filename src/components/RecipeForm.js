@@ -216,7 +216,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [buttonIcons, setButtonIcons] = useState({
     importRecipe: '📥',
     scanImage: '📷',
-    webImport: '🌐'
+    webImport: '🌐',
+    cancelRecipe: '✕'
   });
   const [showTypeahead, setShowTypeahead] = useState(false);
   const [typeaheadIngredientIndex, setTypeaheadIngredientIndex] = useState(null);
@@ -228,6 +229,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
   // Tracks whether the web import default list pre-selection has been applied
   const webImportListPreselected = useRef(false);
+  // Cancel button press state
+  const [cancelPressed, setCancelPressed] = useState(false);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -348,7 +351,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setButtonIcons({
         importRecipe: icons.importRecipe || '📥',
         scanImage: icons.scanImage || '📷',
-        webImport: icons.webImport || '🌐'
+        webImport: icons.webImport || '🌐',
+        cancelRecipe: icons.cancelRecipe || '✕'
       });
     };
     loadCustomLists();
@@ -1288,6 +1292,26 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           </button>
         </div>
       </form>
+
+      {/* Cancel FAB button - positioned at bottom-left */}
+      <button
+        className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+        onClick={onCancel}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        title="Abbrechen"
+        aria-label="Rezeptbearbeitung abbrechen"
+      >
+        {isBase64Image(buttonIcons.cancelRecipe) ? (
+          <img src={buttonIcons.cancelRecipe} alt="Abbrechen" className="button-icon-image" />
+        ) : (
+          buttonIcons.cancelRecipe
+        )}
+      </button>
 
       {showImportModal && (
         <RecipeImportModal

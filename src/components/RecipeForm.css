@@ -848,3 +848,61 @@
   border-color: #000;
   background: #000;
 }
+
+/* Cancel FAB button - circular button positioned at bottom-left */
+.cancel-fab-button {
+  background: white;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1101;
+  opacity: 0.85;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.cancel-fab-button:active {
+  background: white;
+  outline: none;
+}
+
+.cancel-fab-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.cancel-fab-button.pressed {
+  transform: scale(1.15);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile adjustments for cancel FAB button */
+@media (max-width: 768px) {
+  .cancel-fab-button {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+  }
+}
