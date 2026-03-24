@@ -381,7 +381,7 @@ export async function convertFirebaseImageToBase64(url) {
     }
     const blob = await response.blob();
 
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.onerror = reject;

@@ -1,4 +1,4 @@
-import { fileToBase64, isBase64Image, isValidImageSource, compressImage, analyzeImageBrightness, selectMenuGridImages } from './imageUtils';
+import { fileToBase64, isBase64Image, isValidImageSource, compressImage, analyzeImageBrightness, selectMenuGridImages, convertFirebaseImageToBase64 } from './imageUtils';
 
 describe('imageUtils', () => {
   describe('isBase64Image', () => {
@@ -333,6 +333,80 @@ describe('imageUtils', () => {
 
       await analyzeImageBrightness('data:image/png;base64,test');
       expect(mockImg.crossOrigin).toBeNull();
+    });
+  });
+
+  describe('convertFirebaseImageToBase64', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    test('returns null for null or non-string input', async () => {
+      expect(await convertFirebaseImageToBase64(null)).toBeNull();
+      expect(await convertFirebaseImageToBase64(undefined)).toBeNull();
+      expect(await convertFirebaseImageToBase64('')).toBeNull();
+      expect(await convertFirebaseImageToBase64(42)).toBeNull();
+    });
+
+    test('returns data-URL as-is without fetching', async () => {
+      const dataUrl = 'data:image/png;base64,abc123';
+      global.fetch = jest.fn();
+      const result = await convertFirebaseImageToBase64(dataUrl);
+      expect(result).toBe(dataUrl);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test('returns null when fetch responds with non-ok status', async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 403 });
+      const result = await convertFirebaseImageToBase64('https://firebasestorage.googleapis.com/image.jpg');
+      expect(result).toBeNull();
+    });
+
+    test('converts remote URL to Base64 data-URL via fetch + FileReader', async () => {
+      const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/jpeg' });
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(fakeBlob) });
+
+      // Mock FileReader so it returns a predictable data-URL
+      const fakeDataUrl = 'data:image/jpeg;base64,ZmFrZS1pbWFnZS1ieXRlcw==';
+      const mockReader = {
+        result: fakeDataUrl,
+        onloadend: null,
+        onerror: null,
+        readAsDataURL: jest.fn(function () {
+          setTimeout(() => { if (this.onloadend) this.onloadend(); }, 0);
+        }),
+      };
+      global.FileReader = jest.fn(() => mockReader);
+
+      const result = await convertFirebaseImageToBase64('https://firebasestorage.googleapis.com/image.jpg');
+      expect(result).toBe(fakeDataUrl);
+      expect(global.fetch).toHaveBeenCalledWith('https://firebasestorage.googleapis.com/image.jpg');
+    });
+
+    test('returns null when FileReader triggers onerror', async () => {
+      const fakeBlob = new Blob(['bytes'], { type: 'image/jpeg' });
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(fakeBlob) });
+
+      const mockReader = {
+        result: null,
+        onloadend: null,
+        onerror: null,
+        readAsDataURL: jest.fn(function () {
+          setTimeout(() => { if (mockReader.onerror) mockReader.onerror(new Error('FileReader error')); }, 0);
+        }),
+      };
+      global.FileReader = jest.fn(() => mockReader);
+
+      const result = await convertFirebaseImageToBase64('https://firebasestorage.googleapis.com/image.jpg');
+      expect(result).toBeNull();
+    });
+
+    test('returns null when fetch throws an error', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      const result = await convertFirebaseImageToBase64('https://firebasestorage.googleapis.com/image.jpg');
+      expect(result).toBeNull();
     });
   });
 
