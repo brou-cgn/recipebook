@@ -520,6 +520,36 @@
   background: #d32f2f;
 }
 
+/* Inline remove button inside the text field */
+.inline-remove-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.65rem;
+  line-height: 1;
+  padding: 0 0.4rem;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.3rem;
+  transition: color 0.2s ease;
+}
+
+.inline-remove-button:hover {
+  color: #f44336;
+}
+
+/* Extra padding for input/textarea when inline remove button is present */
+.input-with-handle.has-remove-btn input,
+.input-with-handle.has-remove-btn textarea {
+  padding-right: 1.5rem;
+}
+
 /* Drag and drop styles */
 .drag-handle {
   background: #f5f5f5;
@@ -705,9 +735,22 @@
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.portionen-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.portionen-inline input {
+  flex: 1;
+}
+
+.portionen-inline select {
+  flex: 2;
 }
 
 .difficulty-slider {
