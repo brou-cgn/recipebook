@@ -379,12 +379,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
     const result = Object.fromEntries(
       allListRecipes.map((r) => {
-        const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds);
+        const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds, currentUser?.id);
         return [r.id, status];
       })
     );
     return result;
-  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds, currentUser?.id]);
 
   // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
   // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.

@@ -163,7 +163,11 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
 
 /**
  * Compute the shared group status for a single recipe based on all list members' swipes.
- * Members who have not yet swiped are treated as having voted 'kandidat'.
+ *
+ * Logic for missing swipes:
+ * - Current user (before they swipe): treated as 'archiv'
+ * - Other members (after current user has swiped): treated as 'kandidat'
+ * - Other members (before current user has swiped): ignored (not counted)
  *
  * @param {string[]} memberIds       - All member user IDs of the list
  * @param {Object}   allMembersFlags - Map of userId → { recipeId → flag }
@@ -173,18 +177,34 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
  *   - groupThresholdKandidatMaxArchiv   {number} Max % of archiv votes for Kandidat status
  *   - groupThresholdArchivMinArchiv     {number} Min % of archiv votes for Archiv status
  *   - groupThresholdArchivMaxKandidat   {number} Max % of kandidat votes for Archiv status
+ * @param {string}   [currentUserId] - ID of the current user (to distinguish their missing swipe)
  * @returns {'kandidat'|'archiv'|null} Group status, or null if no threshold is met
  */
-export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, thresholds) {
+export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, thresholds, currentUserId) {
   if (!Array.isArray(memberIds) || memberIds.length === 0) return null;
 
   let kandidatCount = 0;
   let archivCount = 0;
 
+  const currentUserHasSwiped = currentUserId && allMembersFlags[currentUserId]?.[recipeId] !== undefined;
+
   for (const uid of memberIds) {
-    const flag = allMembersFlags[uid]?.[recipeId] ?? 'kandidat';
-    if (flag === 'kandidat') kandidatCount++;
-    else if (flag === 'archiv') archivCount++;
+    const flag = allMembersFlags[uid]?.[recipeId];
+
+    if (flag !== undefined) {
+      if (flag === 'kandidat') kandidatCount++;
+      else if (flag === 'archiv') archivCount++;
+      // 'geparkt' is ignored (not counted)
+    } else {
+      if (uid === currentUserId) {
+        // Current user hasn't swiped yet → treat as 'archiv'
+        archivCount++;
+      } else if (currentUserHasSwiped) {
+        // Other member hasn't swiped, but current user has → treat as 'kandidat'
+        kandidatCount++;
+      }
+      // else: neither current user nor other member has swiped → ignore
+    }
   }
 
   const total = memberIds.length;
