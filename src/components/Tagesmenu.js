@@ -389,21 +389,64 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Returns 0 when disabled (null threshold) or when there are no other members,
   // which safely leaves the allSwiped threshold check false.
   const candidateScore = useMemo(() => {
-    if (maxKandidatenSchwelle === null || listMemberIds.length === 0) return 0;
+    console.log('🔍 candidateScore calculation triggered');
+    console.log('  maxKandidatenSchwelle:', maxKandidatenSchwelle);
+    console.log('  listMemberIds:', listMemberIds);
+    console.log('  currentUser?.id:', currentUser?.id);
+
+    if (maxKandidatenSchwelle === null || listMemberIds.length === 0) {
+      console.log('  ⚠️ Returning 0 (threshold disabled or no members)');
+      return 0;
+    }
+
     const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
-    if (otherMemberIds.length === 0) return 0;
+    console.log('  otherMemberIds:', otherMemberIds);
+
+    if (otherMemberIds.length === 0) {
+      console.log('  ⚠️ Returning 0 (no other members)');
+      return 0;
+    }
+
+    console.log('  allListRecipes.length:', allListRecipes.length);
+    console.log('  allMembersFlags:', allMembersFlags);
+    console.log('  groupStatusByRecipeId:', groupStatusByRecipeId);
+
     const swipedCandidateRecipes = allListRecipes.filter((recipe) => {
       const hasSwipedByCurrentUser = allMembersFlags[currentUser?.id]?.[recipe.id] !== undefined;
       const groupStatus = groupStatusByRecipeId[recipe.id];
-      return hasSwipedByCurrentUser && groupStatus === 'kandidat';
+      const isCandidate = hasSwipedByCurrentUser && groupStatus === 'kandidat';
+
+      console.log(`    Recipe ${recipe.id}:`, {
+        title: recipe.title,
+        hasSwipedByCurrentUser,
+        groupStatus,
+        isCandidate
+      });
+
+      return isCandidate;
     });
-    return swipedCandidateRecipes.reduce((sum, recipe) => {
+
+    console.log('  swipedCandidateRecipes.length:', swipedCandidateRecipes.length);
+
+    const score = swipedCandidateRecipes.reduce((sum, recipe) => {
       const swipedCount = otherMemberIds.filter(
         (uid) => allMembersFlags[uid]?.[recipe.id] !== undefined
       ).length;
       const ni = otherMemberIds.length - swipedCount;
-      return sum + 1 / (1 + ni);
+      const contribution = 1 / (1 + ni);
+
+      console.log(`    Recipe ${recipe.id} contribution:`, {
+        swipedCount,
+        ni,
+        contribution,
+        runningSum: sum + contribution
+      });
+
+      return sum + contribution;
     }, 0);
+
+    console.log('  ✅ Final candidateScore:', score);
+    return score;
   }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser, groupStatusByRecipeId]);
 
   const allSwiped =
@@ -411,6 +454,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     (listRecipes.length === 0 ||
       currentIndex >= listRecipes.length ||
       (maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle));
+
+  console.log('🎯 allSwiped check:', {
+    allListRecipesLength: allListRecipes.length,
+    listRecipesLength: listRecipes.length,
+    currentIndex,
+    maxKandidatenSchwelle,
+    candidateScore,
+    thresholdMet: maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle,
+    allSwiped
+  });
   const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // How far along the swipe are we (0–1) – used to animate background cards
