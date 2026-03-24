@@ -236,6 +236,8 @@ function getRecipeDefaultImage(recipe) {
  * @returns {string[]} Array of image URL / base64 strings (length ≤ maxImages).
  */
 export function selectMenuGridImages(sections, recipes, categoryImages = [], maxImages = 6) {
+  console.log('[selectMenuGridImages] sections:', sections.length, 'recipes:', recipes.length, 'categoryImages:', categoryImages.length);
+
   const categoryImageSet = new Set(categoryImages.map(ci => ci.image).filter(Boolean));
 
   const isCustomImage = (url) => Boolean(url) && !categoryImageSet.has(url);
@@ -300,6 +302,7 @@ export function selectMenuGridImages(sections, recipes, categoryImages = [], max
     }
   }
 
+  console.log('[selectMenuGridImages] selected', selectedImages.length, 'images:', selectedImages.map(u => u.substring(0, 60)));
   return selectedImages;
 }
 
@@ -337,8 +340,16 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
 
   if (!imageUrls || imageUrls.length === 0) return null;
 
-  const count = Math.min(imageUrls.length, 6);
-  const urls = imageUrls.slice(0, count);
+  const validUrls = imageUrls.filter(url => typeof url === 'string' && url.length > 0);
+  if (validUrls.length === 0) {
+    console.warn('[buildMenuGridImage] No valid image URLs provided');
+    return null;
+  }
+
+  console.log('[buildMenuGridImage] Building grid with', validUrls.length, 'images');
+
+  const count = Math.min(validUrls.length, 6);
+  const urls = validUrls.slice(0, count);
   const { cols, rows } = getGridLayout(count);
 
   const canvas = document.createElement('canvas');
@@ -351,21 +362,35 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
 
   const loadImage = (src) =>
     new Promise((resolve) => {
+      if (!src || typeof src !== 'string') {
+        console.warn('[buildMenuGridImage] Invalid image source:', src);
+        resolve(null);
+        return;
+      }
+      console.log('[buildMenuGridImage] Loading image:', src.substring(0, 80));
       const img = new Image();
       if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
+      img.onload = () => {
+        console.log('[buildMenuGridImage] Image loaded successfully:', src.substring(0, 60), `(${img.width}x${img.height})`);
+        resolve(img);
+      };
+      img.onerror = (err) => {
+        console.warn('[buildMenuGridImage] Failed to load image:', src.substring(0, 80), err);
+        resolve(null);
+      };
       img.src = src;
     });
 
   const images = await Promise.all(urls.map(loadImage));
+
+  const loadedCount = images.filter(Boolean).length;
+  console.log('[buildMenuGridImage]', loadedCount, 'of', count, 'images loaded successfully');
 
   const cellW = (width - gap * (cols + 1)) / cols;
   const cellH = (height - gap * (rows + 1)) / rows;
 
   for (let i = 0; i < count; i++) {
     const img = images[i];
-    if (!img) continue;
 
     let col = i % cols;
     const row = Math.floor(i / cols);
@@ -381,7 +406,14 @@ export async function buildMenuGridImage(imageUrls, options = {}) {
     const x = gap + col * (cellW + gap) + xOffset;
     const y = gap + row * (cellH + gap);
 
-    // Cover-fit: crop the image to fill the cell without distortion.
+    if (!img) {
+      // Draw a slightly lighter placeholder for cells where the image failed to load.
+      ctx.fillStyle = '#d0d0d0';
+      ctx.fillRect(x, y, cellW, cellH);
+      continue;
+    }
+
+    // Cover-fit: crop the image to fill the cell without distortion, centering it.
     const imgAspect = img.width / img.height;
     const cellAspect = cellW / cellH;
     let srcX, srcY, srcW, srcH;

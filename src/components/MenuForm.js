@@ -270,9 +270,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       let gridImage = menu?.gridImage || null;
       try {
         const categoryImages = await getCategoryImages();
+        console.log('[MenuForm] categoryImages loaded:', categoryImages.length);
         const selectedUrls = selectMenuGridImages(sections, recipes, categoryImages);
+        console.log('[MenuForm] selectedUrls for grid:', selectedUrls.length, selectedUrls.map(u => u.substring(0, 60)));
         if (selectedUrls.length > 0) {
           gridImage = await buildMenuGridImage(selectedUrls);
+          console.log('[MenuForm] gridImage generated:', Boolean(gridImage));
         }
       } catch (err) {
         console.error('Fehler beim Erstellen des Menü-Rasterbilds:', err);
