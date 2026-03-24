@@ -536,6 +536,52 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         <div className="tagesmenu-results">
           {/* Group status section – only shown for lists with multiple members */}
           {listMemberIds.length > 1 && (() => {
+            // Helper to render a recipe tile (reused across groups)
+            const renderTile = (recipe) => {
+              const allImages =
+                Array.isArray(recipe.images) && recipe.images.length > 0
+                  ? recipe.images
+                  : recipe.image
+                  ? [{ url: recipe.image, isDefault: true }]
+                  : [];
+              const orderedImages = [
+                ...allImages.filter((img) => img.isDefault),
+                ...allImages.filter((img) => !img.isDefault),
+              ];
+              return (
+                <button
+                  key={recipe.id}
+                  className="tagesmenu-results-tile"
+                  onClick={() => onSelectRecipe(recipe)}
+                >
+                  <div className="tagesmenu-results-tile-image">
+                    {orderedImages.length > 0 ? (
+                      <img src={orderedImages[0].url} alt={recipe.title} />
+                    ) : (
+                      <span>🍽️</span>
+                    )}
+                  </div>
+                  <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                </button>
+              );
+            };
+
+            // "Gemeinsame Kandidaten" group: recipes from current session with group status
+            // 'kandidat', sorted by voting count (desc), limited to maxKandidatenSchwelle.
+            const gemeinsameKandidaten = (() => {
+              if (maxKandidatenSchwelle === null) return [];
+              const pool = allListRecipes.filter((r) => {
+                const isInCurrentSession = !activeFlags[r.id] || swipeResults[r.id] !== undefined;
+                return isInCurrentSession && groupStatusByRecipeId[r.id] === 'kandidat';
+              });
+              const sorted = [...pool].sort((a, b) => {
+                const aVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[a.id] === 'kandidat').length;
+                const bVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[b.id] === 'kandidat').length;
+                return bVotes - aVotes;
+              });
+              return sorted.slice(0, maxKandidatenSchwelle);
+            })();
+
             const groupStatusGroups = [
               { label: 'Kandidat', flag: 'kandidat' },
               { label: 'Archiviert', flag: 'archiv' },
@@ -551,42 +597,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               }),
             })).filter(({ group }) => group.length > 0);
 
-            if (groupStatusGroups.length === 0) return null;
+            if (gemeinsameKandidaten.length === 0 && groupStatusGroups.length === 0) return null;
             return (
               <>
                 <h2 className="tagesmenu-results-section-title">Gemeinsamer Status</h2>
+                {gemeinsameKandidaten.length > 0 && (
+                  <div className="tagesmenu-results-group tagesmenu-results-group--gemeinsame-kandidaten">
+                    <h3 className="tagesmenu-results-group-title">Gemeinsame Kandidaten</h3>
+                    <div className="tagesmenu-results-tiles">
+                      {gemeinsameKandidaten.map(renderTile)}
+                    </div>
+                  </div>
+                )}
                 {groupStatusGroups.map(({ label, flag, group }) => (
                   <div key={`group-${flag}`} className="tagesmenu-results-group">
                     <h3 className="tagesmenu-results-group-title">{label}</h3>
                     <div className="tagesmenu-results-tiles">
-                      {group.map((recipe) => {
-                        const allImages =
-                          Array.isArray(recipe.images) && recipe.images.length > 0
-                            ? recipe.images
-                            : recipe.image
-                            ? [{ url: recipe.image, isDefault: true }]
-                            : [];
-                        const orderedImages = [
-                          ...allImages.filter((img) => img.isDefault),
-                          ...allImages.filter((img) => !img.isDefault),
-                        ];
-                        return (
-                          <button
-                            key={recipe.id}
-                            className="tagesmenu-results-tile"
-                            onClick={() => onSelectRecipe(recipe)}
-                          >
-                            <div className="tagesmenu-results-tile-image">
-                              {orderedImages.length > 0 ? (
-                                <img src={orderedImages[0].url} alt={recipe.title} />
-                              ) : (
-                                <span>🍽️</span>
-                              )}
-                            </div>
-                            <p className="tagesmenu-results-tile-name">{recipe.title}</p>
-                          </button>
-                        );
-                      })}
+                      {group.map(renderTile)}
                     </div>
                   </div>
                 ))}

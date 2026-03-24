@@ -754,3 +754,240 @@ describe('Tagesmenu – one extra card shown when threshold is crossed mid-sessi
     expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
 });
+
+describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
+  const multiMemberList = {
+    id: 'list1',
+    name: 'Test Liste',
+    listKind: 'interactive',
+    recipeIds: [],
+    ownerId: 'user1',
+    memberIds: ['user2'],
+  };
+
+  const allRecipes = [
+    makeRecipe('r1', 'Rezept 1'),
+    makeRecipe('r2', 'Rezept 2'),
+    makeRecipe('r3', 'Rezept 3'),
+  ];
+
+  beforeEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+    mockComputeGroupRecipeStatus = () => 'kandidat';
+  });
+
+  afterEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+    mockComputeGroupRecipeStatus = () => 'kandidat';
+  });
+
+  function swipeCardUp() {
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    if (!topCard) return;
+    const propsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+    const props = topCard[propsKey];
+    act(() => { props.onPointerDown({ clientX: 200, clientY: 300, pointerId: 1, currentTarget: topCard }); });
+    act(() => { props.onPointerMove({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: topCard }); });
+    act(() => { props.onPointerUp({ clientX: 200, clientY: 200, pointerId: 1, currentTarget: topCard }); });
+    act(() => {
+      const freshPropsKey = Object.keys(topCard).find((k) => k.startsWith('__reactProps$'));
+      topCard[freshPropsKey].onTransitionEnd?.({ propertyName: 'transform' });
+    });
+  }
+
+  test('Gemeinsame Kandidaten group is not shown when maxKandidatenSchwelle is null', async () => {
+    mockMaxKandidatenSchwelle = null;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten')).toBeNull();
+  });
+
+  test('Gemeinsame Kandidaten group appears when maxKandidatenSchwelle is set and kandidaten exist', async () => {
+    mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    expect(gemeinsameGroup).toHaveTextContent('Gemeinsame Kandidaten');
+    const tiles = gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile');
+    expect(tiles).toHaveLength(3);
+  });
+
+  test('Gemeinsame Kandidaten group is limited to maxKandidatenSchwelle items', async () => {
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    const tiles = gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile');
+    // Group capped at maxKandidatenSchwelle = 2, even though 3 candidates qualify
+    expect(tiles).toHaveLength(2);
+  });
+
+  test('Gemeinsame Kandidaten group sorts recipes by voting count descending', async () => {
+    mockMaxKandidatenSchwelle = 3;
+    // r1 voted by both user1 and user2 (2 votes), r2 only by user1 (1 vote), r3 by nobody (0 votes)
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat' },
+    };
+    // All recipes get 'kandidat' group status
+    mockComputeGroupRecipeStatus = () => 'kandidat';
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+
+    const tileNames = Array.from(gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile-name'))
+      .map((el) => el.textContent);
+    // r1 has 2 votes, r2 has 1 vote, r3 has 0 votes → descending order: r1, r2, r3
+    expect(tileNames[0]).toBe('Rezept 1');
+    expect(tileNames[1]).toBe('Rezept 2');
+    expect(tileNames[2]).toBe('Rezept 3');
+  });
+
+  test('Gemeinsame Kandidaten group only includes current-session recipes', async () => {
+    // r1 has a pre-existing active flag and was NOT swiped in this session → excluded
+    mockActiveFlagsValue = { r1: 'kandidat' };
+    mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Only r2 and r3 are in the swipe stack (r1 is pre-flagged); swipe them up
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    const tileNames = Array.from(gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile-name'))
+      .map((el) => el.textContent);
+    // Only r2 and r3 (current-session swipes), r1 is excluded (pre-existing flag)
+    expect(tileNames).toContain('Rezept 2');
+    expect(tileNames).toContain('Rezept 3');
+    expect(tileNames).not.toContain('Rezept 1');
+  });
+
+  test('Gemeinsame Kandidaten group is not shown when no recipes qualify', async () => {
+    mockMaxKandidatenSchwelle = 3;
+    // All recipes get 'archiv' group status → no kandidaten
+    mockComputeGroupRecipeStatus = () => 'archiv';
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'archiv', r2: 'archiv', r3: 'archiv' },
+      user2: { r1: 'archiv', r2: 'archiv', r3: 'archiv' },
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={allRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+    swipeCardUp();
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten')).toBeNull();
+  });
+});
