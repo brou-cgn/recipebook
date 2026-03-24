@@ -341,6 +341,18 @@
   grid-auto-rows: 1fr;
 }
 
+/* Compact layout for 1-2 tiles (1-column): tiles shrink to fit content and don't fill the viewport */
+.tagesmenu-results-group--gemeinsame-kandidaten .tagesmenu-results-tiles--1col {
+  flex: 0 0 auto;
+  align-content: start;
+  grid-auto-rows: auto;
+}
+
+/* Reduced image aspect-ratio for compact 1-column tiles so both fit on screen without scrolling */
+.tagesmenu-results-group--gemeinsame-kandidaten .tagesmenu-results-tiles--1col .tagesmenu-results-tile-image {
+  aspect-ratio: 16/9;
+}
+
 .tagesmenu-results-tile {
   background: #ffffff;
   border: 1px solid #e0e0e0;

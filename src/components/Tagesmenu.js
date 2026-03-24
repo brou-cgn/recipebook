@@ -703,7 +703,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             // "Gemeinsame Kandidaten" group: use pre-computed useMemo value
             if (gemeinsameKandidaten.length === 0) return null;
             const tilesColumnClass =
-              gemeinsameKandidaten.length === 1
+              gemeinsameKandidaten.length <= 2
                 ? 'tagesmenu-results-tiles--1col'
                 : gemeinsameKandidaten.length <= 6
                 ? 'tagesmenu-results-tiles--2col'
