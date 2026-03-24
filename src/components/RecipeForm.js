@@ -3,7 +3,7 @@ import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
-import { getCustomLists } from '../utils/customLists';
+import { getCustomLists, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
@@ -214,6 +214,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({
+    importRecipe: DEFAULT_BUTTON_ICONS.importRecipe,
+    scanImage: DEFAULT_BUTTON_ICONS.scanImage,
+    webImport: DEFAULT_BUTTON_ICONS.webImport,
+    saveRecipe: DEFAULT_BUTTON_ICONS.saveRecipe
     importRecipe: '📥',
     scanImage: '📷',
     webImport: '🌐',
@@ -229,6 +233,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [aiOcrLimitReached, setAiOcrLimitReached] = useState(false);
   // Tracks whether the web import default list pre-selection has been applied
   const webImportListPreselected = useRef(false);
+  // FAB button pressed state for animation
+  const [fabPressed, setFabPressed] = useState(false);
+  // Form ref for FAB button
+  const formRef = useRef(null);
   // Cancel button press state
   const [cancelPressed, setCancelPressed] = useState(false);
 
@@ -349,6 +357,10 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const { getButtonIcons } = await import('../utils/customLists');
       const icons = await getButtonIcons();
       setButtonIcons({
+        importRecipe: icons.importRecipe || DEFAULT_BUTTON_ICONS.importRecipe,
+        scanImage: icons.scanImage || DEFAULT_BUTTON_ICONS.scanImage,
+        webImport: icons.webImport || DEFAULT_BUTTON_ICONS.webImport,
+        saveRecipe: icons.saveRecipe || DEFAULT_BUTTON_ICONS.saveRecipe
         importRecipe: icons.importRecipe || '📥',
         scanImage: icons.scanImage || '📷',
         webImport: icons.webImport || '🌐',
@@ -716,6 +728,42 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     onSave(recipeData);
   };
 
+  const handleFabClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Helper to create synthetic event for fallback
+    const createSyntheticEvent = () => ({ 
+      preventDefault: () => {}, 
+      target: formRef.current 
+    });
+    
+    // Trigger form submission using the form ref
+    if (formRef.current) {
+      try {
+        // Use requestSubmit() to trigger validation
+        if (typeof formRef.current.requestSubmit === 'function') {
+          formRef.current.requestSubmit();
+        } else {
+          // Fallback for browsers that don't support requestSubmit
+          // Call handleSubmit directly with synthetic event
+          handleSubmit(createSyntheticEvent());
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        // Fallback: call handleSubmit directly with synthetic event
+        handleSubmit(createSyntheticEvent());
+      }
+    }
+  };
+
+  const handleFabMouseDown = () => {
+    setFabPressed(true);
+  };
+
+  const handleFabMouseUp = () => {
+    setFabPressed(false);
+  };
+
   const handleImport = (importedRecipe) => {
     // Populate form with imported data
     setTitle(importedRecipe.title || '');
@@ -931,7 +979,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         );
       })()}
 
-      <form className="recipe-form" onSubmit={handleSubmit}>
+      <form ref={formRef} className="recipe-form" onSubmit={handleSubmit}>
         {/* Private list selector - only shown when creating a new recipe */}
         {!recipe && !isCreatingVersion && privateLists.length > 0 && (
           <div className="form-group private-list-selector">
@@ -1346,6 +1394,26 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           inputValue={ingredients[typeaheadIngredientIndex]?.text || ''}
         />
       )}
+
+      {/* FAB Save Button */}
+      <button
+        type="button"
+        className={`save-fab-button ${fabPressed ? 'pressed' : ''}`}
+        onClick={handleFabClick}
+        onMouseDown={handleFabMouseDown}
+        onMouseUp={handleFabMouseUp}
+        onMouseLeave={handleFabMouseUp}
+        onTouchStart={handleFabMouseDown}
+        onTouchEnd={handleFabMouseUp}
+        aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+        title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+      >
+        {isBase64Image(buttonIcons.saveRecipe) ? (
+          <img src={buttonIcons.saveRecipe} alt="Speichern" className="button-icon-image" />
+        ) : (
+          buttonIcons.saveRecipe
+        )}
+      </button>
     </div>
   );
 }
