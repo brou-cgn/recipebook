@@ -228,7 +228,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     swipeLeft: '👎',
     swipeUp: '⭐',
     menuFavoritesButton: '★',
-    tagesmenuFilterButton: '☰'
+    tagesmenuFilterButton: '☰',
+    tagesmenuZumTagesMenu: '🗓️'
   });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
 
@@ -3009,6 +3010,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.tagesmenuFilterButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.tagesmenuFilterButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="tagesmenuZumTagesMenuIcon">Zum-Tagesmenü-Button (Tagesmenü):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.tagesmenuZumTagesMenu) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="tagesmenuZumTagesMenuIcon"
+                          value={buttonIcons.tagesmenuZumTagesMenu}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, tagesmenuZumTagesMenu: e.target.value })}
+                          placeholder="z.B. 🗓️"
+                          maxLength={10}
+                        />
+                        <label htmlFor="tagesmenuZumTagesMenuIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'tagesmenuZumTagesMenu' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="tagesmenuZumTagesMenuIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('tagesmenuZumTagesMenu', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'tagesmenuZumTagesMenu'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('tagesmenuZumTagesMenu')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, tagesmenuZumTagesMenu: DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.tagesmenuZumTagesMenu) ? (
+                        <img src={buttonIcons.tagesmenuZumTagesMenu} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.tagesmenuZumTagesMenu}</span>
                       )}
                     </div>
                   </div>

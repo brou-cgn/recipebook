@@ -286,6 +286,7 @@ export const DEFAULT_BUTTON_ICONS = {
   swipeUp: '⭐',
   menuFavoritesButton: '★',
   tagesmenuFilterButton: '☰',
+  tagesmenuZumTagesMenu: '🗓️',
   cancelRecipe: '✕'
 };
 

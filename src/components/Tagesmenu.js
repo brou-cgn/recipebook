@@ -91,6 +91,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Configurable filter button icon loaded from settings
   const [filterButtonIcon, setFilterButtonIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
 
+  // Configurable "Zum Tagesmenü" button icon loaded from settings
+  const [zumTagesMenuIcon, setZumTagesMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
+
+  // When true, jump directly to the results view (used by the "Zum Tagesmenü" button)
+  const [forceShowResults, setForceShowResults] = useState(false);
+
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
     if (!selectedList) return [];
@@ -116,6 +122,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setAllMembersFlagsLoaded(false);
       setFlagsLoaded(false);
       setThresholdCrossedAtIndex(null);
+      setForceShowResults(false);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -141,6 +148,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         swipeUp: icons.swipeUp ?? DEFAULT_BUTTON_ICONS.swipeUp,
       });
       setFilterButtonIcon(icons.tagesmenuFilterButton ?? DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
+      setZumTagesMenuIcon(icons.tagesmenuZumTagesMenu ?? DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
     }).catch(() => {});
   }, []);
 
@@ -398,6 +406,19 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return result;
   }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds, currentUser?.id]);
 
+  // Gemeinsame Kandidaten: all recipes with group status 'kandidat', sorted by voting count (desc),
+  // limited to maxKandidatenSchwelle. Empty when threshold is disabled or list has only one member.
+  const gemeinsameKandidaten = useMemo(() => {
+    if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
+    const pool = allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === 'kandidat');
+    const sorted = [...pool].sort((a, b) => {
+      const aVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[a.id] === 'kandidat').length;
+      const bVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[b.id] === 'kandidat').length;
+      return bVotes - aVotes;
+    });
+    return sorted.slice(0, maxKandidatenSchwelle);
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId, maxKandidatenSchwelle]);
+
   // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
   // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
   // Only recipes that the current user has already swiped AND whose group status
@@ -483,13 +504,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   }, [thresholdMet, hasSwiped, currentIndex, thresholdCrossedAtIndex]);
 
   const allSwiped =
-    allListRecipes.length > 0 &&
+    (forceShowResults && allListRecipes.length > 0) ||
+    (allListRecipes.length > 0 &&
     (listRecipes.length === 0 ||
       currentIndex >= listRecipes.length ||
       // Threshold was already met at initial load (no swipes this session): end stack immediately
       (thresholdMet && !hasSwiped) ||
       // Threshold was crossed mid-session by a swipe and the extra last card has been swiped
-      (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex));
+      (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex)));
 
   console.log('🎯 allSwiped check:', {
     allListRecipesLength: allListRecipes.length,
@@ -586,21 +608,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               );
             };
 
-            // "Gemeinsame Kandidaten" group: all recipes with group status 'kandidat',
-            // sorted by voting count (desc), limited to maxKandidatenSchwelle.
-            const gemeinsameKandidaten = (() => {
-              if (maxKandidatenSchwelle === null) return [];
-              const pool = allListRecipes.filter((r) => {
-                return groupStatusByRecipeId[r.id] === 'kandidat';
-              });
-              const sorted = [...pool].sort((a, b) => {
-                const aVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[a.id] === 'kandidat').length;
-                const bVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[b.id] === 'kandidat').length;
-                return bVotes - aVotes;
-              });
-              return sorted.slice(0, maxKandidatenSchwelle);
-            })();
-
+            // "Gemeinsame Kandidaten" group: use pre-computed useMemo value
             if (gemeinsameKandidaten.length === 0) return null;
             const tilesColumnClass =
               gemeinsameKandidaten.length <= 2
@@ -857,6 +865,22 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             <img src={filterButtonIcon} alt="Listen filtern" className="button-icon-image" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{filterButtonIcon}</span>
+          )}
+        </button>
+      )}
+
+      {/* "Zum Tagesmenü" FAB button – bottom right, only shown during the swipe stack when gemeinsame Kandidaten exist */}
+      {!allSwiped && readyToRender && gemeinsameKandidaten.length > 0 && (
+        <button
+          className="tagesmenu-zum-tagesMenu-btn"
+          onClick={() => setForceShowResults(true)}
+          aria-label="Zum Tagesmenü"
+          title="Zum Tagesmenü"
+        >
+          {isBase64Image(zumTagesMenuIcon) ? (
+            <img src={zumTagesMenuIcon} alt="Zum Tagesmenü" className="button-icon-image" />
+          ) : (
+            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{zumTagesMenuIcon}</span>
           )}
         </button>
       )}
