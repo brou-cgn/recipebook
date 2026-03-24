@@ -600,6 +600,27 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
 
+  test('no swipe card flickers before results view when threshold is already met at initial load', async () => {
+    // Regression test: before the fix, flagsLoaded became true before maxKandidatenSchwelle
+    // and allMembersFlags resolved, causing the swipe stack to briefly appear (flicker)
+    // even when the threshold was already exceeded at load time.
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' } };
+
+    // Do NOT await – check the state while async loads are still pending.
+    // The swipe stack must never be visible at any point during loading.
+    renderMenuWithTwoMembers();
+
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+
+    // After all data resolves, results view appears directly with no stack visible.
+    await act(async () => {});
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
+  });
+
   test('stack stays open when other member has not yet voted (S < threshold)', async () => {
     // user2 has not voted any recipe → ni=1 for each (1 other member, none swiped)
     // S = 3 * 1/(1+1) = 1.5; threshold = 2 → 1.5 < 2 → stack continues

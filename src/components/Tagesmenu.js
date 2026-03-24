@@ -67,6 +67,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Maximum candidate score threshold for ending the swipe stack early (null = disabled)
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
+  // True once getMaxKandidatenSchwelle() has resolved (null is a valid value meaning "disabled")
+  const [maxKandidatenSchwelleLoaded, setMaxKandidatenSchwelleLoaded] = useState(false);
 
   // Tracks the currentIndex at which the candidate threshold was first crossed mid-session
   // by a swipe (swipeResults non-empty). null = not yet crossed mid-session, or was already
@@ -76,6 +78,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // All members' swipe flags for the selected list (used for group status determination)
   // Map of userId → { recipeId → flag }
   const [allMembersFlags, setAllMembersFlags] = useState({});
+  // True once getAllMembersSwipeFlags() has resolved for the current list
+  const [allMembersFlagsLoaded, setAllMembersFlagsLoaded] = useState(false);
 
   // Configurable swipe badge icons loaded from settings
   const [swipeIcons, setSwipeIcons] = useState({
@@ -109,10 +113,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setSwipeResults({});
       setActiveFlags({});
       setAllMembersFlags({});
+      setAllMembersFlagsLoaded(false);
       setFlagsLoaded(false);
       setThresholdCrossedAtIndex(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
-      getMaxKandidatenSchwelle().then(setMaxKandidatenSchwelle).catch(() => {});
+      getMaxKandidatenSchwelle()
+        .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
+        .catch(() => { setMaxKandidatenSchwelleLoaded(true); });
     }
   }, [selectedListId]);
 
@@ -120,7 +127,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     getStatusValiditySettings().then(setStatusValiditySettings).catch(() => {});
     getGroupStatusThresholds().then(setGroupThresholds).catch(() => {});
-    getMaxKandidatenSchwelle().then(setMaxKandidatenSchwelle).catch(() => {});
+    getMaxKandidatenSchwelle()
+      .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
+      .catch(() => { setMaxKandidatenSchwelleLoaded(true); });
   }, []);
 
   // Load configurable swipe icons once on mount
@@ -153,6 +162,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     if (!selectedListId || !selectedList) {
       setAllMembersFlags({});
+      setAllMembersFlagsLoaded(true);
       return;
     }
     const memberIds = Array.isArray(selectedList.memberIds) ? selectedList.memberIds : [];
@@ -161,11 +171,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       : memberIds;
     if (allMemberIds.length === 0) {
       setAllMembersFlags({});
+      setAllMembersFlagsLoaded(true);
       return;
     }
     getAllMembersSwipeFlags(selectedListId, allMemberIds).then((flags) => {
       setAllMembersFlags(flags);
-    }).catch(() => {});
+      setAllMembersFlagsLoaded(true);
+    }).catch(() => { setAllMembersFlagsLoaded(true); });
   }, [selectedListId, selectedList, currentUser]);
 
   // Drag / animation state
@@ -523,6 +535,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // ---- Render ---------------------------------------------------------
 
+  // All async data needed to determine whether to show the stack or the results view
+  // must be fully loaded before rendering anything. This prevents the swipe stack from
+  // briefly flashing when the threshold is already met at initial load time.
+  const readyToRender = flagsLoaded && maxKandidatenSchwelleLoaded && allMembersFlagsLoaded;
+
   return (
     <div className={`tagesmenu-container${allSwiped ? ' tagesmenu-container--results' : ''}`}>
       {allListRecipes.length === 0 ? (
@@ -530,7 +547,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           <span className="tagesmenu-empty-icon">🍽️</span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
         </div>
-      ) : !flagsLoaded ? (
+      ) : !readyToRender ? (
         null
       ) : allSwiped ? (
         <div className="tagesmenu-results">
