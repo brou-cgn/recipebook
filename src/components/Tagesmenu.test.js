@@ -5,12 +5,13 @@ import Tagesmenu from './Tagesmenu';
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
 let mockMaxKandidatenSchwelle = null;
+let mockComputeGroupRecipeStatus = () => 'kandidat';
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
   getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
-  computeGroupRecipeStatus: () => 'kandidat',
+  computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -544,5 +545,124 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     await act(async () => { pills2[1].click(); });
 
     expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+  });
+});
+
+describe('Tagesmenu – one extra card shown when threshold is crossed mid-session by a swipe', () => {
+  // Simulates a realistic scenario where group status is 'kandidat' only when both
+  // user1 (current user) AND user2 (other member) have voted the recipe. This means
+  // user1's swipes can increase the candidateScore, allowing the threshold to be
+  // crossed mid-session (not at initial load time).
+  function requireBothMembers(_memberIds, flags, recipeId) {
+    const user1Voted = flags['user1']?.[recipeId] !== undefined;
+    const user2Voted = flags['user2']?.[recipeId] !== undefined;
+    return user1Voted && user2Voted ? 'kandidat' : 'archiv';
+  }
+
+  const listWithTwoMembers = {
+    id: 'list1',
+    name: 'Test Liste',
+    listKind: 'interactive',
+    recipeIds: [],
+    ownerId: 'user1',
+    memberIds: ['user2'],
+  };
+
+  function renderMenuWithTwoMembers() {
+    return render(
+      <Tagesmenu
+        interactiveLists={[listWithTwoMembers]}
+        recipes={recipes}
+        allUsers={[]}
+        onSelectRecipe={() => {}}
+        currentUser={currentUser}
+      />
+    );
+  }
+
+  beforeEach(() => {
+    // user2 has voted all 3 recipes as kandidat; user1 has not yet voted
+    mockAllMembersFlagsValue = { user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' } };
+    mockMaxKandidatenSchwelle = 2;
+    // Score only counts recipes where BOTH user1 and user2 have voted (dynamic mock)
+    mockComputeGroupRecipeStatus = requireBothMembers;
+  });
+
+  afterEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+    mockComputeGroupRecipeStatus = () => 'kandidat';
+  });
+
+  test('stack stays open before any swipe when score is below threshold', async () => {
+    // user1 has not voted yet → no recipe has 'kandidat' group status → score = 0 < threshold 2
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+  });
+
+  test('after a swipe crosses the threshold, the already-visible next card remains as the last swipeable card', async () => {
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    // Swipe r1 as kandidat: r1 now 'kandidat' (both user1+user2 voted), score = 1 < threshold 2
+    const card1 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card1);
+    finishSwipeAnimation(card1);
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+
+    // Swipe r2 as kandidat: r2 now 'kandidat', score = 2 = threshold → threshold crossed by swipe
+    const card2 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card2);
+    finishSwipeAnimation(card2);
+
+    // Stack must still be visible: r3 is the extra last swipeable card
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-results')).toBeNull();
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+  });
+
+  test('only 1 card is shown in the stack after the threshold is crossed mid-session', async () => {
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    // Swipe r1 and r2 to cross the threshold (score becomes 2 = threshold)
+    const card1 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card1);
+    finishSwipeAnimation(card1);
+
+    const card2 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card2);
+    finishSwipeAnimation(card2);
+
+    // After threshold crossed mid-session: only 1 card shown (the last swipeable card)
+    const allCards = document.querySelectorAll('.tagesmenu-card');
+    expect(allCards).toHaveLength(1);
+  });
+
+  test('results view appears after swiping the extra last card following threshold crossing', async () => {
+    await act(async () => { renderMenuWithTwoMembers(); });
+
+    // Swipe r1 and r2 to cross the threshold
+    const card1 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card1);
+    finishSwipeAnimation(card1);
+
+    const card2 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card2);
+    finishSwipeAnimation(card2);
+
+    // Stack still visible (r3 is the extra last card)
+    expect(document.querySelector('.tagesmenu-stack')).not.toBeNull();
+
+    // Swipe the last card (r3)
+    const card3 = document.querySelector('.tagesmenu-card-top');
+    swipeUp(card3);
+    finishSwipeAnimation(card3);
+
+    // Results view should now appear
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack')).toBeNull();
   });
 });
