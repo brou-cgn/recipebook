@@ -462,7 +462,61 @@
   object-fit: contain;
 }
 
-/* ---- "Zum Tagesmenü" button (bottom-right, only shown during swipe stack when gemeinsame Kandidaten exist) -- */
+/* ---- "Meine Auswahl" FAB button (bottom-center, test mode only) -- */
+
+.tagesmenu-meine-auswahl-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1101;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: white;
+  color: #666;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.85;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.tagesmenu-meine-auswahl-btn:active {
+  transform: translateX(-50%) scale(1.15);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  outline: none;
+}
+
+.tagesmenu-meine-auswahl-btn .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+/* ---- "Meine Auswahl" dedicated view (own candidate groups) ---------- */
+
+.tagesmenu-meine-auswahl {
+  flex: 1;
+  min-height: 0;
+  padding: 1.25rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: tagesmenu-results-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
 
 .tagesmenu-zum-tagesMenu-btn {
   position: fixed;

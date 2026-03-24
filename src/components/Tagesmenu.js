@@ -94,8 +94,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Configurable "Zum Tagesmenü" button icon loaded from settings
   const [zumTagesMenuIcon, setZumTagesMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
 
+  // Configurable "Meine Auswahl" button icon loaded from settings
+  const [meineAuswahlIcon, setMeineAuswahlIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuMeineAuswahl);
+
   // When true, jump directly to the results view (used by the "Zum Tagesmenü" button)
   const [forceShowResults, setForceShowResults] = useState(false);
+
+  // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
+  const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -123,6 +129,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setFlagsLoaded(false);
       setThresholdCrossedAtIndex(null);
       setForceShowResults(false);
+      setShowMeineAuswahl(false);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -149,6 +156,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       });
       setFilterButtonIcon(icons.tagesmenuFilterButton ?? DEFAULT_BUTTON_ICONS.tagesmenuFilterButton);
       setZumTagesMenuIcon(icons.tagesmenuZumTagesMenu ?? DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu);
+      setMeineAuswahlIcon(icons.tagesmenuMeineAuswahl ?? DEFAULT_BUTTON_ICONS.tagesmenuMeineAuswahl);
     }).catch(() => {});
   }, []);
 
@@ -563,7 +571,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const readyToRender = flagsLoaded && maxKandidatenSchwelleLoaded && allMembersFlagsLoaded;
 
   return (
-    <div className={`tagesmenu-container${allSwiped ? ' tagesmenu-container--results' : ''}`}>
+    <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl) ? ' tagesmenu-container--results' : ''}`}>
       {allListRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
           <span className="tagesmenu-empty-icon">🍽️</span>
@@ -571,6 +579,74 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         </div>
       ) : !readyToRender ? (
         null
+      ) : showMeineAuswahl ? (
+        <div className="tagesmenu-meine-auswahl">
+          <div className="tagesmenu-results-page-header">
+            <h2 className="tagesmenu-results-page-title">Meine Auswahl</h2>
+          </div>
+          {[
+            { label: 'Kandidat', flag: 'kandidat' },
+            { label: 'Für später', flag: 'geparkt' },
+            { label: 'Archiviert', flag: 'archiv' },
+          ].map(({ label, flag }) => {
+            const group = allListRecipes.filter((r) => {
+              const combinedFlag = swipeResults[r.id] ?? activeFlags[r.id];
+              return combinedFlag === flag;
+            });
+            if (group.length === 0) return null;
+            return (
+              <div key={flag} className="tagesmenu-results-group">
+                <h3 className="tagesmenu-results-group-title">{label}</h3>
+                <div className="tagesmenu-results-tiles">
+                  {group.map((recipe) => {
+                    const allImages =
+                      Array.isArray(recipe.images) && recipe.images.length > 0
+                        ? recipe.images
+                        : recipe.image
+                        ? [{ url: recipe.image, isDefault: true }]
+                        : [];
+                    const orderedImages = [
+                      ...allImages.filter((img) => img.isDefault),
+                      ...allImages.filter((img) => !img.isDefault),
+                    ];
+                    const authorName = getAuthorName(recipe.authorId);
+                    const kulinarikTags = Array.isArray(recipe.kulinarik)
+                      ? recipe.kulinarik
+                      : recipe.kulinarik
+                      ? [recipe.kulinarik]
+                      : [];
+                    return (
+                      <button
+                        key={recipe.id}
+                        className="tagesmenu-results-tile"
+                        onClick={() => onSelectRecipe(recipe)}
+                      >
+                        <div className="tagesmenu-results-tile-image">
+                          {orderedImages.length > 0 ? (
+                            <img src={orderedImages[0].url} alt={recipe.title} />
+                          ) : (
+                            <span>🍽️</span>
+                          )}
+                        </div>
+                        <p className="tagesmenu-results-tile-name">{recipe.title}</p>
+                        {authorName && (
+                          <p className="tagesmenu-results-tile-author">{authorName}</p>
+                        )}
+                        {kulinarikTags.length > 0 && (
+                          <div className="tagesmenu-results-tile-kulinarik">
+                            {kulinarikTags.slice(0, 2).map((k) => (
+                              <span key={k} className="tagesmenu-results-tile-kulinarik-tag">{k}</span>
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : allSwiped ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
@@ -641,13 +717,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     </div>
                   </div>
                 )}
-                {currentUser?.tagesmenuTestmode !== false && (
-                  <h2 className="tagesmenu-results-section-title">Meine Auswahl</h2>
-                )}
               </>
             );
           })()}
-          {currentUser?.tagesmenuTestmode !== false && [
+          {/* Meine Auswahl groups – shown in results only for single-member lists.
+              For multi-member lists, these are accessible via the dedicated Meine Auswahl view. */}
+          {currentUser?.tagesmenuTestmode !== false && listMemberIds.length <= 1 && [
             { label: 'Kandidat', flag: 'kandidat' },
             { label: 'Für später', flag: 'geparkt' },
             { label: 'Archiviert', flag: 'archiv' },
@@ -897,6 +972,22 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             <img src={filterButtonIcon} alt="Listen filtern" className="button-icon-image" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{filterButtonIcon}</span>
+          )}
+        </button>
+      )}
+
+      {/* "Meine Auswahl" FAB button – bottom center, only shown in test mode */}
+      {readyToRender && currentUser?.tagesmenuTestmode !== false && (
+        <button
+          className="tagesmenu-meine-auswahl-btn"
+          onClick={() => setShowMeineAuswahl((v) => !v)}
+          aria-label="Meine Auswahl"
+          title="Meine Auswahl"
+        >
+          {isBase64Image(meineAuswahlIcon) ? (
+            <img src={meineAuswahlIcon} alt="Meine Auswahl" className="button-icon-image" />
+          ) : (
+            <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{meineAuswahlIcon}</span>
           )}
         </button>
       )}
