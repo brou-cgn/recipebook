@@ -358,6 +358,7 @@ export async function getSettings() {
         groupThresholdKandidatMaxArchiv: settings.groupThresholdKandidatMaxArchiv ?? DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
         groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
+        maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
       };
       
       return settingsCache;
@@ -395,6 +396,7 @@ export async function getSettings() {
       groupThresholdKandidatMaxArchiv: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
+      maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
     };
     
     // Create the settings document
@@ -437,6 +439,7 @@ export async function getSettings() {
       groupThresholdKandidatMaxArchiv: DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV,
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
+      maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
     };
   }
 }
