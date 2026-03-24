@@ -126,6 +126,15 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                 className="menu-card"
                 onClick={() => onSelectMenu(menu)}
               >
+                {(menu.image || menu.gridImage) && (
+                  <div className="menu-card-image">
+                    <img
+                      src={menu.image || menu.gridImage}
+                      alt={menu.name}
+                      className="menu-card-image-img"
+                    />
+                  </div>
+                )}
                 <div className="menu-card-badges">
                   {isFavorite && (
                     <div className="menu-favorite-badge favorite-active">★</div>

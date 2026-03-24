@@ -1,4 +1,4 @@
-import { fileToBase64, isBase64Image, isValidImageSource, compressImage, analyzeImageBrightness } from './imageUtils';
+import { fileToBase64, isBase64Image, isValidImageSource, compressImage, analyzeImageBrightness, selectMenuGridImages } from './imageUtils';
 
 describe('imageUtils', () => {
   describe('isBase64Image', () => {
@@ -333,6 +333,102 @@ describe('imageUtils', () => {
 
       await analyzeImageBrightness('data:image/png;base64,test');
       expect(mockImg.crossOrigin).toBeNull();
+    });
+  });
+
+  describe('selectMenuGridImages', () => {
+    const makeRecipe = (id, imageUrl) => ({ id, image: imageUrl, images: [] });
+    const makeRecipeWithImages = (id, imageUrl, isDefault = true) => ({
+      id,
+      image: imageUrl,
+      images: [{ url: imageUrl, isDefault }],
+    });
+
+    const catImg = 'data:image/png;base64,CATEGORY_IMAGE';
+    const customImg1 = 'data:image/jpeg;base64,CUSTOM_1';
+    const customImg2 = 'data:image/jpeg;base64,CUSTOM_2';
+    const customImg3 = 'data:image/jpeg;base64,CUSTOM_3';
+    const categoryImages = [{ image: catImg }];
+
+    test('returns empty array when no sections or recipes have images', () => {
+      const sections = [{ name: 'Hauptspeise', recipeIds: ['r1'] }];
+      const recipes = [makeRecipe('r1', '')];
+      expect(selectMenuGridImages(sections, recipes, [])).toEqual([]);
+    });
+
+    test('returns at most maxImages images', () => {
+      const sections = [
+        { name: 'A', recipeIds: ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7'] },
+      ];
+      const recipes = Array.from({ length: 7 }, (_, i) =>
+        makeRecipe(`r${i + 1}`, `data:image/jpeg;base64,IMG${i + 1}`)
+      );
+      const result = selectMenuGridImages(sections, recipes, [], 6);
+      expect(result.length).toBeLessThanOrEqual(6);
+    });
+
+    test('prefers custom images over category images', () => {
+      const sections = [{ name: 'Hauptspeise', recipeIds: ['r1', 'r2'] }];
+      const recipes = [
+        makeRecipe('r1', catImg),
+        makeRecipe('r2', customImg1),
+      ];
+      const result = selectMenuGridImages(sections, recipes, categoryImages, 1);
+      expect(result).toEqual([customImg1]);
+    });
+
+    test('falls back to category image when no custom image is available', () => {
+      const sections = [{ name: 'Hauptspeise', recipeIds: ['r1'] }];
+      const recipes = [makeRecipe('r1', catImg)];
+      const result = selectMenuGridImages(sections, recipes, categoryImages, 6);
+      expect(result).toEqual([catImg]);
+    });
+
+    test('picks one image per section in first pass', () => {
+      const sections = [
+        { name: 'Vorspeise', recipeIds: ['r1'] },
+        { name: 'Hauptspeise', recipeIds: ['r2'] },
+        { name: 'Dessert', recipeIds: ['r3'] },
+      ];
+      const recipes = [
+        makeRecipe('r1', customImg1),
+        makeRecipe('r2', customImg2),
+        makeRecipe('r3', customImg3),
+      ];
+      const result = selectMenuGridImages(sections, recipes, [], 6);
+      expect(result).toHaveLength(3);
+      expect(result).toContain(customImg1);
+      expect(result).toContain(customImg2);
+      expect(result).toContain(customImg3);
+    });
+
+    test('does not include the same recipe image twice', () => {
+      const sections = [
+        { name: 'A', recipeIds: ['r1'] },
+        { name: 'B', recipeIds: ['r1'] }, // same recipe in two sections
+      ];
+      const recipes = [makeRecipe('r1', customImg1)];
+      const result = selectMenuGridImages(sections, recipes, [], 6);
+      expect(result).toHaveLength(1);
+    });
+
+    test('uses images from recipe.images array (isDefault)', () => {
+      const sections = [{ name: 'Hauptspeise', recipeIds: ['r1'] }];
+      const recipes = [makeRecipeWithImages('r1', customImg1)];
+      const result = selectMenuGridImages(sections, recipes, [], 6);
+      expect(result).toEqual([customImg1]);
+    });
+
+    test('respects maxImages across sections', () => {
+      const sections = [
+        { name: 'A', recipeIds: ['r1', 'r2'] },
+        { name: 'B', recipeIds: ['r3', 'r4'] },
+      ];
+      const recipes = Array.from({ length: 4 }, (_, i) =>
+        makeRecipe(`r${i + 1}`, `data:image/jpeg;base64,IMG${i + 1}`)
+      );
+      const result = selectMenuGridImages(sections, recipes, [], 2);
+      expect(result).toHaveLength(2);
     });
   });
 });
