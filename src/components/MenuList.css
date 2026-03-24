@@ -75,6 +75,12 @@
   color: white;
 }
 
+.menu-favorites-filter-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
 .add-menu-fab-button {
   position: fixed;
   bottom: 20px;

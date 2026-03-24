@@ -371,3 +371,9 @@
   outline: none;
 }
 
+.tagesmenu-filter-btn .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
