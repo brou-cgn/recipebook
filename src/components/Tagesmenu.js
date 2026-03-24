@@ -68,6 +68,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Maximum candidate score threshold for ending the swipe stack early (null = disabled)
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
 
+  // Tracks the currentIndex at which the candidate threshold was first crossed mid-session
+  // by a swipe (swipeResults non-empty). null = not yet crossed mid-session, or was already
+  // met at initial load. When non-null, one extra card is shown before results appear.
+  const [thresholdCrossedAtIndex, setThresholdCrossedAtIndex] = useState(null);
+
   // All members' swipe flags for the selected list (used for group status determination)
   // Map of userId → { recipeId → flag }
   const [allMembersFlags, setAllMembersFlags] = useState({});
@@ -105,6 +110,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setActiveFlags({});
       setAllMembersFlags({});
       setFlagsLoaded(false);
+      setThresholdCrossedAtIndex(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle().then(setMaxKandidatenSchwelle).catch(() => {});
     }
@@ -412,13 +418,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     console.log('  groupStatusByRecipeId:', groupStatusByRecipeId);
 
     const swipedCandidateRecipes = allListRecipes.filter((recipe) => {
-      const hasSwipedByCurrentUser = allMembersFlags[currentUser?.id]?.[recipe.id] !== undefined;
       const groupStatus = groupStatusByRecipeId[recipe.id];
-      const isCandidate = hasSwipedByCurrentUser && groupStatus === 'kandidat';
+      const isCandidate = groupStatus === 'kandidat';
 
       console.log(`    Recipe ${recipe.id}:`, {
         title: recipe.title,
-        hasSwipedByCurrentUser,
         groupStatus,
         isCandidate
       });
@@ -449,11 +453,31 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return score;
   }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser, groupStatusByRecipeId]);
 
+  const thresholdMet = maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle;
+  const hasSwiped = Object.keys(swipeResults).length > 0;
+
+  // When the candidate threshold is first crossed mid-session by a swipe (swipeResults
+  // non-empty), record the currentIndex so that the already-visible card at that index
+  // can be swiped as the final card before results appear.
+  useEffect(() => {
+    if (!thresholdMet) {
+      setThresholdCrossedAtIndex(null);
+      return;
+    }
+    // Only record when crossed for the first time mid-session (not at initial load)
+    if (thresholdCrossedAtIndex === null && hasSwiped) {
+      setThresholdCrossedAtIndex(currentIndex);
+    }
+  }, [thresholdMet, hasSwiped, currentIndex, thresholdCrossedAtIndex]);
+
   const allSwiped =
     allListRecipes.length > 0 &&
     (listRecipes.length === 0 ||
       currentIndex >= listRecipes.length ||
-      (maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle));
+      // Threshold was already met at initial load (no swipes this session): end stack immediately
+      (thresholdMet && !hasSwiped) ||
+      // Threshold was crossed mid-session by a swipe and the extra last card has been swiped
+      (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex));
 
   console.log('🎯 allSwiped check:', {
     allListRecipesLength: allListRecipes.length,
@@ -461,10 +485,18 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     currentIndex,
     maxKandidatenSchwelle,
     candidateScore,
-    thresholdMet: maxKandidatenSchwelle !== null && candidateScore >= maxKandidatenSchwelle,
+    thresholdMet,
+    thresholdCrossedAtIndex,
     allSwiped
   });
-  const visibleRecipes = listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
+
+  // When the threshold has been crossed mid-session, show only the single card at
+  // currentIndex (no depth-effect cards behind it), so the deck appears empty and
+  // the user knows this is the last swipeable card.
+  const visibleRecipes =
+    thresholdMet && hasSwiped
+      ? listRecipes.slice(currentIndex, currentIndex + 1)
+      : listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // How far along the swipe are we (0–1) – used to animate background cards
   const dragProgress = Math.min(
