@@ -1227,6 +1227,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </button>
               )
             )}
+            {currentUser && !currentUser.isGuest && (
+              <button
+                className="cook-date-button"
+                onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
+                title="Kochdatum erfassen"
+                aria-label="Kochdatum erfassen"
+              >
+                {isBase64Image(cookDateIcon) ? (
+                  <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
+                ) : (
+                  cookDateIcon
+                )}
+              </button>
+            )}
+            <RecipeRating
+              recipeId={recipe.id}
+              ratingAvg={recipe.ratingAvg}
+              ratingCount={recipe.ratingCount}
+              currentUser={currentUser}
+              onOpenModal={() => setShowRatingModal(true)}
+            />
           </div>
         </div>
       )}
@@ -1548,12 +1569,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     </button>
                   )
                 )}
-              </div>
-            )}
-
-            <div className="recipe-title-row">
-              <h1 className="recipe-title">{recipe.title}</h1>
-              <div className="recipe-title-actions">
                 {currentUser && !currentUser.isGuest && (
                   <button
                     className="cook-date-button"
@@ -1576,6 +1591,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   onOpenModal={() => setShowRatingModal(true)}
                 />
               </div>
+            )}
+
+            <div className="recipe-title-row">
+              <h1 className="recipe-title">{recipe.title}</h1>
             </div>
 
             <div className="recipe-captions">
