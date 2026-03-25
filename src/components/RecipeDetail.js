@@ -1221,6 +1221,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           </button>
           
           <div className="action-buttons">
+            {userCanDirectlyEdit && (
+              <button className="edit-button" onClick={() => onEdit(recipe)}>
+                Bearbeiten
+              </button>
+            )}
+            {userCanCreateVersion && !userCanDirectlyEdit && (
+              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
+                Eigene Version erstellen
+              </button>
+            )}
+            {userCanDelete && (
+              <button className="delete-button" onClick={handleDelete}>
+                Löschen
+              </button>
+            )}
             {onToggleFavorite && (
               <button 
                 className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
@@ -1245,16 +1260,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
               </button>
             )}
-            {userCanDirectlyEdit && (
-              <button className="edit-button" onClick={() => onEdit(recipe)}>
-                Bearbeiten
-              </button>
-            )}
-            {userCanCreateVersion && !userCanDirectlyEdit && (
-              <button className="version-button" onClick={() => onCreateVersion(recipe)}>
-                Eigene Version erstellen
-              </button>
-            )}
+            <button
+              className="shopping-list-trigger-button"
+              onClick={handleShoppingListClick}
+              title="Einkaufsliste anzeigen"
+              aria-label="Einkaufsliste öffnen"
+            >
+              {isBase64Image(shoppingListIcon) ? (
+                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
+              ) : (
+                shoppingListIcon
+              )}
+            </button>
             {currentUser && !currentUser.isGuest && (
               <button
                 className="cook-date-button"
@@ -1269,18 +1286,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
               </button>
             )}
-              <button
-              className="shopping-list-trigger-button"
-              onClick={handleShoppingListClick}
-              title="Einkaufsliste anzeigen"
-              aria-label="Einkaufsliste öffnen"
-            >
-              {isBase64Image(shoppingListIcon) ? (
-                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
-              ) : (
-                shoppingListIcon
-              )}
-            </button>
+            <RecipeRating
+              recipeId={recipe.id}
+              ratingAvg={recipe.ratingAvg}
+              ratingCount={recipe.ratingCount}
+              currentUser={currentUser}
+              onOpenModal={() => setShowRatingModal(true)}
+            />
             {isRecipePublic && !recipe.shareId && (
               <button
                 className="share-button"
@@ -1334,13 +1346,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </button>
               )
             )}
-            <RecipeRating
-              recipeId={recipe.id}
-              ratingAvg={recipe.ratingAvg}
-              ratingCount={recipe.ratingCount}
-              currentUser={currentUser}
-              onOpenModal={() => setShowRatingModal(true)}
-            />
           </div>
         </div>
       )}
@@ -1624,6 +1629,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     shoppingListIcon
                   )}
                 </button>
+                {currentUser && !currentUser.isGuest && (
+                  <button
+                    className="cook-date-button"
+                    onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
+                    title="Kochdatum erfassen"
+                    aria-label="Kochdatum erfassen"
+                  >
+                    {isBase64Image(cookDateIcon) ? (
+                      <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
+                    ) : (
+                      cookDateIcon
+                    )}
+                  </button>
+                )}
+                <RecipeRating
+                  recipeId={recipe.id}
+                  ratingAvg={recipe.ratingAvg}
+                  ratingCount={recipe.ratingCount}
+                  currentUser={currentUser}
+                  onOpenModal={() => setShowRatingModal(true)}
+                />
                 {isRecipePublic && !recipe.shareId && (
                   <button
                     className="share-button"
@@ -1677,27 +1703,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     </button>
                   )
                 )}
-                {currentUser && !currentUser.isGuest && (
-                  <button
-                    className="cook-date-button"
-                    onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
-                    title="Kochdatum erfassen"
-                    aria-label="Kochdatum erfassen"
-                  >
-                    {isBase64Image(cookDateIcon) ? (
-                      <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
-                    ) : (
-                      cookDateIcon
-                    )}
-                  </button>
-                )}
-                <RecipeRating
-                  recipeId={recipe.id}
-                  ratingAvg={recipe.ratingAvg}
-                  ratingCount={recipe.ratingCount}
-                  currentUser={currentUser}
-                  onOpenModal={() => setShowRatingModal(true)}
-                />
               </div>
             )}
 
@@ -1890,18 +1895,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </ol>
             </section>
 
-            {(userCanPublish || userCanDelete) && (
+            {userCanPublish && (
               <div className="bottom-action-buttons">
-                {userCanPublish && (
-                  <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
-                    {publishLoading ? '…' : 'Veröffentlichen'}
-                  </button>
-                )}
-                {userCanDelete && (
-                  <button className="delete-button" onClick={handleDelete}>
-                    Löschen
-                  </button>
-                )}
+                <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
+                  {publishLoading ? '…' : 'Veröffentlichen'}
+                </button>
               </div>
             )}
 
