@@ -312,6 +312,7 @@ const Header = forwardRef(function Header({
                       )}
                     </div>
                   )}
+                  {currentUser?.themeToggle !== false && (
                   <div className="menu-section">
                     <div className="menu-section-title">Erscheinungsbild</div>
                     <button
@@ -321,6 +322,7 @@ const Header = forwardRef(function Header({
                       {darkMode ? '☀️ Helles Design' : '🌙 Dunkles Design'}
                     </button>
                   </div>
+                  )}
                   <div className="menu-section">
                     <div className="menu-section-title">Benutzer</div>
                     <div className="menu-user-info">

@@ -5,7 +5,10 @@ import Header from './Header';
 // Mock the custom lists utility
 jest.mock('../utils/customLists', () => ({
   getHeaderSlogan: () => Promise.resolve('Test Slogan'),
-  getAppLogoImage: () => Promise.resolve(null)
+  getAppLogoImage: () => Promise.resolve(null),
+  getDarkModePreference: () => false,
+  saveDarkModePreference: jest.fn(),
+  applyDarkModePreference: jest.fn(),
 }));
 
 // Mock faqFirestore with a controllable subscribeToFaqs
@@ -223,5 +226,51 @@ describe('Header - openSearch imperative handle', () => {
 
     // Search input should now be visible
     expect(screen.getByPlaceholderText('Rezepte durchsuchen...')).toBeInTheDocument();
+  });
+});
+
+describe('Header - Erscheinungsbild (themeToggle) permission', () => {
+  test('Erscheinungsbild section is visible when themeToggle is true', () => {
+    const userWithThemeToggle = { ...mockCurrentUser, themeToggle: true };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByText('Erscheinungsbild')).toBeInTheDocument();
+  });
+
+  test('Erscheinungsbild section is hidden when themeToggle is false', () => {
+    const userWithoutThemeToggle = { ...mockCurrentUser, themeToggle: false };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithoutThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.queryByText('Erscheinungsbild')).not.toBeInTheDocument();
+  });
+
+  test('Erscheinungsbild section is visible when themeToggle is not set (backward compatibility)', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByText('Erscheinungsbild')).toBeInTheDocument();
   });
 });

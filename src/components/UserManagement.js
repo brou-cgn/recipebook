@@ -220,7 +220,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten und Testmodus Tagesmenü haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü und Erscheinungsbild haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -236,11 +236,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Sortier-Karussell</th>
                   <th>Listen bearbeiten</th>
                   <th>Testmodus Tagesmenü</th>
+                  <th>Erscheinungsbild</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false };
+                  const perms = rolePermissions?.[role] || { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -336,6 +337,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.tagesmenuTestmode ? 'Testmodus Tagesmenü deaktivieren' : 'Testmodus Tagesmenü aktivieren'}
                         >
                           {perms.tagesmenuTestmode ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.themeToggle ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'themeToggle', perms.themeToggle)}
+                          title={perms.themeToggle ? 'Erscheinungsbild deaktivieren' : 'Erscheinungsbild aktivieren'}
+                        >
+                          {perms.themeToggle ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>
