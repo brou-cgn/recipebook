@@ -154,6 +154,7 @@
 
   cursor: pointer;
   line-height: 1;
+  font-size: 1.4rem;
 
   transition:
     background-color 0.2s ease,
@@ -161,6 +162,12 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.15s ease;
+}
+
+.favorite-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
 }
 
 .favorite-button:hover {
