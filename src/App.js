@@ -356,6 +356,7 @@ function App() {
           deleteRating: rolePerms.deleteRating ?? false,
           sortCarousel: rolePerms.sortCarousel ?? false,
           tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
+          themeToggle: rolePerms.themeToggle ?? false,
         };
       });
     };
