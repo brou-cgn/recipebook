@@ -176,6 +176,43 @@ export function applyTileSizePreference(size) {
   document.documentElement.style.setProperty('--tile-size-min', tileSize);
 }
 
+// Dark mode preference key
+const DARK_MODE_KEY = 'darkModePreference';
+
+/**
+ * Get the dark mode preference from localStorage
+ * @returns {boolean} True if dark mode is enabled
+ */
+export function getDarkModePreference() {
+  const stored = localStorage.getItem(DARK_MODE_KEY);
+  if (stored !== null) return stored === 'true';
+  // Fall back to system preference
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/**
+ * Save the dark mode preference to localStorage and dispatch a custom event
+ * so other components in the same tab can react to the change.
+ * @param {boolean} isDark - Whether dark mode should be enabled
+ */
+export function saveDarkModePreference(isDark) {
+  localStorage.setItem(DARK_MODE_KEY, String(isDark));
+  window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark } }));
+}
+
+/**
+ * Apply the dark mode preference by setting data-theme attribute on the document root
+ * @param {boolean} [isDark] - Whether dark mode should be enabled; reads from localStorage if omitted
+ */
+export function applyDarkModePreference(isDark) {
+  const dark = isDark !== undefined ? isDark : getDarkModePreference();
+  if (dark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
 // Standard-Prompt für KI-Rezepterkennung (optimiert)
 export const DEFAULT_AI_RECIPE_PROMPT = `Analysiere dieses Rezeptbild und extrahiere alle Informationen als strukturiertes JSON. Extrahiere nur das Rezept, ignoriere Kommentare, Likes, UI‑Text. Erfinde keine Zutaten/Mengen/Temperaturen.
 

@@ -39,7 +39,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
+import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import {
   subscribeToRecipes,
@@ -376,6 +376,11 @@ function App() {
   // Apply tile size preference on mount
   useEffect(() => {
     applyTileSizePreference();
+  }, []);
+
+  // Apply dark mode preference on mount
+  useEffect(() => {
+    applyDarkModePreference();
   }, []);
 
   // Load cuisine groups for hierarchical filter expansion

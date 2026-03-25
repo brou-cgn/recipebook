@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -269,6 +269,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // Tile size state
   const [tileSize, setTileSize] = useState(getTileSizePreference);
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(getDarkModePreference);
 
   // Sort/filter settings state
   const [trendingDays, setTrendingDays] = useState(DEFAULT_TRENDING_DAYS);
@@ -554,6 +557,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveTimelineCookEventBubbleIcon(timelineCookEventBubbleIcon);
       saveTimelineCookEventDefaultImage(timelineCookEventDefaultImage);
       saveTileSizePreference(tileSize);
+      saveDarkModePreference(darkMode);
       await saveSortSettings({ trendingDays, trendingMinViews, newRecipeDays, ratingMinVotes });
       await saveStatusValiditySettings({
         statusValidityDaysKandidat: statusValidityDaysKandidat !== '' ? parseInt(statusValidityDaysKandidat, 10) : null,
@@ -581,6 +585,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
       // Apply tile size immediately
       applyTileSizePreference(tileSize);
+
+      // Apply dark mode immediately
+      applyDarkModePreference(darkMode);
 
       // Notify service worker about settings update for PWA manifest/icons
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -3743,6 +3750,33 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   <span className="tile-size-icon">⊞</span>
                   <span className="tile-size-label">Groß</span>
                   <span className="tile-size-desc">Weniger Kacheln pro Zeile</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Erscheinungsbild</h3>
+              <p className="section-description">
+                Wählen Sie zwischen hellem und dunklem Design. Das dunkle Design schont die Augen bei wenig Licht.
+              </p>
+              <div className="theme-options">
+                <button
+                  type="button"
+                  className={`theme-btn${!darkMode ? ' active' : ''}`}
+                  onClick={() => setDarkMode(false)}
+                >
+                  <span className="theme-btn-icon">☀️</span>
+                  <span className="theme-btn-label">Hell</span>
+                  <span className="theme-btn-desc">Helles Design</span>
+                </button>
+                <button
+                  type="button"
+                  className={`theme-btn${darkMode ? ' active' : ''}`}
+                  onClick={() => setDarkMode(true)}
+                >
+                  <span className="theme-btn-icon">🌙</span>
+                  <span className="theme-btn-label">Dunkel</span>
+                  <span className="theme-btn-desc">Dunkles Design</span>
                 </button>
               </div>
             </div>

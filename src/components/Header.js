@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import './Header.css';
-import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
+import { getHeaderSlogan, getAppLogoImage, getDarkModePreference, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import { ROLES } from '../utils/userManagement';
 import SearchIcon from './icons/SearchIcon';
@@ -41,6 +41,7 @@ const Header = forwardRef(function Header({
   const [faqModalOpen, setFaqModalOpen] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [darkMode, setDarkMode] = useState(getDarkModePreference);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -59,6 +60,24 @@ const Header = forwardRef(function Header({
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sync dark mode state when it changes from another component (e.g. Settings)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'darkModePreference') {
+        setDarkMode(e.newValue === 'true');
+      }
+    };
+    const handleDarkModeChange = (e) => {
+      setDarkMode(e.detail.isDark);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('darkModeChange', handleDarkModeChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('darkModeChange', handleDarkModeChange);
+    };
   }, []);
   
   useEffect(() => {
@@ -158,6 +177,13 @@ const Header = forwardRef(function Header({
       onLogout();
     }
     setMenuOpen(false);
+  };
+
+  const handleDarkModeToggle = () => {
+    const newValue = !darkMode;
+    setDarkMode(newValue);
+    saveDarkModePreference(newValue);
+    applyDarkModePreference(newValue);
   };
   
   return (
@@ -286,6 +312,15 @@ const Header = forwardRef(function Header({
                       )}
                     </div>
                   )}
+                  <div className="menu-section">
+                    <div className="menu-section-title">Erscheinungsbild</div>
+                    <button
+                      className="menu-item dark-mode-toggle"
+                      onClick={handleDarkModeToggle}
+                    >
+                      {darkMode ? '☀️ Helles Design' : '🌙 Dunkles Design'}
+                    </button>
+                  </div>
                   <div className="menu-section">
                     <div className="menu-section-title">Benutzer</div>
                     <div className="menu-user-info">
