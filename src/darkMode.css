@@ -550,9 +550,9 @@
 }
 
 [data-theme="dark"] .menu-favorites-filter-button.active {
-  background: #402C1C;
+  background: #DF7A00;
   color: #fff;
-  border-color: #402C1C;
+  border-color: #DF7A00;
 }
 
 /* ---- Menu Detail ---- */
