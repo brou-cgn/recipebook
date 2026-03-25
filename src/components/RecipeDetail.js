@@ -78,6 +78,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
   const missingSavedRef = useRef(false);
+  const editLongPressTimerRef = useRef(null);
+  const editLongPressTriggeredRef = useRef(false);
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
   const [alarmRunning, setAlarmRunning] = useState(false);
@@ -114,6 +116,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
     };
     loadSettings();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (editLongPressTimerRef.current) {
+        clearTimeout(editLongPressTimerRef.current);
+      }
+    };
   }, []);
 
   // Track window size for responsive design with debouncing
@@ -317,6 +327,33 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setSelectedRecipe(allVersions[currentVersionIndex + 1]);
       setServingMultiplier(1);
     }
+  };
+
+  // Edit FAB long press handlers
+  const handleEditFabPressStart = () => {
+    setEditFabPressed(true);
+    if (userCanCreateVersion && onCreateVersion) {
+      editLongPressTimerRef.current = setTimeout(() => {
+        editLongPressTriggeredRef.current = true;
+        onCreateVersion(recipe);
+      }, 500);
+    }
+  };
+
+  const handleEditFabPressEnd = () => {
+    setEditFabPressed(false);
+    if (editLongPressTimerRef.current) {
+      clearTimeout(editLongPressTimerRef.current);
+      editLongPressTimerRef.current = null;
+    }
+  };
+
+  const handleEditFabClick = () => {
+    if (editLongPressTriggeredRef.current) {
+      editLongPressTriggeredRef.current = false;
+      return;
+    }
+    onEdit && onEdit(recipe);
   };
 
   // Get author name
@@ -1906,13 +1943,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {userCanDirectlyEdit && onEdit && (
         <button
           className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
-          onClick={() => onEdit(recipe)}
-          onTouchStart={() => setEditFabPressed(true)}
-          onTouchEnd={() => setEditFabPressed(false)}
-          onTouchCancel={() => setEditFabPressed(false)}
-          onMouseDown={() => setEditFabPressed(true)}
-          onMouseUp={() => setEditFabPressed(false)}
-          onMouseLeave={() => setEditFabPressed(false)}
+          onClick={handleEditFabClick}
+          onTouchStart={handleEditFabPressStart}
+          onTouchEnd={handleEditFabPressEnd}
+          onTouchCancel={handleEditFabPressEnd}
+          onMouseDown={handleEditFabPressStart}
+          onMouseUp={handleEditFabPressEnd}
+          onMouseLeave={handleEditFabPressEnd}
           title="Rezept bearbeiten"
           aria-label="Rezept bearbeiten"
         >

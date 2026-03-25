@@ -374,3 +374,81 @@ describe('RecipeDetail - Alarm Modal', () => {
     clearIntervalSpy.mockRestore();
   });
 });
+
+describe('RecipeDetail - Edit FAB Long Press', () => {
+  const recipe = {
+    id: 'recipe-lp',
+    title: 'Long Press Recipe',
+    authorId: 'user-1',
+    portionen: 2,
+    ingredients: ['Salz'],
+    steps: ['Schritt 1'],
+  };
+  const currentUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
+
+  test('short click on edit FAB calls onEdit', () => {
+    const onEdit = jest.fn();
+    const onCreateVersion = jest.fn();
+    render(
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => {}}
+        onEdit={onEdit}
+        onDelete={() => {}}
+        onCreateVersion={onCreateVersion}
+        currentUser={currentUser}
+      />
+    );
+    const fab = document.querySelector('.edit-fab-button');
+    expect(fab).toBeInTheDocument();
+    fireEvent.mouseDown(fab);
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.mouseUp(fab);
+    fireEvent.click(fab);
+    expect(onEdit).toHaveBeenCalledWith(recipe);
+    expect(onCreateVersion).not.toHaveBeenCalled();
+  });
+
+  test('long press on edit FAB calls onCreateVersion', () => {
+    const onEdit = jest.fn();
+    const onCreateVersion = jest.fn();
+    render(
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => {}}
+        onEdit={onEdit}
+        onDelete={() => {}}
+        onCreateVersion={onCreateVersion}
+        currentUser={currentUser}
+      />
+    );
+    const fab = document.querySelector('.edit-fab-button');
+    expect(fab).toBeInTheDocument();
+    fireEvent.mouseDown(fab);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(fab);
+    fireEvent.click(fab);
+    expect(onCreateVersion).toHaveBeenCalledWith(recipe);
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  test('long press on edit FAB does not call onCreateVersion if onCreateVersion is not provided', () => {
+    const onEdit = jest.fn();
+    render(
+      <RecipeDetail
+        recipe={recipe}
+        onBack={() => {}}
+        onEdit={onEdit}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    const fab = document.querySelector('.edit-fab-button');
+    expect(fab).toBeInTheDocument();
+    fireEvent.mouseDown(fab);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(fab);
+    fireEvent.click(fab);
+    expect(onEdit).toHaveBeenCalledWith(recipe);
+  });
+});
