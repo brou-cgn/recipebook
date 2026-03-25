@@ -1930,7 +1930,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           </div>
         </div>
       )}
-      {userCanDirectlyEdit && onEdit && (
+      {userCanDirectlyEdit && onEdit && !cookingMode && (
         <button
           className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
           onClick={handleEditFabClick}
@@ -1950,7 +1950,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {userCanCreateVersion && !userCanDirectlyEdit && onCreateVersion && (
+      {userCanCreateVersion && !userCanDirectlyEdit && onCreateVersion && !cookingMode && (
         <button
           className={`new-version-fab-button${newVersionFabPressed ? ' pressed' : ''}`}
           onClick={() => onCreateVersion(recipe)}
