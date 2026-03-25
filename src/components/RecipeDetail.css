@@ -794,7 +794,7 @@ difficulty-stars .star {
 
 .recipe-section {
   padding: 1.5rem;
-  /*border-bottom: 1px solid #f0f0f0;*/
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .recipe-section:last-child {
