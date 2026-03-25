@@ -684,14 +684,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'sine';
+      osc.type = 'square';
       // Ascending sweep: 800 Hz → 1800 Hz over 0.3s
       osc.frequency.setValueAtTime(800, now);
       osc.frequency.linearRampToValueAtTime(1800, now + 0.3);
       // Descending sweep: 1800 Hz → 800 Hz over 0.2s
       osc.frequency.linearRampToValueAtTime(800, now + 0.5);
-      gain.gain.setValueAtTime(0.5, now);
-      gain.gain.setValueAtTime(0.5, now + 0.5);
+      gain.gain.setValueAtTime(0.65, now);
+      gain.gain.setValueAtTime(0.65, now + 0.5);
       gain.gain.linearRampToValueAtTime(0, now + 0.6);
       osc.start(now);
       osc.stop(now + 0.6);
@@ -701,12 +701,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const gain2 = ctx.createGain();
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
-      osc2.type = 'sine';
+      osc2.type = 'square';
       osc2.frequency.setValueAtTime(1600, now);
       osc2.frequency.linearRampToValueAtTime(3600, now + 0.3);
       osc2.frequency.linearRampToValueAtTime(1600, now + 0.5);
-      gain2.gain.setValueAtTime(0.2, now);
-      gain2.gain.setValueAtTime(0.2, now + 0.5);
+      gain2.gain.setValueAtTime(0.28, now);
+      gain2.gain.setValueAtTime(0.28, now + 0.5);
       gain2.gain.linearRampToValueAtTime(0, now + 0.6);
       osc2.start(now);
       osc2.stop(now + 0.6);
@@ -715,7 +715,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }
 
-  function startAlarmLoop(label) {
+  /*function startAlarmLoop(label) {
     // Only one alarm at a time
     if (alarmIntervalRef.current) return;
 
@@ -736,9 +736,56 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('⏰ Timer abgelaufen!', { body: label, icon: '/favicon.ico' });
     }
-  }
+  }*/
 
-  function stopAlarm() {
+  async function startAlarmLoop(label) {
+    // Nur ein Alarm gleichzeitig
+    if (alarmIntervalRef.current) return;
+  
+    setAlarmLabel(label);
+    setAlarmRunning(true);
+  
+    try {
+      if (!alarmCtxRef.current) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) throw new Error('AudioContext not supported');
+        alarmCtxRef.current = new AudioCtx();
+      }
+  
+      const ctx = alarmCtxRef.current;
+  
+      // Auf manchen Mobilgeräten startet der Context suspended
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+  
+      // Sofort einmal abspielen
+      playRadarPattern(ctx);
+  
+      // Dann wiederholen bis OK gedrückt wird
+      alarmIntervalRef.current = setInterval(async () => {
+        try {
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+          }
+          playRadarPattern(ctx);
+        } catch (_) {
+          // ignorieren
+        }
+      }, 1000);
+    } catch (_) {
+      // Audio API nicht verfügbar – Modal bleibt trotzdem sichtbar
+    }
+  
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('⏰ Timer abgelaufen!', {
+        body: label,
+        icon: '/favicon.ico'
+      });
+    }
+  }
+  
+  /*function stopAlarm() {
     if (alarmIntervalRef.current) {
       clearInterval(alarmIntervalRef.current);
       alarmIntervalRef.current = null;
@@ -749,8 +796,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
     setAlarmRunning(false);
     setAlarmLabel('');
-  }
+  }*/
 
+  function stopAlarm() {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+  
+    // Context nicht jedes Mal schließen, sondern behalten.
+    // Das ist stabiler als bei jedem Alarm einen neuen anzulegen.
+    setAlarmRunning(false);
+    setAlarmLabel('');
+  }
+  
   function notifyTimerDone(label) {
     startAlarmLoop(label);
   }
@@ -870,7 +929,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   }
 
   // Clean up all intervals on unmount
-  useEffect(() => {
+  /*useEffect(() => {
     const intervals = timerIntervalsRef.current;
     return () => {
       Object.values(intervals).forEach(id => clearInterval(id));
@@ -881,9 +940,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         try { alarmCtxRef.current.close(); } catch (_) {}
       }
     };
+  }, []);*/
+
+  useEffect(() => {
+    const intervals = timerIntervalsRef.current;
+    return () => {
+      Object.values(intervals).forEach(id => clearInterval(id));
+  
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+        alarmIntervalRef.current = null;
+      }
+  
+      if (alarmCtxRef.current) {
+        try { alarmCtxRef.current.close(); } catch (_) {}
+        alarmCtxRef.current = null;
+      }
+    };
   }, []);
-
-
 
   // Get actual step items (filter out headings) - moved before useEffect
   const stepItems = useMemo(() => {
