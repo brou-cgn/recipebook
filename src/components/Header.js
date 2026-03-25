@@ -69,8 +69,15 @@ const Header = forwardRef(function Header({
         setDarkMode(e.newValue === 'true');
       }
     };
+    const handleDarkModeChange = (e) => {
+      setDarkMode(e.detail.isDark);
+    };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('darkModeChange', handleDarkModeChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('darkModeChange', handleDarkModeChange);
+    };
   }, []);
   
   useEffect(() => {

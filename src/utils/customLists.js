@@ -191,11 +191,13 @@ export function getDarkModePreference() {
 }
 
 /**
- * Save the dark mode preference to localStorage
+ * Save the dark mode preference to localStorage and dispatch a custom event
+ * so other components in the same tab can react to the change.
  * @param {boolean} isDark - Whether dark mode should be enabled
  */
 export function saveDarkModePreference(isDark) {
   localStorage.setItem(DARK_MODE_KEY, String(isDark));
+  window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark } }));
 }
 
 /**
