@@ -807,6 +807,7 @@ difficulty-stars .star {
   color: #1a1a1a;
   font-size: 1.25rem;
   font-weight: 700;
+  border-bottom: none;
 }
 
 .section-header {
