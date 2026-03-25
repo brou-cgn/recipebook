@@ -117,6 +117,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     filterButtonActive: DEFAULT_BUTTON_ICONS.filterButtonActive,
     addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
     addPrivateRecipe: DEFAULT_BUTTON_ICONS.addPrivateRecipe,
+    menuFavoritesButtonActive: DEFAULT_BUTTON_ICONS.menuFavoritesButtonActive,
   });
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
@@ -438,6 +439,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 recipe={recipe}
                 onClick={() => handleRecipeClick(group)}
                 isFavorite={isFavorite}
+                favoriteActiveIcon={buttonIcons.menuFavoritesButtonActive}
                 isNew={isNewRecipe(recipe, sortSettings)}
                 authorName={authorName}
                 versionCount={group.versionCount}

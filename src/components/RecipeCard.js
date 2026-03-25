@@ -2,6 +2,7 @@ import React from 'react';
 import './RecipeList.css';
 import RecipeImageCarousel from './RecipeImageCarousel';
 import RecipeRating from './RecipeRating';
+import { isBase64Image } from '../utils/imageUtils';
 
 const MAX_KULINARIK_TAGS = 5;
 
@@ -23,7 +24,7 @@ function renderKulinarikTags(kulinarik) {
   );
 }
 
-function RecipeCard({ recipe, onClick, isFavorite, isNew, authorName, versionCount, currentUser }) {
+function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser }) {
   const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
     ? recipe.images
     : recipe.image
@@ -38,7 +39,17 @@ function RecipeCard({ recipe, onClick, isFavorite, isNew, authorName, versionCou
   return (
     <div className="recipe-card" onClick={onClick}>
       {isFavorite && (
-        <div className="recipe-favorite-badge">★</div>
+        <div className="recipe-favorite-badge">
+          {favoriteActiveIcon ? (
+            isBase64Image(favoriteActiveIcon) ? (
+              <img src={favoriteActiveIcon} alt="Favorit" className="button-icon-image" />
+            ) : (
+              favoriteActiveIcon
+            )
+          ) : (
+            '★'
+          )}
+        </div>
       )}
       {isNew && (
         <div className="new-badge">Neu</div>

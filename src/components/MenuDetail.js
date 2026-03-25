@@ -19,6 +19,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
   const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
+  const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
+  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [shareLoading, setShareLoading] = useState(false);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
@@ -37,6 +39,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
       setCopyLinkIcon(icons.copyLink || '📋');
       setShoppingListIcon(icons.shoppingList || '🛒');
       setBringButtonIcon(icons.bringButton || '🛍️');
+      setFavoritesButtonIcon(icons.menuFavoritesButton || '☆');
+      setFavoritesButtonActiveIcon(icons.menuFavoritesButtonActive || '★');
       setConversionTable(lists.conversionTable || []);
     };
     loadButtonIcons();
@@ -307,7 +311,19 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
             onClick={handleToggleFavorite}
             title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
           >
-            {isFavorite ? '★' : '☆'}
+            {isFavorite ? (
+              isBase64Image(favoritesButtonActiveIcon) ? (
+                <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" />
+              ) : (
+                favoritesButtonActiveIcon
+              )
+            ) : (
+              isBase64Image(favoritesButtonIcon) ? (
+                <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" />
+              ) : (
+                favoritesButtonIcon
+              )
+            )}
           </button>
           {canEditMenu(currentUser, menu) && (
             <button className="edit-button" onClick={() => onEdit(menu)}>
@@ -407,6 +423,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
                       recipe={recipe}
                       onClick={() => onSelectRecipe(recipe)}
                       isFavorite={isRecipeFav}
+                      favoriteActiveIcon={favoritesButtonActiveIcon}
                       authorName={getRecipeAuthorName(recipe)}
                       currentUser={currentUser}
                     />

@@ -12,6 +12,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   const [buttonIcons, setButtonIcons] = useState({
     addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
     menuFavoritesButton: DEFAULT_BUTTON_ICONS.menuFavoritesButton,
+    menuFavoritesButtonActive: DEFAULT_BUTTON_ICONS.menuFavoritesButtonActive,
   });
 
   // Load button icons on mount
@@ -137,7 +138,13 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                 )}
                 <div className="menu-card-badges">
                   {isFavorite && (
-                    <div className="menu-favorite-badge favorite-active">★</div>
+                    <div className="menu-favorite-badge favorite-active">
+                      {isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
+                        <img src={buttonIcons.menuFavoritesButtonActive} alt="Favorit" className="button-icon-image" />
+                      ) : (
+                        buttonIcons.menuFavoritesButtonActive
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="menu-card-content">
@@ -185,10 +192,18 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         title={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
         aria-label={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
       >
-        {isBase64Image(buttonIcons.menuFavoritesButton) ? (
-          <img src={buttonIcons.menuFavoritesButton} alt="Favoriten" className="button-icon-image" />
+        {showFavoritesOnly ? (
+          isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
+            <img src={buttonIcons.menuFavoritesButtonActive} alt="Favoriten aktiv" className="button-icon-image" />
+          ) : (
+            buttonIcons.menuFavoritesButtonActive
+          )
         ) : (
-          buttonIcons.menuFavoritesButton
+          isBase64Image(buttonIcons.menuFavoritesButton) ? (
+            <img src={buttonIcons.menuFavoritesButton} alt="Favoriten" className="button-icon-image" />
+          ) : (
+            buttonIcons.menuFavoritesButton
+          )
         )}
       </button>
     </div>

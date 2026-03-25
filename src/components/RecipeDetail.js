@@ -70,6 +70,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [editRecipeIcon, setEditRecipeIcon] = useState('✏️');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [newVersionIcon, setNewVersionIcon] = useState('📝');
+  const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
+  const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
@@ -107,6 +109,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setCookDateIcon(icons.cookDate || '📅');
       setEditRecipeIcon(icons.editRecipe || '✏️');
       setNewVersionIcon(icons.newVersion || '📝');
+      setFavoritesButtonIcon(icons.menuFavoritesButton || '☆');
+      setFavoritesButtonActiveIcon(icons.menuFavoritesButtonActive || '★');
       setConversionTable(lists.conversionTable || []);
       const bubbleIcon = await getTimelineBubbleIcon();
       const cookEventBubbleIcon = await getTimelineCookEventBubbleIcon();
@@ -1226,7 +1230,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 aria-pressed={isFavorite}
                 type="button"
               >
-                {isFavorite ? '★' : '☆'}
+                {isFavorite ? (
+                  isBase64Image(favoritesButtonActiveIcon) ? (
+                    <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" />
+                  ) : (
+                    favoritesButtonActiveIcon
+                  )
+                ) : (
+                  isBase64Image(favoritesButtonIcon) ? (
+                    <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" />
+                  ) : (
+                    favoritesButtonIcon
+                  )
+                )}
               </button>
             )}
             {userCanDirectlyEdit && (
@@ -1581,7 +1597,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   aria-pressed={isFavorite}
                   type="button"
                 >
-                  {isFavorite ? '★' : '☆'}
+                  {isFavorite ? (
+                    isBase64Image(favoritesButtonActiveIcon) ? (
+                      <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" />
+                    ) : (
+                      favoritesButtonActiveIcon
+                    )
+                  ) : (
+                    isBase64Image(favoritesButtonIcon) ? (
+                      <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" />
+                    ) : (
+                      favoritesButtonIcon
+                    )
+                  )}
                 </button>
                 )}
                 <button

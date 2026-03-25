@@ -228,7 +228,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
-    menuFavoritesButton: '★',
+    menuFavoritesButton: '☆',
+    menuFavoritesButtonActive: '★',
     tagesmenuFilterButton: '☰',
     tagesmenuZumTagesMenu: '🗓️',
     newVersion: '📝'
@@ -2285,7 +2286,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 </div>
 
                 <div className="button-icon-item">
-                  <label htmlFor="menuFavoritesButtonIcon">Favoriten-Button (Menüübersicht):</label>
+                  <label htmlFor="menuFavoritesButtonIcon">Favoriten-Button (inaktiv):</label>
                   <div className="button-icon-input-group">
                     {!isBase64Image(buttonIcons.menuFavoritesButton) ? (
                       <>
@@ -2294,7 +2295,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           id="menuFavoritesButtonIcon"
                           value={buttonIcons.menuFavoritesButton}
                           onChange={(e) => setButtonIcons({ ...buttonIcons, menuFavoritesButton: e.target.value })}
-                          placeholder="z.B. ★"
+                          placeholder="z.B. ☆"
                           maxLength={10}
                         />
                         <label htmlFor="menuFavoritesButtonIconFile" className="upload-icon-btn" title="Bild hochladen">
@@ -2335,6 +2336,63 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         <img src={buttonIcons.menuFavoritesButton} alt="Icon" className="icon-image" />
                       ) : (
                         <span>{buttonIcons.menuFavoritesButton}</span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="input-hint">Emoji, kurzer Text (max. 10 Zeichen) oder Bild (PNG, JPG, SVG, max. 5MB)</p>
+                </div>
+
+                <div className="button-icon-item">
+                  <label htmlFor="menuFavoritesButtonActiveIcon">Favoriten-Button (aktiv):</label>
+                  <div className="button-icon-input-group">
+                    {!isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
+                      <>
+                        <input
+                          type="text"
+                          id="menuFavoritesButtonActiveIcon"
+                          value={buttonIcons.menuFavoritesButtonActive}
+                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuFavoritesButtonActive: e.target.value })}
+                          placeholder="z.B. ★"
+                          maxLength={10}
+                        />
+                        <label htmlFor="menuFavoritesButtonActiveIconFile" className="upload-icon-btn" title="Bild hochladen">
+                          {uploadingButtonIcon === 'menuFavoritesButtonActive' ? '⏳' : '📷'}
+                        </label>
+                        <input
+                          type="file"
+                          id="menuFavoritesButtonActiveIconFile"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={(e) => handleButtonIconImageUpload('menuFavoritesButtonActive', e)}
+                          style={{ display: 'none' }}
+                          disabled={uploadingButtonIcon === 'menuFavoritesButtonActive'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="icon-image-info">Bild hochgeladen</div>
+                        <button
+                          type="button"
+                          className="remove-icon-btn"
+                          onClick={() => handleRemoveButtonIconImage('menuFavoritesButtonActive')}
+                          title="Bild entfernen"
+                        >
+                          ✕ Entfernen
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="reset-icon-btn"
+                      onClick={() => setButtonIcons({ ...buttonIcons, menuFavoritesButtonActive: DEFAULT_BUTTON_ICONS.menuFavoritesButtonActive })}
+                      title="Auf Standard zurücksetzen"
+                    >
+                      ↻
+                    </button>
+                    <div className="icon-preview">
+                      {isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
+                        <img src={buttonIcons.menuFavoritesButtonActive} alt="Icon" className="icon-image" />
+                      ) : (
+                        <span>{buttonIcons.menuFavoritesButtonActive}</span>
                       )}
                     </div>
                   </div>
