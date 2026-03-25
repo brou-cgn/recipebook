@@ -408,11 +408,11 @@
   transform: translateY(-1px);
 }
 
-/*.form-section {
+.form-section {
   margin-bottom: 2rem;
   padding-top: 1rem;
   border-top: 2px solid #f0f0f0;
-}*/
+}
 
 .section-header {
   display: flex;
