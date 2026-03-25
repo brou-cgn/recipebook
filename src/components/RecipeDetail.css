@@ -139,38 +139,55 @@
 }
 
 .favorite-button {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1.25rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: #DF7A00;
-  border-color: #DF7A00;
   width: 48px;
   height: 48px;
-  display: flex;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+
+  background: #fff;
+  color: #DF7A00;
+  border: 1px solid #DF7A00;
+  border-radius: 12px;
+
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 
-/*.favorite-button:hover {
-  background: #fff3e0;
-  border-color: #DF7A00;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}*/
+.favorite-button:hover {
+  background: rgba(223, 122, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 
-.favorite-button.is-favorite {
+.favorite-button:active {
+  transform: scale(0.96);
+}
+
+.favorite-button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(223, 122, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.favorite-button--active {
   background: #DF7A00;
-  color: white;
+  color: #fff;
   border-color: #DF7A00;
 }
 
-.favorite-button.is-favorite:hover {
-  background: #DF7A00;
-  border-color: #DF7A00;
+.favorite-button--active:hover {
+  background: #c96d00;
+  border-color: #c96d00;
 }
 
 .edit-button {
@@ -911,7 +928,7 @@ difficulty-stars .star {
     padding: 1rem;
   }
 
-  .mobile-action-buttons .favorite-button {
+  /*.mobile-action-buttons .favorite-button {
     width: 48px;
     height: 48px;
     padding: 0;
@@ -920,7 +937,7 @@ difficulty-stars .star {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-  }
+  }*/
 
   .mobile-action-buttons .shopping-list-trigger-button,
   .mobile-action-buttons .share-copy-url-button {
@@ -966,19 +983,10 @@ difficulty-stars .star {
     .overlay-cooking-mode:hover,
     .overlay-cooking-mode.active:hover,
     .overlay-back-button:hover,
-    .favorite-button:hover,
     .edit-button:hover,
     .version-button:hover {
       transform: none;
       box-shadow: none;
-    }
-    
-    .favorite-button:hover {
-      background: white;
-    }
-    
-    .favorite-button.is-favorite:hover {
-      background: #DF7A00;
     }
     
     .edit-button:hover {
