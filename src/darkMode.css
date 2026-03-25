@@ -163,6 +163,16 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .add-icon-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .add-icon-button:active {
+  background: #2a2a2a;
+}
+
 /* ---- Recipe Cards ---- */
 [data-theme="dark"] .recipe-card {
   background: #1e1e1e;
@@ -284,6 +294,26 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .edit-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .edit-fab-button:active {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .new-version-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .new-version-fab-button:active {
+  background: #2a2a2a;
+}
+
 /* ---- Recipe Form ---- */
 [data-theme="dark"] .recipe-form-container {
   background: #121212;
@@ -350,6 +380,22 @@
 [data-theme="dark"] .image-upload-area:hover {
   background: #333;
   border-color: #777;
+}
+
+[data-theme="dark"] .save-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cancel-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cancel-fab-button:active {
+  background: #2a2a2a;
 }
 
 /* ---- Settings ---- */
@@ -555,6 +601,12 @@
   border-color: #DF7A00;
 }
 
+[data-theme="dark"] .add-menu-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
 /* ---- Menu Detail ---- */
 [data-theme="dark"] .menu-detail-container {
   background: #121212;
@@ -713,6 +765,24 @@
 
 [data-theme="dark"] .swipe-action-label {
   color: #e8e8e8;
+}
+
+[data-theme="dark"] .tagesmenu-filter-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .tagesmenu-meine-auswahl-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .tagesmenu-zum-tagesMenu-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
 }
 
 /* ---- Modals (generic) ---- */
