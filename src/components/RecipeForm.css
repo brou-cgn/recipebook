@@ -1025,14 +1025,14 @@
 }
 
 .save-fab-button .button-icon-image {
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.2rem;
+  height: 1.2rem;
   object-fit: contain;
 }
 
 .cancel-fab-button .button-icon-image {
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.2rem;
+  height: 1.2rem;
   object-fit: contain;
 }
 
