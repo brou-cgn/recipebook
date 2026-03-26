@@ -319,7 +319,7 @@ const Header = forwardRef(function Header({
                       className="menu-item dark-mode-toggle"
                       onClick={handleDarkModeToggle}
                     >
-                      {darkMode ? '☀️ Helles Design' : '🌙 Dunkles Design'}
+                      {darkMode ? 'Helles Design' : 'Dunkles Design'}
                     </button>
                   </div>
                   )}
