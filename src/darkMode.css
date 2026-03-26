@@ -231,6 +231,14 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .recipe-card-content h3 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .recipe-author {
+  color: #aaa;
+}
+
 [data-theme="dark"] .recipe-card-meta,
 [data-theme="dark"] .recipe-card-info {
   color: #aaa;
@@ -298,6 +306,16 @@
   border-color: #3d3d3d;
 }
 
+[data-theme="dark"] .ingredients-list li,
+[data-theme="dark"] .steps-list li {
+  color: #ccc;
+}
+
+[data-theme="dark"] .ingredient-heading,
+[data-theme="dark"] .step-heading {
+  color: #c08060;
+}
+
 [data-theme="dark"] .instruction-step-number {
   background: #2a2a2a;
   color: #e8e8e8;
@@ -318,6 +336,24 @@
 [data-theme="dark"] .action-btn,
 [data-theme="dark"] .icon-btn {
   color: #e8e8e8;
+}
+
+[data-theme="dark"] .favorite-button {
+  background: #2a2a2a;
+  border-color: #555 !important;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .favorite-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .step-heute-gekocht-btn {
+  background: #DF7A00;
+}
+
+[data-theme="dark"] .step-heute-gekocht-btn:hover {
+  background: #c96d00;
 }
 
 [data-theme="dark"] .detail-info-grid {
@@ -399,6 +435,11 @@
 [data-theme="dark"] .ingredient-row:hover,
 [data-theme="dark"] .instruction-row:hover {
   background: #333;
+}
+
+[data-theme="dark"] .form-list-item input,
+[data-theme="dark"] .form-list-item textarea {
+  border-color: #555;
 }
 
 [data-theme="dark"] .add-ingredient-btn,
@@ -630,6 +671,10 @@
 }
 
 [data-theme="dark"] .menu-card-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .menu-card-content h3 {
   color: #e8e8e8;
 }
 

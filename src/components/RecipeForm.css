@@ -452,6 +452,20 @@
   border-right: none;
   min-width: 36px;
   width: 36px;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.form-list-item:hover .input-with-handle .drag-handle,
+.form-list-item.dragging .input-with-handle .drag-handle {
+  opacity: 1;
+}
+
+/* Always show drag handle on touch devices since hover is not available */
+@media (hover: none) {
+  .input-with-handle .drag-handle {
+    opacity: 1;
+  }
 }
 
 .input-with-handle input,
