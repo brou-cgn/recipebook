@@ -920,16 +920,20 @@ export async function getButtonIcons() {
  * @returns {Promise<void>}
  */
 export async function saveButtonIcons(buttonIcons) {
+  // Merge with DEFAULT_BUTTON_ICONS to ensure ALL keys (including dark mode variants)
+  // are always persisted to Firestore, even if they were never explicitly set.
+  const completeIcons = { ...DEFAULT_BUTTON_ICONS, ...buttonIcons };
+
   // Optimistic cache update so components mounting immediately after this call
   // (e.g. when Settings closes) already see the new icons without waiting for
   // the Firestore round-trip to complete.
   const previousButtonIcons = settingsCache?.buttonIcons;
   if (settingsCache) {
-    settingsCache.buttonIcons = buttonIcons;
+    settingsCache.buttonIcons = completeIcons;
   }
   try {
     const settingsRef = doc(db, 'settings', 'app');
-    await updateDoc(settingsRef, { buttonIcons });
+    await updateDoc(settingsRef, { buttonIcons: completeIcons });
   } catch (error) {
     // Revert optimistic cache update on failure to avoid inconsistent state
     if (settingsCache) {

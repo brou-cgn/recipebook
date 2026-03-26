@@ -546,6 +546,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         } catch (storageErr) {
           console.warn('Could not upload app logo to Storage:', storageErr);
           // Don't abort the overall save – the base64 is still saved to Firestore.
+          // Clear the URL to avoid stale references from a previous successful upload.
+          setAppLogoImageUrl(null);
+          await saveAppLogoImageUrl(null).catch(e => console.warn('Could not clear app logo URL from Firestore. Manual cleanup may be required:', e));
         }
       } else if (!appLogoImage && appLogoImageUrl) {
         // Logo was removed – clean up Storage and clear the URL.
