@@ -945,6 +945,38 @@ export async function saveButtonIcons(buttonIcons) {
 }
 
 /**
+ * Save a single button icon to Firestore (incremental update)
+ * @param {string} iconKey - The icon key (e.g. 'cookingMode' or 'cookingModeDark')
+ * @param {string} iconValue - The icon value (emoji, text, or base64 image)
+ * @returns {Promise<void>}
+ */
+export async function saveButtonIcon(iconKey, iconValue) {
+  // Optimistic cache update
+  const previousValue = settingsCache?.buttonIcons?.[iconKey];
+  if (settingsCache) {
+    if (!settingsCache.buttonIcons) {
+      settingsCache.buttonIcons = { ...DEFAULT_BUTTON_ICONS };
+    }
+    settingsCache.buttonIcons[iconKey] = iconValue;
+  }
+
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    // Use dot notation to update only one field in the buttonIcons object
+    await updateDoc(settingsRef, {
+      [`buttonIcons.${iconKey}`]: iconValue
+    });
+  } catch (error) {
+    // Revert optimistic cache update on failure
+    if (settingsCache?.buttonIcons) {
+      settingsCache.buttonIcons[iconKey] = previousValue;
+    }
+    console.error(`Error saving button icon '${iconKey}':`, error);
+    throw error;
+  }
+}
+
+/**
  * Reset button icons to defaults
  * @returns {Promise<Object>} Promise resolving to default button icons
  */
