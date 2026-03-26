@@ -1887,3 +1887,15 @@
   cursor: pointer;
   color: #402C1C;
 }
+
+.icon-saving-indicator {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--primary-color, #007bff);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -242,6 +242,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Button icons state
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [uploadingButtonIcon, setUploadingButtonIcon] = useState(null);
+  const [savingButtonIcon, setSavingButtonIcon] = useState(null);
+  const buttonIconSaveTimeoutsRef = useRef({});
 
   // Timeline bubble icon state
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -362,6 +364,13 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Load role permissions for abortCalc check
   useEffect(() => {
     getRolePermissions().then(setRolePermissions);
+  }, []);
+
+  // Cleanup pending button icon save timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(buttonIconSaveTimeoutsRef.current).forEach(clearTimeout);
+    };
   }, []);
 
   // Subscribe to FAQs for real-time updates
@@ -561,7 +570,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         }
       }
 
-      await saveButtonIcons({ ...DEFAULT_BUTTON_ICONS, ...buttonIcons });
+      // Button icons are now saved incrementally (auto-save after each change)
       saveTimelineBubbleIcon(timelineBubbleIcon);
       saveTimelineMenuBubbleIcon(timelineMenuBubbleIcon);
       saveTimelineMenuDefaultImage(timelineMenuDefaultImage);
@@ -1062,16 +1071,68 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     try {
       const base64 = await fileToBase64(file);
       const compressedBase64 = await compressImage(base64);
+
+      // Update local state immediately (optimistic update)
       setButtonIcons({ ...buttonIcons, [iconKey]: compressedBase64 });
+
+      // Save to Firestore immediately (incremental save)
+      setSavingButtonIcon(iconKey);
+      await saveButtonIcon(iconKey, compressedBase64);
+      setSavingButtonIcon(null);
     } catch (error) {
-      alert(error.message);
+      alert(`Fehler beim Speichern des Icons: ${error.message}`);
+      // Revert local state on error
+      setButtonIcons(prev => ({ ...prev, [iconKey]: DEFAULT_BUTTON_ICONS[iconKey] }));
     } finally {
       setUploadingButtonIcon(null);
     }
   };
 
-  const handleRemoveButtonIconImage = (iconKey) => {
-    setButtonIcons({ ...buttonIcons, [iconKey]: DEFAULT_BUTTON_ICONS[iconKey] });
+  const handleRemoveButtonIconImage = async (iconKey) => {
+    const defaultValue = DEFAULT_BUTTON_ICONS[iconKey];
+    setButtonIcons({ ...buttonIcons, [iconKey]: defaultValue });
+
+    try {
+      setSavingButtonIcon(iconKey);
+      await saveButtonIcon(iconKey, defaultValue);
+      setSavingButtonIcon(null);
+    } catch (error) {
+      alert(`Fehler beim Zurücksetzen des Icons: ${error.message}`);
+    }
+  };
+
+  const handleResetButtonIcon = async (iconKey) => {
+    const defaultValue = DEFAULT_BUTTON_ICONS[iconKey];
+    setButtonIcons(prev => ({ ...prev, [iconKey]: defaultValue }));
+
+    try {
+      setSavingButtonIcon(iconKey);
+      await saveButtonIcon(iconKey, defaultValue);
+      setSavingButtonIcon(null);
+    } catch (error) {
+      alert(`Fehler beim Zurücksetzen des Icons: ${error.message}`);
+    }
+  };
+
+  const handleButtonIconTextChange = async (iconKey, value) => {
+    // Update local state immediately
+    setButtonIcons(prev => ({ ...prev, [iconKey]: value }));
+
+    // Debounce per icon: Save after 1 second of no typing for this specific icon
+    if (buttonIconSaveTimeoutsRef.current[iconKey]) {
+      clearTimeout(buttonIconSaveTimeoutsRef.current[iconKey]);
+    }
+
+    buttonIconSaveTimeoutsRef.current[iconKey] = setTimeout(async () => {
+      delete buttonIconSaveTimeoutsRef.current[iconKey];
+      try {
+        setSavingButtonIcon(iconKey);
+        await saveButtonIcon(iconKey, value);
+        setSavingButtonIcon(null);
+      } catch (error) {
+        alert(`Fehler beim Speichern des Icons: ${error.message}`);
+      }
+    }, 1000);
   };
 
   // Timeline bubble icon handlers
@@ -1392,7 +1453,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="cookingModeIcon"
                           value={buttonIcons.cookingMode}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookingMode: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('cookingMode', e.target.value)}
                           placeholder="z.B. 👨‍🍳"
                           maxLength={10}
                         />
@@ -1424,7 +1485,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, cookingMode: DEFAULT_BUTTON_ICONS.cookingMode })}
+                      onClick={() => handleResetButtonIcon('cookingMode')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1449,7 +1510,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="cookingModeAltIcon"
                           value={buttonIcons.cookingModeAlt}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookingModeAlt: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('cookingModeAlt', e.target.value)}
                           placeholder="z.B. 👨‍🍳"
                           maxLength={10}
                         />
@@ -1481,7 +1542,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, cookingModeAlt: DEFAULT_BUTTON_ICONS.cookingModeAlt })}
+                      onClick={() => handleResetButtonIcon('cookingModeAlt')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1506,7 +1567,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="importRecipeIcon"
                           value={buttonIcons.importRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, importRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('importRecipe', e.target.value)}
                           placeholder="z.B. 📥"
                           maxLength={10}
                         />
@@ -1538,7 +1599,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, importRecipe: DEFAULT_BUTTON_ICONS.importRecipe })}
+                      onClick={() => handleResetButtonIcon('importRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1563,7 +1624,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="scanImageIcon"
                           value={buttonIcons.scanImage}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, scanImage: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('scanImage', e.target.value)}
                           placeholder="z.B. 📷"
                           maxLength={10}
                         />
@@ -1595,7 +1656,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, scanImage: DEFAULT_BUTTON_ICONS.scanImage })}
+                      onClick={() => handleResetButtonIcon('scanImage')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1620,7 +1681,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="webImportIcon"
                           value={buttonIcons.webImport}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, webImport: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('webImport', e.target.value)}
                           placeholder="z.B. 🌐"
                           maxLength={10}
                         />
@@ -1652,7 +1713,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, webImport: DEFAULT_BUTTON_ICONS.webImport })}
+                      onClick={() => handleResetButtonIcon('webImport')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1677,7 +1738,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="saveRecipeIcon"
                           value={buttonIcons.saveRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, saveRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('saveRecipe', e.target.value)}
                           placeholder="z.B. 💾"
                           maxLength={10}
                         />
@@ -1709,7 +1770,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, saveRecipe: DEFAULT_BUTTON_ICONS.saveRecipe })}
+                      onClick={() => handleResetButtonIcon('saveRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1734,7 +1795,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="cancelRecipeIcon"
                           value={buttonIcons.cancelRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, cancelRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('cancelRecipe', e.target.value)}
                           placeholder="z.B. ✕"
                           maxLength={10}
                         />
@@ -1766,7 +1827,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, cancelRecipe: DEFAULT_BUTTON_ICONS.cancelRecipe })}
+                      onClick={() => handleResetButtonIcon('cancelRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1791,7 +1852,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="closeButtonIcon"
                           value={buttonIcons.closeButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, closeButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('closeButton', e.target.value)}
                           placeholder="z.B. ✕"
                           maxLength={10}
                         />
@@ -1823,7 +1884,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, closeButton: DEFAULT_BUTTON_ICONS.closeButton })}
+                      onClick={() => handleResetButtonIcon('closeButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1848,7 +1909,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="closeButtonAltIcon"
                           value={buttonIcons.closeButtonAlt}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, closeButtonAlt: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('closeButtonAlt', e.target.value)}
                           placeholder="z.B. ✕"
                           maxLength={10}
                         />
@@ -1880,7 +1941,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, closeButtonAlt: DEFAULT_BUTTON_ICONS.closeButtonAlt })}
+                      onClick={() => handleResetButtonIcon('closeButtonAlt')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1905,7 +1966,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="menuCloseButtonIcon"
                           value={buttonIcons.menuCloseButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuCloseButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('menuCloseButton', e.target.value)}
                           placeholder="z.B. ✕"
                           maxLength={10}
                         />
@@ -1937,7 +1998,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, menuCloseButton: DEFAULT_BUTTON_ICONS.menuCloseButton })}
+                      onClick={() => handleResetButtonIcon('menuCloseButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -1962,7 +2023,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="filterButtonIcon"
                           value={buttonIcons.filterButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, filterButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('filterButton', e.target.value)}
                           placeholder="z.B. ⚙"
                           maxLength={10}
                         />
@@ -1994,7 +2055,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, filterButton: DEFAULT_BUTTON_ICONS.filterButton })}
+                      onClick={() => handleResetButtonIcon('filterButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2019,7 +2080,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="filterButtonActiveIcon"
                           value={buttonIcons.filterButtonActive}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, filterButtonActive: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('filterButtonActive', e.target.value)}
                           placeholder="z.B. 🔽"
                           maxLength={10}
                         />
@@ -2051,7 +2112,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, filterButtonActive: DEFAULT_BUTTON_ICONS.filterButtonActive })}
+                      onClick={() => handleResetButtonIcon('filterButtonActive')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2076,7 +2137,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="addRecipeIcon"
                           value={buttonIcons.addRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, addRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('addRecipe', e.target.value)}
                           placeholder="z.B. ➕"
                           maxLength={10}
                         />
@@ -2108,7 +2169,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, addRecipe: DEFAULT_BUTTON_ICONS.addRecipe })}
+                      onClick={() => handleResetButtonIcon('addRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2133,7 +2194,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="editRecipeIcon"
                           value={buttonIcons.editRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, editRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('editRecipe', e.target.value)}
                           placeholder="z.B. ✏️"
                           maxLength={10}
                         />
@@ -2165,7 +2226,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, editRecipe: DEFAULT_BUTTON_ICONS.editRecipe })}
+                      onClick={() => handleResetButtonIcon('editRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2190,7 +2251,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="newVersionIcon"
                           value={buttonIcons.newVersion}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, newVersion: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('newVersion', e.target.value)}
                           placeholder="z.B. 📝"
                           maxLength={10}
                         />
@@ -2222,7 +2283,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, newVersion: DEFAULT_BUTTON_ICONS.newVersion })}
+                      onClick={() => handleResetButtonIcon('newVersion')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2247,7 +2308,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="addMenuIcon"
                           value={buttonIcons.addMenu}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, addMenu: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('addMenu', e.target.value)}
                           placeholder="z.B. 📋"
                           maxLength={10}
                         />
@@ -2279,7 +2340,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, addMenu: DEFAULT_BUTTON_ICONS.addMenu })}
+                      onClick={() => handleResetButtonIcon('addMenu')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2304,7 +2365,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="menuFavoritesButtonIcon"
                           value={buttonIcons.menuFavoritesButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuFavoritesButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('menuFavoritesButton', e.target.value)}
                           placeholder="z.B. ☆"
                           maxLength={10}
                         />
@@ -2336,7 +2397,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, menuFavoritesButton: DEFAULT_BUTTON_ICONS.menuFavoritesButton })}
+                      onClick={() => handleResetButtonIcon('menuFavoritesButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2361,7 +2422,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="menuFavoritesButtonActiveIcon"
                           value={buttonIcons.menuFavoritesButtonActive}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, menuFavoritesButtonActive: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('menuFavoritesButtonActive', e.target.value)}
                           placeholder="z.B. ★"
                           maxLength={10}
                         />
@@ -2393,7 +2454,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, menuFavoritesButtonActive: DEFAULT_BUTTON_ICONS.menuFavoritesButtonActive })}
+                      onClick={() => handleResetButtonIcon('menuFavoritesButtonActive')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2418,7 +2479,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="addPrivateRecipeIcon"
                           value={buttonIcons.addPrivateRecipe}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, addPrivateRecipe: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('addPrivateRecipe', e.target.value)}
                           placeholder="z.B. 🔒"
                           maxLength={10}
                         />
@@ -2450,7 +2511,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, addPrivateRecipe: DEFAULT_BUTTON_ICONS.addPrivateRecipe })}
+                      onClick={() => handleResetButtonIcon('addPrivateRecipe')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2475,7 +2536,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="copyLinkIcon"
                           value={buttonIcons.copyLink}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, copyLink: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('copyLink', e.target.value)}
                           placeholder="z.B. 📋"
                           maxLength={10}
                         />
@@ -2507,7 +2568,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, copyLink: DEFAULT_BUTTON_ICONS.copyLink })}
+                      onClick={() => handleResetButtonIcon('copyLink')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2532,7 +2593,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="nutritionEmptyIcon"
                           value={buttonIcons.nutritionEmpty}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, nutritionEmpty: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('nutritionEmpty', e.target.value)}
                           placeholder="z.B. ➕"
                           maxLength={10}
                         />
@@ -2564,7 +2625,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, nutritionEmpty: DEFAULT_BUTTON_ICONS.nutritionEmpty })}
+                      onClick={() => handleResetButtonIcon('nutritionEmpty')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2589,7 +2650,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="nutritionFilledIcon"
                           value={buttonIcons.nutritionFilled}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, nutritionFilled: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('nutritionFilled', e.target.value)}
                           placeholder="z.B. 🥦"
                           maxLength={10}
                         />
@@ -2621,7 +2682,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, nutritionFilled: DEFAULT_BUTTON_ICONS.nutritionFilled })}
+                      onClick={() => handleResetButtonIcon('nutritionFilled')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2646,7 +2707,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="ratingHeartEmptyIcon"
                           value={buttonIcons.ratingHeartEmpty}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartEmpty: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('ratingHeartEmpty', e.target.value)}
                           placeholder="z.B. 🤍"
                           maxLength={10}
                         />
@@ -2678,7 +2739,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartEmpty: DEFAULT_BUTTON_ICONS.ratingHeartEmpty })}
+                      onClick={() => handleResetButtonIcon('ratingHeartEmpty')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2703,7 +2764,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="ratingHeartEmptyModalIcon"
                           value={buttonIcons.ratingHeartEmptyModal}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartEmptyModal: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('ratingHeartEmptyModal', e.target.value)}
                           placeholder="z.B. ♡"
                           maxLength={10}
                         />
@@ -2735,7 +2796,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartEmptyModal: DEFAULT_BUTTON_ICONS.ratingHeartEmptyModal })}
+                      onClick={() => handleResetButtonIcon('ratingHeartEmptyModal')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2760,7 +2821,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="ratingHeartFilledIcon"
                           value={buttonIcons.ratingHeartFilled}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, ratingHeartFilled: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('ratingHeartFilled', e.target.value)}
                           placeholder="z.B. ♥"
                           maxLength={10}
                         />
@@ -2792,7 +2853,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, ratingHeartFilled: DEFAULT_BUTTON_ICONS.ratingHeartFilled })}
+                      onClick={() => handleResetButtonIcon('ratingHeartFilled')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2817,7 +2878,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="privateListBackIcon"
                           value={buttonIcons.privateListBack}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, privateListBack: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('privateListBack', e.target.value)}
                           placeholder="z.B. ✕"
                           maxLength={10}
                         />
@@ -2849,7 +2910,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, privateListBack: DEFAULT_BUTTON_ICONS.privateListBack })}
+                      onClick={() => handleResetButtonIcon('privateListBack')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2874,7 +2935,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="shoppingListIcon"
                           value={buttonIcons.shoppingList}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, shoppingList: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('shoppingList', e.target.value)}
                           placeholder="z.B. 🛒"
                           maxLength={10}
                         />
@@ -2906,7 +2967,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, shoppingList: DEFAULT_BUTTON_ICONS.shoppingList })}
+                      onClick={() => handleResetButtonIcon('shoppingList')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2931,7 +2992,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="bringButtonIcon"
                           value={buttonIcons.bringButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, bringButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('bringButton', e.target.value)}
                           placeholder="z.B. 🛍️"
                           maxLength={10}
                         />
@@ -2963,7 +3024,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, bringButton: DEFAULT_BUTTON_ICONS.bringButton })}
+                      onClick={() => handleResetButtonIcon('bringButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -2988,7 +3049,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="timerStartIcon"
                           value={buttonIcons.timerStart}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, timerStart: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('timerStart', e.target.value)}
                           placeholder="z.B. ⏱"
                           maxLength={10}
                         />
@@ -3020,7 +3081,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, timerStart: DEFAULT_BUTTON_ICONS.timerStart })}
+                      onClick={() => handleResetButtonIcon('timerStart')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3045,7 +3106,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="timerStopIcon"
                           value={buttonIcons.timerStop}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, timerStop: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('timerStop', e.target.value)}
                           placeholder="z.B. ⏹"
                           maxLength={10}
                         />
@@ -3077,7 +3138,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, timerStop: DEFAULT_BUTTON_ICONS.timerStop })}
+                      onClick={() => handleResetButtonIcon('timerStop')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3102,7 +3163,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="cookDateIcon"
                           value={buttonIcons.cookDate}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, cookDate: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('cookDate', e.target.value)}
                           placeholder="z.B. 📅"
                           maxLength={10}
                         />
@@ -3134,7 +3195,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, cookDate: DEFAULT_BUTTON_ICONS.cookDate })}
+                      onClick={() => handleResetButtonIcon('cookDate')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3159,7 +3220,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="tagesmenuFilterButtonIcon"
                           value={buttonIcons.tagesmenuFilterButton}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, tagesmenuFilterButton: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('tagesmenuFilterButton', e.target.value)}
                           placeholder="z.B. ☰"
                           maxLength={10}
                         />
@@ -3191,7 +3252,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, tagesmenuFilterButton: DEFAULT_BUTTON_ICONS.tagesmenuFilterButton })}
+                      onClick={() => handleResetButtonIcon('tagesmenuFilterButton')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3216,7 +3277,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="tagesmenuZumTagesMenuIcon"
                           value={buttonIcons.tagesmenuZumTagesMenu}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, tagesmenuZumTagesMenu: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('tagesmenuZumTagesMenu', e.target.value)}
                           placeholder="z.B. 🗓️"
                           maxLength={10}
                         />
@@ -3248,7 +3309,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, tagesmenuZumTagesMenu: DEFAULT_BUTTON_ICONS.tagesmenuZumTagesMenu })}
+                      onClick={() => handleResetButtonIcon('tagesmenuZumTagesMenu')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3273,7 +3334,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="swipeRightIcon"
                           value={buttonIcons.swipeRight}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, swipeRight: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('swipeRight', e.target.value)}
                           placeholder="z.B. 👍"
                           maxLength={10}
                         />
@@ -3305,7 +3366,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, swipeRight: DEFAULT_BUTTON_ICONS.swipeRight })}
+                      onClick={() => handleResetButtonIcon('swipeRight')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3330,7 +3391,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="swipeLeftIcon"
                           value={buttonIcons.swipeLeft}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, swipeLeft: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('swipeLeft', e.target.value)}
                           placeholder="z.B. 👎"
                           maxLength={10}
                         />
@@ -3362,7 +3423,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, swipeLeft: DEFAULT_BUTTON_ICONS.swipeLeft })}
+                      onClick={() => handleResetButtonIcon('swipeLeft')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3387,7 +3448,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           type="text"
                           id="swipeUpIcon"
                           value={buttonIcons.swipeUp}
-                          onChange={(e) => setButtonIcons({ ...buttonIcons, swipeUp: e.target.value })}
+                          onChange={(e) => handleButtonIconTextChange('swipeUp', e.target.value)}
                           placeholder="z.B. ⭐"
                           maxLength={10}
                         />
@@ -3419,7 +3480,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <button
                       type="button"
                       className="reset-icon-btn"
-                      onClick={() => setButtonIcons({ ...buttonIcons, swipeUp: DEFAULT_BUTTON_ICONS.swipeUp })}
+                      onClick={() => handleResetButtonIcon('swipeUp')}
                       title="Auf Standard zurücksetzen"
                     >
                       ↻
@@ -3470,7 +3531,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             <input
                               type="text"
                               value={buttonIcons[darkKey] || ''}
-                              onChange={(e) => setButtonIcons({ ...buttonIcons, [darkKey]: e.target.value })}
+                              onChange={(e) => handleButtonIconTextChange(darkKey, e.target.value)}
                               placeholder="–"
                               maxLength={10}
                               className="dark-icon-text-input"
@@ -3497,7 +3558,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             <button
                               type="button"
                               className="reset-icon-btn"
-                              onClick={() => setButtonIcons({ ...buttonIcons, [darkKey]: '' })}
+                              onClick={() => handleResetButtonIcon(darkKey)}
                               title="Dunkel-Variante entfernen"
                             >
                               ✕
