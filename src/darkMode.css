@@ -113,6 +113,49 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .mobile-search-tile {
+  background: #2a2a2a;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .mobile-search-tile-image {
+  background: #3a3a3a;
+}
+
+[data-theme="dark"] .mobile-search-tile-placeholder {
+  color: #666;
+}
+
+[data-theme="dark"] .mobile-search-tile-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .mobile-search-bar-row {
+  background: #1e1e1e;
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .mobile-search-input-wrapper {
+  background: #2a2a2a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .mobile-search-icon {
+  color: #777;
+}
+
+[data-theme="dark"] .mobile-search-input {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .mobile-search-input::placeholder {
+  color: #666;
+}
+
+[data-theme="dark"] .mobile-search-clear-btn {
+  background: #555;
+}
+
 /* ---- Recipe List ---- */
 [data-theme="dark"] .recipe-list-container {
   background: #121212;
@@ -317,6 +360,11 @@
 /* ---- Recipe Form ---- */
 [data-theme="dark"] .recipe-form-container {
   background: #121212;
+}
+
+[data-theme="dark"] .recipe-form {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="dark"] .recipe-form-header {
@@ -607,9 +655,55 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .menu-favorite-badge {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .menu-description {
+  color: #aaa;
+}
+
 /* ---- Menu Detail ---- */
 [data-theme="dark"] .menu-detail-container {
   background: #121212;
+}
+
+[data-theme="dark"] .menu-detail-content {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .menu-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .menu-author-date {
+  color: #aaa;
+}
+
+[data-theme="dark"] .menu-date-label,
+[data-theme="dark"] .menu-author-label {
+  color: #777;
+}
+
+[data-theme="dark"] .menu-detail-container .menu-section {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .section-title {
+  color: #c08060;
+}
+
+[data-theme="dark"] .no-recipes {
+  color: #777;
+}
+
+[data-theme="dark"] .menu-stats {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .stat-value {
+  color: #e8e8e8;
 }
 
 [data-theme="dark"] .menu-detail-header {
@@ -1079,6 +1173,32 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .timeline-card {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .timeline-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .timeline-image {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .timeline-author {
+  color: #777;
+}
+
+[data-theme="dark"] .timeline-stack-bg {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .timeline-empty {
+  color: #aaa;
+}
+
 /* ---- Kueche ---- */
 [data-theme="dark"] .kueche-container {
   background: #121212;
@@ -1096,6 +1216,26 @@
 
 [data-theme="dark"] .kueche-tile:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .kueche-tile--chefkoch .kueche-tile-content h3 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .kueche-tile-description {
+  color: #aaa;
+}
+
+[data-theme="dark"] .kueche-tile-meta {
+  color: #aaa;
+}
+
+[data-theme="dark"] .kueche-tile-meta .meta-text strong {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .kueche-section-title h3 {
+  color: #e8e8e8;
 }
 
 /* ---- Meine Küchenstars Page ---- */
@@ -1212,6 +1352,58 @@
 }
 
 [data-theme="dark"] .faq-item p {
+  color: #aaa;
+}
+
+/* ---- FAQ Kochschule Modal ---- */
+[data-theme="dark"] .faq-modal {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .faq-modal-header {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .faq-modal-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .faq-modal-close {
+  color: #aaa;
+}
+
+[data-theme="dark"] .faq-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .faq-question-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .faq-question-text {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .faq-question-arrow {
+  color: #aaa;
+}
+
+[data-theme="dark"] .faq-answer-text {
+  color: #ccc;
+}
+
+[data-theme="dark"] .faq-answer-screenshot {
+  border-color: #555;
+}
+
+[data-theme="dark"] .faq-section-heading {
+  background: #2a2a2a;
+  color: #c08060;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .faq-section-description {
   color: #aaa;
 }
 
@@ -1880,12 +2072,49 @@
   border-bottom-color: #3d3d3d;
 }
 
+[data-theme="dark"] .metadata-item {
+  background: #2a2a2a;
+}
+
 [data-theme="dark"] .metadata-label {
   color: #aaa;
 }
 
+[data-theme="dark"] .metadata-value {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .serving-control {
   background: #2a2a2a;
+}
+
+[data-theme="dark"] .serving-btn {
+  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
+}
+
+[data-theme="dark"] .serving-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c46900 0%, #DF7A00 100%);
+}
+
+[data-theme="dark"] .serving-btn:disabled {
+  background: #444;
+}
+
+[data-theme="dark"] .serving-display {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .private-lists-section {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .private-lists-title {
+  color: #c08060;
+}
+
+[data-theme="dark"] .private-list-item {
+  color: #e8e8e8;
 }
 
 [data-theme="dark"] .carousel-dot {
