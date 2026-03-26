@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './MenuList.css';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
 function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorite, currentUser, allUsers }) {
@@ -9,11 +9,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [addPressed, setAddPressed] = useState(false);
   const [favPressed, setFavPressed] = useState(false);
-  const [buttonIcons, setButtonIcons] = useState({
-    addRecipe: DEFAULT_BUTTON_ICONS.addRecipe,
-    menuFavoritesButton: DEFAULT_BUTTON_ICONS.menuFavoritesButton,
-    menuFavoritesButtonActive: DEFAULT_BUTTON_ICONS.menuFavoritesButtonActive,
-  });
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   // Load button icons on mount
   useEffect(() => {
@@ -26,6 +23,13 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
       }
     };
     loadButtonIcons();
+  }, []);
+
+  // Listen for dark mode changes
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
   // Load favorite IDs when user changes
@@ -174,10 +178,10 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         title="Menü erstellen"
         aria-label="Menü erstellen"
       >
-        {isBase64Image(buttonIcons.addRecipe) ? (
-          <img src={buttonIcons.addRecipe} alt="Menü erstellen" className="button-icon-image" />
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)} alt="Menü erstellen" className="button-icon-image" />
         ) : (
-          buttonIcons.addRecipe
+          getEffectiveIcon(buttonIcons, 'addMenu', isDarkMode)
         )}
       </button>
       <button
@@ -193,16 +197,16 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         aria-label={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
       >
         {showFavoritesOnly ? (
-          isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (
-            <img src={buttonIcons.menuFavoritesButtonActive} alt="Favoriten aktiv" className="button-icon-image" />
+          isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)} alt="Favoriten aktiv" className="button-icon-image" />
           ) : (
-            buttonIcons.menuFavoritesButtonActive
+            getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)
           )
         ) : (
-          isBase64Image(buttonIcons.menuFavoritesButton) ? (
-            <img src={buttonIcons.menuFavoritesButton} alt="Favoriten" className="button-icon-image" />
+          isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)} alt="Favoriten" className="button-icon-image" />
           ) : (
-            buttonIcons.menuFavoritesButton
+            getEffectiveIcon(buttonIcons, 'menuFavoritesButton', isDarkMode)
           )
         )}
       </button>
