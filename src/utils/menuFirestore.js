@@ -20,6 +20,46 @@ import {
 import { removeUndefinedFields } from './firestoreUtils';
 
 /**
+ * Validate that gridImage is a Firebase Storage URL, not a Base64 data-URL.
+ * Base64 strings must never be persisted to Firestore to avoid document size limits.
+ *
+ * @param {string|null|undefined} gridImage - The gridImage value to validate
+ * @returns {boolean} True if valid (Storage URL or empty), false if invalid (Base64 or unknown)
+ */
+export function isValidGridImage(gridImage) {
+  if (!gridImage) return true; // null/undefined/empty is OK
+
+  // Reject Base64 data-URLs
+  if (gridImage.startsWith('data:image/')) {
+    console.error('[menuFirestore] gridImage is a Base64 string - refusing to save to Firestore');
+    return false;
+  }
+
+  // Accept Firebase Storage URLs
+  if (gridImage.startsWith('https://firebasestorage.googleapis.com/')) {
+    return true;
+  }
+
+  console.warn('[menuFirestore] gridImage has an unexpected format:', gridImage.substring(0, 100));
+  return false;
+}
+
+/**
+ * Sanitize menu data before writing to Firestore.
+ * Clears any gridImage that is not a Firebase Storage URL.
+ *
+ * @param {Object} menuData - Raw menu data
+ * @returns {Object} Sanitized menu data safe to persist
+ */
+function sanitizeMenuData(menuData) {
+  if (!isValidGridImage(menuData.gridImage)) {
+    console.error('[menuFirestore] Invalid gridImage detected - setting to null before save');
+    return { ...menuData, gridImage: null };
+  }
+  return menuData;
+}
+
+/**
  * Set up real-time listener for menus
  * @param {Function} callback - Callback function that receives menus array
  * @returns {Function} Unsubscribe function
@@ -73,7 +113,7 @@ export const getMenus = async () => {
 export const addMenu = async (menu, authorId) => {
   try {
     const menuData = {
-      ...menu,
+      ...sanitizeMenuData(menu),
       authorId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -104,7 +144,7 @@ export const updateMenu = async (menuId, updates) => {
   try {
     const menuRef = doc(db, 'menus', menuId);
     const updateData = {
-      ...updates,
+      ...sanitizeMenuData(updates),
       updatedAt: serverTimestamp()
     };
     

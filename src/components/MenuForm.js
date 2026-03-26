@@ -249,7 +249,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    if (savingMenu) {
+      console.warn('[MenuForm:handleSubmit] Already saving - ignoring duplicate call');
+      return;
+    }
+
     console.log('=== [MenuForm:handleSubmit] START ===');
     const t0 = performance.now();
 

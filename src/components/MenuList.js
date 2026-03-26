@@ -131,7 +131,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                 className="menu-card"
                 onClick={() => onSelectMenu(menu)}
               >
-                {(menu.image || menu.gridImage) && (
+                {(menu.image || (menu.gridImage && !menu.gridImage.startsWith('data:image/'))) && (
                   <div className="menu-card-image">
                     <img
                       src={menu.image || menu.gridImage}
