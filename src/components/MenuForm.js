@@ -311,7 +311,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         if (selectedUrls.length > 0) {
           console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage...');
           const tGrid = performance.now();
-          const gridImageBase64 = await buildMenuGridImage(selectedUrls);
+          const gridImageBase64 = await buildMenuGridImage(selectedUrls, {
+            width: 600,
+            height: 300,
+            gap: 0,
+            quality: 0.8
+          });
           console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → gridImage generated: %s',
             performance.now() - tGrid, Boolean(gridImageBase64));
 
