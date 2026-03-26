@@ -8,9 +8,13 @@ jest.mock('../firebase', () => ({ db: {} }));
 jest.mock('firebase/firestore', () => ({
   doc: jest.fn((...args) => ({ path: args.slice(1).join('/') })),
   getDoc: jest.fn(),
+  getDocs: jest.fn(),
   setDoc: jest.fn(),
   updateDoc: jest.fn(),
   deleteField: jest.fn(() => ({ _methodName: 'FieldValue.delete' })),
+  collection: jest.fn((db, name) => ({ id: name })),
+  writeBatch: jest.fn(),
+  serverTimestamp: jest.fn(() => ({ _methodName: 'FieldValue.serverTimestamp' })),
 }));
 
 import {
@@ -26,7 +30,12 @@ import {
   expandCuisineSelection,
   getParentCuisineNames,
 } from './customLists';
-import { getDoc, updateDoc, setDoc, doc } from 'firebase/firestore';
+import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch } from 'firebase/firestore';
+
+const mockBatch = {
+  set: jest.fn(),
+  commit: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockGetDoc = getDoc;
 const mockUpdateDoc = updateDoc;
@@ -35,10 +44,17 @@ beforeEach(() => {
   // Only clear call history on specific mocks; clearAllMocks() would also wipe
   // the doc() implementation which is needed by the module under test
   getDoc.mockClear();
+  getDocs.mockClear();
   updateDoc.mockClear();
   setDoc.mockClear();
+  mockBatch.set.mockClear();
+  mockBatch.commit.mockClear();
+  writeBatch.mockClear();
+  writeBatch.mockReturnValue(mockBatch);
   // Restore doc() implementation in case it was wiped by a previous reset
   doc.mockImplementation((...args) => ({ path: args.slice(1).join('/') }));
+  // Default: getDocs returns an empty snapshot (no icons in collection)
+  getDocs.mockResolvedValue({ forEach: jest.fn() });
   clearSettingsCache();
 });
 
@@ -330,8 +346,8 @@ describe('getSettings – settings/images document split', () => {
           data: () => ({
             faviconImage: 'data:image/png;base64,abc123',
             appLogoImage: null,
-            buttonIcons: { cookingMode: '🍳' },
             timelineBubbleIcon: 'data:image/png;base64,bubble',
+            // buttonIcons is no longer stored in settings/images
           }),
         });
       }
@@ -339,6 +355,10 @@ describe('getSettings – settings/images document split', () => {
         exists: () => true,
         data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
       });
+    });
+    // Simulate cookingMode icon in the buttonIcons collection
+    getDocs.mockResolvedValue({
+      forEach: (cb) => cb({ id: 'cookingMode', data: () => ({ value: '🍳' }) }),
     });
 
     const settings = await getSettings();
@@ -393,20 +413,68 @@ describe('getSettings – settings/images document split', () => {
 
     // Image data should appear in the returned settings
     expect(settings.faviconImage).toBe(faviconBase64);
-    expect(settings.buttonIcons.cookingMode).toBe('🍳');
+    // buttonIcons migrated from settings/app → collection; getDocs returns empty → DEFAULT_BUTTON_ICONS used
+    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: '👨‍🍳' }));
 
-    // setDoc should have been called to create settings/images with the migrated data
+    // setDoc should have been called to create settings/images with faviconImage only
+    // (buttonIcons is no longer stored in settings/images)
     expect(setDoc).toHaveBeenCalledWith(
       expect.objectContaining({ path: 'settings/images' }),
-      expect.objectContaining({ faviconImage: faviconBase64, buttonIcons: mockButtonIcons })
+      expect.objectContaining({ faviconImage: faviconBase64 })
+    );
+    // buttonIcons must NOT be written to settings/images
+    expect(setDoc).not.toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'settings/images' }),
+      expect.objectContaining({ buttonIcons: expect.anything() })
     );
 
-    // updateDoc should have been called to remove image fields from settings/app
+    // writeBatch should have been used to migrate buttonIcons to the collection
+    expect(mockBatch.set).toHaveBeenCalled();
+    expect(mockBatch.commit).toHaveBeenCalled();
+
+    // updateDoc should have been called to remove faviconImage from settings/app
     const updateCalls = updateDoc.mock.calls;
-    const appDeleteCall = updateCalls.find(call => call[0]?.path === 'settings/app');
-    expect(appDeleteCall).toBeDefined();
-    expect(Object.keys(appDeleteCall[1])).toContain('faviconImage');
-    expect(Object.keys(appDeleteCall[1])).toContain('buttonIcons');
+    const appDeleteCalls = updateCalls.filter(call => call[0]?.path === 'settings/app');
+    expect(appDeleteCalls.length).toBeGreaterThan(0);
+    const allAppDeleteKeys = appDeleteCalls.flatMap(call => Object.keys(call[1]));
+    expect(allAppDeleteKeys).toContain('faviconImage');
+    // buttonIcons is also removed from settings/app via the buttonIcons migration
+    expect(allAppDeleteKeys).toContain('buttonIcons');
+  });
+
+  test('migrates buttonIcons from settings/images to buttonIcons collection', async () => {
+    const mockButtonIcons = { cookingMode: '🍳' };
+
+    getDoc.mockImplementation((docRef) => {
+      if (docRef.path === 'settings/images') {
+        return Promise.resolve({
+          exists: () => true,
+          data: () => ({
+            faviconImage: null,
+            buttonIcons: mockButtonIcons,
+          }),
+        });
+      }
+      return Promise.resolve({
+        exists: () => true,
+        data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+      });
+    });
+    updateDoc.mockResolvedValue(undefined);
+
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    await getSettings();
+    logSpy.mockRestore();
+
+    // writeBatch should have been used to migrate buttonIcons to the collection
+    expect(mockBatch.set).toHaveBeenCalled();
+    expect(mockBatch.commit).toHaveBeenCalled();
+
+    // buttonIcons should be removed from settings/images
+    const updateCalls = updateDoc.mock.calls;
+    const imagesDeleteCall = updateCalls.find(call => call[0]?.path === 'settings/images');
+    expect(imagesDeleteCall).toBeDefined();
+    expect(Object.keys(imagesDeleteCall[1])).toContain('buttonIcons');
   });
 
   test('does not migrate when no image fields are present in settings/app', async () => {
