@@ -604,9 +604,6 @@ export async function getSettings() {
 export async function getCustomLists() {
   const settings = await getSettings();
 
-  console.log('DEBUG getCustomLists - cuisineTypes:', settings.cuisineTypes);
-  console.log('DEBUG getCustomLists - mealCategories:', settings.mealCategories);
-  
   return {
     cuisineTypes: settings.cuisineTypes ?? DEFAULT_CUISINE_TYPES,
     cuisineGroups: settings.cuisineGroups ?? DEFAULT_CUISINE_GROUPS,
