@@ -96,6 +96,8 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: 12px 12px;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 [data-theme="dark"] .action-button,
