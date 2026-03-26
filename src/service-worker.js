@@ -66,35 +66,38 @@ async function saveToIndexedDB(key, value) {
   });
 }
 
-// Helper function to resize images
+// Helper function to resize images (Service Worker compatible)
 async function resizeImage(base64, targetSize) {
-  const img = new Image();
-  
-  return new Promise((resolve, reject) => {
-    img.onload = async () => {
-      try {
-        const canvas = new OffscreenCanvas(targetSize, targetSize);
-        const ctx = canvas.getContext('2d');
-        
-        // Draw image centered and scaled to fit
-        const scale = Math.min(targetSize / img.width, targetSize / img.height);
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
-        const x = (targetSize - scaledWidth) / 2;
-        const y = (targetSize - scaledHeight) / 2;
-        
-        ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-        
-        const blob = await canvas.convertToBlob({ type: 'image/png' });
-        resolve(blob);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = base64;
-  });
+  try {
+    const response = await fetch(base64);
+    const blob = await response.blob();
+
+    if (typeof OffscreenCanvas === 'undefined') {
+      return blob;
+    }
+
+    const imageBitmap = await createImageBitmap(blob);
+
+    const canvas = new OffscreenCanvas(targetSize, targetSize);
+    const ctx = canvas.getContext('2d');
+
+    // Draw image centered and scaled to fit
+    const scale = Math.min(targetSize / imageBitmap.width, targetSize / imageBitmap.height);
+    const scaledWidth = imageBitmap.width * scale;
+    const scaledHeight = imageBitmap.height * scale;
+    const x = (targetSize - scaledWidth) / 2;
+    const y = (targetSize - scaledHeight) / 2;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetSize, targetSize);
+    ctx.drawImage(imageBitmap, x, y, scaledWidth, scaledHeight);
+
+    return await canvas.convertToBlob({ type: 'image/png' });
+  } catch (error) {
+    console.error('[SW] Error resizing image:', error);
+    const response = await fetch(base64);
+    return await response.blob();
+  }
 }
 
 // Listen for messages from the main app to update settings
