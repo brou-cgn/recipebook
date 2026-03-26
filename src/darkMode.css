@@ -1316,6 +1316,1192 @@
   border-color: #555;
 }
 
+/* ---- Tagesmenu additional ---- */
+[data-theme="dark"] .tagesmenu-card-no-image {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .tagesmenu-card-info {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .tagesmenu-card-author {
+  color: #aaa;
+}
+
+[data-theme="dark"] .tagesmenu-kulinarik-tag {
+  background: #2a1a1a;
+  color: #f08080;
+  border-color: #5a2a2a;
+}
+
+[data-theme="dark"] .tagesmenu-results-tile {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .tagesmenu-results-tile-image {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .tagesmenu-results-tile-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .tagesmenu-results-tile-author {
+  color: #aaa;
+}
+
+[data-theme="dark"] .tagesmenu-results-tile-kulinarik-tag {
+  background: #2a1a1a;
+  color: #f08080;
+  border-color: #5a2a2a;
+}
+
+[data-theme="dark"] .tagesmenu-results-group-title,
+[data-theme="dark"] .tagesmenu-results-section-title {
+  color: #aaa;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .tagesmenu-results-page-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .tagesmenu-results-header p {
+  color: #aaa;
+}
+
+[data-theme="dark"] .tagesmenu-empty p {
+  color: #aaa;
+}
+
+/* ---- AppCallsPage additional ---- */
+[data-theme="dark"] .app-calls-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .app-calls-table th,
+[data-theme="dark"] .app-calls-table td {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .app-calls-table th {
+  background: #2a2a2a;
+  color: #ccc;
+}
+
+[data-theme="dark"] .app-calls-table tbody tr:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .app-calls-info-text {
+  color: #aaa;
+}
+
+[data-theme="dark"] .app-calls-empty {
+  color: #aaa;
+}
+
+[data-theme="dark"] .cuisine-proposal-form {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .cuisine-proposal-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cuisine-proposal-edit-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .cuisine-proposal-group-select {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cuisine-proposal-edit-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cuisine-proposal-edit-btn:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .cuisine-proposal-cancel-btn {
+  background: #2a2a2a;
+  color: #aaa;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cuisine-proposal-cancel-btn:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .cuisine-proposal-no-group {
+  color: #777;
+}
+
+[data-theme="dark"] .cuisine-proposal-duplicate-error {
+  color: #f08080;
+}
+
+/* ---- GroupDetail additional ---- */
+[data-theme="dark"] .group-member-row {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .group-member-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .group-add-member-panel {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .group-add-member-list {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .group-add-member-success {
+  background: #1a2f1a;
+  color: #4caf50;
+}
+
+[data-theme="dark"] .group-recipe-card {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .group-recipe-card-content h4 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .group-recipe-card-description {
+  color: #aaa;
+}
+
+[data-theme="dark"] .group-type-badge.public {
+  background: #1a2f1a;
+  color: #4caf50;
+}
+
+[data-theme="dark"] .group-type-badge.private {
+  background: #2a1a2f;
+  color: #ce93d8;
+}
+
+[data-theme="dark"] .group-empty-hint {
+  color: #aaa;
+}
+
+[data-theme="dark"] .group-invite-email-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+/* ---- MenuForm additional ---- */
+[data-theme="dark"] .new-section-input {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .section-block {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .section-quick-select label {
+  color: #aaa;
+}
+
+[data-theme="dark"] .quick-select-button {
+  background: #2a2a2a;
+  color: #c08060;
+  border-color: #5a3c2c;
+}
+
+[data-theme="dark"] .quick-select-button:hover:not(:disabled) {
+  background: #402C1C;
+  color: #fff;
+}
+
+[data-theme="dark"] .typeahead-dropdown {
+  background: #1e1e1e;
+  border-color: #555;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .typeahead-item {
+  border-bottom-color: #3d3d3d;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .typeahead-item:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .typeahead-no-results {
+  color: #aaa;
+}
+
+[data-theme="dark"] .selected-recipe-item {
+  background: #1e1e1e;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .selected-recipe-item.dragging {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .selected-recipes h5 {
+  color: #aaa;
+}
+
+[data-theme="dark"] .menu-image-remove-btn {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+/* ---- MeineKuechenstarsPage additional ---- */
+[data-theme="dark"] .meine-kuechenstars-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .meine-kuechenstars-info-text {
+  color: #aaa;
+}
+
+[data-theme="dark"] .meine-kuechenstars-empty {
+  color: #777;
+}
+
+[data-theme="dark"] .meine-kuechenstars-table th,
+[data-theme="dark"] .meine-kuechenstars-table td {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .meine-kuechenstars-table th {
+  background: #2a2a2a;
+  color: #ccc;
+}
+
+[data-theme="dark"] .meine-kuechenstars-table tbody tr:hover {
+  background: #2a2a2a;
+}
+
+/* ---- NutritionModal additional ---- */
+[data-theme="dark"] .nutrition-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-input:focus {
+  background: #2a2a2a;
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .nutrition-cancel-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-autocalc-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-autocalc-info {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-autocalc-error-box {
+  background: #2a1a1a;
+  border-color: #5a2a2a;
+}
+
+[data-theme="dark"] .nutrition-autocalc-retry-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-autocalc-source {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-autocalc-details {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-autocalc-detail-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .nutrition-autocalc-detail-reason {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-calc-progress-bar-track {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .nutrition-calc-current {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-not-included {
+  background: #2a1f12;
+  border-color: #5a4a30;
+}
+
+[data-theme="dark"] .nutrition-modal-hint {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-field label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .nutrition-modal-footer {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-autocalc {
+  border-top-color: #3d3d3d;
+}
+
+/* ---- OcrScanModal additional ---- */
+[data-theme="dark"] .camera-button,
+[data-theme="dark"] .upload-button {
+  background: #2a2a2a;
+  color: #7a8fdf;
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .camera-button:hover,
+[data-theme="dark"] .upload-button:hover {
+  background: #7a8fdf;
+  color: #121212;
+}
+
+[data-theme="dark"] .language-selector label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .language-tab {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #aaa;
+}
+
+[data-theme="dark"] .language-tab:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .ocr-mode-selector label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .ocr-mode-tab {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #aaa;
+}
+
+[data-theme="dark"] .ocr-mode-tab:hover:not(.disabled) {
+  background: #333;
+}
+
+[data-theme="dark"] .ocr-mode-tab.disabled {
+  color: #555;
+}
+
+[data-theme="dark"] .ai-hint {
+  color: #aaa;
+}
+
+[data-theme="dark"] .ai-result-section {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .ai-result-title {
+  color: #e8e8e8;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .ai-result-ingredients,
+[data-theme="dark"] .ai-result-steps,
+[data-theme="dark"] .ai-result-tags {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .ai-tag {
+  background: #402C1C;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .ai-meta-badge {
+  background: #2a2a2a;
+  color: #ccc;
+  border-color: #555;
+}
+
+[data-theme="dark"] .scan-quota-info {
+  color: #aaa;
+}
+
+[data-theme="dark"] .scan-quota-warning {
+  color: #f08080;
+}
+
+[data-theme="dark"] .new-scan-button,
+[data-theme="dark"] .edit-text-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .new-scan-button:hover,
+[data-theme="dark"] .edit-text-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .validation-info {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .image-preview-item {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .image-preview-add {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #7a8fdf;
+}
+
+[data-theme="dark"] .image-preview-number {
+  background: #333;
+  color: #e8e8e8;
+}
+
+/* ---- RecipeDetail additional ---- */
+[data-theme="dark"] .back-button {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .back-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .edit-button,
+[data-theme="dark"] .version-button,
+[data-theme="dark"] .share-button,
+[data-theme="dark"] .publish-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .edit-button:hover,
+[data-theme="dark"] .version-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .cook-date-button {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .shopping-list-trigger-button {
+  background: #2a2a2a !important;
+  border-color: #555 !important;
+}
+
+[data-theme="dark"] .share-add-button {
+  background: #2a2a2a;
+  color: #c08060;
+  border-color: #5a3c2c;
+}
+
+[data-theme="dark"] .share-add-button:hover:not(:disabled) {
+  background: #402C1C;
+  color: #fff;
+}
+
+[data-theme="dark"] .recipe-detail-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .version-selector {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .version-selector label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .version-select {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .version-caption,
+[data-theme="dark"] .author-caption {
+  color: #aaa;
+}
+
+[data-theme="dark"] .author-name {
+  color: #ccc;
+}
+
+[data-theme="dark"] .recipe-captions {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .metadata-label {
+  color: #aaa;
+}
+
+[data-theme="dark"] .serving-control {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .carousel-dot {
+  background: #555;
+}
+
+[data-theme="dark"] .carousel-dot--active {
+  background: #e8e8e8;
+}
+
+[data-theme="dark"] .share-add-success {
+  color: #4caf50;
+}
+
+/* ---- RecipeForm additional ---- */
+[data-theme="dark"] .add-item-button {
+  background: #2a2a2a;
+  color: #c08060;
+}
+
+[data-theme="dark"] .add-item-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .cancel-button {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+[data-theme="dark"] .cancel-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .ingredient-context-menu {
+  background: #1e1e1e;
+  border-color: #555;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .ingredient-context-menu button {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .ingredient-context-menu button:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .form-list-item.heading-item {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .draft-checkbox-container {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .draft-label {
+  color: #aaa;
+}
+
+[data-theme="dark"] .ai-ocr-limit-info {
+  background: #2a1f12;
+  border-color: #5a4a30;
+  color: #f0a030;
+}
+
+[data-theme="dark"] .cuisine-checkbox {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .cuisine-checkbox:hover {
+  border-color: #c08060;
+  background: #333;
+}
+
+[data-theme="dark"] .cuisine-checkbox span {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .drag-handle {
+  background: #2a2a2a;
+  color: #777;
+  border-color: #555;
+}
+
+[data-theme="dark"] .drag-handle:hover {
+  background: #333;
+  color: #e8e8e8;
+  border-color: #c08060;
+}
+
+[data-theme="dark"] .multi-image-item {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .version-info-banner {
+  background: linear-gradient(135deg, #1a2a3a 0%, #0a1a2a 100%);
+  border-left-color: #7a8fdf;
+}
+
+/* ---- RecipeList additional ---- */
+[data-theme="dark"] .filter-button {
+  background: #2a2a2a;
+  color: #aaa;
+  border-color: #555;
+}
+
+[data-theme="dark"] .filter-button.active {
+  border-color: #DF7A00;
+  color: #DF7A00;
+}
+
+[data-theme="dark"] .add-button {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .recipe-image {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .active-filter-chip--search {
+  background: #1a2a3a;
+  border-color: #2a3a5a;
+  color: #7a9fdf;
+}
+
+[data-theme="dark"] .active-filter-chip--cuisine {
+  background: #1a2a1a;
+  border-color: #2a4a2a;
+  color: #6aaf6a;
+}
+
+/* ---- Settings additional ---- */
+[data-theme="dark"] .list-item .drag-handle {
+  background: #2a2a2a;
+  color: #777;
+}
+
+[data-theme="dark"] .list-item .drag-handle:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .list-item.dragging {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .conversion-table-new-row {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .conversion-table tbody tr.conversion-row-no-values {
+  background: #2a2018;
+}
+
+[data-theme="dark"] .list-item .edit-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .list-item .edit-btn:hover {
+  background: #333;
+}
+
+/* ---- ShoppingListModal additional ---- */
+[data-theme="dark"] .shopping-list-item {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .shopping-list-item:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .shopping-list-item.checked {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .shopping-list-item-text {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .shopping-list-footer {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .shopping-list-count {
+  color: #aaa;
+}
+
+[data-theme="dark"] .shopping-list-bring-btn {
+  background: #2a2a2a;
+  color: #f47c00;
+  border-color: #f47c00;
+}
+
+[data-theme="dark"] .shopping-list-reset-btn {
+  background: #2a2a2a;
+  color: #aaa;
+  border-color: #555;
+}
+
+[data-theme="dark"] .shopping-list-edit-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+/* ---- RatingModal additional ---- */
+[data-theme="dark"] .rating-modal-cancel-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .rating-modal-cancel-btn:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .rating-modal-footer {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .rating-reviews-list {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .rating-review-item {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .rating-reviews-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .rating-name-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+/* ---- UserManagement additional ---- */
+[data-theme="dark"] .user-management-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .user-management-header h2 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .action-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .action-btn:hover:not(:disabled) {
+  background: #333;
+}
+
+[data-theme="dark"] .role-badge.role-admin {
+  background: #1a1a2f;
+  color: #9fa8da;
+  border-color: #3d3d6a;
+}
+
+[data-theme="dark"] .role-badge.role-edit {
+  background: #1a2a3a;
+  color: #7aafdf;
+  border-color: #2a4a6a;
+}
+
+[data-theme="dark"] .role-badge.role-moderator {
+  background: #1a2a1a;
+  color: #6aaf6a;
+  border-color: #2a4a2a;
+}
+
+[data-theme="dark"] .role-badge.role-comment {
+  background: #2a2a1a;
+  color: #dfaf6a;
+  border-color: #5a4a2a;
+}
+
+[data-theme="dark"] .role-permissions-table th {
+  background: #2a2a2a;
+  color: #ccc;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .role-permissions-table td {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .role-permissions-table tbody tr:hover {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .toggle-slider {
+  background: #555;
+}
+
+[data-theme="dark"] .toggle-slider:before {
+  background: #e8e8e8;
+}
+
+[data-theme="dark"] .modal {
+  background: #1e1e1e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .modal h3 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .modal-subtitle {
+  color: #aaa;
+}
+
+[data-theme="dark"] .modal-info {
+  background: #1a2a3a;
+  color: #7aafdf;
+  border-left-color: #7a8fdf;
+}
+
+[data-theme="dark"] .btn-cancel {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .btn-cancel:hover {
+  background: #333;
+}
+
+/* ---- WebImportModal additional ---- */
+[data-theme="dark"] .web-import-modal-header {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .web-import-modal-header h2 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .web-import-instructions {
+  color: #aaa;
+}
+
+[data-theme="dark"] .url-input-container label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .url-input-container input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .url-input-hint {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+[data-theme="dark"] .source-url {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+[data-theme="dark"] .web-import-cancel-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+/* ---- UniversalImportModal additional ---- */
+[data-theme="dark"] .universal-import-label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .universal-import-url-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .universal-import-textarea {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .universal-image-item {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .universal-add-image {
+  background: #1a2a1a;
+  border-color: #4a8a4a;
+  color: #6aaf6a;
+}
+
+[data-theme="dark"] .universal-add-image:hover {
+  background: #4a8a4a;
+  color: #fff;
+}
+
+[data-theme="dark"] .universal-image-indicator.pending {
+  background: #333;
+  color: #777;
+}
+
+[data-theme="dark"] .universal-result-section {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .universal-result-section h4 {
+  color: #e8e8e8;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .universal-merged-notice {
+  background: #1a2a3a;
+  color: #7aafdf;
+  border-left-color: #7a8fdf;
+}
+
+[data-theme="dark"] .universal-error {
+  background: #2a1a1a;
+  border-color: #5a2a2a;
+  color: #f08080;
+}
+
+[data-theme="dark"] .universal-cancel-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .universal-cancel-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .universal-back-button {
+  background: #2a2a2a;
+  color: #7a8fdf;
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .universal-progress-bar {
+  background: #2a2a2a;
+}
+
+/* ---- InstagramImportModal additional ---- */
+[data-theme="dark"] .instagram-image-item {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .instagram-add-image {
+  background: #1a2a1a;
+  border-color: #4a7a9a;
+  color: #7a9fdf;
+}
+
+[data-theme="dark"] .instagram-add-image:hover {
+  background: #4a7a9a;
+  color: #fff;
+}
+
+[data-theme="dark"] .instagram-progress-bar {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .instagram-image-indicator.pending {
+  background: #333;
+  color: #777;
+}
+
+[data-theme="dark"] .instagram-merged-notice {
+  background: #1a2a3a;
+  color: #7aafdf;
+  border-left-color: #7a8fdf;
+}
+
+[data-theme="dark"] .instagram-result-section {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .instagram-result-section h4 {
+  color: #e8e8e8;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .instagram-error {
+  background: #2a1a1a;
+  border-color: #5a2a2a;
+  color: #f08080;
+}
+
+[data-theme="dark"] .instagram-import-actions {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .instagram-cancel-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .instagram-cancel-button:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .instagram-back-button {
+  background: #2a2a2a;
+  color: #7a8fdf;
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .instagram-result-title {
+  color: #e8e8e8;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .instagram-result-meta {
+  color: #aaa;
+}
+
+[data-theme="dark"] .instagram-meta-badge {
+  background: #2a2a2a;
+  color: #ccc;
+}
+
+/* ---- PasswordChangeModal additional ---- */
+[data-theme="dark"] .password-change-warning {
+  background: #2a2218;
+  color: #dfb86a;
+  border-color: #5a4a28;
+}
+
+/* ---- PersonalDataPage additional ---- */
+[data-theme="dark"] .personal-data-cancel-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .personal-data-cancel-btn:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .personal-data-success {
+  background: #1a2f1a;
+  color: #4caf50;
+}
+
+[data-theme="dark"] .personal-data-error {
+  background: #2a1a1a;
+  color: #f08080;
+}
+
+/* ---- RecipeTimeline additional ---- */
+[data-theme="dark"] .timeline-version-badge {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .timeline-no-data {
+  color: #aaa;
+}
+
+/* ---- RecipeImageCarousel additional ---- */
+[data-theme="dark"] .recipe-image-carousel-placeholder {
+  background: #2a2a2a;
+}
+
+/* ---- GroupCreateDialog additional ---- */
+[data-theme="dark"] .group-btn-secondary {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .group-btn-secondary:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .group-dialog-step-info {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+/* ---- CookDateModal additional ---- */
+[data-theme="dark"] .cook-date-modal-cancel-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+/* ---- RecipeTypeahead additional ---- */
+[data-theme="dark"] .recipe-typeahead-no-results {
+  color: #aaa;
+}
+
+[data-theme="dark"] .recipe-typeahead-result-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .recipe-typeahead-result-meta {
+  color: #aaa;
+}
+
 [data-theme="dark"] .dark-icon-text-input:focus {
   border-color: #DF7A00;
 }
