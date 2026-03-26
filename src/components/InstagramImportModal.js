@@ -146,8 +146,8 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
     <div className="modal-overlay">
       <div className="instagram-import-modal">
         <div className="instagram-import-header">
-          <h2>📸 Instagram Import</h2>
-          <button className="close-button" onClick={onCancel}>✕</button>
+          <h2>Instagram Import</h2>
+          <button className="close-button" onClick={onCancel}>×</button>
         </div>
 
         <div className="instagram-import-content">
@@ -176,7 +176,7 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
                       onClick={() => handleRemoveImage(index)}
                       title="Bild entfernen"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                 ))}
@@ -201,7 +201,7 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
           {/* Processing Step */}
           {step === 'processing' && (
             <div className="instagram-processing">
-              <p className="instagram-processing-title">🔍 Analyse läuft...</p>
+              <p className="instagram-processing-title">Analyse läuft...</p>
               <p className="instagram-processing-subtitle">
                 Bild {currentImageIndex + 1} von {images.length}
               </p>
@@ -236,7 +236,7 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
             <div className="instagram-result">
               {images.length > 1 && (
                 <div className="instagram-merged-notice">
-                  🔗 Aus {images.length} Bildern zusammengeführt
+                  Aus {images.length} Bildern zusammengeführt
                 </div>
               )}
               {aiResult.title && (
@@ -244,18 +244,18 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
               )}
               <div className="instagram-result-meta">
                 {aiResult.servings && (
-                  <span className="instagram-meta-badge">🍽 {aiResult.servings} Portionen</span>
+                  <span className="instagram-meta-badge">{aiResult.servings} Portionen</span>
                 )}
                 {(aiResult.prepTime || aiResult.cookTime) && (
                   <span className="instagram-meta-badge">
-                    ⏱ {aiResult.prepTime || aiResult.cookTime}
+                    {aiResult.prepTime || aiResult.cookTime}
                   </span>
                 )}
                 {aiResult.difficulty && (
-                  <span className="instagram-meta-badge">📊 Schwierigkeit: {aiResult.difficulty}</span>
+                  <span className="instagram-meta-badge">Schwierigkeit: {aiResult.difficulty}</span>
                 )}
                 {aiResult.cuisine && (
-                  <span className="instagram-meta-badge">🌍 {aiResult.cuisine}</span>
+                  <span className="instagram-meta-badge">{aiResult.cuisine}</span>
                 )}
               </div>
               {aiResult.ingredients && aiResult.ingredients.length > 0 && (
@@ -293,7 +293,7 @@ function InstagramImportModal({ onImport, onCancel, initialImages = [] }) {
               onClick={handleStartAnalysis}
               disabled={images.length === 0}
             >
-              🔍 Analyse starten
+              Analyse starten
             </button>
           )}
           {step === 'result' && (

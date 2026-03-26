@@ -53,7 +53,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel }) {
       <div className="group-dialog">
         <div className="group-dialog-header">
           <h2>Neue Liste erstellen</h2>
-          <button className="group-dialog-close" onClick={onCancel} aria-label="Schließen">✕</button>
+          <button className="group-dialog-close" onClick={onCancel} aria-label="Schließen">×</button>
         </div>
 
         <form onSubmit={handleSubmit}>

@@ -1113,7 +1113,7 @@ function App() {
             fontSize: '0.95rem',
             color: '#1565C0'
           }}>
-            🌐 Bitte melde dich an, um das Rezept zu importieren.
+            Bitte melde dich an, um das Rezept zu importieren.
           </div>
         )}
         {authView === 'login' ? (

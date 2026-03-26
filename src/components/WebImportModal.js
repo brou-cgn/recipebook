@@ -131,7 +131,7 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
       <div className="web-import-modal">
         <div className="web-import-modal-header">
           <h2>Rezept von Website importieren</h2>
-          <button className="close-button" onClick={onCancel}>✕</button>
+          <button className="close-button" onClick={onCancel}>×</button>
         </div>
 
         <div className="web-import-modal-content">
@@ -160,8 +160,8 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
               </div>
 
               <div className="url-input-hint">
-                <p>💡 Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
-                <p>📸 Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
+                <p>Tipp: Die Website wird automatisch erfasst und das Rezept extrahiert.</p>
+                <p>Instagram Reels werden direkt unterstützt – die Caption wird automatisch ausgelesen.</p>
               </div>
             </div>
           )}
@@ -208,19 +208,19 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
               {(aiResult.servings || aiResult.prepTime || aiResult.cookTime || aiResult.difficulty || aiResult.cuisine || aiResult.category) && (
                 <div className="result-meta">
                   {aiResult.servings && (
-                    <span className="meta-badge">👥 {aiResult.servings} Portionen</span>
+                    <span className="meta-badge">{aiResult.servings} Portionen</span>
                   )}
                   {(aiResult.prepTime || aiResult.cookTime) && (
-                    <span className="meta-badge">⏱️ {aiResult.prepTime || aiResult.cookTime}</span>
+                    <span className="meta-badge">{aiResult.prepTime || aiResult.cookTime}</span>
                   )}
                   {aiResult.difficulty && (
-                    <span className="meta-badge">📊 Schwierigkeit: {aiResult.difficulty}/5</span>
+                    <span className="meta-badge">Schwierigkeit: {aiResult.difficulty}/5</span>
                   )}
                   {aiResult.cuisine && (
-                    <span className="meta-badge">🌍 {aiResult.cuisine}</span>
+                    <span className="meta-badge">{aiResult.cuisine}</span>
                   )}
                   {aiResult.category && (
-                    <span className="meta-badge">📂 {aiResult.category}</span>
+                    <span className="meta-badge">{aiResult.category}</span>
                   )}
                 </div>
               )}

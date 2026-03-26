@@ -226,8 +226,8 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
     <div className="modal-overlay">
       <div className="universal-import-modal">
         <div className="universal-import-header">
-          <h2>📥 Universeller Import</h2>
-          <button className="close-button" onClick={onCancel}>✕</button>
+          <h2>Universeller Import</h2>
+          <button className="close-button" onClick={onCancel}>×</button>
         </div>
 
         <div className="universal-import-content">
@@ -249,7 +249,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
 
               {/* URL field */}
               <div className="universal-import-field">
-                <label className="universal-import-label">🌐 URL</label>
+                <label className="universal-import-label">URL</label>
                 <input
                   type="url"
                   className="universal-import-url-input"
@@ -261,7 +261,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
 
               {/* Text field */}
               <div className="universal-import-field">
-                <label className="universal-import-label">📝 Text</label>
+                <label className="universal-import-label">Text</label>
                 <textarea
                   className="universal-import-textarea"
                   placeholder="Rezepttext hier einfügen..."
@@ -273,7 +273,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
 
               {/* Image grid */}
               <div className="universal-import-field">
-                <label className="universal-import-label">🖼 Bilder ({images.length})</label>
+                <label className="universal-import-label">Bilder ({images.length})</label>
                 <div className="universal-image-grid">
                   {images.map((src, index) => (
                     <div key={index} className="universal-image-item">
@@ -283,7 +283,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
                         onClick={() => handleRemoveImage(index)}
                         title="Bild entfernen"
                       >
-                        ✕
+                        ×
                       </button>
                     </div>
                   ))}
@@ -309,7 +309,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
           {/* Processing Step */}
           {step === 'processing' && (
             <div className="universal-processing">
-              <p className="universal-processing-title">🔍 Analyse läuft...</p>
+              <p className="universal-processing-title">Analyse läuft...</p>
               <p className="universal-processing-subtitle">{processingLabel}</p>
               <div className="universal-progress-bar">
                 <div
@@ -344,7 +344,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
             <div className="universal-result">
               {totalItems > 1 && (
                 <div className="universal-merged-notice">
-                  🔗 Aus {totalItems} Inhalten zusammengeführt
+                  Aus {totalItems} Inhalten zusammengeführt
                 </div>
               )}
               {aiResult.title && (
@@ -352,18 +352,18 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
               )}
               <div className="universal-result-meta">
                 {aiResult.servings && (
-                  <span className="universal-meta-badge">🍽 {aiResult.servings} Portionen</span>
+                  <span className="universal-meta-badge">{aiResult.servings} Portionen</span>
                 )}
                 {(aiResult.prepTime || aiResult.cookTime) && (
                   <span className="universal-meta-badge">
-                    ⏱ {aiResult.prepTime || aiResult.cookTime}
+                    {aiResult.prepTime || aiResult.cookTime}
                   </span>
                 )}
                 {aiResult.difficulty && (
-                  <span className="universal-meta-badge">📊 Schwierigkeit: {aiResult.difficulty}</span>
+                  <span className="universal-meta-badge">Schwierigkeit: {aiResult.difficulty}</span>
                 )}
                 {aiResult.cuisine && (
-                  <span className="universal-meta-badge">🌍 {aiResult.cuisine}</span>
+                  <span className="universal-meta-badge">{aiResult.cuisine}</span>
                 )}
               </div>
               {aiResult.ingredients && aiResult.ingredients.length > 0 && (
@@ -401,7 +401,7 @@ function UniversalImportModal({ onImport, onCancel, initialImages = [], initialT
               onClick={handleStartAnalysis}
               disabled={!hasContent}
             >
-              🔍 Analyse starten
+              Analyse starten
             </button>
           )}
           {step === 'result' && (

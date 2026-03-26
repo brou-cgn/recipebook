@@ -100,7 +100,7 @@ function SortableListItem({ id, label, onRemove, onRename }) {
       {onRename && !isEditing && (
         <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
       )}
-      <button className="remove-btn" onClick={onRemove} title="Entfernen">✕</button>
+      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
     </div>
   );
 }
@@ -129,7 +129,7 @@ function SortablePortionUnitItem({ id, unit, onRemove }) {
         ⋮⋮
       </button>
       <span>{unit.singular} / {unit.plural}</span>
-      <button className="remove-btn" onClick={onRemove} title="Entfernen">✕</button>
+      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
     </div>
   );
 }
@@ -1355,21 +1355,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <img src={faviconImage} alt="Favicon" style={{ width: '32px', height: '32px' }} />
                     <div className="favicon-actions">
                       <label htmlFor="faviconImageFile" className="favicon-change-btn">
-                        {uploadingFavicon ? 'Hochladen...' : '🔄 Ändern'}
+                        {uploadingFavicon ? 'Hochladen...' : 'Ändern'}
                       </label>
                       <button 
                         className="favicon-remove-btn" 
                         onClick={handleRemoveFavicon}
                         disabled={uploadingFavicon}
                       >
-                        ✕ Entfernen
+                        × Entfernen
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="favicon-upload">
                     <label htmlFor="faviconImageFile" className="image-upload-label">
-                      {uploadingFavicon ? 'Hochladen...' : '📷 Logo hochladen'}
+                      {uploadingFavicon ? 'Hochladen...' : 'Logo hochladen'}
                     </label>
                   </div>
                 )}
@@ -1396,21 +1396,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <img src={appLogoImage} alt="App Logo" style={{ width: '64px', height: '64px' }} />
                     <div className="favicon-actions">
                       <label htmlFor="appLogoImageFile" className="favicon-change-btn">
-                        {uploadingAppLogo ? 'Hochladen...' : '🔄 Ändern'}
+                        {uploadingAppLogo ? 'Hochladen...' : 'Ändern'}
                       </label>
                       <button 
                         className="favicon-remove-btn" 
                         onClick={handleRemoveAppLogo}
                         disabled={uploadingAppLogo}
                       >
-                        ✕ Entfernen
+                        × Entfernen
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="favicon-upload">
                     <label htmlFor="appLogoImageFile" className="image-upload-label">
-                      {uploadingAppLogo ? 'Hochladen...' : '📷 App-Logo hochladen'}
+                      {uploadingAppLogo ? 'Hochladen...' : 'App-Logo hochladen'}
                     </label>
                   </div>
                 )}
@@ -1444,8 +1444,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <div className="dark-icon-config">
                 <div className="dark-icon-header-row">
                   <span className="dark-icon-col-label">Button</span>
-                  <span className="dark-icon-col-normal">☀️ Normal</span>
-                  <span className="dark-icon-col-dark">🌙 Dunkel-Variante</span>
+                  <span className="dark-icon-col-normal">Normal</span>
+                  <span className="dark-icon-col-dark">Dunkel-Variante</span>
                 </div>
                 {DARK_MODE_ICON_ROWS.map(({ key, label }) => {
                   const darkKey = key + 'Dark';
@@ -1469,7 +1469,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                                 className="upload-icon-btn"
                                 title="Bild hochladen"
                               >
-                                {uploadingButtonIcon === key ? '⏳' : '📷'}
+                                {uploadingButtonIcon === key ? '...' : 'Foto'}
                               </label>
                               <input
                                 type="file"
@@ -1489,7 +1489,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                                 onClick={() => handleRemoveButtonIconImage(key)}
                                 title="Bild entfernen"
                               >
-                                ✕
+                                ×
                               </button>
                             </>
                           )}
@@ -1529,7 +1529,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             className="upload-icon-btn"
                             title="Bild hochladen"
                           >
-                            {uploadingButtonIcon === darkKey ? '⏳' : '📷'}
+                            {uploadingButtonIcon === darkKey ? '...' : 'Foto'}
                           </label>
                           <input
                             type="file"
@@ -1546,7 +1546,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                               onClick={() => handleResetButtonIcon(darkKey)}
                               title="Dunkel-Variante entfernen"
                             >
-                              ✕
+                              ×
                             </button>
                           ) : null}
                           <div className="dark-icon-preview">
@@ -1579,7 +1579,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                               onClick={onRemove}
                               title="Bild entfernen"
                             >
-                              ✕
+                              ×
                             </button>
                           </>
                         ) : null}
@@ -1588,7 +1588,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           className="upload-icon-btn"
                           title="Bild hochladen"
                         >
-                          {uploading ? '⏳' : '📷'}
+                          {uploading ? '...' : 'Foto'}
                         </label>
                         <input
                           type="file"
@@ -1628,21 +1628,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <img src={timelineMenuDefaultImage} alt="Standardbild Menüs" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
                     <div className="favicon-actions">
                       <label htmlFor="timelineMenuDefaultImageFile" className="favicon-change-btn">
-                        {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : '🔄 Ändern'}
+                        {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : 'Ändern'}
                       </label>
                       <button
                         className="favicon-remove-btn"
                         onClick={handleRemoveTimelineMenuDefaultImage}
                         disabled={uploadingTimelineMenuDefaultImage}
                       >
-                        ✕ Entfernen
+                        × Entfernen
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="favicon-upload">
                     <label htmlFor="timelineMenuDefaultImageFile" className="image-upload-label">
-                      {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : '📷 Standardbild hochladen'}
+                      {uploadingTimelineMenuDefaultImage ? 'Hochladen...' : 'Standardbild hochladen'}
                     </label>
                   </div>
                 )}
@@ -1670,21 +1670,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     <img src={timelineCookEventDefaultImage} alt="Standardbild Kochereignisse" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
                     <div className="favicon-actions">
                       <label htmlFor="timelineCookEventDefaultImageFile" className="favicon-change-btn">
-                        {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : '🔄 Ändern'}
+                        {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : 'Ändern'}
                       </label>
                       <button
                         className="favicon-remove-btn"
                         onClick={handleRemoveTimelineCookEventDefaultImage}
                         disabled={uploadingTimelineCookEventDefaultImage}
                       >
-                        ✕ Entfernen
+                        × Entfernen
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="favicon-upload">
                     <label htmlFor="timelineCookEventDefaultImageFile" className="image-upload-label">
-                      {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : '📷 Standardbild hochladen'}
+                      {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : 'Standardbild hochladen'}
                     </label>
                   </div>
                 )}
@@ -1737,7 +1737,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   
                   <div className="image-upload-button-container">
                     <label htmlFor="categoryImageFile" className="image-upload-label">
-                      {uploadingImage ? 'Hochladen...' : '📷 Neues Bild hochladen'}
+                      {uploadingImage ? 'Hochladen...' : 'Neues Bild hochladen'}
                     </label>
                     <input
                       type="file"
@@ -1766,7 +1766,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           onClick={() => handleRemoveCategoryImage(img.id)}
                           title="Bild entfernen"
                         >
-                          ✕
+                          ×
                         </button>
                       )}
                     </div>
@@ -1811,7 +1811,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             className="cancel-edit-btn" 
                             onClick={handleCancelEditCategories}
                           >
-                            ✕ Abbrechen
+                            × Abbrechen
                           </button>
                         </div>
                       </div>
@@ -1832,7 +1832,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             onClick={() => handleEditImageCategories(img.id)}
                             title="Kategorien bearbeiten"
                           >
-                            ✏️ Bearbeiten
+                            Bearbeiten
                           </button>
                         </div>
                       </div>
@@ -1889,7 +1889,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   className={`theme-btn${darkMode === 'light' ? ' active' : ''}`}
                   onClick={() => setDarkMode('light')}
                 >
-                  <span className="theme-btn-icon">☀️</span>
+                  <span className="theme-btn-icon">Hell</span>
                   <span className="theme-btn-label">Hell</span>
                   <span className="theme-btn-desc">Helles Design</span>
                 </button>
@@ -1898,7 +1898,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   className={`theme-btn${darkMode === 'dark' ? ' active' : ''}`}
                   onClick={() => setDarkMode('dark')}
                 >
-                  <span className="theme-btn-icon">🌙</span>
+                  <span className="theme-btn-icon">Dunkel</span>
                   <span className="theme-btn-label">Dunkel</span>
                   <span className="theme-btn-desc">Dunkles Design</span>
                 </button>
@@ -1907,7 +1907,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   className={`theme-btn${darkMode === 'auto' ? ' active' : ''}`}
                   onClick={() => setDarkMode('auto')}
                 >
-                  <span className="theme-btn-icon">⚙️</span>
+                  <span className="theme-btn-icon">Auto</span>
                   <span className="theme-btn-label">Automatisch</span>
                   <span className="theme-btn-desc">Systemeinstellung</span>
                 </button>
@@ -2028,7 +2028,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   </div>
                 </div>
                 <div className="sort-settings-group">
-                  <h4>🕒 Geparkt</h4>
+                  <h4>Geparkt</h4>
                   <div className="sort-settings-field">
                     <label htmlFor="statusValidityDaysGeparkt">Gültigkeitsdauer (Tage):</label>
                     <input
@@ -2051,7 +2051,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   </div>
                 </div>
                 <div className="sort-settings-group">
-                  <h4>🗄️ Archiv</h4>
+                  <h4>Archiv</h4>
                   <div className="sort-settings-field">
                     <label htmlFor="statusValidityDaysArchiv">Gültigkeitsdauer (Tage):</label>
                     <input
@@ -2110,7 +2110,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   </div>
                 </div>
                 <div className="sort-settings-group">
-                  <h4>🗄️ Archiv</h4>
+                  <h4>Archiv</h4>
                   <div className="sort-settings-field">
                     <label htmlFor="groupThresholdArchivMinArchiv">Minimum Archiv-Swipes (%):</label>
                     <input
@@ -2224,7 +2224,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <div key={group.name} className="cuisine-group-item">
                 <div className="cuisine-group-header">
                   <strong>{group.name}</strong>
-                  <button className="remove-btn" onClick={() => removeCuisineGroup(group.name)} title="Gruppe entfernen">✕</button>
+                  <button className="remove-btn" onClick={() => removeCuisineGroup(group.name)} title="Gruppe entfernen">×</button>
                 </div>
                 <div className="cuisine-group-children">
                   {group.children.map(child => (
@@ -2235,7 +2235,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         onClick={() => removeChildFromGroup(group.name, child)}
                         title="Untertyp entfernen"
                         aria-label={`${child} aus Gruppe entfernen`}
-                      >✕</button>
+                      >×</button>
                     </span>
                   ))}
                   <select
@@ -2395,7 +2395,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       />
                     </td>
                     <td>
-                      <button className="remove-btn" onClick={() => removeConversionEntry(entry.id)} title="Entfernen">✕</button>
+                      <button className="remove-btn" onClick={() => removeConversionEntry(entry.id)} title="Entfernen">×</button>
                     </td>
                   </tr>
                   );
@@ -2563,7 +2563,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   onClick={handleImportFaqFromMd}
                   disabled={importingFaq}
                 >
-                  {importingFaq ? 'Importiere...' : '📥 FAQ.md importieren'}
+                  {importingFaq ? 'Importiere...' : 'FAQ.md importieren'}
                 </button>
               </div>
 
@@ -2617,7 +2617,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       checked={faqForm.showOnDesktop ?? true}
                       onChange={(e) => setFaqForm(prev => ({ ...prev, showOnDesktop: e.target.checked }))}
                     />
-                    🖥 Desktop
+                    Desktop
                   </label>
                   <label className="faq-visibility-label">
                     <input
@@ -2625,7 +2625,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       checked={faqForm.showOnMobile ?? true}
                       onChange={(e) => setFaqForm(prev => ({ ...prev, showOnMobile: e.target.checked }))}
                     />
-                    📱 Mobil
+                    Mobil
                   </label>
                 </div>
                 <div className="faq-screenshot-section">
@@ -2638,12 +2638,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                         className="favicon-remove-btn"
                         onClick={() => setFaqForm(prev => ({ ...prev, screenshot: null }))}
                       >
-                        ✕ Entfernen
+                        × Entfernen
                       </button>
                     </div>
                   ) : (
                     <label htmlFor="faqScreenshotFile" className="image-upload-label">
-                      {uploadingFaqScreenshot ? 'Hochladen...' : '📷 Screenshot hochladen'}
+                      {uploadingFaqScreenshot ? 'Hochladen...' : 'Screenshot hochladen'}
                     </label>
                   )}
                   <input
@@ -2720,13 +2720,13 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             <strong className="faq-list-item-title">{renderBoldText(faq.title)}</strong>
                             <span className="faq-list-item-level">Ebene {faq.level ?? 1}</span>
                             {faq.adminOnly && (
-                              <span className="faq-admin-badge" title="Nur für Administratoren sichtbar">🔒 Admin</span>
+                              <span className="faq-admin-badge" title="Nur für Administratoren sichtbar">Admin</span>
                             )}
                             {(faq.showOnDesktop !== false) && (
-                              <span className="faq-visibility-badge" title="Auf Desktop sichtbar">🖥</span>
+                              <span className="faq-visibility-badge" title="Auf Desktop sichtbar">Desktop</span>
                             )}
                             {(faq.showOnMobile !== false) && (
-                              <span className="faq-visibility-badge" title="Auf Mobilgeräten sichtbar">📱</span>
+                              <span className="faq-visibility-badge" title="Auf Mobilgeräten sichtbar">Mobil</span>
                             )}
                             <div className="faq-list-item-actions">
                               <button
@@ -2750,14 +2750,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                                 onClick={() => handleEditFaq(faq)}
                                 title="Bearbeiten"
                               >
-                                ✏️
+                                Edit
                               </button>
                               <button
                                 className="faq-delete-btn"
                                 onClick={() => handleDeleteFaq(faq.id)}
                                 title="Löschen"
                               >
-                                🗑️
+                                Löschen
                               </button>
                             </div>
                           </div>

@@ -608,7 +608,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
       <div className="ocr-modal">
         <div className="ocr-modal-header">
           <h2>Rezept scannen</h2>
-          <button className="close-button" onClick={handleCancel}>✕</button>
+          <button className="close-button" onClick={handleCancel}>×</button>
         </div>
 
         <div className="ocr-modal-content">
@@ -626,13 +626,13 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                     className={`language-tab ${language === 'de' ? 'active' : ''}`}
                     onClick={() => setLanguage('de')}
                   >
-                    🇩🇪 Deutsch
+                    Deutsch
                   </button>
                   <button
                     className={`language-tab ${language === 'en' ? 'active' : ''}`}
                     onClick={() => setLanguage('en')}
                   >
-                    🇬🇧 English
+                    English
                   </button>
                 </div>
               </div>
@@ -640,8 +640,8 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
               {remainingScans !== null && ocrMode === 'ai' && (
                 <div className={`scan-quota-info ${remainingScans < 5 ? 'scan-quota-warning' : ''}`}>
                   {remainingScans < 5
-                    ? `⚠️ Noch ${remainingScans} KI-Scans heute verfügbar. Danach Standard-OCR verwenden.`
-                    : `🤖 ${remainingScans} KI-Scans heute noch verfügbar`
+                    ? `Noch ${remainingScans} KI-Scans heute verfügbar. Danach Standard-OCR verwenden.`
+                    : `${remainingScans} KI-Scans heute noch verfügbar`
                   }
                 </div>
               )}
@@ -649,10 +649,10 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
               {!cameraActive && (
                 <div className="upload-buttons">
                   <button className="camera-button" onClick={startCamera}>
-                    📷 Kamera starten
+                    Kamera starten
                   </button>
                   <label htmlFor="imageUpload" className="upload-button">
-                    📁 Bild(er) hochladen
+                    Bild(er) hochladen
                   </label>
                   <input
                     type="file"
@@ -704,7 +704,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                       disabled={capturedPhotos.length >= MAX_CAMERA_PHOTOS}
                       aria-label="Foto aufnehmen"
                     >
-                      📸 {capturedPhotos.length > 0 ? 'Weiteres Foto aufnehmen' : 'Foto aufnehmen'}
+                      {capturedPhotos.length > 0 ? 'Weiteres Foto aufnehmen' : 'Foto aufnehmen'}
                     </button>
                     {capturedPhotos.length > 0 && (
                       <>
@@ -720,7 +720,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                           onClick={removeLastPhoto}
                           aria-label="Letztes Foto löschen"
                         >
-                          🗑️ Letztes löschen
+                          Löschen
                         </button>
                       </>
                     )}
@@ -729,7 +729,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                       onClick={cancelCamera}
                       aria-label="Kamera abbrechen"
                     >
-                      ✕ Abbrechen
+                      × Abbrechen
                     </button>
                   </div>
                 </div>
@@ -760,7 +760,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                       aria-label={`Bild ${index + 1} entfernen`}
                       title="Bild entfernen"
                     >
-                      ✕
+                      ×
                     </button>
                     <span className="image-preview-number">{index + 1}</span>
                   </div>
@@ -847,7 +847,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                         'pending'
                       }`}
                     >
-                      {index < currentImageIndex ? '✓' : index === currentImageIndex ? '⏳' : '○'}
+                      {index < currentImageIndex ? '✓' : index === currentImageIndex ? '...' : '○'}
                     </div>
                   ))}
                 </div>
@@ -867,19 +867,19 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
               {(aiResult.servings || aiResult.prepTime || aiResult.cookTime || aiResult.difficulty || aiResult.cuisine || aiResult.category) && (
                 <div className="ai-result-meta">
                   {aiResult.servings && (
-                    <span className="ai-meta-badge">👥 {aiResult.servings} Portionen</span>
+                    <span className="ai-meta-badge">{aiResult.servings} Portionen</span>
                   )}
                   {(aiResult.prepTime || aiResult.cookTime) && (
-                    <span className="ai-meta-badge">⏱️ {aiResult.prepTime || aiResult.cookTime}</span>
+                    <span className="ai-meta-badge">{aiResult.prepTime || aiResult.cookTime}</span>
                   )}
                   {aiResult.difficulty && (
-                    <span className="ai-meta-badge">📊 Schwierigkeit: {aiResult.difficulty}/5</span>
+                    <span className="ai-meta-badge">Schwierigkeit: {aiResult.difficulty}/5</span>
                   )}
                   {aiResult.cuisine && (
-                    <span className="ai-meta-badge">🌍 {aiResult.cuisine}</span>
+                    <span className="ai-meta-badge">{aiResult.cuisine}</span>
                   )}
                   {aiResult.category && (
-                    <span className="ai-meta-badge">📂 {aiResult.category}</span>
+                    <span className="ai-meta-badge">{aiResult.category}</span>
                   )}
                 </div>
               )}
@@ -918,7 +918,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
               )}
 
               <button className="edit-text-button" onClick={convertAiResultToText}>
-                ✏️ Als Text bearbeiten
+                Als Text bearbeiten
               </button>
             </div>
           )}
@@ -936,7 +936,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                   <h4>Erkennungsqualität: {validationResult.score}%</h4>
                   {validationResult.warnings.length > 0 && (
                     <div className="validation-warnings">
-                      <strong>⚠️ Hinweise:</strong>
+                      <strong>Hinweise:</strong>
                       <ul>
                         {validationResult.warnings.map((warning, idx) => (
                           <li key={idx}>{warning}</li>
@@ -946,7 +946,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
                   )}
                   {validationResult.suggestions.length > 0 && (
                     <div className="validation-suggestions">
-                      <strong>💡 Verbesserungsvorschläge:</strong>
+                      <strong>Verbesserungsvorschläge:</strong>
                       <ul>
                         {validationResult.suggestions.slice(0, 3).map((suggestion, idx) => (
                           <li key={idx}>{suggestion}</li>
@@ -981,7 +981,7 @@ function OcrScanModal({ onImport, onCancel, initialImage = '', initialImages = [
               )}
               {aiFailed && (
                 <button className="fallback-ocr-button" onClick={fallbackToStandardOcr}>
-                  📝 Mit Standard-OCR fortfahren
+                  Mit Standard-OCR fortfahren
                 </button>
               )}
             </div>

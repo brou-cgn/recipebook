@@ -445,7 +445,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                                 disabled={abortingCalcId === recipe.id}
                                 title="Berechnung abbrechen"
                               >
-                                {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : '❌ Abbrechen'}
+                                {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : 'Abbrechen'}
                               </button>
                             </td>
                           </tr>
@@ -570,7 +570,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                                 onClick={() => handleStartEdit(proposal)}
                                 title="Kulinariktyp bearbeiten"
                               >
-                                ✏️ Bearbeiten
+                                Bearbeiten
                               </button>
                               <button
                                 className="cuisine-proposal-release-btn"

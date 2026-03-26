@@ -225,7 +225,7 @@ const Header = forwardRef(function Header({
                         onClick={handleSearchClear}
                         aria-label="Suche löschen"
                       >
-                        ✕
+                        ×
                       </button>
                     )}
                   </div>
@@ -318,19 +318,19 @@ const Header = forwardRef(function Header({
                       className={`menu-item${darkMode === 'light' ? ' active' : ''}`}
                       onClick={() => handleDarkModeSelect('light')}
                     >
-                      ☀️ Hell
+                      Hell
                     </button>
                     <button
                       className={`menu-item${darkMode === 'dark' ? ' active' : ''}`}
                       onClick={() => handleDarkModeSelect('dark')}
                     >
-                      🌙 Dunkel
+                      Dunkel
                     </button>
                     <button
                       className={`menu-item${darkMode === 'auto' ? ' active' : ''}`}
                       onClick={() => handleDarkModeSelect('auto')}
                     >
-                      ⚙️ Automatisch
+                      Automatisch
                     </button>
                   </div>
                   )}
@@ -371,7 +371,7 @@ const Header = forwardRef(function Header({
                 onClick={() => setFaqModalOpen(false)}
                 aria-label="Kochschule schließen"
               >
-                ✕
+                ×
               </button>
             </div>
             <div className="faq-modal-body">

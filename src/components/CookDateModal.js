@@ -98,7 +98,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
       <div className="cook-date-modal" onClick={(e) => e.stopPropagation()}>
         <div className="cook-date-modal-header">
           <h2 className="cook-date-modal-title">Kochbuch</h2>
-          <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">✕</button>
+          <button className="cook-date-modal-close" onClick={onClose} aria-label="Schließen">×</button>
         </div>
         <div className="cook-date-modal-body">
           <div className="cook-date-input-wrapper">
@@ -126,7 +126,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                       <span className="cook-date-timeline-marker-emoji">{timelineCookEventBubbleIcon}</span>
                     )
                   ) : (
-                    <span className="cook-date-timeline-marker-emoji">🍳</span>
+                    <span className="cook-date-timeline-marker-emoji">♨</span>
                   )}
                 </div>
                 <div className="cook-date-timeline-card">
@@ -147,7 +147,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                       title="Eintrag löschen"
                       aria-label="Gekocht am-Eintrag löschen"
                     >
-                      🗑
+                      ×
                     </button>
                   )}
                 </div>
@@ -163,7 +163,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
                       <span className="cook-date-timeline-marker-emoji">{timelineBubbleIcon}</span>
                     )
                   ) : (
-                    <span className="cook-date-timeline-marker-emoji">📝</span>
+                    <span className="cook-date-timeline-marker-emoji">✎</span>
                   )}
                 </div>
                 <div className="cook-date-timeline-card">

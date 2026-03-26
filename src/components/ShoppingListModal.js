@@ -122,7 +122,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
             onClick={onClose}
             aria-label="Einkaufsliste schließen"
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -195,7 +195,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
             {bringLoading ? '…' : (
               isBringIconImage
                 ? <img src={bringButtonIcon} alt="Bring!" className="bring-btn-icon-img" />
-                : (bringButtonIcon || '🛍️') + ' Bring!'
+                : (bringButtonIcon || 'Bring') + ' Bring!'
             )}
           </button>}
           <button

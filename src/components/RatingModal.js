@@ -143,7 +143,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
       <div className="rating-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rating-modal-header">
           <h2 className="rating-modal-title">Rezept bewerten</h2>
-          <button className="rating-modal-close" onClick={handleClose} aria-label="Schließen">✕</button>
+          <button className="rating-modal-close" onClick={handleClose} aria-label="Schließen">×</button>
         </div>
         <div className="rating-modal-body">
           {count > 0 && (
@@ -199,7 +199,7 @@ function RatingModal({ recipeId, currentUser, canDeleteRatings = false, onClose 
                         title="Bewertung löschen"
                         aria-label="Bewertung löschen"
                       >
-                        🗑
+                        Löschen
                       </button>
                     )}
                   </div>

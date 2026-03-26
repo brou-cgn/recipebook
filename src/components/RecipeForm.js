@@ -131,7 +131,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
             onClick={() => onRemove(index)}
             aria-label="Zutat entfernen"
           >
-            ✕
+            ×
           </button>
         )}
       </div>
@@ -257,7 +257,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
             onClick={() => onRemove(index)}
             aria-label="Schritt entfernen"
           >
-            ✕
+            ×
           </button>
         )}
       </div>
@@ -1153,7 +1153,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                       onClick={() => handleRemoveImageFromList(img.url)}
                       title="Bild entfernen"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                 </div>

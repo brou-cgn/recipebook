@@ -48,31 +48,31 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [portionUnits, setPortionUnits] = useState([]);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-  const [cookingModeIcon, setCookingModeIcon] = useState('👨‍🍳');
-  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('👨‍🍳');
-  const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
-  const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('✕');
+  const [cookingModeIcon, setCookingModeIcon] = useState('♨');
+  const [cookingModeAltIcon, setCookingModeAltIcon] = useState('♨');
+  const [closeButtonIcon, setCloseButtonIcon] = useState('×');
+  const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('×');
   // Whether to use alt icons due to bright image corners
   const [useCookingModeAlt, setUseCookingModeAlt] = useState(false);
   const [useCloseButtonAlt, setUseCloseButtonAlt] = useState(false);
   // Image carousel state
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
-  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('➕');
-  const [nutritionFilledIcon, setNutritionFilledIcon] = useState('🥦');
+  const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
+  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('+');
+  const [nutritionFilledIcon, setNutritionFilledIcon] = useState('Nähr.');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
-  const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
-  const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
-  const [timerStartIcon, setTimerStartIcon] = useState('⏱');
-  const [timerStopIcon, setTimerStopIcon] = useState('⏹');
-  const [cookDateIcon, setCookDateIcon] = useState('📅');
-  const [editRecipeIcon, setEditRecipeIcon] = useState('✏️');
+  const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
+  const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
+  const [timerStartIcon, setTimerStartIcon] = useState('▶');
+  const [timerStopIcon, setTimerStopIcon] = useState('■');
+  const [cookDateIcon, setCookDateIcon] = useState('Datum');
+  const [editRecipeIcon, setEditRecipeIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
-  const [newVersionIcon, setNewVersionIcon] = useState('📝');
+  const [newVersionIcon, setNewVersionIcon] = useState('Version');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
@@ -113,20 +113,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Re-compute individual icon states when icons or dark mode changes
   useEffect(() => {
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
-    setCookingModeIcon(eff('cookingMode') || '👨‍🍳');
-    setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '👨‍🍳');
-    setCloseButtonIcon(eff('closeButton') || '✕');
-    setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '✕');
-    setCopyLinkIcon(eff('copyLink') || '📋');
-    setNutritionEmptyIcon(eff('nutritionEmpty') || '➕');
-    setNutritionFilledIcon(eff('nutritionFilled') || '🥦');
-    setShoppingListIcon(eff('shoppingList') || '🛒');
-    setBringButtonIcon(eff('bringButton') || '🛍️');
-    setTimerStartIcon(eff('timerStart') || '⏱');
-    setTimerStopIcon(eff('timerStop') || '⏹');
-    setCookDateIcon(eff('cookDate') || '📅');
-    setEditRecipeIcon(eff('editRecipe') || '✏️');
-    setNewVersionIcon(eff('newVersion') || '📝');
+    setCookingModeIcon(eff('cookingMode') || '♨');
+    setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
+    setCloseButtonIcon(eff('closeButton') || '×');
+    setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
+    setCopyLinkIcon(eff('copyLink') || 'Link');
+    setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
+    setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
+    setShoppingListIcon(eff('shoppingList') || 'Einkauf');
+    setBringButtonIcon(eff('bringButton') || 'Bring');
+    setTimerStartIcon(eff('timerStart') || '▶');
+    setTimerStopIcon(eff('timerStop') || '■');
+    setCookDateIcon(eff('cookDate') || 'Datum');
+    setEditRecipeIcon(eff('editRecipe') || 'Edit');
+    setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
   }, [allButtonIcons, isDarkMode]);
@@ -1224,7 +1224,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               onClick={toggleCookingMode}
               title="Kochmodus beenden"
             >
-              ✕
+              ×
             </button>
           </div>
         </div>
@@ -2006,7 +2006,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 onClick={() => setShowPortionSelector(false)}
                 aria-label="Portionsauswahl schließen"
               >
-                ✕
+                ×
               </button>
             </div>
             <div className="portion-selector-body">

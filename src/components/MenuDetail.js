@@ -16,13 +16,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [menu, setMenu] = useState(initialMenu);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
-  const [closeButtonIcon, setCloseButtonIcon] = useState('✕');
-  const [copyLinkIcon, setCopyLinkIcon] = useState('📋');
-  const [shoppingListIcon, setShoppingListIcon] = useState('🛒');
-  const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
+  const [closeButtonIcon, setCloseButtonIcon] = useState('×');
+  const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
+  const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
+  const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
-  const [editMenuIcon, setEditMenuIcon] = useState('✏️');
+  const [editMenuIcon, setEditMenuIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -50,13 +50,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   useEffect(() => {
     if (!allButtonIcons) return;
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
-    setCloseButtonIcon(eff('menuCloseButton') || '✕');
-    setCopyLinkIcon(eff('copyLink') || '📋');
-    setShoppingListIcon(eff('shoppingList') || '🛒');
-    setBringButtonIcon(eff('bringButton') || '🛍️');
+    setCloseButtonIcon(eff('menuCloseButton') || '×');
+    setCopyLinkIcon(eff('copyLink') || 'Link');
+    setShoppingListIcon(eff('shoppingList') || 'Einkauf');
+    setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
-    setEditMenuIcon(eff('editRecipe') || '✏️');
+    setEditMenuIcon(eff('editRecipe') || 'Edit');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -493,13 +493,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
             onClick={(e) => e.stopPropagation()}
           >
             <div className="portion-selector-header">
-              <h2 className="portion-selector-title">🛒 Portionen für Einkaufsliste</h2>
+              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
               <button
                 className="portion-selector-close"
                 onClick={() => setShowPortionSelector(false)}
                 aria-label="Portionsauswahl schließen"
               >
-                ✕
+                ×
               </button>
             </div>
             <div className="portion-selector-body">

@@ -113,7 +113,7 @@ function RecipeTypeahead({
             onClick={onCancel}
             type="button"
           >
-            ✕
+            ×
           </button>
         </div>
         

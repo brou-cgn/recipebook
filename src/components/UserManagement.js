@@ -396,21 +396,21 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           onClick={() => handleEditUser(user)}
                           title="Name bearbeiten"
                         >
-                          ✏️
+                          Edit
                         </button>
                         <button 
                           className="action-btn role-btn" 
                           onClick={() => handleOpenRoleEdit(user)}
                           title="Berechtigung ändern"
                         >
-                          🔐
+                          Bearb.
                         </button>
                         <button 
                           className="action-btn password-btn" 
                           onClick={() => handleOpenPasswordReset(user)}
                           title="Temporäres Passwort setzen"
                         >
-                          🔑
+                          Pw.
                         </button>
                         <button 
                           className="action-btn delete-btn" 
@@ -418,7 +418,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title="Benutzer löschen"
                           disabled={user.id === currentUser?.id}
                         >
-                          🗑️
+                          Löschen
                         </button>
                       </div>
                     </td>
@@ -586,7 +586,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
               Benutzer: {deleteConfirmUser.vorname} {deleteConfirmUser.nachname} ({deleteConfirmUser.email})
             </p>
             <p className="modal-warning">
-              ⚠️ Sind Sie sicher, dass Sie diesen Benutzer löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+              Sind Sie sicher, dass Sie diesen Benutzer löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
             </p>
             <div className="modal-actions">
               <button className="btn-cancel" onClick={handleCancelDelete}>

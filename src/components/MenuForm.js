@@ -66,7 +66,7 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
         onClick={() => onRemove(sectionIndex, recipe.id)}
         title="Rezept entfernen"
       >
-        ✕
+        ×
       </button>
     </div>
   );
@@ -479,7 +479,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               <img src={menuImage} alt="Menüfoto" />
               <div className="menu-image-actions">
                 <label htmlFor="menuImageFile" className="menu-image-change-btn">
-                  {uploadingMenuImage ? 'Hochladen...' : '🔄 Ändern'}
+                  {uploadingMenuImage ? 'Hochladen...' : 'Ändern'}
                 </label>
                 <button
                   type="button"
@@ -487,13 +487,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   onClick={handleRemoveMenuImage}
                   disabled={uploadingMenuImage}
                 >
-                  ✕ Entfernen
+                  × Entfernen
                 </button>
               </div>
             </div>
           ) : (
             <label htmlFor="menuImageFile" className="menu-image-upload-label">
-              {uploadingMenuImage ? 'Hochladen...' : '📷 Foto hochladen'}
+              {uploadingMenuImage ? 'Hochladen...' : 'Foto hochladen'}
             </label>
           )}
           <input
@@ -592,7 +592,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                         onClick={() => handleRemoveSection(sectionIndex)}
                         title="Abschnitt löschen"
                       >
-                        ✕
+                        ×
                       </button>
                     </div>
                   </div>

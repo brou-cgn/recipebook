@@ -103,7 +103,7 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
       <div className="import-modal">
         <div className="import-modal-header">
           <h2>Rezept importieren</h2>
-          <button className="close-button" onClick={onCancel}>✕</button>
+          <button className="close-button" onClick={onCancel}>×</button>
         </div>
 
         <div className="import-modal-content">
@@ -113,7 +113,7 @@ function RecipeImportModal({ onImport, onBulkImport, onCancel }) {
 
           <div className="csv-upload-section">
             <label htmlFor="csv-upload" className="csv-upload-label">
-              📄 CSV-Datei hochladen (Bulk-Import)
+              CSV-Datei hochladen (Bulk-Import)
             </label>
             <input
               id="csv-upload"

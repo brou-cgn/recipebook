@@ -575,7 +575,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
             onClick={onClose}
             aria-label="Nährwerte schließen"
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -692,7 +692,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
               disabled={autoCalcLoading}
               title="Nährwerte automatisch aus OpenFoodFacts berechnen"
             >
-              {autoCalcLoading ? 'Berechne…' : '🔍 Automatisch berechnen (OpenFoodFacts)'}
+              {autoCalcLoading ? 'Berechne…' : 'Automatisch berechnen (OpenFoodFacts)'}
             </button>
             {!autoCalcLoading && recipe.naehrwerte?.calcPending && (
               <div className="nutrition-calc-progress">
@@ -707,7 +707,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                   onClick={handleAutoCalculate}
                   disabled={autoCalcLoading}
                 >
-                  🔄 Erneut versuchen
+                  Erneut versuchen
                 </button>
               </div>
             )}
@@ -765,8 +765,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                                 className="nutrition-reformulation-cancel-btn"
                                 onClick={() => setEditingIngredient(null)}
                                 title="Abbrechen"
-                              >✕</button>
-                            </div>
+                              >×</button>                            </div>
                           ) : (
                             <>
                               <div className="nutrition-not-included-row">
@@ -786,7 +785,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                                     setEditingText(reformulations[item.ingredient]?.text || item.ingredient);
                                   }}
                                   title="Zutat umformulieren"
-                                >✏️</button>
+                                >Edit</button>
                                 <button
                                   className="nutrition-accept-ingredient-btn"
                                   onClick={() => handleAcceptIngredient(item.ingredient)}
@@ -818,7 +817,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                         disabled={autoCalcLoading}
                         title="Nährwerte mit den umformulierten Zutaten neu berechnen"
                       >
-                        🔄 Mit Umformulierungen neu berechnen
+                        Mit Umformulierungen neu berechnen
                       </button>
                     )}
                   </div>
@@ -838,7 +837,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                   onClick={handleAutoCalculate}
                   disabled={autoCalcLoading}
                 >
-                  🔄 Erneut versuchen
+                  Erneut versuchen
                 </button>
               </div>
             )}

@@ -508,13 +508,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Returns 0 when disabled (null threshold) or when there are no other members,
   // which safely leaves the allSwiped threshold check false.
   const candidateScore = useMemo(() => {
-    console.log('🔍 candidateScore calculation triggered');
+    console.log('candidateScore calculation triggered');
     console.log('  maxKandidatenSchwelle:', maxKandidatenSchwelle);
     console.log('  listMemberIds:', listMemberIds);
     console.log('  currentUser?.id:', currentUser?.id);
 
     if (maxKandidatenSchwelle === null || listMemberIds.length === 0) {
-      console.log('  ⚠️ Returning 0 (threshold disabled or no members)');
+      console.log('  Returning 0 (threshold disabled or no members)');
       return 0;
     }
 
@@ -522,7 +522,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     console.log('  otherMemberIds:', otherMemberIds);
 
     if (otherMemberIds.length === 0) {
-      console.log('  ⚠️ Returning 0 (no other members)');
+      console.log('  Returning 0 (no other members)');
       return 0;
     }
 
@@ -562,7 +562,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       return sum + contribution;
     }, 0);
 
-    console.log('  ✅ Final candidateScore:', score);
+    console.log('  Final candidateScore:', score);
     return score;
   }, [allListRecipes, listMemberIds, allMembersFlags, maxKandidatenSchwelle, currentUser, groupStatusByRecipeId]);
 
@@ -593,7 +593,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       // Threshold was crossed mid-session by a swipe and the extra last card has been swiped
       (thresholdCrossedAtIndex !== null && currentIndex > thresholdCrossedAtIndex)));
 
-  console.log('🎯 allSwiped check:', {
+  console.log('allSwiped check:', {
     allListRecipesLength: allListRecipes.length,
     listRecipesLength: listRecipes.length,
     currentIndex,
@@ -646,7 +646,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     <div className={`tagesmenu-container${(allSwiped || showMeineAuswahl) ? ' tagesmenu-container--results' : ''}`}>
       {allListRecipes.length === 0 ? (
         <div className="tagesmenu-empty">
-          <span className="tagesmenu-empty-icon">🍽️</span>
+          <span className="tagesmenu-empty-icon"></span>
           <p>Diese Liste enthält noch keine Rezepte.</p>
         </div>
       ) : !readyToRender ? (
@@ -694,13 +694,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                         onClick={() => onSelectRecipe(recipe)}
                       >
                         {flag === 'archiv' && permanentlyArchivedRecipeIds.has(recipe.id) && (
-                          <div className="tagesmenu-permanent-archive-badge" title="Dauerhaft archiviert">🗄️</div>
+                          <div className="tagesmenu-permanent-archive-badge" title="Dauerhaft archiviert">Archiv</div>
                         )}
                         <div className="tagesmenu-results-tile-image">
                           {orderedImages.length > 0 ? (
                             <img src={orderedImages[0].url} alt={recipe.title} />
                           ) : (
-                            <span>🍽️</span>
+                            <span></span>
                           )}
                         </div>
                         <p className="tagesmenu-results-tile-name">{recipe.title}</p>
@@ -757,7 +757,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     {orderedImages.length > 0 ? (
                       <img src={orderedImages[0].url} alt={recipe.title} />
                     ) : (
-                      <span>🍽️</span>
+                      <span></span>
                     )}
                   </div>
                   <p className="tagesmenu-results-tile-name">{recipe.title}</p>
@@ -838,7 +838,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           {orderedImages.length > 0 ? (
                             <img src={orderedImages[0].url} alt={recipe.title} />
                           ) : (
-                            <span>🍽️</span>
+                            <span></span>
                           )}
                         </div>
                         <p className="tagesmenu-results-tile-name">{recipe.title}</p>
@@ -965,7 +965,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                   </div>
                 ) : (
                   <div className="tagesmenu-card-image tagesmenu-card-no-image">
-                    <span>🍽️</span>
+                    <span></span>
                   </div>
                 )}
 
