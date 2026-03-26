@@ -22,6 +22,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [bringButtonIcon, setBringButtonIcon] = useState('🛍️');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
+  const [editMenuIcon, setEditMenuIcon] = useState('✏️');
+  const [editFabPressed, setEditFabPressed] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [shareLoading, setShareLoading] = useState(false);
@@ -54,6 +56,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     setBringButtonIcon(eff('bringButton') || '🛍️');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setEditMenuIcon(eff('editRecipe') || '✏️');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -124,6 +127,19 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     if (window.confirm(`Möchten Sie "${menu.name}" wirklich löschen?`)) {
       onDelete(menu.id);
     }
+  };
+
+  // Edit FAB press handlers
+  const handleEditFabPressStart = () => {
+    setEditFabPressed(true);
+  };
+
+  const handleEditFabPressEnd = () => {
+    setEditFabPressed(false);
+  };
+
+  const handleEditFabClick = () => {
+    onEdit && onEdit(menu);
   };
 
   // Derive favorite status from favoriteMenuIds
@@ -342,11 +358,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
               )
             )}
           </button>
-          {canEditMenu(currentUser, menu) && (
-            <button className="edit-button" onClick={() => onEdit(menu)}>
-              Bearbeiten
-            </button>
-          )}
           <button
             className="shopping-list-trigger-button"
             onClick={handleShoppingListClick}
@@ -576,6 +587,26 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
             </div>
           </div>
         </div>
+      )}
+      {canEditMenu(currentUser, menu) && onEdit && (
+        <button
+          className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+          onClick={handleEditFabClick}
+          onTouchStart={handleEditFabPressStart}
+          onTouchEnd={handleEditFabPressEnd}
+          onTouchCancel={handleEditFabPressEnd}
+          onMouseDown={handleEditFabPressStart}
+          onMouseUp={handleEditFabPressEnd}
+          onMouseLeave={handleEditFabPressEnd}
+          title="Menü bearbeiten"
+          aria-label="Menü bearbeiten"
+        >
+          {isBase64Image(editMenuIcon) ? (
+            <img src={editMenuIcon} alt="Bearbeiten" className="button-icon-image" />
+          ) : (
+            editMenuIcon
+          )}
+        </button>
       )}
     </div>
   );

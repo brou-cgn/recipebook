@@ -89,7 +89,7 @@ describe('MenuDetail - Action Buttons', () => {
     );
 
     expect(screen.getByTitle(/Favoriten/i)).toBeInTheDocument();
-    expect(screen.getByText('Bearbeiten')).toBeInTheDocument();
+    expect(screen.getByTitle('Menü bearbeiten')).toBeInTheDocument();
     expect(screen.getByText('Löschen')).toBeInTheDocument();
     expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
   });
@@ -112,7 +112,7 @@ describe('MenuDetail - Action Buttons', () => {
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
     const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(4);
+    expect(buttons.length).toBe(3);
   });
 
   test('delete button is not inside action-buttons', () => {
