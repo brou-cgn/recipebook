@@ -4,6 +4,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage } from '../utils/imageUtils';
+import { uploadMenuGridImage, deleteMenuGridImage, isStorageUrl } from '../utils/storageUtils';
 import { getCategoryImages } from '../utils/categoryImages';
 import {
   DndContext,
@@ -305,9 +306,35 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         if (selectedUrls.length > 0) {
           console.log('[MenuForm:handleSubmit] Calling buildMenuGridImage...');
           const tGrid = performance.now();
-          gridImage = await buildMenuGridImage(selectedUrls);
+          const gridImageBase64 = await buildMenuGridImage(selectedUrls);
           console.log('[MenuForm:handleSubmit] buildMenuGridImage() done in %.1fms → gridImage generated: %s',
-            performance.now() - tGrid, Boolean(gridImage));
+            performance.now() - tGrid, Boolean(gridImageBase64));
+
+          if (gridImageBase64) {
+            // Delete old grid image from Firebase Storage if updating an existing menu
+            if (menu?.gridImage && isStorageUrl(menu.gridImage)) {
+              try {
+                await deleteMenuGridImage(menu.gridImage);
+              } catch (err) {
+                console.warn('[MenuForm:handleSubmit] Could not delete old grid image:', err);
+              }
+            }
+
+            // Upload grid image to Firebase Storage
+            try {
+              console.log('[MenuForm:handleSubmit] Uploading grid image to Firebase Storage...');
+              const tUpload = performance.now();
+              // Use existing menu ID or generate temporary ID for new menus
+              const uploadMenuId = menu?.id || `temp-${Date.now()}`;
+              gridImage = await uploadMenuGridImage(gridImageBase64, uploadMenuId);
+              console.log('[MenuForm:handleSubmit] Grid image uploaded in %.1fms → URL: %s',
+                performance.now() - tUpload, gridImage.substring(0, 80));
+            } catch (uploadErr) {
+              console.error('[MenuForm:handleSubmit] Failed to upload grid image:', uploadErr);
+              // Fall back to null if upload fails — don't block menu save
+              gridImage = null;
+            }
+          }
         } else {
           console.warn('[MenuForm:handleSubmit] No URLs selected — skipping grid generation');
         }
