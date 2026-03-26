@@ -66,6 +66,14 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .header h1 {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .header .tagline {
+  color: #ccc;
+}
+
 [data-theme="dark"] .header-slogan {
   color: #aaa;
 }
@@ -78,6 +86,16 @@
 
 [data-theme="dark"] .category-filter:hover {
   background: #3a3a3a;
+}
+
+[data-theme="dark"] .category-filter-arrow {
+  background: transparent;
+  color: transparent;
+  border: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23e8e8e8' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
 }
 
 [data-theme="dark"] .action-button,
@@ -178,24 +196,6 @@
 [data-theme="dark"] .filter-section {
   background: #1e1e1e;
   border-bottom-color: #3d3d3d;
-}
-
-[data-theme="dark"] .sort-carousel {
-  background: #1e1e1e;
-  border-top-color: #3d3d3d;
-}
-
-[data-theme="dark"] .sort-carousel-item {
-  background: #2a2a2a;
-  color: #e8e8e8;
-  border-color: #555;
-}
-
-[data-theme="dark"] .sort-carousel-item.active,
-[data-theme="dark"] .sort-carousel-item--active {
-  background: #402C1C;
-  color: #fff;
-  border-color: #402C1C;
 }
 
 [data-theme="dark"] .recipe-group-header {
