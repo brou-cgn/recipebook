@@ -157,6 +157,72 @@ export async function deleteAppLogoFromStorage() {
 }
 
 /**
+ * Upload a menu grid image (Base64 data-URL) to Firebase Storage.
+ *
+ * @param {string} base64Image - Base64 data-URL of the grid image
+ * @param {string} menuId - Menu ID for the filename
+ * @returns {Promise<string>} Public download URL
+ */
+export async function uploadMenuGridImage(base64Image, menuId) {
+  if (!base64Image || !menuId) {
+    throw new Error('No image or menu ID provided');
+  }
+
+  try {
+    // Convert the data-URL to a Blob for upload
+    const response = await fetch(base64Image);
+    const blob = await response.blob();
+
+    // Generate filename: recipes/menu-grid-{menuId}.jpg
+    const filename = `menu-grid-${menuId}.jpg`;
+    const storageRef = ref(storage, `recipes/${filename}`);
+
+    const snapshot = await uploadBytes(storageRef, blob, {
+      contentType: 'image/jpeg',
+      cacheControl: 'public, max-age=86400',
+    });
+
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading menu grid image to Firebase Storage:', error);
+    throw new Error('Failed to upload menu grid image. Please try again.');
+  }
+}
+
+/**
+ * Delete a menu grid image from Firebase Storage.
+ * Errors are logged but not re-thrown so that deletion never blocks saving.
+ *
+ * @param {string} imageUrl - The download URL of the grid image to delete
+ * @returns {Promise<void>}
+ */
+export async function deleteMenuGridImage(imageUrl) {
+  if (!imageUrl || !isStorageUrl(imageUrl)) {
+    return;
+  }
+
+  try {
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/o\/(.+)/);
+
+    if (!pathMatch || !pathMatch[1]) {
+      console.warn('Could not extract path from Storage URL:', imageUrl);
+      return;
+    }
+
+    const encodedPath = pathMatch[1];
+    const path = decodeURIComponent(encodedPath);
+
+    const storageRef = ref(storage, path);
+    await deleteObject(storageRef);
+    console.log('[deleteMenuGridImage] Deleted old grid image:', path);
+  } catch (error) {
+    console.error('Error deleting menu grid image from Firebase Storage:', error);
+  }
+}
+
+/**
  * Check if a URL is a Firebase Storage URL
  * @param {string} imageUrl - The URL to check
  * @returns {boolean} - True if it's a Firebase Storage URL
