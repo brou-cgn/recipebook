@@ -184,6 +184,17 @@ const Header = forwardRef(function Header({
     saveDarkModePreference(mode);
     applyDarkModePreference(mode);
   };
+
+  const handleDarkModeCycle = () => {
+    const modes = ['light', 'dark', 'auto'];
+    const currentIndex = modes.indexOf(darkMode);
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+    handleDarkModeSelect(nextMode);
+  };
+
+  const darkModeLabel = darkMode === 'light' ? 'Helles Design'
+    : darkMode === 'dark' ? 'Dunkles Design'
+    : 'Automatisch';
   
   return (
     <>
@@ -315,22 +326,10 @@ const Header = forwardRef(function Header({
                   <div className="menu-section">
                     <div className="menu-section-title">Erscheinungsbild</div>
                     <button
-                      className={`menu-item${darkMode === 'light' ? ' active' : ''}`}
-                      onClick={() => handleDarkModeSelect('light')}
+                      className="menu-item"
+                      onClick={handleDarkModeCycle}
                     >
-                      ☀️ Hell
-                    </button>
-                    <button
-                      className={`menu-item${darkMode === 'dark' ? ' active' : ''}`}
-                      onClick={() => handleDarkModeSelect('dark')}
-                    >
-                      🌙 Dunkel
-                    </button>
-                    <button
-                      className={`menu-item${darkMode === 'auto' ? ' active' : ''}`}
-                      onClick={() => handleDarkModeSelect('auto')}
-                    >
-                      ⚙️ Automatisch
+                      {darkModeLabel}
                     </button>
                   </div>
                   )}
