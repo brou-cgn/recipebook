@@ -126,6 +126,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Button icons collection – each document stores one icon (key = iconKey, value = emoji/base64)
+    match /buttonIcons/{iconId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Custom lists collection
     match /customLists/{listId} {
       allow read: if isAnyUser();

@@ -2,7 +2,7 @@
  * Default configuration values for customizable lists
  */
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Italian',
@@ -390,13 +390,13 @@ export function getEffectiveIcon(icons, key, isDarkMode) {
 // Cache for settings to avoid repeated Firestore reads
 let settingsCache = null;
 
+const BUTTON_ICONS_COLLECTION = 'buttonIcons';
 
 // Image field names that live in settings/images (not settings/app)
 const IMAGE_FIELD_NAMES = [
   'faviconImage',
   'appLogoImage',
   'appLogoImageUrl',
-  'buttonIcons',
   'timelineBubbleIcon',
   'timelineMenuBubbleIcon',
   'timelineCookEventBubbleIcon',
@@ -404,6 +404,26 @@ const IMAGE_FIELD_NAMES = [
   'timelineMenuDefaultImage',
   'timelineCookEventDefaultImage',
 ];
+
+/**
+ * Migrate button icons from a plain object to the buttonIcons collection.
+ * Each icon key becomes a separate document: buttonIcons/{key} = { value, updatedAt }.
+ * @param {Object} icons - Plain object mapping icon keys to values
+ * @returns {Promise<void>}
+ */
+async function migrateButtonIconsToCollection(icons) {
+  try {
+    const batch = writeBatch(db);
+    for (const [key, value] of Object.entries(icons)) {
+      const iconRef = doc(db, BUTTON_ICONS_COLLECTION, key);
+      batch.set(iconRef, { value, updatedAt: serverTimestamp() });
+    }
+    await batch.commit();
+    console.log('Migrated buttonIcons to buttonIcons collection');
+  } catch (error) {
+    console.error('Failed to migrate buttonIcons to collection:', error);
+  }
+}
 
 /**
  * Get settings from Firestore or return defaults.
@@ -452,6 +472,32 @@ export async function getSettings() {
         }
       }
 
+      // One-time migration: move buttonIcons from settings/app or settings/images → buttonIcons collection
+      const buttonIconsFromApp = settings.buttonIcons;
+      const buttonIconsFromImages = imagesData.buttonIcons;
+      if (buttonIconsFromApp || buttonIconsFromImages) {
+        try {
+          // Prefer images data (was the last migration target) over app data
+          const iconsToMigrate = buttonIconsFromImages || buttonIconsFromApp;
+          await migrateButtonIconsToCollection(iconsToMigrate);
+
+          const deletePromises = [];
+          if (buttonIconsFromApp) {
+            deletePromises.push(
+              updateDoc(doc(db, 'settings', 'app'), { buttonIcons: deleteField() })
+            );
+          }
+          if (buttonIconsFromImages) {
+            deletePromises.push(
+              updateDoc(doc(db, 'settings', 'images'), { buttonIcons: deleteField() })
+            );
+          }
+          await Promise.all(deletePromises);
+        } catch (migrationError) {
+          console.error('Failed to migrate buttonIcons to collection:', migrationError);
+        }
+      }
+
       let aiRecipePrompt = settings.aiRecipePrompt || DEFAULT_AI_RECIPE_PROMPT;
 
       // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
@@ -469,6 +515,10 @@ export async function getSettings() {
           (err) => console.error('Failed to migrate aiRecipePrompt in Firestore:', err)
         );
       }
+
+      // Load button icons from the buttonIcons collection.
+      // settingsCache has not been set yet at this point, so getButtonIcons() fetches from Firestore.
+      const buttonIcons = await getButtonIcons();
 
       // Ensure all fields exist for backward compatibility
       settingsCache = {
@@ -500,7 +550,7 @@ export async function getSettings() {
         faviconImage: imagesData.faviconImage || null,
         appLogoImage: imagesData.appLogoImage || null,
         appLogoImageUrl: imagesData.appLogoImageUrl || null,
-        buttonIcons: { ...DEFAULT_BUTTON_ICONS, ...(imagesData.buttonIcons || {}) },
+        buttonIcons,
         timelineBubbleIcon: imagesData.timelineBubbleIcon || null,
         timelineMenuBubbleIcon: imagesData.timelineMenuBubbleIcon || null,
         timelineCookEventBubbleIcon: imagesData.timelineCookEventBubbleIcon || null,
@@ -936,16 +986,28 @@ export async function addMissingConversionEntries(missingEntries, currentTable =
 }
 
 /**
- * Get the button icons from Firestore or return defaults
+ * Get the button icons from the buttonIcons collection (or return from cache / defaults).
  * @returns {Promise<Object>} Promise resolving to button icons object
  */
 export async function getButtonIcons() {
-  const settings = await getSettings();
-  return settings.buttonIcons || DEFAULT_BUTTON_ICONS;
+  if (settingsCache) {
+    return settingsCache.buttonIcons || { ...DEFAULT_BUTTON_ICONS };
+  }
+  try {
+    const snapshot = await getDocs(collection(db, BUTTON_ICONS_COLLECTION));
+    const icons = { ...DEFAULT_BUTTON_ICONS };
+    snapshot.forEach((docSnap) => {
+      icons[docSnap.id] = docSnap.data().value;
+    });
+    return icons;
+  } catch (error) {
+    console.error('Error loading button icons:', error);
+    return { ...DEFAULT_BUTTON_ICONS };
+  }
 }
 
 /**
- * Save the button icons to Firestore (settings/images)
+ * Save all button icons to the buttonIcons collection (one document per icon key).
  * @param {Object} buttonIcons - Button icons object
  * @returns {Promise<void>}
  */
@@ -962,8 +1024,12 @@ export async function saveButtonIcons(buttonIcons) {
     settingsCache.buttonIcons = completeIcons;
   }
   try {
-    const imagesRef = doc(db, 'settings', 'images');
-    await setDoc(imagesRef, { buttonIcons: completeIcons }, { merge: true });
+    const batch = writeBatch(db);
+    for (const [key, value] of Object.entries(completeIcons)) {
+      const iconRef = doc(db, BUTTON_ICONS_COLLECTION, key);
+      batch.set(iconRef, { value, updatedAt: serverTimestamp() });
+    }
+    await batch.commit();
   } catch (error) {
     // Revert optimistic cache update on failure to avoid inconsistent state
     if (settingsCache) {
@@ -975,7 +1041,7 @@ export async function saveButtonIcons(buttonIcons) {
 }
 
 /**
- * Save a single button icon to Firestore/settings/images (incremental update)
+ * Save a single button icon to the buttonIcons collection (incremental update).
  * @param {string} iconKey - The icon key (e.g. 'cookingMode' or 'cookingModeDark')
  * @param {string} iconValue - The icon value (emoji, text, or base64 image)
  * @returns {Promise<void>}
@@ -990,29 +1056,10 @@ export async function saveButtonIcon(iconKey, iconValue) {
     settingsCache.buttonIcons[iconKey] = iconValue;
   }
 
-  const imagesRef = doc(db, 'settings', 'images');
   try {
-    // Use dot notation to update only one field in the buttonIcons object
-    await updateDoc(imagesRef, {
-      [`buttonIcons.${iconKey}`]: iconValue
-    });
+    const iconRef = doc(db, BUTTON_ICONS_COLLECTION, iconKey);
+    await setDoc(iconRef, { value: iconValue, updatedAt: serverTimestamp() });
   } catch (error) {
-    if (error.code === 'not-found') {
-      // settings/images doesn't exist yet – create it with the full icons object.
-      // Ensure the new icon value is always included, even if the cache is null.
-      try {
-        const baseIcons = settingsCache?.buttonIcons || DEFAULT_BUTTON_ICONS;
-        const iconsToSave = { ...baseIcons, [iconKey]: iconValue };
-        await setDoc(imagesRef, { buttonIcons: iconsToSave });
-        return;
-      } catch (createError) {
-        if (settingsCache?.buttonIcons) {
-          settingsCache.buttonIcons[iconKey] = previousValue;
-        }
-        console.error(`Error creating settings/images for button icon '${iconKey}':`, createError);
-        throw createError;
-      }
-    }
     // Revert optimistic cache update on failure
     if (settingsCache?.buttonIcons) {
       settingsCache.buttonIcons[iconKey] = previousValue;
