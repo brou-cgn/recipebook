@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import './Header.css';
-import { getHeaderSlogan, getAppLogoImage, getDarkModePreference, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
+import { getHeaderSlogan, getAppLogoImage, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
 import { ROLES } from '../utils/userManagement';
 import SearchIcon from './icons/SearchIcon';
@@ -41,7 +41,7 @@ const Header = forwardRef(function Header({
   const [faqModalOpen, setFaqModalOpen] = useState(false);
   const [expandedFaqId, setExpandedFaqId] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-  const [darkMode, setDarkMode] = useState(getDarkModePreference);
+  const [darkMode, setDarkMode] = useState(getDarkModeMode);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -66,11 +66,11 @@ const Header = forwardRef(function Header({
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'darkModePreference') {
-        setDarkMode(e.newValue === 'true');
+        setDarkMode(getDarkModeMode());
       }
     };
-    const handleDarkModeChange = (e) => {
-      setDarkMode(e.detail.isDark);
+    const handleDarkModeChange = () => {
+      setDarkMode(getDarkModeMode());
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('darkModeChange', handleDarkModeChange);
@@ -179,11 +179,10 @@ const Header = forwardRef(function Header({
     setMenuOpen(false);
   };
 
-  const handleDarkModeToggle = () => {
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    saveDarkModePreference(newValue);
-    applyDarkModePreference(newValue);
+  const handleDarkModeSelect = (mode) => {
+    setDarkMode(mode);
+    saveDarkModePreference(mode);
+    applyDarkModePreference(mode);
   };
   
   return (
@@ -316,10 +315,22 @@ const Header = forwardRef(function Header({
                   <div className="menu-section">
                     <div className="menu-section-title">Erscheinungsbild</div>
                     <button
-                      className="menu-item dark-mode-toggle"
-                      onClick={handleDarkModeToggle}
+                      className={`menu-item${darkMode === 'light' ? ' active' : ''}`}
+                      onClick={() => handleDarkModeSelect('light')}
                     >
-                      {darkMode ? 'Helles Design' : 'Dunkles Design'}
+                      ☀️ Hell
+                    </button>
+                    <button
+                      className={`menu-item${darkMode === 'dark' ? ' active' : ''}`}
+                      onClick={() => handleDarkModeSelect('dark')}
+                    >
+                      🌙 Dunkel
+                    </button>
+                    <button
+                      className={`menu-item${darkMode === 'auto' ? ' active' : ''}`}
+                      onClick={() => handleDarkModeSelect('auto')}
+                    >
+                      ⚙️ Automatisch
                     </button>
                   </div>
                   )}

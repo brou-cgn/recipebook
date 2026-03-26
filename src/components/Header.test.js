@@ -6,6 +6,7 @@ import Header from './Header';
 jest.mock('../utils/customLists', () => ({
   getHeaderSlogan: () => Promise.resolve('Test Slogan'),
   getAppLogoImage: () => Promise.resolve(null),
+  getDarkModeMode: () => 'auto',
   getDarkModePreference: () => false,
   saveDarkModePreference: jest.fn(),
   applyDarkModePreference: jest.fn(),
@@ -272,5 +273,88 @@ describe('Header - Erscheinungsbild (themeToggle) permission', () => {
 
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
     expect(screen.getByText('Erscheinungsbild')).toBeInTheDocument();
+  });
+
+  test('three theme buttons (Hell, Dunkel, Automatisch) are shown in Erscheinungsbild section', () => {
+    const userWithThemeToggle = { ...mockCurrentUser, themeToggle: true };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByText(/☀️ Hell/)).toBeInTheDocument();
+    expect(screen.getByText(/🌙 Dunkel/)).toBeInTheDocument();
+    expect(screen.getByText(/⚙️ Automatisch/)).toBeInTheDocument();
+  });
+
+  test('clicking Automatisch calls saveDarkModePreference and applyDarkModePreference with "auto"', () => {
+    const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
+    saveDarkModePreference.mockClear();
+    applyDarkModePreference.mockClear();
+
+    const userWithThemeToggle = { ...mockCurrentUser, themeToggle: true };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByText(/⚙️ Automatisch/));
+
+    expect(saveDarkModePreference).toHaveBeenCalledWith('auto');
+    expect(applyDarkModePreference).toHaveBeenCalledWith('auto');
+  });
+
+  test('clicking Hell calls saveDarkModePreference and applyDarkModePreference with "light"', () => {
+    const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
+    saveDarkModePreference.mockClear();
+    applyDarkModePreference.mockClear();
+
+    const userWithThemeToggle = { ...mockCurrentUser, themeToggle: true };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByText(/☀️ Hell/));
+
+    expect(saveDarkModePreference).toHaveBeenCalledWith('light');
+    expect(applyDarkModePreference).toHaveBeenCalledWith('light');
+  });
+
+  test('clicking Dunkel calls saveDarkModePreference and applyDarkModePreference with "dark"', () => {
+    const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
+    saveDarkModePreference.mockClear();
+    applyDarkModePreference.mockClear();
+
+    const userWithThemeToggle = { ...mockCurrentUser, themeToggle: true };
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={userWithThemeToggle}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByText(/🌙 Dunkel/));
+
+    expect(saveDarkModePreference).toHaveBeenCalledWith('dark');
+    expect(applyDarkModePreference).toHaveBeenCalledWith('dark');
   });
 });
