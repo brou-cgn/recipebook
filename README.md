@@ -536,24 +536,21 @@ REACT_APP_FIREBASE_PROJECT_ID=your_project_id
 
 ## Firebase Storage CORS Setup
 
-After deploying the application, configure CORS for Firebase Storage to allow images to load correctly in the Menu-Grid.
+Nach dem initialen Setup muss die CORS-Konfiguration auf den Firebase Storage Bucket angewendet werden, damit Bilder korrekt geladen und Menüs gespeichert werden können.
 
-### Prerequisites
-- Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
-- Authenticate: `gcloud auth login`
-- Set project: `gcloud config set project broubook`
+**Siehe:** [CORS_FIX_ANLEITUNG.md](CORS_FIX_ANLEITUNG.md) für detaillierte Anweisungen.
 
-### Apply CORS Configuration
-
+**Kurzversion:**
 ```bash
-gsutil cors set storage-cors.json gs://broubook.firebasestorage.app
-```
+# Google Cloud SDK authentifizieren
+gcloud auth login
+gcloud config set project [DEIN-PROJEKT-ID]
 
-Or use the provided deployment script:
+# CORS-Konfiguration anwenden
+gsutil cors set storage-cors.json gs://[DEIN-PROJEKT-ID].appspot.com
 
-```bash
-chmod +x scripts/deploy-cors.sh
-./scripts/deploy-cors.sh
+# Storage Rules deployen
+firebase deploy --only storage
 ```
 
 ### Verify Configuration

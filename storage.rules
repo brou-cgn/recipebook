@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check user role from Firestore
+    function getUserRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Check if user has edit permissions or higher
+    function hasEditPermission() {
+      return isAuthenticated() &&
+             getUserRole() in ['edit', 'moderator', 'admin'];
+    }
+
+    // Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+
+    // Recipe images - require edit permission
+    match /recipes/{recipeImage} {
+      allow read: if true;  // Public read access
+      allow write: if hasEditPermission();
+      allow delete: if hasEditPermission();
+    }
+
+    // Settings images (favicon, app logo) - require admin permission
+    match /settings/{settingImage} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Thumbnails for shared recipes - public read, system write
+    match /thumbnails/{thumbnail} {
+      allow read: if true;  // Public read access
+      allow write: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
