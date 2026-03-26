@@ -2738,3 +2738,190 @@
 [data-theme="dark"] .dark-icon-row {
   border-bottom-color: #3d3d3d;
 }
+
+/* ---- Cooking mode (Kochmodus) ---- */
+[data-theme="dark"] .cooking-mode-ingredients {
+  background: #1e1e1e;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .cooking-mode-steps {
+  background: #121212;
+}
+
+[data-theme="dark"] .cooking-mode-serving-control {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .cooking-mode-serving-control .serving-display {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .cooking-mode-serving-control .serving-btn:disabled {
+  background: #444;
+}
+
+[data-theme="dark"] .step-card {
+  background: #1e1e1e;
+  color: #e8e8e8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .step-card.active {
+  box-shadow: 0 4px 16px rgba(150, 98, 47, 0.35);
+}
+
+[data-theme="dark"] .step-card .step-counter {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+[data-theme="dark"] .step-dot {
+  background: #555;
+}
+
+[data-theme="dark"] .step-dot.active {
+  background: #c08060;
+}
+
+[data-theme="dark"] .step-timer-top-area {
+  background: #2a2a2a;
+  border-color: #7a5c3a;
+}
+
+[data-theme="dark"] .step-timer-time {
+  color: #c08060;
+}
+
+[data-theme="dark"] .step-timer-progress-bar {
+  background: #3d3d3d;
+}
+
+/* ---- Alarm modal (Timermodal) ---- */
+[data-theme="dark"] .alarm-modal {
+  background: #1e1e1e;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .alarm-modal-label {
+  color: #aaa;
+}
+
+/* ---- Delete button in menu (Löschbutton im Menü) ---- */
+[data-theme="dark"] .delete-button {
+  background: #2a2a2a;
+  color: #f77;
+  border-color: #c44;
+}
+
+[data-theme="dark"] .delete-button:hover {
+  background: #3a1a1a;
+  border-color: #f44336;
+}
+
+/* ---- Menu form editing (Menü bearbeiten) ---- */
+[data-theme="dark"] .menu-form {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .section-header {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .section-header h4 {
+  color: #c08060;
+}
+
+[data-theme="dark"] .move-button {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .move-button:hover:not(:disabled) {
+  border-color: #c08060;
+  background: #333;
+}
+
+[data-theme="dark"] .remove-section-button {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .section-summary {
+  color: #aaa;
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .recipe-section-info {
+  color: #777;
+}
+
+[data-theme="dark"] .recipe-checkbox {
+  border-color: #555;
+}
+
+[data-theme="dark"] .recipe-checkbox:hover {
+  background: #2a2a2a;
+  border-color: #c08060;
+}
+
+[data-theme="dark"] .recipe-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .form-actions {
+  border-top-color: #3d3d3d;
+}
+
+/* ---- Portion selector modal (in MenuDetail) ---- */
+[data-theme="dark"] .portion-selector-modal {
+  background: #1e1e1e;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .portion-selector-header {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .portion-selector-title {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .portion-selector-close {
+  color: #aaa;
+}
+
+[data-theme="dark"] .portion-selector-close:hover {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .portion-selector-item {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .portion-selector-recipe-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .portion-selector-btn {
+  background: #2a2a2a;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .portion-selector-btn:hover {
+  background: #3a3a3a;
+}
+
+[data-theme="dark"] .portion-selector-count {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .portion-selector-footer {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .portion-selector-section-label {
+  color: #777;
+  border-top-color: #3d3d3d;
+}
