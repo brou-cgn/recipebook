@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle } from '../utils/customLists';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -279,8 +279,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Tile size state
   const [tileSize, setTileSize] = useState(getTileSizePreference);
 
-  // Dark mode state
-  const [darkMode, setDarkMode] = useState(getDarkModePreference);
+  // Dark mode state ('light' | 'dark' | 'auto')
+  const [darkMode, setDarkMode] = useState(getDarkModeMode);
 
   // Sort/filter settings state
   const [trendingDays, setTrendingDays] = useState(DEFAULT_TRENDING_DAYS);
@@ -1881,13 +1881,13 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <div className="settings-section">
               <h3>Erscheinungsbild</h3>
               <p className="section-description">
-                Wählen Sie zwischen hellem und dunklem Design. Das dunkle Design schont die Augen bei wenig Licht.
+                Wählen Sie zwischen hellem und dunklem Design oder übernehmen Sie die Systemeinstellung automatisch.
               </p>
               <div className="theme-options">
                 <button
                   type="button"
-                  className={`theme-btn${!darkMode ? ' active' : ''}`}
-                  onClick={() => setDarkMode(false)}
+                  className={`theme-btn${darkMode === 'light' ? ' active' : ''}`}
+                  onClick={() => setDarkMode('light')}
                 >
                   <span className="theme-btn-icon">☀️</span>
                   <span className="theme-btn-label">Hell</span>
@@ -1895,12 +1895,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 </button>
                 <button
                   type="button"
-                  className={`theme-btn${darkMode ? ' active' : ''}`}
-                  onClick={() => setDarkMode(true)}
+                  className={`theme-btn${darkMode === 'dark' ? ' active' : ''}`}
+                  onClick={() => setDarkMode('dark')}
                 >
                   <span className="theme-btn-icon">🌙</span>
                   <span className="theme-btn-label">Dunkel</span>
                   <span className="theme-btn-desc">Dunkles Design</span>
+                </button>
+                <button
+                  type="button"
+                  className={`theme-btn${darkMode === 'auto' ? ' active' : ''}`}
+                  onClick={() => setDarkMode('auto')}
+                >
+                  <span className="theme-btn-icon">⚙️</span>
+                  <span className="theme-btn-label">Automatisch</span>
+                  <span className="theme-btn-desc">Systemeinstellung</span>
                 </button>
               </div>
             </div>

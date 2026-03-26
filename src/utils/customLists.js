@@ -179,37 +179,87 @@ export function applyTileSizePreference(size) {
 // Dark mode preference key
 const DARK_MODE_KEY = 'darkModePreference';
 
+// Module-level reference to the active matchMedia listener for 'auto' mode
+let _darkModeMediaListener = null;
+
+/**
+ * Get the current dark mode setting from localStorage.
+ * @returns {'light'|'dark'|'auto'} The stored mode; defaults to 'auto' when nothing is stored.
+ */
+export function getDarkModeMode() {
+  const stored = localStorage.getItem(DARK_MODE_KEY);
+  if (stored === 'auto') return 'auto';
+  if (stored === 'true') return 'dark';
+  if (stored === 'false') return 'light';
+  return 'auto'; // default: follow system
+}
+
 /**
  * Get the dark mode preference from localStorage
  * @returns {boolean} True if dark mode is enabled
  */
 export function getDarkModePreference() {
   const stored = localStorage.getItem(DARK_MODE_KEY);
-  if (stored !== null) return stored === 'true';
-  // Fall back to system preference
-  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (stored === 'true') return true;
+  if (stored === 'false') return false;
+  // 'auto' or not set: fall back to system preference
+  return window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
 }
 
 /**
- * Save the dark mode preference to localStorage and dispatch a custom event
+ * Save the dark mode setting to localStorage and dispatch a custom event
  * so other components in the same tab can react to the change.
- * @param {boolean} isDark - Whether dark mode should be enabled
+ * @param {'light'|'dark'|'auto'} mode - The mode to save
  */
-export function saveDarkModePreference(isDark) {
-  localStorage.setItem(DARK_MODE_KEY, String(isDark));
+export function saveDarkModePreference(mode) {
+  let stored;
+  if (mode === 'auto') stored = 'auto';
+  else if (mode === 'dark' || mode === true) stored = 'true';
+  else stored = 'false';
+  localStorage.setItem(DARK_MODE_KEY, stored);
+  const isDark = getDarkModePreference();
   window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark } }));
 }
 
 /**
- * Apply the dark mode preference by setting data-theme attribute on the document root
- * @param {boolean} [isDark] - Whether dark mode should be enabled; reads from localStorage if omitted
+ * Apply the dark mode preference by setting data-theme attribute on the document root.
+ * When the resolved mode is 'auto', a matchMedia listener is registered so the theme
+ * updates automatically whenever the OS preference changes.
+ * @param {'light'|'dark'|'auto'} [mode] - The mode to apply; reads from localStorage if omitted
  */
-export function applyDarkModePreference(isDark) {
-  const dark = isDark !== undefined ? isDark : getDarkModePreference();
-  if (dark) {
+export function applyDarkModePreference(mode) {
+  const resolvedMode = mode !== undefined ? mode : getDarkModeMode();
+
+  let isDark;
+  if (resolvedMode === 'auto') {
+    isDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+  } else {
+    isDark = resolvedMode === 'dark' || resolvedMode === true || resolvedMode === 'true';
+  }
+
+  if (isDark) {
     document.documentElement.setAttribute('data-theme', 'dark');
   } else {
     document.documentElement.removeAttribute('data-theme');
+  }
+
+  // Manage the system-preference listener for 'auto' mode
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (_darkModeMediaListener && mq) {
+    mq.removeEventListener('change', _darkModeMediaListener);
+    _darkModeMediaListener = null;
+  }
+  if (resolvedMode === 'auto' && mq) {
+    _darkModeMediaListener = (e) => {
+      const dark = e.matches;
+      if (dark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark: dark } }));
+    };
+    mq.addEventListener('change', _darkModeMediaListener);
   }
 }
 
