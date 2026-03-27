@@ -850,7 +850,8 @@
 
 .recipe-section {
   padding: 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  /*border-bottom: 1px solid #f0f0f0;*/
+  border-bottom: none;
 }
 
 .recipe-section:last-child {
@@ -871,7 +872,6 @@
   margin-bottom: 0rem;
   flex-wrap: wrap;
   gap: 0.5rem;
-  border-bottom: none;
 }
 
 .serving-control {
