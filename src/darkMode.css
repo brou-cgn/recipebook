@@ -319,7 +319,7 @@
 [data-theme="dark"] .recipe-section h2,
 [data-theme="dark"] .recipe-section h3 {
   color: #e8e8e8;
-  border-bottom-color: #3d3d3d;
+  border-bottom-color: white;
 }
 
 [data-theme="dark"] .ingredient-item {
