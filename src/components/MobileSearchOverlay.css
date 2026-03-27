@@ -319,9 +319,9 @@
   gap: 5px;
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1.5px solid transparent;
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: #ffffff;
+  border: 1px solid #E5DED8;
+  background: #F5F2EF;
+  color: #3E2B1C;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -335,9 +335,9 @@
 }
 
 .mobile-search-filter-pill.active {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-  color: #ffffff;
-  border-color: transparent;
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
 }
 
 .mobile-search-filter-pill:focus-visible {
@@ -346,13 +346,15 @@
 }
 
 .mobile-search-cuisine-pill {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
+  background: #F5F2EF;
+  color: #3E2B1C;
+  border: 1px solid #E5DED8;
 }
 
 .mobile-search-cuisine-pill.active {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-  color: #ffffff;
-  border-color: transparent;
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
 }
 
 

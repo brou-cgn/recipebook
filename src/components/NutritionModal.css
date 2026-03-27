@@ -184,8 +184,9 @@
 }
 
 .nutrition-kcal-badge {
-  background: #402C1C;
-  color: white;
+  background: #F5F2EF;
+  color: #3E2B1C;
+  border: 1px solid #E5DED8;
   border-radius: 6px;
   padding: 0.1rem 0.45rem;
   font-size: 0.78rem;

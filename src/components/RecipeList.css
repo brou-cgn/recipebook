@@ -305,8 +305,9 @@
 
 .kulinarik-tag {
   display: inline-block;
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
+  background: #F5F2EF;
+  color: #3E2B1C;
+  border: 1px solid #E5DED8;
   border-radius: 12px;
   padding: 0.15rem 0.6rem;
   font-size: 0.78rem;
@@ -314,7 +315,7 @@
 }
 
 .kulinarik-tag-more {
-  background: linear-gradient(135deg, #888 0%, #555 100%);
+  background: #F5F2EF;
 }
 
 .recipe-footer {

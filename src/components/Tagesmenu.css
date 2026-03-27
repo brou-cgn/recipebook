@@ -148,8 +148,9 @@
 }
 
 .tagesmenu-kulinarik-tag {
-  background: #fdecea;
-  color: #e63946;
+  background: #F5F2EF;
+  color: #3E2B1C;
+  border: 1px solid #E5DED8;
   border-radius: 12px;
   padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
@@ -439,8 +440,9 @@
 }
 
 .tagesmenu-results-tile-kulinarik-tag {
-  background: #fdecea;
-  color: #e63946;
+  background: #F5F2EF;
+  color: #3E2B1C;
+  border: 1px solid #E5DED8;
   border-radius: 8px;
   padding: 0.1rem 0.35rem;
   font-size: 0.58rem;
