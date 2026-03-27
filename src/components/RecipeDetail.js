@@ -60,6 +60,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Whether the current carousel image is a default category image
   const [isDefaultCategoryImage, setIsDefaultCategoryImage] = useState(false);
   const [categoryImageSet, setCategoryImageSet] = useState(new Set());
+  // Track whether category images have been loaded to avoid flashing wrong icons
+  const [categoryImageSetLoaded, setCategoryImageSetLoaded] = useState(false);
   // Image carousel state
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
@@ -101,19 +103,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const loadSettings = async () => {
       const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } = require('../utils/customLists');
       const { getCategoryImages } = require('../utils/categoryImages');
-      const lists = await getCustomLists();
-      const icons = await getButtonIcons();
+      const [lists, icons, catImages] = await Promise.all([
+        getCustomLists(),
+        getButtonIcons(),
+        Promise.resolve(getCategoryImages()).catch((err) => { console.error('Error loading category images:', err); return []; }),
+      ]);
       setPortionUnits(lists.portionUnits || []);
       setAllButtonIcons(icons);
       setConversionTable(lists.conversionTable || []);
+      setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
+      setCategoryImageSetLoaded(true);
       const bubbleIcon = await getTimelineBubbleIcon();
       const cookEventBubbleIcon = await getTimelineCookEventBubbleIcon();
       const cookEventDefaultImg = await getTimelineCookEventDefaultImage();
       setTimelineBubbleIcon(bubbleIcon);
       setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
-      const catImages = await getCategoryImages();
-      setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
     };
     loadSettings();
   }, []);
@@ -1606,7 +1611,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     </>
                   )}
                   {isMobile && (
-                    <div className="image-overlay-actions">
+                    <div className={`image-overlay-actions${categoryImageSetLoaded ? '' : ' image-overlay-actions--hidden'}`}>
                       <div 
                         className="overlay-cooking-mode-static" 
                         onClick={toggleCookingMode} 

@@ -673,6 +673,10 @@
   pointer-events: none;
 }
 
+.image-overlay-actions--hidden {
+  visibility: hidden;
+}
+
 .image-overlay-actions > * {
   pointer-events: auto;
 }
