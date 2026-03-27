@@ -50,11 +50,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [cookingModeIcon, setCookingModeIcon] = useState('♨');
   const [cookingModeAltIcon, setCookingModeAltIcon] = useState('♨');
+  const [cookingModeDefaultImgIcon, setCookingModeDefaultImgIcon] = useState('♨');
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   const [closeButtonAltIcon, setCloseButtonAltIcon] = useState('×');
+  const [closeButtonDefaultImgIcon, setCloseButtonDefaultImgIcon] = useState('×');
   // Whether to use alt icons due to bright image corners
   const [useCookingModeAlt, setUseCookingModeAlt] = useState(false);
   const [useCloseButtonAlt, setUseCloseButtonAlt] = useState(false);
+  // Whether the current carousel image is a default category image
+  const [isDefaultCategoryImage, setIsDefaultCategoryImage] = useState(false);
+  const [categoryImageSet, setCategoryImageSet] = useState(new Set());
   // Image carousel state
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
@@ -95,6 +100,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   useEffect(() => {
     const loadSettings = async () => {
       const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } = require('../utils/customLists');
+      const { getCategoryImages } = require('../utils/categoryImages');
       const lists = await getCustomLists();
       const icons = await getButtonIcons();
       setPortionUnits(lists.portionUnits || []);
@@ -106,6 +112,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimelineBubbleIcon(bubbleIcon);
       setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
+      const catImages = await getCategoryImages();
+      setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
     };
     loadSettings();
   }, []);
@@ -115,8 +123,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCookingModeIcon(eff('cookingMode') || '♨');
     setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
+    setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
     setCloseButtonIcon(eff('closeButton') || '×');
     setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
+    setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
     setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
@@ -206,6 +216,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Derive alt-icon state from imageBrightness metadata stored at upload time.
   // Both useCookingModeAlt and useCloseButtonAlt always share the same value so
   // there is never a mixed icon state.
+  // Also detects whether the current image is a default category image.
   useEffect(() => {
     const allImages = Array.isArray(selectedRecipe.images) && selectedRecipe.images.length > 0
       ? selectedRecipe.images
@@ -219,7 +230,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const isBright = currentImage?.imageBrightness?.isBright || false;
     setUseCookingModeAlt(isBright);
     setUseCloseButtonAlt(isBright);
-  }, [selectedRecipe.images, selectedRecipe.image, carouselIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+    const isCatImage = Boolean(currentImage?.url) && categoryImageSet.has(currentImage.url);
+    setIsDefaultCategoryImage(isCatImage);
+  }, [selectedRecipe.images, selectedRecipe.image, carouselIndex, categoryImageSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep header visible on mobile - removed auto-hide behavior
   useEffect(() => {
@@ -1602,24 +1615,32 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleCookingMode()}
                         aria-label="Kochmodus aktivieren"
                       >
-                        {/* Use alt icon when top-left image corner is too bright */}
-                        {isBase64Image(useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon) ? (
-                          <img src={useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
-                        ) : (
-                          <span>{useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon}</span>
-                        )}
+                        {/* Use default-category-image icon when the displayed image is a category image,
+                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                        {(() => {
+                          const icon = isDefaultCategoryImage
+                            ? cookingModeDefaultImgIcon
+                            : (useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon);
+                          return isBase64Image(icon)
+                            ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                            : <span>{icon}</span>;
+                        })()}
                       </div>
                       <button 
                         className="overlay-back-button"
                         onClick={handleBackFromLinkedRecipe}
                         title="Zurück"
                       >
-                        {/* Use alt icon when top-right image corner is too bright */}
-                        {isBase64Image(useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon) ? (
-                          <img src={useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
-                        ) : (
-                          useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon
-                        )}
+                        {/* Use default-category-image icon when the displayed image is a category image,
+                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                        {(() => {
+                          const icon = isDefaultCategoryImage
+                            ? closeButtonDefaultImgIcon
+                            : (useCloseButtonAlt ? closeButtonAltIcon : closeButtonIcon);
+                          return isBase64Image(icon)
+                            ? <img src={icon} alt="Schließen" className="close-button-icon-img" />
+                            : icon;
+                        })()}
                       </button>
                     </div>
                   )}

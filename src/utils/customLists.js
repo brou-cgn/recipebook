@@ -343,12 +343,16 @@ export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '♨',
   // Alt icon shown when the top-left image corner is too bright (high luminance)
   cookingModeAlt: '♨',
+  // Icon shown when the recipe uses the default category image (light mode)
+  cookingModeDefaultImg: '♨',
   importRecipe: 'Import',
   scanImage: 'Scan',
   webImport: 'Web',
   closeButton: '×',
   // Alt icon shown when the top-right image corner is too bright (high luminance)
   closeButtonAlt: '×',
+  // Icon shown when the recipe uses the default category image (light mode)
+  closeButtonDefaultImg: '×',
   menuCloseButton: '×',
   filterButton: '⚙',
   filterButtonActive: '▼',
@@ -382,11 +386,15 @@ export const DEFAULT_BUTTON_ICONS = {
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
   cookingModeDark: '',
   cookingModeAltDark: '',
+  // Dark mode variant for the default category image icon
+  cookingModeDefaultImgDark: '',
   importRecipeDark: '',
   scanImageDark: '',
   webImportDark: '',
   closeButtonDark: '',
   closeButtonAltDark: '',
+  // Dark mode variant for the default category image icon
+  closeButtonDefaultImgDark: '',
   menuCloseButtonDark: '',
   filterButtonDark: '',
   filterButtonActiveDark: '',

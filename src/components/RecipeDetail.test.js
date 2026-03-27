@@ -57,6 +57,10 @@ jest.mock('../utils/customLists', () => ({
   getDarkModePreference: () => false,
 }));
 
+jest.mock('../utils/categoryImages', () => ({
+  getCategoryImages: jest.fn(() => Promise.resolve([])),
+}));
+
 describe('RecipeDetail - Portion Controller', () => {
   const mockRecipe = {
     id: 'recipe-1',
@@ -970,6 +974,131 @@ describe('RecipeDetail - Brightness-based alt icon switching', () => {
     expect(cookingModeBtn).toBeInTheDocument();
     // No canvas analysis should take place – metadata fallback to false
     expect(document.createElement).not.toHaveBeenCalledWith('canvas');
+  });
+});
+
+describe('RecipeDetail - Default category image icon switching', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+    rolle: 'Familymember',
+  };
+
+  beforeEach(() => {
+    // Mobile viewport so overlay buttons are rendered
+    global.innerWidth = 400;
+    global.dispatchEvent(new Event('resize'));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('uses default category image icons when current image is a category image', async () => {
+    const categoryImageUrl = 'data:image/png;base64,categoryimage';
+
+    // Spy on getCategoryImages to return a category image
+    jest.spyOn(require('../utils/categoryImages'), 'getCategoryImages')
+      .mockResolvedValue([
+        { id: 'cat1', image: categoryImageUrl, categories: ['Hauptgericht'] },
+      ]);
+
+    // Spy on getButtonIcons to return the new default-img icon keys
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons')
+      .mockResolvedValue({
+        cookingMode: '♨',
+        cookingModeDefaultImg: '🍳',
+        closeButton: '×',
+        closeButtonDefaultImg: '⬅',
+      });
+
+    // Spy on getEffectiveIcon so it can look up the new keys
+    jest.spyOn(require('../utils/customLists'), 'getEffectiveIcon')
+      .mockImplementation((icons, key) => icons[key] ?? '');
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      images: [{ url: categoryImageUrl, isDefault: true }],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(false);
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Cooking mode overlay button should exist (mobile viewport)
+    const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
+    expect(cookingModeBtn).toBeInTheDocument();
+    // Should show the default-category-image cooking mode icon
+    expect(cookingModeBtn.textContent).toContain('🍳');
+  });
+
+  test('uses normal icons when current image is not a category image', async () => {
+    const customImageUrl = 'https://firebasestorage.example.com/custom-photo.jpg';
+    const categoryImageUrl = 'data:image/png;base64,categoryimage';
+
+    // Spy on getCategoryImages to return a category image (different from recipe image)
+    jest.spyOn(require('../utils/categoryImages'), 'getCategoryImages')
+      .mockResolvedValue([
+        { id: 'cat1', image: categoryImageUrl, categories: ['Hauptgericht'] },
+      ]);
+
+    // Spy on getButtonIcons to return the new default-img icon keys
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons')
+      .mockResolvedValue({
+        cookingMode: '♨',
+        cookingModeDefaultImg: '🍳',
+        closeButton: '×',
+        closeButtonDefaultImg: '⬅',
+      });
+
+    // Spy on getEffectiveIcon
+    jest.spyOn(require('../utils/customLists'), 'getEffectiveIcon')
+      .mockImplementation((icons, key) => icons[key] ?? '');
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      images: [{ url: customImageUrl, isDefault: true }],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(false);
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Cooking mode overlay button should exist (mobile viewport)
+    const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
+    expect(cookingModeBtn).toBeInTheDocument();
+    // Should show the normal cooking mode icon (not the default-category one)
+    expect(cookingModeBtn.textContent).toContain('♨');
+    expect(cookingModeBtn.textContent).not.toContain('🍳');
   });
 });
 

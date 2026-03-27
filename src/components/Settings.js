@@ -154,11 +154,13 @@ function renderBoldText(text) {
 const DARK_MODE_ICON_ROWS = [
   { key: 'cookingMode', label: 'Kochmodus-Button' },
   { key: 'cookingModeAlt', label: 'Kochmodus-Alt (helles Bild oben links)' },
+  { key: 'cookingModeDefaultImg', label: 'Kochmodus-Button (Standard-Kategoriebild)' },
   { key: 'importRecipe', label: 'Import-Button' },
   { key: 'scanImage', label: 'Bild-scannen-Button' },
   { key: 'webImport', label: 'Web-Import-Button' },
   { key: 'closeButton', label: 'Schließen-Button' },
   { key: 'closeButtonAlt', label: 'Schließen-Alt (helles Bild oben rechts)' },
+  { key: 'closeButtonDefaultImg', label: 'Schließen-Button (Standard-Kategoriebild)' },
   { key: 'menuCloseButton', label: 'Menü-Schließen-Button' },
   { key: 'filterButton', label: 'Filter-Button' },
   { key: 'filterButtonActive', label: 'Filter-Button (aktiv)' },
