@@ -2152,7 +2152,7 @@
 }
 
 [data-theme="dark"] .metadata-item {
-  background: #2a2a2a;
+  background: transparent;
 }
 
 [data-theme="dark"] .metadata-label {
