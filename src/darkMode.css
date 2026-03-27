@@ -301,6 +301,10 @@
   background: #121212;
 }
 
+[data-theme="dark"] .recipe-detail-image {
+  background: #1a1a1a;
+}
+
 [data-theme="dark"] .recipe-detail-header h1,
 [data-theme="dark"] .recipe-detail-title {
   color: #e8e8e8;
