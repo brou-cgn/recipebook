@@ -2809,6 +2809,39 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .cook-date-modal-footer {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .cook-date-timeline-card {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .cook-date-timeline-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .cook-date-timeline-card-image {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .cook-date-timeline-date {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .cook-date-timeline-recipe-title {
+  color: #aaa;
+}
+
+[data-theme="dark"] .cook-date-timeline-label {
+  color: #999;
+}
+
+[data-theme="dark"] .cook-date-timeline-delete-btn {
+  color: #aaa;
+}
+
 /* ---- RecipeTypeahead additional ---- */
 [data-theme="dark"] .recipe-typeahead-no-results {
   color: #aaa;
