@@ -62,6 +62,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [categoryImageSet, setCategoryImageSet] = useState(new Set());
   // Track whether category images have been loaded to avoid flashing wrong icons
   const [categoryImageSetLoaded, setCategoryImageSetLoaded] = useState(false);
+  // Track whether button icons have been loaded to avoid flashing text defaults
+  const [buttonIconsLoaded, setButtonIconsLoaded] = useState(false);
   // Image carousel state
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
@@ -110,6 +112,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       ]);
       setPortionUnits(lists.portionUnits || []);
       setAllButtonIcons(icons);
+      setButtonIconsLoaded(true);
       setConversionTable(lists.conversionTable || []);
       setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
       setCategoryImageSetLoaded(true);
@@ -120,7 +123,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
     };
-    loadSettings();
+    loadSettings().catch(() => setButtonIconsLoaded(true));
   }, []);
 
   // Re-compute individual icon states when icons or dark mode changes
@@ -1274,7 +1277,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             ← Zurück
           </button>
           
-          <div className="action-buttons">
+          <div className="action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
             {userCanDirectlyEdit && (
               <button className="edit-button" onClick={() => onEdit(recipe)}>
                 Bearbeiten
@@ -1654,7 +1657,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             })()}
 
             {isMobile && (
-              <div className="mobile-action-buttons">
+              <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
                 {onToggleFavorite && (
                 <button
                   className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
@@ -2112,6 +2115,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {userCanDirectlyEdit && onEdit && !cookingMode && (
         <button
           className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={handleEditFabClick}
           onTouchStart={handleEditFabPressStart}
           onTouchEnd={handleEditFabPressEnd}
@@ -2132,6 +2136,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       {userCanCreateVersion && !userCanDirectlyEdit && onCreateVersion && !cookingMode && (
         <button
           className={`new-version-fab-button${newVersionFabPressed ? ' pressed' : ''}`}
+          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={() => onCreateVersion(recipe)}
           onTouchStart={() => setNewVersionFabPressed(true)}
           onTouchEnd={() => setNewVersionFabPressed(false)}
