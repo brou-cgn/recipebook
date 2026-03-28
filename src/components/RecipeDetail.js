@@ -1812,13 +1812,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
               
-              {categoryDisplay && (
-                <div className="metadata-item">
-                  <span className="metadata-label">Kategorie:</span>
-                  <span className="metadata-value">{categoryDisplay}</span>
-                </div>
-              )}
-              
               {recipe.kochdauer && (
                 <div className="metadata-item">
                   <span className="metadata-label">Zeit:</span>
