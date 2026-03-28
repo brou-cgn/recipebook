@@ -110,6 +110,31 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         getButtonIcons(),
         Promise.resolve(getCategoryImages()).catch((err) => { console.error('Error loading category images:', err); return []; }),
       ]);
+      // Pre-compute individual icon states using the current dark mode preference so
+      // that all icon state updates land in the same React batch as setButtonIconsLoaded(true).
+      // Without this, buttons become visible (buttonIconsLoaded=true) one render cycle before
+      // the dependent useEffect updates the individual icon states, causing a brief flash of
+      // the initial text/emoji placeholders.
+      const currentDarkMode = getDarkModePreference();
+      const eff = (key) => getEffectiveIcon(icons, key, currentDarkMode);
+      setCookingModeIcon(eff('cookingMode') || '♨');
+      setCookingModeAltIcon(eff('cookingModeAlt') || eff('cookingMode') || '♨');
+      setCookingModeDefaultImgIcon(eff('cookingModeDefaultImg') || eff('cookingMode') || '♨');
+      setCloseButtonIcon(eff('closeButton') || '×');
+      setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
+      setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
+      setCopyLinkIcon(eff('copyLink') || 'Link');
+      setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
+      setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
+      setShoppingListIcon(eff('shoppingList') || 'Einkauf');
+      setBringButtonIcon(eff('bringButton') || 'Bring');
+      setTimerStartIcon(eff('timerStart') || '▶');
+      setTimerStopIcon(eff('timerStop') || '■');
+      setCookDateIcon(eff('cookDate') || 'Datum');
+      setEditRecipeIcon(eff('editRecipe') || 'Edit');
+      setNewVersionIcon(eff('newVersion') || 'Version');
+      setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
+      setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
       setPortionUnits(lists.portionUnits || []);
       setAllButtonIcons(icons);
       setButtonIconsLoaded(true);
