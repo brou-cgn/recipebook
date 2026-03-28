@@ -293,6 +293,69 @@ describe('RecipeDetail - Step Timer', () => {
     expect(timeDisplay).toHaveClass('finished');
   });
 
+  test('timer syncs to correct time after page becomes visible (background sync)', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    enterCookingMode();
+
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+    expect(document.querySelector('.step-timer-time').textContent).toBe('10:00');
+
+    // Simulate 30 seconds passing in background without interval ticks firing
+    const now = Date.now();
+    jest.setSystemTime(now + 30000);
+
+    // Simulate app coming back to foreground
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Timer should show 9:30 based on actual elapsed time
+    expect(document.querySelector('.step-timer-time').textContent).toBe('09:30');
+  });
+
+  test('timer shows finished and triggers alarm when timer completes in background', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    enterCookingMode();
+
+    fireEvent.click(document.querySelector('.step-timer-start-btn'));
+
+    // Simulate 10+ minutes passing in background without interval ticks firing
+    const now = Date.now();
+    jest.setSystemTime(now + 601000);
+
+    // Simulate app coming back to foreground
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Timer should show finished checkmark
+    const timeDisplay = document.querySelector('.step-timer-time');
+    expect(timeDisplay).toBeInTheDocument();
+    expect(timeDisplay.textContent).toBe('✓');
+    expect(timeDisplay).toHaveClass('finished');
+
+    // Alarm modal should have appeared
+    expect(document.querySelector('.alarm-modal-overlay')).toBeInTheDocument();
+  });
+
   test('Stunden timer parses to correct seconds', () => {
     const recipeWithHours = {
       ...mockRecipe,

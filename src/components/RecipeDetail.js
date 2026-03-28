@@ -100,6 +100,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [alarmLabel, setAlarmLabel] = useState('');
   const alarmIntervalRef = useRef(null);
   const alarmCtxRef = useRef(null);
+  const notifyTimerDoneRef = useRef(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -882,6 +883,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     startAlarmLoop(label);
   }
 
+  // Keep a ref to notifyTimerDone so the visibilitychange effect can always
+  // access the latest version without needing it in its dependency array.
+  notifyTimerDoneRef.current = notifyTimerDone;
+
   function requestNotificationPermission() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -908,6 +913,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       alarmCtxRef.current.resume().catch(e => console.warn('AudioContext resume failed:', e));
     }
 
+    const endTime = Date.now() + totalSeconds * 1000;
     setActiveTimers(prev => ({
       ...prev,
       [stepKey]: {
@@ -915,6 +921,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         [timerIndex]: {
           totalSeconds,
           remainingSeconds: totalSeconds,
+          endTime,
           running: true,
           finished: false,
           label,
@@ -931,7 +938,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         if (!stepTimers) return prev;
         const t = stepTimers[timerIndex];
         if (!t || !t.running) return prev;
-        const next = t.remainingSeconds - 1;
+        const next = Math.max(0, Math.round((t.endTime - Date.now()) / 1000));
         if (next <= 0) {
           clearInterval(timerIntervalsRef.current[intervalKey]);
           delete timerIntervalsRef.current[intervalKey];
@@ -978,6 +985,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (!stepTimers) return prev;
       const t = stepTimers[timerIndex];
       if (!t || t.finished) return prev;
+      const endTime = Date.now() + t.remainingSeconds * 1000;
       const intervalKey = `${stepKey}_${timerIndex}`;
       if (timerIntervalsRef.current[intervalKey]) clearInterval(timerIntervalsRef.current[intervalKey]);
       timerIntervalsRef.current[intervalKey] = setInterval(() => {
@@ -986,7 +994,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           if (!st) return cur;
           const tt = st[timerIndex];
           if (!tt || !tt.running) return cur;
-          const next = tt.remainingSeconds - 1;
+          const next = Math.max(0, Math.round((tt.endTime - Date.now()) / 1000));
           if (next <= 0) {
             clearInterval(timerIntervalsRef.current[intervalKey]);
             delete timerIntervalsRef.current[intervalKey];
@@ -998,7 +1006,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }, 1000);
       return {
         ...prev,
-        [stepKey]: { ...stepTimers, [timerIndex]: { ...t, running: true } },
+        [stepKey]: { ...stepTimers, [timerIndex]: { ...t, endTime, running: true } },
       };
     });
   }
@@ -1043,6 +1051,42 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         alarmCtxRef.current = null;
       }
     };
+  }, []);
+
+  // Sync running timers with actual elapsed time when the page becomes visible again
+  // (handles screen lock, app switching to background, etc.)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      setActiveTimers(prev => {
+        const now = Date.now();
+        let changed = false;
+        const next = {};
+        Object.entries(prev).forEach(([stepKey, stepTimers]) => {
+          next[stepKey] = { ...stepTimers };
+          Object.entries(stepTimers).forEach(([timerIndex, t]) => {
+            if (t.running && t.endTime) {
+              const remaining = Math.max(0, Math.round((t.endTime - now) / 1000));
+              if (remaining <= 0 && !t.finished) {
+                const intervalKey = `${stepKey}_${timerIndex}`;
+                clearInterval(timerIntervalsRef.current[intervalKey]);
+                delete timerIntervalsRef.current[intervalKey];
+                next[stepKey] = { ...next[stepKey], [timerIndex]: { ...t, remainingSeconds: 0, running: false, finished: true } };
+                notifyTimerDoneRef.current(t.label);
+                changed = true;
+              } else if (remaining !== t.remainingSeconds) {
+                next[stepKey] = { ...next[stepKey], [timerIndex]: { ...t, remainingSeconds: remaining } };
+                changed = true;
+              }
+            }
+          });
+        });
+        return changed ? next : prev;
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // Get actual step items (filter out headings) - moved before useEffect
