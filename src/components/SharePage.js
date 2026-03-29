@@ -3,7 +3,7 @@ import './SharePage.css';
 import { getRecipeByShareId } from '../utils/recipeFirestore';
 import RecipeDetail from './RecipeDetail';
 
-function SharePage({ shareId, currentUser }) {
+function SharePage({ shareId, currentUser, onClose }) {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -42,7 +42,7 @@ function SharePage({ shareId, currentUser }) {
   return (
     <RecipeDetail
       recipe={recipe}
-      onBack={() => { window.location.hash = ''; }}
+      onBack={onClose || (() => { window.location.hash = ''; })}
       currentUser={currentUser}
       allRecipes={[]}
       allUsers={[]}
