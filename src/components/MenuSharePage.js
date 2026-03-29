@@ -5,7 +5,7 @@ import { getRecipesByIds } from '../utils/recipeFirestore';
 import MenuDetail from './MenuDetail';
 import RecipeDetail from './RecipeDetail';
 
-function MenuSharePage({ shareId, currentUser }) {
+function MenuSharePage({ shareId, currentUser, onClose }) {
   const [menu, setMenu] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +76,7 @@ function MenuSharePage({ shareId, currentUser }) {
     <MenuDetail
       menu={menu}
       recipes={recipes}
-      onBack={() => { window.location.hash = ''; }}
+      onBack={onClose || (() => { window.location.hash = ''; })}
       onSelectRecipe={setSelectedRecipe}
       currentUser={currentUser}
       allUsers={[]}

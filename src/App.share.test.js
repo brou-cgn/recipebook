@@ -3,12 +3,12 @@ import { render, screen, act } from '@testing-library/react';
 import App from './App';
 
 // Mock SharePage and MenuSharePage to isolate routing logic
-jest.mock('./components/SharePage', () => function MockSharePage({ shareId }) {
-  return <div data-testid="share-page" data-share-id={shareId}>SharePage: {shareId}</div>;
+jest.mock('./components/SharePage', () => function MockSharePage({ shareId, onClose }) {
+  return <div data-testid="share-page" data-share-id={shareId}>SharePage: {shareId}<button data-testid="share-page-close" onClick={onClose}>Close</button></div>;
 });
 
-jest.mock('./components/MenuSharePage', () => function MockMenuSharePage({ shareId }) {
-  return <div data-testid="menu-share-page" data-share-id={shareId}>MenuSharePage: {shareId}</div>;
+jest.mock('./components/MenuSharePage', () => function MockMenuSharePage({ shareId, onClose }) {
+  return <div data-testid="menu-share-page" data-share-id={shareId}>MenuSharePage: {shareId}<button data-testid="menu-share-page-close" onClick={onClose}>Close</button></div>;
 });
 
 // Mock userManagement so auth resolves immediately with no user
@@ -71,14 +71,17 @@ jest.mock('./utils/faviconUtils', () => ({
 }));
 
 jest.mock('./utils/customLists', () => ({
-  applyTileSizePreference: jest.fn(),
-  getCustomLists: jest.fn(() => Promise.resolve({
+  applyTileSizePreference: () => {},
+  applyDarkModePreference: () => {},
+  expandCuisineSelection: () => [],
+  getCustomLists: () => Promise.resolve({
     portionUnits: [{ id: 'portion', singular: 'Portion', plural: 'Portionen' }],
     cuisineTypes: [],
+    cuisineGroups: [],
     mealCategories: [],
     units: [],
-  })),
-  getSortSettings: jest.fn(() => Promise.resolve({})),
+  }),
+  getSortSettings: () => Promise.resolve({}),
 }));
 
 jest.mock('./utils/recipeCallsFirestore', () => ({
@@ -163,6 +166,32 @@ describe('Share URL hash routing', () => {
 
     expect(screen.queryByTestId('share-page')).not.toBeInTheDocument();
   });
+
+  test('onClose from SharePage clears hash and hides share page', () => {
+    window.location.hash = '#share/abc-123';
+    render(<App />);
+    expect(screen.getByTestId('share-page')).toBeInTheDocument();
+
+    act(() => {
+      screen.getByTestId('share-page-close').click();
+      window.dispatchEvent(new Event('hashchange'));
+    });
+
+    expect(screen.queryByTestId('share-page')).not.toBeInTheDocument();
+  });
+
+  test('onClose from MenuSharePage clears hash and hides menu share page', () => {
+    window.location.hash = '#menu-share/xyz-456';
+    render(<App />);
+    expect(screen.getByTestId('menu-share-page')).toBeInTheDocument();
+
+    act(() => {
+      screen.getByTestId('menu-share-page-close').click();
+      window.dispatchEvent(new Event('hashchange'));
+    });
+
+    expect(screen.queryByTestId('menu-share-page')).not.toBeInTheDocument();
+  });
 });
 
 describe('Share URL pathname routing', () => {
@@ -202,5 +231,43 @@ describe('Share URL pathname routing', () => {
     render(<App />);
     expect(screen.queryByTestId('share-page')).not.toBeInTheDocument();
     expect(screen.queryByTestId('menu-share-page')).not.toBeInTheDocument();
+  });
+
+  test('onClose from SharePage navigates away from path-based share URL', () => {
+    const pushStateSpy = jest.spyOn(window.history, 'pushState');
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, hash: '', pathname: '/share/abc-123' },
+      writable: true,
+      configurable: true,
+    });
+    render(<App />);
+    expect(screen.getByTestId('share-page')).toBeInTheDocument();
+
+    act(() => {
+      screen.getByTestId('share-page-close').click();
+    });
+
+    expect(pushStateSpy).toHaveBeenCalledWith({}, '', '/');
+    expect(screen.queryByTestId('share-page')).not.toBeInTheDocument();
+    pushStateSpy.mockRestore();
+  });
+
+  test('onClose from MenuSharePage navigates away from path-based menu-share URL', () => {
+    const pushStateSpy = jest.spyOn(window.history, 'pushState');
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, hash: '', pathname: '/menu-share/xyz-456' },
+      writable: true,
+      configurable: true,
+    });
+    render(<App />);
+    expect(screen.getByTestId('menu-share-page')).toBeInTheDocument();
+
+    act(() => {
+      screen.getByTestId('menu-share-page-close').click();
+    });
+
+    expect(pushStateSpy).toHaveBeenCalledWith({}, '', '/');
+    expect(screen.queryByTestId('menu-share-page')).not.toBeInTheDocument();
+    pushStateSpy.mockRestore();
   });
 });

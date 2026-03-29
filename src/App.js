@@ -1083,12 +1083,22 @@ function App() {
 
   // If accessing a share URL, show SharePage (no login required)
   if (sharePageId) {
+    const handleSharePageClose = () => {
+      if (window.location.pathname.match(/^\/share\//)) {
+        window.history.pushState({}, '', '/');
+        setSharePageId(null);
+      } else {
+        window.location.hash = '';
+      }
+      setCurrentView('recipes');
+    };
     return (
       <div className="App">
         <Header />
         <SharePage
           shareId={sharePageId}
           currentUser={currentUser}
+          onClose={handleSharePageClose}
         />
       </div>
     );
@@ -1096,12 +1106,22 @@ function App() {
 
   // If accessing a menu share URL, show MenuSharePage (no login required)
   if (menuSharePageId) {
+    const handleMenuSharePageClose = () => {
+      if (window.location.pathname.match(/^\/menu-share\//)) {
+        window.history.pushState({}, '', '/');
+        setMenuSharePageId(null);
+      } else {
+        window.location.hash = '';
+      }
+      setCurrentView('recipes');
+    };
     return (
       <div className="App">
         <Header />
         <MenuSharePage
           shareId={menuSharePageId}
           currentUser={currentUser}
+          onClose={handleMenuSharePageClose}
         />
       </div>
     );
