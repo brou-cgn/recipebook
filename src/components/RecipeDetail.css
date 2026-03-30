@@ -714,6 +714,7 @@
   height: 2rem;
   object-fit: contain;
   user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .overlay-cooking-mode:active {
