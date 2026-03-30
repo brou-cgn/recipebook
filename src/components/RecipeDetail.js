@@ -1330,7 +1330,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           <div className="cooking-mode-content">
             <span className="cooking-mode-icon">
               {isBase64Image(cookingModeIcon) ? (
-                <img src={cookingModeIcon} alt="Kochmodus" className="cooking-mode-icon-img" />
+                <img src={cookingModeIcon} alt="Kochmodus" className="button-icon-image" draggable="false" />
               ) : (
                 cookingModeIcon
               )}
@@ -1706,7 +1706,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                             ? cookingModeDefaultImgIcon
                             : (useCookingModeAlt ? cookingModeAltIcon : cookingModeIcon);
                           return isBase64Image(icon)
-                            ? <img src={icon} alt="Kochmodus" className="overlay-cooking-mode-icon-img" />
+                            ? <img src={icon} alt="Kochmodus" className="button-icon-image" draggable="false" />
                             : <span>{icon}</span>;
                         })()}
                       </div>
