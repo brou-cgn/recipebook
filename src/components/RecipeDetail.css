@@ -1966,11 +1966,11 @@
   }
 }
 
-/* Delete FAB button - fixed bottom left above publish-fab-button, same style */
+/* Delete FAB button - fixed bottom left, right of publish-fab-button, same style */
 .delete-fab-button {
   position: fixed;
-  bottom: 78px;
-  left: 20px;
+  bottom: 20px;
+  left: 74px;
   z-index: 1101;
   width: 44px;
   height: 44px;
@@ -2020,6 +2020,7 @@
     min-width: 56px;
     max-width: 56px;
     opacity: 0.85;
-    bottom: 90px;
+    bottom: 20px;
+    left: 86px;
   }
 }
