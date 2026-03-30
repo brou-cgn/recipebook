@@ -1233,3 +1233,81 @@ describe('RecipeList - Filter Button Visibility', () => {
   });
 
 });
+
+describe('RecipeList - Filter Button Long Press', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.spyOn(userFavorites, 'getUserFavorites').mockResolvedValue([]);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽',
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  test('long press on active filter button clears filters but does not open dialog', async () => {
+    const onClearAllFilters = jest.fn();
+    const onOpenSearch = jest.fn();
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onClearAllFilters={onClearAllFilters}
+        onOpenSearch={onOpenSearch}
+        activeFilters={{ cuisine: 'Italian' }}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+
+    // Start touch (long press)
+    fireEvent.touchStart(filterButton);
+
+    // Advance past the long press threshold (500ms)
+    act(() => { jest.advanceTimersByTime(600); });
+
+    // End touch
+    fireEvent.touchEnd(filterButton);
+
+    // Filter should be cleared
+    expect(onClearAllFilters).toHaveBeenCalledTimes(1);
+    // Dialog must NOT be opened
+    expect(onOpenSearch).not.toHaveBeenCalled();
+  });
+
+  test('short tap on filter button opens dialog without clearing filters', async () => {
+    const onClearAllFilters = jest.fn();
+    const onOpenSearch = jest.fn();
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onClearAllFilters={onClearAllFilters}
+        onOpenSearch={onOpenSearch}
+        activeFilters={{ cuisine: 'Italian' }}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+
+    // Short tap: touchStart + touchEnd without long press delay
+    fireEvent.touchStart(filterButton);
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.touchEnd(filterButton);
+
+    // Dialog should open
+    expect(onOpenSearch).toHaveBeenCalledTimes(1);
+    // Filters must NOT be cleared
+    expect(onClearAllFilters).not.toHaveBeenCalled();
+  });
+});

@@ -81,6 +81,7 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
 
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
+const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
 function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || (activeFilters && (
@@ -104,6 +105,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [filterPressed, setFilterPressed] = useState(false);
   const filterLongPressTimer = useRef(null);
   const filterLongPressed = useRef(false);
+  const filterLongPressJustFired = useRef(false);
   const filterButtonRef = useRef(null);
   const [activeSort, setActiveSort] = useState(
     () => sessionStorage.getItem(SORT_STORAGE_KEY) || 'alphabetical'
@@ -237,6 +239,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     e.preventDefault();
     if (filterLongPressed.current) {
       filterLongPressed.current = false;
+      filterLongPressJustFired.current = true;
+      setTimeout(() => { filterLongPressJustFired.current = false; }, LONG_PRESS_CLICK_SUPPRESSION_MS);
       onClearAllFilters?.();
     } else {
       onOpenSearch?.();
@@ -250,6 +254,14 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       filterLongPressTimer.current = null;
     }
     filterLongPressed.current = false;
+  };
+
+  const handleFilterClick = () => {
+    if (filterLongPressJustFired.current) {
+      filterLongPressJustFired.current = false;
+      return;
+    }
+    onOpenSearch?.();
   };
 
   // Generate dynamic heading based on filters
@@ -342,7 +354,7 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                   onTouchStart={handleFilterTouchStart}
                   onTouchEnd={handleFilterTouchEnd}
                   onTouchCancel={handleFilterTouchCancel}
-                  onClick={() => { onOpenSearch?.(); }}
+                  onClick={handleFilterClick}
                   onMouseDown={() => setFilterPressed(true)}
                   onMouseUp={() => setFilterPressed(false)}
                   onMouseLeave={() => setFilterPressed(false)}
