@@ -704,12 +704,13 @@
   transition: transform 0.2s ease;
 }
 
-.overlay-cooking-mode-static:hover {
+/*.overlay-cooking-mode-static:hover {
   transform: scale(1.1);
-}
+}*/
 
 .overlay-cooking-mode-static:active {
-  transform: scale(0.95);
+  transform: scale(1.1);
+  opacity: 0.2;
 }
 
 .overlay-cooking-mode-icon-img {
@@ -719,7 +720,9 @@
 }
 
 .overlay-cooking-mode:active {
-  transform: scale(0.95);
+  transform: scale(1.1);
+  opacity: 0.2;
+}
 }
 
 .overlay-cooking-mode.active {
