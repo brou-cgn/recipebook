@@ -988,6 +988,7 @@
     width: 100%;
     gap: 0.75rem;
     padding: 1rem;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /*.mobile-action-buttons .favorite-button {
