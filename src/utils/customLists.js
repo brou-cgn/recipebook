@@ -383,6 +383,7 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuMeineAuswahl: 'Liste',
   cancelRecipe: '×',
   newVersion: 'Version',
+  publishRecipe: '↑',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
   cookingModeDark: '',
   cookingModeAltDark: '',
@@ -425,6 +426,7 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuMeineAuswahlDark: '',
   cancelRecipeDark: '',
   newVersionDark: '',
+  publishRecipeDark: '',
 };
 
 /**

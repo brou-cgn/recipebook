@@ -85,6 +85,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
+  const [publishRecipeIcon, setPublishRecipeIcon] = useState('↑');
+  const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
   const [cookDateModalPrefillToday, setCookDateModalPrefillToday] = useState(false);
@@ -136,6 +138,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNewVersionIcon(eff('newVersion') || 'Version');
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+      setPublishRecipeIcon(eff('publishRecipe') || '↑');
       setPortionUnits(lists.portionUnits || []);
       setAllButtonIcons(icons);
       setButtonIconsLoaded(true);
@@ -173,6 +176,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setPublishRecipeIcon(eff('publishRecipe') || '↑');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -2030,14 +2034,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </ol>
             </section>
 
-            {userCanPublish && (
-              <div className="bottom-action-buttons">
-                <button className="publish-button" onClick={handlePublish} disabled={publishLoading}>
-                  {publishLoading ? '…' : 'Veröffentlichen'}
-                </button>
-              </div>
-            )}
-
             {currentUser && privateLists.length > 0 && (onAddToPrivateList || onRemoveFromPrivateList) && (
               <div className="private-lists-section">
                 <h3 className="private-lists-title">Private Listen</h3>
@@ -2228,6 +2224,30 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <img src={newVersionIcon} alt="Neue Version" className="button-icon-image" draggable="false" />
           ) : (
             newVersionIcon
+          )}
+        </button>
+      )}
+      {userCanPublish && onPublish && !cookingMode && (
+        <button
+          className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
+          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
+          onClick={handlePublish}
+          onTouchStart={() => setPublishFabPressed(true)}
+          onTouchEnd={() => setPublishFabPressed(false)}
+          onTouchCancel={() => setPublishFabPressed(false)}
+          onMouseDown={() => setPublishFabPressed(true)}
+          onMouseUp={() => setPublishFabPressed(false)}
+          onMouseLeave={() => setPublishFabPressed(false)}
+          disabled={publishLoading}
+          title="Rezept veröffentlichen"
+          aria-label="Rezept veröffentlichen"
+        >
+          {publishLoading ? '…' : (
+            isBase64Image(publishRecipeIcon) ? (
+              <img src={publishRecipeIcon} alt="Veröffentlichen" className="button-icon-image" draggable="false" />
+            ) : (
+              publishRecipeIcon
+            )
           )}
         </button>
       )}
