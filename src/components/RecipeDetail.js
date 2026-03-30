@@ -247,7 +247,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
   }, [initialRecipe]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derive alt-icon state from imageBrightness metadata stored at upload time.
+  // Also reset carousel index whenever the selected recipe changes (e.g. version navigation)
+  useEffect(() => {
+    setCarouselIndex(0);
+    if (carouselTrackRef.current) {
+      carouselTrackRef.current.scrollLeft = 0;
+    }
+  }, [selectedRecipe.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Both useCookingModeAlt and useCloseButtonAlt always share the same value so
   // there is never a mixed icon state.
   // Also detects whether the current image is a default category image.

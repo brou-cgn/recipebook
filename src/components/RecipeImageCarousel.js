@@ -17,13 +17,14 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick }) 
   const lengthRef = useRef(images.length);
   lengthRef.current = images.length;
 
-  // Reset to first slide when the images array changes size
+  // Reset to first slide when the images array changes (by content or size)
+  const imagesKey = images.map(img => img.url).join(',');
   useEffect(() => {
     setCarouselIndex(0);
     if (trackRef.current) {
       trackRef.current.scrollLeft = 0;
     }
-  }, [images.length]);
+  }, [imagesKey]);
 
   const hasMultiple = images.length > 1;
 
