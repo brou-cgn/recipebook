@@ -427,6 +427,16 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .publish-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .publish-fab-button:active {
+  background: #2a2a2a;
+}
+
 /* ---- Recipe Form ---- */
 [data-theme="dark"] .recipe-form-container {
   background: #121212;
