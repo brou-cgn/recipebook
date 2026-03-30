@@ -57,6 +57,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       {hasImages && (
         <div className="recipe-image" onClick={(e) => e.stopPropagation()}>
           <RecipeImageCarousel
+            key={recipe.id}
             images={orderedImages}
             altText={recipe.title}
             onImageClick={onClick}
