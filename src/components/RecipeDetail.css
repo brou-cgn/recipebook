@@ -990,7 +990,12 @@
     padding: 1rem;
     -webkit-tap-highlight-color: transparent;
   }
-
+  
+  .mobile-action-buttons:active {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+  
   /*.mobile-action-buttons .favorite-button {
     width: 48px;
     height: 48px;
@@ -1021,17 +1026,6 @@
     padding: 0.875rem 1rem;
     font-size: 0.9rem;
   }
-
-  /*.mobile-action-buttons .cook-date-button {
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }*/
 
   .mobile-action-buttons .recipe-rating-detail-summary {
     height: 48px;
