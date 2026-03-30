@@ -220,6 +220,10 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.15s ease;
+
+  -webkit-tab-highlight-color: transparent !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
 /*.cook-date-button:hover {
