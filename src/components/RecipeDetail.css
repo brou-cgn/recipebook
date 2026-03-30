@@ -45,6 +45,12 @@
   justify-content: center;
 }
 
+.cooking-mode-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 .cooking-mode-text {
   font-weight: 700;
   font-size: 1rem;
@@ -701,6 +707,13 @@
 .overlay-cooking-mode-static:active {
   transform: scale(1.1);
   opacity: 0.2;
+}
+
+.overlay-cooking-mode-icon-img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: contain;
+  user-select: none;
 }
 
 .overlay-cooking-mode:active {
