@@ -142,6 +142,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
       setPublishRecipeIcon(eff('publishRecipe') || '↑');
       setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
+      setAllButtonIcons(icons);
       setPortionUnits(lists.portionUnits || []);
       setButtonIconsLoaded(true);
       setConversionTable(lists.conversionTable || []);

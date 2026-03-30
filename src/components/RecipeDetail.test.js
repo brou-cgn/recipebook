@@ -1646,3 +1646,79 @@ describe('RecipeDetail - Metadata Order', () => {
     expect(emptyStars.length).toBe(3);
   });
 });
+
+describe('RecipeDetail - Dark mode icon persistence', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+    rolle: 'Familymember',
+  };
+
+  const mockRecipe = {
+    id: 'recipe-1',
+    title: 'Test Recipe',
+    images: [{ url: 'https://example.com/recipe.jpg', isDefault: true }],
+    ingredients: ['Ingredient 1'],
+    steps: ['Step 1'],
+  };
+
+  beforeEach(() => {
+    // Mobile viewport so overlay buttons are rendered
+    global.innerWidth = 400;
+    global.dispatchEvent(new Event('resize'));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('icons remain correct after darkModeChange event fires post-load', async () => {
+    const darkCookingModeIcon = 'data:image/png;base64,darkCookingModeIcon==';
+    const darkCloseIcon = 'data:image/png;base64,darkCloseIcon==';
+
+    jest.spyOn(require('../utils/customLists'), 'getDarkModePreference').mockReturnValue(true);
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      cookingMode: '♨',
+      cookingModeDark: darkCookingModeIcon,
+      closeButton: '×',
+      closeButtonDark: darkCloseIcon,
+    });
+    jest.spyOn(require('../utils/customLists'), 'getEffectiveIcon').mockImplementation(
+      (icons, key, isDark) => {
+        if (isDark) {
+          const darkKey = key + 'Dark';
+          if (icons[darkKey]) return icons[darkKey];
+        }
+        return icons[key] ?? '';
+      }
+    );
+
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockImplementation((v) => typeof v === 'string' && v.startsWith('data:image'));
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // Trigger a darkModeChange event (simulates app returning from background)
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark: true } }));
+    });
+
+    // The cooking mode button should still show the dark icon image after the event
+    const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
+    expect(cookingModeBtn).toBeInTheDocument();
+    const cookingModeImg = cookingModeBtn.querySelector('img');
+    expect(cookingModeImg).toBeInTheDocument();
+    expect(cookingModeImg.src).toContain('darkCookingModeIcon');
+  });
+});
