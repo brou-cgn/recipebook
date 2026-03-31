@@ -528,7 +528,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setNewCuisineLoading(true);
     try {
       await saveCustomLists({ cuisineTypes: [...customLists.cuisineTypes, name] });
-      await addCuisineProposal({ name, groupName: null, createdBy: currentUser?.id || '' });
+      await addCuisineProposal({ name, groupName: null, createdBy: currentUser?.id || '', source: 'recipe_form' });
     } catch (err) {
       console.error('Error adding new cuisine type:', err);
     } finally {

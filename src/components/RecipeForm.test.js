@@ -786,7 +786,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
 
     // The proposal should also have been submitted for Küchenbetrieb visibility
     expect(addCuisineProposal).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Peruanisch' })
+      expect.objectContaining({ name: 'Peruanisch', source: 'recipe_form' })
     );
   });
 

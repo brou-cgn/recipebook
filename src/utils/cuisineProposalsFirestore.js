@@ -8,6 +8,7 @@
  *   - released:   boolean – true once the type has been "freigegeben" (approved)
  *   - createdAt:  serverTimestamp
  *   - createdBy:  string – userId of the proposing user
+ *   - source:     string – origin of the proposal ('recipe_form' | 'manual')
  */
 
 import { db } from '../firebase';
@@ -48,15 +49,17 @@ export const getCuisineProposals = async () => {
  * @param {string} proposal.name - Cuisine type name
  * @param {string|null} proposal.groupName - Kulinarikgruppe name (optional)
  * @param {string} proposal.createdBy - User ID of the creator
+ * @param {string} [proposal.source] - Origin of the proposal ('recipe_form' | 'manual'), defaults to 'manual'
  * @returns {Promise<string>} ID of the created document
  */
-export const addCuisineProposal = async ({ name, groupName = null, createdBy }) => {
+export const addCuisineProposal = async ({ name, groupName = null, createdBy, source = 'manual' }) => {
   const docRef = await addDoc(collection(db, 'cuisineProposals'), {
     name: name.trim(),
     groupName: groupName || null,
     released: false,
     createdAt: serverTimestamp(),
     createdBy,
+    source,
   });
   return docRef.id;
 };

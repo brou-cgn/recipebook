@@ -118,6 +118,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
         name,
         groupName: newCuisineGroup || null,
         createdBy: currentUser?.id || '',
+        source: 'manual',
       });
       setCuisineProposals(prev => [
         {
@@ -127,6 +128,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
           released: false,
           createdBy: currentUser?.id || '',
           createdAt: null,
+          source: 'manual',
         },
         ...prev,
       ]);
@@ -195,6 +197,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     } finally {
       setReleasingId(null);
     }
+  };
+
+  const renderSourceBadge = (source) => {
+    if (source === 'recipe_form') {
+      return <span className="cuisine-proposal-source-badge cuisine-proposal-source-recipe">Rezept-Formular</span>;
+    }
+    return <span className="cuisine-proposal-source-badge cuisine-proposal-source-manual">Manuell</span>;
   };
 
   if (!currentUser?.appCalls) {
@@ -509,6 +518,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     <tr>
                       <th>Name</th>
                       <th>Gruppe</th>
+                      <th>Quelle</th>
                       <th>Aktionen</th>
                     </tr>
                   </thead>
@@ -544,6 +554,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                                 ))}
                               </select>
                             </td>
+                            <td>
+                              {renderSourceBadge(proposal.source)}
+                            </td>
                             <td className="cuisine-proposal-actions">
                               <button
                                 className="app-calls-share-btn"
@@ -564,6 +577,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                           <>
                             <td>{proposal.name}</td>
                             <td>{proposal.groupName || <span className="cuisine-proposal-no-group">–</span>}</td>
+                            <td>
+                              {renderSourceBadge(proposal.source)}
+                            </td>
                             <td className="cuisine-proposal-actions">
                               <button
                                 className="cuisine-proposal-edit-btn"
