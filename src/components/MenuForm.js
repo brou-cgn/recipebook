@@ -221,6 +221,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
   const [addSectionIcon, setAddSectionIcon] = useState('+');
   const [addSectionFabPressedIndex, setAddSectionFabPressedIndex] = useState(null);
+  const [insertSectionAtIndex, setInsertSectionAtIndex] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -357,9 +358,17 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
-    setSections([...sections, createMenuSection(name, [])]);
+    const newSection = createMenuSection(name, []);
+    if (insertSectionAtIndex !== null) {
+      const newSections = [...sections];
+      newSections.splice(insertSectionAtIndex, 0, newSection);
+      setSections(newSections);
+    } else {
+      setSections([...sections, newSection]);
+    }
     setNewSectionName('');
     setShowSectionInput(false);
+    setInsertSectionAtIndex(null);
 
     // Save new section name for future use
     saveSectionNames([name]);
@@ -704,7 +713,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               <button 
                 type="button" 
                 className="add-section-button"
-                onClick={() => setShowSectionInput(!showSectionInput)}
+                onClick={() => { setInsertSectionAtIndex(null); setShowSectionInput(!showSectionInput); }}
               >
                 + Abschnitt hinzufügen
               </button>
@@ -761,7 +770,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   <button
                     type="button"
                     className={`add-section-fab-button${addSectionFabPressedIndex === 0 ? ' pressed' : ''}`}
-                    onClick={() => setShowSectionInput(!showSectionInput)}
+                    onClick={() => { setInsertSectionAtIndex(0); setShowSectionInput(!showSectionInput); }}
                     onTouchStart={() => handleAddSectionFabPressStart(0)}
                     onTouchEnd={handleAddSectionFabPressEnd}
                     onTouchCancel={handleAddSectionFabPressEnd}
@@ -811,7 +820,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                     <button
                       type="button"
                       className={`add-section-fab-button${addSectionFabPressedIndex === sectionIndex + 1 ? ' pressed' : ''}`}
-                      onClick={() => setShowSectionInput(!showSectionInput)}
+                      onClick={() => { setInsertSectionAtIndex(sectionIndex + 1); setShowSectionInput(!showSectionInput); }}
                       onTouchStart={() => handleAddSectionFabPressStart(sectionIndex + 1)}
                       onTouchEnd={handleAddSectionFabPressEnd}
                       onTouchCancel={handleAddSectionFabPressEnd}
