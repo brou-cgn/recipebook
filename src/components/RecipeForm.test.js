@@ -23,6 +23,7 @@ jest.mock('../utils/customLists', () => ({
       { id: 'portion', singular: 'Portion', plural: 'Portionen' }
     ]
   }),
+  saveCustomLists: jest.fn(() => Promise.resolve()),
   getButtonIcons: () => Promise.resolve({
     cookingMode: '👨‍🍳',
     importRecipe: '📥',
@@ -731,6 +732,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
 
   test('new cuisine pill appears for search text with no exact match and activates type immediately', async () => {
     const { addCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    const { saveCustomLists } = require('../utils/customLists');
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -775,7 +777,14 @@ describe('RecipeForm - Multi-Select Fields', () => {
       expect(pill).toHaveAttribute('aria-pressed', 'true');
     });
 
-    // The proposal should have been submitted in the background
+    // The type should have been saved to the main cuisineTypes list
+    await waitFor(() => {
+      expect(saveCustomLists).toHaveBeenCalledWith(
+        expect.objectContaining({ cuisineTypes: expect.arrayContaining(['Peruanisch']) })
+      );
+    });
+
+    // The proposal should also have been submitted for Küchenbetrieb visibility
     expect(addCuisineProposal).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Peruanisch' })
     );
@@ -819,6 +828,43 @@ describe('RecipeForm - Multi-Select Fields', () => {
       const pill = screen.getByRole('button', { name: 'Mexikanisch' });
       expect(pill).toHaveAttribute('aria-pressed', 'true');
     });
+  });
+
+  test('does not call saveCustomLists when selecting an already existing cuisine type', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+    saveCustomLists.mockClear();
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Wait for cuisine pills to load
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
+
+    // Click the existing "Italian" pill directly (handleCuisinePillToggle)
+    fireEvent.click(screen.getByRole('button', { name: 'Italian' }));
+
+    // The Italian pill should now be active (selected)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Italian' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    // saveCustomLists should NOT have been called since the type already exists
+    expect(saveCustomLists).not.toHaveBeenCalled();
   });
 });
 
