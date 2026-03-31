@@ -1852,40 +1852,43 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             )}
 
             <div className="recipe-title-row">
+              {hasMultipleVersions && (
+                <button 
+                  className="version-arrow"
+                  onClick={handlePreviousVersion}
+                  disabled={currentVersionIndex === 0}
+                  title="Vorherige Version"
+                >
+                  ←
+                </button>
+              )}
               <h1 className="recipe-title">{recipe.title}</h1>
+              {hasMultipleVersions && (
+                <button 
+                  className="version-arrow"
+                  onClick={handleNextVersion}
+                  disabled={currentVersionIndex === allVersions.length - 1}
+                  title="Nächste Version"
+                >
+                  →
+                </button>
+              )}
             </div>
 
-            <div className="recipe-captions">
-              {hasMultipleVersions && (
-                <div className="version-navigation">
-                  <button 
-                    className="version-arrow"
-                    onClick={handlePreviousVersion}
-                    disabled={currentVersionIndex === 0}
-                    title="Vorherige Version"
-                  >
-                    ←
-                  </button>
-                  <span className="version-caption">
-                    {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
-                  </span>
-                  <button 
-                    className="version-arrow"
-                    onClick={handleNextVersion}
-                    disabled={currentVersionIndex === allVersions.length - 1}
-                    title="Nächste Version"
-                  >
-                    →
-                  </button>
-                </div>
-              )}
-              {(authorName || formattedCreatedAt) && (
-                <div className="author-date-caption">
-                  {authorName && <span className="author-name">Autor: {authorName}</span>}
-                  {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
-                </div>
-              )}
-            </div>
+            {hasMultipleVersions && (
+              <div className="version-caption-row">
+                <span className="version-caption">
+                  {isRecipeVersion(recipe) ? `Version ${versionNumber}` : 'Original'}
+                </span>
+              </div>
+            )}
+
+            {(authorName || formattedCreatedAt) && (
+              <div className="author-date-caption">
+                {authorName && <span className="author-name">Autor: {authorName}</span>}
+                {formattedCreatedAt && <span className="creation-date">Erstellt am: {formattedCreatedAt}</span>}
+              </div>
+            )}
 
             <div className="recipe-metadata">
               {cuisineDisplay && (

@@ -466,20 +466,20 @@
   box-shadow: 0 0 0 3px rgba(64, 44, 28, 0.1);
 }
 
-.recipe-captions {
-  padding: 0 1.5rem 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  /*Linie unterhalb von Titel, Autor und Erstellt am*/
-  /*border-bottom: 1px solid #f0f0f0;*/
+.version-caption-row {
+  padding: 0 1.5rem 0.25rem;
+  text-align: center;
 }
 
-.version-navigation {
+/* Author and date caption container */
+.author-date-caption {
+  padding: 0 1.5rem 1rem;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
 }
 
 .version-arrow {
@@ -521,18 +521,6 @@
 .version-caption {
   min-width: 80px;
   text-align: center;
-}
-
-/* Author and date caption container */
-.author-date-caption {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex: 1;
-  /*gap: 1rem;*/
-  font-size: 0.85rem;
-  color: #666;
-  font-weight: 500;
 }
 
 .author-name {
@@ -767,7 +755,7 @@
 
 .recipe-title-row {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.75rem;
   padding: 1.5rem 1.5rem 0.75rem;
   min-width: 0;
