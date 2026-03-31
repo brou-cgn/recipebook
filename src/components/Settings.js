@@ -194,6 +194,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'publishRecipe', label: 'Rezept veröffentlichen' },
   { key: 'deleteRecipe', label: 'Rezept löschen' },
   { key: 'printRecipe', label: 'Rezept drucken' },
+  { key: 'addSection', label: 'Abschnitt hinzufügen (Menü bearbeiten)' },
 ];
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {

@@ -3,9 +3,12 @@ import './MenuForm.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
-import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage } from '../utils/imageUtils';
+import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, deleteMenuGridImage, isStorageUrl } from '../utils/storageUtils';
 import { getCategoryImages } from '../utils/categoryImages';
+import { getDarkModePreference, getEffectiveIcon, getButtonIcons } from '../utils/customLists';
+
+const MOBILE_BREAKPOINT = 768;
 import {
   DndContext,
   closestCenter,
@@ -85,6 +88,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [menuImage, setMenuImage] = useState('');
   const [uploadingMenuImage, setUploadingMenuImage] = useState(false);
   const [savingMenu, setSavingMenu] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
+  const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
+  const [allButtonIcons, setAllButtonIcons] = useState(null);
+  const [addSectionIcon, setAddSectionIcon] = useState('+');
+  const [addSectionFabPressedIndex, setAddSectionFabPressedIndex] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -106,6 +114,35 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  // Load button icons
+  useEffect(() => {
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setAllButtonIcons(icons);
+    };
+    loadIcons();
+  }, []);
+
+  // Re-compute icon when icons or dark mode changes
+  useEffect(() => {
+    if (!allButtonIcons) return;
+    setAddSectionIcon(getEffectiveIcon(allButtonIcons, 'addSection', isDarkMode) || '+');
+  }, [allButtonIcons, isDarkMode]);
+
+  // Listen for dark mode changes
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
+  // Track mobile breakpoint
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Load available section names
@@ -432,6 +469,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return fuzzyFilter(availableRecipes, query, recipe => recipe.title);
   };
 
+  const handleAddSectionFabPressStart = (index) => setAddSectionFabPressedIndex(index);
+  const handleAddSectionFabPressEnd = () => setAddSectionFabPressedIndex(null);
+
   return (
     <div className="menu-form-container">
       <div className="menu-form-header">
@@ -509,13 +549,15 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         <div className="form-section sections-management">
           <div className="sections-header">
             <h3>Abschnitte & Rezepte</h3>
-            <button 
-              type="button" 
-              className="add-section-button"
-              onClick={() => setShowSectionInput(!showSectionInput)}
-            >
-              + Abschnitt hinzufügen
-            </button>
+            {!isMobile && (
+              <button 
+                type="button" 
+                className="add-section-button"
+                onClick={() => setShowSectionInput(!showSectionInput)}
+              >
+                + Abschnitt hinzufügen
+              </button>
+            )}
           </div>
 
           {showSectionInput && (
@@ -563,8 +605,32 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             <p className="no-recipes">Keine Rezepte verfügbar. Bitte erstellen Sie zuerst einige Rezepte.</p>
           ) : (
             <div className="sections-list">
+              {isMobile && (
+                <div className="add-section-gap">
+                  <button
+                    type="button"
+                    className={`add-section-fab-button${addSectionFabPressedIndex === 0 ? ' pressed' : ''}`}
+                    onClick={() => setShowSectionInput(!showSectionInput)}
+                    onTouchStart={() => handleAddSectionFabPressStart(0)}
+                    onTouchEnd={handleAddSectionFabPressEnd}
+                    onTouchCancel={handleAddSectionFabPressEnd}
+                    onMouseDown={() => handleAddSectionFabPressStart(0)}
+                    onMouseUp={handleAddSectionFabPressEnd}
+                    onMouseLeave={handleAddSectionFabPressEnd}
+                    title="Abschnitt hinzufügen"
+                    aria-label="Abschnitt hinzufügen"
+                  >
+                    {isBase64Image(addSectionIcon) ? (
+                      <img src={addSectionIcon} alt="Abschnitt hinzufügen" className="button-icon-image" draggable="false" />
+                    ) : (
+                      addSectionIcon
+                    )}
+                  </button>
+                </div>
+              )}
               {sections.map((section, sectionIndex) => (
-                <div key={sectionIndex} className="section-block">
+                <React.Fragment key={sectionIndex}>
+                <div className="section-block">
                   <div className="section-header">
                     <h4>{section.name}</h4>
                     <div className="section-actions">
@@ -672,6 +738,30 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                     {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
                   </div>
                 </div>
+                {isMobile && (
+                  <div className="add-section-gap">
+                    <button
+                      type="button"
+                      className={`add-section-fab-button${addSectionFabPressedIndex === sectionIndex + 1 ? ' pressed' : ''}`}
+                      onClick={() => setShowSectionInput(!showSectionInput)}
+                      onTouchStart={() => handleAddSectionFabPressStart(sectionIndex + 1)}
+                      onTouchEnd={handleAddSectionFabPressEnd}
+                      onTouchCancel={handleAddSectionFabPressEnd}
+                      onMouseDown={() => handleAddSectionFabPressStart(sectionIndex + 1)}
+                      onMouseUp={handleAddSectionFabPressEnd}
+                      onMouseLeave={handleAddSectionFabPressEnd}
+                      title="Abschnitt hinzufügen"
+                      aria-label="Abschnitt hinzufügen"
+                    >
+                      {isBase64Image(addSectionIcon) ? (
+                        <img src={addSectionIcon} alt="Abschnitt hinzufügen" className="button-icon-image" draggable="false" />
+                      ) : (
+                        addSectionIcon
+                      )}
+                    </button>
+                  </div>
+                )}
+                </React.Fragment>
               ))}
             </div>
           )}

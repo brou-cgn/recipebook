@@ -386,6 +386,7 @@ export const DEFAULT_BUTTON_ICONS = {
   publishRecipe: '↑',
   deleteRecipe: '🗑',
   printRecipe: '⎙',
+  addSection: '+',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
   cookingModeDark: '',
   cookingModeAltDark: '',
@@ -431,6 +432,7 @@ export const DEFAULT_BUTTON_ICONS = {
   publishRecipeDark: '',
   deleteRecipeDark: '',
   printRecipeDark: '',
+  addSectionDark: '',
 };
 
 /**
