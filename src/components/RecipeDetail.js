@@ -79,6 +79,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [timerStartIcon, setTimerStartIcon] = useState('▶');
   const [timerStopIcon, setTimerStopIcon] = useState('■');
   const [cookDateIcon, setCookDateIcon] = useState('Datum');
+  const [printRecipeIcon, setPrintRecipeIcon] = useState('⎙');
   const [editRecipeIcon, setEditRecipeIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
@@ -136,6 +137,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimerStartIcon(eff('timerStart') || '▶');
       setTimerStopIcon(eff('timerStop') || '■');
       setCookDateIcon(eff('cookDate') || 'Datum');
+      setPrintRecipeIcon(eff('printRecipe') || '⎙');
       setEditRecipeIcon(eff('editRecipe') || 'Edit');
       setNewVersionIcon(eff('newVersion') || 'Version');
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
@@ -175,6 +177,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setTimerStartIcon(eff('timerStart') || '▶');
     setTimerStopIcon(eff('timerStop') || '■');
     setCookDateIcon(eff('cookDate') || 'Datum');
+    setPrintRecipeIcon(eff('printRecipe') || '⎙');
     setEditRecipeIcon(eff('editRecipe') || 'Edit');
     setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
@@ -1422,6 +1425,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 )}
               </button>
             )}
+            {currentUser?.printRecipe !== false && (
+              <button
+                className="cook-date-button print-recipe-button"
+                onClick={() => window.print()}
+                title="Rezept drucken"
+                aria-label="Rezept drucken"
+              >
+                {isBase64Image(printRecipeIcon) ? (
+                  <img src={printRecipeIcon} alt="Drucken" className="cook-date-icon-img" />
+                ) : (
+                  printRecipeIcon
+                )}
+              </button>
+            )}
             <RecipeRating
               recipeId={recipe.id}
               ratingAvg={recipe.ratingAvg}
@@ -1785,6 +1802,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
                     ) : (
                       cookDateIcon
+                    )}
+                  </button>
+                )}
+                {currentUser?.printRecipe !== false && (
+                  <button
+                    className="cook-date-button print-recipe-button"
+                    onClick={() => window.print()}
+                    title="Rezept drucken"
+                    aria-label="Rezept drucken"
+                  >
+                    {isBase64Image(printRecipeIcon) ? (
+                      <img src={printRecipeIcon} alt="Drucken" className="cook-date-icon-img" />
+                    ) : (
+                      printRecipeIcon
                     )}
                   </button>
                 )}
