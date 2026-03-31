@@ -24,6 +24,8 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
   const [editMenuIcon, setEditMenuIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
+  const [deleteMenuIcon, setDeleteMenuIcon] = useState('🗑');
+  const [deleteFabPressed, setDeleteFabPressed] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [shareLoading, setShareLoading] = useState(false);
@@ -57,6 +59,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
     setEditMenuIcon(eff('editRecipe') || 'Edit');
+    setDeleteMenuIcon(eff('deleteRecipe') || '🗑');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -140,6 +143,15 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
 
   const handleEditFabClick = () => {
     onEdit && onEdit(menu);
+  };
+
+  // Delete FAB press handlers
+  const handleDeleteFabPressStart = () => {
+    setDeleteFabPressed(true);
+  };
+
+  const handleDeleteFabPressEnd = () => {
+    setDeleteFabPressed(false);
   };
 
   // Derive favorite status from favoriteMenuIds
@@ -462,12 +474,25 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
           </section>
         ))}
       </div>
-      {canDeleteMenu(currentUser, menu) && (
-        <div className="menu-delete-actions">
-          <button className="delete-button" onClick={handleDelete}>
-            Löschen
-          </button>
-        </div>
+      {canDeleteMenu(currentUser, menu) && onDelete && (
+        <button
+          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
+          onClick={handleDelete}
+          onTouchStart={handleDeleteFabPressStart}
+          onTouchEnd={handleDeleteFabPressEnd}
+          onTouchCancel={handleDeleteFabPressEnd}
+          onMouseDown={handleDeleteFabPressStart}
+          onMouseUp={handleDeleteFabPressEnd}
+          onMouseLeave={handleDeleteFabPressEnd}
+          title="Menü löschen"
+          aria-label="Menü löschen"
+        >
+          {isBase64Image(deleteMenuIcon) ? (
+            <img src={deleteMenuIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+          ) : (
+            deleteMenuIcon
+          )}
+        </button>
       )}
       {showShoppingListModal && (
         <ShoppingListModal

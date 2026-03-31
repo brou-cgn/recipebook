@@ -90,7 +90,7 @@ describe('MenuDetail - Action Buttons', () => {
 
     expect(screen.getByTitle(/Favoriten/i)).toBeInTheDocument();
     expect(screen.getByTitle('Menü bearbeiten')).toBeInTheDocument();
-    expect(screen.getByText('Löschen')).toBeInTheDocument();
+    expect(screen.getByTitle('Menü löschen')).toBeInTheDocument();
     expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
   });
 
@@ -115,7 +115,7 @@ describe('MenuDetail - Action Buttons', () => {
     expect(buttons.length).toBe(3);
   });
 
-  test('delete button is not inside action-buttons', () => {
+  test('delete fab button is not inside action-buttons', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -131,11 +131,11 @@ describe('MenuDetail - Action Buttons', () => {
     );
 
     const actionButtons = container.querySelector('.action-buttons');
-    const deleteInHeader = actionButtons.querySelector('.delete-button');
+    const deleteInHeader = actionButtons.querySelector('.delete-fab-button');
     expect(deleteInHeader).not.toBeInTheDocument();
   });
 
-  test('delete button is inside menu-delete-actions below the content', () => {
+  test('delete fab button is rendered as a fixed FAB outside menu-detail-content', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -150,16 +150,14 @@ describe('MenuDetail - Action Buttons', () => {
       />
     );
 
-    const deleteActions = container.querySelector('.menu-delete-actions');
-    expect(deleteActions).toBeInTheDocument();
-    const deleteButton = deleteActions.querySelector('.delete-button');
-    expect(deleteButton).toBeInTheDocument();
-    expect(deleteButton).toHaveTextContent('Löschen');
+    const deleteFab = container.querySelector('.delete-fab-button');
+    expect(deleteFab).toBeInTheDocument();
+    expect(deleteFab).toHaveAttribute('aria-label', 'Menü löschen');
 
-    // Verify menu-delete-actions appears after menu-detail-content
+    // Verify delete-fab-button appears after menu-detail-content
     const menuContent = container.querySelector('.menu-detail-content');
     expect(
-      menuContent.compareDocumentPosition(deleteActions) & Node.DOCUMENT_POSITION_FOLLOWING
+      menuContent.compareDocumentPosition(deleteFab) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 });
