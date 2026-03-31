@@ -174,7 +174,6 @@
 }
 
 .shopping-list-reset-btn,
-.shopping-list-close-btn,
 .shopping-list-bring-btn {
   padding: 0.6rem 1.25rem;
   border: none;
@@ -210,15 +209,6 @@
 .shopping-list-reset-btn:hover {
   border-color: #402C1C;
   color: #402C1C;
-}
-
-.shopping-list-close-btn {
-  background: linear-gradient(135deg, #402C1C 0%, #1a1a1a 100%);
-  color: white;
-}
-
-.shopping-list-close-btn:hover {
-  background: linear-gradient(135deg, #1a1a1a 0%, #402C1C 100%);
 }
 
 .shopping-list-bring-btn--image {

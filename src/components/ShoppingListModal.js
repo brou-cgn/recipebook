@@ -186,6 +186,12 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
           <span className="shopping-list-count">
             {checkedCount} / {listItems.length} erledigt
           </span>
+          <button
+            className="shopping-list-reset-btn"
+            onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}
+          >
+            Zurücksetzen
+          </button>
           {!hideBringButton && <button
             className={`shopping-list-bring-btn${isBringIconImage ? ' shopping-list-bring-btn--image' : ''}`}
             onClick={handleBringExport}
@@ -198,18 +204,6 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
                 : (bringButtonIcon || 'Bring') + ' Bring!'
             )}
           </button>}
-          <button
-            className="shopping-list-reset-btn"
-            onClick={() => setListItems(prev => prev.map(i => ({ ...i, checked: false })))}
-          >
-            Zurücksetzen
-          </button>
-          <button
-            className="shopping-list-close-btn"
-            onClick={onClose}
-          >
-            Schließen
-          </button>
         </div>
       </div>
     </div>
