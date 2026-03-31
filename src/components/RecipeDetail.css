@@ -778,6 +778,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  border-bottom: 1px solid #e0d5c7;
 }
 
 .metadata-item {
