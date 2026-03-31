@@ -97,6 +97,7 @@
   margin-bottom: 1.5rem;
   gap: 1rem;
   flex-wrap: wrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .back-button {
