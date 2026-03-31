@@ -2024,16 +2024,9 @@
 
 /* ===== @media print: Recipe Print Layout ===== */
 @media print {
-  /* Hide everything by default */
-  body > *,
-  #root > * {
+  /* Hide all App-level siblings except the recipe detail container */
+  .App > *:not(.recipe-detail-container) {
     display: none !important;
-  }
-
-  /* Show only the recipe detail container */
-  #root .recipe-detail-container,
-  #root .recipe-detail-container * {
-    display: revert !important;
   }
 
   /* Reset container for print */
