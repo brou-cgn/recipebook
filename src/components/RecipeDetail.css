@@ -97,7 +97,6 @@
   margin-bottom: 1.5rem;
   gap: 1rem;
   flex-wrap: wrap;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .back-button {
@@ -127,9 +126,9 @@
 .share-button,
 .publish-button {
   background: white;
-  border: 2px solid #ddd;
+  border: 1px solid #ddd;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -313,10 +312,10 @@
   padding: 0 1rem;
 }
 
-.version-button:hover {
+/*.version-button:hover {
   background: #2196F3;
   color: white;
-}
+}*/
 
 .delete-button {
   color: #f44336;
@@ -324,20 +323,20 @@
   height: 48px;
 }
 
-.delete-button:hover {
+/*.delete-button:hover {
   background: #f44336;
   color: white;
-}
+}*/
 
 .share-button {
   color: #5c6bc0;
   border-color: #5c6bc0;
 }
 
-.share-button:hover:not(:disabled) {
+/*.share-button:hover:not(:disabled) {
   background: #5c6bc0;
   color: white;
-}
+}*/
 
 .share-button.share-active {
   background: #5c6bc0;
@@ -361,10 +360,10 @@
   height: 48px;
 }
 
-.publish-button:hover:not(:disabled) {
+/*.publish-button:hover:not(:disabled) {
   background: #2e7d32;
   color: white;
-}
+}*/
 
 .publish-button:disabled {
   opacity: 0.6;
@@ -392,10 +391,10 @@
   font-weight: 600;
 }
 
-.share-add-button:hover:not(:disabled) {
+/*.share-add-button:hover:not(:disabled) {
   background: #402C1C;
   color: white;
-}
+}*/
 
 .share-add-button:disabled {
   opacity: 0.6;
@@ -651,6 +650,7 @@
   align-items: flex-start;
   padding: 1rem;
   pointer-events: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .image-overlay-actions--hidden {
