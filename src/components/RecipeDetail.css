@@ -2174,33 +2174,30 @@
     overflow: visible !important;
     gap: 0.5rem !important;
     width: 100% !important;
-    /* 1 image: full width; 2 images: 2 columns; 3-4 images: 2x2 grid */
-    grid-template-columns: repeat(auto-fill, minmax(45%, 1fr)) !important;
-  }
-
-  /* Single image: full width */
-  .carousel-track:has(.carousel-slide:only-child) {
+    /* Default (1 image): full width */
     grid-template-columns: 1fr !important;
   }
 
+  /* Single image: full width (default above covers this) */
+
   /* Two images: side by side */
-  .carousel-track:has(.carousel-slide:nth-child(2):last-child) {
+  .carousel-track[data-image-count="2"] {
     grid-template-columns: 1fr 1fr !important;
   }
 
   /* Three images: 2 top, 1 centered below */
-  .carousel-track:has(.carousel-slide:nth-child(3):last-child) {
+  .carousel-track[data-image-count="3"] {
     grid-template-columns: 1fr 1fr !important;
   }
 
-  .carousel-track:has(.carousel-slide:nth-child(3):last-child) .carousel-slide:last-child {
+  .carousel-track[data-image-count="3"] .carousel-slide:last-child {
     grid-column: 1 / -1 !important;
     max-width: 50% !important;
     margin: 0 auto !important;
   }
 
   /* Four images: 2x2 grid */
-  .carousel-track:has(.carousel-slide:nth-child(4):last-child) {
+  .carousel-track[data-image-count="4"] {
     grid-template-columns: 1fr 1fr !important;
   }
 

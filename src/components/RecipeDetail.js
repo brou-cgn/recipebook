@@ -1668,6 +1668,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 >
                   <div
                     className="carousel-track"
+                    data-image-count={orderedImages.length}
                     ref={carouselTrackRef}
                     onScroll={hasMultiple ? handleCarouselScroll : undefined}
                   >
