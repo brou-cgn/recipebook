@@ -1895,3 +1895,92 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ===== Print Format Settings ===== */
+.print-format-item {
+  border: 1px solid #d9c9b8;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: #fdfaf6;
+}
+
+.print-format-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.print-format-name-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #fff;
+}
+
+.print-format-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.print-format-orientation-options {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.print-format-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.print-format-select {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background: #fff;
+  min-width: 240px;
+}
+
+.print-format-element-order {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.print-format-element-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fff;
+  border: 1px solid #e0d5c8;
+  border-radius: 5px;
+  padding: 0.35rem 0.6rem;
+}
+
+.print-format-element-label {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.print-format-element-btns {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.print-format-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}

@@ -68,6 +68,43 @@ export const DEFAULT_SLOGAN = 'Unsere besten Momente';
 export const DEFAULT_FAVICON_TEXT = 'brouBook';
 
 /**
+ * Default print format configuration constants
+ */
+export const DEFAULT_PRINT_FONT_FAMILY = "Georgia, 'Times New Roman', serif";
+export const DEFAULT_PRINT_ORIENTATION = 'portrait';
+export const DEFAULT_PRINT_ELEMENT_ORDER = ['images', 'ingredients', 'steps'];
+
+/** Available font options for print formats */
+export const PRINT_FONT_OPTIONS = [
+  { label: 'Georgia (Serif)', value: "Georgia, 'Times New Roman', serif" },
+  { label: 'Times New Roman (Serif)', value: "'Times New Roman', Times, serif" },
+  { label: 'Arial (Sans-Serif)', value: "Arial, Helvetica, sans-serif" },
+  { label: 'Helvetica (Sans-Serif)', value: "Helvetica, Arial, sans-serif" },
+  { label: 'Verdana (Sans-Serif)', value: "Verdana, Geneva, sans-serif" },
+  { label: 'Courier New (Monospace)', value: "'Courier New', Courier, monospace" },
+];
+
+/**
+ * Default print formats.  Each format can have:
+ *   id {string}            - Unique identifier
+ *   name {string}          - Display name in settings
+ *   maxPhotos {number|null}- Max photo count this format applies to (null = catch-all)
+ *   orientation {string}   - 'portrait' | 'landscape'
+ *   elementOrder {string[]}- Ordered array of 'images', 'ingredients', 'steps'
+ *   fontFamily {string}    - CSS font-family string
+ */
+export const DEFAULT_PRINT_FORMATS = [
+  {
+    id: 'default',
+    name: 'Standard',
+    maxPhotos: null,
+    orientation: 'portrait',
+    elementOrder: ['images', 'ingredients', 'steps'],
+    fontFamily: "Georgia, 'Times New Roman', serif",
+  },
+];
+
+/**
  * Default cuisine groups – each entry defines a parent type with its child types.
  * Parent types cannot be assigned directly to recipes; they group child types for filtering.
  * @type {Array<{name: string, children: string[]}>}
@@ -610,6 +647,7 @@ export async function getSettings() {
         groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
         maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+        printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
         appLogoImage: imagesData.appLogoImage || null,
@@ -650,6 +688,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      printFormats: DEFAULT_PRINT_FORMATS,
     };
     
     // Create the settings/app document with text config only
@@ -707,6 +746,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      printFormats: DEFAULT_PRINT_FORMATS,
     };
   }
 }
@@ -1542,4 +1582,68 @@ export async function saveMaxKandidatenSchwelle(value) {
     console.error('Error saving max kandidaten schwelle:', error);
     throw error;
   }
+}
+
+/**
+ * Get print format configurations from Firestore or return defaults.
+ * @returns {Promise<Array>} Promise resolving to array of print format objects
+ */
+export async function getPrintFormats() {
+  const settings = await getSettings();
+  return settings.printFormats && settings.printFormats.length > 0
+    ? settings.printFormats
+    : DEFAULT_PRINT_FORMATS;
+}
+
+/**
+ * Save print format configurations to Firestore.
+ * @param {Array} printFormats - Array of print format objects
+ * @returns {Promise<void>}
+ */
+export async function savePrintFormats(printFormats) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { printFormats });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.printFormats = printFormats;
+    }
+  } catch (error) {
+    console.error('Error saving print formats:', error);
+    throw error;
+  }
+}
+
+/**
+ * Select the best matching print format for a given image count.
+ *
+ * Formats with a maxPhotos value act as thresholds: they apply when
+ * imageCount <= maxPhotos.  Among all matching threshold formats the one
+ * with the **lowest** maxPhotos wins (most specific match).  Formats with
+ * maxPhotos === null act as catch-all fallbacks and are only used when no
+ * threshold format matches.
+ *
+ * @param {Array} printFormats - Array of print format objects (may be empty)
+ * @param {number} imageCount  - Number of images in the recipe
+ * @returns {Object} The selected print format object
+ */
+export function selectPrintFormat(printFormats, imageCount) {
+  const formats = printFormats && printFormats.length > 0 ? printFormats : DEFAULT_PRINT_FORMATS;
+  const count = imageCount || 0;
+
+  // Collect threshold formats that cover the current image count
+  const withThreshold = formats.filter(
+    (f) => f.maxPhotos !== null && f.maxPhotos !== undefined && f.maxPhotos >= count
+  );
+
+  if (withThreshold.length > 0) {
+    // Pick the most specific (lowest threshold that still covers count)
+    withThreshold.sort((a, b) => a.maxPhotos - b.maxPhotos);
+    return withThreshold[0];
+  }
+
+  // Fall back to catch-all format (maxPhotos === null / undefined)
+  const catchAll = formats.find((f) => f.maxPhotos === null || f.maxPhotos === undefined);
+  return catchAll || DEFAULT_PRINT_FORMATS[0];
 }

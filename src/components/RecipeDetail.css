@@ -2037,7 +2037,7 @@
     padding: 0 !important;
     background: white !important;
     color: black !important;
-    font-family: Georgia, 'Times New Roman', serif !important;
+    font-family: var(--print-font-family, Georgia, 'Times New Roman', serif) !important;
   }
 
   /* Hide UI chrome: header, action buttons, cooking mode, navigation, modals */
@@ -2075,14 +2075,28 @@
     display: none !important;
   }
 
-  /* Recipe content card */
+  /* Recipe content card: use flex-column to allow element re-ordering */
   .recipe-detail-content {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     background: white !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     overflow: visible !important;
     page-break-inside: avoid;
+  }
+
+  /* Configurable element order for images, ingredients, and steps */
+  .recipe-section--images {
+    order: var(--print-images-order, 1) !important;
+  }
+
+  .recipe-section--ingredients {
+    order: var(--print-ingredients-order, 2) !important;
+  }
+
+  .recipe-section--steps {
+    order: var(--print-steps-order, 3) !important;
   }
 
   /* Recipe title */

@@ -13,7 +13,7 @@ import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
-import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat } from '../utils/customLists';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 
@@ -96,6 +96,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineCookEventBubbleIcon, setTimelineCookEventBubbleIcon] = useState(null);
   const [timelineCookEventDefaultImage, setTimelineCookEventDefaultImage] = useState(null);
+  const [printFormats, setPrintFormats] = useState(DEFAULT_PRINT_FORMATS);
   const missingSavedRef = useRef(false);
   const editLongPressTimerRef = useRef(null);
   const editLongPressTriggeredRef = useRef(false);
@@ -109,7 +110,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   useEffect(() => {
     const loadSettings = async () => {
-      const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } = require('../utils/customLists');
+      const { getCustomLists, getButtonIcons, getTimelineBubbleIcon, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, getPrintFormats } = require('../utils/customLists');
       const { getCategoryImages } = require('../utils/categoryImages');
       const [lists, icons, catImages] = await Promise.all([
         getCustomLists(),
@@ -156,6 +157,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setTimelineBubbleIcon(bubbleIcon);
       setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
+      const formats = await getPrintFormats();
+      setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
     loadSettings().catch(() => setButtonIconsLoaded(true));
   }, []);
@@ -679,6 +682,49 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setShareUrlCopied(true);
       setTimeout(() => setShareUrlCopied(false), 2000);
     }
+  };
+
+  const handlePrint = () => {
+    const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
+      ? recipe.images
+      : (recipe.image ? [recipe.image] : []);
+    const imageCount = allImages.length;
+    const format = selectPrintFormat(printFormats, imageCount);
+
+    const root = document.documentElement;
+    const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
+    const elementOrder = format?.elementOrder || ['images', 'ingredients', 'steps'];
+    const orientation = format?.orientation || 'portrait';
+
+    root.style.setProperty('--print-font-family', fontFamily);
+    root.style.setProperty('--print-images-order', String(elementOrder.indexOf('images') + 1));
+    root.style.setProperty('--print-ingredients-order', String(elementOrder.indexOf('ingredients') + 1));
+    root.style.setProperty('--print-steps-order', String(elementOrder.indexOf('steps') + 1));
+
+    // Inject a @page orientation rule
+    let pageStyle = document.getElementById('print-page-format');
+    if (!pageStyle) {
+      pageStyle = document.createElement('style');
+      pageStyle.id = 'print-page-format';
+      document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = `@page { size: ${orientation}; }`;
+
+    // Clean up CSS variables and the injected style after printing
+    const cleanup = () => {
+      root.style.removeProperty('--print-font-family');
+      root.style.removeProperty('--print-images-order');
+      root.style.removeProperty('--print-ingredients-order');
+      root.style.removeProperty('--print-steps-order');
+      if (pageStyle.parentNode) pageStyle.parentNode.removeChild(pageStyle);
+    };
+    // afterprint fires when the print dialog closes (including cancellation in most browsers)
+    window.addEventListener('afterprint', cleanup, { once: true });
+    // Fallback: clean up after a timeout in case afterprint does not fire (e.g. some older browsers)
+    const cleanupTimeout = setTimeout(cleanup, 30000);
+    window.addEventListener('afterprint', () => clearTimeout(cleanupTimeout), { once: true });
+
+    window.print();
   };
 
   const scaleIngredient = (ingredient) => {
@@ -1428,7 +1474,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             {currentUser?.printRecipe !== false && (
               <button
                 className="cook-date-button print-recipe-button"
-                onClick={() => window.print()}
+                onClick={() => handlePrint()}
                 title="Rezept drucken"
                 aria-label="Rezept drucken"
               >
@@ -1664,7 +1710,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               carouselLengthRef.current = orderedImages.length;
               return (
                 <div
-                  className="recipe-detail-image"
+                  className="recipe-detail-image recipe-section--images"
                 >
                   <div
                     className="carousel-track"
@@ -1809,7 +1855,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 {currentUser?.printRecipe !== false && (
                   <button
                     className="cook-date-button print-recipe-button"
-                    onClick={() => window.print()}
+                    onClick={() => handlePrint()}
                     title="Rezept drucken"
                     aria-label="Rezept drucken"
                   >
@@ -2005,7 +2051,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               )}
             </div>
 
-            <section className="recipe-section">
+            <section className="recipe-section recipe-section--ingredients">
               <div className="section-header">
                 <h2>Zutaten für</h2>
                 {recipe.portionen && (
@@ -2048,7 +2094,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </ul>
             </section>
 
-            <section className="recipe-section">
+            <section className="recipe-section recipe-section--steps">
               <h2>Zubereitungsschritte</h2>
               <ol className="steps-list">
                 {recipe.steps?.map((step, index) => {
