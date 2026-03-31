@@ -752,7 +752,7 @@
   flex: 1;
   width: 100%;
   /*Linie unterhalb der Buttonreihe*/
-  /*border-bottom: 1px solid #f0f0f0;*/
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .recipe-title-row {
@@ -778,7 +778,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  border-bottom: 1px solid #e0d5c7;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .metadata-item {
