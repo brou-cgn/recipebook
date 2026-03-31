@@ -474,7 +474,7 @@
 
 /* Author and date caption container */
 .author-date-caption {
-  padding: 0 1.5rem 1rem 1rem;
+  padding: 0 1.5rem 1rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -988,6 +988,10 @@
     align-items: center;
     flex-shrink: 0;
   }
+  
+  .author-date-caption {
+    padding: 0 1.5rem 1rem 1rem;
+}
 
   /* Remove hover effects on mobile/touch devices */
   @media (hover: none) {
