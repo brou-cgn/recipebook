@@ -201,5 +201,23 @@ service cloud.firestore {
       allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId)
                     || isAdmin();
     }
+
+    // Cuisine proposals collection - tracks user-proposed cuisine types for admin review
+    match /cuisineProposals/{proposalId} {
+      // Any authenticated user can read proposals
+      allow read: if isAnyUser();
+
+      // Users with edit permission can create proposals
+      allow create: if isEditOrAdmin()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.released == false;
+
+      // Users can edit their own proposals; admins can edit any
+      allow update: if (isEditOrAdmin() && resource.data.createdBy == request.auth.uid)
+                    || isAdmin();
+
+      // Only admins can delete proposals
+      allow delete: if isAdmin();
+    }
   }
 }
