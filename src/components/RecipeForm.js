@@ -3,7 +3,7 @@ import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage } from '../utils/storageUtils';
-import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
@@ -313,6 +313,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   });
   const [newCuisineInput, setNewCuisineInput] = useState('');
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
+  const [newCuisineDuplicateHint, setNewCuisineDuplicateHint] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -500,6 +501,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     );
   };
 
+  const handleCuisineInputChange = (e) => {
+    setNewCuisineInput(e.target.value);
+    setNewCuisineDuplicateHint(false);
+  };
+
   const handleNewCuisinePillClick = async (name) => {
     if (!name) return;
     const exists = customLists.cuisineTypes.some(
@@ -510,15 +516,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         customLists.cuisineTypes.find((t) => t.toLowerCase() === name.toLowerCase()) || name
       );
       setNewCuisineInput('');
+      setNewCuisineDuplicateHint(true);
       return;
     }
+    setNewCuisineDuplicateHint(false);
     // Optimistically update local state so the new type is immediately active on the recipe
     setCustomLists((prev) => ({ ...prev, cuisineTypes: [...prev.cuisineTypes, name] }));
     setKulinarik((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setNewCuisineInput('');
-    // Save the proposal in the background; a failure does not roll back the local activation
+    // Save directly to the main cuisineTypes list and create a proposal for Küchenbetrieb
     setNewCuisineLoading(true);
     try {
+      await saveCustomLists({ cuisineTypes: [...customLists.cuisineTypes, name] });
       await addCuisineProposal({ name, groupName: null, createdBy: currentUser?.id || '' });
     } catch (err) {
       console.error('Error adding new cuisine type:', err);
@@ -1255,11 +1264,16 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
             id="kulinarik-search"
             className="recipe-form-cuisine-search"
             value={newCuisineInput}
-            onChange={(e) => setNewCuisineInput(e.target.value)}
+            onChange={handleCuisineInputChange}
             placeholder="Kulinariktypen suchen …"
             aria-label="Kulinariktypen suchen"
             autoComplete="off"
           />
+          {newCuisineDuplicateHint && (
+            <p className="recipe-form-cuisine-duplicate-hint">
+              Dieser Kulinariktyp ist bereits vorhanden und wurde ausgewählt.
+            </p>
+          )}
           {(orderedCuisinePills.length > 0 || newCuisineInput.trim()) && (
             <div className="recipe-form-cuisine-grid">
               {orderedCuisinePills.map((name) => (

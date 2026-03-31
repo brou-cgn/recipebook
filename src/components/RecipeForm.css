@@ -296,6 +296,16 @@
   border-style: dashed;
 }
 
+.recipe-form-cuisine-duplicate-hint {
+  font-size: 0.8rem;
+  color: #1565C0;
+  background-color: #E3F2FD;
+  border: 1px solid #90CAF9;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 4px 0 0;
+}
+
 
 .form-group input:focus,
 .form-group select:focus {
