@@ -541,6 +541,32 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .recipe-form-cuisine-search {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .recipe-form-cuisine-search:focus {
+  border-color: #b07a40;
+}
+
+[data-theme="dark"] .recipe-form-cuisine-search::placeholder {
+  color: #888;
+}
+
+[data-theme="dark"] .recipe-form-cuisine-pill {
+  background: #2A2623;
+  color: #E6DED6;
+  border-color: #3A342F;
+}
+
+[data-theme="dark"] .recipe-form-cuisine-pill.active {
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
+}
+
 /* ---- Settings ---- */
 [data-theme="dark"] .settings-container {
   background: #121212;

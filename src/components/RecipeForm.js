@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
 import { fileToBase64, isBase64Image, analyzeImageBrightness } from '../utils/imageUtils';
@@ -312,7 +312,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     portionUnits: []
   });
   const [newCuisineInput, setNewCuisineInput] = useState('');
-  const [newCuisineDuplicateError, setNewCuisineDuplicateError] = useState(false);
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -333,6 +332,23 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const formRef = useRef(null);
   // Cancel button press state
   const [cancelPressed, setCancelPressed] = useState(false);
+
+  // Derived cuisine pill lists for the pill-based cuisine selector
+  const visibleCuisinePills = useMemo(() => {
+    const groups = customLists.cuisineGroups || [];
+    const nonGroupTypes = (customLists.cuisineTypes || []).filter(
+      (cuisine) => !groups.some((g) => g.name === cuisine)
+    );
+    const term = newCuisineInput.trim().toLowerCase();
+    if (!term) return nonGroupTypes;
+    return nonGroupTypes.filter((name) => name.toLowerCase().includes(term));
+  }, [customLists.cuisineTypes, customLists.cuisineGroups, newCuisineInput]);
+
+  const orderedCuisinePills = useMemo(() => {
+    const active = visibleCuisinePills.filter((name) => kulinarik.includes(name));
+    const inactive = visibleCuisinePills.filter((name) => !kulinarik.includes(name));
+    return [...active, ...inactive];
+  }, [visibleCuisinePills, kulinarik]);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -478,19 +494,29 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setImageError(false);
   }, [image]);
 
-  const handleAddNewCuisine = async () => {
-    const name = newCuisineInput.trim();
+  const handleCuisinePillToggle = (name) => {
+    setKulinarik((prev) =>
+      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+    );
+  };
+
+  const handleNewCuisinePillClick = async (name) => {
     if (!name) return;
-    if (customLists.cuisineTypes.some(t => t.toLowerCase() === name.toLowerCase())) {
-      setNewCuisineDuplicateError(true);
+    const exists = customLists.cuisineTypes.some(
+      (t) => t.toLowerCase() === name.toLowerCase()
+    );
+    if (exists) {
+      handleCuisinePillToggle(
+        customLists.cuisineTypes.find((t) => t.toLowerCase() === name.toLowerCase()) || name
+      );
+      setNewCuisineInput('');
       return;
     }
-    setNewCuisineDuplicateError(false);
     setNewCuisineLoading(true);
     try {
       await addCuisineProposal({ name, groupName: null, createdBy: currentUser?.id || '' });
-      setCustomLists(prev => ({ ...prev, cuisineTypes: [...prev.cuisineTypes, name] }));
-      setKulinarik(prev => [...prev, name]);
+      setCustomLists((prev) => ({ ...prev, cuisineTypes: [...prev.cuisineTypes, name] }));
+      setKulinarik((prev) => (prev.includes(name) ? prev : [...prev, name]));
       setNewCuisineInput('');
     } catch (err) {
       console.error('Error adding new cuisine type:', err);
@@ -1221,50 +1247,48 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
 
         <div className="form-group">
-          <label htmlFor="kulinarik">Kulinarik (Mehrfachauswahl möglich)</label>
-          <select
-            id="kulinarik"
-            multiple
-            value={kulinarik}
-            onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions, option => option.value);
-              setKulinarik(options);
-            }}
-            size={Math.min(customLists.cuisineTypes.length, 8)}
-          >
-            {customLists.cuisineTypes
-              .filter(cuisine => {
-                const groups = customLists.cuisineGroups || [];
-                return !groups.some(g => g.name === cuisine);
-              })
-              .map((cuisine) => (
-                <option key={cuisine} value={cuisine}>{cuisine}</option>
+          <label htmlFor="kulinarik-search">Kulinarik (Mehrfachauswahl möglich)</label>
+          <input
+            type="text"
+            id="kulinarik-search"
+            className="recipe-form-cuisine-search"
+            value={newCuisineInput}
+            onChange={(e) => setNewCuisineInput(e.target.value)}
+            placeholder="Kulinariktypen suchen …"
+            aria-label="Kulinariktypen suchen"
+            autoComplete="off"
+          />
+          {(orderedCuisinePills.length > 0 || newCuisineInput.trim()) && (
+            <div className="recipe-form-cuisine-grid">
+              {orderedCuisinePills.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`recipe-form-cuisine-pill${kulinarik.includes(name) ? ' active' : ''}`}
+                  onClick={() => handleCuisinePillToggle(name)}
+                  aria-pressed={kulinarik.includes(name)}
+                  title={kulinarik.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                >
+                  {name}
+                </button>
               ))}
-          </select>
-          {kulinarik.length > 0 && (
-            <div className="selected-items">
-              Ausgewählt: {kulinarik.join(', ')}
+              {newCuisineInput.trim() &&
+                !visibleCuisinePills.some(
+                  (p) => p.toLowerCase() === newCuisineInput.trim().toLowerCase()
+                ) && (
+                  <button
+                    key={`new-${newCuisineInput.trim()}`}
+                    type="button"
+                    className={`recipe-form-cuisine-pill recipe-form-cuisine-pill--new${kulinarik.includes(newCuisineInput.trim()) ? ' active' : ''}`}
+                    onClick={() => handleNewCuisinePillClick(newCuisineInput.trim())}
+                    disabled={newCuisineLoading}
+                    aria-pressed={kulinarik.includes(newCuisineInput.trim())}
+                    title={`„${newCuisineInput.trim()}" als neuen Kulinariktyp vorschlagen und auswählen`}
+                  >
+                    {newCuisineLoading ? '…' : newCuisineInput.trim()}
+                  </button>
+                )}
             </div>
-          )}
-          <div className="new-cuisine-input">
-            <input
-              type="text"
-              value={newCuisineInput}
-              onChange={(e) => { setNewCuisineInput(e.target.value); setNewCuisineDuplicateError(false); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddNewCuisine()}
-              placeholder="Neuen Kulinariktyp eingeben…"
-              aria-label="Neuen Kulinariktyp eingeben"
-            />
-            <button
-              type="button"
-              onClick={handleAddNewCuisine}
-              disabled={newCuisineLoading || !newCuisineInput.trim()}
-            >
-              {newCuisineLoading ? '…' : 'Hinzufügen'}
-            </button>
-          </div>
-          {newCuisineDuplicateError && (
-            <p className="new-cuisine-error">Dieser Kulinariktyp existiert bereits.</p>
           )}
         </div>
 

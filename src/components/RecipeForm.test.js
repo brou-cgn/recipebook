@@ -441,7 +441,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
     jest.clearAllMocks();
   });
 
-  test('Kulinarik field is a multi-select dropdown', () => {
+  test('Kulinarik field is a search input for pill-based selection', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -460,9 +460,9 @@ describe('RecipeForm - Multi-Select Fields', () => {
       />
     );
 
-    const kulinarikField = screen.getByLabelText('Kulinarik (Mehrfachauswahl möglich)');
-    expect(kulinarikField.tagName).toBe('SELECT');
-    expect(kulinarikField).toHaveAttribute('multiple');
+    const kulinarikSearch = screen.getByLabelText('Kulinariktypen suchen');
+    expect(kulinarikSearch.tagName).toBe('INPUT');
+    expect(kulinarikSearch).toHaveAttribute('type', 'text');
   });
 
   test('Speisekategorie field is a multi-select dropdown', () => {
@@ -508,21 +508,12 @@ describe('RecipeForm - Multi-Select Fields', () => {
       />
     );
 
-    const kulinarikField = screen.getByLabelText('Kulinarik (Mehrfachauswahl möglich)');
-    
-    // Wait for options to load
-    await waitFor(() => expect(kulinarikField.options.length).toBeGreaterThan(0));
+    // Wait for cuisine pills to appear
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
 
-    // Get the options
-    const italianOption = screen.getByRole('option', { name: 'Italian' });
-    const thaiOption = screen.getByRole('option', { name: 'Thai' });
-    
-    // Select multiple options by setting selected property
-    italianOption.selected = true;
-    thaiOption.selected = true;
-    
-    // Trigger change event
-    fireEvent.change(kulinarikField);
+    // Click the Italian and Thai pills to select them
+    fireEvent.click(screen.getByRole('button', { name: 'Italian' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Thai' }));
 
     // Fill in required title and other required fields
     fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
@@ -635,14 +626,13 @@ describe('RecipeForm - Multi-Select Fields', () => {
       />
     );
 
-    const kulinarikField = screen.getByLabelText('Kulinarik (Mehrfachauswahl möglich)');
+    // Wait for cuisine pills to appear and verify selected pills are shown active
+    await waitFor(() => {
+      const italianPill = screen.getByRole('button', { name: 'Italian' });
+      expect(italianPill).toHaveAttribute('aria-pressed', 'true');
+    });
 
-    // Wait for options to load
-    await waitFor(() => expect(kulinarikField.options.length).toBeGreaterThan(0));
-    
-    // Check that Italian and Chinese options exist and are rendered
-    // (JSDOM may not reflect selectedOptions for controlled React selects,
-    // so we verify the kulinarik state is passed correctly on submit)
+    // Submit form and verify kulinarik values are preserved
     fireEvent.submit(document.querySelector('.recipe-form'));
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({

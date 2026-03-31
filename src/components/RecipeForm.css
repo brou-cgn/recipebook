@@ -217,52 +217,85 @@
   border-left: 4px solid #402C1C;
 }
 
-.new-cuisine-input {
-  display: flex;
-  gap: 8px;
-  margin-top: 0.75rem;
-  align-items: center;
-}
+/* ─── Kulinariktypen pill-based selector ─────────────────────────────────── */
 
-.new-cuisine-input input[type="text"] {
-  flex: 1;
+.recipe-form-cuisine-search {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
-  width: auto;
+  box-sizing: border-box;
 }
 
-.new-cuisine-input input[type="text"]:focus {
+.recipe-form-cuisine-search:focus {
   outline: none;
   border-color: #402C1C;
 }
 
-.new-cuisine-input button {
-  padding: 0.5rem 1rem;
-  background-color: #402C1C;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
+.recipe-form-cuisine-grid {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  padding: 8px 0 4px;
+  /* Two-row carousel – mirrors mobile-search-cuisine-grid */
+  max-height: 84px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.recipe-form-cuisine-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.recipe-form-cuisine-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #E5DED8;
+  background: #F5F2EF;
+  color: #3E2B1C;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  touch-action: manipulation;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.new-cuisine-input button:hover:not(:disabled) {
-  background-color: #5a3e2b;
+.recipe-form-cuisine-pill:active {
+  transform: scale(0.95);
 }
 
-.new-cuisine-input button:disabled {
+.recipe-form-cuisine-pill.active {
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
+}
+
+.recipe-form-cuisine-pill:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.recipe-form-cuisine-pill:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.new-cuisine-error {
-  margin-top: 0.4rem;
-  color: #c62828;
-  font-size: 0.85rem;
+.recipe-form-cuisine-pill--new {
+  border-style: dashed;
 }
+
 
 .form-group input:focus,
 .form-group select:focus {
