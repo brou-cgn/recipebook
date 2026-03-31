@@ -227,6 +227,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Pending renames for cuisine types and meal categories (to propagate to recipes on save)
   const [pendingCuisineRenames, setPendingCuisineRenames] = useState([]);
   const [pendingCategoryRenames, setPendingCategoryRenames] = useState([]);
+  // Pending deletes for cuisine types and meal categories (to propagate to recipes on save)
+  const [pendingCuisineDeletes, setPendingCuisineDeletes] = useState([]);
+  const [pendingCategoryDeletes, setPendingCategoryDeletes] = useState([]);
   
   // Category images state
   const [categoryImages, setCategoryImages] = useState([]);
@@ -541,6 +544,30 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     clearRenames([]);
   };
 
+  /**
+   * Propagate deletions of a recipe field (kulinarik or speisekategorie) to all affected recipes.
+   * @param {Array<string>} deletes - Names of items that were deleted
+   * @param {string} field - Recipe field name ('kulinarik' or 'speisekategorie')
+   * @param {Function} clearDeletes - State setter to clear the pending deletes
+   */
+  const propagateDeletes = async (deletes, field, clearDeletes) => {
+    if (deletes.length === 0 || !onUpdateRecipe) return;
+    const recipesToUpdate = allRecipes.filter(recipe => {
+      const values = Array.isArray(recipe[field])
+        ? recipe[field]
+        : recipe[field] ? [recipe[field]] : [];
+      return deletes.some(d => values.includes(d));
+    });
+    for (const recipe of recipesToUpdate) {
+      const values = Array.isArray(recipe[field])
+        ? recipe[field]
+        : recipe[field] ? [recipe[field]] : [];
+      const updated = values.filter(v => !deletes.includes(v));
+      await onUpdateRecipe(recipe.id, { [field]: updated });
+    }
+    clearDeletes([]);
+  };
+
   const handleSave = async () => {
     try {
       await saveCustomLists(lists);
@@ -599,8 +626,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
 
+      // Propagate cuisine type deletions to all affected recipes
+      await propagateDeletes(pendingCuisineDeletes, 'kulinarik', setPendingCuisineDeletes);
+
       // Propagate meal category renames to all affected recipes
       await propagateRenames(pendingCategoryRenames, 'speisekategorie', setPendingCategoryRenames);
+
+      // Propagate meal category deletions to all affected recipes
+      await propagateDeletes(pendingCategoryDeletes, 'speisekategorie', setPendingCategoryDeletes);
 
       // Apply favicon changes immediately
       updateFavicon(faviconImage);
@@ -639,6 +672,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         setLists(defaultLists);
         setPendingCuisineRenames([]);
         setPendingCategoryRenames([]);
+        setPendingCuisineDeletes([]);
+        setPendingCategoryDeletes([]);
         alert('Listen auf Standardwerte zurückgesetzt!');
       } catch (error) {
         console.error('Fehler beim Zurücksetzen der Listen:', error);
@@ -648,20 +683,28 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const addCuisine = () => {
-    if (newCuisine.trim() && !lists.cuisineTypes.includes(newCuisine.trim())) {
+    const trimmed = newCuisine.trim();
+    if (trimmed && !lists.cuisineTypes.includes(trimmed)) {
       setLists({
         ...lists,
-        cuisineTypes: [...lists.cuisineTypes, newCuisine.trim()]
+        cuisineTypes: [...lists.cuisineTypes, trimmed]
       });
       setNewCuisine('');
+      // Cancel a pending delete if this type was just re-added with the same name
+      setPendingCuisineDeletes(prev => prev.filter(d => d !== trimmed));
     }
   };
 
   const removeCuisine = (cuisine) => {
-    setLists({
-      ...lists,
-      cuisineTypes: lists.cuisineTypes.filter(c => c !== cuisine)
-    });
+    setLists(prev => ({
+      ...prev,
+      cuisineTypes: prev.cuisineTypes.filter(c => c !== cuisine),
+      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+        ...g,
+        children: g.children.filter(c => c !== cuisine)
+      }))
+    }));
+    setPendingCuisineDeletes(prev => prev.includes(cuisine) ? prev : [...prev, cuisine]);
   };
 
   const renameCuisine = (oldName, newName) => {
@@ -669,7 +712,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     if (!trimmed || oldName === trimmed) return;
     setLists(prev => ({
       ...prev,
-      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c)
+      cuisineTypes: prev.cuisineTypes.map(c => c === oldName ? trimmed : c),
+      cuisineGroups: (prev.cuisineGroups || []).map(g => ({
+        ...g,
+        children: g.children.map(c => c === oldName ? trimmed : c)
+      }))
     }));
     setPendingCuisineRenames(prev => {
       const existingIdx = prev.findIndex(r => r.to === oldName);
@@ -683,12 +730,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const addCategory = () => {
-    if (newCategory.trim() && !lists.mealCategories.includes(newCategory.trim())) {
+    const trimmed = newCategory.trim();
+    if (trimmed && !lists.mealCategories.includes(trimmed)) {
       setLists({
         ...lists,
-        mealCategories: [...lists.mealCategories, newCategory.trim()]
+        mealCategories: [...lists.mealCategories, trimmed]
       });
       setNewCategory('');
+      // Cancel a pending delete if this category was just re-added with the same name
+      setPendingCategoryDeletes(prev => prev.filter(d => d !== trimmed));
     }
   };
 
@@ -739,6 +789,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       ...lists,
       mealCategories: lists.mealCategories.filter(c => c !== category)
     });
+    setPendingCategoryDeletes(prev => prev.includes(category) ? prev : [...prev, category]);
   };
 
   const renameCategory = (oldName, newName) => {
