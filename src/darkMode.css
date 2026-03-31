@@ -3003,19 +3003,12 @@
   color: #c08060;
 }
 
-[data-theme="dark"] .move-button {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #e8e8e8;
-}
-
-[data-theme="dark"] .move-button:hover:not(:disabled) {
-  border-color: #c08060;
-  background: #333;
-}
-
 [data-theme="dark"] .remove-section-button {
-  background: #2a2a2a;
+  color: #777;
+}
+
+[data-theme="dark"] .remove-section-button:hover {
+  color: #f44336;
 }
 
 [data-theme="dark"] .section-summary {

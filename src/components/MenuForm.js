@@ -27,6 +27,131 @@ import { CSS } from '@dnd-kit/utilities';
 
 const MOBILE_BREAKPOINT = 768;
 
+// Sortable Section Component for drag & drop reordering of menu sections
+function SortableSection({
+  id, section, sectionIndex, recipes, favoriteIds, searchQueries, sensors, closeIcon,
+  onRemoveSection, onDragEndRecipes, onRemoveRecipeFromSection,
+  onSearchChange, onAddRecipeToSection, getFilteredRecipes,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`section-block${isDragging ? ' dragging' : ''}`}>
+      <div className="section-header">
+        <button
+          type="button"
+          className="drag-handle section-drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Abschnitt verschieben"
+        >
+          ⋮⋮
+        </button>
+        <h4>{section.name}</h4>
+        <div className="section-actions">
+          <button
+            type="button"
+            className="remove-section-button"
+            onClick={() => onRemoveSection(sectionIndex)}
+            title="Abschnitt löschen"
+          >
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+            ) : (
+              closeIcon
+            )}
+          </button>
+        </div>
+      </div>
+      <div className="recipe-selection">
+        {section.recipeIds.length > 0 && (
+          <div className="selected-recipes">
+            <h5>Ausgewählte Rezepte:</h5>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => onDragEndRecipes(sectionIndex, event)}
+            >
+              <SortableContext
+                items={section.recipeIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {section.recipeIds.map(recipeId => {
+                  const recipe = recipes.find(r => r.id === recipeId);
+                  if (!recipe) return null;
+                  const isFavorite = favoriteIds.includes(recipe.id);
+                  return (
+                    <SortableRecipeItem
+                      key={recipe.id}
+                      id={recipe.id}
+                      recipe={recipe}
+                      isFavorite={isFavorite}
+                      sectionIndex={sectionIndex}
+                      onRemove={onRemoveRecipeFromSection}
+                    />
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
+          </div>
+        )}
+
+        <div className="typeahead-container">
+          <input
+            type="text"
+            className="typeahead-input"
+            placeholder="Rezept suchen und hinzufügen..."
+            value={searchQueries[sectionIndex] || ''}
+            onChange={(e) => onSearchChange(sectionIndex, e.target.value)}
+          />
+
+          {searchQueries[sectionIndex] && searchQueries[sectionIndex].trim() && (
+            <div className="typeahead-dropdown">
+              {(() => {
+                const filteredRecipes = getFilteredRecipes(sectionIndex);
+                if (filteredRecipes.length === 0) {
+                  return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
+                }
+                return filteredRecipes.slice(0, 10).map(recipe => {
+                  const isFavorite = favoriteIds.includes(recipe.id);
+                  return (
+                    <div
+                      key={recipe.id}
+                      className="typeahead-item"
+                      onClick={() => onAddRecipeToSection(sectionIndex, recipe.id)}
+                    >
+                      <span className="recipe-name">
+                        {recipe.title}
+                      </span>
+                      {isFavorite && <span className="favorite-indicator">★</span>}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="section-summary">
+        {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
+      </div>
+    </div>
+  );
+}
+
 // Sortable Recipe Item Component for menu sections
 function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) {
   const {
@@ -279,18 +404,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setSections(newSections);
   };
 
-  const handleMoveSectionUp = (index) => {
-    if (index === 0) return;
-    const newSections = [...sections];
-    [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
-    setSections(newSections);
-  };
-
-  const handleMoveSectionDown = (index) => {
-    if (index === sections.length - 1) return;
-    const newSections = [...sections];
-    [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
-    setSections(newSections);
+  const handleDragEndSections = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSections((prevSections) => {
+        const oldIndex = prevSections.findIndex(s => s.name === active.id);
+        const newIndex = prevSections.findIndex(s => s.name === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prevSections;
+        return arrayMove(prevSections, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleMenuImageUpload = async (e) => {
@@ -656,116 +779,33 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   </button>
                 </div>
               )}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEndSections}
+              >
+                <SortableContext
+                  items={sections.map(s => s.name)}
+                  strategy={verticalListSortingStrategy}
+                >
               {sections.map((section, sectionIndex) => (
-                <React.Fragment key={sectionIndex}>
-                <div className="section-block">
-                  <div className="section-header">
-                    <h4>{section.name}</h4>
-                    <div className="section-actions">
-                      <button
-                        type="button"
-                        className="move-button"
-                        onClick={() => handleMoveSectionUp(sectionIndex)}
-                        disabled={sectionIndex === 0}
-                        title="Nach oben"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="move-button"
-                        onClick={() => handleMoveSectionDown(sectionIndex)}
-                        disabled={sectionIndex === sections.length - 1}
-                        title="Nach unten"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="remove-section-button"
-                        onClick={() => handleRemoveSection(sectionIndex)}
-                        title="Abschnitt löschen"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <div className="recipe-selection">
-                    {/* Display selected recipes */}
-                    {section.recipeIds.length > 0 && (
-                      <div className="selected-recipes">
-                        <h5>Ausgewählte Rezepte:</h5>
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={(event) => handleDragEndRecipes(sectionIndex, event)}
-                        >
-                          <SortableContext
-                            items={section.recipeIds}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {section.recipeIds.map(recipeId => {
-                              const recipe = recipes.find(r => r.id === recipeId);
-                              if (!recipe) return null;
-                              const isFavorite = favoriteIds.includes(recipe.id);
-                              return (
-                                <SortableRecipeItem
-                                  key={recipe.id}
-                                  id={recipe.id}
-                                  recipe={recipe}
-                                  isFavorite={isFavorite}
-                                  sectionIndex={sectionIndex}
-                                  onRemove={handleRemoveRecipeFromSection}
-                                />
-                              );
-                            })}
-                          </SortableContext>
-                        </DndContext>
-                      </div>
-                    )}
-                    
-                    {/* Typeahead search input */}
-                    <div className="typeahead-container">
-                      <input
-                        type="text"
-                        className="typeahead-input"
-                        placeholder="Rezept suchen und hinzufügen..."
-                        value={searchQueries[sectionIndex] || ''}
-                        onChange={(e) => handleSearchChange(sectionIndex, e.target.value)}
-                      />
-                      
-                      {/* Show dropdown only when there's a search query */}
-                      {searchQueries[sectionIndex] && searchQueries[sectionIndex].trim() && (
-                        <div className="typeahead-dropdown">
-                          {(() => {
-                            const filteredRecipes = getFilteredRecipes(sectionIndex);
-                            if (filteredRecipes.length === 0) {
-                              return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
-                            }
-                            return filteredRecipes.slice(0, 10).map(recipe => {
-                              const isFavorite = favoriteIds.includes(recipe.id);
-                              return (
-                                <div
-                                  key={recipe.id}
-                                  className="typeahead-item"
-                                  onClick={() => handleAddRecipeToSection(sectionIndex, recipe.id)}
-                                >
-                                  <span className="recipe-name">
-                                    {recipe.title}
-                                  </span>
-                                  {isFavorite && <span className="favorite-indicator">★</span>}
-                                </div>
-                              );
-                            });
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="section-summary">
-                    {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
-                  </div>
-                </div>
+                <React.Fragment key={section.name}>
+                <SortableSection
+                  id={section.name}
+                  section={section}
+                  sectionIndex={sectionIndex}
+                  recipes={recipes}
+                  favoriteIds={favoriteIds}
+                  searchQueries={searchQueries}
+                  sensors={sensors}
+                  closeIcon={getEffectiveIcon(buttonIcons, 'menuCloseButton', isDarkMode)}
+                  onRemoveSection={handleRemoveSection}
+                  onDragEndRecipes={handleDragEndRecipes}
+                  onRemoveRecipeFromSection={handleRemoveRecipeFromSection}
+                  onSearchChange={handleSearchChange}
+                  onAddRecipeToSection={handleAddRecipeToSection}
+                  getFilteredRecipes={getFilteredRecipes}
+                />
                 {isMobile && (
                   <div className="add-section-gap">
                     <button
@@ -791,6 +831,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                 )}
                 </React.Fragment>
               ))}
+                </SortableContext>
+              </DndContext>
             </div>
           )}
         </div>
