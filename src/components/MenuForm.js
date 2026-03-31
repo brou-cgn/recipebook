@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './MenuForm.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
-import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage } from '../utils/imageUtils';
+import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, deleteMenuGridImage, isStorageUrl } from '../utils/storageUtils';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
 import {
   DndContext,
@@ -85,6 +86,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [menuImage, setMenuImage] = useState('');
   const [uploadingMenuImage, setUploadingMenuImage] = useState(false);
   const [savingMenu, setSavingMenu] = useState(false);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
+  const formRef = useRef(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -153,6 +159,47 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       setMenuDate(new Date().toISOString().slice(0, 10));
     }
   }, [menu]);
+
+  // Load button icons
+  useEffect(() => {
+    const loadButtonIcons = async () => {
+      const { getButtonIcons } = await import('../utils/customLists');
+      const icons = await getButtonIcons();
+      setButtonIcons(icons);
+    };
+    loadButtonIcons();
+  }, []);
+
+  // Listen for dark mode changes
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
+  const handleFabClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const createSyntheticEvent = () => ({
+      preventDefault: () => {},
+      target: formRef.current,
+    });
+    if (formRef.current) {
+      try {
+        if (typeof formRef.current.requestSubmit === 'function') {
+          formRef.current.requestSubmit();
+        } else {
+          handleSubmit(createSyntheticEvent());
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        handleSubmit(createSyntheticEvent());
+      }
+    }
+  };
+
+  const handleFabMouseDown = () => setFabPressed(true);
+  const handleFabMouseUp = () => setFabPressed(false);
 
   const handleAddSection = (sectionName = null) => {
     const name = sectionName || newSectionName.trim();
@@ -438,7 +485,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         <h2>{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
       </div>
 
-      <form className="menu-form" onSubmit={handleSubmit}>
+      <form ref={formRef} className="menu-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="menuName">Menü-Name *</label>
           <input
@@ -676,16 +723,49 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             </div>
           )}
         </div>
-
-        <div className="form-actions">
-          <button type="button" className="cancel-button" onClick={onCancel} disabled={savingMenu}>
-            Abbrechen
-          </button>
-          <button type="submit" className="save-button" disabled={savingMenu}>
-            {savingMenu ? 'Speichern...' : (menu ? 'Menü aktualisieren' : 'Menü erstellen')}
-          </button>
-        </div>
       </form>
+
+      {/* Cancel FAB button - positioned at bottom-left */}
+      <button
+        className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+        onClick={onCancel}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        disabled={savingMenu}
+        title="Abbrechen"
+        aria-label="Menübearbeitung abbrechen"
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
+        )}
+      </button>
+
+      {/* FAB Save Button */}
+      <button
+        type="button"
+        className={`save-fab-button ${fabPressed ? 'pressed' : ''}`}
+        onClick={handleFabClick}
+        onMouseDown={handleFabMouseDown}
+        onMouseUp={handleFabMouseUp}
+        onMouseLeave={handleFabMouseUp}
+        onTouchStart={handleFabMouseDown}
+        onTouchEnd={handleFabMouseUp}
+        disabled={savingMenu}
+        aria-label={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+        title={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+        )}
+      </button>
     </div>
   );
 }
