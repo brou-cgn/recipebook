@@ -106,6 +106,10 @@ jest.mock('../utils/recipeLinks', () => ({
   containsHashForTypeahead: jest.fn(() => false),
 }));
 
+jest.mock('../utils/cuisineProposalsFirestore', () => ({
+  addCuisineProposal: jest.fn(() => Promise.resolve('proposal-id-1')),
+}));
+
 // Mock @dnd-kit modules
 jest.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }) => <div>{children}</div>,
@@ -723,6 +727,98 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(mockOnSave).not.toHaveBeenCalled();
 
     alertMock.mockRestore();
+  });
+
+  test('new cuisine pill appears for search text with no exact match and activates type immediately', async () => {
+    const { addCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Wait for cuisine pills to load
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
+
+    // Type a cuisine name that does not exist yet
+    const kulinarikSearch = screen.getByLabelText('Kulinariktypen suchen');
+    fireEvent.change(kulinarikSearch, { target: { value: 'Peruanisch' } });
+
+    // The new pill (dashed border) should appear showing the typed text
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Peruanisch' })).toBeInTheDocument();
+    });
+
+    // Click the new cuisine pill
+    fireEvent.click(screen.getByRole('button', { name: 'Peruanisch' }));
+
+    // The input should be cleared immediately after clicking
+    await waitFor(() => {
+      expect(kulinarikSearch.value).toBe('');
+    });
+
+    // The new type should now be active in the pill list
+    await waitFor(() => {
+      const pill = screen.getByRole('button', { name: 'Peruanisch' });
+      expect(pill).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    // The proposal should have been submitted in the background
+    expect(addCuisineProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Peruanisch' })
+    );
+  });
+
+  test('new cuisine pill activates type even when addCuisineProposal fails', async () => {
+    const { addCuisineProposal } = require('../utils/cuisineProposalsFirestore');
+    addCuisineProposal.mockRejectedValueOnce(new Error('Firestore unavailable'));
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // Wait for cuisine pills to load
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
+
+    // Type a new cuisine name
+    const kulinarikSearch = screen.getByLabelText('Kulinariktypen suchen');
+    fireEvent.change(kulinarikSearch, { target: { value: 'Mexikanisch' } });
+
+    // Click the new cuisine pill
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Mexikanisch' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Mexikanisch' }));
+
+    // Type is immediately added to kulinarik even though the proposal save fails
+    await waitFor(() => {
+      const pill = screen.getByRole('button', { name: 'Mexikanisch' });
+      expect(pill).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 });
 

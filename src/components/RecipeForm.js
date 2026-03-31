@@ -512,12 +512,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       setNewCuisineInput('');
       return;
     }
+    // Optimistically update local state so the new type is immediately active on the recipe
+    setCustomLists((prev) => ({ ...prev, cuisineTypes: [...prev.cuisineTypes, name] }));
+    setKulinarik((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    setNewCuisineInput('');
+    // Save the proposal in the background; a failure does not roll back the local activation
     setNewCuisineLoading(true);
     try {
       await addCuisineProposal({ name, groupName: null, createdBy: currentUser?.id || '' });
-      setCustomLists((prev) => ({ ...prev, cuisineTypes: [...prev.cuisineTypes, name] }));
-      setKulinarik((prev) => (prev.includes(name) ? prev : [...prev, name]));
-      setNewCuisineInput('');
     } catch (err) {
       console.error('Error adding new cuisine type:', err);
     } finally {
