@@ -473,7 +473,7 @@
 
 /* Author and date caption container */
 .author-date-caption {
-  padding: 0 1rem 1rem;
+  padding: 0 1.5rem 1rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
