@@ -193,6 +193,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'newVersion', label: 'Neue Version' },
   { key: 'publishRecipe', label: 'Rezept veröffentlichen' },
   { key: 'deleteRecipe', label: 'Rezept löschen' },
+  { key: 'printRecipe', label: 'Rezept drucken' },
 ];
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
