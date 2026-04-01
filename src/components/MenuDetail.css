@@ -524,11 +524,11 @@
   }
 }
 
-/* Delete FAB button - fixed bottom right, left of edit-fab-button, same style */
+/* Delete FAB button - fixed bottom left, right of publish-fab-button, same style */
 .delete-fab-button {
   position: fixed;
   bottom: 20px;
-  right: 74px;
+  left: 74px;
   z-index: 1101;
   width: 44px;
   height: 44px;
@@ -578,7 +578,68 @@
     min-width: 56px;
     max-width: 56px;
     opacity: 0.85;
-    right: auto;
-    left: 20px;
+    left: 74px;
+  }
+}
+
+/* Publish FAB button - fixed bottom left, same style as RecipeDetail */
+.publish-fab-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1101;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  border-radius: 50%;
+  padding: 0;
+  background: white;
+  color: #333;
+  border: 1px solid #ddd;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.15s ease,
+              box-shadow 0.15s ease;
+}
+
+.publish-fab-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.publish-fab-button:active {
+  background: white;
+  outline: none;
+}
+
+.publish-fab-button.pressed {
+  transform: scale(1.15);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.publish-fab-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .publish-fab-button {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    opacity: 0.85;
   }
 }

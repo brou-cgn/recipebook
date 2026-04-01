@@ -26,6 +26,9 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
+  const [publishMenuIcon, setPublishMenuIcon] = useState('↑');
+  const [publishFabPressed, setPublishFabPressed] = useState(false);
+  const [publishLoading, setPublishLoading] = useState(false);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [shareLoading, setShareLoading] = useState(false);
@@ -60,6 +63,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
     setEditMenuIcon(eff('editRecipe') || 'Edit');
     setDeleteMenuIcon(eff('deleteRecipe') || '🗑');
+    setPublishMenuIcon(eff('publishRecipe') || '↑');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -152,6 +156,26 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
   const handleDeleteFabPressEnd = () => {
     setDeleteFabPressed(false);
+  };
+
+  const handlePublish = async () => {
+    if (!onPublish) return;
+    if (window.confirm(`Möchten Sie "${menu.name}" in der Liste "Öffentlich" veröffentlichen?`)) {
+      setPublishLoading(true);
+      try {
+        await onPublish(menu.id);
+      } finally {
+        setPublishLoading(false);
+      }
+    }
+  };
+
+  const handlePublishFabPressStart = () => {
+    setPublishFabPressed(true);
+  };
+
+  const handlePublishFabPressEnd = () => {
+    setPublishFabPressed(false);
   };
 
   // Derive favorite status from favoriteMenuIds
@@ -422,15 +446,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )}
             </button>
           )}
-          {menu.privat && canEditMenu(currentUser, menu) && onPublish && (
-            <button
-              className="publish-menu-button"
-              onClick={() => onPublish(menu.id)}
-              title="Menü freigeben"
-            >
-              Freigeben
-            </button>
-          )}
         </div>
       </div>
 
@@ -501,6 +516,29 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             <img src={deleteMenuIcon} alt="Löschen" className="button-icon-image" draggable="false" />
           ) : (
             deleteMenuIcon
+          )}
+        </button>
+      )}
+      {menu.privat && canEditMenu(currentUser, menu) && onPublish && (
+        <button
+          className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
+          onClick={handlePublish}
+          onTouchStart={handlePublishFabPressStart}
+          onTouchEnd={handlePublishFabPressEnd}
+          onTouchCancel={handlePublishFabPressEnd}
+          onMouseDown={handlePublishFabPressStart}
+          onMouseUp={handlePublishFabPressEnd}
+          onMouseLeave={handlePublishFabPressEnd}
+          disabled={publishLoading}
+          title="Menü veröffentlichen"
+          aria-label="Menü veröffentlichen"
+        >
+          {publishLoading ? '…' : (
+            isBase64Image(publishMenuIcon) ? (
+              <img src={publishMenuIcon} alt="Veröffentlichen" className="button-icon-image" draggable="false" />
+            ) : (
+              publishMenuIcon
+            )
           )}
         </button>
       )}
