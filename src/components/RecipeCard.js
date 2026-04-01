@@ -77,24 +77,15 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     onClick?.(e);
   };
 
-  const handleListSelect = (e) => {
-    const listId = e.target.value;
-    if (!listId) {
-      setShowListSelect(false);
-      return;
-    }
+  const handleListToggle = (listId) => {
     const list = privateLists.find(l => l.id === listId);
-    if (!list) {
-      setShowListSelect(false);
-      return;
-    }
+    if (!list) return;
     const isInList = list.recipeIds?.includes(recipe.id);
     if (isInList) {
       onRemoveFromPrivateList?.(listId, recipe.id);
     } else {
       onAddToPrivateList?.(listId, recipe.id);
     }
-    setShowListSelect(false);
   };
 
   const allImages = Array.isArray(recipe.images) && recipe.images.length > 0
@@ -117,18 +108,32 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       onTouchCancel={handleTouchCancel}
     >
       {showListSelect && privateLists && privateLists.length > 0 && (
-        <div className="recipe-card-list-select" onClick={(e) => e.stopPropagation()}>
-          <select onChange={handleListSelect} defaultValue="">
-            <option value="">-- Liste auswählen --</option>
-            {privateLists.map(list => {
-              const isInList = list.recipeIds?.includes(recipe.id);
-              return (
-                <option key={list.id} value={list.id}>
-                  {isInList ? '✓ ' : ''}{list.name}
-                </option>
-              );
-            })}
-          </select>
+        <div className="recipe-card-list-modal-overlay" onClick={() => setShowListSelect(false)}>
+          <div className="recipe-card-list-modal" role="dialog" aria-modal="true" aria-label="Zur Liste hinzufügen" onClick={(e) => e.stopPropagation()}>
+            <div className="recipe-card-list-modal-header">
+              <span className="recipe-card-list-modal-title">Zur Liste hinzufügen</span>
+              <button className="recipe-card-list-modal-close" onClick={() => setShowListSelect(false)} aria-label="Schließen">×</button>
+            </div>
+            <ul className="recipe-card-list-modal-list">
+              {privateLists.map(list => {
+                const isInList = list.recipeIds?.includes(recipe.id);
+                return (
+                  <li key={list.id}>
+                    <button
+                      className={`recipe-card-list-modal-item${isInList ? ' in-list' : ''}`}
+                      onClick={() => handleListToggle(list.id)}
+                    >
+                      <span className="recipe-card-list-modal-check">{isInList ? '✓' : ''}</span>
+                      <span className="recipe-card-list-modal-name">{list.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="recipe-card-list-modal-footer">
+              <button className="recipe-card-list-modal-close-btn" onClick={() => setShowListSelect(false)}>Schließen</button>
+            </div>
+          </div>
         </div>
       )}
       {isFavorite && (
