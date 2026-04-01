@@ -848,30 +848,33 @@ describe("User Management Utilities", () => {
     const editUser = { id: "user-1", role: ROLES.EDIT };
     const otherUser = { id: "user-2", role: ROLES.EDIT };
     const readUser = { id: "user-3", role: ROLES.READ };
-    const menuByEditUser = { id: "menu-1", name: "Test Menu", authorId: "user-1" };
+    const privateMenuByEditUser = { id: "menu-1", name: "Test Menu", authorId: "user-1", privat: true };
+    const publicMenuByEditUser = { id: "menu-3", name: "Public Menu", authorId: "user-1", privat: false };
     const menuByOtherUser = { id: "menu-2", name: "Other Menu", authorId: "other-user" };
 
     describe("canEditMenu", () => {
       test("should allow admin to edit any menu", () => {
-        expect(canEditMenu(adminUser, menuByEditUser)).toBe(true);
+        expect(canEditMenu(adminUser, privateMenuByEditUser)).toBe(true);
         expect(canEditMenu(adminUser, menuByOtherUser)).toBe(true);
       });
-      test("should allow author to edit their own menu", () => { expect(canEditMenu(editUser, menuByEditUser)).toBe(true); });
-      test("should not allow non-author edit user to edit other menus", () => { expect(canEditMenu(otherUser, menuByEditUser)).toBe(false); });
-      test("should not allow read user to edit any menu", () => { expect(canEditMenu(readUser, menuByEditUser)).toBe(false); });
+      test("should allow author to edit their own menu", () => { expect(canEditMenu(editUser, privateMenuByEditUser)).toBe(true); });
+      test("should not allow non-author edit user to edit other menus", () => { expect(canEditMenu(otherUser, privateMenuByEditUser)).toBe(false); });
+      test("should not allow read user to edit any menu", () => { expect(canEditMenu(readUser, privateMenuByEditUser)).toBe(false); });
       test("should return false for null user or menu", () => {
-        expect(canEditMenu(null, menuByEditUser)).toBe(false);
+        expect(canEditMenu(null, privateMenuByEditUser)).toBe(false);
         expect(canEditMenu(editUser, null)).toBe(false);
       });
     });
 
     describe("canDeleteMenu", () => {
-      test("should allow admin to delete any menu", () => { expect(canDeleteMenu(adminUser, menuByEditUser)).toBe(true); });
-      test("should allow author to delete their own menu", () => { expect(canDeleteMenu(editUser, menuByEditUser)).toBe(true); });
-      test("should not allow non-author to delete menus", () => { expect(canDeleteMenu(otherUser, menuByEditUser)).toBe(false); });
-      test("should not allow read user to delete any menu", () => { expect(canDeleteMenu(readUser, menuByEditUser)).toBe(false); });
+      test("should allow admin to delete any menu", () => { expect(canDeleteMenu(adminUser, privateMenuByEditUser)).toBe(true); });
+      test("should allow admin to delete public menus too", () => { expect(canDeleteMenu(adminUser, publicMenuByEditUser)).toBe(true); });
+      test("should allow author to delete their own private menu", () => { expect(canDeleteMenu(editUser, privateMenuByEditUser)).toBe(true); });
+      test("should not allow author to delete their own public menu", () => { expect(canDeleteMenu(editUser, publicMenuByEditUser)).toBe(false); });
+      test("should not allow non-author to delete menus", () => { expect(canDeleteMenu(otherUser, privateMenuByEditUser)).toBe(false); });
+      test("should not allow read user to delete any menu", () => { expect(canDeleteMenu(readUser, privateMenuByEditUser)).toBe(false); });
       test("should return false for null user or menu", () => {
-        expect(canDeleteMenu(null, menuByEditUser)).toBe(false);
+        expect(canDeleteMenu(null, privateMenuByEditUser)).toBe(false);
         expect(canDeleteMenu(editUser, null)).toBe(false);
       });
     });

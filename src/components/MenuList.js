@@ -141,6 +141,9 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
                   </div>
                 )}
                 <div className="menu-card-badges">
+                  {menu.privat && (
+                    <div className="private-badge">Privat</div>
+                  )}
                   {isFavorite && (
                     <div className="menu-favorite-badge favorite-active">
                       {isBase64Image(buttonIcons.menuFavoritesButtonActive) ? (

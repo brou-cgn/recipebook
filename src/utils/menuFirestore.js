@@ -61,19 +61,26 @@ function sanitizeMenuData(menuData) {
 
 /**
  * Set up real-time listener for menus
+ * Filters private menus: only the author and admins can see private menus.
+ * @param {string} userId - Current user ID
+ * @param {boolean} isAdmin - Whether current user is an admin
  * @param {Function} callback - Callback function that receives menus array
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToMenus = (callback) => {
+export const subscribeToMenus = (userId, isAdmin, callback) => {
   const menusRef = collection(db, 'menus');
   
   return onSnapshot(menusRef, (snapshot) => {
     const menus = [];
     snapshot.forEach((doc) => {
-      menus.push({
+      const menu = {
         id: doc.id,
         ...doc.data()
-      });
+      };
+      // Include menu if it's public OR if it's private and (user is admin OR menu author)
+      if (!menu.privat || isAdmin || menu.authorId === userId) {
+        menus.push(menu);
+      }
     });
     callback(menus);
   }, (error) => {
@@ -115,6 +122,7 @@ export const addMenu = async (menu, authorId) => {
     const menuData = {
       ...sanitizeMenuData(menu),
       authorId,
+      privat: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };

@@ -665,17 +665,18 @@ export const canEditMenu = (user, menu) => {
 
 /**
  * Check if user can delete a specific menu
- * Only admins and the original author can delete a menu.
+ * Admins can delete any menu.
+ * Non-admin authors can only delete their own private menus (privat === true).
  * @param {Object} user - User object
- * @param {Object} menu - Menu object with authorId field
+ * @param {Object} menu - Menu object with authorId and privat fields
  * @returns {boolean}
  */
 export const canDeleteMenu = (user, menu) => {
   if (!user || !menu) return false;
   // Admins can delete any menu
   if (user.role === ROLES.ADMIN) return true;
-  // Original author can delete their own menu
-  if (menu.authorId === user.id) return true;
+  // Original author can only delete their own private menus
+  if (menu.authorId === user.id && menu.privat === true) return true;
   return false;
 };
 

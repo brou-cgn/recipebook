@@ -505,9 +505,13 @@ function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribe = subscribeToMenus((menusFromFirestore) => {
-      setMenus(menusFromFirestore);
-    });
+    const unsubscribe = subscribeToMenus(
+      currentUser.id,
+      currentUser.role === 'admin',
+      (menusFromFirestore) => {
+        setMenus(menusFromFirestore);
+      }
+    );
 
     return () => unsubscribe();
   }, [currentUser]);
@@ -826,6 +830,26 @@ function App() {
     } catch (error) {
       console.error('Error deleting menu:', error);
       alert('Fehler beim Löschen des Menüs. Bitte versuchen Sie es erneut.');
+    }
+  };
+
+  const handlePublishMenu = async (menuId) => {
+    if (!currentUser) return;
+
+    const menu = menus.find(m => m.id === menuId);
+    if (!canEditMenu(currentUser, menu)) {
+      alert('Sie haben keine Berechtigung, dieses Menü freizugeben.');
+      return;
+    }
+
+    try {
+      await updateMenuInFirestore(menuId, { privat: false });
+      if (selectedMenu && selectedMenu.id === menuId) {
+        setSelectedMenu({ ...selectedMenu, privat: false });
+      }
+    } catch (error) {
+      console.error('Error publishing menu:', error);
+      alert('Fehler beim Freigeben des Menüs. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -1225,6 +1249,7 @@ function App() {
           onBack={handleBackToMenuList}
           onEdit={handleEditMenu}
           onDelete={handleDeleteMenu}
+          onPublish={handlePublishMenu}
           onSelectRecipe={handleSelectRecipe}
           onToggleMenuFavorite={handleToggleMenuFavorite}
           currentUser={currentUser}

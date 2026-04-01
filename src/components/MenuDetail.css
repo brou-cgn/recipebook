@@ -108,6 +108,23 @@
   object-fit: contain;
 }
 
+.publish-menu-button {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.publish-menu-button:hover {
+  background: #1b5e20;
+}
+
 .favorite-button.favorite-active {
   color: white;
   border-color: #DF7A00;

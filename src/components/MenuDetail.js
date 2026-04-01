@@ -12,7 +12,7 @@ import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
 
-function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
+function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
@@ -422,12 +422,22 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onSe
               )}
             </button>
           )}
+          {menu.privat && canEditMenu(currentUser, menu) && onPublish && (
+            <button
+              className="publish-menu-button"
+              onClick={() => onPublish(menu.id)}
+              title="Menü freigeben"
+            >
+              Freigeben
+            </button>
+          )}
         </div>
       </div>
 
       <div className="menu-detail-content">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
+          {menu.privat && <span className="private-indicator">Privat</span>}
           <button className="close-button" onClick={onBack} title="Schließen">
             {isBase64Image(closeButtonIcon) ? (
               <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
