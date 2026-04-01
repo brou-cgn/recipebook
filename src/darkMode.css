@@ -378,9 +378,13 @@
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .favorite-button:hover {
-  background: #333;
+[data-theme="dark"] .favorite-button--active {
+  border-color: #DF7A00 !important;
 }
+
+/*[data-theme="dark"] .favorite-button:hover {
+  background: #333;
+}*/
 
 [data-theme="dark"] .step-heute-gekocht-btn {
   background: #DF7A00;
