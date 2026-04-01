@@ -121,7 +121,7 @@
 }
 
 .edit-button,
-.delete-button,
+.-button,
 .version-button,
 .share-button,
 .publish-button {
@@ -317,13 +317,13 @@
   color: white;
 }*/
 
-.delete-button {
+.-button {
   color: #f44336;
   border-color: #f44336;
   height: 48px;
 }
 
-/*.delete-button:hover {
+/*.-button:hover {
   background: #f44336;
   color: white;
 }*/
@@ -1962,7 +1962,7 @@
 .delete-fab-button {
   position: fixed;
   bottom: 20px;
-  left: 74px;
+  left: 86px;
   z-index: 1101;
   width: 44px;
   height: 44px;
