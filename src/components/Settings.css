@@ -2004,3 +2004,60 @@
   font-weight: 600;
   color: #5a3e2b;
 }
+
+/* ===== Print Format Preview ===== */
+.print-preview-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.print-preview-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #5a3e2b;
+  white-space: nowrap;
+}
+
+.print-preview-container {
+  margin-top: 1rem;
+  border: 1px dashed #c8b8a2;
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: #f9f5ef;
+}
+
+.print-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.print-preview-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5a3e2b;
+}
+
+.print-preview-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.print-preview-badge--active {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.print-preview-badge--inactive {
+  background: #f0f0f0;
+  color: #666;
+  border: 1px solid #ddd;
+}

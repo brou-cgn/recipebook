@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, selectPrintFormat } from '../utils/customLists';
 import PrintFormatEditor from './PrintFormatEditor';
+import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -315,6 +316,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Print format settings
   const [printFormats, setPrintFormats] = useState(DEFAULT_PRINT_FORMATS);
   const [savingPrintFormats, setSavingPrintFormats] = useState(false);
+  // ID of the recipe currently selected for the print format preview ('' = none)
+  const [printPreviewRecipeId, setPrintPreviewRecipeId] = useState('');
 
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
@@ -2062,6 +2065,30 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                 Die Anzahl der Fotos bestimmt, welches Format angewendet wird.
               </p>
 
+              {/* ── Preview recipe selector ─────────────────────────────── */}
+              {allRecipes.length > 0 && (
+                <div className="print-preview-selector">
+                  <label htmlFor="print-preview-recipe" className="print-preview-label">
+                    Vorschau-Rezept:
+                  </label>
+                  <select
+                    id="print-preview-recipe"
+                    className="pfe-select"
+                    value={printPreviewRecipeId}
+                    onChange={(e) => setPrintPreviewRecipeId(e.target.value)}
+                  >
+                    <option value="">– kein Vorschau-Rezept –</option>
+                    {[...allRecipes]
+                      .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'))
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.title}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
               {printFormats.map((fmt, fmtIdx) => (
                 <div key={fmt.id} className="print-format-item">
                   <div className="print-format-header">
@@ -2135,6 +2162,38 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       setPrintFormats(updated);
                     }}
                   />
+
+                  {/* Print format preview */}
+                  {printPreviewRecipeId && (() => {
+                    const previewRecipe = allRecipes.find((r) => r.id === printPreviewRecipeId);
+                    if (!previewRecipe) return null;
+                    const allImages =
+                      Array.isArray(previewRecipe.images) && previewRecipe.images.length > 0
+                        ? previewRecipe.images
+                        : previewRecipe.image
+                        ? [{ url: previewRecipe.image }]
+                        : [];
+                    const imageCount = allImages.length;
+                    const applicableFormat = selectPrintFormat(printFormats, imageCount);
+                    const isApplicable = applicableFormat?.id === fmt.id;
+                    return (
+                      <div className="print-preview-container">
+                        <div className="print-preview-header">
+                          <span className="print-preview-title">Vorschau: {previewRecipe.title}</span>
+                          {isApplicable ? (
+                            <span className="print-preview-badge print-preview-badge--active">
+                              Aktives Format für dieses Rezept
+                            </span>
+                          ) : (
+                            <span className="print-preview-badge print-preview-badge--inactive">
+                              Nicht aktiv für dieses Rezept
+                            </span>
+                          )}
+                        </div>
+                        <PrintPreview recipe={previewRecipe} format={fmt} />
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
 
