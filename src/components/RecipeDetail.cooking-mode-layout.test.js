@@ -129,6 +129,25 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     });
   };
 
+  const setMockWindowHeight = (height) => {
+    Object.defineProperty(window, 'innerHeight', {
+      writable: true,
+      configurable: true,
+      value: height,
+    });
+  };
+
+  const setLandscapeMode = () => {
+    // width > 480, height <= 480 → isMobileLandscape = true
+    setMockWindowWidth(900);
+    setMockWindowHeight(400);
+  };
+
+  const setPortraitMode = () => {
+    setMockWindowWidth(400);
+    setMockWindowHeight(900);
+  };
+
   // Mock Wake Lock API
   beforeEach(() => {
     Object.defineProperty(navigator, 'wakeLock', {
@@ -483,5 +502,173 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     const modal = document.querySelector('.cook-date-modal');
     expect(modal).toBeInTheDocument();
     expect(modal.getAttribute('data-prefill-today')).toBe('false');
+  });
+
+  describe('Landscape cooking mode', () => {
+    test('adds cooking-mode-landscape class when in landscape and cooking mode is active', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      // The content wrapper should have the landscape class
+      const content = document.querySelector('.recipe-detail-content');
+      expect(content).toHaveClass('cooking-mode-active');
+      expect(content).toHaveClass('cooking-mode-landscape');
+    });
+
+    test('does not add cooking-mode-landscape class in portrait mode', () => {
+      setPortraitMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      const content = document.querySelector('.recipe-detail-content');
+      expect(content).toHaveClass('cooking-mode-active');
+      expect(content).not.toHaveClass('cooking-mode-landscape');
+    });
+
+    test('landscape cooking mode shows both ingredients and steps sections', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      // Both sections should be visible simultaneously
+      expect(document.querySelector('.cooking-mode-ingredients')).toBeInTheDocument();
+      expect(document.querySelector('.cooking-mode-steps')).toBeInTheDocument();
+    });
+
+    test('landscape cooking mode step cards are rendered correctly', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      // All step cards should be rendered
+      const stepCards = document.querySelectorAll('.step-card');
+      expect(stepCards.length).toBe(3);
+      expect(stepCards[0]).toHaveClass('active');
+    });
+
+    test('ArrowUp navigates to previous step in landscape mode', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      const stepCards = document.querySelectorAll('.step-card');
+
+      // Navigate forward with ArrowDown first
+      fireEvent.keyDown(window, { key: 'ArrowDown' });
+      expect(stepCards[1]).toHaveClass('active');
+
+      // Now navigate back with ArrowUp
+      fireEvent.keyDown(window, { key: 'ArrowUp' });
+      expect(stepCards[0]).toHaveClass('active');
+    });
+
+    test('ArrowDown navigates to next step in landscape mode', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      const stepCards = document.querySelectorAll('.step-card');
+      expect(stepCards[0]).toHaveClass('active');
+
+      fireEvent.keyDown(window, { key: 'ArrowDown' });
+      expect(stepCards[1]).toHaveClass('active');
+      expect(stepCards[0]).not.toHaveClass('active');
+    });
+
+    test('landscape cooking mode shows step dots for navigation', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Activate cooking mode
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      // Step dots should be present for navigation
+      const dots = document.querySelectorAll('.step-dot');
+      expect(dots.length).toBe(3);
+      expect(dots[0]).toHaveClass('active');
+    });
   });
 });
