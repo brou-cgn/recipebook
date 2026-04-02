@@ -1255,10 +1255,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (!cookingMode) return;
 
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowLeft') {
+      if (e.key === 'ArrowLeft' || (isMobileLandscape && e.key === 'ArrowUp')) {
         e.preventDefault();
         setCurrentStepIndex(prev => Math.max(0, prev - 1));
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' || (isMobileLandscape && e.key === 'ArrowDown')) {
         e.preventDefault();
         setCurrentStepIndex(prev => Math.min(stepItems.length - 1, prev + 1));
       }
@@ -1266,7 +1266,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cookingMode, stepItems]);
+  }, [cookingMode, stepItems, isMobileLandscape]);
 
   // Scroll to current step card
   useEffect(() => {
@@ -1277,13 +1277,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const currentCard = cards[currentStepIndex];
     
     if (currentCard && currentCard.scrollIntoView) {
-      currentCard.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
+      if (isMobileLandscape) {
+        // Vertical carousel in landscape: scroll to the card vertically
+        currentCard.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      } else {
+        currentCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
     }
-  }, [currentStepIndex, cookingMode]);
+  }, [currentStepIndex, cookingMode, isMobileLandscape]);
 
   // Auto-activate card on swipe/scroll
   useEffect(() => {
@@ -1305,14 +1306,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
         // Calculate which card is most centered in the viewport
         const containerRect = container.getBoundingClientRect();
-        const containerCenter = containerRect.left + containerRect.width / 2;
+
+        // In landscape the carousel scrolls vertically; use vertical centre detection
+        const containerCenter = isMobileLandscape
+          ? containerRect.top + containerRect.height / 2
+          : containerRect.left + containerRect.width / 2;
 
         let closestIndex = 0;
         let closestDistance = Infinity;
 
         cards.forEach((card, index) => {
           const cardRect = card.getBoundingClientRect();
-          const cardCenter = cardRect.left + cardRect.width / 2;
+          const cardCenter = isMobileLandscape
+            ? cardRect.top + cardRect.height / 2
+            : cardRect.left + cardRect.width / 2;
           const distance = Math.abs(containerCenter - cardCenter);
 
           if (distance < closestDistance) {
@@ -1339,7 +1346,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         clearTimeout(scrollTimeout);
       }
     };
-  }, [cookingMode]);
+  }, [cookingMode, isMobileLandscape]);
 
   // --- Carousel scroll handlers ---
 
@@ -1635,7 +1642,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
 
-      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''}`} ref={contentRef}>
+      <div className={`recipe-detail-content ${cookingMode ? 'cooking-mode-active' : ''} ${cookingMode && isMobileLandscape ? 'cooking-mode-landscape' : ''}`} ref={contentRef}>
         {cookingMode ? (
           // Cooking mode layout
           <>
