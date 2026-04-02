@@ -2075,7 +2075,8 @@
     display: none !important;
   }
 
-  /* Recipe content card: use flex-column to allow element re-ordering */
+  /* Recipe content card: use flex-column to allow element re-ordering (legacy),
+     or position:relative when WYSIWYG absolute placement is active. */
   .recipe-detail-content {
     display: flex !important;
     flex-direction: column !important;
@@ -2086,7 +2087,18 @@
     page-break-inside: avoid;
   }
 
-  /* Configurable element order, width and alignment for images, ingredients, and steps */
+  /* When WYSIWYG element positions are active the content block acts as the
+     absolute positioning context.  The injected #print-element-positions style
+     sets position:absolute on individual sections; this rule makes the
+     container tall enough to show a full A4 page. */
+  .recipe-detail-content.print-wysiwyg-layout {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+  }
+
+  /* Configurable element order, width and alignment for images, ingredients, and steps (legacy flex) */
   .recipe-section--images {
     order: var(--print-images-order, 1) !important;
     width: var(--print-image-width, 100%) !important;

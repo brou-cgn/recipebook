@@ -697,20 +697,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     const root = document.documentElement;
     const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
-    const elementOrder = format?.elementOrder || ['images', 'ingredients', 'steps'];
     const orientation = format?.orientation || 'portrait';
-    const imageWidth = format?.imageWidth != null ? format.imageWidth : 100;
-    const imageAlign = format?.imageAlign || 'center';
     const imageColumns = format?.imageColumns || 'auto';
 
-    const alignSelfMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
-
     root.style.setProperty('--print-font-family', fontFamily);
-    root.style.setProperty('--print-images-order', String(elementOrder.indexOf('images') + 1));
-    root.style.setProperty('--print-ingredients-order', String(elementOrder.indexOf('ingredients') + 1));
-    root.style.setProperty('--print-steps-order', String(elementOrder.indexOf('steps') + 1));
-    root.style.setProperty('--print-image-width', `${imageWidth}%`);
-    root.style.setProperty('--print-image-align-self', alignSelfMap[imageAlign] || 'center');
 
     // Inject a @page orientation rule
     let pageStyle = document.getElementById('print-page-format');
@@ -729,12 +719,76 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       document.head.appendChild(columnStyle);
     }
     if (imageColumns !== 'auto') {
-      // imageColumns is a numeric string ('1' or '2'); build the matching grid template
       const colCount = parseInt(imageColumns, 10);
       const cols = Array.from({ length: colCount }, () => '1fr').join(' ');
       columnStyle.textContent = `@media print { .carousel-track, .carousel-track[data-image-count] { grid-template-columns: ${cols} !important; } }`;
     } else {
       columnStyle.textContent = '';
+    }
+
+    // WYSIWYG element positioning: inject absolute-position CSS when the format has
+    // an `elements` array (new-style format from PrintFormatEditor).
+    const ELEMENT_SELECTOR_MAP = {
+      title:       '.recipe-title-row',
+      images:      '.recipe-section--images',
+      authorDate:  '.author-date-caption',
+      metadata:    '.recipe-metadata',
+      ingredients: '.recipe-section--ingredients',
+      steps:       '.recipe-section--steps',
+    };
+
+    let elemStyle = document.getElementById('print-element-positions');
+    if (!elemStyle) {
+      elemStyle = document.createElement('style');
+      elemStyle.id = 'print-element-positions';
+      document.head.appendChild(elemStyle);
+    }
+
+    // Toggle the WYSIWYG layout class on the content container
+    const contentEl = contentRef.current;
+    const useWysiwyg = format?.elements && format.elements.length > 0;
+    if (contentEl) {
+      if (useWysiwyg) {
+        contentEl.classList.add('print-wysiwyg-layout');
+      } else {
+        contentEl.classList.remove('print-wysiwyg-layout');
+      }
+    }
+
+    if (useWysiwyg) {
+      const rules = format.elements.map((el) => {
+        const selector = ELEMENT_SELECTOR_MAP[el.id];
+        if (!selector) return '';
+        if (el.visible === false) {
+          return `@media print { ${selector} { display: none !important; } }`;
+        }
+        return `@media print {
+  ${selector} {
+    position: absolute !important;
+    left: ${el.x.toFixed(2)}% !important;
+    top: ${el.y.toFixed(2)}% !important;
+    width: ${el.w.toFixed(2)}% !important;
+    height: ${el.h.toFixed(2)}% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0.25rem !important;
+    box-sizing: border-box !important;
+  }
+}`;
+      });
+      elemStyle.textContent = rules.join('\n');
+    } else {
+      // Legacy format: fall back to flex-order approach
+      const elementOrder = format?.elementOrder || ['images', 'ingredients', 'steps'];
+      const imageWidth = format?.imageWidth != null ? format.imageWidth : 100;
+      const imageAlign = format?.imageAlign || 'center';
+      const alignSelfMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
+      root.style.setProperty('--print-images-order', String(elementOrder.indexOf('images') + 1));
+      root.style.setProperty('--print-ingredients-order', String(elementOrder.indexOf('ingredients') + 1));
+      root.style.setProperty('--print-steps-order', String(elementOrder.indexOf('steps') + 1));
+      root.style.setProperty('--print-image-width', `${imageWidth}%`);
+      root.style.setProperty('--print-image-align-self', alignSelfMap[imageAlign] || 'center');
+      elemStyle.textContent = '';
     }
 
     // Clean up CSS variables and the injected styles after printing
@@ -745,8 +799,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       root.style.removeProperty('--print-steps-order');
       root.style.removeProperty('--print-image-width');
       root.style.removeProperty('--print-image-align-self');
+      if (contentEl) contentEl.classList.remove('print-wysiwyg-layout');
       if (pageStyle.parentNode) pageStyle.parentNode.removeChild(pageStyle);
       if (columnStyle.parentNode) columnStyle.parentNode.removeChild(columnStyle);
+      if (elemStyle.parentNode) elemStyle.parentNode.removeChild(elemStyle);
     };
     // afterprint fires when the print dialog closes (including cancellation in most browsers)
     window.addEventListener('afterprint', cleanup, { once: true });

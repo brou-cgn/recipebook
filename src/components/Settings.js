@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, PRINT_FONT_OPTIONS, PRINT_IMAGE_ALIGN_OPTIONS, PRINT_IMAGE_COLUMNS_OPTIONS } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT } from '../utils/customLists';
+import PrintFormatEditor from './PrintFormatEditor';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
 import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
 import UserManagement from './UserManagement';
@@ -2056,9 +2057,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             <div className="settings-section">
               <h3>Druckformate</h3>
               <p className="section-description">
-                Konfigurieren Sie die Dokumentenvorlage für den Druck von Rezepten. Für jedes Format können Sie
-                Seitenausrichtung, Schriftart, die Reihenfolge der Elemente sowie Bildgröße, Bildausrichtung und
-                Spaltenanzahl der Bilder festlegen. Die Anzahl der Fotos bestimmt, welches Format angewendet wird.
+                Konfigurieren Sie das Drucklayout für Rezepte. Platzieren Sie die Elemente per Drag &amp; Drop
+                frei auf der Seite und passen Sie ihre Größe durch Ziehen an den Rändern an.
+                Die Anzahl der Fotos bestimmt, welches Format angewendet wird.
               </p>
 
               {printFormats.map((fmt, fmtIdx) => (
@@ -2085,7 +2086,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                           alert('Es muss mindestens ein Druckformat vorhanden sein.');
                           return;
                         }
-                        // Prevent deletion if this is the only catch-all format (maxPhotos === null)
                         const isCatchAll = fmt.maxPhotos === null || fmt.maxPhotos === undefined;
                         const remainingCatchAlls = printFormats.filter(
                           (f, i) => i !== fmtIdx && (f.maxPhotos === null || f.maxPhotos === undefined)
@@ -2103,205 +2103,38 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     </button>
                   </div>
 
-                  <div className="print-format-fields">
-                    {/* Max photos threshold */}
-                    <div className="sort-settings-field">
-                      <label>Maximale Fotoanzahl:</label>
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder="Unbegrenzt"
-                        value={fmt.maxPhotos != null ? fmt.maxPhotos : ''}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const val = raw === '' ? null : parseInt(raw, 10);
-                          const updated = printFormats.map((f, i) =>
-                            i === fmtIdx ? { ...f, maxPhotos: isNaN(val) ? null : val } : f
-                          );
-                          setPrintFormats(updated);
-                        }}
-                      />
-                      <span className="sort-settings-hint">
-                        Dieses Format wird verwendet, wenn die Anzahl der Fotos ≤ diesem Wert ist. Leer = gilt für alle.
-                      </span>
-                    </div>
-
-                    {/* Orientation */}
-                    <div className="sort-settings-field">
-                      <label>Ausrichtung:</label>
-                      <div className="print-format-orientation-options">
-                        <label className="print-format-radio-label">
-                          <input
-                            type="radio"
-                            name={`orientation-${fmt.id}`}
-                            value="portrait"
-                            checked={fmt.orientation === 'portrait'}
-                            onChange={() => {
-                              const updated = printFormats.map((f, i) =>
-                                i === fmtIdx ? { ...f, orientation: 'portrait' } : f
-                              );
-                              setPrintFormats(updated);
-                            }}
-                          />
-                          Hochformat
-                        </label>
-                        <label className="print-format-radio-label">
-                          <input
-                            type="radio"
-                            name={`orientation-${fmt.id}`}
-                            value="landscape"
-                            checked={fmt.orientation === 'landscape'}
-                            onChange={() => {
-                              const updated = printFormats.map((f, i) =>
-                                i === fmtIdx ? { ...f, orientation: 'landscape' } : f
-                              );
-                              setPrintFormats(updated);
-                            }}
-                          />
-                          Querformat
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Font family */}
-                    <div className="sort-settings-field">
-                      <label>Schriftart:</label>
-                      <select
-                        className="print-format-select"
-                        value={fmt.fontFamily}
-                        onChange={(e) => {
-                          const updated = printFormats.map((f, i) =>
-                            i === fmtIdx ? { ...f, fontFamily: e.target.value } : f
-                          );
-                          setPrintFormats(updated);
-                        }}
-                      >
-                        {PRINT_FONT_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Element order */}
-                    <div className="sort-settings-field">
-                      <label>Reihenfolge der Elemente:</label>
-                      <div className="print-format-element-order">
-                        {(fmt.elementOrder || ['images', 'ingredients', 'steps']).map((el, elIdx) => {
-                          const labelMap = { images: 'Bilder', ingredients: 'Zutaten', steps: 'Zubereitungsschritte' };
-                          return (
-                            <div key={el} className="print-format-element-row">
-                              <span className="print-format-element-label">{labelMap[el] || el}</span>
-                              <div className="print-format-element-btns">
-                                <button
-                                  type="button"
-                                  className="faq-move-btn"
-                                  disabled={elIdx === 0}
-                                  title="Nach oben"
-                                  onClick={() => {
-                                    const order = [...fmt.elementOrder];
-                                    [order[elIdx - 1], order[elIdx]] = [order[elIdx], order[elIdx - 1]];
-                                    const updated = printFormats.map((f, i) =>
-                                      i === fmtIdx ? { ...f, elementOrder: order } : f
-                                    );
-                                    setPrintFormats(updated);
-                                  }}
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  className="faq-move-btn"
-                                  disabled={elIdx === (fmt.elementOrder || []).length - 1}
-                                  title="Nach unten"
-                                  onClick={() => {
-                                    const order = [...fmt.elementOrder];
-                                    [order[elIdx], order[elIdx + 1]] = [order[elIdx + 1], order[elIdx]];
-                                    const updated = printFormats.map((f, i) =>
-                                      i === fmtIdx ? { ...f, elementOrder: order } : f
-                                    );
-                                    setPrintFormats(updated);
-                                  }}
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Image width */}
-                    <div className="sort-settings-field">
-                      <label>Bildbreite:</label>
-                      <div className="print-format-image-width-row">
-                        <input
-                          type="range"
-                          className="print-format-image-width-slider"
-                          min="25"
-                          max="100"
-                          step="5"
-                          value={fmt.imageWidth != null ? fmt.imageWidth : 100}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            const updated = printFormats.map((f, i) =>
-                              i === fmtIdx ? { ...f, imageWidth: val } : f
-                            );
-                            setPrintFormats(updated);
-                          }}
-                        />
-                        <span className="print-format-image-width-label">
-                          {fmt.imageWidth != null ? fmt.imageWidth : 100} %
-                        </span>
-                      </div>
-                      <span className="sort-settings-hint">Breite des Bildbereichs relativ zur Seitenbreite.</span>
-                    </div>
-
-                    {/* Image alignment */}
-                    <div className="sort-settings-field">
-                      <label>Bildausrichtung:</label>
-                      <select
-                        className="print-format-select"
-                        value={fmt.imageAlign || 'center'}
-                        onChange={(e) => {
-                          const updated = printFormats.map((f, i) =>
-                            i === fmtIdx ? { ...f, imageAlign: e.target.value } : f
-                          );
-                          setPrintFormats(updated);
-                        }}
-                      >
-                        {PRINT_IMAGE_ALIGN_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Image columns */}
-                    <div className="sort-settings-field">
-                      <label>Bildspalten:</label>
-                      <select
-                        className="print-format-select"
-                        value={fmt.imageColumns || 'auto'}
-                        onChange={(e) => {
-                          const updated = printFormats.map((f, i) =>
-                            i === fmtIdx ? { ...f, imageColumns: e.target.value } : f
-                          );
-                          setPrintFormats(updated);
-                        }}
-                      >
-                        {PRINT_IMAGE_COLUMNS_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="sort-settings-hint">Anzahl der Spalten für die Bilddarstellung beim Drucken.</span>
-                    </div>
+                  {/* Max photos threshold */}
+                  <div className="sort-settings-field" style={{ marginBottom: '0.75rem' }}>
+                    <label>Maximale Fotoanzahl:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Unbegrenzt"
+                      value={fmt.maxPhotos != null ? fmt.maxPhotos : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const val = raw === '' ? null : parseInt(raw, 10);
+                        const updated = printFormats.map((f, i) =>
+                          i === fmtIdx ? { ...f, maxPhotos: isNaN(val) ? null : val } : f
+                        );
+                        setPrintFormats(updated);
+                      }}
+                    />
+                    <span className="sort-settings-hint">
+                      Dieses Format wird verwendet, wenn die Anzahl der Fotos ≤ diesem Wert ist. Leer = gilt für alle.
+                    </span>
                   </div>
+
+                  {/* WYSIWYG editor */}
+                  <PrintFormatEditor
+                    format={fmt}
+                    onChange={(updatedFmt) => {
+                      const updated = printFormats.map((f, i) =>
+                        i === fmtIdx ? updatedFmt : f
+                      );
+                      setPrintFormats(updated);
+                    }}
+                  />
                 </div>
               ))}
 
@@ -2315,11 +2148,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       name: `Format ${printFormats.length + 1}`,
                       maxPhotos: null,
                       orientation: 'portrait',
-                      elementOrder: ['images', 'ingredients', 'steps'],
                       fontFamily: "Georgia, 'Times New Roman', serif",
-                      imageWidth: 100,
-                      imageAlign: 'center',
                       imageColumns: 'auto',
+                      elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
                     };
                     setPrintFormats([...printFormats, newFormat]);
                   }}

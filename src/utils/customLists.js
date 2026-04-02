@@ -99,15 +99,58 @@ export const PRINT_IMAGE_COLUMNS_OPTIONS = [
 ];
 
 /**
+ * All elements that can be placed on a print format page.
+ * Each entry has:
+ *   id {string}     - Unique element identifier (matches CSS selector keys)
+ *   label {string}  - Human-readable label shown in the editor
+ *   color {string}  - Background color used in the WYSIWYG preview
+ */
+export const PRINT_FORMAT_ELEMENTS = [
+  { id: 'title',       label: 'Titel',                   color: '#d4e8f7' },
+  { id: 'images',      label: 'Fotos',                   color: '#fde8c8' },
+  { id: 'authorDate',  label: 'Autor & Datum',            color: '#d4f0e8' },
+  { id: 'metadata',    label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4' },
+  { id: 'ingredients', label: 'Zutaten',                  color: '#e8d4f0' },
+  { id: 'steps',       label: 'Zubereitungsschritte',     color: '#f7d4d4' },
+];
+
+/**
+ * Default element positions for a portrait A4 page (coordinates in % of page).
+ * x, y = top-left corner; w, h = width/height.
+ */
+export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
+  { id: 'title',       x: 2,  y: 1,  w: 96, h: 7,  visible: true },
+  { id: 'images',      x: 2,  y: 9,  w: 96, h: 28, visible: true },
+  { id: 'authorDate',  x: 2,  y: 38, w: 96, h: 5,  visible: true },
+  { id: 'metadata',    x: 2,  y: 44, w: 96, h: 8,  visible: true },
+  { id: 'ingredients', x: 2,  y: 53, w: 45, h: 40, visible: true },
+  { id: 'steps',       x: 51, y: 53, w: 47, h: 40, visible: true },
+];
+
+/**
+ * Default element positions for a landscape A4 page (coordinates in % of page).
+ */
+export const DEFAULT_PRINT_ELEMENTS_LANDSCAPE = [
+  { id: 'title',       x: 2,  y: 1,  w: 96, h: 10, visible: true },
+  { id: 'images',      x: 2,  y: 12, w: 45, h: 80, visible: true },
+  { id: 'authorDate',  x: 51, y: 12, w: 47, h: 7,  visible: true },
+  { id: 'metadata',    x: 51, y: 20, w: 47, h: 10, visible: true },
+  { id: 'ingredients', x: 51, y: 31, w: 47, h: 30, visible: true },
+  { id: 'steps',       x: 51, y: 62, w: 47, h: 30, visible: true },
+];
+
+/**
  * Default print formats.  Each format can have:
  *   id {string}            - Unique identifier
  *   name {string}          - Display name in settings
  *   maxPhotos {number|null}- Max photo count this format applies to (null = catch-all)
  *   orientation {string}   - 'portrait' | 'landscape'
- *   elementOrder {string[]}- Ordered array of 'images', 'ingredients', 'steps'
  *   fontFamily {string}    - CSS font-family string
- *   imageWidth {number}    - Image section width as a percentage of the page (25–100)
- *   imageAlign {string}    - Horizontal alignment of the image section: 'left' | 'center' | 'right'
+ *   elements {Array}       - WYSIWYG element positions: [{id, x, y, w, h, visible}]
+ *                            x, y, w, h are percentages of the page dimensions.
+ *   elementOrder {string[]}- (legacy) Ordered array of 'images', 'ingredients', 'steps'
+ *   imageWidth {number}    - (legacy) Image section width as a percentage of the page
+ *   imageAlign {string}    - (legacy) Alignment: 'left' | 'center' | 'right'
  *   imageColumns {string}  - Number of image columns: 'auto' | '1' | '2'
  */
 export const DEFAULT_PRINT_FORMATS = [
@@ -116,11 +159,9 @@ export const DEFAULT_PRINT_FORMATS = [
     name: 'Standard',
     maxPhotos: null,
     orientation: 'portrait',
-    elementOrder: ['images', 'ingredients', 'steps'],
     fontFamily: "Georgia, 'Times New Roman', serif",
-    imageWidth: 100,
-    imageAlign: 'center',
     imageColumns: 'auto',
+    elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
   },
 ];
 
