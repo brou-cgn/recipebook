@@ -565,7 +565,7 @@
   outline-offset: 2px;
 }
 
-.recipe-card-list-select {
+/*.recipe-card-list-select {
   position: absolute;
   top: 0;
   left: 0;
@@ -589,4 +589,86 @@
   background: white;
   color: #333;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}*/
+
+/* ── Recipe Card List Menu (Longpress Overlay) ───────────────────── */
+
+.recipe-card-list-menu-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.recipe-card-list-menu {
+  width: calc(100% - 2rem);
+  max-width: 320px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recipe-card-list-menu-title {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.5rem 0.5rem 0.25rem;
+  color: #333;
+}
+
+.recipe-card-list-menu-item {
+  width: 100%;
+  border: none;
+  background: white;
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.recipe-card-list-menu-item:hover {
+  background: #f7f3ee;
+}
+
+.recipe-card-list-menu-check {
+  width: 1.25rem;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #c46900;
+}
+
+.recipe-card-list-menu-label {
+  flex: 1;
+}
+
+.recipe-card-list-menu-cancel {
+  width: 100%;
+  border: none;
+  background: #f3f3f3;
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  margin-top: 0.25rem;
+  transition: background 0.15s ease;
+}
+
+.recipe-card-list-menu-cancel:hover {
+  background: #e9e9e9;
 }
