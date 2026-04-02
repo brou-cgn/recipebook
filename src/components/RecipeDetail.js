@@ -30,6 +30,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(
+    window.innerHeight <= MOBILE_BREAKPOINT && window.innerWidth > MOBILE_BREAKPOINT
+  );
   const [recipeNavigationStack, setRecipeNavigationStack] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
@@ -215,6 +218,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
       timeoutId = setTimeout(() => {
         setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+        setIsMobileLandscape(window.innerHeight <= MOBILE_BREAKPOINT && window.innerWidth > MOBILE_BREAKPOINT);
       }, 150);
     };
     
@@ -1430,7 +1434,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
       
-      {!isMobile && !cookingMode && (
+      {!isMobile && !isMobileLandscape && !cookingMode && (
         <div className="recipe-detail-header">
           <button className="back-button" onClick={handleBackFromLinkedRecipe}>
             ← Zurück
@@ -1782,7 +1786,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       </div>
                     </>
                   )}
-                  {isMobile && (
+                  {(isMobile || isMobileLandscape) && (
                     <div className={`image-overlay-actions${categoryImageSetLoaded ? '' : ' image-overlay-actions--hidden'}`}>
                       <div 
                         className="overlay-cooking-mode-static" 
@@ -1826,7 +1830,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               );
             })()}
 
-            {isMobile && (
+            {(isMobile || isMobileLandscape) && (
               <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
                 {onToggleFavorite && (
                 <button
