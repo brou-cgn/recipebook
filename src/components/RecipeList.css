@@ -275,6 +275,7 @@
   overflow: hidden;
   background: #f0f0f0;
   position: relative;
+  border-radius: 12px 12px 0 0;
 }
 
 .recipe-image img {

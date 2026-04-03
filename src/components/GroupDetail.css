@@ -343,6 +343,7 @@
   width: 100%;
   height: 130px;
   overflow: hidden;
+  border-radius: 10px 10px 0 0;
 }
 
 .group-recipe-card-image img {
