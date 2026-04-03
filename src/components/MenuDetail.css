@@ -318,6 +318,12 @@
   }
 }
 
+@media (max-width: 768px) and (orientation: portrait) {
+  .recipes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Portion Selector Modal */
 .portion-selector-overlay {
   position: fixed;
