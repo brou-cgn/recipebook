@@ -1311,6 +1311,12 @@
 /* Applied via JS when cookingMode && isMobileLandscape */
 .recipe-detail-content.cooking-mode-active.cooking-mode-landscape {
   flex-direction: row;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-top: 0; /* No cooking-mode-indicator in landscape, so no top padding needed */
 }
 
 /* Left column: scrollable ingredients list */
