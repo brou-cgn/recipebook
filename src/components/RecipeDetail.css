@@ -1316,7 +1316,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding-top: 0; /* No cooking-mode-indicator in landscape, so no top padding needed */
+  padding-top: env(safe-area-inset-top, 8px); /* Push content below status bar / notch */
 }
 
 /* Left column: scrollable ingredients list */
@@ -1369,18 +1369,18 @@
   flex-direction: column;
   justify-content: center;
   flex-shrink: 0;
-  padding: 0.35rem;
+  padding: 0.2rem 0.1rem;
   gap: 0.35rem;
 }
 
 .cooking-mode-landscape .step-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .cooking-mode-landscape .step-dot.active {
-  width: 11px;
-  height: 11px;
+  width: 8px;
+  height: 8px;
 }
 
 
