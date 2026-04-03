@@ -453,6 +453,12 @@
 }
 }
 
+@media (max-width: 768px) and (orientation: portrait) {
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 480px) {
   .recipe-list-header-top {
     flex-direction: column;
