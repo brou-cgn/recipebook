@@ -41,6 +41,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const wakeLockRef = useRef(null);
   const contentRef = useRef(null);
   const stepsContainerRef = useRef(null);
+  // Tracks whether cooking mode was auto-activated by a landscape rotation
+  const landscapeAutoActivatedRef = useRef(false);
   // Carousel refs
   const carouselImagesRef = useRef([]);
   const carouselTrackRef = useRef(null);
@@ -231,7 +233,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     };
   }, []);
 
-  // Load favorite IDs when user changes
+  // Auto-activate cooking mode when rotating to mobile landscape, deactivate on rotation back
+  useEffect(() => {
+    if (isMobileLandscape) {
+      if (!cookingMode) {
+        landscapeAutoActivatedRef.current = true;
+        setCookingMode(true);
+        setCurrentStepIndex(0);
+      }
+    } else {
+      if (landscapeAutoActivatedRef.current) {
+        landscapeAutoActivatedRef.current = false;
+        setCookingMode(false);
+      }
+    }
+  }, [isMobileLandscape, cookingMode]); // cookingMode needed to prevent stale closure when user manually activates before rotating
+
   useEffect(() => {
     const loadFavorites = async () => {
       if (currentUser?.id) {
@@ -293,18 +310,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setIsDefaultCategoryImage(isCatImage);
   }, [selectedRecipe.images, selectedRecipe.image, carouselIndex, categoryImageSet]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep header visible on mobile - removed auto-hide behavior
+  // Keep header visible on mobile; hide in landscape mode to maximize cooking space
   useEffect(() => {
     if (!onHeaderVisibilityChange) return;
 
-    // Ensure header is visible when component mounts
-    onHeaderVisibilityChange(true);
+    // Hide header in mobile landscape mode, show otherwise
+    onHeaderVisibilityChange(!isMobileLandscape);
 
     return () => {
       // Show header again when leaving detail view
       onHeaderVisibilityChange(true);
     };
-  }, [onHeaderVisibilityChange]);
+  }, [isMobileLandscape, onHeaderVisibilityChange]);
 
   // Cooking mode: Wake Lock API integration
   useEffect(() => {
@@ -1475,7 +1492,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   return (
     <div className={`recipe-detail-container${cookingMode ? ' cooking-mode-container' : ''}`}>
-      {cookingMode && (
+      {cookingMode && !isMobileLandscape && (
         <div className="cooking-mode-indicator">
           <div className="cooking-mode-content">
             <span className="cooking-mode-icon">

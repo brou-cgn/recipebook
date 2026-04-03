@@ -505,6 +505,25 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
   });
 
   describe('Landscape cooking mode', () => {
+    test('auto-activates cooking mode when rotating to landscape on mobile', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Cooking mode should be auto-activated without any user interaction
+      const content = document.querySelector('.recipe-detail-content');
+      expect(content).toHaveClass('cooking-mode-active');
+      expect(content).toHaveClass('cooking-mode-landscape');
+    });
+
     test('adds cooking-mode-landscape class when in landscape and cooking mode is active', () => {
       setLandscapeMode();
 
@@ -518,11 +537,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
-      // The content wrapper should have the landscape class
+      // Cooking mode is auto-activated in landscape
       const content = document.querySelector('.recipe-detail-content');
       expect(content).toHaveClass('cooking-mode-active');
       expect(content).toHaveClass('cooking-mode-landscape');
@@ -541,13 +556,50 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
+      // Activate cooking mode manually in portrait
       const staticIcon = document.querySelector('.overlay-cooking-mode-static');
       fireEvent.click(staticIcon);
 
       const content = document.querySelector('.recipe-detail-content');
       expect(content).toHaveClass('cooking-mode-active');
       expect(content).not.toHaveClass('cooking-mode-landscape');
+    });
+
+    test('cooking mode banner is not shown in landscape mode', () => {
+      setLandscapeMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Cooking mode is auto-activated but banner should be hidden
+      expect(document.querySelector('.cooking-mode-indicator')).not.toBeInTheDocument();
+    });
+
+    test('hides app header in landscape mode via onHeaderVisibilityChange', () => {
+      setLandscapeMode();
+      const onHeaderVisibilityChange = jest.fn();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+          onHeaderVisibilityChange={onHeaderVisibilityChange}
+        />
+      );
+
+      // Header should be hidden in landscape mode
+      const calls = onHeaderVisibilityChange.mock.calls.map(c => c[0]);
+      expect(calls[calls.length - 1]).toBe(false);
     });
 
     test('landscape cooking mode shows both ingredients and steps sections', () => {
@@ -563,11 +615,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
-      // Both sections should be visible simultaneously
+      // Both sections should be visible simultaneously (auto-activated)
       expect(document.querySelector('.cooking-mode-ingredients')).toBeInTheDocument();
       expect(document.querySelector('.cooking-mode-steps')).toBeInTheDocument();
     });
@@ -585,11 +633,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
-      // All step cards should be rendered
+      // All step cards should be rendered (auto-activated)
       const stepCards = document.querySelectorAll('.step-card');
       expect(stepCards.length).toBe(3);
       expect(stepCards[0]).toHaveClass('active');
@@ -608,10 +652,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
+      // Cooking mode is auto-activated in landscape
       const stepCards = document.querySelectorAll('.step-card');
 
       // Navigate forward with ArrowDown first
@@ -636,10 +677,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
+      // Cooking mode is auto-activated in landscape
       const stepCards = document.querySelectorAll('.step-card');
       expect(stepCards[0]).toHaveClass('active');
 
@@ -661,11 +699,7 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
         />
       );
 
-      // Activate cooking mode
-      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
-      fireEvent.click(staticIcon);
-
-      // Step dots should be present for navigation
+      // Step dots should be present for navigation (auto-activated)
       const dots = document.querySelectorAll('.step-dot');
       expect(dots.length).toBe(3);
       expect(dots[0]).toHaveClass('active');
