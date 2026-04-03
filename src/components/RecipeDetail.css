@@ -1339,7 +1339,6 @@
 .cooking-mode-landscape .step-carousel {
   flex: 1;
   min-height: 0;
-  height: 100%; /* explicit height so step cards can resolve flex-basis: 100% */
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1355,16 +1354,8 @@
   max-width: none;
   scroll-snap-align: start;
   box-sizing: border-box;
-  padding: 1rem;
-  font-size: 0.95rem;
-  min-height: 0; /* prevent card from expanding beyond flex basis */
-  overflow-y: auto; /* allow internal scrolling for long step content */
-  overscroll-behavior: contain; /* prevent scroll from bubbling to carousel navigation */
-}
-
-/* Reduce step-content bottom padding in landscape to maximise text area */
-.cooking-mode-landscape .step-content {
-  padding-bottom: 1.75rem;
+  padding: 1.5rem;
+  font-size: 1rem;
 }
 
 /* Vertical dots on the right side of the carousel */
@@ -1387,25 +1378,7 @@
   border-radius: 4px;
 }
 
-/* ── Compact cooking-mode indicator on mobile landscape ───────────────── */
-/* Reduces the fixed indicator height to reclaim vertical space for the step card */
-@media (orientation: landscape) and (max-height: 480px) {
-  .cooking-mode-indicator {
-    padding: 0.35rem 0.75rem;
-  }
 
-  .cooking-mode-text {
-    font-size: 0.85rem;
-  }
-
-  .cooking-mode-icon {
-    font-size: 1.1rem;
-  }
-
-  .recipe-detail-content.cooking-mode-active {
-    padding-top: 2.5rem; /* matches reduced indicator height */
-  }
-}
 
 /* Header row inside the step card that holds the start/stop button (right-aligned) */
 .step-timer-header {
