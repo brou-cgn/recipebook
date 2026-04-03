@@ -468,12 +468,6 @@
   }
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
-  .recipe-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ── Active-filters bar (single line in header) ──────────────────────────── */
 
 .active-filters-bar {
