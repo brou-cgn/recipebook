@@ -860,6 +860,13 @@
   gap: 0.5rem;
 }
 
+/* WYSIWYG print heading/photo helpers – hidden on screen and in regular print */
+.recipe-ingredients-heading,
+.recipe-steps-heading,
+.recipe-photo-wysiwyg {
+  display: none;
+}
+
 .serving-control {
   display: flex;
   align-items: center;
@@ -2396,6 +2403,33 @@
   /* Ensure links don't show URLs */
   a[href]::after {
     content: '' !important;
+  }
+
+  /* WYSIWYG heading/photo helpers: still hidden by default in print.
+     They are shown individually by the dynamically injected element-position CSS. */
+  .recipe-ingredients-heading,
+  .recipe-steps-heading,
+  .recipe-photo-wysiwyg {
+    display: none !important;
+  }
+
+  /* When shown in WYSIWYG mode, style the headings to match section headings */
+  .recipe-ingredients-heading h2,
+  .recipe-steps-heading h2 {
+    font-size: 1.2rem !important;
+    color: black !important;
+    border-bottom: 2px solid #333 !important;
+    padding-bottom: 0.3rem !important;
+    margin: 0 !important;
+  }
+
+  /* When shown in WYSIWYG mode, make the photo fill its positioned box */
+  .recipe-photo-wysiwyg img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
   }
 
   /* Dark mode: force light print even in dark mode */

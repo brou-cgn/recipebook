@@ -1,39 +1,19 @@
 import React from 'react';
 import './PrintPreview.css';
-import {
-  PRINT_FORMAT_ELEMENTS,
-  DEFAULT_PRINT_ELEMENTS_PORTRAIT,
-  DEFAULT_PRINT_ELEMENTS_LANDSCAPE,
-} from '../utils/customLists';
-
-/**
- * Returns default elements for the given orientation.
- */
-function getDefaultElements(orientation) {
-  return orientation === 'landscape'
-    ? DEFAULT_PRINT_ELEMENTS_LANDSCAPE
-    : DEFAULT_PRINT_ELEMENTS_PORTRAIT;
-}
-
-/**
- * Ensures every known element ID is represented in the elements array.
- */
-function mergeWithDefaults(elements, orientation) {
-  const defaults = getDefaultElements(orientation);
-  return PRINT_FORMAT_ELEMENTS.map((def) => {
-    const existing = elements && elements.find((e) => e.id === def.id);
-    if (existing) return existing;
-    const fallback = defaults.find((d) => d.id === def.id);
-    return fallback
-      ? { ...fallback }
-      : { id: def.id, x: 2, y: 2, w: 50, h: 10, visible: true };
-  });
-}
+import { mergePrintElementsWithDefaults } from '../utils/customLists';
 
 /**
  * Renders recipe content for a given element id.
  */
 function ElementContent({ id, recipe }) {
+  // Helper to get all images for this recipe
+  const getAllImages = () =>
+    Array.isArray(recipe.images) && recipe.images.length > 0
+      ? recipe.images
+      : recipe.image
+      ? [{ url: recipe.image }]
+      : [];
+
   switch (id) {
     case 'title':
       return (
@@ -43,12 +23,7 @@ function ElementContent({ id, recipe }) {
       );
 
     case 'images': {
-      const allImages =
-        Array.isArray(recipe.images) && recipe.images.length > 0
-          ? recipe.images
-          : recipe.image
-          ? [{ url: recipe.image }]
-          : [];
+      const allImages = getAllImages();
       const firstImage = allImages[0];
       if (!firstImage) {
         return <div className="ppv-el-placeholder">Kein Foto</div>;
@@ -59,6 +34,22 @@ function ElementContent({ id, recipe }) {
           alt={recipe.title}
           className="ppv-el-image"
         />
+      );
+    }
+
+    case 'photo1':
+    case 'photo2':
+    case 'photo3': {
+      const photoIndex = parseInt(id.replace('photo', ''), 10) - 1;
+      const allImages = getAllImages();
+      const img = allImages[photoIndex];
+      if (!img) {
+        return (
+          <div className="ppv-el-placeholder">Kein Foto {photoIndex + 1}</div>
+        );
+      }
+      return (
+        <img src={img.url} alt={recipe.title} className="ppv-el-image" />
       );
     }
 
@@ -105,11 +96,16 @@ function ElementContent({ id, recipe }) {
       );
     }
 
+    case 'ingredientsHeading':
+      return <div className="ppv-el-section-heading">Zutaten</div>;
+
+    case 'stepsHeading':
+      return <div className="ppv-el-section-heading">Zubereitung</div>;
+
     case 'ingredients': {
       const ingredients = recipe.ingredients || [];
       return (
         <div className="ppv-el-ingredients">
-          <div className="ppv-el-section-heading">Zutaten</div>
           <ul className="ppv-el-list">
             {ingredients.slice(0, 12).map((ing, i) => {
               const text = typeof ing === 'string' ? ing : ing.text || '';
@@ -132,7 +128,6 @@ function ElementContent({ id, recipe }) {
       const steps = recipe.steps || [];
       return (
         <div className="ppv-el-steps">
-          <div className="ppv-el-section-heading">Zubereitung</div>
           <ol className="ppv-el-list ppv-el-steps-list">
             {steps.slice(0, 8).map((step, i) => {
               const item =
@@ -170,7 +165,7 @@ export default function PrintPreview({ recipe, format }) {
   const orientation = format?.orientation || 'portrait';
   const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
   const pagePaddingBottom = orientation === 'landscape' ? '70.71%' : '141.43%';
-  const elements = mergeWithDefaults(format?.elements, orientation);
+  const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
 
   return (
     <div className="ppv-root">

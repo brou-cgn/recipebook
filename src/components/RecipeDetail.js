@@ -13,7 +13,7 @@ import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
 import RatingModal from './RatingModal';
-import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat } from '../utils/customLists';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, DEFAULT_PRINT_FORMATS, selectPrintFormat, mergePrintElementsWithDefaults } from '../utils/customLists';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 
@@ -746,13 +746,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     // WYSIWYG element positioning: inject absolute-position CSS when the format has
     // an `elements` array (new-style format from PrintFormatEditor).
     const ELEMENT_SELECTOR_MAP = {
-      title:       '.recipe-title-row',
-      images:      '.recipe-section--images',
-      authorDate:  '.author-date-caption',
-      metadata:    '.recipe-metadata',
-      ingredients: '.recipe-section--ingredients',
-      steps:       '.recipe-section--steps',
+      title:              '.recipe-title-row',
+      images:             '.recipe-section--images',
+      authorDate:         '.author-date-caption',
+      metadata:           '.recipe-metadata',
+      ingredients:        '.recipe-section--ingredients',
+      steps:              '.recipe-section--steps',
+      ingredientsHeading: '.recipe-ingredients-heading',
+      stepsHeading:       '.recipe-steps-heading',
+      photo1:             '.recipe-photo-1',
+      photo2:             '.recipe-photo-2',
+      photo3:             '.recipe-photo-3',
     };
+
+    // Elements that are hidden by default and need display:block when shown in WYSIWYG
+    const WYSIWYG_HIDDEN_ELEMENTS = new Set([
+      'ingredientsHeading', 'stepsHeading', 'photo1', 'photo2', 'photo3',
+    ]);
 
     let elemStyle = document.getElementById('print-element-positions');
     if (!elemStyle) {
@@ -773,15 +783,26 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
 
     if (useWysiwyg) {
-      const rules = format.elements.map((el) => {
+      // Merge stored elements with defaults so all known IDs are present
+      const mergedElements = mergePrintElementsWithDefaults(format?.elements, orientation);
+
+      // Check whether any individual photo element is visible
+      const anyPhotoVisible = mergedElements.some(
+        (el) => ['photo1', 'photo2', 'photo3'].includes(el.id) && el.visible !== false,
+      );
+
+      const rules = mergedElements.map((el) => {
         const selector = ELEMENT_SELECTOR_MAP[el.id];
         if (!selector) return '';
         if (el.visible === false) {
           return `@media print { ${selector} { display: none !important; } }`;
         }
+        const displayRule = WYSIWYG_HIDDEN_ELEMENTS.has(el.id)
+          ? 'display: block !important;\n    '
+          : '';
         return `@media print {
   ${selector} {
-    position: absolute !important;
+    ${displayRule}position: absolute !important;
     left: ${el.x.toFixed(2)}% !important;
     top: ${el.y.toFixed(2)}% !important;
     width: ${el.w.toFixed(2)}% !important;
@@ -793,6 +814,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   }
 }`;
       });
+
+      // When any individual photo is shown, hide the combined images block to avoid overlap
+      if (anyPhotoVisible) {
+        rules.push('@media print { .recipe-section--images { display: none !important; } }');
+      }
+
+      // When the separate heading elements are visible, hide the duplicated headings
+      // inside their respective sections so they do not appear twice
+      const ingredientsHeadingEl = mergedElements.find((e) => e.id === 'ingredientsHeading');
+      if (ingredientsHeadingEl && ingredientsHeadingEl.visible !== false) {
+        rules.push('@media print { .recipe-section--ingredients .section-header { display: none !important; } }');
+      }
+      const stepsHeadingEl = mergedElements.find((e) => e.id === 'stepsHeading');
+      if (stepsHeadingEl && stepsHeadingEl.visible !== false) {
+        rules.push('@media print { .recipe-section--steps > h2 { display: none !important; } }');
+      }
+
       elemStyle.textContent = rules.join('\n');
     } else {
       // Legacy format: fall back to flex-order approach
@@ -1819,6 +1857,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               const hasMultiple = orderedImages.length > 1;
               carouselLengthRef.current = orderedImages.length;
               return (
+                <>
+                  {/* Individual photo wrappers for WYSIWYG print positioning.
+                      Hidden on screen; each one is shown only when the corresponding
+                      'photoN' print element is active. */}
+                  {orderedImages.slice(0, 3).map((img, idx) => (
+                    <div key={idx} className={`recipe-photo-wysiwyg recipe-photo-${idx + 1}`} aria-hidden="true">
+                      <img src={img.url} alt={recipe.title} />
+                    </div>
+                  ))}
+
                 <div
                   className="recipe-detail-image recipe-section--images"
                 >
@@ -1907,6 +1955,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     </div>
                   )}
                 </div>
+                </>
               );
             })()}
 
@@ -2161,6 +2210,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               )}
             </div>
 
+            {/* Ingredients heading – separate element for WYSIWYG print positioning.
+                Hidden on screen; shown only when the 'ingredientsHeading' print element
+                is active.  When shown, the duplicate heading inside the section is hidden
+                via dynamically injected CSS. */}
+            <div className="recipe-ingredients-heading" aria-hidden="true">
+              <h2>Zutaten</h2>
+            </div>
+
             <section className="recipe-section recipe-section--ingredients">
               <div className="section-header">
                 <h2>Zutaten für</h2>
@@ -2203,6 +2260,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 ) || <li>Keine Zutaten aufgelistet</li>}
               </ul>
             </section>
+
+            {/* Steps heading – separate element for WYSIWYG print positioning.
+                Hidden on screen; shown only when the 'stepsHeading' print element is active. */}
+            <div className="recipe-steps-heading" aria-hidden="true">
+              <h2>Zubereitung</h2>
+            </div>
 
             <section className="recipe-section recipe-section--steps">
               <h2>Zubereitungsschritte</h2>

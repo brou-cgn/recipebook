@@ -106,12 +106,17 @@ export const PRINT_IMAGE_COLUMNS_OPTIONS = [
  *   color {string}  - Background color used in the WYSIWYG preview
  */
 export const PRINT_FORMAT_ELEMENTS = [
-  { id: 'title',       label: 'Titel',                   color: '#d4e8f7' },
-  { id: 'images',      label: 'Fotos',                   color: '#fde8c8' },
-  { id: 'authorDate',  label: 'Autor & Datum',            color: '#d4f0e8' },
-  { id: 'metadata',    label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4' },
-  { id: 'ingredients', label: 'Zutaten',                  color: '#e8d4f0' },
-  { id: 'steps',       label: 'Zubereitungsschritte',     color: '#f7d4d4' },
+  { id: 'title',              label: 'Titel',                   color: '#d4e8f7' },
+  { id: 'images',             label: 'Fotos (gesamt)',           color: '#fde8c8' },
+  { id: 'authorDate',         label: 'Autor & Datum',            color: '#d4f0e8' },
+  { id: 'metadata',           label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4' },
+  { id: 'ingredients',        label: 'Zutaten',                  color: '#e8d4f0' },
+  { id: 'steps',              label: 'Zubereitungsschritte',     color: '#f7d4d4' },
+  { id: 'ingredientsHeading', label: 'Überschrift Zutaten',      color: '#c8b0e0' },
+  { id: 'stepsHeading',       label: 'Überschrift Zubereitung',  color: '#e8b0b0' },
+  { id: 'photo1',             label: 'Foto 1',                   color: '#fdd8a0' },
+  { id: 'photo2',             label: 'Foto 2',                   color: '#fdc880' },
+  { id: 'photo3',             label: 'Foto 3',                   color: '#fdb860' },
 ];
 
 /**
@@ -119,25 +124,53 @@ export const PRINT_FORMAT_ELEMENTS = [
  * x, y = top-left corner; w, h = width/height.
  */
 export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
-  { id: 'title',       x: 2,  y: 1,  w: 96, h: 7,  visible: true },
-  { id: 'images',      x: 2,  y: 9,  w: 96, h: 28, visible: true },
-  { id: 'authorDate',  x: 2,  y: 38, w: 96, h: 5,  visible: true },
-  { id: 'metadata',    x: 2,  y: 44, w: 96, h: 8,  visible: true },
-  { id: 'ingredients', x: 2,  y: 53, w: 45, h: 40, visible: true },
-  { id: 'steps',       x: 51, y: 53, w: 47, h: 40, visible: true },
+  { id: 'title',              x: 2,  y: 1,  w: 96, h: 7,  visible: true  },
+  { id: 'images',             x: 2,  y: 9,  w: 96, h: 28, visible: true  },
+  { id: 'authorDate',         x: 2,  y: 38, w: 96, h: 5,  visible: true  },
+  { id: 'metadata',           x: 2,  y: 44, w: 96, h: 8,  visible: true  },
+  { id: 'ingredients',        x: 2,  y: 53, w: 45, h: 40, visible: true  },
+  { id: 'steps',              x: 51, y: 53, w: 47, h: 40, visible: true  },
+  { id: 'ingredientsHeading', x: 2,  y: 53, w: 45, h: 5,  visible: false },
+  { id: 'stepsHeading',       x: 51, y: 53, w: 47, h: 5,  visible: false },
+  { id: 'photo1',             x: 2,  y: 9,  w: 96, h: 28, visible: false },
+  { id: 'photo2',             x: 2,  y: 9,  w: 45, h: 28, visible: false },
+  { id: 'photo3',             x: 51, y: 9,  w: 45, h: 28, visible: false },
 ];
 
 /**
  * Default element positions for a landscape A4 page (coordinates in % of page).
  */
 export const DEFAULT_PRINT_ELEMENTS_LANDSCAPE = [
-  { id: 'title',       x: 2,  y: 1,  w: 96, h: 10, visible: true },
-  { id: 'images',      x: 2,  y: 12, w: 45, h: 80, visible: true },
-  { id: 'authorDate',  x: 51, y: 12, w: 47, h: 7,  visible: true },
-  { id: 'metadata',    x: 51, y: 20, w: 47, h: 10, visible: true },
-  { id: 'ingredients', x: 51, y: 31, w: 47, h: 30, visible: true },
-  { id: 'steps',       x: 51, y: 62, w: 47, h: 30, visible: true },
+  { id: 'title',              x: 2,  y: 1,  w: 96, h: 10, visible: true  },
+  { id: 'images',             x: 2,  y: 12, w: 45, h: 80, visible: true  },
+  { id: 'authorDate',         x: 51, y: 12, w: 47, h: 7,  visible: true  },
+  { id: 'metadata',           x: 51, y: 20, w: 47, h: 10, visible: true  },
+  { id: 'ingredients',        x: 51, y: 31, w: 47, h: 30, visible: true  },
+  { id: 'steps',              x: 51, y: 62, w: 47, h: 30, visible: true  },
+  { id: 'ingredientsHeading', x: 51, y: 31, w: 47, h: 7,  visible: false },
+  { id: 'stepsHeading',       x: 51, y: 62, w: 47, h: 7,  visible: false },
+  { id: 'photo1',             x: 2,  y: 12, w: 45, h: 80, visible: false },
+  { id: 'photo2',             x: 2,  y: 12, w: 20, h: 40, visible: false },
+  { id: 'photo3',             x: 24, y: 12, w: 20, h: 40, visible: false },
 ];
+
+/**
+ * Merges stored print-format elements with the defaults, ensuring all known element IDs
+ * are present. Used by both the editor preview and the live print handler.
+ */
+export function mergePrintElementsWithDefaults(elements, orientation) {
+  const defaults = orientation === 'landscape'
+    ? DEFAULT_PRINT_ELEMENTS_LANDSCAPE
+    : DEFAULT_PRINT_ELEMENTS_PORTRAIT;
+  return PRINT_FORMAT_ELEMENTS.map((def) => {
+    const existing = elements && elements.find((e) => e.id === def.id);
+    if (existing) return existing;
+    const fallback = defaults.find((d) => d.id === def.id);
+    return fallback
+      ? { ...fallback }
+      : { id: def.id, x: 2, y: 2, w: 50, h: 10, visible: false };
+  });
+}
 
 /**
  * Default print formats.  Each format can have:

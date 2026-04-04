@@ -4,6 +4,7 @@ import {
   PRINT_FORMAT_ELEMENTS,
   DEFAULT_PRINT_ELEMENTS_PORTRAIT,
   DEFAULT_PRINT_ELEMENTS_LANDSCAPE,
+  mergePrintElementsWithDefaults,
   PRINT_FONT_OPTIONS,
   PRINT_IMAGE_COLUMNS_OPTIONS,
 } from '../utils/customLists';
@@ -20,23 +21,6 @@ function getDefaultElements(orientation) {
   return orientation === 'landscape'
     ? DEFAULT_PRINT_ELEMENTS_LANDSCAPE
     : DEFAULT_PRINT_ELEMENTS_PORTRAIT;
-}
-
-/**
- * Ensures every known element ID is represented in the elements array.
- * Missing elements are added at a default position; extra unknown IDs are preserved.
- */
-function mergeWithDefaults(elements, orientation) {
-  const defaults = getDefaultElements(orientation);
-  const merged = PRINT_FORMAT_ELEMENTS.map((def) => {
-    const existing = elements && elements.find((e) => e.id === def.id);
-    if (existing) return existing;
-    const fallback = defaults.find((d) => d.id === def.id);
-    return fallback
-      ? { ...fallback }
-      : { id: def.id, x: 2, y: 2, w: 50, h: 10, visible: true };
-  });
-  return merged;
 }
 
 /**
@@ -65,7 +49,7 @@ export default function PrintFormatEditor({ format, onChange }) {
   const imageColumns = format?.imageColumns || 'auto';
 
   // Merge stored elements with defaults so we always have all element IDs
-  const elements = mergeWithDefaults(format?.elements, orientation);
+  const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
