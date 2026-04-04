@@ -106,12 +106,22 @@
   cursor: pointer;
 }
 
+/* ── Canvas + properties panel layout ────────────────────────────────────── */
+.pfe-canvas-and-props {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 /* ── Page canvas ──────────────────────────────────────────────────────────── */
 .pfe-page-wrapper {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.4rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .pfe-page {
@@ -220,7 +230,196 @@
 .pfe-resize-se { bottom: 0; right: 0; cursor: nwse-resize; transform: translate(3px, 3px); }
 .pfe-resize-sw { bottom: 0; left: 0; cursor: nesw-resize; transform: translate(-3px, 3px); }
 
-/* ── Hint text ────────────────────────────────────────────────────────────── */
+.pfe-element--selected {
+  box-shadow: 0 0 0 2.5px #5a3e2b, 0 0 6px rgba(90, 62, 43, 0.5);
+  z-index: 15;
+}
+
+/* ── Snap guides ──────────────────────────────────────────────────────────── */
+.pfe-snap-guide {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  background: rgba(60, 120, 220, 0.75);
+}
+
+.pfe-snap-guide--h {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.pfe-snap-guide--v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+/* ── Element properties panel ─────────────────────────────────────────────── */
+.pfe-props-panel {
+  flex: 0 0 220px;
+  min-width: 200px;
+  background: #fdf6ec;
+  border: 1px solid #d9c9b8;
+  border-radius: 6px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pfe-props-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #5a3e2b;
+  border-bottom: 1px solid #d9c9b8;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.1rem;
+}
+
+.pfe-props-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.pfe-props-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pfe-props-label {
+  font-size: 0.8rem;
+  color: #5a3e2b;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.pfe-props-unit {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.pfe-props-number {
+  width: 56px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.pfe-props-color {
+  width: 32px;
+  height: 26px;
+  padding: 1px 2px;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+.pfe-props-select {
+  min-width: 0;
+  flex: 1;
+}
+
+.pfe-props-style-btns {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pfe-style-btn {
+  width: 28px;
+  height: 26px;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s;
+  padding: 0;
+}
+
+.pfe-style-btn--bold {
+  font-weight: 700;
+}
+
+.pfe-style-btn--italic {
+  font-style: italic;
+}
+
+.pfe-style-btn--underline {
+  text-decoration: underline;
+}
+
+.pfe-style-btn--active {
+  background: #d9c9b8;
+  border-color: #8b5e3c;
+}
+
+.pfe-style-btn:hover:not(.pfe-style-btn--active) {
+  background: #f0e8dc;
+}
+
+.pfe-props-section-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5a3e2b;
+  margin-top: 0.2rem;
+}
+
+.pfe-props-align-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.pfe-align-btn {
+  flex: 1;
+  padding: 0.22rem 0.2rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  color: #5a3e2b;
+  transition: background 0.1s;
+}
+
+.pfe-align-btn:hover {
+  background: #f0e8dc;
+}
+
+.pfe-props-close-btn {
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #5a3e2b;
+  align-self: flex-end;
+  transition: background 0.1s;
+}
+
+.pfe-props-close-btn:hover {
+  background: #f0e8dc;
+}
+
+
 .pfe-hint {
   font-size: 0.75rem;
   color: #888;

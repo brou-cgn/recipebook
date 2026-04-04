@@ -791,6 +791,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         (el) => ['photo1', 'photo2', 'photo3'].includes(el.id) && el.visible !== false,
       );
 
+      // Image element IDs – these do not receive text formatting rules
+      const WYSIWYG_IMAGE_ELEMENT_IDS = new Set(['images', 'photo1', 'photo2', 'photo3']);
+
       const rules = mergedElements.map((el) => {
         const selector = ELEMENT_SELECTOR_MAP[el.id];
         if (!selector) return '';
@@ -800,6 +803,21 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const displayRule = WYSIWYG_HIDDEN_ELEMENTS.has(el.id)
           ? 'display: block !important;\n    '
           : '';
+
+        // Per-element text formatting (not for image elements)
+        const isImageEl = WYSIWYG_IMAGE_ELEMENT_IDS.has(el.id);
+        const textRules = [];
+        if (!isImageEl) {
+          if (el.fontSizeScale && el.fontSizeScale !== 1) {
+            textRules.push(`font-size: ${el.fontSizeScale}em !important;`);
+          }
+          if (el.fontBold) textRules.push('font-weight: bold !important;');
+          if (el.fontItalic) textRules.push('font-style: italic !important;');
+          if (el.fontUnderline) textRules.push('text-decoration: underline !important;');
+          if (el.fontColor) textRules.push(`color: ${el.fontColor} !important;`);
+        }
+        const rotationRule = el.rotation ? `transform: rotate(${el.rotation}deg) !important;` : '';
+
         return `@media print {
   ${selector} {
     ${displayRule}position: absolute !important;
@@ -811,6 +829,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     margin: 0 !important;
     padding: 0.25rem !important;
     box-sizing: border-box !important;
+    ${rotationRule}
+    ${textRules.join('\n    ')}
   }
 }`;
       });

@@ -106,17 +106,36 @@ export const PRINT_IMAGE_COLUMNS_OPTIONS = [
  *   color {string}  - Background color used in the WYSIWYG preview
  */
 export const PRINT_FORMAT_ELEMENTS = [
-  { id: 'title',              label: 'Titel',                   color: '#d4e8f7' },
-  { id: 'images',             label: 'Fotos (gesamt)',           color: '#fde8c8' },
-  { id: 'authorDate',         label: 'Autor & Datum',            color: '#d4f0e8' },
-  { id: 'metadata',           label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4' },
-  { id: 'ingredients',        label: 'Zutaten',                  color: '#e8d4f0' },
-  { id: 'steps',              label: 'Zubereitungsschritte',     color: '#f7d4d4' },
-  { id: 'ingredientsHeading', label: 'Überschrift Zutaten',      color: '#c8b0e0' },
-  { id: 'stepsHeading',       label: 'Überschrift Zubereitung',  color: '#e8b0b0' },
-  { id: 'photo1',             label: 'Foto 1',                   color: '#fdd8a0' },
-  { id: 'photo2',             label: 'Foto 2',                   color: '#fdc880' },
-  { id: 'photo3',             label: 'Foto 3',                   color: '#fdb860' },
+  { id: 'title',              label: 'Titel',                   color: '#d4e8f7', isImage: false },
+  { id: 'images',             label: 'Fotos (gesamt)',           color: '#fde8c8', isImage: true  },
+  { id: 'authorDate',         label: 'Autor & Datum',            color: '#d4f0e8', isImage: false },
+  { id: 'metadata',           label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4', isImage: false },
+  { id: 'ingredients',        label: 'Zutaten',                  color: '#e8d4f0', isImage: false },
+  { id: 'steps',              label: 'Zubereitungsschritte',     color: '#f7d4d4', isImage: false },
+  { id: 'ingredientsHeading', label: 'Überschrift Zutaten',      color: '#c8b0e0', isImage: false },
+  { id: 'stepsHeading',       label: 'Überschrift Zubereitung',  color: '#e8b0b0', isImage: false },
+  { id: 'photo1',             label: 'Foto 1',                   color: '#fdd8a0', isImage: true  },
+  { id: 'photo2',             label: 'Foto 2',                   color: '#fdc880', isImage: true  },
+  { id: 'photo3',             label: 'Foto 3',                   color: '#fdb860', isImage: true  },
+];
+
+/** Available rotation options for print format elements */
+export const PRINT_ROTATION_OPTIONS = [
+  { label: '0°',   value: 0   },
+  { label: '90°',  value: 90  },
+  { label: '180°', value: 180 },
+  { label: '270°', value: 270 },
+];
+
+/** Available aspect ratio options for image elements in print formats */
+export const PRINT_ASPECT_RATIO_OPTIONS = [
+  { label: 'Original',          value: 'none' },
+  { label: 'Quadrat (1:1)',     value: '1/1'  },
+  { label: '3:2',               value: '3/2'  },
+  { label: '4:3',               value: '4/3'  },
+  { label: '16:9',              value: '16/9' },
+  { label: '2:3 (Hochformat)',  value: '2/3'  },
+  { label: '3:4 (Hochformat)',  value: '3/4'  },
 ];
 
 /**

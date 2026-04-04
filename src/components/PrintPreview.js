@@ -3,9 +3,9 @@ import './PrintPreview.css';
 import { mergePrintElementsWithDefaults } from '../utils/customLists';
 
 /**
- * Renders recipe content for a given element id.
+ * Renders recipe content for a given element id, with optional image aspect ratio.
  */
-function ElementContent({ id, recipe }) {
+function ElementContent({ id, recipe, aspectRatio }) {
   // Helper to get all images for this recipe
   const getAllImages = () =>
     Array.isArray(recipe.images) && recipe.images.length > 0
@@ -28,11 +28,15 @@ function ElementContent({ id, recipe }) {
       if (!firstImage) {
         return <div className="ppv-el-placeholder">Kein Foto</div>;
       }
+      const imgStyle = aspectRatio && aspectRatio !== 'none'
+        ? { aspectRatio, width: '100%', objectFit: 'cover', display: 'block' }
+        : undefined;
       return (
         <img
           src={firstImage.url}
           alt={recipe.title}
           className="ppv-el-image"
+          style={imgStyle}
         />
       );
     }
@@ -48,8 +52,11 @@ function ElementContent({ id, recipe }) {
           <div className="ppv-el-placeholder">Kein Foto {photoIndex + 1}</div>
         );
       }
+      const imgStyle = aspectRatio && aspectRatio !== 'none'
+        ? { aspectRatio, width: '100%', objectFit: 'cover', display: 'block' }
+        : undefined;
       return (
-        <img src={img.url} alt={recipe.title} className="ppv-el-image" />
+        <img src={img.url} alt={recipe.title} className="ppv-el-image" style={imgStyle} />
       );
     }
 
@@ -176,18 +183,30 @@ export default function PrintPreview({ recipe, format }) {
         <div className="ppv-page-inner">
           {elements.map((el) => {
             if (el.visible === false) return null;
+            const rotation = el.rotation || 0;
+            const elStyle = {
+              left: `${el.x}%`,
+              top: `${el.y}%`,
+              width: `${el.w}%`,
+              height: `${el.h}%`,
+            };
+            if (rotation) {
+              elStyle.transform = `rotate(${rotation}deg)`;
+            }
+            if (el.fontSizeScale && el.fontSizeScale !== 1) {
+              elStyle.fontSize = `${el.fontSizeScale}em`;
+            }
+            if (el.fontBold) elStyle.fontWeight = 'bold';
+            if (el.fontItalic) elStyle.fontStyle = 'italic';
+            if (el.fontUnderline) elStyle.textDecoration = 'underline';
+            if (el.fontColor) elStyle.color = el.fontColor;
             return (
               <div
                 key={el.id}
                 className="ppv-element"
-                style={{
-                  left: `${el.x}%`,
-                  top: `${el.y}%`,
-                  width: `${el.w}%`,
-                  height: `${el.h}%`,
-                }}
+                style={elStyle}
               >
-                <ElementContent id={el.id} recipe={recipe} />
+                <ElementContent id={el.id} recipe={recipe} aspectRatio={el.aspectRatio} />
               </div>
             );
           })}
