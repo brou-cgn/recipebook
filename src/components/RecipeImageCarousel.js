@@ -3,6 +3,7 @@ import './RecipeImageCarousel.css';
 
 /**
  * A reusable image carousel with scroll-snap, dot indicators, and desktop arrow navigation.
+ * Supports lazy loading via IntersectionObserver (with native loading="lazy" as enhancement).
  *
  * Props:
  *   images      - Array of image objects with at least a `url` property (required)
@@ -12,7 +13,10 @@ import './RecipeImageCarousel.css';
  */
 function RecipeImageCarousel({ images, altText, className = '', onImageClick }) {
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [loadedImages, setLoadedImages] = useState({});
+  const [isVisible, setIsVisible] = useState(false);
   const trackRef = useRef(null);
+  const containerRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
   const lengthRef = useRef(images.length);
   lengthRef.current = images.length;
@@ -21,10 +25,35 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick }) 
   const imagesKey = images.map(img => img.url).join(',');
   useEffect(() => {
     setCarouselIndex(0);
+    setLoadedImages({});
     if (trackRef.current) {
       trackRef.current.scrollLeft = 0;
     }
   }, [imagesKey]);
+
+  // Intersection Observer: defer image loading until the carousel is near the viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!('IntersectionObserver' in window)) {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(container);
+        }
+      },
+      { rootMargin: '50px' }
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const hasMultiple = images.length > 1;
 
@@ -63,7 +92,7 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick }) 
   const safeIndex = Math.min(carouselIndex, images.length - 1);
 
   return (
-    <div className={`recipe-image-carousel ${className}`.trim()}>
+    <div className={`recipe-image-carousel ${className}`.trim()} ref={containerRef}>
       <div
         className="ric-track"
         ref={trackRef}
@@ -75,7 +104,17 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick }) 
             className="ric-slide"
             onClick={onImageClick}
           >
-            <img src={img.url} alt={altText} />
+            <div className={`ric-placeholder${loadedImages[idx] ? ' ric-placeholder--hidden' : ''}`} />
+            {isVisible && (
+              <img
+                src={img.url}
+                alt={altText}
+                loading="lazy"
+                className={`ric-image${loadedImages[idx] ? ' ric-image--loaded' : ''}`}
+                onLoad={() => setLoadedImages(prev => ({ ...prev, [idx]: true }))}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
           </div>
         ))}
       </div>

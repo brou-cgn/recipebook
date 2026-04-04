@@ -276,6 +276,8 @@
   background: #f0f0f0;
   position: relative;
   border-radius: 12px 12px 0 0;
+  will-change: transform;
+  aspect-ratio: 4 / 3;
 }
 
 .recipe-image img {

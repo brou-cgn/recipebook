@@ -6,6 +6,7 @@
   height: 100%;
   overflow: hidden;
   background: #f0f0f0;
+  will-change: transform;
 }
 
 /* Film-strip track */
@@ -28,13 +29,44 @@
   width: 100%;
   height: 100%;
   scroll-snap-align: start;
+  position: relative;
 }
 
-.ric-slide img {
+/* Lazy loading placeholder */
+.ric-placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #e8e8e8 25%, #f0f0f0 50%, #e8e8e8 75%);
+  background-size: 200% 200%;
+  animation: ric-skeleton-shimmer 1.4s ease infinite;
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+
+.ric-placeholder--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes ric-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Lazy-loaded image: fade in when loaded */
+.ric-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ric-image--loaded {
+  opacity: 1;
 }
 
 /* Dot indicators */
