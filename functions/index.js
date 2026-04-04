@@ -3246,3 +3246,172 @@ exports.shareRecipe = onRequest(
     },
 );
 
+
+/**
+ * Cloud Function: Notify private-list members about a new or added recipe.
+ *
+ * Called by the client after a recipe is created in (or added to) a private
+ * list.  Looks up the list members, fetches their FCM tokens from Firestore,
+ * and sends a push notification to every member except the actor.
+ *
+ * Input data:
+ *   - groupId  {string}            Firestore ID of the private list
+ *   - recipeId {string}            Firestore ID of the recipe
+ *   - actorId  {string}            Firestore ID of the user who acted
+ *   - action   {'created'|'added'} Whether the recipe was newly created or added
+ *
+ * Returns: { success: boolean, sent: number }
+ */
+exports.notifyPrivateListMembers = onCall(
+    {maxInstances: 10},
+    async (request) => {
+      const callerAuth = request.auth;
+      if (!callerAuth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'Sie müssen angemeldet sein.',
+        );
+      }
+
+      const {groupId, recipeId, actorId, action} = request.data;
+
+      if (!groupId || !recipeId || !actorId) {
+        throw new HttpsError(
+            'invalid-argument',
+            'groupId, recipeId und actorId sind erforderlich.',
+        );
+      }
+
+      const db = admin.firestore();
+
+      // 1. Load the group to get member list
+      const groupSnap = await db.collection('groups').doc(groupId).get();
+      if (!groupSnap.exists) {
+        throw new HttpsError('not-found', 'Gruppe nicht gefunden.');
+      }
+      const groupData = groupSnap.data();
+
+      if (groupData.type !== 'private') {
+        // Only send notifications for private lists
+        return {success: true, sent: 0};
+      }
+
+      // Collect all member IDs (owner + memberIds), excluding the actor
+      const ownerIdEntry = groupData.ownerId ? [groupData.ownerId] : [];
+      const memberIds = Array.isArray(groupData.memberIds)
+        ? groupData.memberIds
+        : [];
+      const allMemberIds = [...new Set([...ownerIdEntry, ...memberIds])].filter(
+          (id) => id !== actorId,
+      );
+
+      if (allMemberIds.length === 0) {
+        return {success: true, sent: 0};
+      }
+
+      // 2. Load the recipe title for the notification body
+      let recipeTitle = 'Ein Rezept';
+      try {
+        const recipeSnap = await db.collection('recipes').doc(recipeId).get();
+        if (recipeSnap.exists) {
+          recipeTitle = recipeSnap.data().title || recipeTitle;
+        }
+      } catch (recipeErr) {
+        console.warn(
+            'notifyPrivateListMembers: could not load recipe title',
+            recipeErr,
+        );
+      }
+
+      // 3. Collect FCM tokens for the relevant members
+      const tokenFetches = allMemberIds.map((uid) =>
+        db.collection('users').doc(uid).get(),
+      );
+      const userSnaps = await Promise.all(tokenFetches);
+
+      const tokens = [];
+      userSnaps.forEach((snap) => {
+        if (!snap.exists) return;
+        const userData = snap.data();
+        if (Array.isArray(userData.fcmTokens)) {
+          tokens.push(...userData.fcmTokens.filter(Boolean));
+        }
+      });
+
+      if (tokens.length === 0) {
+        return {success: true, sent: 0};
+      }
+
+      // 4. Build the notification payload
+      const listName = groupData.name || 'einer privaten Liste';
+      const actionLabel =
+        action === 'created' ? 'erstellt' : 'hinzugefügt';
+      const notificationPayload = {
+        notification: {
+          title: `Neues Rezept in „${listName}"`,
+          body: `„${recipeTitle}" wurde ${actionLabel}.`,
+        },
+        data: {
+          groupId,
+          recipeId,
+          action: action || 'added',
+        },
+      };
+
+      // 5. Send notifications in batches (FCM sendEachForMulticast limit: 500)
+      const BATCH_SIZE = 500;
+      let sentCount = 0;
+      const staleTokens = [];
+
+      for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+        const batch = tokens.slice(i, i + BATCH_SIZE);
+        try {
+          const response = await admin.messaging().sendEachForMulticast({
+            tokens: batch,
+            ...notificationPayload,
+          });
+
+          sentCount += response.successCount;
+
+          // Collect tokens that are no longer valid
+          response.responses.forEach((resp, idx) => {
+            if (
+              !resp.success &&
+              (resp.error?.code ===
+                'messaging/registration-token-not-registered' ||
+                resp.error?.code === 'messaging/invalid-registration-token')
+            ) {
+              staleTokens.push(batch[idx]);
+            }
+          });
+        } catch (sendErr) {
+          console.error(
+              'notifyPrivateListMembers: batch send error',
+              sendErr,
+          );
+        }
+      }
+
+      // 6. Remove stale tokens from Firestore (best-effort, non-blocking)
+      if (staleTokens.length > 0) {
+        const removePromises = userSnaps.map(async (snap) => {
+          if (!snap.exists) return;
+          const userData = snap.data();
+          if (!Array.isArray(userData.fcmTokens)) return;
+          const updatedTokens = userData.fcmTokens.filter(
+              (t) => !staleTokens.includes(t),
+          );
+          if (updatedTokens.length !== userData.fcmTokens.length) {
+            await snap.ref.update({fcmTokens: updatedTokens});
+          }
+        });
+        await Promise.allSettled(removePromises);
+      }
+
+      console.log(
+          `notifyPrivateListMembers: sent ${sentCount} notification(s) ` +
+          `for recipe ${recipeId} in group ${groupId}`,
+      );
+      return {success: true, sent: sentCount};
+    },
+);

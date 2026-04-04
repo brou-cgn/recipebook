@@ -8,6 +8,7 @@ import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
+import { getMessaging, isSupported as isMessagingSupported } from 'firebase/messaging';
 
 // Firebase configuration from environment variables
 // These values are loaded from .env.local file (not committed to git)
@@ -56,4 +57,15 @@ enableIndexedDbPersistence(db).catch((err) => {
   }
 });
 
-export { app, db, auth, functions, storage };
+// Initialize Firebase Cloud Messaging (only in supported environments)
+// isMessagingSupported() returns a Promise, so we resolve lazily.
+let messaging = null;
+isMessagingSupported().then((supported) => {
+  if (supported) {
+    messaging = getMessaging(app);
+  }
+}).catch(() => {
+  // Silently ignore environments where FCM is not available (e.g. SSR, test)
+});
+
+export { app, db, auth, functions, storage, messaging, firebaseConfig, isMessagingSupported };

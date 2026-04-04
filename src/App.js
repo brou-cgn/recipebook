@@ -31,8 +31,14 @@ import {
   onAuthStateChange,
   canEditMenu,
   canDeleteMenu,
-  getRolePermissions
+  getRolePermissions,
+  saveFcmToken
 } from './utils/userManagement';
+import {
+  requestNotificationPermission,
+  setupForegroundMessageListener,
+  notifyPrivateListMembers
+} from './utils/pushNotifications';
 import { 
   toggleFavorite,
   migrateGlobalFavorites
@@ -380,6 +386,28 @@ function App() {
     loadFavicon();
   }, [currentUser]);
 
+  // Initialise push notification permission and register FCM token for the
+  // current user.  Runs once when a real (non-guest) user logs in.
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isGuest) return;
+    let foregroundUnsubscribe = () => {};
+    const initPush = async () => {
+      try {
+        const token = await requestNotificationPermission();
+        if (token) {
+          await saveFcmToken(currentUser.id, token);
+        }
+        foregroundUnsubscribe = setupForegroundMessageListener();
+      } catch (err) {
+        // Push notifications are optional – never break the main app
+        console.warn('pushNotifications: init failed', err);
+      }
+    };
+    initPush();
+    return () => foregroundUnsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
   // Apply tile size preference on mount
   useEffect(() => {
     applyTileSizePreference();
@@ -641,6 +669,11 @@ function App() {
           } catch (shareError) {
             console.error('Error generating share link:', shareError);
           }
+        }
+
+        // Notify other members when the recipe was created directly in a private list
+        if (savedRecipe?.id && groupType === 'private' && safeGroupId) {
+          notifyPrivateListMembers(safeGroupId, savedRecipe.id, currentUser.id, 'created');
         }
 
         setSelectedRecipe(savedRecipeWithShare);
@@ -939,6 +972,10 @@ function App() {
   const handleAddRecipeToPrivateList = async (groupId, recipeId) => {
     try {
       await addRecipeToGroupInFirestore(groupId, recipeId);
+      // Notify other members of the private list about the newly added recipe
+      if (currentUser?.id) {
+        notifyPrivateListMembers(groupId, recipeId, currentUser.id, 'added');
+      }
     } catch (error) {
       console.error('Error adding recipe to private list:', error);
     }

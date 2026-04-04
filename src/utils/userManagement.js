@@ -1053,6 +1053,46 @@ export const updateUserWebimport = async (userId, webimport) => {
 };
 
 /**
+ * Save an FCM push token for the given user.
+ * The token is stored under `users/{userId}.fcmTokens` as an array so that
+ * a user with multiple devices is covered.
+ *
+ * @param {string} userId - ID of the user
+ * @param {string} token  - FCM registration token
+ * @returns {Promise<void>}
+ */
+export const saveFcmToken = async (userId, token) => {
+  if (!userId || !token) return;
+  try {
+    const { arrayUnion } = await import('firebase/firestore');
+    await updateDoc(doc(db, 'users', userId), {
+      fcmTokens: arrayUnion(token)
+    });
+  } catch (error) {
+    console.error('Error saving FCM token:', error);
+  }
+};
+
+/**
+ * Remove an FCM push token for the given user (e.g. on logout).
+ *
+ * @param {string} userId - ID of the user
+ * @param {string} token  - FCM registration token to remove
+ * @returns {Promise<void>}
+ */
+export const removeFcmToken = async (userId, token) => {
+  if (!userId || !token) return;
+  try {
+    const { arrayRemove } = await import('firebase/firestore');
+    await updateDoc(doc(db, 'users', userId), {
+      fcmTokens: arrayRemove(token)
+    });
+  } catch (error) {
+    console.error('Error removing FCM token:', error);
+  }
+};
+
+/**
  * Default role permissions for fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle and printRecipe features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; all other features start with all disabled for non-admin roles.
  */
