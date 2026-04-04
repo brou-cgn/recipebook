@@ -257,8 +257,8 @@
 
 /* ── Element properties panel ─────────────────────────────────────────────── */
 .pfe-props-panel {
-  flex: 0 0 220px;
-  min-width: 200px;
+  flex: 0 0 240px;
+  min-width: 220px;
   background: #fdf6ec;
   border: 1px solid #d9c9b8;
   border-radius: 6px;
@@ -303,6 +303,11 @@
   min-width: 80px;
 }
 
+.pfe-props-label--sm {
+  min-width: 16px;
+  font-size: 0.75rem;
+}
+
 .pfe-props-unit {
   font-size: 0.8rem;
   color: #888;
@@ -315,6 +320,15 @@
   border-radius: 4px;
   font-size: 0.85rem;
   text-align: right;
+}
+
+.pfe-props-number--sm {
+  width: 44px;
+}
+
+.pfe-toolbar-number {
+  width: 52px;
+  min-width: unset;
 }
 
 .pfe-props-color {
@@ -424,6 +438,49 @@
   font-size: 0.75rem;
   color: #888;
   margin: 0;
+}
+
+/* ── Text alignment buttons ───────────────────────────────────────────────── */
+.pfe-textalign-btn {
+  width: auto;
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.pfe-textalign-label {
+  font-size: 0.72rem;
+}
+
+/* ── Border side checkboxes ───────────────────────────────────────────────── */
+.pfe-border-sides {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pfe-border-side-label {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid #c8b8a2;
+  border-radius: 4px;
+  background: #fff;
+  user-select: none;
+}
+
+.pfe-border-side-label:hover {
+  background: #f0e8dc;
+}
+
+.pfe-border-side-label input[type='checkbox'] {
+  margin: 0;
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */

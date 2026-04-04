@@ -138,6 +138,26 @@ export const PRINT_ASPECT_RATIO_OPTIONS = [
   { label: '3:4 (Hochformat)',  value: '3/4'  },
 ];
 
+/** Available horizontal text alignment options for print format text elements */
+export const PRINT_TEXT_ALIGN_H_OPTIONS = [
+  { label: 'Links',     value: 'left'    },
+  { label: 'Mitte',     value: 'center'  },
+  { label: 'Rechts',    value: 'right'   },
+  { label: 'Blocksatz', value: 'justify' },
+];
+
+/** Available vertical text alignment options for print format text elements */
+export const PRINT_TEXT_ALIGN_V_OPTIONS = [
+  { label: 'Oben',  value: 'top'    },
+  { label: 'Mitte', value: 'middle' },
+  { label: 'Unten', value: 'bottom' },
+];
+
+/** Default page width in cm for portrait orientation (DIN A4) */
+export const DEFAULT_PRINT_PAGE_WIDTH_CM = 21.0;
+/** Default page height in cm for portrait orientation (DIN A4) */
+export const DEFAULT_PRINT_PAGE_HEIGHT_CM = 29.7;
+
 /**
  * Default element positions for a portrait A4 page (coordinates in % of page).
  * x, y = top-left corner; w, h = width/height.

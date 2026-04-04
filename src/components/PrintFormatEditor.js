@@ -9,6 +9,10 @@ import {
   PRINT_IMAGE_COLUMNS_OPTIONS,
   PRINT_ROTATION_OPTIONS,
   PRINT_ASPECT_RATIO_OPTIONS,
+  PRINT_TEXT_ALIGN_H_OPTIONS,
+  PRINT_TEXT_ALIGN_V_OPTIONS,
+  DEFAULT_PRINT_PAGE_WIDTH_CM,
+  DEFAULT_PRINT_PAGE_HEIGHT_CM,
 } from '../utils/customLists';
 
 // Minimum element size in percent of page
@@ -137,6 +141,16 @@ export default function PrintFormatEditor({ format, onChange }) {
   const orientation = format?.orientation || 'portrait';
   const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
   const imageColumns = format?.imageColumns || 'auto';
+
+  // Page dimensions in cm (default: DIN A4)
+  const pageWidthCm = format?.pageWidthCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM);
+  const pageHeightCm = format?.pageHeightCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_WIDTH_CM : DEFAULT_PRINT_PAGE_HEIGHT_CM);
+
+  // Convert % ↔ cm
+  const pctToCmX = useCallback((pct) => ((pct / 100) * pageWidthCm).toFixed(1), [pageWidthCm]);
+  const pctToCmY = useCallback((pct) => ((pct / 100) * pageHeightCm).toFixed(1), [pageHeightCm]);
+  const cmToPctX = useCallback((cm) => (parseFloat(cm) / pageWidthCm) * 100, [pageWidthCm]);
+  const cmToPctY = useCallback((cm) => (parseFloat(cm) / pageHeightCm) * 100, [pageHeightCm]);
 
   // Merge stored elements with defaults so we always have all element IDs
   const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
@@ -298,6 +312,8 @@ export default function PrintFormatEditor({ format, onChange }) {
     updateFormat({
       orientation: newOrientation,
       elements: getDefaultElements(newOrientation),
+      pageWidthCm: newOrientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM,
+      pageHeightCm: newOrientation === 'landscape' ? DEFAULT_PRINT_PAGE_WIDTH_CM : DEFAULT_PRINT_PAGE_HEIGHT_CM,
     });
   };
 
@@ -347,8 +363,8 @@ export default function PrintFormatEditor({ format, onChange }) {
   );
 
   // ─── Page aspect ratio ───────────────────────────────────────────────────────
-  // A4: 210 × 297 mm  → portrait padding-bottom ≈ 141.4%, landscape ≈ 70.7%
-  const pagePaddingBottom = orientation === 'landscape' ? '70.71%' : '141.43%';
+  // Derive aspect ratio from configured page dimensions (default: DIN A4)
+  const pagePaddingBottom = `${(pageHeightCm / pageWidthCm) * 100}%`;
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -379,6 +395,33 @@ export default function PrintFormatEditor({ format, onChange }) {
             />
             Querformat
           </label>
+        </div>
+
+        {/* Page size in cm */}
+        <div className="pfe-toolbar-group">
+          <span className="pfe-toolbar-label">Seitengröße:</span>
+          <input
+            type="number"
+            className="pfe-props-number pfe-toolbar-number"
+            min="5"
+            max="200"
+            step="0.1"
+            value={pageWidthCm}
+            onChange={(e) => updateFormat({ pageWidthCm: parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_WIDTH_CM })}
+            title="Seitenbreite in cm"
+          />
+          <span className="pfe-props-unit">×</span>
+          <input
+            type="number"
+            className="pfe-props-number pfe-toolbar-number"
+            min="5"
+            max="200"
+            step="0.1"
+            value={pageHeightCm}
+            onChange={(e) => updateFormat({ pageHeightCm: parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_HEIGHT_CM })}
+            title="Seitenhöhe in cm"
+          />
+          <span className="pfe-props-unit">cm</span>
         </div>
 
         {/* Font */}
@@ -485,6 +528,19 @@ export default function PrintFormatEditor({ format, onChange }) {
                 if (!def) return null;
                 const isSelected = el.id === selectedElementId;
                 const rotation = el.rotation || 0;
+                // Build border inline styles when borders are configured
+                const hasBorder = el.borderTop || el.borderRight || el.borderBottom || el.borderLeft;
+                const borderInlineStyles = hasBorder ? (() => {
+                  const bw = `${el.borderWidth || 1}px`;
+                  const bc = el.borderColor || '#000000';
+                  const b = `${bw} solid ${bc}`;
+                  return {
+                    borderTop: el.borderTop ? b : 'none',
+                    borderRight: el.borderRight ? b : 'none',
+                    borderBottom: el.borderBottom ? b : 'none',
+                    borderLeft: el.borderLeft ? b : 'none',
+                  };
+                })() : {};
                 return (
                   <div
                     key={el.id}
@@ -496,6 +552,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                       height: `${el.h}%`,
                       '--el-color': def.color,
                       transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                      ...borderInlineStyles,
                     }}
                     onMouseDown={(e) => startDrag(e, el.id)}
                     title={`${def.label} – ziehen zum Verschieben, klicken zum Bearbeiten`}
@@ -532,11 +589,79 @@ export default function PrintFormatEditor({ format, onChange }) {
               {selectedDef.label}
             </div>
 
+            {/* Position & Size in cm */}
+            <div className="pfe-props-section-label">Position &amp; Größe:</div>
+            <div className="pfe-props-row">
+              <span className="pfe-props-label pfe-props-label--sm">X:</span>
+              <input
+                type="number"
+                className="pfe-props-number"
+                min="0"
+                max={pageWidthCm}
+                step="0.1"
+                value={pctToCmX(selectedElement.x)}
+                onChange={(e) => {
+                  const newX = cmToPctX(e.target.value);
+                  updateElement(selectedElementId, { x: clamp(newX, 0, 100 - selectedElement.w) });
+                }}
+                title="Horizontale Position in cm"
+              />
+              <span className="pfe-props-unit">cm</span>
+              <span className="pfe-props-label pfe-props-label--sm">Y:</span>
+              <input
+                type="number"
+                className="pfe-props-number"
+                min="0"
+                max={pageHeightCm}
+                step="0.1"
+                value={pctToCmY(selectedElement.y)}
+                onChange={(e) => {
+                  const newY = cmToPctY(e.target.value);
+                  updateElement(selectedElementId, { y: clamp(newY, 0, 100 - selectedElement.h) });
+                }}
+                title="Vertikale Position in cm"
+              />
+              <span className="pfe-props-unit">cm</span>
+            </div>
+            <div className="pfe-props-row">
+              <span className="pfe-props-label pfe-props-label--sm">B:</span>
+              <input
+                type="number"
+                className="pfe-props-number"
+                min="0.1"
+                max={pageWidthCm}
+                step="0.1"
+                value={pctToCmX(selectedElement.w)}
+                onChange={(e) => {
+                  const newW = Math.max(MIN_W, cmToPctX(e.target.value));
+                  updateElement(selectedElementId, { w: Math.min(newW, 100 - selectedElement.x) });
+                }}
+                title="Breite in cm"
+              />
+              <span className="pfe-props-unit">cm</span>
+              <span className="pfe-props-label pfe-props-label--sm">H:</span>
+              <input
+                type="number"
+                className="pfe-props-number"
+                min="0.1"
+                max={pageHeightCm}
+                step="0.1"
+                value={pctToCmY(selectedElement.h)}
+                onChange={(e) => {
+                  const newH = Math.max(MIN_H, cmToPctY(e.target.value));
+                  updateElement(selectedElementId, { h: Math.min(newH, 100 - selectedElement.y) });
+                }}
+                title="Höhe in cm"
+              />
+              <span className="pfe-props-unit">cm</span>
+            </div>
+
             {/* Text formatting – only for non-image elements */}
             {!selectedDef.isImage && (
               <>
+                <div className="pfe-props-section-label">Schrift:</div>
                 <div className="pfe-props-row">
-                  <span className="pfe-props-label">Schriftgröße:</span>
+                  <span className="pfe-props-label">Größe:</span>
                   <input
                     type="number"
                     className="pfe-props-number"
@@ -593,7 +718,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 </div>
 
                 <div className="pfe-props-row">
-                  <span className="pfe-props-label">Schriftfarbe:</span>
+                  <span className="pfe-props-label">Farbe:</span>
                   <input
                     type="color"
                     className="pfe-props-color"
@@ -603,6 +728,45 @@ export default function PrintFormatEditor({ format, onChange }) {
                     }
                     title="Schriftfarbe"
                   />
+                </div>
+
+                {/* Text alignment */}
+                <div className="pfe-props-section-label">Textausrichtung:</div>
+                <div className="pfe-props-row">
+                  <span className="pfe-props-label pfe-props-label--sm">H:</span>
+                  <div className="pfe-props-style-btns">
+                    {PRINT_TEXT_ALIGN_H_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`pfe-style-btn pfe-textalign-btn ${(selectedElement.textAlignH || 'left') === opt.value ? 'pfe-style-btn--active' : ''}`}
+                        onClick={() =>
+                          updateElement(selectedElementId, { textAlignH: opt.value })
+                        }
+                        title={opt.label}
+                      >
+                        <span className="pfe-textalign-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pfe-props-row">
+                  <span className="pfe-props-label pfe-props-label--sm">V:</span>
+                  <div className="pfe-props-style-btns">
+                    {PRINT_TEXT_ALIGN_V_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`pfe-style-btn pfe-textalign-btn ${(selectedElement.textAlignV || 'top') === opt.value ? 'pfe-style-btn--active' : ''}`}
+                        onClick={() =>
+                          updateElement(selectedElementId, { textAlignV: opt.value })
+                        }
+                        title={opt.label}
+                      >
+                        <span className="pfe-textalign-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -644,6 +808,55 @@ export default function PrintFormatEditor({ format, onChange }) {
                 </select>
               </div>
             )}
+
+            {/* Border – for all elements */}
+            <div className="pfe-props-section-label">Rahmen:</div>
+            <div className="pfe-props-row">
+              <span className="pfe-props-label">Seiten:</span>
+              <div className="pfe-border-sides">
+                {[
+                  { key: 'borderTop',    label: '↑' },
+                  { key: 'borderRight',  label: '→' },
+                  { key: 'borderBottom', label: '↓' },
+                  { key: 'borderLeft',   label: '←' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="pfe-border-side-label" title={key.replace('border', '')}>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedElement[key]}
+                      onChange={(e) => updateElement(selectedElementId, { [key]: e.target.checked })}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="pfe-props-row">
+              <span className="pfe-props-label">Farbe:</span>
+              <input
+                type="color"
+                className="pfe-props-color"
+                value={selectedElement.borderColor || '#000000'}
+                onChange={(e) =>
+                  updateElement(selectedElementId, { borderColor: e.target.value })
+                }
+                title="Rahmenfarbe"
+              />
+              <span className="pfe-props-label pfe-props-label--sm">Dicke:</span>
+              <input
+                type="number"
+                className="pfe-props-number pfe-props-number--sm"
+                min="0.5"
+                max="20"
+                step="0.5"
+                value={selectedElement.borderWidth || 1}
+                onChange={(e) =>
+                  updateElement(selectedElementId, { borderWidth: parseFloat(e.target.value) || 1 })
+                }
+                title="Rahmendicke in px"
+              />
+              <span className="pfe-props-unit">px</span>
+            </div>
 
             {/* Alignment */}
             <div className="pfe-props-section-label">Ausrichten:</div>

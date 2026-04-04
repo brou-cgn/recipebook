@@ -171,7 +171,9 @@ export default function PrintPreview({ recipe, format }) {
 
   const orientation = format?.orientation || 'portrait';
   const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
-  const pagePaddingBottom = orientation === 'landscape' ? '70.71%' : '141.43%';
+  const pageWidthCm = format?.pageWidthCm ?? (orientation === 'landscape' ? 29.7 : 21.0);
+  const pageHeightCm = format?.pageHeightCm ?? (orientation === 'landscape' ? 21.0 : 29.7);
+  const pagePaddingBottom = `${(pageHeightCm / pageWidthCm) * 100}%`;
   const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
 
   return (
@@ -200,6 +202,30 @@ export default function PrintPreview({ recipe, format }) {
             if (el.fontItalic) elStyle.fontStyle = 'italic';
             if (el.fontUnderline) elStyle.textDecoration = 'underline';
             if (el.fontColor) elStyle.color = el.fontColor;
+
+            // Text alignment
+            if (el.textAlignH) {
+              elStyle.textAlign = el.textAlignH;
+            }
+            if (el.textAlignV && el.textAlignV !== 'top') {
+              elStyle.display = 'flex';
+              elStyle.flexDirection = 'column';
+              elStyle.alignItems = 'stretch';
+              elStyle.justifyContent = el.textAlignV === 'bottom' ? 'flex-end' : 'center';
+            }
+
+            // Border styles
+            const hasBorder = el.borderTop || el.borderRight || el.borderBottom || el.borderLeft;
+            if (hasBorder) {
+              const bw = `${el.borderWidth || 1}px`;
+              const bc = el.borderColor || '#000000';
+              const b = `${bw} solid ${bc}`;
+              elStyle.borderTop = el.borderTop ? b : 'none';
+              elStyle.borderRight = el.borderRight ? b : 'none';
+              elStyle.borderBottom = el.borderBottom ? b : 'none';
+              elStyle.borderLeft = el.borderLeft ? b : 'none';
+            }
+
             return (
               <div
                 key={el.id}
