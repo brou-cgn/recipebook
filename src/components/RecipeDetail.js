@@ -760,11 +760,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       photo1:             '.recipe-photo-1',
       photo2:             '.recipe-photo-2',
       photo3:             '.recipe-photo-3',
+      photo4:             '.recipe-photo-4',
     };
 
     // Elements that are hidden by default and need display:block when shown in WYSIWYG
     const WYSIWYG_HIDDEN_ELEMENTS = new Set([
-      'ingredientsHeading', 'stepsHeading', 'photo1', 'photo2', 'photo3',
+      'ingredientsHeading', 'stepsHeading', 'photo1', 'photo2', 'photo3', 'photo4',
     ]);
 
     let elemStyle = document.getElementById('print-element-positions');
@@ -789,13 +790,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       // Merge stored elements with defaults so all known IDs are present
       const mergedElements = mergePrintElementsWithDefaults(format?.elements, orientation);
 
-      // Check whether any individual photo element is visible
-      const anyPhotoVisible = mergedElements.some(
-        (el) => ['photo1', 'photo2', 'photo3'].includes(el.id) && el.visible !== false,
-      );
-
       // Image element IDs – these do not receive text formatting rules
-      const WYSIWYG_IMAGE_ELEMENT_IDS = new Set(['images', 'photo1', 'photo2', 'photo3']);
+      const WYSIWYG_IMAGE_ELEMENT_IDS = new Set(['photo1', 'photo2', 'photo3', 'photo4']);
 
       const rules = mergedElements.map((el) => {
         const selector = ELEMENT_SELECTOR_MAP[el.id];
@@ -838,10 +834,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 }`;
       });
 
-      // When any individual photo is shown, hide the combined images block to avoid overlap
-      if (anyPhotoVisible) {
-        rules.push('@media print { .recipe-section--images { display: none !important; } }');
-      }
+      // In WYSIWYG mode, always hide the combined images carousel; individual photo elements are used instead
+      rules.push('@media print { .recipe-section--images { display: none !important; } }');
 
       // When the separate heading elements are visible, hide the duplicated headings
       // inside their respective sections so they do not appear twice
@@ -2040,7 +2034,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   {/* Individual photo wrappers for WYSIWYG print positioning.
                       Hidden on screen; each one is shown only when the corresponding
                       'photoN' print element is active. */}
-                  {orderedImages.slice(0, 3).map((img, idx) => (
+                  {orderedImages.slice(0, 4).map((img, idx) => (
                     <div key={idx} className={`recipe-photo-wysiwyg recipe-photo-${idx + 1}`} aria-hidden="true">
                       <img src={img.url} alt={recipe.title} />
                     </div>

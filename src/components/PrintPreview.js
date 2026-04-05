@@ -44,7 +44,8 @@ function ElementContent({ id, recipe, aspectRatio }) {
 
     case 'photo1':
     case 'photo2':
-    case 'photo3': {
+    case 'photo3':
+    case 'photo4': {
       const photoIndex = parseInt(id.replace('photo', ''), 10) - 1;
       const allImages = getAllImages();
       const img = allImages[photoIndex];
