@@ -146,11 +146,11 @@ export default function PrintFormatEditor({ format, onChange }) {
   const pageWidthCm = format?.pageWidthCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM);
   const pageHeightCm = format?.pageHeightCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_WIDTH_CM : DEFAULT_PRINT_PAGE_HEIGHT_CM);
 
-  // Convert % ↔ cm
+  // Convert % ↔ cm (all coordinates are stored as % of page WIDTH)
   const pctToCmX = useCallback((pct) => ((pct / 100) * pageWidthCm).toFixed(1), [pageWidthCm]);
-  const pctToCmY = useCallback((pct) => ((pct / 100) * pageHeightCm).toFixed(1), [pageHeightCm]);
+  const pctToCmY = useCallback((pct) => ((pct / 100) * pageWidthCm).toFixed(1), [pageWidthCm]);
   const cmToPctX = useCallback((cm) => (parseFloat(cm) / pageWidthCm) * 100, [pageWidthCm]);
-  const cmToPctY = useCallback((cm) => (parseFloat(cm) / pageHeightCm) * 100, [pageHeightCm]);
+  const cmToPctY = useCallback((cm) => (parseFloat(cm) / pageWidthCm) * 100, [pageWidthCm]);
 
   // Merge stored elements with defaults so we always have all element IDs
   const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
@@ -241,7 +241,7 @@ export default function PrintFormatEditor({ format, onChange }) {
       if (!state) return;
 
       const dx = ((e.clientX - state.startMouseX) / state.pageWidth) * 100;
-      const dy = ((e.clientY - state.startMouseY) / state.pageHeight) * 100;
+      const dy = ((e.clientY - state.startMouseY) / state.pageWidth) * 100;
 
       if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
         didDragRef.current = true;
@@ -249,14 +249,17 @@ export default function PrintFormatEditor({ format, onChange }) {
 
       if (!didDragRef.current) return;
 
+      // Max y+h in % of page width (since all coords are % of page width)
+      const maxPageY = (state.pageHeight / state.pageWidth) * 100;
+
       if (state.type === 'drag') {
         const el = elements.find((el) => el.id === state.elementId);
         if (!el) return;
         const rawX = clamp(state.startElemX + dx, 0, 100 - el.w);
-        const rawY = clamp(state.startElemY + dy, 0, 100 - el.h);
+        const rawY = clamp(state.startElemY + dy, 0, maxPageY - el.h);
         const snapped = computeSnap(el, rawX, rawY, elements);
         const newX = clamp(snapped.x, 0, 100 - el.w);
-        const newY = clamp(snapped.y, 0, 100 - el.h);
+        const newY = clamp(snapped.y, 0, maxPageY - el.h);
         setSnapGuides(snapped.guides);
         updateElement(state.elementId, { x: newX, y: newY });
       } else if (state.type === 'resize') {
@@ -275,13 +278,13 @@ export default function PrintFormatEditor({ format, onChange }) {
         }
         if (handle.includes('n')) {
           const newH = Math.max(MIN_H, state.startElemH - dy);
-          y = clamp(state.startElemY + (state.startElemH - newH), 0, 100 - MIN_H);
+          y = clamp(state.startElemY + (state.startElemH - newH), 0, maxPageY - MIN_H);
           h = newH;
         }
 
         // Clamp to page bounds
         w = Math.min(w, 100 - x);
-        h = Math.min(h, 100 - y);
+        h = Math.min(h, maxPageY - y);
 
         updateElement(state.elementId, { x, y, w, h });
       }
@@ -356,7 +359,7 @@ export default function PrintFormatEditor({ format, onChange }) {
           // end
           newVal = Math.max(...others.map((o) => o.y + o.h)) - selectedElement.h;
         }
-        updateElement(selectedElementId, { y: clamp(newVal, 0, 100 - selectedElement.h) });
+        updateElement(selectedElementId, { y: clamp(newVal, 0, (pageHeightCm / pageWidthCm) * 100 - selectedElement.h) });
       }
     },
     [selectedElement, selectedElementId, elements, updateElement],
@@ -629,7 +632,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 value={pctToCmY(selectedElement.y)}
                 onChange={(e) => {
                   const newY = cmToPctY(e.target.value);
-                  updateElement(selectedElementId, { y: clamp(newY, 0, 100 - selectedElement.h) });
+                  updateElement(selectedElementId, { y: clamp(newY, 0, (pageHeightCm / pageWidthCm) * 100 - selectedElement.h) });
                 }}
                 title="Vertikale Position in cm"
               />
@@ -661,7 +664,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 value={pctToCmY(selectedElement.h)}
                 onChange={(e) => {
                   const newH = Math.max(MIN_H, cmToPctY(e.target.value));
-                  updateElement(selectedElementId, { h: Math.min(newH, 100 - selectedElement.y) });
+                  updateElement(selectedElementId, { h: Math.min(newH, (pageHeightCm / pageWidthCm) * 100 - selectedElement.y) });
                 }}
                 title="Höhe in cm"
               />
