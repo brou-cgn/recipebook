@@ -1,6 +1,7 @@
 import React from 'react';
 import './PrintPreview.css';
 import { mergePrintElementsWithDefaults } from '../utils/customLists';
+import { formatIngredientAsFraction } from '../utils/ingredientUtils';
 
 /**
  * Renders recipe content for a given element id, with optional image aspect ratio.
@@ -120,7 +121,7 @@ function ElementContent({ id, recipe, aspectRatio }) {
               return isHeading ? (
                 <li key={i} className="ppv-el-list-heading">{text}</li>
               ) : (
-                <li key={i}>{text}</li>
+                <li key={i}>{formatIngredientAsFraction(text)}</li>
               );
             })}
             {ingredients.length > 12 && (

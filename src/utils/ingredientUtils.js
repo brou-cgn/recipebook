@@ -3,6 +3,98 @@
  * Provides utilities for formatting and normalizing ingredient text
  */
 
+/**
+ * Returns the greatest common divisor of two non-negative integers.
+ * @param {number} a
+ * @param {number} b
+ * @returns {number}
+ */
+function gcd(a, b) {
+  a = Math.abs(Math.round(a));
+  b = Math.abs(Math.round(b));
+  while (b) {
+    const t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
+}
+
+/**
+ * Converts a decimal number to a fully-reduced fraction string.
+ * Returns the fraction string when a clean representation is found
+ * using common cooking denominators (up to 10), or null otherwise.
+ * Whole numbers are returned as plain integer strings.
+ * Mixed numbers are formatted as "whole fractional" (e.g. "1 1/2").
+ *
+ * Examples:
+ *   0.5   → "1/2"
+ *   0.25  → "1/4"
+ *   0.75  → "3/4"
+ *   1.5   → "1 1/2"
+ *   0.333 → "1/3"
+ *   0.1   → "1/10"
+ *   0.15  → null  (no clean fraction)
+ *
+ * @param {number} decimal - The decimal number to convert
+ * @returns {string|null} - Fraction string or null if no clean representation exists
+ */
+export function decimalToFraction(decimal) {
+  if (typeof decimal !== 'number' || isNaN(decimal) || !isFinite(decimal)) return null;
+  if (decimal < 0) return null;
+
+  if (decimal % 1 === 0) return decimal.toString();
+
+  const wholePart = Math.floor(decimal);
+  const fractionalPart = decimal - wholePart;
+
+  const maxDenominator = 10;
+  const tolerance = 0.005;
+
+  for (let denom = 2; denom <= maxDenominator; denom++) {
+    const numerator = Math.round(fractionalPart * denom);
+    if (Math.abs(numerator / denom - fractionalPart) < tolerance) {
+      const g = gcd(numerator, denom);
+      const simplifiedNum = numerator / g;
+      const simplifiedDenom = denom / g;
+
+      if (simplifiedDenom === 1) {
+        return (wholePart + simplifiedNum).toString();
+      }
+
+      const fractionStr = `${simplifiedNum}/${simplifiedDenom}`;
+      return wholePart > 0 ? `${wholePart} ${fractionStr}` : fractionStr;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Replaces decimal numbers in an ingredient string with fully-reduced fractions.
+ * Numbers already written as fractions (e.g. "1/2") are left unchanged.
+ * Whole numbers are left unchanged.
+ *
+ * Examples:
+ *   "0,5 l Milch"     → "1/2 l Milch"
+ *   "1.5 EL Öl"       → "1 1/2 EL Öl"
+ *   "0,25 TL Salz"    → "1/4 TL Salz"
+ *   "1/2 TL Salz"     → "1/2 TL Salz"  (unchanged)
+ *   "200 g Mehl"      → "200 g Mehl"   (unchanged)
+ *
+ * @param {string} ingredient - The ingredient text to format
+ * @returns {string} - The formatted ingredient text
+ */
+export function formatIngredientAsFraction(ingredient) {
+  if (!ingredient || typeof ingredient !== 'string') return ingredient;
+
+  return ingredient.replace(/\d+[.,]\d+/g, (match) => {
+    const value = parseFloat(match.replace(',', '.'));
+    const fraction = decimalToFraction(value);
+    return fraction !== null ? fraction : match;
+  });
+}
+
 // Common units to recognize (case-insensitive)
 // German and international units
 const UNITS = [
@@ -252,7 +344,13 @@ export function combineIngredients(ingredients) {
   return order.map(key => {
     const { amount, unit, name } = combined.get(key);
     if (amount === null) return name;
-    const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(1);
+    let formatted;
+    if (amount % 1 === 0) {
+      formatted = amount.toString();
+    } else {
+      const fraction = decimalToFraction(amount);
+      formatted = fraction !== null ? fraction : amount.toFixed(1);
+    }
     return unit ? `${formatted} ${unit} ${name}` : `${formatted} ${name}`;
   });
 }
@@ -372,7 +470,13 @@ export function scaleIngredient(ingredient, multiplier) {
     }
 
     const scaled = value * multiplier;
-    const formatted = scaled % 1 === 0 ? scaled.toString() : scaled.toFixed(1);
+    let formatted;
+    if (scaled % 1 === 0) {
+      formatted = scaled.toString();
+    } else {
+      const fraction = decimalToFraction(scaled);
+      formatted = fraction !== null ? fraction : scaled.toFixed(1);
+    }
 
     return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
   });
