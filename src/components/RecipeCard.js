@@ -121,6 +121,12 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     ...allImages.filter(img => img.isDefault),
     ...allImages.filter(img => !img.isDefault),
   ];
+  const hasValidImageThumbnail =
+    recipe.imageThumbnail &&
+    (recipe.imageThumbnail.startsWith('https://') || recipe.imageThumbnail.startsWith('http://'));
+  if (hasValidImageThumbnail && orderedImages.length > 0) {
+    orderedImages[0] = { ...orderedImages[0], thumbnailUrl: recipe.imageThumbnail };
+  }
   const hasImages = orderedImages.length > 0;
 
   return (
