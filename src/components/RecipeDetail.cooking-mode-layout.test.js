@@ -15,6 +15,7 @@ jest.mock('../utils/userManagement', () => ({
   canDirectlyEditRecipe: () => true,
   canCreateNewVersion: () => true,
   canDeleteRecipe: () => true,
+  canDeleteRecipes: () => true,
 }));
 
 jest.mock('../utils/recipeVersioning', () => ({

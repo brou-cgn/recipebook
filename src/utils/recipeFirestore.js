@@ -272,6 +272,22 @@ export const disableRecipeSharing = async (recipeId) => {
 };
 
 /**
+ * Reset the WhatsApp thumbnail for a recipe by deleting the imageThumbnail field.
+ * The next time the recipe is shared via WhatsApp, a new thumbnail will be generated.
+ * @param {string} recipeId - ID of the recipe
+ * @returns {Promise<void>}
+ */
+export const resetRecipeThumbnail = async (recipeId) => {
+  try {
+    const recipeRef = doc(db, 'recipes', recipeId);
+    await updateDoc(recipeRef, { imageThumbnail: deleteField(), updatedAt: serverTimestamp() });
+  } catch (error) {
+    console.error('Error resetting recipe thumbnail:', error);
+    throw error;
+  }
+};
+
+/**
  * Initialize recipe_count field for all users based on existing recipes.
  * Counts recipes per authorId and sets the recipe_count field on each user document.
  * Safe to run multiple times as it sets (not increments) the count.

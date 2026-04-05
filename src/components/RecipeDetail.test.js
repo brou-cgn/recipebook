@@ -17,6 +17,7 @@ jest.mock('../utils/userManagement', () => ({
   canDirectlyEditRecipe: () => true,
   canCreateNewVersion: () => true,
   canDeleteRecipe: () => true,
+  canDeleteRecipes: () => true,
   isCurrentUserAdmin: jest.fn(() => false),
   getUsers: () => [
     { id: 'user-1', vorname: 'Test', nachname: 'User' },

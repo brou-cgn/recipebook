@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './RecipeDetail.css';
-import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, isCurrentUserAdmin } from '../utils/userManagement';
+import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
-import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
+import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
@@ -96,6 +96,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
+  const [resetThumbnailFabPressed, setResetThumbnailFabPressed] = useState(false);
+  const [resetThumbnailLoading, setResetThumbnailLoading] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
   const [showCookDateModal, setShowCookDateModal] = useState(false);
   const [cookDateModalPrefillToday, setCookDateModalPrefillToday] = useState(false);
@@ -422,6 +424,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const userCanDelete = canDeleteRecipe(currentUser, recipe, isRecipePublic);
   const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
   const deleteAtPublishPosition = isRecipePublic && userCanDelete;
+  const userCanResetThumbnail = canDeleteRecipes(currentUser);
+  const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -521,6 +525,20 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       } finally {
         setPublishLoading(false);
       }
+    }
+  };
+
+  const handleResetThumbnail = async () => {
+    if (!window.confirm(`Möchten Sie das WhatsApp-Thumbnail für "${recipe.title}" zurücksetzen? Beim nächsten Teilen über WhatsApp wird ein neues Thumbnail generiert.`)) return;
+    setResetThumbnailLoading(true);
+    try {
+      await resetRecipeThumbnail(recipe.id);
+      setSelectedRecipe(prev => { const { imageThumbnail: _removed, ...rest } = prev; return rest; });
+    } catch (error) {
+      console.error('Error resetting thumbnail:', error);
+      alert('Fehler beim Zurücksetzen des Thumbnails. Bitte versuchen Sie es erneut.');
+    } finally {
+      setResetThumbnailLoading(false);
     }
   };
 
@@ -2482,6 +2500,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               publishRecipeIcon
             )
           )}
+        </button>
+      )}
+      {userCanResetThumbnail && !cookingMode && (
+        <button
+          className={`reset-thumbnail-fab-button${resetThumbnailFabPressed ? ' pressed' : ''}${thumbnailResetAtSecondPosition ? ' at-second-position' : ''}`}
+          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
+          onClick={handleResetThumbnail}
+          onTouchStart={() => setResetThumbnailFabPressed(true)}
+          onTouchEnd={() => setResetThumbnailFabPressed(false)}
+          onTouchCancel={() => setResetThumbnailFabPressed(false)}
+          onMouseDown={() => setResetThumbnailFabPressed(true)}
+          onMouseUp={() => setResetThumbnailFabPressed(false)}
+          onMouseLeave={() => setResetThumbnailFabPressed(false)}
+          disabled={resetThumbnailLoading}
+          title="WhatsApp-Thumbnail zurücksetzen"
+          aria-label="WhatsApp-Thumbnail zurücksetzen"
+        >
+          {resetThumbnailLoading ? '…' : '📷'}
         </button>
       )}
     </div>
