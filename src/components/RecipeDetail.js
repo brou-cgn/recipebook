@@ -1165,7 +1165,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       // Audio API nicht verfügbar – Modal bleibt trotzdem sichtbar
     }
   
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
       new Notification('⏰ Timer abgelaufen!', {
         body: label,
         icon: '/favicon.ico'
