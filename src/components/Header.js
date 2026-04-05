@@ -30,7 +30,8 @@ const Header = forwardRef(function Header({
   onUserManagement,
   visible = true,
   onSearchChange,
-  interactiveLists = []
+  interactiveLists = [],
+  onChefkochClick
 }, ref) {
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [appLogoImage, setAppLogoImage] = useState(null);
@@ -156,6 +157,13 @@ const Header = forwardRef(function Header({
   const handleLogoutInternal = () => {
     if (onLogout) {
       onLogout();
+    }
+    setMenuOpen(false);
+  };
+
+  const handleChefkochClickInternal = () => {
+    if (onChefkochClick) {
+      onChefkochClick();
     }
     setMenuOpen(false);
   };
@@ -289,9 +297,14 @@ const Header = forwardRef(function Header({
                   <div className="menu-section">
                     <div className="menu-section-title">Benutzer</div>
                     <div className="menu-user-info">
-                      <span className="menu-user-name">
+                      <button
+                        className={`menu-user-name${onChefkochClick ? ' menu-user-name--clickable' : ''}`}
+                        onClick={onChefkochClick ? handleChefkochClickInternal : undefined}
+                        disabled={!onChefkochClick}
+                        aria-label={onChefkochClick ? 'Chefkoch-Seite öffnen' : undefined}
+                      >
                         {currentUser.vorname} {currentUser.nachname}
-                      </span>
+                      </button>
                       {currentUser.isAdmin && (
                         <span className="admin-badge">Admin</span>
                       )}

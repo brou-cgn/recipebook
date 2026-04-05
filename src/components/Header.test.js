@@ -241,3 +241,55 @@ describe('Header - Erscheinungsbild (themeToggle) permission', () => {
     expect(screen.queryByText('Erscheinungsbild')).not.toBeInTheDocument();
   });
 });
+
+describe('Header - Chefkoch user name click', () => {
+  test('user name button has aria-label when onChefkochClick is provided', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onChefkochClick={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByLabelText('Chefkoch-Seite öffnen')).toBeInTheDocument();
+  });
+
+  test('clicking user name calls onChefkochClick and closes the menu', () => {
+    const onChefkochClick = jest.fn();
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onChefkochClick={onChefkochClick}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByLabelText('Chefkoch-Seite öffnen'));
+
+    expect(onChefkochClick).toHaveBeenCalledTimes(1);
+    // Menu should be closed after clicking
+    expect(screen.queryByText('Abmelden')).not.toBeInTheDocument();
+  });
+
+  test('user name is not interactive when onChefkochClick is not provided', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    const userNameBtn = screen.getByText(`${mockCurrentUser.vorname} ${mockCurrentUser.nachname}`);
+    expect(userNameBtn).toBeDisabled();
+  });
+});
