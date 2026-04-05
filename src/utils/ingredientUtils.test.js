@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -280,7 +280,7 @@ describe('combineIngredients', () => {
   });
 
   test('handles ingredients with decimal result', () => {
-    expect(combineIngredients(['100 g Mehl', '50.5 g Mehl'])).toEqual(['150.5 g Mehl']);
+    expect(combineIngredients(['100 g Mehl', '50.5 g Mehl'])).toEqual(['150 1/2 g Mehl']);
   });
 
   test('handles fractions', () => {
@@ -482,5 +482,104 @@ describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () =
   test('converts "el" (lowercase abbreviation) to ml using EL entry', () => {
     const { converted } = convertIngredientUnits(['2 el Öl'], conversionTable);
     expect(converted).toEqual(['30 ml Öl']);
+  });
+});
+
+describe('decimalToFraction', () => {
+  test('returns whole numbers as integer strings', () => {
+    expect(decimalToFraction(1)).toBe('1');
+    expect(decimalToFraction(2)).toBe('2');
+    expect(decimalToFraction(100)).toBe('100');
+    expect(decimalToFraction(0)).toBe('0');
+  });
+
+  test('converts common halves', () => {
+    expect(decimalToFraction(0.5)).toBe('1/2');
+    expect(decimalToFraction(1.5)).toBe('1 1/2');
+    expect(decimalToFraction(2.5)).toBe('2 1/2');
+  });
+
+  test('converts common quarters', () => {
+    expect(decimalToFraction(0.25)).toBe('1/4');
+    expect(decimalToFraction(0.75)).toBe('3/4');
+    expect(decimalToFraction(1.25)).toBe('1 1/4');
+    expect(decimalToFraction(1.75)).toBe('1 3/4');
+  });
+
+  test('converts thirds', () => {
+    expect(decimalToFraction(1 / 3)).toBe('1/3');
+    expect(decimalToFraction(2 / 3)).toBe('2/3');
+  });
+
+  test('converts eighths', () => {
+    expect(decimalToFraction(0.125)).toBe('1/8');
+    expect(decimalToFraction(0.375)).toBe('3/8');
+    expect(decimalToFraction(0.625)).toBe('5/8');
+    expect(decimalToFraction(0.875)).toBe('7/8');
+  });
+
+  test('converts fifths', () => {
+    expect(decimalToFraction(0.2)).toBe('1/5');
+    expect(decimalToFraction(0.4)).toBe('2/5');
+    expect(decimalToFraction(0.6)).toBe('3/5');
+    expect(decimalToFraction(0.8)).toBe('4/5');
+  });
+
+  test('converts tenths', () => {
+    expect(decimalToFraction(0.1)).toBe('1/10');
+    expect(decimalToFraction(0.3)).toBe('3/10');
+    expect(decimalToFraction(0.7)).toBe('7/10');
+    expect(decimalToFraction(0.9)).toBe('9/10');
+  });
+
+  test('returns null for values with no clean fraction', () => {
+    expect(decimalToFraction(0.15)).toBeNull();
+    expect(decimalToFraction(0.37)).toBeNull();
+  });
+
+  test('returns null for invalid inputs', () => {
+    expect(decimalToFraction(NaN)).toBeNull();
+    expect(decimalToFraction(Infinity)).toBeNull();
+    expect(decimalToFraction(-1)).toBeNull();
+    expect(decimalToFraction('0.5')).toBeNull();
+    expect(decimalToFraction(null)).toBeNull();
+    expect(decimalToFraction(undefined)).toBeNull();
+  });
+});
+
+describe('formatIngredientAsFraction', () => {
+  test('converts decimal with dot to fraction', () => {
+    expect(formatIngredientAsFraction('0.5 l Milch')).toBe('1/2 l Milch');
+    expect(formatIngredientAsFraction('1.5 EL Öl')).toBe('1 1/2 EL Öl');
+    expect(formatIngredientAsFraction('0.25 TL Salz')).toBe('1/4 TL Salz');
+    expect(formatIngredientAsFraction('0.75 Tasse Mehl')).toBe('3/4 Tasse Mehl');
+  });
+
+  test('converts decimal with comma to fraction', () => {
+    expect(formatIngredientAsFraction('0,5 l Milch')).toBe('1/2 l Milch');
+    expect(formatIngredientAsFraction('1,5 EL Öl')).toBe('1 1/2 EL Öl');
+    expect(formatIngredientAsFraction('0,25 TL Salz')).toBe('1/4 TL Salz');
+  });
+
+  test('leaves existing fractions unchanged', () => {
+    expect(formatIngredientAsFraction('1/2 TL Salz')).toBe('1/2 TL Salz');
+    expect(formatIngredientAsFraction('1 1/2 EL Öl')).toBe('1 1/2 EL Öl');
+    expect(formatIngredientAsFraction('3/4 Tasse Mehl')).toBe('3/4 Tasse Mehl');
+  });
+
+  test('leaves whole numbers unchanged', () => {
+    expect(formatIngredientAsFraction('200 g Mehl')).toBe('200 g Mehl');
+    expect(formatIngredientAsFraction('3 Eier')).toBe('3 Eier');
+    expect(formatIngredientAsFraction('1 TL Salz')).toBe('1 TL Salz');
+  });
+
+  test('leaves decimals without clean fraction unchanged', () => {
+    expect(formatIngredientAsFraction('0.15 l Wasser')).toBe('0.15 l Wasser');
+  });
+
+  test('handles null and undefined gracefully', () => {
+    expect(formatIngredientAsFraction(null)).toBe(null);
+    expect(formatIngredientAsFraction(undefined)).toBe(undefined);
+    expect(formatIngredientAsFraction('')).toBe('');
   });
 });
