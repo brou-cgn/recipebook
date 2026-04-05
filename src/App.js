@@ -47,6 +47,8 @@ import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
+import { deleteRecipeThumbnail } from './utils/storageUtils';
+import { deleteField } from 'firebase/firestore';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -632,9 +634,27 @@ function App() {
       if (editingRecipe && editingRecipe.id !== undefined && !isCreatingVersion) {
         // Update existing recipe (direct edit)
         const { id, ...updates } = recipe;
-        await updateRecipeInFirestore(id, updates, editingRecipe.authorId);
+
+        // Automatically clear WhatsApp thumbnail when the default image changes,
+        // so it gets regenerated from the new default image on the next share.
+        const shouldClearThumbnail = Boolean(updates.image) && updates.image !== editingRecipe.image && Boolean(editingRecipe.imageThumbnail);
+        if (shouldClearThumbnail) {
+          await deleteRecipeThumbnail(editingRecipe.imageThumbnail);
+        }
+
+        await updateRecipeInFirestore(
+          id,
+          shouldClearThumbnail ? { ...updates, imageThumbnail: deleteField() } : updates,
+          editingRecipe.authorId
+        );
+
+        // Build local state: exclude Firestore sentinel so it doesn't end up in React state
+        const nextSelectedRecipe = { ...editingRecipe, ...updates };
+        if (shouldClearThumbnail) {
+          delete nextSelectedRecipe.imageThumbnail;
+        }
         // Navigate back to the recipe detail view after a successful update
-        setSelectedRecipe({ ...editingRecipe, ...updates });
+        setSelectedRecipe(nextSelectedRecipe);
       } else {
         // Add new recipe or new version; attach groupId if created from within a group,
         // otherwise fall back to the public group (from state or from the groups subscription)
