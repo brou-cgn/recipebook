@@ -250,16 +250,16 @@ export default function PrintFormatEditor({ format, onChange }) {
       if (!didDragRef.current) return;
 
       // Max y+h in % of page width (since all coords are % of page width)
-      const maxPageY = (state.pageHeight / state.pageWidth) * 100;
+      const maxPageYPct = (state.pageHeight / state.pageWidth) * 100;
 
       if (state.type === 'drag') {
         const el = elements.find((el) => el.id === state.elementId);
         if (!el) return;
         const rawX = clamp(state.startElemX + dx, 0, 100 - el.w);
-        const rawY = clamp(state.startElemY + dy, 0, maxPageY - el.h);
+        const rawY = clamp(state.startElemY + dy, 0, maxPageYPct - el.h);
         const snapped = computeSnap(el, rawX, rawY, elements);
         const newX = clamp(snapped.x, 0, 100 - el.w);
-        const newY = clamp(snapped.y, 0, maxPageY - el.h);
+        const newY = clamp(snapped.y, 0, maxPageYPct - el.h);
         setSnapGuides(snapped.guides);
         updateElement(state.elementId, { x: newX, y: newY });
       } else if (state.type === 'resize') {
@@ -278,13 +278,13 @@ export default function PrintFormatEditor({ format, onChange }) {
         }
         if (handle.includes('n')) {
           const newH = Math.max(MIN_H, state.startElemH - dy);
-          y = clamp(state.startElemY + (state.startElemH - newH), 0, maxPageY - MIN_H);
+          y = clamp(state.startElemY + (state.startElemH - newH), 0, maxPageYPct - MIN_H);
           h = newH;
         }
 
         // Clamp to page bounds
         w = Math.min(w, 100 - x);
-        h = Math.min(h, maxPageY - y);
+        h = Math.min(h, maxPageYPct - y);
 
         updateElement(state.elementId, { x, y, w, h });
       }
