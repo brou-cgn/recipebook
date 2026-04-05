@@ -2101,6 +2101,11 @@
   }
 }
 
+/* Delete FAB button at publish position (when recipe is published and user is admin) */
+.delete-fab-button.at-publish-position {
+  left: 20px !important;
+}
+
 /* ===== Print Recipe Button ===== */
 .print-recipe-button {
   /* Inherits .cook-date-button — no additional overrides needed */

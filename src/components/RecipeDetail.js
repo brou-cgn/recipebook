@@ -419,6 +419,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const isRecipePublic = !recipe.groupId || recipe.groupId === publicGroupId || !!recipe.publishedToPublic;
   const userCanDelete = canDeleteRecipe(currentUser, recipe, isRecipePublic);
   const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
+  const deleteAtPublishPosition = isRecipePublic && userCanDelete;
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -2480,7 +2481,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       )}
       {userCanDelete && onDelete && !cookingMode && (
         <button
-          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
+          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}${deleteAtPublishPosition ? ' at-publish-position' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
           onClick={handleDelete}
           onTouchStart={() => setDeleteFabPressed(true)}
