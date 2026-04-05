@@ -88,7 +88,10 @@ export function decimalToFraction(decimal) {
 export function formatIngredientAsFraction(ingredient) {
   if (!ingredient || typeof ingredient !== 'string') return ingredient;
 
-  return ingredient.replace(/(^|\s)(\d+[.,]\d+)/g, (match, space, number) => {
+  // Match decimal numbers (with . or ,) that appear at the start of the string
+  // or after whitespace, and are not followed by a hyphen (to avoid matching
+  // version numbers or range expressions like "3.14-based").
+  return ingredient.replace(/(^|\s)(\d+[.,]\d+)(?!-)/g, (match, space, number) => {
     const value = parseFloat(number.replace(',', '.'));
     const fraction = decimalToFraction(value);
     return space + (fraction !== null ? fraction : number);
