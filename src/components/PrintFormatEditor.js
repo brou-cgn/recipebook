@@ -362,12 +362,14 @@ export default function PrintFormatEditor({ format, onChange }) {
         updateElement(selectedElementId, { y: clamp(newVal, 0, (pageHeightCm / pageWidthCm) * 100 - selectedElement.h) });
       }
     },
-    [selectedElement, selectedElementId, elements, updateElement],
+    [selectedElement, selectedElementId, elements, updateElement, pageHeightCm, pageWidthCm],
   );
 
   // ─── Page aspect ratio ───────────────────────────────────────────────────────
   // Derive aspect ratio from configured page dimensions (default: DIN A4)
   const pagePaddingBottom = `${(pageHeightCm / pageWidthCm) * 100}%`;
+  // Max reachable y+h in % of page width (used for clamp bounds in the properties panel)
+  const maxPageYPct = (pageHeightCm / pageWidthCm) * 100;
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -632,7 +634,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 value={pctToCmY(selectedElement.y)}
                 onChange={(e) => {
                   const newY = cmToPctY(e.target.value);
-                  updateElement(selectedElementId, { y: clamp(newY, 0, (pageHeightCm / pageWidthCm) * 100 - selectedElement.h) });
+                  updateElement(selectedElementId, { y: clamp(newY, 0, maxPageYPct - selectedElement.h) });
                 }}
                 title="Vertikale Position in cm"
               />
@@ -664,7 +666,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 value={pctToCmY(selectedElement.h)}
                 onChange={(e) => {
                   const newH = Math.max(MIN_H, cmToPctY(e.target.value));
-                  updateElement(selectedElementId, { h: Math.min(newH, (pageHeightCm / pageWidthCm) * 100 - selectedElement.y) });
+                  updateElement(selectedElementId, { h: Math.min(newH, maxPageYPct - selectedElement.y) });
                 }}
                 title="Höhe in cm"
               />
