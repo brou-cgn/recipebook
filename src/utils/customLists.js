@@ -107,7 +107,6 @@ export const PRINT_IMAGE_COLUMNS_OPTIONS = [
  */
 export const PRINT_FORMAT_ELEMENTS = [
   { id: 'title',              label: 'Titel',                   color: '#d4e8f7', isImage: false },
-  { id: 'images',             label: 'Fotos (gesamt)',           color: '#fde8c8', isImage: true  },
   { id: 'authorDate',         label: 'Autor & Datum',            color: '#d4f0e8', isImage: false },
   { id: 'metadata',           label: 'Kulinarik / Zeit / Infos', color: '#f0e8d4', isImage: false },
   { id: 'ingredients',        label: 'Zutaten',                  color: '#e8d4f0', isImage: false },
@@ -117,6 +116,7 @@ export const PRINT_FORMAT_ELEMENTS = [
   { id: 'photo1',             label: 'Foto 1',                   color: '#fdd8a0', isImage: true  },
   { id: 'photo2',             label: 'Foto 2',                   color: '#fdc880', isImage: true  },
   { id: 'photo3',             label: 'Foto 3',                   color: '#fdb860', isImage: true  },
+  { id: 'photo4',             label: 'Foto 4',                   color: '#fd9840', isImage: true  },
 ];
 
 /** Available rotation options for print format elements */
@@ -164,16 +164,16 @@ export const DEFAULT_PRINT_PAGE_HEIGHT_CM = 29.7;
  */
 export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
   { id: 'title',              x: 2,  y: 1,  w: 96, h: 7,  visible: true  },
-  { id: 'images',             x: 2,  y: 9,  w: 96, h: 28, visible: true  },
+  { id: 'photo1',             x: 2,  y: 9,  w: 96, h: 28, visible: true  },
   { id: 'authorDate',         x: 2,  y: 38, w: 96, h: 5,  visible: true  },
   { id: 'metadata',           x: 2,  y: 44, w: 96, h: 8,  visible: true  },
   { id: 'ingredients',        x: 2,  y: 53, w: 45, h: 40, visible: true  },
   { id: 'steps',              x: 51, y: 53, w: 47, h: 40, visible: true  },
   { id: 'ingredientsHeading', x: 2,  y: 53, w: 45, h: 5,  visible: false },
   { id: 'stepsHeading',       x: 51, y: 53, w: 47, h: 5,  visible: false },
-  { id: 'photo1',             x: 2,  y: 9,  w: 96, h: 28, visible: false },
   { id: 'photo2',             x: 2,  y: 9,  w: 45, h: 28, visible: false },
   { id: 'photo3',             x: 51, y: 9,  w: 45, h: 28, visible: false },
+  { id: 'photo4',             x: 51, y: 38, w: 45, h: 14, visible: false },
 ];
 
 /**
@@ -181,16 +181,16 @@ export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
  */
 export const DEFAULT_PRINT_ELEMENTS_LANDSCAPE = [
   { id: 'title',              x: 2,  y: 1,  w: 96, h: 10, visible: true  },
-  { id: 'images',             x: 2,  y: 12, w: 45, h: 80, visible: true  },
+  { id: 'photo1',             x: 2,  y: 12, w: 45, h: 80, visible: true  },
   { id: 'authorDate',         x: 51, y: 12, w: 47, h: 7,  visible: true  },
   { id: 'metadata',           x: 51, y: 20, w: 47, h: 10, visible: true  },
   { id: 'ingredients',        x: 51, y: 31, w: 47, h: 30, visible: true  },
   { id: 'steps',              x: 51, y: 62, w: 47, h: 30, visible: true  },
   { id: 'ingredientsHeading', x: 51, y: 31, w: 47, h: 7,  visible: false },
   { id: 'stepsHeading',       x: 51, y: 62, w: 47, h: 7,  visible: false },
-  { id: 'photo1',             x: 2,  y: 12, w: 45, h: 80, visible: false },
   { id: 'photo2',             x: 2,  y: 12, w: 20, h: 40, visible: false },
   { id: 'photo3',             x: 24, y: 12, w: 20, h: 40, visible: false },
+  { id: 'photo4',             x: 2,  y: 53, w: 20, h: 40, visible: false },
 ];
 
 /**

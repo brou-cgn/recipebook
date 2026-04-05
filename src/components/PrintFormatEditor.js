@@ -489,9 +489,12 @@ export default function PrintFormatEditor({ format, onChange }) {
               <input
                 type="checkbox"
                 checked={isVisible}
-                onChange={(e) =>
-                  updateElement(def.id, { visible: e.target.checked })
-                }
+                onChange={(e) => {
+                  updateElement(def.id, { visible: e.target.checked });
+                  if (!e.target.checked && selectedElementId === def.id) {
+                    setSelectedElementId(null);
+                  }
+                }}
               />
               {def.label}
             </label>
@@ -534,6 +537,7 @@ export default function PrintFormatEditor({ format, onChange }) {
               {elements.map((el) => {
                 const def = PRINT_FORMAT_ELEMENTS.find((d) => d.id === el.id);
                 if (!def) return null;
+                if (el.visible === false) return null;
                 const isSelected = el.id === selectedElementId;
                 const rotation = el.rotation || 0;
                 // Build border inline styles when borders are configured
@@ -552,7 +556,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 return (
                   <div
                     key={el.id}
-                    className={`pfe-element ${el.visible === false ? 'pfe-element--hidden' : ''} ${isSelected ? 'pfe-element--selected' : ''}`.trim()}
+                    className={`pfe-element ${isSelected ? 'pfe-element--selected' : ''}`.trim()}
                     style={{
                       left: `${el.x}%`,
                       top: `${el.y}%`,
