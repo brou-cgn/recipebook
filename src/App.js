@@ -219,6 +219,7 @@ function App() {
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);
+  const [kuecheOpenPersonalData, setKuecheOpenPersonalData] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -825,6 +826,11 @@ function App() {
     setCategoryFilter('');
   };
 
+  const handleChefkochClick = () => {
+    handleViewChange('kueche');
+    setKuecheOpenPersonalData(true);
+  };
+
   const handleCategoryFilterChange = (category) => {
     setCategoryFilter(category);
   };
@@ -1263,6 +1269,7 @@ function App() {
         visible={headerVisible}
         onSearchChange={handleSearchChange}
         interactiveLists={interactiveLists}
+        onChefkochClick={currentUser ? handleChefkochClick : undefined}
       />
       {isSettingsOpen ? (
         <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
@@ -1359,6 +1366,8 @@ function App() {
           currentUser={currentUser}
           onProfileUpdated={(updatedUser) => setCurrentUser(prev => ({ ...prev, ...updatedUser }))}
           onViewChange={handleViewChange}
+          openPersonalData={kuecheOpenPersonalData}
+          onPersonalDataOpened={() => setKuecheOpenPersonalData(false)}
         />
       ) : currentView === 'groups' ? (
         selectedGroup ? (

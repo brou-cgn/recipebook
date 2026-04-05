@@ -150,7 +150,7 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
-function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange }) {
+function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -162,6 +162,15 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [cookDates, setCookDates] = useState([]);
+
+  const prevOpenPersonalData = React.useRef(false);
+  useEffect(() => {
+    if (openPersonalData && !prevOpenPersonalData.current) {
+      setShowPersonalData(true);
+      if (onPersonalDataOpened) onPersonalDataOpened();
+    }
+    prevOpenPersonalData.current = openPersonalData;
+  }, [openPersonalData, onPersonalDataOpened]);
 
   useEffect(() => {
     Promise.all([

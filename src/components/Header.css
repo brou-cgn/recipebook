@@ -424,6 +424,21 @@
   color: #1a1a1a;
   font-size: 0.95rem;
   font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+}
+
+.menu-user-name--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.menu-user-name--clickable:hover {
+  color: #DF7A00;
 }
 
 .logout-item {
