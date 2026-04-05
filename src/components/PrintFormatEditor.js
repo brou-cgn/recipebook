@@ -407,7 +407,11 @@ export default function PrintFormatEditor({ format, onChange }) {
             max="200"
             step="0.1"
             value={pageWidthCm}
-            onChange={(e) => updateFormat({ pageWidthCm: parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_WIDTH_CM })}
+            onChange={(e) => {
+              const newWidth = parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_WIDTH_CM;
+              const newOrientation = newWidth >= pageHeightCm ? 'landscape' : 'portrait';
+              updateFormat({ pageWidthCm: newWidth, orientation: newOrientation });
+            }}
             title="Seitenbreite in cm"
           />
           <span className="pfe-props-unit">×</span>
@@ -418,7 +422,11 @@ export default function PrintFormatEditor({ format, onChange }) {
             max="200"
             step="0.1"
             value={pageHeightCm}
-            onChange={(e) => updateFormat({ pageHeightCm: parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_HEIGHT_CM })}
+            onChange={(e) => {
+              const newHeight = parseFloat(e.target.value) || DEFAULT_PRINT_PAGE_HEIGHT_CM;
+              const newOrientation = pageWidthCm >= newHeight ? 'landscape' : 'portrait';
+              updateFormat({ pageHeightCm: newHeight, orientation: newOrientation });
+            }}
             title="Seitenhöhe in cm"
           />
           <span className="pfe-props-unit">cm</span>
