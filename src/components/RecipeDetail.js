@@ -96,6 +96,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [deleteRecipeIcon, setDeleteRecipeIcon] = useState('🗑');
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
+  const [resetThumbnailIcon, setResetThumbnailIcon] = useState('📷');
   const [resetThumbnailFabPressed, setResetThumbnailFabPressed] = useState(false);
   const [resetThumbnailLoading, setResetThumbnailLoading] = useState(false);
   const [conversionTable, setConversionTable] = useState([]);
@@ -154,6 +155,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
       setPublishRecipeIcon(eff('publishRecipe') || '↑');
       setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
+      setResetThumbnailIcon(eff('resetThumbnail') || '📷');
       setAllButtonIcons(icons);
       setPortionUnits(lists.portionUnits || []);
       setButtonIconsLoaded(true);
@@ -196,6 +198,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
     setPublishRecipeIcon(eff('publishRecipe') || '↑');
     setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
+    setResetThumbnailIcon(eff('resetThumbnail') || '📷');
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -2517,7 +2520,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           title="WhatsApp-Thumbnail zurücksetzen"
           aria-label="WhatsApp-Thumbnail zurücksetzen"
         >
-          {resetThumbnailLoading ? '…' : '📷'}
+          {resetThumbnailLoading ? '…' : (
+            isBase64Image(resetThumbnailIcon) ? (
+              <img src={resetThumbnailIcon} alt="Thumbnail löschen" className="button-icon-image" draggable="false" />
+            ) : (
+              resetThumbnailIcon
+            )
+          )}
         </button>
       )}
     </div>
