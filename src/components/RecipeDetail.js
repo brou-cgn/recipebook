@@ -7,7 +7,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
-import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction, decimalToFraction } from '../utils/ingredientUtils';
+import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -889,36 +889,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const scaleIngredient = (ingredient) => {
-    if (servingMultiplier === 1) return formatIngredientAsFraction(ingredient);
-    
-    // Match numbers with optional fractions and units at the start or after whitespace
-    // This pattern is designed to match quantities like "200g", "2 cups", "1/2 tsp"
-    const regex = /(?:^|\s)(\d+(?:[.,]\d+)?|\d+\/\d+)\s*([a-zA-Z]+)?/g;
-    
-    return ingredient.replace(regex, (match, number, unit) => {
-      // Preserve leading whitespace if any
-      const leadingSpace = match.startsWith(' ') ? ' ' : '';
-      
-      // Convert fraction to decimal if needed
-      let value;
-      if (number.includes('/')) {
-        const [num, denom] = number.split('/');
-        value = parseFloat(num) / parseFloat(denom);
-      } else {
-        value = parseFloat(number.replace(',', '.'));
-      }
-      
-      const scaled = value * servingMultiplier;
-      let formatted;
-      if (scaled % 1 === 0) {
-        formatted = scaled.toString();
-      } else {
-        const fraction = decimalToFraction(scaled);
-        formatted = fraction !== null ? fraction : scaled.toFixed(1);
-      }
-      
-      return leadingSpace + (unit ? `${formatted} ${unit}` : formatted);
-    });
+    const scaled = scaleIngredientUtil(ingredient, servingMultiplier);
+    return formatIngredientAsFraction(scaled);
   };
 
   const currentServings = (recipe.portionen || 4) * servingMultiplier;
