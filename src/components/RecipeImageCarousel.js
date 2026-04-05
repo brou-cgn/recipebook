@@ -5,6 +5,11 @@ import './RecipeImageCarousel.css';
  * A reusable image carousel with scroll-snap, dot indicators, and desktop arrow navigation.
  * Supports lazy loading via IntersectionObserver (with native loading="lazy" as enhancement).
  *
+ * Lazy Loading Strategy:
+ *   - Uses IntersectionObserver with dynamic viewport-based rootMargin
+ *   - Preloads images 1.0-1.5 viewports ahead (responsive)
+ *   - Native loading="lazy" as additional enhancement
+ *
  * Props:
  *   images        - Array of image objects with at least a `url` property (required).
  *                   Objects may also carry a `thumbnailUrl` for faster list-view loading.
@@ -34,7 +39,9 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
     }
   }, [imagesKey]);
 
-  // Intersection Observer: defer image loading until the carousel is near the viewport
+  // Intersection Observer: defer image loading until the carousel is near the viewport.
+  // Preload distance is responsive: 1.0× viewport height on mobile (≤768 px) to conserve
+  // data, and 1.5× on tablet/desktop so images are ready before the user scrolls to them.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -44,6 +51,11 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
       return;
     }
 
+    const viewportHeight = window.innerHeight;
+    const isMobile = window.innerWidth <= 768;
+    const multiplier = isMobile ? 1.0 : 1.5;
+    const preloadDistance = viewportHeight * multiplier;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -51,7 +63,7 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
           observer.unobserve(container);
         }
       },
-      { rootMargin: '50px' }
+      { rootMargin: `${preloadDistance}px 0px` }
     );
 
     observer.observe(container);
