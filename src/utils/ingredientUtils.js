@@ -88,10 +88,10 @@ export function decimalToFraction(decimal) {
 export function formatIngredientAsFraction(ingredient) {
   if (!ingredient || typeof ingredient !== 'string') return ingredient;
 
-  return ingredient.replace(/\d+[.,]\d+/g, (match) => {
-    const value = parseFloat(match.replace(',', '.'));
+  return ingredient.replace(/(^|\s)(\d+[.,]\d+)/g, (match, space, number) => {
+    const value = parseFloat(number.replace(',', '.'));
     const fraction = decimalToFraction(value);
-    return fraction !== null ? fraction : match;
+    return space + (fraction !== null ? fraction : number);
   });
 }
 
