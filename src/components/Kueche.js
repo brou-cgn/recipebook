@@ -163,13 +163,13 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [cookDates, setCookDates] = useState([]);
 
-  const wasOpenPersonalData = React.useRef(false);
+  const prevOpenPersonalData = React.useRef(false);
   useEffect(() => {
-    if (openPersonalData && !wasOpenPersonalData.current) {
+    if (openPersonalData && !prevOpenPersonalData.current) {
       setShowPersonalData(true);
       if (onPersonalDataOpened) onPersonalDataOpened();
     }
-    wasOpenPersonalData.current = !!openPersonalData;
+    prevOpenPersonalData.current = openPersonalData;
   }, [openPersonalData, onPersonalDataOpened]);
 
   useEffect(() => {
