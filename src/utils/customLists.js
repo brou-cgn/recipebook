@@ -159,38 +159,50 @@ export const DEFAULT_PRINT_PAGE_WIDTH_CM = 21.0;
 export const DEFAULT_PRINT_PAGE_HEIGHT_CM = 29.7;
 
 /**
- * Default element positions for a portrait A4 page (coordinates in % of page).
- * x, y = top-left corner; w, h = width/height.
+ * Layout version for print format elements.
+ * v1 (no layoutVersion field): x, w as % of page width; y, h as % of page height.
+ * v2 (layoutVersion: 2):       x, y, w, h ALL as % of page width.
+ *   This is required because the CSS padding-bottom trick renders all percentage
+ *   values (including top/height) relative to the container WIDTH, not its height.
+ */
+export const PRINT_FORMAT_LAYOUT_VERSION = 2;
+
+/**
+ * Default element positions for a portrait A4 page.
+ * ALL coordinates (x, y, w, h) are expressed as % of page WIDTH.
+ * For A4 portrait (21 × 29.7 cm): max reachable y+h ≈ 141.4% of page width.
  */
 export const DEFAULT_PRINT_ELEMENTS_PORTRAIT = [
-  { id: 'title',              x: 2,  y: 1,  w: 96, h: 7,  visible: true  },
-  { id: 'photo1',             x: 2,  y: 9,  w: 96, h: 28, visible: true  },
-  { id: 'authorDate',         x: 2,  y: 38, w: 96, h: 5,  visible: true  },
-  { id: 'metadata',           x: 2,  y: 44, w: 96, h: 8,  visible: true  },
-  { id: 'ingredients',        x: 2,  y: 53, w: 45, h: 40, visible: true  },
-  { id: 'steps',              x: 51, y: 53, w: 47, h: 40, visible: true  },
-  { id: 'ingredientsHeading', x: 2,  y: 53, w: 45, h: 5,  visible: false },
-  { id: 'stepsHeading',       x: 51, y: 53, w: 47, h: 5,  visible: false },
-  { id: 'photo2',             x: 2,  y: 9,  w: 45, h: 28, visible: false },
-  { id: 'photo3',             x: 51, y: 9,  w: 45, h: 28, visible: false },
-  { id: 'photo4',             x: 51, y: 38, w: 45, h: 14, visible: false },
+  { id: 'title',              x: 2,  y: 1.4,  w: 96, h: 9.9,  visible: true  },
+  { id: 'photo1',             x: 2,  y: 12.7, w: 96, h: 39.6, visible: true  },
+  { id: 'authorDate',         x: 2,  y: 53.7, w: 96, h: 7.1,  visible: true  },
+  { id: 'metadata',           x: 2,  y: 62.2, w: 96, h: 11.3, visible: true  },
+  { id: 'ingredients',        x: 2,  y: 75.0, w: 45, h: 56.6, visible: true  },
+  { id: 'steps',              x: 51, y: 75.0, w: 47, h: 56.6, visible: true  },
+  { id: 'ingredientsHeading', x: 2,  y: 75.0, w: 45, h: 7.1,  visible: false },
+  { id: 'stepsHeading',       x: 51, y: 75.0, w: 47, h: 7.1,  visible: false },
+  { id: 'photo2',             x: 2,  y: 12.7, w: 45, h: 39.6, visible: false },
+  { id: 'photo3',             x: 51, y: 12.7, w: 45, h: 39.6, visible: false },
+  { id: 'photo4',             x: 51, y: 53.7, w: 45, h: 19.8, visible: false },
 ];
 
 /**
- * Default element positions for a landscape A4 page (coordinates in % of page).
+ * Default element positions for a landscape A4 page.
+ * ALL coordinates (x, y, w, h) are expressed as % of page WIDTH.
+ * For A4 landscape (29.7 × 21 cm): max reachable y+h ≈ 70.7% of page width.
  */
 export const DEFAULT_PRINT_ELEMENTS_LANDSCAPE = [
-  { id: 'title',              x: 2,  y: 1,  w: 96, h: 10, visible: true  },
-  { id: 'photo1',             x: 2,  y: 12, w: 45, h: 80, visible: true  },
-  { id: 'authorDate',         x: 51, y: 12, w: 47, h: 7,  visible: true  },
-  { id: 'metadata',           x: 51, y: 20, w: 47, h: 10, visible: true  },
-  { id: 'ingredients',        x: 51, y: 31, w: 47, h: 30, visible: true  },
-  { id: 'steps',              x: 51, y: 62, w: 47, h: 30, visible: true  },
-  { id: 'ingredientsHeading', x: 51, y: 31, w: 47, h: 7,  visible: false },
-  { id: 'stepsHeading',       x: 51, y: 62, w: 47, h: 7,  visible: false },
-  { id: 'photo2',             x: 2,  y: 12, w: 20, h: 40, visible: false },
-  { id: 'photo3',             x: 24, y: 12, w: 20, h: 40, visible: false },
-  { id: 'photo4',             x: 2,  y: 53, w: 20, h: 40, visible: false },
+  { id: 'title',              x: 2,  y: 0.7,  w: 96, h: 7.1,  visible: true  },
+  { id: 'photo1',             x: 2,  y: 8.5,  w: 45, h: 56.6, visible: true  },
+  { id: 'authorDate',         x: 51, y: 8.5,  w: 47, h: 4.9,  visible: true  },
+  { id: 'metadata',           x: 51, y: 14.1, w: 47, h: 7.1,  visible: true  },
+  { id: 'ingredients',        x: 51, y: 21.9, w: 47, h: 21.2, visible: true  },
+  { id: 'steps',              x: 51, y: 43.8, w: 47, h: 21.2, visible: true  },
+  { id: 'ingredientsHeading', x: 51, y: 21.9, w: 47, h: 4.9,  visible: false },
+  { id: 'stepsHeading',       x: 51, y: 43.8, w: 47, h: 4.9,  visible: false },
+  { id: 'photo2',             x: 2,  y: 8.5,  w: 20, h: 28.3, visible: false },
+  { id: 'photo3',             x: 24, y: 8.5,  w: 20, h: 28.3, visible: false },
+  { id: 'photo4',             x: 2,  y: 37.5, w: 20, h: 28.3, visible: false },
 ];
 
 /**
@@ -218,8 +230,9 @@ export function mergePrintElementsWithDefaults(elements, orientation) {
  *   maxPhotos {number|null}- Max photo count this format applies to (null = catch-all)
  *   orientation {string}   - 'portrait' | 'landscape'
  *   fontFamily {string}    - CSS font-family string
+ *   layoutVersion {number} - Element coordinate version (see PRINT_FORMAT_LAYOUT_VERSION)
  *   elements {Array}       - WYSIWYG element positions: [{id, x, y, w, h, visible}]
- *                            x, y, w, h are percentages of the page dimensions.
+ *                            Since layoutVersion 2: x, y, w, h are ALL % of page width.
  *   elementOrder {string[]}- (legacy) Ordered array of 'images', 'ingredients', 'steps'
  *   imageWidth {number}    - (legacy) Image section width as a percentage of the page
  *   imageAlign {string}    - (legacy) Alignment: 'left' | 'center' | 'right'
@@ -233,6 +246,7 @@ export const DEFAULT_PRINT_FORMATS = [
     orientation: 'portrait',
     fontFamily: "Georgia, 'Times New Roman', serif",
     imageColumns: 'auto',
+    layoutVersion: PRINT_FORMAT_LAYOUT_VERSION,
     elements: DEFAULT_PRINT_ELEMENTS_PORTRAIT,
   },
 ];
@@ -1754,14 +1768,45 @@ export async function saveMaxKandidatenSchwelle(value) {
 }
 
 /**
+ * Migrates a print format from layoutVersion 1 (y/h as % of page height) to
+ * layoutVersion 2 (all coordinates as % of page width).
+ *
+ * In v1, element y and h values were stored as percentage of the page HEIGHT.
+ * In v2, ALL coordinates (x, y, w, h) are stored as percentage of the page WIDTH.
+ * CSS percentage values for top/height inside a padding-bottom aspect-ratio container
+ * are relative to the container WIDTH, so all coordinates must use the same base.
+ *
+ * @param {Object} format - A print format object (may be v1 or v2)
+ * @returns {Object} A new format object in v2 layout
+ */
+export function migrateFormatToV2(format) {
+  if ((format.layoutVersion || 1) >= PRINT_FORMAT_LAYOUT_VERSION) {
+    return format; // Already up to date
+  }
+  const orientation = format.orientation || 'portrait';
+  const pageWidthCm = format.pageWidthCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_HEIGHT_CM : DEFAULT_PRINT_PAGE_WIDTH_CM);
+  const pageHeightCm = format.pageHeightCm ?? (orientation === 'landscape' ? DEFAULT_PRINT_PAGE_WIDTH_CM : DEFAULT_PRINT_PAGE_HEIGHT_CM);
+  const ratio = pageHeightCm / pageWidthCm;
+
+  const migratedElements = (format.elements || []).map((el) => ({
+    ...el,
+    y: parseFloat((el.y * ratio).toFixed(2)),
+    h: parseFloat((el.h * ratio).toFixed(2)),
+  }));
+
+  return { ...format, elements: migratedElements, layoutVersion: PRINT_FORMAT_LAYOUT_VERSION };
+}
+
+/**
  * Get print format configurations from Firestore or return defaults.
  * @returns {Promise<Array>} Promise resolving to array of print format objects
  */
 export async function getPrintFormats() {
   const settings = await getSettings();
-  return settings.printFormats && settings.printFormats.length > 0
+  const formats = settings.printFormats && settings.printFormats.length > 0
     ? settings.printFormats
     : DEFAULT_PRINT_FORMATS;
+  return formats.map(migrateFormatToV2);
 }
 
 /**
