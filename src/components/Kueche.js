@@ -174,6 +174,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       window.scrollTo(0, 0);
     } else if (hadPersonalDataOpenRef.current) {
       const savedPos = kuecheScrollPositionRef.current;
+      hadPersonalDataOpenRef.current = false;
       requestAnimationFrame(() => window.scrollTo(0, savedPos));
     }
   }, [showPersonalData]);
