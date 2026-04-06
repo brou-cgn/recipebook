@@ -315,9 +315,7 @@ describe('PersonalDataPage - Alarmton', () => {
     fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
 
     expect(screen.getByRole('heading', { name: 'Alarmton' })).toBeInTheDocument();
-    expect(screen.getByRole('listbox', { name: /Alarmton auswählen/i })).toBeInTheDocument();
-    expect(screen.getAllByText('Radar').length).toBeGreaterThan(0);
-    expect(screen.getByText('Chime')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Chime/i })).toBeInTheDocument();
   });
 
   test('selected sound shows checkmark in picker', () => {
@@ -325,23 +323,27 @@ describe('PersonalDataPage - Alarmton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
 
-    const radarItem = screen.getByRole('option', { name: /Radar/i });
-    expect(radarItem).toHaveAttribute('aria-selected', 'true');
-    const chimeItem = screen.getByRole('option', { name: /Chime/i });
-    expect(chimeItem).toHaveAttribute('aria-selected', 'false');
+    const radarOption = screen.getByRole('option', { name: /Radar/i });
+    expect(radarOption).toHaveAttribute('aria-selected', 'true');
+    const chimeOption = screen.getByRole('option', { name: /Chime/i });
+    expect(chimeOption).toHaveAttribute('aria-selected', 'false');
   });
 
-  test('clicking a sound in picker saves and previews it', () => {
+  test('clicking a sound in picker saves and previews it, and updates the row', () => {
     const { saveAlarmSoundPreference } = jest.requireMock('../utils/customLists');
     const { previewAlarmSound } = jest.requireMock('../utils/alarmAudioUtils');
 
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Alarmton/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Chime/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Chime/i }));
 
     expect(saveAlarmSoundPreference).toHaveBeenCalledWith('chime');
     expect(previewAlarmSound).toHaveBeenCalledWith('chime');
+
+    // Return to main page and verify row shows new selection
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.getByText('Chime')).toBeInTheDocument();
   });
 
   test('back button in picker returns to main page', () => {

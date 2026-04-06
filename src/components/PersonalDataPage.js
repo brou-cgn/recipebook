@@ -93,11 +93,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             </button>
             <h2 className="alarm-sound-picker-title">Alarmton</h2>
           </div>
-          <ul className="alarm-sound-picker-list" role="listbox" aria-label="Alarmton auswählen">
+          <ul className="alarm-sound-picker-list" aria-label="Alarmton auswählen">
             {ALARM_SOUNDS.map(sound => (
-              <li key={sound.key} role="option" aria-selected={alarmSoundKey === sound.key}>
+              <li key={sound.key}>
                 <button
                   type="button"
+                  role="option"
+                  aria-selected={alarmSoundKey === sound.key}
                   className={`alarm-sound-picker-item${alarmSoundKey === sound.key ? ' selected' : ''}`}
                   onClick={() => {
                     setAlarmSoundKey(sound.key);
@@ -188,7 +190,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             type="button"
             className="alarm-sound-row"
             onClick={() => setShowAlarmPicker(true)}
-            aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Tippen zum Ändern.`}
+            aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
           >
             <span className="alarm-sound-row-label">Alarmton</span>
             <span className="alarm-sound-row-right">
