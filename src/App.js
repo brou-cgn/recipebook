@@ -1290,9 +1290,6 @@ function App() {
           publicGroupId={publicGroupId}
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
-          privateLists={groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))}
-          onAddToPrivateList={handleAddRecipeToPrivateList}
-          onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
         />
       ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail

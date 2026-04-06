@@ -25,7 +25,7 @@ const MOBILE_BREAKPOINT = 480;
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
 
-function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange, privateLists = [], onAddToPrivateList, onRemoveFromPrivateList }) {
+function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
@@ -542,18 +542,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       alert('Fehler beim Zurücksetzen des Thumbnails. Bitte versuchen Sie es erneut.');
     } finally {
       setResetThumbnailLoading(false);
-    }
-  };
-
-  const handleTogglePrivateList = async (listId) => {
-    if (!recipe.id) return;
-    const list = privateLists.find(l => l.id === listId);
-    if (!list) return;
-    const isInList = Array.isArray(list.recipeIds) && list.recipeIds.includes(recipe.id);
-    if (isInList) {
-      if (onRemoveFromPrivateList) await onRemoveFromPrivateList(listId, recipe.id);
-    } else {
-      if (onAddToPrivateList) await onAddToPrivateList(listId, recipe.id);
     }
   };
 
@@ -2271,26 +2259,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </ol>
             </section>
 
-            {currentUser && privateLists.length > 0 && (onAddToPrivateList || onRemoveFromPrivateList) && (
-              <div className="private-lists-section">
-                <h3 className="private-lists-title">Private Listen</h3>
-                <div className="private-lists-items">
-                  {privateLists.map(list => {
-                    const isInList = Array.isArray(list.recipeIds) && list.recipeIds.includes(recipe.id);
-                    return (
-                      <label key={list.id} className="private-list-item">
-                        <input
-                          type="checkbox"
-                          checked={isInList}
-                          onChange={() => handleTogglePrivateList(list.id)}
-                        />
-                        <span>{list.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
