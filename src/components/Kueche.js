@@ -164,6 +164,21 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [cookDates, setCookDates] = useState([]);
 
   const prevOpenPersonalData = React.useRef(false);
+  const kuecheScrollPositionRef = React.useRef(0);
+  const hadPersonalDataOpenRef = React.useRef(false);
+
+  useEffect(() => {
+    if (showPersonalData) {
+      kuecheScrollPositionRef.current = window.scrollY;
+      hadPersonalDataOpenRef.current = true;
+      window.scrollTo(0, 0);
+    } else if (hadPersonalDataOpenRef.current) {
+      const savedPos = kuecheScrollPositionRef.current;
+      hadPersonalDataOpenRef.current = false;
+      requestAnimationFrame(() => window.scrollTo(0, savedPos));
+    }
+  }, [showPersonalData]);
+
   useEffect(() => {
     if (openPersonalData && !prevOpenPersonalData.current) {
       setShowPersonalData(true);

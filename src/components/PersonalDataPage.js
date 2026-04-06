@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './PersonalDataPage.css';
 import { updateUserProfile, changePassword } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 
 const THEME_MODES = [
-  { key: 'light', label: 'Hell', icon: '☀️' },
-  { key: 'dark', label: 'Dunkel', icon: '🌙' },
-  { key: 'auto', label: 'Automatisch', icon: '⚙️' },
+  { key: 'light', label: 'Hell' },
+  { key: 'dark', label: 'Dunkel' },
+  { key: 'auto', label: 'Automatisch' },
 ];
 
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
@@ -35,6 +35,12 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     saveDarkModePreference(mode);
     applyDarkModePreference(mode);
   };
+
+  useEffect(() => {
+    if (showAlarmPicker || showAppearancePicker) {
+      window.scrollTo(0, 0);
+    }
+  }, [showAlarmPicker, showAppearancePicker]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -150,7 +156,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                   <span className="alarm-sound-picker-checkmark" aria-hidden="true">
                     {darkMode === mode.key ? '✓' : ''}
                   </span>
-                  <span className="alarm-sound-picker-icon" aria-hidden="true">{mode.icon}</span>
                   <span className="alarm-sound-picker-name">{mode.label}</span>
                 </button>
               </li>
