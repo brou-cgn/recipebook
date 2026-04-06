@@ -12,12 +12,6 @@
   background: #f5f5f5;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-container {
-    background: #1c1c1e;
-  }
-}
-
 /* ---- card stack container ---------------------------------------- */
 
 .tagesmenu-stack {
@@ -43,13 +37,6 @@
   overflow: hidden;
   user-select: none;
   will-change: transform;
-}
-
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-card {
-    background: #2c2c2e;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-  }
 }
 
 /* The frontmost (draggable) card gets a grab cursor */
@@ -131,12 +118,6 @@
   font-size: 4rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-card-no-image {
-    background: #2c2c2e;
-  }
-}
-
 /* ---- info strip – non-scrollable, takes remaining card space ------- */
 
 .tagesmenu-card-info {
@@ -144,12 +125,6 @@
   overflow: hidden;
   padding: 1rem 1.25rem 1.25rem;
   background: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-card-info {
-    background: #2c2c2e;
-  }
 }
 
 .tagesmenu-card-title {
@@ -396,13 +371,6 @@
   position: relative;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-results-tile {
-    background: #2c2c2e;
-    border-color: #3a3a3c;
-  }
-}
-
 .tagesmenu-permanent-archive-badge {
   position: absolute;
   top: 0.4rem;
@@ -432,12 +400,6 @@
   justify-content: center;
   font-size: 2rem;
   flex-shrink: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .tagesmenu-results-tile-image {
-    background: #3a3a3c;
-  }
 }
 
 .tagesmenu-results-tile-image img {
