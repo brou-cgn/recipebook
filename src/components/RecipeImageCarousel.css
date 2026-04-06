@@ -9,12 +9,6 @@
   will-change: transform;
 }
 
-@media (prefers-color-scheme: dark) {
-  .recipe-image-carousel {
-    background: #1c1c1e;
-  }
-}
-
 /* Film-strip track */
 .ric-track {
   display: flex;
@@ -47,12 +41,6 @@
   animation: ric-skeleton-shimmer 1.4s ease infinite;
   z-index: 1;
   transition: opacity 0.3s ease;
-}
-
-@media (prefers-color-scheme: dark) {
-  .ric-placeholder {
-    background: linear-gradient(135deg, #2c2c2e 25%, #3a3a3c 50%, #2c2c2e 75%);
-  }
 }
 
 .ric-placeholder--hidden {
