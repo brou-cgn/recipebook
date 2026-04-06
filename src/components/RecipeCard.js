@@ -29,7 +29,6 @@ function renderKulinarikTags(kulinarik) {
 }
 
 function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList }) {
-  const nativeSelectRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -102,12 +101,6 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     onClick?.(e);
   };
 
-  const handleRevealButtonClick = () => {
-    nativeSelectRef.current?.click();
-    setSwipeRevealed(false);
-    setSwipeOffset(0);
-  };
-
   const handleNativeSelectChange = (e) => {
     const listId = e.target.value;
     e.target.value = '';
@@ -145,13 +138,25 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   return (
     <div className="recipe-card-swipe-wrapper">
       {privateLists && privateLists.length > 0 && (
-        <button
-          className="recipe-card-list-reveal-button"
-          onClick={handleRevealButtonClick}
-          type="button"
-        >
-          📋
-        </button>
+        <div className="recipe-card-list-reveal-button" aria-label="Zu Liste hinzufügen">
+          <span className="recipe-card-list-reveal-icon" aria-hidden="true">📋</span>
+          <select
+            onChange={handleNativeSelectChange}
+            onClick={(e) => e.stopPropagation()}
+            value=""
+            className="recipe-card-list-reveal-select"
+          >
+            <option value="" disabled>Listen…</option>
+            {privateLists.map((list) => {
+              const isInList = list.recipeIds?.includes(recipe.id);
+              return (
+                <option key={list.id} value={list.id}>
+                  {isInList ? `✓ ${list.name}` : list.name}
+                </option>
+              );
+            })}
+          </select>
+        </div>
       )}
       <div
         className="recipe-card"
@@ -165,27 +170,6 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
         onTouchCancel={handleTouchCancel}
         onTouchMove={handleTouchMove}
       >
-        {privateLists && privateLists.length > 0 && (
-          <select
-            ref={nativeSelectRef}
-            value=""
-            onChange={handleNativeSelectChange}
-            onClick={(e) => e.stopPropagation()}
-            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
-            aria-hidden="true"
-            tabIndex={-1}
-          >
-            <option value="" disabled>Listen…</option>
-            {privateLists.map((list) => {
-              const isInList = list.recipeIds?.includes(recipe.id);
-              return (
-                <option key={list.id} value={list.id}>
-                  {isInList ? `✓ ${list.name}` : list.name}
-                </option>
-              );
-            })}
-          </select>
-        )}
         {isFavorite && (
           <div className="recipe-favorite-badge">
             {favoriteActiveIcon ? (
