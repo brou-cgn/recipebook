@@ -148,6 +148,21 @@
   margin-top: 0;
 }
 
+.personal-data-preferences-section {
+  margin-top: 0;
+}
+
+.preferences-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-group-divider {
+  border: none;
+  border-top: 1px solid #e5e5ea;
+  margin: 0;
+}
+
 .alarm-sound-row {
   display: flex;
   align-items: center;
@@ -286,58 +301,15 @@
   flex-shrink: 0;
 }
 
+.alarm-sound-picker-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
 .alarm-sound-picker-name {
   flex: 1;
 }
 
 .personal-data-appearance-section {
   margin-top: 0;
-}
-
-.theme-options {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.theme-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 1rem 1.5rem;
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 100px;
-}
-
-.theme-btn:hover {
-  border-color: #402C1C;
-}
-
-.theme-btn.active {
-  border-color: #402C1C;
-  background: #f7f3ef;
-  color: #402C1C;
-}
-
-.theme-btn-icon {
-  font-size: 1.6rem;
-}
-
-.theme-btn-label {
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.theme-btn-desc {
-  font-size: 0.78rem;
-  color: #888;
-}
-
-.theme-btn.active .theme-btn-desc {
-  color: #6b4c35;
 }

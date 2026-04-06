@@ -236,54 +236,94 @@ describe('PersonalDataPage - Erscheinungsbild', () => {
     getDarkModeMode.mockReturnValue('auto');
   });
 
-  test('renders Erscheinungsbild section with three theme buttons', () => {
+  test('renders Erscheinungsbild row with current selection', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.getByText('Erscheinungsbild')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Hell/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Dunkel/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Automatisch/i })).toBeInTheDocument();
+    expect(screen.getByText('Automatisch')).toBeInTheDocument();
   });
 
-  test('auto button is active when darkMode is auto', () => {
+  test('opens appearance picker when Erscheinungsbild row is clicked', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    const autoBtn = screen.getByRole('button', { name: /Automatisch/i });
-    expect(autoBtn).toHaveClass('active');
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+
+    expect(screen.getByRole('heading', { name: 'Erscheinungsbild' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Hell/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Dunkel/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Automatisch/i })).toBeInTheDocument();
   });
 
-  test('clicking Hell button saves light mode', () => {
+  test('auto option shows checkmark in picker when darkMode is auto', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+
+    const autoOption = screen.getByRole('option', { name: /Automatisch/i });
+    expect(autoOption).toHaveAttribute('aria-selected', 'true');
+    const lightOption = screen.getByRole('option', { name: /Hell/i });
+    expect(lightOption).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('clicking Hell option saves light mode', () => {
     const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
 
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Hell/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Hell/i }));
 
     expect(saveDarkModePreference).toHaveBeenCalledWith('light');
     expect(applyDarkModePreference).toHaveBeenCalledWith('light');
   });
 
-  test('clicking Dunkel button saves dark mode', () => {
+  test('clicking Dunkel option saves dark mode', () => {
     const { saveDarkModePreference, applyDarkModePreference } = jest.requireMock('../utils/customLists');
 
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Dunkel/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Dunkel/i }));
 
     expect(saveDarkModePreference).toHaveBeenCalledWith('dark');
     expect(applyDarkModePreference).toHaveBeenCalledWith('dark');
   });
 
-  test('clicking Automatisch button saves auto mode', () => {
+  test('clicking Automatisch option saves auto mode', () => {
     const { saveDarkModePreference, applyDarkModePreference, getDarkModeMode } = jest.requireMock('../utils/customLists');
     getDarkModeMode.mockReturnValue('light');
 
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Automatisch/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Automatisch/i }));
 
     expect(saveDarkModePreference).toHaveBeenCalledWith('auto');
     expect(applyDarkModePreference).toHaveBeenCalledWith('auto');
+  });
+
+  test('back button in picker returns to main page', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+    expect(screen.getByRole('heading', { name: 'Erscheinungsbild' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.queryByRole('heading', { name: 'Erscheinungsbild' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+  });
+
+  test('selecting an option updates the row value after closing picker', () => {
+    const { getDarkModeMode } = jest.requireMock('../utils/customLists');
+    getDarkModeMode.mockReturnValue('auto');
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Erscheinungsbild/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Hell/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.getByText('Hell')).toBeInTheDocument();
   });
 });
 

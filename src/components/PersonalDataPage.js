@@ -4,6 +4,12 @@ import { updateUserProfile, changePassword } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 
+const THEME_MODES = [
+  { key: 'light', label: 'Hell', icon: '☀️' },
+  { key: 'dark', label: 'Dunkel', icon: '🌙' },
+  { key: 'auto', label: 'Automatisch', icon: '⚙️' },
+];
+
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
   const [vorname, setVorname] = useState(currentUser?.vorname || '');
   const [nachname, setNachname] = useState(currentUser?.nachname || '');
@@ -22,6 +28,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [alarmSoundKey, setAlarmSoundKey] = useState(() => getAlarmSoundPreference());
   const [darkMode, setDarkMode] = useState(getDarkModeMode);
   const [showAlarmPicker, setShowAlarmPicker] = useState(false);
+  const [showAppearancePicker, setShowAppearancePicker] = useState(false);
 
   const handleDarkModeSelect = (mode) => {
     setDarkMode(mode);
@@ -117,7 +124,41 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </ul>
         </div>
       )}
-      <div className={`personal-data-main${showAlarmPicker ? ' personal-data-main--hidden' : ''}`}>
+      {showAppearancePicker && (
+        <div className="alarm-sound-picker-page">
+          <div className="alarm-sound-picker-header">
+            <button
+              type="button"
+              className="alarm-sound-picker-back-btn"
+              onClick={() => setShowAppearancePicker(false)}
+              aria-label="Zurück"
+            >
+              ‹ Zurück
+            </button>
+            <h2 className="alarm-sound-picker-title">Erscheinungsbild</h2>
+          </div>
+          <ul className="alarm-sound-picker-list" aria-label="Erscheinungsbild auswählen">
+            {THEME_MODES.map(mode => (
+              <li key={mode.key}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={darkMode === mode.key}
+                  className={`alarm-sound-picker-item${darkMode === mode.key ? ' selected' : ''}`}
+                  onClick={() => handleDarkModeSelect(mode.key)}
+                >
+                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
+                    {darkMode === mode.key ? '✓' : ''}
+                  </span>
+                  <span className="alarm-sound-picker-icon" aria-hidden="true">{mode.icon}</span>
+                  <span className="alarm-sound-picker-name">{mode.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker ? ' personal-data-main--hidden' : ''}`}>
       <div className="personal-data-header">
         <h2>Chefkoch</h2>
       </div>
@@ -185,52 +226,36 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </div>
         )}
         <div className="personal-data-section-divider" />
-        <section className="personal-data-alarm-section">
-          <button
-            type="button"
-            className="alarm-sound-row"
-            onClick={() => setShowAlarmPicker(true)}
-            aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
-          >
-            <span className="alarm-sound-row-label">Alarmton</span>
-            <span className="alarm-sound-row-right">
-              <span className="alarm-sound-row-value">
-                {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
+        <section className="personal-data-preferences-section">
+          <div className="preferences-group">
+            <button
+              type="button"
+              className="alarm-sound-row"
+              onClick={() => setShowAlarmPicker(true)}
+              aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
+            >
+              <span className="alarm-sound-row-label">Alarmton</span>
+              <span className="alarm-sound-row-right">
+                <span className="alarm-sound-row-value">
+                  {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
+                </span>
+                <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
               </span>
-              <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
-            </span>
-          </button>
-        </section>
-        <div className="personal-data-section-divider" />
-        <section className="personal-data-appearance-section">
-          <h3 className="personal-data-section-title">Erscheinungsbild</h3>
-          <div className="theme-options">
-            <button
-              type="button"
-              className={`theme-btn${darkMode === 'light' ? ' active' : ''}`}
-              onClick={() => handleDarkModeSelect('light')}
-            >
-              <span className="theme-btn-icon">☀️</span>
-              <span className="theme-btn-label">Hell</span>
-              <span className="theme-btn-desc">Helles Design</span>
             </button>
+            <div className="preferences-group-divider" />
             <button
               type="button"
-              className={`theme-btn${darkMode === 'dark' ? ' active' : ''}`}
-              onClick={() => handleDarkModeSelect('dark')}
+              className="alarm-sound-row"
+              onClick={() => setShowAppearancePicker(true)}
+              aria-label={`Erscheinungsbild: ${THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}. Zum Ändern klicken.`}
             >
-              <span className="theme-btn-icon">🌙</span>
-              <span className="theme-btn-label">Dunkel</span>
-              <span className="theme-btn-desc">Dunkles Design</span>
-            </button>
-            <button
-              type="button"
-              className={`theme-btn${darkMode === 'auto' ? ' active' : ''}`}
-              onClick={() => handleDarkModeSelect('auto')}
-            >
-              <span className="theme-btn-icon">⚙️</span>
-              <span className="theme-btn-label">Automatisch</span>
-              <span className="theme-btn-desc">Systemeinstellung</span>
+              <span className="alarm-sound-row-label">Erscheinungsbild</span>
+              <span className="alarm-sound-row-right">
+                <span className="alarm-sound-row-value">
+                  {THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}
+                </span>
+                <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
+              </span>
             </button>
           </div>
         </section>
