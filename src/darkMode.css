@@ -1584,10 +1584,6 @@
   border-color: #3d3d3d;
 }
 
-[data-theme="dark"] .menu-section + .menu-section {
-  border-top: 1px solid #3d3d3d;
-}
-
 [data-theme="dark"] .menu-section-title {
   color: #777;
 }
@@ -1613,8 +1609,17 @@
   color: #DF7A00;
 }
 
+[data-theme="dark"] .menu-user-info {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .logout-item {
+  border-bottom-color: #3d3d3d;
+}
+
 [data-theme="dark"] .menu-version {
   color: #555;
+  border-top-color: #3d3d3d;
 }
 
 [data-theme="dark"] .admin-badge {
