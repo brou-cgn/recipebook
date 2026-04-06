@@ -247,6 +247,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+[data-theme="dark"] .recipe-card-swipe-wrapper {
+  background: #121212;
+}
+
 [data-theme="dark"] .recipe-card:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
