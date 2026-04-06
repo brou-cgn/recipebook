@@ -288,6 +288,8 @@
 
 .recipe-card-content {
   padding: 1rem 1rem 24px 1rem;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .recipe-card-content h3 {
