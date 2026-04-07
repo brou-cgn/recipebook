@@ -250,31 +250,31 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           )}
           <button
             type="button"
-            className="alarm-sound-row"
+            className="settings-row"
             onClick={() => setShowAppearancePicker(true)}
             aria-label={`Erscheinungsbild: ${THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}. Zum Ändern klicken.`}
           >
-            <span className="alarm-sound-row-label">Erscheinungsbild</span>
-            <span className="alarm-sound-row-right">
-              <span className="alarm-sound-row-value">
+            <span className="settings-row-label">Erscheinungsbild</span>
+            <span className="settings-row-right">
+              <span className="settings-row-value">
                 {THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}
               </span>
-              <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
+              <span className="settings-row-chevron" aria-hidden="true">›</span>
             </span>
           </button>
           <div className="preferences-group-divider" />
           <button
             type="button"
-            className="alarm-sound-row"
+            className="settings-row"
             onClick={() => setShowAlarmPicker(true)}
             aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
           >
-            <span className="alarm-sound-row-label">Alarmton</span>
-            <span className="alarm-sound-row-right">
-              <span className="alarm-sound-row-value">
+            <span className="settings-row-label">Alarmton</span>
+            <span className="settings-row-right">
+              <span className="settings-row-value">
                 {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
               </span>
-              <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
+              <span className="settings-row-chevron" aria-hidden="true">›</span>
             </span>
           </button>
         </div>
