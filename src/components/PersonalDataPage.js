@@ -4,6 +4,8 @@ import { updateUserProfile, changePassword } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 
+const NO_LIST_OPTION = { id: '', name: '– Keine Vorauswahl –' };
+
 const THEME_MODES = [
   { key: 'light', label: 'Hell' },
   { key: 'dark', label: 'Dunkel' },
@@ -29,6 +31,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [darkMode, setDarkMode] = useState(getDarkModeMode);
   const [showAlarmPicker, setShowAlarmPicker] = useState(false);
   const [showAppearancePicker, setShowAppearancePicker] = useState(false);
+  const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
 
   const handleDarkModeSelect = (mode) => {
     setDarkMode(mode);
@@ -36,11 +39,25 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     applyDarkModePreference(mode);
   };
 
+  const handleWebImportListSelect = async (listId) => {
+    setDefaultWebImportListId(listId);
+    const result = await updateUserProfile(currentUser.id, {
+      vorname: currentUser.vorname,
+      nachname: currentUser.nachname,
+      email: currentUser.email,
+      signatureSatz: currentUser.signatureSatz,
+      defaultWebImportListId: listId,
+    });
+    if (result.success && onProfileUpdated) {
+      onProfileUpdated({ ...currentUser, defaultWebImportListId: listId });
+    }
+  };
+
   useEffect(() => {
-    if (showAlarmPicker || showAppearancePicker) {
+    if (showAlarmPicker || showAppearancePicker || showWebImportListPicker) {
       window.scrollTo(0, 0);
     }
-  }, [showAlarmPicker, showAppearancePicker]);
+  }, [showAlarmPicker, showAppearancePicker, showWebImportListPicker]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -93,6 +110,39 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
 
   return (
     <div className="personal-data-page">
+      {showWebImportListPicker && (
+        <div className="alarm-sound-picker-page">
+          <div className="alarm-sound-picker-header">
+            <button
+              type="button"
+              className="alarm-sound-picker-back-btn"
+              onClick={() => setShowWebImportListPicker(false)}
+              aria-label="Zurück"
+            >
+              ‹ Zurück
+            </button>
+            <h2 className="alarm-sound-picker-title">Standard-Liste für Webimport</h2>
+          </div>
+          <ul className="alarm-sound-picker-list" aria-label="Standard-Liste für Webimport auswählen">
+            {[NO_LIST_OPTION, ...privateLists].map(list => (
+              <li key={list.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={defaultWebImportListId === list.id}
+                  className={`alarm-sound-picker-item${defaultWebImportListId === list.id ? ' selected' : ''}`}
+                  onClick={() => handleWebImportListSelect(list.id)}
+                >
+                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
+                    {defaultWebImportListId === list.id ? '✓' : ''}
+                  </span>
+                  <span className="alarm-sound-picker-name">{list.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {showAlarmPicker && (
         <div className="alarm-sound-picker-page">
           <div className="alarm-sound-picker-header">
@@ -163,7 +213,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </ul>
         </div>
       )}
-      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker ? ' personal-data-main--hidden' : ''}`}>
+      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker || showWebImportListPicker ? ' personal-data-main--hidden' : ''}`}>
       <div className="personal-data-header">
         <h2>Chefkoch</h2>
       </div>
@@ -230,21 +280,20 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         <div className="preferences-group">
           {privateLists.length > 0 && (
             <>
-              <div className="personal-data-field personal-data-field--inline">
-                <label htmlFor="defaultWebImportList">Standard-Liste für Webimport</label>
-                <select
-                  id="defaultWebImportList"
-                  value={defaultWebImportListId}
-                  onChange={(e) => setDefaultWebImportListId(e.target.value)}
-                >
-                  <option value="">– Keine Vorauswahl –</option>
-                  {privateLists.map((list) => (
-                    <option key={list.id} value={list.id}>
-                      {list.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <button
+                type="button"
+                className="settings-row"
+                onClick={() => setShowWebImportListPicker(true)}
+                aria-label={`Standard-Liste für Webimport: ${privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
+              >
+                <span className="settings-row-label">Standard-Liste für Webimport</span>
+                <span className="settings-row-right">
+                  <span className="settings-row-value">
+                    {privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}
+                  </span>
+                  <span className="settings-row-chevron" aria-hidden="true">›</span>
+                </span>
+              </button>
               <div className="preferences-group-divider" />
             </>
           )}

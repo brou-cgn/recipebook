@@ -221,6 +221,145 @@ describe('PersonalDataPage', () => {
   });
 });
 
+describe('PersonalDataPage - Standard-Liste für Webimport', () => {
+  const mockUser = {
+    id: 'user-1',
+    vorname: 'John',
+    nachname: 'Doe',
+    email: 'john@example.com',
+    signatureSatz: '',
+  };
+
+  const privateLists = [
+    { id: 'list-1', name: 'Meine Favoriten' },
+    { id: 'list-2', name: 'Wochenplan' },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    updateUserProfile.mockResolvedValue({ success: true, message: 'Profil erfolgreich aktualisiert.' });
+  });
+
+  test('renders Standard-Liste row with chevron when privateLists are provided', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    expect(screen.getByText('Standard-Liste für Webimport')).toBeInTheDocument();
+    expect(screen.getByText('– Keine Vorauswahl –')).toBeInTheDocument();
+  });
+
+  test('does not render Standard-Liste row when privateLists is empty', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={[]} />);
+
+    expect(screen.queryByText('Standard-Liste für Webimport')).not.toBeInTheDocument();
+  });
+
+  test('shows current selection in the row when defaultWebImportListId is set', () => {
+    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
+    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
+
+    expect(screen.getByText('Meine Favoriten')).toBeInTheDocument();
+  });
+
+  test('opens web import list picker when row is clicked', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+
+    expect(screen.getByRole('heading', { name: 'Standard-Liste für Webimport' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Keine Vorauswahl/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Meine Favoriten/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Wochenplan/i })).toBeInTheDocument();
+  });
+
+  test('no-preselection option shows checkmark by default', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+
+    const noListOption = screen.getByRole('option', { name: /Keine Vorauswahl/i });
+    expect(noListOption).toHaveAttribute('aria-selected', 'true');
+    const list1Option = screen.getByRole('option', { name: /Meine Favoriten/i });
+    expect(list1Option).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('selected list shows checkmark in picker', () => {
+    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
+    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+
+    const list1Option = screen.getByRole('option', { name: /Meine Favoriten/i });
+    expect(list1Option).toHaveAttribute('aria-selected', 'true');
+    const noListOption = screen.getByRole('option', { name: /Keine Vorauswahl/i });
+    expect(noListOption).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('clicking a list in picker saves profile immediately and updates the row', async () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Meine Favoriten/i }));
+
+    await waitFor(() => {
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        defaultWebImportListId: 'list-1',
+      }));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.getByText('Meine Favoriten')).toBeInTheDocument();
+  });
+
+  test('clicking no-preselection option clears the selection', async () => {
+    const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
+    render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Keine Vorauswahl/i }));
+
+    await waitFor(() => {
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        defaultWebImportListId: '',
+      }));
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.getByText('– Keine Vorauswahl –')).toBeInTheDocument();
+  });
+
+  test('calls onProfileUpdated when list is selected', async () => {
+    const onProfileUpdated = jest.fn();
+    render(
+      <PersonalDataPage
+        currentUser={mockUser}
+        onBack={() => {}}
+        onProfileUpdated={onProfileUpdated}
+        privateLists={privateLists}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('option', { name: /Wochenplan/i }));
+
+    await waitFor(() => {
+      expect(onProfileUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultWebImportListId: 'list-2' })
+      );
+    });
+  });
+
+  test('back button in picker returns to main page', () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    expect(screen.getByRole('heading', { name: 'Standard-Liste für Webimport' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
+    expect(screen.queryByRole('heading', { name: 'Standard-Liste für Webimport' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+  });
+});
+
 describe('PersonalDataPage - Erscheinungsbild', () => {
   const mockUser = {
     id: 'user-1',
