@@ -391,9 +391,9 @@
     left: 20px;
     z-index: 1101;
     color: white;
-    /*opacity: 0.85;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);*/
-    /*Liquid Glass*/
+    opacity: 0.85;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    /*Liquid Glass
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(2px) saturate(160%);
     -webkit-backdrop-filter: blur(2px) saturate(160%);
@@ -401,7 +401,7 @@
       0 10px 24px rgba(0, 0, 0, 0.22),
       inset 0 1px 0 rgba(255,255,255,0.4),
       inset 0 -1px 0 rgba(255,255,255,0.08);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.25);*/
     
     width: 56px;
     height: 56px;
@@ -423,7 +423,7 @@
                 box-shadow 0.15s ease;
   }
   
-  /*Liquid Glass*/
+  /*Liquid Glass
   .filter-button::before {
     content: "";
     position: absolute;
@@ -436,7 +436,7 @@
       rgba(255,255,255,0.02) 65%
     );
     pointer-events: none;
-  }
+  }*/
 
   
   .filter-button.pressed {
@@ -449,7 +449,7 @@
   }
 
   .filter-button.has-active-filters {
-    /*Liquid Glass*/
+    /*Liquid Glass
     background: rgba(223, 122, 0, 0.35);
     backdrop-filter: blur(2px) saturate(160%);
     -webkit-backdrop-filter: blur(2px) saturate(160%);
@@ -458,7 +458,7 @@
       inset 0 1px 0 rgba(255,255,255,0.4),
       inset 0 -1px 0 rgba(255,255,255,0.08);
     border: 1px solid rgba(255, 255, 255, 0.25);
-  }
+  }*/
   
   .filter-button.has-active-filters::after {
     top: 2px;
@@ -478,8 +478,8 @@
   max-width: 56px;
   border-radius: 50%;
   padding: 0;
-  /*opacity: 0.85;*/
-  /*Liquid Glass*/
+  opacity: 0.85;
+  /*Liquid Glass
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(2px) saturate(160%);
   -webkit-backdrop-filter: blur(2px) saturate(160%);
@@ -487,7 +487,7 @@
     0 10px 24px rgba(0, 0, 0, 0.22),
     inset 0 1px 0 rgba(255,255,255,0.4),
     inset 0 -1px 0 rgba(255,255,255,0.08);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);*/
   
   display: flex;
   align-items: center;
@@ -508,7 +508,7 @@
   box-shadow: 0 8px 18px rgba(0,0,0,0.3);
 }
 
-/*Liquid Glass*/
+/*Liquid Glass
   .add-icon-button::before {
     content: "";
     position: absolute;
@@ -521,7 +521,7 @@
       rgba(255,255,255,0.02) 65%
     );
     pointer-events: none;
-  }
+  }*/
 }
 @media (max-width: 768px) and (orientation: portrait) {
   .recipe-grid {
