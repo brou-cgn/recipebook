@@ -2467,7 +2467,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         <div className="settings-section">
           <h3>Kulinarik-Gruppen</h3>
           <p className="section-description">
-            Übergeordnete Kulinariktypen für die Suchfilterung. Untergeordnete Typen müssen aus der Liste der Kulinarik-Typen ausgewählt werden. Übergeordnete Typen können nicht direkt Rezepten zugeordnet werden.
+            Übergeordnete Kulinariktypen für die Suchfilterung. Untergeordnete Typen müssen aus der Liste der Kulinarik-Typen ausgewählt werden. Gruppenname können auch direkt Rezepten zugeordnet werden.
           </p>
           <div className="list-input">
             <input
