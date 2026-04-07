@@ -41,16 +41,15 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
 
   const handleWebImportListSelect = async (listId) => {
     setDefaultWebImportListId(listId);
-    const updated = { ...currentUser, defaultWebImportListId: listId };
-    await updateUserProfile(currentUser.id, {
-      vorname: updated.vorname,
-      nachname: updated.nachname,
-      email: updated.email,
-      signatureSatz: updated.signatureSatz,
+    const result = await updateUserProfile(currentUser.id, {
+      vorname: currentUser.vorname,
+      nachname: currentUser.nachname,
+      email: currentUser.email,
+      signatureSatz: currentUser.signatureSatz,
       defaultWebImportListId: listId,
     });
-    if (onProfileUpdated) {
-      onProfileUpdated(updated);
+    if (result.success && onProfileUpdated) {
+      onProfileUpdated({ ...currentUser, defaultWebImportListId: listId });
     }
   };
 
