@@ -165,7 +165,7 @@
   margin: 0;
 }
 
-.alarm-sound-row {
+.settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -180,28 +180,28 @@
   text-align: left;
 }
 
-.alarm-sound-row:hover {
+.settings-row:hover {
   background: none;
 }
 
-.alarm-sound-row-label {
+.settings-row-label {
   font-size: 1rem;
   color: #1a1a1a;
 }
 
-.alarm-sound-row-right {
+.settings-row-right {
   display: flex;
   align-items: center;
   gap: 0.3rem;
   color: #888;
 }
 
-.alarm-sound-row-value {
+.settings-row-value {
   font-size: 1rem;
   color: #888;
 }
 
-.alarm-sound-row-chevron {
+.settings-row-chevron {
   font-size: 1.3rem;
   line-height: 1;
   color: #c7c7cc;
