@@ -2341,7 +2341,8 @@
     position: relative !important;
     display: block !important;
     width: 100% !important;
-    min-height: 100vh !important;
+    min-height: auto !important;
+    height: auto !important;
   }
 
   /* Configurable element order, width and alignment for images, ingredients, and steps (legacy flex) */
