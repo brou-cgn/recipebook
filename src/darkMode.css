@@ -338,6 +338,14 @@
   border-bottom-color: #3d3d3d;
 }
 
+[data-theme="dark"] .mobile-action-buttons {
+   border-bottom-color: #3d3d3d;
+}
+   
+[data-theme="dark"] .recipe-metadata {
+   border-bottom-color: #3d3d3d;
+}
+
 [data-theme="dark"] .ingredient-item.checked {
   color: #777;
 }
