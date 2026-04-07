@@ -316,3 +316,15 @@
 .personal-data-appearance-section {
   margin-top: 0;
 }
+
+.personal-data-settings-section {
+  margin-top: 0;
+}
+
+.personal-data-field--inline {
+  padding: 0.6rem 0;
+}
+
+.personal-data-field--inline label {
+  margin-bottom: 0.5rem;
+}

@@ -208,62 +208,11 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             rows={3}
           />
         </div>
-        {privateLists.length > 0 && (
-          <div className="personal-data-field">
-            <label htmlFor="defaultWebImportList">Standard-Liste für Webimport (optional)</label>
-            <select
-              id="defaultWebImportList"
-              value={defaultWebImportListId}
-              onChange={(e) => setDefaultWebImportListId(e.target.value)}
-            >
-              <option value="">– Keine Vorauswahl –</option>
-              {privateLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         {message && (
           <div className={`personal-data-message ${message.success ? 'success' : 'error'}`}>
             {message.text}
           </div>
         )}
-        <div className="personal-data-section-divider" />
-        <section className="personal-data-preferences-section">
-          <div className="preferences-group">
-            <button
-              type="button"
-              className="alarm-sound-row"
-              onClick={() => setShowAlarmPicker(true)}
-              aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
-            >
-              <span className="alarm-sound-row-label">Alarmton</span>
-              <span className="alarm-sound-row-right">
-                <span className="alarm-sound-row-value">
-                  {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
-                </span>
-                <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
-              </span>
-            </button>
-            <div className="preferences-group-divider" />
-            <button
-              type="button"
-              className="alarm-sound-row"
-              onClick={() => setShowAppearancePicker(true)}
-              aria-label={`Erscheinungsbild: ${THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}. Zum Ändern klicken.`}
-            >
-              <span className="alarm-sound-row-label">Erscheinungsbild</span>
-              <span className="alarm-sound-row-right">
-                <span className="alarm-sound-row-value">
-                  {THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}
-                </span>
-                <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
-              </span>
-            </button>
-          </div>
-        </section>
         <div className="personal-data-actions">
           <button type="button" className="personal-data-cancel-btn" onClick={onBack}>
             Abbrechen
@@ -273,6 +222,63 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </button>
         </div>
       </form>
+
+      <div className="personal-data-section-divider" />
+
+      <section className="personal-data-settings-section">
+        <h3 className="personal-data-section-title">Einstellungen</h3>
+        <div className="preferences-group">
+          {privateLists.length > 0 && (
+            <>
+              <div className="personal-data-field personal-data-field--inline">
+                <label htmlFor="defaultWebImportList">Standard-Liste für Webimport</label>
+                <select
+                  id="defaultWebImportList"
+                  value={defaultWebImportListId}
+                  onChange={(e) => setDefaultWebImportListId(e.target.value)}
+                >
+                  <option value="">– Keine Vorauswahl –</option>
+                  {privateLists.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="preferences-group-divider" />
+            </>
+          )}
+          <button
+            type="button"
+            className="alarm-sound-row"
+            onClick={() => setShowAppearancePicker(true)}
+            aria-label={`Erscheinungsbild: ${THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}. Zum Ändern klicken.`}
+          >
+            <span className="alarm-sound-row-label">Erscheinungsbild</span>
+            <span className="alarm-sound-row-right">
+              <span className="alarm-sound-row-value">
+                {THEME_MODES.find(m => m.key === darkMode)?.label || darkMode}
+              </span>
+              <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
+            </span>
+          </button>
+          <div className="preferences-group-divider" />
+          <button
+            type="button"
+            className="alarm-sound-row"
+            onClick={() => setShowAlarmPicker(true)}
+            aria-label={`Alarmton: ${ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}. Zum Ändern klicken.`}
+          >
+            <span className="alarm-sound-row-label">Alarmton</span>
+            <span className="alarm-sound-row-right">
+              <span className="alarm-sound-row-value">
+                {ALARM_SOUNDS.find(s => s.key === alarmSoundKey)?.label || alarmSoundKey}
+              </span>
+              <span className="alarm-sound-row-chevron" aria-hidden="true">›</span>
+            </span>
+          </button>
+        </div>
+      </section>
 
       <div className="personal-data-section-divider" />
 
