@@ -34,6 +34,8 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   const isSwiping = useRef(false);
   const swipeDirectionLocked = useRef(null);
 
+  const selectRef = useRef(null);
+
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeRevealed, setSwipeRevealed] = useState(false);
 
@@ -101,6 +103,17 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     onClick?.(e);
   };
 
+  const handleRevealButtonClick = (e) => {
+    e.stopPropagation();
+    if (!selectRef.current) return;
+    try {
+      selectRef.current.showPicker();
+    } catch {
+      // showPicker() is not available in all browsers/versions; fall back to click()
+      selectRef.current.click();
+    }
+  };
+
   const handleNativeSelectChange = (e) => {
     const listId = e.target.value;
     e.target.value = '';
@@ -138,13 +151,14 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   return (
     <div className="recipe-card-swipe-wrapper">
       {privateLists && privateLists.length > 0 && (
-        <div className="recipe-card-list-reveal-button" aria-label="Zu Liste hinzufügen">
+        <div className="recipe-card-list-reveal-button" aria-label="Zu Liste hinzufügen" onClick={handleRevealButtonClick} style={{ cursor: 'pointer' }}>
           <span className="recipe-card-list-reveal-icon" aria-hidden="true">
             {swipeRightIcon && isBase64Image(swipeRightIcon)
               ? <img src={swipeRightIcon} alt="" className="button-icon-image" draggable="false" />
               : (swipeRightIcon || '📋')}
           </span>
           <select
+            ref={selectRef}
             onChange={handleNativeSelectChange}
             onClick={(e) => e.stopPropagation()}
             value=""
