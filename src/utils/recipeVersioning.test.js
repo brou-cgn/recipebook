@@ -238,6 +238,34 @@ describe('Recipe Versioning Utilities', () => {
       expect(group.primaryRecipe).toEqual(originalRecipe);
       expect(group.primaryRecipe.parentRecipeId).toBeUndefined();
     });
+
+    it('should create standalone group for version whose parent is not in the list (e.g. filtered out)', () => {
+      // Simulate cuisine filter: only version1 passes the filter, the original (parent) does not.
+      const filteredRecipes = [version1];
+      const groups = groupRecipesByParent(filteredRecipes);
+
+      expect(groups).toHaveLength(1);
+      const group = groups[0];
+      expect(group.primaryRecipe).toEqual(version1);
+      expect(group.allRecipes).toHaveLength(1);
+      expect(group.allRecipes).toContainEqual(version1);
+      expect(group.versionCount).toBe(1);
+    });
+
+    it('should create separate standalone groups for multiple versions when parent is not in the list', () => {
+      // Both versions match the cuisine filter but the original (parent) does not.
+      const filteredRecipes = [version1, version2];
+      const groups = groupRecipesByParent(filteredRecipes);
+
+      expect(groups).toHaveLength(2);
+      const ids = groups.map(g => g.primaryRecipe.id);
+      expect(ids).toContain(version1.id);
+      expect(ids).toContain(version2.id);
+      groups.forEach(g => {
+        expect(g.allRecipes).toHaveLength(1);
+        expect(g.versionCount).toBe(1);
+      });
+    });
   });
 
   describe('sortRecipeVersions', () => {

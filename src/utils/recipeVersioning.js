@@ -172,9 +172,17 @@ export const groupRecipesByParent = (allRecipes) => {
         
         // Mark all as processed
         allInGroup.forEach(r => processedIds.add(r.id));
+      } else if (!parent) {
+        // Parent is not in the filtered list (e.g. filtered out by cuisine type).
+        // Show this version as a standalone group so it isn't silently dropped.
+        groups.push({
+          primaryRecipe: recipe,
+          allRecipes: [recipe],
+          versionCount: 1
+        });
+        processedIds.add(recipe.id);
       }
-      // If parent doesn't exist or already processed, this is an orphan - skip for now
-      // It will be processed when we encounter the parent or as standalone
+      // If parent already processed, this version was already included in that group
     } else {
       // This is an original recipe
       const versions = getRecipeVersions(allRecipes, recipe.id);
