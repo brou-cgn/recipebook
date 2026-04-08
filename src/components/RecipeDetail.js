@@ -804,8 +804,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
       // Image element IDs – these do not receive text formatting rules
       const WYSIWYG_IMAGE_ELEMENT_IDS = new Set(['photo1', 'photo2', 'photo3', 'photo4']);
-
-      const ratio = pageHeightCm / pageWidthCm;
       
       const rules = mergedElements.map((el) => {
         const selector = ELEMENT_SELECTOR_MAP[el.id];
@@ -831,8 +829,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         }
         const rotationRule = el.rotation ? `transform: rotate(${el.rotation}deg) !important;` : '';
         
-        const cssTop = el.y / ratio;
-        const cssHeight = el.h / ratio;
+        const cssTop = el.y;
+        const cssHeight = el.h;
         
         return `@media print {
   ${selector} {
