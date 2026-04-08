@@ -370,7 +370,6 @@ export default function PrintFormatEditor({ format, onChange }) {
   const pagePaddingBottom = `${(pageHeightCm / pageWidthCm) * 100}%`;
   // Max reachable y+h in % of page width (used for clamp bounds in the properties panel)
   const maxPageYPct = (pageHeightCm / pageWidthCm) * 100;
-  const ratio = pageHeightCm / pageWidthCm;
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -529,7 +528,7 @@ export default function PrintFormatEditor({ format, onChange }) {
                 <div
                   key={`h-${i}`}
                   className="pfe-snap-guide pfe-snap-guide--h"
-                  style={{ top: `${y / ratio}%` }}
+                  style={{ top: `${y}%` }}
                 />
               ))}
               {snapGuides.v.map((x, i) => (
@@ -565,9 +564,9 @@ export default function PrintFormatEditor({ format, onChange }) {
                     className={`pfe-element ${isSelected ? 'pfe-element--selected' : ''}`.trim()}
                     style={{
                       left: `${el.x}%`,
-                      top: `${el.y / ratio}%`,
+                      top: `${el.y}%`,
                       width: `${el.w}%`,
-                      height: `${el.h / ratio}%`,
+                      height: `${el.h}%`,
                       '--el-color': def.color,
                       transform: rotation ? `rotate(${rotation}deg)` : undefined,
                       ...borderInlineStyles,
