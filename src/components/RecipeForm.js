@@ -336,14 +336,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   // Derived cuisine pill lists for the pill-based cuisine selector
   const visibleCuisinePills = useMemo(() => {
-    const groups = customLists.cuisineGroups || [];
-    const nonGroupTypes = (customLists.cuisineTypes || []).filter(
-      (cuisine) => !groups.some((g) => g.name === cuisine)
-    );
+    const allTypes = customLists.cuisineTypes || [];
     const term = newCuisineInput.trim().toLowerCase();
-    if (!term) return nonGroupTypes;
-    return nonGroupTypes.filter((name) => name.toLowerCase().includes(term));
-  }, [customLists.cuisineTypes, customLists.cuisineGroups, newCuisineInput]);
+    if (!term) return allTypes;
+    return allTypes.filter((name) => name.toLowerCase().includes(term));
+  }, [customLists.cuisineTypes, newCuisineInput]);
 
   const orderedCuisinePills = useMemo(() => {
     const active = visibleCuisinePills.filter((name) => kulinarik.includes(name));

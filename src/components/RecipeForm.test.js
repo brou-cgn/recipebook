@@ -866,6 +866,45 @@ describe('RecipeForm - Multi-Select Fields', () => {
     // saveCustomLists should NOT have been called since the type already exists
     expect(saveCustomLists).not.toHaveBeenCalled();
   });
+
+  test('cuisine types that are also cuisine group names are shown as selectable pills', async () => {
+    const customListsMock = require('../utils/customLists');
+    // Override mock to include a cuisine type that is also a group name
+    const spy = jest.spyOn(customListsMock, 'getCustomLists').mockResolvedValueOnce({
+      cuisineTypes: ['Italian', 'Thai', 'Chinese', 'Asian'],
+      cuisineGroups: [{ name: 'Asian', children: ['Thai', 'Chinese'] }],
+      mealCategories: ['Appetizer', 'Main Course', 'Dessert'],
+      units: [],
+      portionUnits: [{ id: 'portion', singular: 'Portion', plural: 'Portionen' }],
+    });
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    // All cuisine types should be visible as pills, including 'Asian' which is a group name
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Thai' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chinese' })).toBeInTheDocument();
+    // 'Asian' is a group name but must still appear as a selectable pill
+    expect(screen.getByRole('button', { name: 'Asian' })).toBeInTheDocument();
+
+    spy.mockRestore();
+  });
 });
 
 describe('RecipeForm - Category Image Integration', () => {
