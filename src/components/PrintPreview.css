@@ -8,6 +8,7 @@
 .ppv-page {
   position: relative;
   width: 100%;
+  flex: 0 0 auto;
   height: 0;
   max-width: 560px;
   background: #fff;
