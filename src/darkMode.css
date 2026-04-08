@@ -243,6 +243,10 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .recipe-card-list-reveal-button {
+  background: transparent;
+}
+
 /* ---- Recipe Cards ---- */
 [data-theme="dark"] .recipe-card {
   background: #1e1e1e;
