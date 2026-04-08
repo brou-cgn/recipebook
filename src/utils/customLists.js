@@ -5,53 +5,54 @@ import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 export const DEFAULT_CUISINE_TYPES = [
-  'Italian',
-  'Thai',
-  'Chinese',
-  'Japanese',
-  'Indian',
-  'Mexican',
-  'French',
-  'German',
-  'American',
-  'Mediterranean',
-  'Vegetarian',
+  'Deutsche Küche',
+  'Französische Küche',
+  'Italienische Küche',
+  'Österreichische Küche',
+  'Schweizer Küche',
+  'Türkische Küche',
+  'Chinesische Küche',
+  'Indische Küche',
+  'Japanische Küche',
+  'Orientalische Küche',
+  'Thailändische Küche',
+  'Mexikanische Küche',
+  'US-Amerikanische Küche',
+  'Vegetarisch',
   'Vegan',
-  'Other'
+  'Weihnachtliche Küche'
 ];
 
 export const DEFAULT_MEAL_CATEGORIES = [
   'Appetizer',
-  'Main Course',
-  'Dessert',
-  'Soup',
-  'Salad',
-  'Snack',
-  'Beverage',
-  'Side Dish'
+  'Dips & Saucen',
+  'Vorspeisen',
+  'Salate',
+  'Suppen & Eintöpfe',
+  'Hauptspeisen',
+  'Desserts',
+  'Drinks',
+  'Beilagen & Grundrezepte',
+  'Gebäcke & Teige',
+  'Kuchen & Torten',
+  'Grillrezepte'
 ];
 
 export const DEFAULT_UNITS = [
   'g', 'kg', 'ml', 'l',
-  'EL', 'TL', 'Esslöffel', 'Teelöffel',
+  'Esslöffel', 'Teelöffel',
   'Prise', 'Prisen',
   'Tasse', 'Tassen',
   'Becher',
-  'Stück', 'Stk',
-  'Bund',
-  'Pck', 'Pkg',
+  'Stück', 'Bund',
   'Dose', 'Dosen',
-  'cl', 'dl',
-  'tsp', 'tbsp',
-  'cup', 'oz', 'lb',
-  'piece', 'pinch'
+  'cl'
 ];
 
 export const DEFAULT_PORTION_UNITS = [
   { id: 'portion', singular: 'Portion', plural: 'Portionen' },
   { id: 'pizza', singular: 'Pizza', plural: 'Pizzen' },
   { id: 'drink', singular: 'Drink', plural: 'Drinks' },
-  { id: 'serving', singular: 'Serving', plural: 'Servings' },
   { id: 'person', singular: 'Person', plural: 'Personen' }
 ];
 
