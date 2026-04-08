@@ -87,6 +87,26 @@ describe('MobileSearchOverlay – cuisine group children in search', () => {
     expect(screen.getByText('Asiatische Küche')).toBeInTheDocument();
     expect(screen.getByText('Europäische Küche')).toBeInTheDocument();
   });
+
+  test('does not show duplicate pill when type and group share the same name', () => {
+    // "Japanische Küche" is both a cuisine type (with recipes) AND a cuisine group name.
+    // It should appear exactly once in the pill list.
+    render(
+      <MobileSearchOverlay
+        isOpen={true}
+        onClose={jest.fn()}
+        recipes={[{ id: '1', title: 'Sushi', kulinarik: ['Japanische Küche'] }]}
+        onSelectRecipe={jest.fn()}
+        onSearch={jest.fn()}
+        currentUser={null}
+        cuisineTypes={['Japanische Küche']}
+        cuisineGroups={[{ name: 'Japanische Küche', children: ['Japanische Küche', 'Sushi'] }]}
+        onCuisineFilterChange={jest.fn()}
+      />
+    );
+    const pills = screen.getAllByRole('button', { name: 'Japanische Küche' });
+    expect(pills).toHaveLength(1);
+  });
 });
 
 describe('MobileSearchOverlay – dynamic cuisine type expansion on search', () => {

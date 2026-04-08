@@ -267,10 +267,17 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     });
   };
 
-  const allCuisinePills = useMemo(() => [
-    ...topCuisineTypes,
-    ...(cuisineGroups || []).map((g) => g.name),
-  ], [topCuisineTypes, cuisineGroups]);
+  const allCuisinePills = useMemo(() => {
+    const result = [...topCuisineTypes];
+    const seen = new Set(topCuisineTypes);
+    for (const g of cuisineGroups || []) {
+      if (!seen.has(g.name)) {
+        result.push(g.name);
+        seen.add(g.name);
+      }
+    }
+    return result;
+  }, [topCuisineTypes, cuisineGroups]);
 
   const visibleCuisinePills = useMemo(() => {
     if (!debouncedTerm) return allCuisinePills;

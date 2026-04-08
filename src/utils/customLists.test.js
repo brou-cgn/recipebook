@@ -316,6 +316,25 @@ describe('expandCuisineSelection', () => {
     const result = expandCuisineSelection(['Italienisch'], null);
     expect(result).toEqual(['Italienisch']);
   });
+
+  test('expands type that shares a name with a group to include the type and all group children', () => {
+    // "Vegetarisch" exists as both a cuisine type and a cuisine group.
+    // Selecting "Vegetarisch" should include recipes of type "Vegetarisch"
+    // AND all sub-types of the group "Vegetarisch" (e.g. "Vegan").
+    const groups = [{ name: 'Vegetarisch', children: ['Vegetarisch', 'Vegan'] }];
+    const result = expandCuisineSelection(['Vegetarisch'], groups);
+    expect(result).toEqual(expect.arrayContaining(['Vegetarisch', 'Vegan']));
+    expect(result).toHaveLength(2);
+  });
+
+  test('includes the selected type itself even when the group children do not list it explicitly', () => {
+    // Group "Vegetarisch" has only "Vegan" as a child (not "Vegetarisch" itself).
+    // The selected type "Vegetarisch" must still appear in the expanded set.
+    const groups = [{ name: 'Vegetarisch', children: ['Vegan'] }];
+    const result = expandCuisineSelection(['Vegetarisch'], groups);
+    expect(result).toEqual(expect.arrayContaining(['Vegetarisch', 'Vegan']));
+    expect(result).toHaveLength(2);
+  });
 });
 
 describe('getParentCuisineNames', () => {
