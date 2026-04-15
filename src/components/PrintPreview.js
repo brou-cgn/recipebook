@@ -175,6 +175,8 @@ export default function PrintPreview({ recipe, format }) {
   const fontFamily = format?.fontFamily || "Georgia, 'Times New Roman', serif";
   const pageWidthCm = format?.pageWidthCm ?? (orientation === 'landscape' ? 29.7 : 21.0);
   const pageHeightCm = format?.pageHeightCm ?? (orientation === 'landscape' ? 21.0 : 29.7);
+  // Scale factor to convert stored coords (% of page width) → CSS top/height (% of page height)
+  const scaleY = pageWidthCm / pageHeightCm;
   const elements = mergePrintElementsWithDefaults(format?.elements, orientation);
 
   return (
@@ -190,9 +192,9 @@ export default function PrintPreview({ recipe, format }) {
             
             const elStyle = {
               left: `${el.x}%`,
-              top: `${el.y}%`,
+              top: `${el.y * scaleY}%`,
               width: `${el.w}%`,
-              height: `${el.h}%`,
+              height: `${el.h * scaleY}%`,
             };
             if (rotation) {
               elStyle.transform = `rotate(${rotation}deg)`;
