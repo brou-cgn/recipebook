@@ -43,6 +43,16 @@ function clamp(value, min, max) {
 }
 
 /**
+ * Returns the effective bounding-box dimensions of an element,
+ * swapping w and h for 90° / 270° rotations.
+ */
+function effectiveDimensions(el) {
+  const rotation = el.rotation || 0;
+  const swapped = rotation === 90 || rotation === 270;
+  return { effW: swapped ? el.h : el.w, effH: swapped ? el.w : el.h };
+}
+
+/**
  * Compute snap guides and adjusted position for a dragged element.
  * Returns { x, y, guides: { h: number[], v: number[] } }
  * guides.h = horizontal guide lines (y% on page)
@@ -51,11 +61,13 @@ function clamp(value, min, max) {
 function computeSnap(el, rawX, rawY, allElements) {
   const others = allElements.filter((o) => o.id !== el.id && o.visible !== false);
 
+  const { effW, effH } = effectiveDimensions(el);
+
   // Candidate snap points for the current element (left, center, right edges)
-  const elCenterX = rawX + el.w / 2;
-  const elRightX  = rawX + el.w;
-  const elCenterY = rawY + el.h / 2;
-  const elBottomY = rawY + el.h;
+  const elCenterX = rawX + effW / 2;
+  const elRightX  = rawX + effW;
+  const elCenterY = rawY + effH / 2;
+  const elBottomY = rawY + effH;
 
   let snappedX = rawX;
   let snappedY = rawY;
@@ -66,19 +78,20 @@ function computeSnap(el, rawX, rawY, allElements) {
   const xTargets = []; // [{ src: 'left'|'center'|'right', val }]
   const yTargets = [];
   others.forEach((o) => {
+    const { effW: oW, effH: oH } = effectiveDimensions(o);
     xTargets.push({ val: o.x });
-    xTargets.push({ val: o.x + o.w / 2 });
-    xTargets.push({ val: o.x + o.w });
+    xTargets.push({ val: o.x + oW / 2 });
+    xTargets.push({ val: o.x + oW });
     yTargets.push({ val: o.y });
-    yTargets.push({ val: o.y + o.h / 2 });
-    yTargets.push({ val: o.y + o.h });
+    yTargets.push({ val: o.y + oH / 2 });
+    yTargets.push({ val: o.y + oH });
   });
 
   // Try to snap horizontal (x) for left/center/right edges
   const xEdges = [
-    { pos: rawX,        offset: 0        },
-    { pos: elCenterX,   offset: -el.w / 2 },
-    { pos: elRightX,    offset: -el.w    },
+    { pos: rawX,        offset: 0         },
+    { pos: elCenterX,   offset: -effW / 2 },
+    { pos: elRightX,    offset: -effW     },
   ];
   let bestXDist = SNAP_THRESHOLD;
   xEdges.forEach(({ pos, offset }) => {
@@ -97,9 +110,9 @@ function computeSnap(el, rawX, rawY, allElements) {
 
   // Try to snap vertical (y) for top/center/bottom edges
   const yEdges = [
-    { pos: rawY,        offset: 0        },
-    { pos: elCenterY,   offset: -el.h / 2 },
-    { pos: elBottomY,   offset: -el.h    },
+    { pos: rawY,        offset: 0         },
+    { pos: elCenterY,   offset: -effH / 2 },
+    { pos: elBottomY,   offset: -effH     },
   ];
   let bestYDist = SNAP_THRESHOLD;
   yEdges.forEach(({ pos, offset }) => {
@@ -255,11 +268,12 @@ export default function PrintFormatEditor({ format, onChange }) {
       if (state.type === 'drag') {
         const el = elements.find((el) => el.id === state.elementId);
         if (!el) return;
-        const rawX = clamp(state.startElemX + dx, 0, 100 - el.w);
-        const rawY = clamp(state.startElemY + dy, 0, maxPageYPct - el.h);
+        const { effW, effH } = effectiveDimensions(el);
+        const rawX = clamp(state.startElemX + dx, 0, 100 - effW);
+        const rawY = clamp(state.startElemY + dy, 0, maxPageYPct - effH);
         const snapped = computeSnap(el, rawX, rawY, elements);
-        const newX = clamp(snapped.x, 0, 100 - el.w);
-        const newY = clamp(snapped.y, 0, maxPageYPct - el.h);
+        const newX = clamp(snapped.x, 0, 100 - effW);
+        const newY = clamp(snapped.y, 0, maxPageYPct - effH);
         setSnapGuides(snapped.guides);
         updateElement(state.elementId, { x: newX, y: newY });
       } else if (state.type === 'resize') {
