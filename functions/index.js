@@ -458,7 +458,7 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -474,7 +474,10 @@ async function callGeminiAPI(base64Data, mimeType, lang, apiKey, cuisineTypes, m
       console.error('Gemini API error:', errorData);
       const errorMessage = errorData.error?.message || response.statusText;
       if (response.status === 429) {
-        throw new HttpsError('resource-exhausted', `Gemini API error: ${errorMessage}`);
+        throw new HttpsError(
+          'resource-exhausted',
+          'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut oder nutze Standard-OCR.'
+        );
       } else if (response.status === 503 || response.status === 502) {
         throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
       }
@@ -716,7 +719,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   try {
     const response = await fetch(url, {
@@ -730,7 +733,10 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
       console.error('Gemini text API error:', errorData);
       const errorMessage = errorData.error?.message || response.statusText;
       if (response.status === 429) {
-        throw new HttpsError('resource-exhausted', `Gemini API error: ${errorMessage}`);
+        throw new HttpsError(
+          'resource-exhausted',
+          'Die KI-API ist momentan ausgelastet. Bitte versuche es in einigen Minuten erneut oder nutze Standard-OCR.'
+        );
       } else if (response.status === 503 || response.status === 502) {
         throw new HttpsError('unavailable', `Gemini API error: ${errorMessage}`);
       }
