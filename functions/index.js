@@ -5,6 +5,7 @@
 
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
+const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
@@ -3560,5 +3561,390 @@ exports.backfillRecipeThumbnails = onCall(
 
       console.log('backfillRecipeThumbnails complete:', results);
       return results;
+    },
+);
+
+// ---------------------------------------------------------------------------
+// Daily AI importer self-test
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal HTML snippet used as test input for the daily AI importer test.
+ * Kept small to minimise API cost. Contains a clearly structured recipe so
+ * the AI can extract all required fields reliably.
+ */
+const IMPORTER_TEST_HTML = `<!DOCTYPE html>
+<html lang="de">
+<head><title>Testrezept: Rührei</title></head>
+<body>
+<h1>Rührei</h1>
+<p>Für 2 Personen. Zubereitungszeit: 10 Minuten. Schwierigkeit: 1</p>
+<h2>Zutaten</h2>
+<ul>
+  <li>4 Eier</li>
+  <li>2 Esslöffel Butter</li>
+  <li>1 Prise Salz</li>
+</ul>
+<h2>Zubereitung</h2>
+<ol>
+  <li>Eier in einer Schüssel verquirlen und mit Salz würzen.</li>
+  <li>Butter in einer Pfanne bei mittlerer Hitze schmelzen.</li>
+  <li>Eimasse hineingeben und unter ständigem Rühren stocken lassen.</li>
+  <li>Vom Herd nehmen und sofort servieren.</li>
+</ol>
+</body>
+</html>`;
+
+/**
+ * Minimum number of ingredients / steps expected from the HTML test recipe.
+ */
+const IMPORTER_TEST_MIN_INGREDIENTS = 2;
+const IMPORTER_TEST_MIN_STEPS = 2;
+
+/**
+ * Load the AI recipe extraction prompt for internal tests.
+ * Falls back to the built-in default prompt instead of throwing an HttpsError
+ * (which is only appropriate inside onCall handlers).
+ *
+ * @returns {Promise<string>} The extraction prompt string
+ */
+async function getAiRecipePromptForTest() {
+  try {
+    const db = admin.firestore();
+    const settingsDoc = await db.collection('settings').doc('app').get();
+    if (settingsDoc.exists) {
+      const settings = settingsDoc.data();
+      if (settings.aiRecipePrompt && settings.aiRecipePrompt.trim()) {
+        return settings.aiRecipePrompt;
+      }
+    }
+  } catch (err) {
+    console.warn('dailyAiImporterTest: could not load prompt from Firestore:', err);
+  }
+  return DEFAULT_AI_RECIPE_PROMPT;
+}
+
+/**
+ * Validate that a normalised recipe object returned by callGeminiTextAPI has
+ * all expected fields and meets minimum content thresholds.
+ *
+ * @param {Object} recipe - Normalised recipe object
+ * @returns {{valid: boolean, issues: string[]}}
+ */
+function validateImporterResult(recipe) {
+  const issues = [];
+
+  if (!recipe || typeof recipe !== 'object') {
+    return {valid: false, issues: ['Kein Ergebnisobjekt erhalten']};
+  }
+
+  if (!recipe.ingredients || !Array.isArray(recipe.ingredients) ||
+      recipe.ingredients.length < IMPORTER_TEST_MIN_INGREDIENTS) {
+    issues.push(
+        `Zu wenige Zutaten: erwartet mind. ${IMPORTER_TEST_MIN_INGREDIENTS}, ` +
+        `erhalten ${Array.isArray(recipe.ingredients) ? recipe.ingredients.length : 0}`,
+    );
+  }
+
+  if (!recipe.steps || !Array.isArray(recipe.steps) ||
+      recipe.steps.length < IMPORTER_TEST_MIN_STEPS) {
+    issues.push(
+        `Zu wenige Zubereitungsschritte: erwartet mind. ${IMPORTER_TEST_MIN_STEPS}, ` +
+        `erhalten ${Array.isArray(recipe.steps) ? recipe.steps.length : 0}`,
+    );
+  }
+
+  return {valid: issues.length === 0, issues};
+}
+
+/**
+ * Run a single named test and return a structured result.
+ * The provided async function must resolve to { details: string } on success
+ * and throw an error on failure.
+ *
+ * @param {string} name - Human-readable test name
+ * @param {Function} fn - Async test function
+ * @returns {Promise<{name: string, success: boolean, details: string, durationMs: number}>}
+ */
+async function runTest(name, fn) {
+  const start = Date.now();
+  try {
+    const {details} = await fn();
+    return {name, success: true, details, durationMs: Date.now() - start};
+  } catch (err) {
+    return {
+      name,
+      success: false,
+      details: err.message || String(err),
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
+/**
+ * Execute all AI recipe importer tests.
+ *
+ * Tests covered:
+ * 1. Configuration – Gemini API key present + prompt accessible
+ * 2. processHtmlWithAI – full end-to-end extraction from test HTML
+ * 3. fetchRecipeHtml – HTTP connectivity to a public recipe page
+ *
+ * @param {string} apiKey - Gemini API key value
+ * @returns {Promise<Array<{name: string, success: boolean, details: string, durationMs: number}>>}
+ */
+async function runAllImporterTests(apiKey) {
+  const tests = [
+    // Test 1: verify Gemini API key is present and prompt is loadable
+    runTest('Konfiguration (GEMINI_API_KEY & Prompt)', async () => {
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY-Secret ist nicht konfiguriert');
+      }
+      const prompt = await getAiRecipePromptForTest();
+      if (!prompt || prompt.trim().length === 0) {
+        throw new Error('KI-Prompt ist leer oder nicht konfiguriert');
+      }
+      return {
+        details:
+          `API-Schlüssel vorhanden. Prompt geladen (${prompt.length} Zeichen).`,
+      };
+    }),
+
+    // Test 2: full end-to-end HTML processing via Gemini
+    runTest('processHtmlWithAI – HTML-Rezept-Extraktion (Gemini)', async () => {
+      const result = await callGeminiTextAPI(
+          IMPORTER_TEST_HTML, 'de', apiKey, undefined, undefined,
+      );
+      const {valid, issues} = validateImporterResult(result);
+      const title = result.title || '(kein Titel)';
+      const ingredientCount = Array.isArray(result.ingredients) ?
+        result.ingredients.length : 0;
+      const stepCount = Array.isArray(result.steps) ? result.steps.length : 0;
+      if (!valid) {
+        throw new Error(`Validierungsfehler: ${issues.join('; ')}`);
+      }
+      return {
+        details:
+          `Rezept "${title}" extrahiert – ` +
+          `${ingredientCount} Zutaten, ${stepCount} Schritte.`,
+      };
+    }),
+
+    // Test 3: HTTP connectivity for fetchRecipeHtml
+    runTest('fetchRecipeHtml – HTTP-Abruf einer Rezept-URL', async () => {
+      const testUrl =
+        'https://www.chefkoch.de/rezepte/313631109749735/Spaghetti-Carbonara.html';
+      const response = await fetch(testUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (compatible; RecipebookImporterTest/1.0)',
+          'Accept': 'text/html',
+        },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const html = await response.text();
+      if (html.length < 500) {
+        throw new Error(
+            `Antwort zu kurz (${html.length} Zeichen) – URL möglicherweise nicht erreichbar`,
+        );
+      }
+      return {
+        details: `HTTP ${response.status}, ${html.length} Zeichen HTML empfangen.`,
+      };
+    }),
+  ];
+
+  return await Promise.all(tests);
+}
+
+/**
+ * Build the subject line, plain-text body and HTML body for the test result
+ * e-mail that is sent to admins after each daily run.
+ *
+ * @param {Array<{name: string, success: boolean, details: string, durationMs: number}>} results
+ * @param {string} runAt - Human-readable timestamp of the test run
+ * @returns {{subject: string, text: string, html: string}}
+ */
+function buildTestResultEmailContent(results, runAt) {
+  const totalCount = results.length;
+  const passedCount = results.filter((r) => r.success).length;
+  const failedCount = totalCount - passedCount;
+  const allPassed = failedCount === 0;
+
+  const subject = allPassed ?
+    `✅ KI-Importer-Test: Alle ${totalCount} Tests erfolgreich (${runAt})` :
+    `❌ KI-Importer-Test: ${failedCount} von ${totalCount} Tests fehlgeschlagen (${runAt})`;
+
+  // ---- Plain-text body ----
+  let text = `KI-Rezeptimporter – Täglicher Testbericht\n`;
+  text += `Ausgeführt: ${runAt}\n`;
+  text += `Ergebnis: ${passedCount}/${totalCount} Tests bestanden\n\n`;
+  for (const r of results) {
+    text += `${r.success ? '✅' : '❌'} ${r.name}\n`;
+    text += `   ${r.details}\n`;
+    text += `   Dauer: ${r.durationMs} ms\n\n`;
+  }
+  if (!allPassed) {
+    text += `\nBitte prüfen Sie die fehlgeschlagenen Tests.\n`;
+    text += `Logs: https://console.firebase.google.com/project/_/functions/logs\n`;
+  }
+
+  // ---- HTML body ----
+  const statusColor = allPassed ? '#2e7d32' : '#c62828';
+  const statusText = allPassed ?
+    `Alle ${totalCount} Tests bestanden` :
+    `${failedCount} von ${totalCount} Tests fehlgeschlagen`;
+
+  let rowsHtml = '';
+  for (const r of results) {
+    const icon = r.success ? '✅' : '❌';
+    const rowBg = r.success ? '#f1f8e9' : '#ffebee';
+    rowsHtml +=
+      `<tr style="background:${rowBg}">` +
+      `<td style="padding:8px 12px;border-bottom:1px solid #eee">` +
+        `${icon} ${escapeHtml(r.name)}</td>` +
+      `<td style="padding:8px 12px;border-bottom:1px solid #eee">` +
+        `${escapeHtml(r.details)}</td>` +
+      `<td style="padding:8px 12px;border-bottom:1px solid #eee;` +
+        `text-align:right">${r.durationMs} ms</td>` +
+      `</tr>`;
+  }
+
+  const logsLinkHtml = allPassed ? '' :
+    `<p><a href="https://console.firebase.google.com/project/_/functions/logs">` +
+    `Firebase-Logs öffnen</a></p>`;
+
+  const html =
+    `<div style="font-family:Arial,sans-serif;max-width:700px">` +
+    `<h2 style="color:${statusColor}">` +
+      `KI-Rezeptimporter – Täglicher Testbericht</h2>` +
+    `<p><strong>Ausgeführt:</strong> ${escapeHtml(runAt)}</p>` +
+    `<p style="color:${statusColor};font-weight:bold">` +
+      `${escapeHtml(statusText)}</p>` +
+    `<table style="width:100%;border-collapse:collapse;margin-top:16px">` +
+    `<thead><tr style="background:#f5f5f5">` +
+    `<th style="padding:8px 12px;text-align:left;border-bottom:2px solid #ddd">Test</th>` +
+    `<th style="padding:8px 12px;text-align:left;border-bottom:2px solid #ddd">Details</th>` +
+    `<th style="padding:8px 12px;text-align:right;border-bottom:2px solid #ddd">Dauer</th>` +
+    `</tr></thead>` +
+    `<tbody>${rowsHtml}</tbody>` +
+    `</table>` +
+    logsLinkHtml +
+    `</div>`;
+
+  return {subject, text, html};
+}
+
+/**
+ * Scheduled Cloud Function: run daily AI recipe importer self-tests and send
+ * a summary e-mail to all admin users.
+ *
+ * Schedule: every day at 06:00 Europe/Berlin (MEZ/MESZ).
+ *
+ * The function can be disabled without redeployment by setting
+ *   dailyImporterTestEnabled: false
+ * in the `settings/app` Firestore document. Remove the field (or set it to
+ * true) to re-enable the tests.
+ *
+ * Secrets required (same as other email-sending functions):
+ *   GEMINI_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+ */
+exports.dailyAiImporterTest = onSchedule(
+    {
+      schedule: '0 6 * * *',
+      timeZone: 'Europe/Berlin',
+      secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+      memory: '512MiB',
+      timeoutSeconds: 300,
+    },
+    async (_event) => {
+      const runAt = new Date().toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
+      console.log(`dailyAiImporterTest: starting test run at ${runAt}`);
+
+      // Check whether the feature is enabled via Firestore configuration
+      try {
+        const db = admin.firestore();
+        const settingsDoc = await db.collection('settings').doc('app').get();
+        if (settingsDoc.exists && settingsDoc.data().dailyImporterTestEnabled === false) {
+          console.log('dailyAiImporterTest: disabled via settings/app, skipping');
+          return;
+        }
+      } catch (cfgErr) {
+        console.warn('dailyAiImporterTest: could not read settings, proceeding:', cfgErr);
+      }
+
+      // Run all importer tests
+      const apiKeyVal = geminiApiKey.value();
+      let results;
+      try {
+        results = await runAllImporterTests(apiKeyVal);
+      } catch (runErr) {
+        console.error('dailyAiImporterTest: unexpected error running tests:', runErr);
+        results = [{
+          name: 'Test-Ausführung',
+          success: false,
+          details: `Unerwarteter Fehler: ${runErr.message}`,
+          durationMs: 0,
+        }];
+      }
+
+      const passedCount = results.filter((r) => r.success).length;
+      console.log(
+          `dailyAiImporterTest: ${passedCount}/${results.length} tests passed`,
+      );
+
+      // Collect admin e-mail addresses from Firestore
+      const db = admin.firestore();
+      const usersSnapshot = await db
+          .collection('users').where('isAdmin', '==', true).get();
+      const adminEmails = [];
+      usersSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.email) adminEmails.push(data.email);
+      });
+
+      if (adminEmails.length === 0) {
+        console.log('dailyAiImporterTest: no admin emails found, skipping email');
+        return;
+      }
+
+      // Verify SMTP configuration
+      const smtpHostVal = smtpHost.value();
+      const smtpPortVal = smtpPort.value();
+      const smtpUserVal = smtpUser.value();
+      const smtpPasswordVal = smtpPassword.value();
+      const smtpFromVal = smtpFrom.value();
+
+      if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
+        console.warn('dailyAiImporterTest: SMTP not fully configured – skipping email');
+        return;
+      }
+
+      const smtpPortNum = parseInt(smtpPortVal || '587', 10);
+      const transporter = nodemailer.createTransport({
+        host: smtpHostVal,
+        port: smtpPortNum,
+        secure: smtpPortNum === 465,
+        auth: {user: smtpUserVal, pass: smtpPasswordVal},
+      });
+
+      const {subject, text, html} = buildTestResultEmailContent(results, runAt);
+
+      try {
+        await transporter.sendMail({
+          from: smtpFromVal,
+          bcc: adminEmails.join(', '),
+          subject,
+          text,
+          html,
+        });
+        console.log(
+            `dailyAiImporterTest: email sent to ${adminEmails.length} admin(s)`,
+        );
+      } catch (mailErr) {
+        console.error('dailyAiImporterTest: error sending email:', mailErr);
+      }
     },
 );
