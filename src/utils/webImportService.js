@@ -103,23 +103,27 @@ export function isRecipeImportPageUrl(url) {
 }
 
 /**
- * Check whether a URL points to an Instagram Reel.
- * Accepts both www.instagram.com/reel/… and instagram.com/reel/…
+ * Check whether a URL points to an Instagram post, Reel, or IGTV.
+ * Accepts both www.instagram.com and instagram.com, and the path patterns
+ * /reel/…, /p/…, and /tv/….
  *
  * @param {string} url - URL to test
  * @returns {boolean}
  */
-export function isInstagramReelUrl(url) {
+export function isInstagramUrl(url) {
   try {
     const urlObj = new URL(url);
     return (
       (urlObj.hostname === 'www.instagram.com' || urlObj.hostname === 'instagram.com') &&
-      /^\/reel\/[A-Za-z0-9_-]+\/?$/.test(urlObj.pathname)
+      /^\/(reel|p|tv)\/[A-Za-z0-9_-]+\/?/.test(urlObj.pathname)
     );
   } catch {
     return false;
   }
 }
+
+// Backward-compatibility alias
+export const isInstagramReelUrl = isInstagramUrl;
 
 /**
  * Import a recipe from an Instagram Reel.
@@ -132,8 +136,8 @@ export function isInstagramReelUrl(url) {
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function importInstagramReel(url, onProgress = null) {
-  if (!isInstagramReelUrl(url)) {
-    throw new Error('Ungültige Instagram-Reel-URL');
+  if (!isInstagramUrl(url)) {
+    throw new Error('Ungültige Instagram-URL');
   }
 
   if (onProgress) onProgress(10);
@@ -205,10 +209,10 @@ export async function importInstagramReel(url, onProgress = null) {
     } else if (errorCode === 'not-found') {
       throw new Error(
         error.message ||
-        'Kein Rezept auf der Instagram-Seite gefunden. Das Reel ist möglicherweise privat.',
+        'Kein Rezept auf der Instagram-Seite gefunden. Der Beitrag ist möglicherweise privat.',
       );
     } else if (errorCode === 'invalid-argument') {
-      throw new Error(error.message || 'Ungültige Instagram-Reel-URL.');
+      throw new Error(error.message || 'Ungültige Instagram-URL.');
     } else if (errorCode === 'deadline-exceeded') {
       throw new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.');
     } else if (error.message) {

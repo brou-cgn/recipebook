@@ -29,7 +29,7 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText } from './webImportService';
+import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramUrl, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText } from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 import { httpsCallable } from 'firebase/functions';
@@ -492,7 +492,61 @@ ${withJsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
 });
 
 // --------------------------------------------------------------------------
-// isInstagramReelUrl
+// isInstagramUrl
+// --------------------------------------------------------------------------
+
+describe('isInstagramUrl', () => {
+  test('returns true for a standard www.instagram.com reel URL', () => {
+    expect(isInstagramUrl('https://www.instagram.com/reel/DTXPDu9DHHb/')).toBe(true);
+  });
+
+  test('returns true for instagram.com (without www) reel URL', () => {
+    expect(isInstagramUrl('https://instagram.com/reel/ABC123/')).toBe(true);
+  });
+
+  test('returns true for a reel URL without trailing slash', () => {
+    expect(isInstagramUrl('https://www.instagram.com/reel/DTXPDu9DHHb')).toBe(true);
+  });
+
+  test('returns true for reel IDs containing underscores and hyphens', () => {
+    expect(isInstagramUrl('https://www.instagram.com/reel/abc-def_123/')).toBe(true);
+  });
+
+  test('returns true for a standard instagram.com post URL (/p/)', () => {
+    expect(isInstagramUrl('https://www.instagram.com/p/DTXPDu9DHHb/')).toBe(true);
+  });
+
+  test('returns true for a post URL with query parameters', () => {
+    expect(isInstagramUrl('https://www.instagram.com/p/DXR8N5qk4Kk/?igsh=b3MzczRiZ3dudnJz')).toBe(true);
+  });
+
+  test('returns true for an IGTV URL (/tv/)', () => {
+    expect(isInstagramUrl('https://www.instagram.com/tv/DTXPDu9DHHb/')).toBe(true);
+  });
+
+  test('returns false for an Instagram profile URL', () => {
+    expect(isInstagramUrl('https://www.instagram.com/username/')).toBe(false);
+  });
+
+  test('returns false for an unrelated URL', () => {
+    expect(isInstagramUrl('https://www.chefkoch.de/rezepte/123456')).toBe(false);
+  });
+
+  test('returns false for an empty string', () => {
+    expect(isInstagramUrl('')).toBe(false);
+  });
+
+  test('returns false for an invalid URL string', () => {
+    expect(isInstagramUrl('not-a-url')).toBe(false);
+  });
+
+  test('returns false for a URL with no post ID', () => {
+    expect(isInstagramUrl('https://www.instagram.com/reel/')).toBe(false);
+  });
+});
+
+// --------------------------------------------------------------------------
+// isInstagramReelUrl (backward-compat alias)
 // --------------------------------------------------------------------------
 
 describe('isInstagramReelUrl', () => {
@@ -512,8 +566,8 @@ describe('isInstagramReelUrl', () => {
     expect(isInstagramReelUrl('https://www.instagram.com/reel/abc-def_123/')).toBe(true);
   });
 
-  test('returns false for an Instagram post (non-reel) URL', () => {
-    expect(isInstagramReelUrl('https://www.instagram.com/p/DTXPDu9DHHb/')).toBe(false);
+  test('returns true for a standard instagram.com post URL (/p/) via alias', () => {
+    expect(isInstagramReelUrl('https://www.instagram.com/p/DTXPDu9DHHb/')).toBe(true);
   });
 
   test('returns false for an Instagram profile URL', () => {
