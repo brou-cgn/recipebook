@@ -4,6 +4,7 @@ import {
   isRecipeImportPageUrl,
   parseRecipeImportPage,
   isInstagramUrl,
+  isInstagramReelUrl,
   importInstagramReel,
   importRecipeFromUrl,
 } from '../utils/webImportService';
