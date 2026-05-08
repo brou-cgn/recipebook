@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './MeineKuechenstarsPage.css';
-import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
@@ -12,7 +12,7 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   useEffect(() => {
-    getRecipeCalls()
+    getRecentRecipeCalls(14)
       .then(calls => {
         setRecipeCalls(calls);
         setLoading(false);
@@ -74,7 +74,7 @@ function MeineKuechenstarsPage({ onBack, currentUser, recipes = [] }) {
       </div>
       <div className="meine-kuechenstars-content">
         <p className="meine-kuechenstars-info-text">
-          Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe.
+          Hier sind deine Top 20 Rezepte nach Anzahl der Aufrufe der letzten 14 Tage.
         </p>
         {loading ? (
           <div className="meine-kuechenstars-empty">Laden...</div>
