@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import MeineKuechenstarsPage from './MeineKuechenstarsPage';
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
-  getRecipeCalls: jest.fn(),
+  getRecentRecipeCalls: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -27,8 +27,8 @@ const mockRecipes = [
 
 describe('MeineKuechenstarsPage', () => {
   beforeEach(() => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockResolvedValue([]);
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
   });
 
   test('renders the header with title', () => {
@@ -67,8 +67,8 @@ describe('MeineKuechenstarsPage', () => {
   });
 
   test('shows loading state initially', () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockImplementation(() => new Promise(() => {}));
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockImplementation(() => new Promise(() => {}));
     render(
       <MeineKuechenstarsPage
         onBack={() => {}}
@@ -80,8 +80,8 @@ describe('MeineKuechenstarsPage', () => {
   });
 
   test('shows empty message when no recipe calls exist', async () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockResolvedValue([]);
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
     render(
       <MeineKuechenstarsPage
         onBack={() => {}}
@@ -93,8 +93,8 @@ describe('MeineKuechenstarsPage', () => {
   });
 
   test('shows top recipes sorted by call count', async () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockResolvedValue([
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([
       { id: 'c1', recipeId: 'r2' },
       { id: 'c2', recipeId: 'r2' },
       { id: 'c3', recipeId: 'r2' },
@@ -117,8 +117,8 @@ describe('MeineKuechenstarsPage', () => {
   });
 
   test('only shows own recipes, not other users recipes', async () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
-    getRecipeCalls.mockResolvedValue([
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([
       { id: 'c1', recipeId: 'r4' },
       { id: 'c2', recipeId: 'r4' },
     ]);
@@ -136,7 +136,7 @@ describe('MeineKuechenstarsPage', () => {
   });
 
   test('limits results to top 20 recipes', async () => {
-    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     const manyRecipes = Array.from({ length: 25 }, (_, i) => ({
       id: `recipe-${i}`,
       title: `Recipe ${i}`,
@@ -145,7 +145,7 @@ describe('MeineKuechenstarsPage', () => {
     const calls = manyRecipes.map((r, i) =>
       Array.from({ length: 25 - i }, (_, j) => ({ id: `c${i}-${j}`, recipeId: r.id }))
     ).flat();
-    getRecipeCalls.mockResolvedValue(calls);
+    getRecentRecipeCalls.mockResolvedValue(calls);
     render(
       <MeineKuechenstarsPage
         onBack={() => {}}
@@ -156,5 +156,31 @@ describe('MeineKuechenstarsPage', () => {
     const rows = await screen.findAllByRole('row');
     // 1 header row + max 20 data rows
     expect(rows.length).toBe(21);
+  });
+
+  test('fetches only recipe calls from the last 14 days', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    render(
+      <MeineKuechenstarsPage
+        onBack={() => {}}
+        currentUser={mockCurrentUser}
+        recipes={mockRecipes}
+      />
+    );
+    await waitFor(() => {
+      expect(getRecentRecipeCalls).toHaveBeenCalledWith(14);
+    });
+  });
+
+  test('shows info text mentioning 14 days', async () => {
+    render(
+      <MeineKuechenstarsPage
+        onBack={() => {}}
+        currentUser={mockCurrentUser}
+        recipes={[]}
+      />
+    );
+    expect(screen.getByText(/14 Tage/)).toBeInTheDocument();
   });
 });
