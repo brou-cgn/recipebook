@@ -28,7 +28,7 @@ function renderKulinarikTags(kulinarik) {
   );
 }
 
-function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon }) {
+function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, authorName, versionCount, currentUser, privateLists, onAddToPrivateList, onRemoveFromPrivateList, swipeRightIcon, publicGroupId, onMoveRecipeToPublic }) {
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const isSwiping = useRef(false);
@@ -110,14 +110,23 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     const list = privateLists.find((l) => l.id === listId);
     if (!list) return;
 
-    const isInList = list.recipeIds?.includes(recipe.id) || recipe.groupId === list.id;
-    if (isInList) {
-      if (recipe.isPrivate && recipe.groupId === list.id) {
-        alert('Private Rezepte können nicht aus der Liste entfernt werden. Bitte veröffentliche das Rezept zuerst.');
-        return;
-      }
+    // Private recipes cannot be moved from their original list
+    if (recipe.isPrivate === true) {
+      alert('Private Rezepte können nicht aus ihrer ursprünglichen Liste entfernt werden.');
+      return;
+    }
+
+    const isInListViaGroupId = recipe.groupId === list.id;
+    const isInListViaRecipeIds = list.recipeIds?.includes(recipe.id);
+
+    if (isInListViaGroupId) {
+      // Recipe belongs via groupId - move to public group
+      onMoveRecipeToPublic?.(recipe.id);
+    } else if (isInListViaRecipeIds) {
+      // Recipe is in recipeIds array - remove it
       onRemoveFromPrivateList?.(listId, recipe.id);
     } else {
+      // Recipe not in list - add to recipeIds array
       onAddToPrivateList?.(listId, recipe.id);
     }
   };

@@ -83,7 +83,7 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -462,6 +462,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
                 onAddToPrivateList={onAddToPrivateList}
                 onRemoveFromPrivateList={onRemoveFromPrivateList}
                 swipeRightIcon={getEffectiveIcon(buttonIcons, 'recipeCardSwipeRight', isDarkMode)}
+                publicGroupId={publicGroupId}
+                onMoveRecipeToPublic={onMoveRecipeToPublic}
               />
             );
           })}
