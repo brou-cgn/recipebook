@@ -1015,6 +1015,19 @@ function App() {
     }
   };
 
+  const handleMoveRecipeToPublic = async (recipeId) => {
+    if (!currentUser || !publicGroupId) return;
+
+    try {
+      await updateRecipeInFirestore(recipeId, {
+        groupId: publicGroupId,
+        publishedToPublic: true,
+      });
+    } catch (error) {
+      console.error('Error moving recipe to public group:', error);
+    }
+  };
+
   // User authentication handlers
   const handleLogin = async (email, password) => {
     const result = await loginUser(email, password);
@@ -1430,6 +1443,8 @@ function App() {
             privateLists={privateListsForUser}
             onAddToPrivateList={handleAddRecipeToPrivateList}
             onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
+            publicGroupId={publicGroupId}
+            onMoveRecipeToPublic={handleMoveRecipeToPublic}
           />
         </>
       )}
