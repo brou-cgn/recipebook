@@ -110,8 +110,12 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     const list = privateLists.find((l) => l.id === listId);
     if (!list) return;
 
-    const isInList = list.recipeIds?.includes(recipe.id);
+    const isInList = list.recipeIds?.includes(recipe.id) || recipe.groupId === list.id;
     if (isInList) {
+      if (recipe.isPrivate && recipe.groupId === list.id) {
+        alert('Private Rezepte können nicht aus der Liste entfernt werden. Bitte veröffentliche das Rezept zuerst.');
+        return;
+      }
       onRemoveFromPrivateList?.(listId, recipe.id);
     } else {
       onAddToPrivateList?.(listId, recipe.id);
@@ -152,7 +156,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
           >
             <option value="" disabled>Zu Liste hinzufügen…</option>
             {privateLists.map((list) => {
-              const isInList = list.recipeIds?.includes(recipe.id);
+              const isInList = list.recipeIds?.includes(recipe.id) || recipe.groupId === list.id;
               return (
                 <option key={list.id} value={list.id}>
                   {isInList ? `✓ ${list.name}` : list.name}
