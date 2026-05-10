@@ -153,7 +153,7 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                     name="targetListMode"
                     value="select"
                     checked={targetListMode === 'select'}
-                    onChange={() => { setTargetListMode('select'); setTargetListId(''); }}
+                    onChange={() => { setTargetListMode('select'); setTargetListId(''); setNewTargetListName(''); }}
                     disabled={privateLists.length === 0}
                   />
                   <span>Bestehende Liste wählen</span>
