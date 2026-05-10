@@ -560,7 +560,7 @@ Extrahiere nun alle sichtbaren Informationen aus dem Bild genau nach diesem Sche
 // Default button icons (emoji icons)
 export const DEFAULT_BUTTON_ICONS = {
   cookingMode: '♨',
-  // Alt icon shown when the current image is recognized as dark
+  // Alt icon shown when the top-left image corner is too bright (high luminance)
   cookingModeAlt: '♨',
   // Icon shown when the recipe uses the default category image (light mode)
   cookingModeDefaultImg: '♨',
@@ -568,7 +568,7 @@ export const DEFAULT_BUTTON_ICONS = {
   scanImage: 'Scan',
   webImport: 'Web',
   closeButton: '×',
-  // Alt icon shown when the current image is recognized as dark
+  // Alt icon shown when the top-right image corner is too bright (high luminance)
   closeButtonAlt: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
