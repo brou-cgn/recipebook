@@ -45,8 +45,8 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
   cursor: pointer;
   z-index: 10;
 }
@@ -62,7 +62,7 @@
   justify-content: center;
   pointer-events: none;
   z-index: 1;
-  font-size: 1.5rem;
+  font-size: 1.05rem;
   color: #333;
   background: transparent;
   border-radius: 50%;
@@ -75,8 +75,8 @@
 }
 
 .tagesmenu-kachel-context-trigger-img {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.05rem;
+  height: 1.05rem;
   object-fit: contain;
 }
 
