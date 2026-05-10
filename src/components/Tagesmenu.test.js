@@ -1,14 +1,21 @@
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
+import { parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
 
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
 let mockMaxKandidatenSchwelle = null;
 let mockComputeGroupRecipeStatus = () => 'kandidat';
+let mockStatusValiditySettingsValue = {
+  statusValidityDaysKandidat: null,
+  statusValidityDaysGeparkt: null,
+  statusValidityDaysArchiv: null,
+};
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
+  parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
   getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
   computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
@@ -16,11 +23,7 @@ jest.mock('../utils/recipeSwipeFlags', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getStatusValiditySettings: () => Promise.resolve({
-    statusValidityDaysKandidat: null,
-    statusValidityDaysGeparkt: null,
-    statusValidityDaysArchiv: null,
-  }),
+  getStatusValiditySettings: () => Promise.resolve(mockStatusValiditySettingsValue),
   getGroupStatusThresholds: () => Promise.resolve({
     groupThresholdKandidatMinKandidat: 50,
     groupThresholdKandidatMaxArchiv: 50,
@@ -55,6 +58,15 @@ beforeAll(() => {
   if (!HTMLElement.prototype.releasePointerCapture) {
     HTMLElement.prototype.releasePointerCapture = jest.fn();
   }
+});
+
+beforeEach(() => {
+  mockStatusValiditySettingsValue = {
+    statusValidityDaysKandidat: null,
+    statusValidityDaysGeparkt: null,
+    statusValidityDaysArchiv: null,
+  };
+  parkAllRecipeSwipeFlagsForRecipeInList.mockClear();
 });
 
 const makeRecipe = (id, title) => ({ id, title, groupId: 'list1' });
@@ -1456,6 +1468,33 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(menuEntry).not.toBeUndefined();
 
     act(() => { fireEvent.click(menuEntry); });
+    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
+  });
+
+  test('Option "Vielleicht kann ich das besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
+    mockStatusValiditySettingsValue = {
+      statusValidityDaysKandidat: null,
+      statusValidityDaysGeparkt: 14,
+      statusValidityDaysArchiv: null,
+    };
+
+    await act(async () => { renderMenu([makeRecipe('r-special', 'Spezialrezept')]); });
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCard);
+    finishSwipeAnimation(topCard);
+
+    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
+    act(() => { fireEvent.click(trigger); });
+
+    const maybeBetterEntry = Array.from(
+      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
+    ).find((el) => el.textContent === 'Vielleicht kann ich das besser');
+    expect(maybeBetterEntry).not.toBeUndefined();
+
+    await act(async () => { fireEvent.click(maybeBetterEntry); });
+
+    expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
+    expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledWith('list1', 'r-special', 14);
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 });

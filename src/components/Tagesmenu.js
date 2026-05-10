@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
@@ -115,6 +115,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
   const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
   const [showKachelContextMenu, setShowKachelContextMenu] = useState(false);
+  const [kachelContextRecipeId, setKachelContextRecipeId] = useState(null);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -144,6 +145,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setForceShowResults(false);
       setShowMeineAuswahl(false);
       setShowKachelContextMenu(false);
+      setKachelContextRecipeId(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -646,26 +648,52 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     1
   );
 
-  const handleKachelMenuItemClickPlaceholder = () => {
+  const closeKachelContextMenu = useCallback(() => {
     setShowKachelContextMenu(false);
-  };
+    setKachelContextRecipeId(null);
+  }, []);
+
+  const handleKachelMenuItemClick = useCallback(async (item) => {
+    if (
+      item === 'Vielleicht kann ich das besser' &&
+      selectedList?.id &&
+      kachelContextRecipeId
+    ) {
+      const validityDays = statusValiditySettings.statusValidityDaysGeparkt;
+      await parkAllRecipeSwipeFlagsForRecipeInList(
+        selectedList.id,
+        kachelContextRecipeId,
+        validityDays
+      );
+      setSwipeResults((prev) => ({ ...prev, [kachelContextRecipeId]: 'geparkt' }));
+      setActiveFlags((prev) => ({ ...prev, [kachelContextRecipeId]: 'geparkt' }));
+      setAllMembersFlags((prev) => Object.fromEntries(
+        Object.entries(prev).map(([uid, flags]) => [
+          uid,
+          { ...(flags || {}), [kachelContextRecipeId]: 'geparkt' },
+        ])
+      ));
+    }
+
+    closeKachelContextMenu();
+  }, [selectedList, kachelContextRecipeId, statusValiditySettings.statusValidityDaysGeparkt, closeKachelContextMenu]);
 
   useEffect(() => {
     if (!allSwiped && !showMeineAuswahl && showKachelContextMenu) {
-      setShowKachelContextMenu(false);
+      closeKachelContextMenu();
     }
-  }, [allSwiped, showMeineAuswahl, showKachelContextMenu]);
+  }, [allSwiped, showMeineAuswahl, showKachelContextMenu, closeKachelContextMenu]);
 
   useEffect(() => {
     if (!showKachelContextMenu) return undefined;
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setShowKachelContextMenu(false);
+        closeKachelContextMenu();
       }
     };
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [showKachelContextMenu]);
+  }, [showKachelContextMenu, closeKachelContextMenu]);
 
   // ---- Render ---------------------------------------------------------
 
@@ -741,7 +769,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setShowKachelContextMenu((v) => !v);
+                            setKachelContextRecipeId(recipe.id);
+                            setShowKachelContextMenu(true);
                           }}
                         >
                           {isBase64Image(kachelMenuIcon) ? (
@@ -826,7 +855,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowKachelContextMenu((v) => !v);
+                      setKachelContextRecipeId(recipe.id);
+                      setShowKachelContextMenu(true);
                     }}
                   >
                     {isBase64Image(kachelMenuIcon) ? (
@@ -932,7 +962,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setShowKachelContextMenu((v) => !v);
+                            setKachelContextRecipeId(recipe.id);
+                            setShowKachelContextMenu(true);
                           }}
                         >
                           {isBase64Image(kachelMenuIcon) ? (
@@ -1202,14 +1233,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         <>
           <div
             className="tagesmenu-kachel-context-backdrop"
-            onClick={() => setShowKachelContextMenu(false)}
+            onClick={closeKachelContextMenu}
           />
           <div className="tagesmenu-kachel-context-menu">
             {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
               <button
                 key={item}
                 type="button"
-                onClick={handleKachelMenuItemClickPlaceholder}
+                onClick={() => handleKachelMenuItemClick(item)}
               >
                 {item}
               </button>

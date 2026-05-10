@@ -32,7 +32,14 @@ jest.mock('firebase/firestore', () => ({
   },
 }));
 
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from './recipeSwipeFlags';
+import {
+  setRecipeSwipeFlag,
+  getActiveSwipeFlags,
+  getAllMembersSwipeFlags,
+  computeGroupRecipeStatus,
+  clearExpiryForArchivedRecipe,
+  parkAllRecipeSwipeFlagsForRecipeInList
+} from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -44,6 +51,7 @@ beforeEach(() => {
   mockCollection.mockReturnValue('mock-collection-ref');
   mockQuery.mockReturnValue('mock-query-ref');
   mockWhere.mockReturnValue('mock-where-ref');
+  mockTimestampFromMillis.mockImplementation((ms) => ({ _ms: ms, _isMock: true }));
 });
 
 describe('setRecipeSwipeFlag', () => {
@@ -600,6 +608,83 @@ describe('clearExpiryForArchivedRecipe', () => {
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error clearing expiry for archived recipe:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('parkAllRecipeSwipeFlagsForRecipeInList', () => {
+  it('returns false when listId is missing', async () => {
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('', 'recipe-1', 7);
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns false when recipeId is missing', async () => {
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('list-1', '', 7);
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('updates all matching docs to geparkt with configured expiry', async () => {
+    const before = Date.now();
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'mock-ref-1' });
+        cb({ ref: 'mock-ref-2' });
+      },
+    });
+
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('list-1', 'recipe-1', 7);
+
+    expect(result).toBe(true);
+    expect(mockWhere).toHaveBeenCalledWith('listId', '==', 'list-1');
+    expect(mockWhere).toHaveBeenCalledWith('recipeId', '==', 'recipe-1');
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+    expect(mockUpdateDoc).toHaveBeenNthCalledWith(1, 'mock-ref-1', expect.objectContaining({ flag: 'geparkt' }));
+    expect(mockUpdateDoc).toHaveBeenNthCalledWith(2, 'mock-ref-2', expect.objectContaining({ flag: 'geparkt' }));
+
+    expect(mockTimestampFromMillis).toHaveBeenCalledTimes(1);
+    const expiryTimestamp = mockTimestampFromMillis.mock.results[0].value;
+    expect(expiryTimestamp).toEqual(expect.objectContaining({ _isMock: true }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      'mock-ref-1',
+      { flag: 'geparkt', expiresAt: expiryTimestamp }
+    );
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const after = Date.now();
+    expect(expiryTimestamp._ms).toBeGreaterThanOrEqual(before + sevenDays);
+    expect(expiryTimestamp._ms).toBeLessThanOrEqual(after + sevenDays);
+  });
+
+  it('updates all matching docs to geparkt without expiry when validity is null', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'mock-ref-1' });
+      },
+    });
+
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('list-1', 'recipe-1', null);
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-ref-1', { flag: 'geparkt', expiresAt: null });
+  });
+
+  it('returns false and logs error when update fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'mock-ref-1' });
+      },
+    });
+    mockUpdateDoc.mockRejectedValueOnce(new Error('Update error'));
+
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('list-1', 'recipe-1', 7);
+
+    expect(result).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error parking all recipe swipe flags for recipe in list:',
       expect.any(Error)
     );
     consoleSpy.mockRestore();
