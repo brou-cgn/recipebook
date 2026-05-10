@@ -3,6 +3,9 @@ import { render, act, fireEvent } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 import { parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
 import { archiveRecipeForAllUsersInList } from '../utils/recipeSwipeFlags';
+import { updateRecipe } from '../utils/recipeFirestore';
+import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
+import { addFavorite } from '../utils/userFavorites';
 
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
@@ -51,6 +54,19 @@ jest.mock('../utils/customLists', () => ({
 
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
+}));
+
+jest.mock('../utils/recipeFirestore', () => ({
+  updateRecipe: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('../utils/groupFirestore', () => ({
+  addRecipeToGroup: jest.fn(() => Promise.resolve()),
+  removeRecipeFromGroup: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('../utils/userFavorites', () => ({
+  addFavorite: jest.fn(() => Promise.resolve(true)),
 }));
 
 beforeAll(() => {
@@ -1525,5 +1541,83 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     expect(archiveRecipeForAllUsersInList).toHaveBeenCalledWith('list1', 'r1', 14);
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
+  });
+
+  test('Option "Will ich mal wieder kochen" weist Rezept der Zielliste zu', async () => {
+    const interactiveListWithTarget = {
+      ...list,
+      targetListId: 'target-list-1',
+    };
+    const targetRecipe = { id: 'r-target', title: 'Zielrezept', groupId: 'list1' };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[interactiveListWithTarget]}
+          recipes={[targetRecipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeUp(topCard);
+    finishSwipeAnimation(topCard);
+
+    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
+    act(() => { fireEvent.click(trigger); });
+
+    const menuEntry = Array.from(
+      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
+    ).find((el) => el.textContent === 'Will ich mal wieder kochen');
+    expect(menuEntry).not.toBeUndefined();
+
+    await act(async () => { fireEvent.click(menuEntry); });
+
+    expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-target');
+    expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-1', 'r-target');
+    expect(updateRecipe).toHaveBeenCalledWith('r-target', { groupId: 'target-list-1' });
+    expect(addFavorite).not.toHaveBeenCalled();
+  });
+
+  test('Option "Will ich regelmäßig kochen" setzt zusätzlich den Favoritenstatus', async () => {
+    const interactiveListWithTarget = {
+      ...list,
+      targetListId: 'target-list-2',
+    };
+    const targetRecipe = { id: 'r-fav', title: 'Favoritenrezept', groupId: 'list1' };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[interactiveListWithTarget]}
+          recipes={[targetRecipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeUp(topCard);
+    finishSwipeAnimation(topCard);
+
+    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
+    act(() => { fireEvent.click(trigger); });
+
+    const menuEntry = Array.from(
+      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
+    ).find((el) => el.textContent === 'Will ich regelmäßig kochen');
+    expect(menuEntry).not.toBeUndefined();
+
+    await act(async () => { fireEvent.click(menuEntry); });
+
+    expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-fav');
+    expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-2', 'r-fav');
+    expect(updateRecipe).toHaveBeenCalledWith('r-fav', { groupId: 'target-list-2' });
+    expect(addFavorite).toHaveBeenCalledWith('user1', 'r-fav');
   });
 });
