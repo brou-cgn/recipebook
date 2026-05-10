@@ -2,6 +2,9 @@ import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import './Tagesmenu.css';
 import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
+import { updateRecipe } from '../utils/recipeFirestore';
+import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
+import { addFavorite } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
@@ -35,6 +38,10 @@ const TAGESMENU_KACHEL_MENU_ITEMS = [
   'Will ich mal wieder kochen',
   'Will ich regelmäßig kochen',
 ];
+const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
+  'Will ich mal wieder kochen': { markAsFavorite: false },
+  'Will ich regelmäßig kochen': { markAsFavorite: true },
+};
 
 function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, currentUser }) {
   const [selectedListId, setSelectedListId] = useState(
@@ -657,6 +664,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const handleKachelMenuItemClick = useCallback(async (item) => {
     const targetListId = selectedListId;
     const targetRecipeId = contextMenuRecipeId;
+    const targetRecipe = allListRecipes.find((recipe) => recipe.id === targetRecipeId);
+    const interactiveTargetListId = selectedList?.targetListId;
+    const assignToTargetConfig = TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS[item];
     closeKachelContextMenu();
 
     if (
@@ -716,8 +726,39 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         console.error('Failed to park recipe swipe flags for all users:', err);
       }
     }
+
+    if (
+      assignToTargetConfig &&
+      targetListId &&
+      targetRecipeId &&
+      interactiveTargetListId
+    ) {
+      try {
+        // Mapping der beiden Menüoptionen:
+        // - Verbindung des Rezepts zur interaktiven Liste entfernen
+        // - Rezept in die definierte Zielliste übernehmen
+        // - Falls groupId noch auf die interaktive Liste zeigt, auf Zielliste umhängen
+        // - Bei "Will ich regelmäßig kochen" zusätzlich als Favorit markieren
+        await Promise.all([
+          removeRecipeFromGroup(targetListId, targetRecipeId),
+          addRecipeToGroup(interactiveTargetListId, targetRecipeId),
+          ...(targetRecipe?.groupId === targetListId
+            ? [updateRecipe(targetRecipeId, { groupId: interactiveTargetListId })]
+            : []),
+        ]);
+
+        if (assignToTargetConfig.markAsFavorite && currentUser?.id) {
+          await addFavorite(currentUser.id, targetRecipeId);
+        }
+      } catch (err) {
+        console.error('Failed to assign recipe to target list from Tagesmenü:', err);
+      }
+    }
   }, [
     selectedListId,
+    selectedList,
+    allListRecipes,
+    currentUser,
     contextMenuRecipeId,
     statusValiditySettings.statusValidityDaysArchiv,
     statusValiditySettings.statusValidityDaysGeparkt,
