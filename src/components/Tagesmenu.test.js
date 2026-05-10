@@ -270,6 +270,17 @@ describe('Tagesmenu – completion tile view', () => {
     );
   });
 
+  test('long tile titles render in the dedicated title element', async () => {
+    const longTitle = 'Ein sehr sehr sehr sehr sehr sehr sehr sehr sehr langer Rezepttitel';
+    await act(async () => { renderMenu([makeRecipe('r1', longTitle)]); });
+    swipeAllCards([swipeLeft]);
+
+    const tileTitle = document.querySelector('.tagesmenu-results-tile-name');
+    expect(tileTitle).not.toBeNull();
+    expect(tileTitle).toHaveTextContent(longTitle);
+    expect(tileTitle.innerHTML).not.toContain('<br');
+  });
+
   test('results view has no restart button', async () => {
     await act(async () => { renderMenu(); });
     swipeAllCards([swipeLeft, swipeLeft, swipeLeft]);
