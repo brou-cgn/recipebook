@@ -66,6 +66,8 @@ beforeEach(() => {
     statusValidityDaysGeparkt: null,
     statusValidityDaysArchiv: null,
   };
+  const { archiveRecipeForAllUsersInList } = jest.requireMock('../utils/recipeSwipeFlags');
+  archiveRecipeForAllUsersInList.mockResolvedValue(true);
 });
 
 const makeRecipe = (id, title) => ({ id, title, groupId: 'list1' });

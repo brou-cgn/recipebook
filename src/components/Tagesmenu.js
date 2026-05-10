@@ -651,11 +651,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const handleKachelMenuItemClick = (item) => {
     if (item === 'Ich bin enttäuscht' && selectedListId && selectedKachelContextRecipeId) {
       const archiveValidityDays = statusValiditySettings.statusValidityDaysArchiv;
-      Promise.resolve(archiveRecipeForAllUsersInList(
+      archiveRecipeForAllUsersInList(
         selectedListId,
         selectedKachelContextRecipeId,
         archiveValidityDays
-      )).then(() => {
+      ).then((didArchive) => {
+        if (!didArchive) return;
         setSwipeResults((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
         setActiveFlags((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
         setAllMembersFlags((prev) => {
