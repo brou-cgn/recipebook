@@ -651,7 +651,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   };
 
   useEffect(() => {
-    if ((allSwiped || showMeineAuswahl) && showKachelContextMenu) {
+    if (!allSwiped && !showMeineAuswahl && showKachelContextMenu) {
       setShowKachelContextMenu(false);
     }
   }, [allSwiped, showMeineAuswahl, showKachelContextMenu]);
@@ -720,11 +720,36 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       ? [recipe.kulinarik]
                       : [];
                     return (
-                      <button
+                      <div
                         key={recipe.id}
+                        role="button"
+                        tabIndex={0}
                         className="tagesmenu-results-tile"
                         onClick={() => onSelectRecipe(recipe)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSelectRecipe(recipe);
+                          }
+                        }}
                       >
+                        <button
+                          type="button"
+                          className="tagesmenu-kachel-context-trigger"
+                          aria-label="Kachel-Kontextmenü öffnen"
+                          title="Kachel-Kontextmenü öffnen"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowKachelContextMenu((v) => !v);
+                          }}
+                        >
+                          {isBase64Image(kachelMenuIcon) ? (
+                            <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                          ) : (
+                            <span>{kachelMenuIcon}</span>
+                          )}
+                        </button>
                         {flag === 'archiv' && permanentlyArchivedRecipeIds.has(recipe.id) && (
                           <div className="tagesmenu-permanent-archive-badge" title="Dauerhaft archiviert">Archiv</div>
                         )}
@@ -746,7 +771,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                             ))}
                           </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -780,11 +805,36 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                 ? [recipe.kulinarik]
                 : [];
               return (
-                <button
+                <div
                   key={recipe.id}
+                  role="button"
+                  tabIndex={0}
                   className="tagesmenu-results-tile"
                   onClick={() => onSelectRecipe(recipe)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectRecipe(recipe);
+                    }
+                  }}
                 >
+                  <button
+                    type="button"
+                    className="tagesmenu-kachel-context-trigger"
+                    aria-label="Kachel-Kontextmenü öffnen"
+                    title="Kachel-Kontextmenü öffnen"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowKachelContextMenu((v) => !v);
+                    }}
+                  >
+                    {isBase64Image(kachelMenuIcon) ? (
+                      <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                    ) : (
+                      <span>{kachelMenuIcon}</span>
+                    )}
+                  </button>
                   <div className="tagesmenu-results-tile-image">
                     {orderedImages.length > 0 ? (
                       <img src={orderedImages[0].url} alt={recipe.title} />
@@ -803,7 +853,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       ))}
                     </div>
                   )}
-                </button>
+                </div>
               );
             };
 
@@ -861,11 +911,36 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       ? [recipe.kulinarik]
                       : [];
                     return (
-                      <button
+                      <div
                         key={recipe.id}
+                        role="button"
+                        tabIndex={0}
                         className="tagesmenu-results-tile"
                         onClick={() => onSelectRecipe(recipe)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSelectRecipe(recipe);
+                          }
+                        }}
                       >
+                        <button
+                          type="button"
+                          className="tagesmenu-kachel-context-trigger"
+                          aria-label="Kachel-Kontextmenü öffnen"
+                          title="Kachel-Kontextmenü öffnen"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowKachelContextMenu((v) => !v);
+                          }}
+                        >
+                          {isBase64Image(kachelMenuIcon) ? (
+                            <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                          ) : (
+                            <span>{kachelMenuIcon}</span>
+                          )}
+                        </button>
                         <div className="tagesmenu-results-tile-image">
                           {orderedImages.length > 0 ? (
                             <img src={orderedImages[0].url} alt={recipe.title} />
@@ -884,7 +959,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                             ))}
                           </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -965,25 +1040,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       ? <img src={swipeIcons.swipeRight} alt="" className="tagesmenu-swipe-badge-img" />
                       : swipeIcons.swipeRight}
                   </div>
-                )}
-                {isTop && (
-                  <button
-                    type="button"
-                    className="tagesmenu-kachel-context-trigger"
-                    aria-label="Kachel-Kontextmenü öffnen"
-                    title="Kachel-Kontextmenü öffnen"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowKachelContextMenu((v) => !v);
-                    }}
-                  >
-                    {isBase64Image(kachelMenuIcon) ? (
-                      <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
-                    ) : (
-                      <span>{kachelMenuIcon}</span>
-                    )}
-                  </button>
                 )}
                 {isTop && swipeHint === 'left' && (
                   <div
