@@ -9,6 +9,7 @@
  *   - memberIds: string[]
  *   - memberRoles: { [userId]: string }  // placeholder for future role management
  *   - listKind: "interactive" | "classic" | null (null for groups created before this attribute was introduced)
+ *   - targetListId: string | undefined (only for interactive lists; references the target private list)
  */
 
 import { db, functions } from '../firebase';
@@ -137,6 +138,7 @@ export const addGroup = async (groupData, ownerId) => {
       memberIds: Array.isArray(groupData.memberIds) ? [...new Set([ownerId, ...groupData.memberIds])] : [ownerId],
       memberRoles: groupData.memberRoles || {},
       listKind: groupData.listKind || null,
+      targetListId: groupData.targetListId || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });

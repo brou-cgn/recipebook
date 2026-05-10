@@ -146,6 +146,13 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
           currentUser={currentUser}
           onSave={handleSaveGroup}
           onCancel={() => setIsDialogOpen(false)}
+          privateLists={(groups || []).filter(
+            (g) =>
+              g.type === 'private' &&
+              g.listKind !== 'interactive' &&
+              (g.ownerId === currentUser?.id ||
+                (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id)))
+          )}
         />
       )}
     </div>
