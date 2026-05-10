@@ -312,6 +312,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const safeIdx = Math.min(carouselIndex, Math.max(0, orderedImages.length - 1));
     const currentImage = orderedImages[safeIdx];
     const isBright = currentImage?.imageBrightness?.isBright;
+    // Legacy images without brightness metadata keep standard icons.
     const isDark = isBright === false;
     setUseCookingModeAlt(isDark);
     setUseCloseButtonAlt(isDark);
