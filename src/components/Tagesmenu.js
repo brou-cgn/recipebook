@@ -656,6 +656,17 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     }
   }, [allSwiped, showMeineAuswahl]);
 
+  useEffect(() => {
+    if (!showKachelContextMenu) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowKachelContextMenu(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showKachelContextMenu]);
+
   // ---- Render ---------------------------------------------------------
 
   // All async data needed to determine whether to show the stack or the results view
