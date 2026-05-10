@@ -646,7 +646,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     1
   );
 
-  const handleKachelMenuItemClick = () => {
+  const handleKachelMenuItemClickPlaceholder = () => {
     setShowKachelContextMenu(false);
   };
 
@@ -1142,7 +1142,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               <button
                 key={item}
                 type="button"
-                onClick={handleKachelMenuItemClick}
+                onClick={handleKachelMenuItemClickPlaceholder}
               >
                 {item}
               </button>

@@ -3,6 +3,7 @@
  * ------------------------------------------------------------------ */
 
 .tagesmenu-container {
+  --tagesmenu-kachel-context-menu-top: calc(60px + 24px);
   display: flex;
   flex-direction: column;
   /* fill the viewport below the sticky header */
@@ -76,7 +77,7 @@
 
 .tagesmenu-kachel-context-menu {
   position: fixed;
-  top: 84px;
+  top: var(--tagesmenu-kachel-context-menu-top);
   right: 20px;
   z-index: 1199;
   min-width: 260px;
