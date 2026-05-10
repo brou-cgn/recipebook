@@ -1,5 +1,7 @@
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
 import Tagesmenu from './Tagesmenu';
 
 let mockActiveFlagsValue = {};
@@ -278,7 +280,10 @@ describe('Tagesmenu – completion tile view', () => {
     const tileTitle = document.querySelector('.tagesmenu-results-tile-name');
     expect(tileTitle).not.toBeNull();
     expect(tileTitle).toHaveTextContent(longTitle);
-    expect(tileTitle.classList.contains('tagesmenu-results-tile-name')).toBe(true);
+
+    const cssContent = fs.readFileSync(path.resolve(__dirname, 'Tagesmenu.css'), 'utf8');
+    expect(cssContent).toMatch(/\.tagesmenu-results-tile-name\s*\{[\s\S]*white-space:\s*nowrap;/);
+    expect(cssContent).toMatch(/\.tagesmenu-results-tile-name\s*\{[\s\S]*text-overflow:\s*ellipsis;/);
   });
 
   test('results view has no restart button', async () => {
