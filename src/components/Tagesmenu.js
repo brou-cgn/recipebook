@@ -28,8 +28,9 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
 const TAGESMENU_KACHEL_MENU_ITEMS = [
-  'Ich bin enttäuscht',
+  DISAPPOINTED_MENU_ITEM,
   'Vielleicht kann ich das besser',
   'Will ich mal wieder kochen',
   'Will ich regelmäßig kochen',
@@ -649,7 +650,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   );
 
   const handleKachelMenuItemClick = (item) => {
-    if (item === 'Ich bin enttäuscht' && selectedListId && selectedKachelContextRecipeId) {
+    if (item === DISAPPOINTED_MENU_ITEM && selectedListId && selectedKachelContextRecipeId) {
       const archiveValidityDays = statusValiditySettings.statusValidityDaysArchiv;
       archiveRecipeForAllUsersInList(
         selectedListId,
@@ -659,18 +660,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         if (!didArchive) return;
         setSwipeResults((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
         setActiveFlags((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
-        setAllMembersFlags((prev) => {
-          const next = { ...prev };
-          Object.keys(next).forEach((userId) => {
-            if (next[userId]?.[selectedKachelContextRecipeId] !== undefined) {
-              next[userId] = {
-                ...next[userId],
-                [selectedKachelContextRecipeId]: 'archiv',
-              };
+        setAllMembersFlags((prev) => Object.fromEntries(
+          Object.entries(prev).map(([userId, userFlags]) => {
+            if (userFlags?.[selectedKachelContextRecipeId] === undefined) {
+              return [userId, userFlags];
             }
-          });
-          return next;
-        });
+            return [userId, { ...userFlags, [selectedKachelContextRecipeId]: 'archiv' }];
+          })
+        ));
       }).catch((err) => {
         console.error('Failed to archive recipe swipe flags for all users:', err);
       });
