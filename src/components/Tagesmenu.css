@@ -4,12 +4,6 @@
 
 .tagesmenu-container {
   --tagesmenu-sticky-header-height: 60px;
-  --tagesmenu-kachel-context-menu-offset: 24px;
-  --tagesmenu-kachel-context-menu-top: calc(
-    var(--tagesmenu-sticky-header-height) + var(--tagesmenu-kachel-context-menu-offset)
-  );
-  --tagesmenu-kachel-context-backdrop-z: 1198;
-  --tagesmenu-kachel-context-menu-z: 1199;
   display: flex;
   flex-direction: column;
   /* fill the viewport below the sticky header */
@@ -46,68 +40,59 @@
   will-change: transform;
 }
 
-.tagesmenu-kachel-context-trigger {
+/* Native select overlay für Kachel-Menü-Button */
+.tagesmenu-kachel-menu-wrapper {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 25;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: none;
-  background: none;
-  color: #333;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.tagesmenu-kachel-context-icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  cursor: pointer;
-}
-
-.tagesmenu-kachel-context-trigger span {
-  font-size: 1rem;
-  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
+  font-size: 1.5rem;
+  color: #333;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tagesmenu-kachel-context-trigger-img {
-  width: 1rem;
-  height: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
   object-fit: contain;
 }
 
-.tagesmenu-kachel-context-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--tagesmenu-kachel-context-backdrop-z);
-}
-
-.tagesmenu-kachel-context-menu {
-  position: fixed;
-  top: var(--tagesmenu-kachel-context-menu-top);
-  right: 20px;
-  z-index: var(--tagesmenu-kachel-context-menu-z);
-  min-width: 260px;
-  background: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
-  overflow: hidden;
-}
-
-.tagesmenu-kachel-context-menu button {
-  display: block;
+.tagesmenu-kachel-context-select {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  border: none;
-  background: none;
-  text-align: left;
-  padding: 0.75rem 1rem;
-  font-size: 0.95rem;
-  color: #333;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
+  z-index: 2;
+  font-size: 16px; /* Verhindert Auto-Zoom auf iOS */
 }
 
-.tagesmenu-kachel-context-menu button:hover {
-  background: #f5f5f5;
+/* Anpassung für Dark Mode */
+@media (prefers-color-scheme: dark) {
+  .tagesmenu-kachel-context-icon {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+  }
 }
 
 /* The frontmost (draggable) card gets a grab cursor */

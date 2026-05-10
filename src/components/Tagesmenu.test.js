@@ -1462,38 +1462,33 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     };
   });
 
-  test('zeigt das Icon nur in den Kandidaten-Kacheln und öffnet darüber das Kontextmenü', async () => {
+  test('zeigt das Select-Overlay nur in den Kandidaten-Kacheln mit allen Aktionen', async () => {
     await act(async () => { renderMenu(); });
 
-    expect(document.querySelector('.tagesmenu-stack .tagesmenu-kachel-context-trigger')).toBeNull();
+    expect(document.querySelector('.tagesmenu-stack .tagesmenu-kachel-context-select')).toBeNull();
     swipeAllCardsToResults();
 
-    const triggers = document.querySelectorAll('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
-    expect(triggers).toHaveLength(3);
+    const selects = document.querySelectorAll('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    expect(selects).toHaveLength(3);
 
-    act(() => { fireEvent.click(triggers[0]); });
-
-    const menu = document.querySelector('.tagesmenu-kachel-context-menu');
-    expect(menu).not.toBeNull();
-    expect(menu).toHaveTextContent('Ich bin enttäuscht');
-    expect(menu).toHaveTextContent('Vielleicht kann ich das besser');
-    expect(menu).toHaveTextContent('Will ich mal wieder kochen');
-    expect(menu).toHaveTextContent('Will ich regelmäßig kochen');
+    const optionLabels = Array.from(selects[0].querySelectorAll('option')).map((option) => option.textContent);
+    expect(optionLabels).toEqual([
+      'Aktion wählen...',
+      'Ich bin enttäuscht',
+      'Vielleicht kann ich das besser',
+      'Will ich mal wieder kochen',
+      'Will ich regelmäßig kochen',
+    ]);
+    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 
-  test('schließt das Kontextmenü nach Auswahl eines Eintrags', async () => {
+  test('setzt den nativen Select nach Auswahl eines Eintrags zurück', async () => {
     await act(async () => { renderMenu(); });
     swipeAllCardsToResults();
 
-    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
-    act(() => { fireEvent.click(trigger); });
-
-    const menuEntry = Array.from(
-      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
-    ).find((el) => el.textContent === 'Ich bin enttäuscht');
-    expect(menuEntry).not.toBeUndefined();
-
-    act(() => { fireEvent.click(menuEntry); });
+    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
+    expect(select.value).toBe('');
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 
@@ -1509,19 +1504,13 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     swipeLeft(topCard);
     finishSwipeAnimation(topCard);
 
-    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
-    act(() => { fireEvent.click(trigger); });
-
-    const maybeBetterEntry = Array.from(
-      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
-    ).find((el) => el.textContent === 'Vielleicht kann ich das besser');
-    expect(maybeBetterEntry).not.toBeUndefined();
-
-    await act(async () => { fireEvent.click(maybeBetterEntry); });
+    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    await act(async () => {
+      fireEvent.change(select, { target: { value: 'Vielleicht kann ich das besser' } });
+    });
 
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledWith('list1', 'r-special', 14);
-    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 
   test('setzt bei "Ich bin enttäuscht" alle Flags des aktuellen Rezepts in der aktuellen Liste auf archiv', async () => {
@@ -1529,18 +1518,10 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     swipeAllCardsToResults();
 
     const firstTile = document.querySelectorAll('.tagesmenu-results-tile')[0];
-    const trigger = firstTile.querySelector('.tagesmenu-kachel-context-trigger');
-    act(() => { fireEvent.click(trigger); });
-
-    const menuEntry = Array.from(
-      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
-    ).find((el) => el.textContent === 'Ich bin enttäuscht');
-    expect(menuEntry).not.toBeUndefined();
-
-    await act(async () => { fireEvent.click(menuEntry); });
+    const select = firstTile.querySelector('.tagesmenu-kachel-context-select');
+    await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
 
     expect(archiveRecipeForAllUsersInList).toHaveBeenCalledWith('list1', 'r1', 14);
-    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 
   test('Option "Will ich mal wieder kochen" weist Rezept der Zielliste zu', async () => {
@@ -1566,15 +1547,8 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     swipeUp(topCard);
     finishSwipeAnimation(topCard);
 
-    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
-    act(() => { fireEvent.click(trigger); });
-
-    const menuEntry = Array.from(
-      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
-    ).find((el) => el.textContent === 'Will ich mal wieder kochen');
-    expect(menuEntry).not.toBeUndefined();
-
-    await act(async () => { fireEvent.click(menuEntry); });
+    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    await act(async () => { fireEvent.change(select, { target: { value: 'Will ich mal wieder kochen' } }); });
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-target');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-1', 'r-target');
@@ -1605,15 +1579,8 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     swipeUp(topCard);
     finishSwipeAnimation(topCard);
 
-    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
-    act(() => { fireEvent.click(trigger); });
-
-    const menuEntry = Array.from(
-      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
-    ).find((el) => el.textContent === 'Will ich regelmäßig kochen');
-    expect(menuEntry).not.toBeUndefined();
-
-    await act(async () => { fireEvent.click(menuEntry); });
+    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    await act(async () => { fireEvent.change(select, { target: { value: 'Will ich regelmäßig kochen' } }); });
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-fav');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-2', 'r-fav');
