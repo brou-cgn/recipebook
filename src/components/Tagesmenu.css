@@ -64,9 +64,14 @@
   z-index: 1;
   font-size: 1.5rem;
   color: #333;
-  background: rgba(255, 255, 255, 0.9);
+  background: transparent;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+}
+
+.tagesmenu-kachel-context-icon span,
+.tagesmenu-kachel-context-icon img {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .tagesmenu-kachel-context-trigger-img {
@@ -91,7 +96,12 @@
 @media (prefers-color-scheme: dark) {
   .tagesmenu-kachel-context-icon {
     color: #fff;
-    background: rgba(0, 0, 0, 0.7);
+    background: transparent;
+  }
+
+  .tagesmenu-kachel-context-icon span,
+  .tagesmenu-kachel-context-icon img {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
   }
 }
 
