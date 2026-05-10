@@ -28,6 +28,12 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const TAGESMENU_KACHEL_MENU_ITEMS = [
+  'Ich bin enttäuscht',
+  'Vielleicht kann ich das besser',
+  'Will ich mal wieder kochen',
+  'Will ich regelmäßig kochen',
+];
 
 function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, currentUser }) {
   const [selectedListId, setSelectedListId] = useState(
@@ -96,6 +102,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Configurable "Meine Auswahl" button icon loaded from settings
   const [meineAuswahlIcon, setMeineAuswahlIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuMeineAuswahl);
+  // Configurable menu icon shown on the top-right corner of the Tagesmenü tile
+  const [kachelMenuIcon, setKachelMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuKachelMenu);
 
   // Full icons object and dark mode state for dark mode icon variants
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -106,6 +114,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
   const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
+  const [showKachelContextMenu, setShowKachelContextMenu] = useState(false);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -134,6 +143,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setThresholdCrossedAtIndex(null);
       setForceShowResults(false);
       setShowMeineAuswahl(false);
+      setShowKachelContextMenu(false);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -168,6 +178,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     setFilterButtonIcon(eff('tagesmenuFilterButton'));
     setZumTagesMenuIcon(eff('tagesmenuZumTagesMenu'));
     setMeineAuswahlIcon(eff('tagesmenuMeineAuswahl'));
+    setKachelMenuIcon(eff('tagesmenuKachelMenu'));
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -635,6 +646,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     1
   );
 
+  const handleKachelMenuItemClick = () => {
+    setShowKachelContextMenu(false);
+  };
+
+  useEffect(() => {
+    if (allSwiped || showMeineAuswahl) {
+      setShowKachelContextMenu(false);
+    }
+  }, [allSwiped, showMeineAuswahl]);
+
   // ---- Render ---------------------------------------------------------
 
   // All async data needed to determine whether to show the stack or the results view
@@ -934,6 +955,25 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       : swipeIcons.swipeRight}
                   </div>
                 )}
+                {isTop && (
+                  <button
+                    type="button"
+                    className="tagesmenu-kachel-context-trigger"
+                    aria-label="Kachel-Kontextmenü öffnen"
+                    title="Kachel-Kontextmenü öffnen"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowKachelContextMenu((v) => !v);
+                    }}
+                  >
+                    {isBase64Image(kachelMenuIcon) ? (
+                      <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                    ) : (
+                      <span>{kachelMenuIcon}</span>
+                    )}
+                  </button>
+                )}
                 {isTop && swipeHint === 'left' && (
                   <div
                     className="tagesmenu-swipe-badge tagesmenu-swipe-badge--left"
@@ -1090,6 +1130,26 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         selectedListId={selectedListId}
         onSelectList={(id) => setSelectedListId(id)}
       />
+
+      {showKachelContextMenu && (
+        <>
+          <div
+            className="tagesmenu-kachel-context-backdrop"
+            onClick={() => setShowKachelContextMenu(false)}
+          />
+          <div className="tagesmenu-kachel-context-menu">
+            {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={handleKachelMenuItemClick}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
