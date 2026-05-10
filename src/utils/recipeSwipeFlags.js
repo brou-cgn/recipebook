@@ -258,3 +258,40 @@ export const clearExpiryForArchivedRecipe = async (listId, recipeId) => {
     return false;
   }
 };
+
+/**
+ * Set all swipe flag documents for a specific recipe in a list to "archiv".
+ * The expiry is re-written based on validityDays (null = permanent archive).
+ *
+ * @param {string} listId
+ * @param {string} recipeId
+ * @param {number|null} [validityDays]
+ * @returns {Promise<boolean>} true if all updates succeeded
+ */
+export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityDays) => {
+  if (!listId || !recipeId) return false;
+
+  let expiresAt = null;
+  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
+    expiresAt = timestampInDays(validityDays);
+  }
+
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId),
+      where('recipeId', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const updates = [];
+    snapshot.forEach((docSnap) => {
+      updates.push(updateDoc(docSnap.ref, { flag: 'archiv', expiresAt }));
+    });
+    if (updates.length === 0) return false;
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error('Error archiving recipe swipe flags for all users:', error);
+    return false;
+  }
+};

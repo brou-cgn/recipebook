@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
@@ -28,8 +28,9 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
 const TAGESMENU_KACHEL_MENU_ITEMS = [
-  'Ich bin enttäuscht',
+  DISAPPOINTED_MENU_ITEM,
   'Vielleicht kann ich das besser',
   'Will ich mal wieder kochen',
   'Will ich regelmäßig kochen',
@@ -115,6 +116,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
   const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
   const [showKachelContextMenu, setShowKachelContextMenu] = useState(false);
+  const [selectedKachelContextRecipeId, setSelectedKachelContextRecipeId] = useState(null);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -144,6 +146,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setForceShowResults(false);
       setShowMeineAuswahl(false);
       setShowKachelContextMenu(false);
+      setSelectedKachelContextRecipeId(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -646,8 +649,31 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     1
   );
 
-  const handleKachelMenuItemClickPlaceholder = () => {
+  const handleKachelMenuItemClick = (item) => {
+    if (item === DISAPPOINTED_MENU_ITEM && selectedListId && selectedKachelContextRecipeId) {
+      const archiveValidityDays = statusValiditySettings.statusValidityDaysArchiv;
+      archiveRecipeForAllUsersInList(
+        selectedListId,
+        selectedKachelContextRecipeId,
+        archiveValidityDays
+      ).then((didArchive) => {
+        if (!didArchive) return;
+        setSwipeResults((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
+        setActiveFlags((prev) => ({ ...prev, [selectedKachelContextRecipeId]: 'archiv' }));
+        setAllMembersFlags((prev) => Object.fromEntries(
+          Object.entries(prev).map(([userId, userFlags]) => {
+            if (userFlags?.[selectedKachelContextRecipeId] === undefined) {
+              return [userId, userFlags];
+            }
+            return [userId, { ...userFlags, [selectedKachelContextRecipeId]: 'archiv' }];
+          })
+        ));
+      }).catch((err) => {
+        console.error('Failed to archive recipe swipe flags for all users:', err);
+      });
+    }
     setShowKachelContextMenu(false);
+    setSelectedKachelContextRecipeId(null);
   };
 
   useEffect(() => {
@@ -741,6 +767,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
+                            setSelectedKachelContextRecipeId(recipe.id);
                             setShowKachelContextMenu((v) => !v);
                           }}
                         >
@@ -826,6 +853,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
+                      setSelectedKachelContextRecipeId(recipe.id);
                       setShowKachelContextMenu((v) => !v);
                     }}
                   >
@@ -932,6 +960,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
+                            setSelectedKachelContextRecipeId(recipe.id);
                             setShowKachelContextMenu((v) => !v);
                           }}
                         >
@@ -1209,7 +1238,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               <button
                 key={item}
                 type="button"
-                onClick={handleKachelMenuItemClickPlaceholder}
+                onClick={() => handleKachelMenuItemClick(item)}
               >
                 {item}
               </button>

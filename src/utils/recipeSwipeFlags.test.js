@@ -32,7 +32,7 @@ jest.mock('firebase/firestore', () => ({
   },
 }));
 
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe } from './recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList } from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -600,6 +600,86 @@ describe('clearExpiryForArchivedRecipe', () => {
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error clearing expiry for archived recipe:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('archiveRecipeForAllUsersInList', () => {
+  it('returns false when listId is missing', async () => {
+    const result = await archiveRecipeForAllUsersInList('', 'recipe-1', 14);
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns false when recipeId is missing', async () => {
+    const result = await archiveRecipeForAllUsersInList('list-1', '', 14);
+    expect(result).toBe(false);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('updates all matching docs to archiv with configured expiry', async () => {
+    const mockRef1 = 'mock-ref-1';
+    const mockRef2 = 'mock-ref-2';
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: mockRef1 });
+        cb({ ref: mockRef2 });
+      },
+    });
+
+    const before = Date.now();
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', 7);
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    expect(mockWhere).toHaveBeenCalledWith('listId', '==', 'list-1');
+    expect(mockWhere).toHaveBeenCalledWith('recipeId', '==', 'recipe-1');
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+
+    const expiresAt = mockUpdateDoc.mock.calls[0][1].expiresAt;
+    expect(mockUpdateDoc).toHaveBeenCalledWith(mockRef1, { flag: 'archiv', expiresAt });
+    expect(mockUpdateDoc).toHaveBeenCalledWith(mockRef2, { flag: 'archiv', expiresAt });
+
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
+    expect(expiresMs).toBeGreaterThanOrEqual(before + sevenDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + sevenDays);
+  });
+
+  it('updates docs to permanent archiv when validityDays is null', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => cb({ ref: 'mock-ref-1' }),
+    });
+
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', null);
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-ref-1', { flag: 'archiv', expiresAt: null });
+  });
+
+  it('returns false when no matching documents exist', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
+
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', 7);
+
+    expect(result).toBe(false);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('returns false and logs error when update fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => cb({ ref: 'mock-ref-1' }),
+    });
+    mockUpdateDoc.mockRejectedValueOnce(new Error('Update failed'));
+
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', 3);
+
+    expect(result).toBe(false);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error archiving recipe swipe flags for all users:',
       expect.any(Error)
     );
     consoleSpy.mockRestore();
