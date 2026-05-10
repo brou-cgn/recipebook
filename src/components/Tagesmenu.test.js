@@ -32,11 +32,13 @@ jest.mock('../utils/customLists', () => ({
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
+    tagesmenuKachelMenu: '⋯',
   }),
   DEFAULT_BUTTON_ICONS: {
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
+    tagesmenuKachelMenu: '⋯',
   },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
@@ -1404,5 +1406,44 @@ describe('Tagesmenu – Meine Auswahl FAB button', () => {
     act(() => { fireEvent.click(btn); });
     expect(document.querySelector('.tagesmenu-meine-auswahl')).not.toBeNull();
     expect(document.querySelector('.tagesmenu-results')).toBeNull();
+  });
+});
+
+describe('Tagesmenu – Kachel-Kontextmenü', () => {
+  beforeEach(() => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockMaxKandidatenSchwelle = null;
+  });
+
+  test('öffnet das Kontextmenü über das Icon oben rechts', async () => {
+    await act(async () => { renderMenu(); });
+
+    const trigger = document.querySelector('.tagesmenu-kachel-context-trigger');
+    expect(trigger).not.toBeNull();
+
+    act(() => { fireEvent.click(trigger); });
+
+    const menu = document.querySelector('.tagesmenu-kachel-context-menu');
+    expect(menu).not.toBeNull();
+    expect(menu).toHaveTextContent('Ich bin enttäuscht');
+    expect(menu).toHaveTextContent('Vielleicht kann ich das besser');
+    expect(menu).toHaveTextContent('Will ich mal wieder kochen');
+    expect(menu).toHaveTextContent('Will ich regelmäßig kochen');
+  });
+
+  test('schließt das Kontextmenü nach Auswahl eines Eintrags', async () => {
+    await act(async () => { renderMenu(); });
+
+    const trigger = document.querySelector('.tagesmenu-kachel-context-trigger');
+    act(() => { fireEvent.click(trigger); });
+
+    const menuEntry = Array.from(
+      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
+    ).find((el) => el.textContent === 'Ich bin enttäuscht');
+    expect(menuEntry).not.toBeUndefined();
+
+    act(() => { fireEvent.click(menuEntry); });
+    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 });

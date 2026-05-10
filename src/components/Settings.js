@@ -192,6 +192,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'tagesmenuFilterButton', label: 'Tagesmenü-Filter' },
   { key: 'tagesmenuZumTagesMenu', label: 'Zum Tagesmenü' },
   { key: 'tagesmenuMeineAuswahl', label: 'Meine Auswahl' },
+  { key: 'tagesmenuKachelMenu', label: 'Tagesmenü-Kachelmenü' },
   { key: 'newVersion', label: 'Neue Version' },
   { key: 'publishRecipe', label: 'Rezept veröffentlichen' },
   { key: 'deleteRecipe', label: 'Rezept löschen' },
