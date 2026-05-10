@@ -651,10 +651,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   };
 
   useEffect(() => {
-    if (allSwiped || showMeineAuswahl) {
+    if ((allSwiped || showMeineAuswahl) && showKachelContextMenu) {
       setShowKachelContextMenu(false);
     }
-  }, [allSwiped, showMeineAuswahl]);
+  }, [allSwiped, showMeineAuswahl, showKachelContextMenu]);
 
   useEffect(() => {
     if (!showKachelContextMenu) return undefined;

@@ -3,7 +3,13 @@
  * ------------------------------------------------------------------ */
 
 .tagesmenu-container {
-  --tagesmenu-kachel-context-menu-top: calc(60px + 24px);
+  --tagesmenu-sticky-header-height: 60px;
+  --tagesmenu-kachel-context-menu-offset: 24px;
+  --tagesmenu-kachel-context-menu-top: calc(
+    var(--tagesmenu-sticky-header-height) + var(--tagesmenu-kachel-context-menu-offset)
+  );
+  --tagesmenu-kachel-context-backdrop-z: 1198;
+  --tagesmenu-kachel-context-menu-z: 1199;
   display: flex;
   flex-direction: column;
   /* fill the viewport below the sticky header */
@@ -72,14 +78,14 @@
 .tagesmenu-kachel-context-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1198;
+  z-index: var(--tagesmenu-kachel-context-backdrop-z);
 }
 
 .tagesmenu-kachel-context-menu {
   position: fixed;
   top: var(--tagesmenu-kachel-context-menu-top);
   right: 20px;
-  z-index: 1199;
+  z-index: var(--tagesmenu-kachel-context-menu-z);
   min-width: 260px;
   background: #ffffff;
   border: 1px solid #ddd;
