@@ -969,7 +969,30 @@ function App() {
   const handleCreateGroup = async (groupData) => {
     if (!currentUser) return;
     try {
-      await addGroupToFirestore(groupData, currentUser.id);
+      let targetListId = groupData.targetListId;
+
+      // When creating an interactive list with a new target list, first create the target list
+      if (groupData.listKind === 'interactive' && groupData.newTargetListName) {
+        const newTargetList = await addGroupToFirestore(
+          {
+            name: groupData.newTargetListName,
+            memberIds: groupData.memberIds,
+            memberRoles: {},
+            listKind: 'classic',
+          },
+          currentUser.id
+        );
+        targetListId = newTargetList.id;
+      }
+
+      // Build the interactive list data, linking it to the target list
+      const interactiveListData = { ...groupData };
+      delete interactiveListData.newTargetListName;
+      if (targetListId) {
+        interactiveListData.targetListId = targetListId;
+      }
+
+      await addGroupToFirestore(interactiveListData, currentUser.id);
     } catch (error) {
       console.error('Error creating group:', error);
       alert('Fehler beim Erstellen der Gruppe. Bitte versuchen Sie es erneut.');

@@ -132,6 +132,47 @@
   color: #333;
 }
 
+.group-dialog-hint {
+  font-size: 0.825rem;
+  color: #666;
+  margin: 0;
+}
+
+.group-dialog-hint-inline {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 400;
+}
+
+.group-target-list-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.group-target-list-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #333;
+  cursor: pointer;
+}
+
+.group-target-list-option input[type='radio'] {
+  accent-color: #402C1C;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.group-target-list-option input[type='radio']:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .group-dialog-error {
   color: #c0392b;
   font-size: 0.875rem;
