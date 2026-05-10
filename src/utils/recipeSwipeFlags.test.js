@@ -659,6 +659,15 @@ describe('archiveRecipeForAllUsersInList', () => {
     expect(mockUpdateDoc).toHaveBeenCalledWith('mock-ref-1', { flag: 'archiv', expiresAt: null });
   });
 
+  it('returns false when no matching documents exist', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: jest.fn() });
+
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', 7);
+
+    expect(result).toBe(false);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
   it('returns false and logs error when update fails', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetDocs.mockResolvedValueOnce({

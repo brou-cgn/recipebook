@@ -287,6 +287,7 @@ export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityD
     snapshot.forEach((docSnap) => {
       updates.push(updateDoc(docSnap.ref, { flag: 'archiv', expiresAt }));
     });
+    if (updates.length === 0) return false;
     await Promise.all(updates);
     return true;
   } catch (error) {

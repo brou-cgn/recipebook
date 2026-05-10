@@ -50,6 +50,8 @@ jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
 }));
 
+const { archiveRecipeForAllUsersInList } = jest.requireMock('../utils/recipeSwipeFlags');
+
 beforeAll(() => {
   if (!HTMLElement.prototype.setPointerCapture) {
     HTMLElement.prototype.setPointerCapture = jest.fn();
@@ -1423,8 +1425,6 @@ describe('Tagesmenu – Meine Auswahl FAB button', () => {
 });
 
 describe('Tagesmenu – Kachel-Kontextmenü', () => {
-  const { archiveRecipeForAllUsersInList } = jest.requireMock('../utils/recipeSwipeFlags');
-
   const swipeAllCardsToResults = () => {
     [swipeLeft, swipeLeft, swipeLeft].forEach((swipeFn) => {
       const topCard = document.querySelector('.tagesmenu-card-top');
