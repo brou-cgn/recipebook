@@ -1410,19 +1410,30 @@ describe('Tagesmenu – Meine Auswahl FAB button', () => {
 });
 
 describe('Tagesmenu – Kachel-Kontextmenü', () => {
+  const swipeAllCardsToResults = () => {
+    [swipeLeft, swipeLeft, swipeLeft].forEach((swipeFn) => {
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeFn(topCard);
+      finishSwipeAnimation(topCard);
+    });
+  };
+
   beforeEach(() => {
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {};
     mockMaxKandidatenSchwelle = null;
   });
 
-  test('öffnet das Kontextmenü über das Icon oben rechts', async () => {
+  test('zeigt das Icon nur in den Kandidaten-Kacheln und öffnet darüber das Kontextmenü', async () => {
     await act(async () => { renderMenu(); });
 
-    const trigger = document.querySelector('.tagesmenu-kachel-context-trigger');
-    expect(trigger).not.toBeNull();
+    expect(document.querySelector('.tagesmenu-stack .tagesmenu-kachel-context-trigger')).toBeNull();
+    swipeAllCardsToResults();
 
-    act(() => { fireEvent.click(trigger); });
+    const triggers = document.querySelectorAll('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
+    expect(triggers).toHaveLength(3);
+
+    act(() => { fireEvent.click(triggers[0]); });
 
     const menu = document.querySelector('.tagesmenu-kachel-context-menu');
     expect(menu).not.toBeNull();
@@ -1434,8 +1445,9 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
   test('schließt das Kontextmenü nach Auswahl eines Eintrags', async () => {
     await act(async () => { renderMenu(); });
+    swipeAllCardsToResults();
 
-    const trigger = document.querySelector('.tagesmenu-kachel-context-trigger');
+    const trigger = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-trigger');
     act(() => { fireEvent.click(trigger); });
 
     const menuEntry = Array.from(
