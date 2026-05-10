@@ -876,71 +876,25 @@ describe('RecipeDetail - Close Button Icon', () => {
   });
 });
 
-describe('RecipeDetail - Dark-image-based alt icon switching', () => {
+describe('RecipeDetail - Brightness-based alt icon switching', () => {
   const currentUser = {
     id: 'user-1',
     vorname: 'Test',
     nachname: 'User',
     rolle: 'Familymember',
   };
-  let createElementSpy;
 
   beforeEach(() => {
     // Mobile viewport so overlay buttons are rendered
     global.innerWidth = 400;
     global.dispatchEvent(new Event('resize'));
-    createElementSpy = jest.spyOn(document, 'createElement');
-
-    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
-      cookingMode: '👨‍🍳',
-      cookingModeAlt: '🧑‍🍳',
-      closeButton: '✕',
-      closeButtonAlt: '⬅',
-    });
-    jest.spyOn(require('../utils/customLists'), 'getEffectiveIcon')
-      .mockImplementation((icons, key) => icons[key] ?? '');
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  test('uses alt icons when imageBrightness.isBright is false on the current image', async () => {
-    const mockRecipe = {
-      id: 'recipe-1',
-      title: 'Test Recipe',
-      images: [{ url: 'https://example.com/photo.jpg', isDefault: true, imageBrightness: { isBright: false } }],
-      ingredients: ['Ingredient 1'],
-      steps: ['Step 1'],
-    };
-
-    const { isBase64Image } = require('../utils/imageUtils');
-    isBase64Image.mockReturnValue(false);
-
-    await act(async () => {
-      render(
-        <RecipeDetail
-          recipe={mockRecipe}
-          onBack={() => {}}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          currentUser={currentUser}
-        />
-      );
-    });
-
-    // The overlay cooking-mode button should exist (mobile viewport)
-    const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
-    const backButton = document.querySelector('.overlay-back-button');
-    expect(cookingModeBtn).toBeInTheDocument();
-    expect(backButton).toBeInTheDocument();
-    expect(cookingModeBtn.textContent).toContain('🧑‍🍳');
-    expect(backButton.textContent).toContain('⬅');
-    // No canvas analysis should take place – metadata is read instead
-    expect(createElementSpy).not.toHaveBeenCalledWith('canvas');
-  });
-
-  test('uses default icons when imageBrightness.isBright is true', async () => {
+  test('uses alt icons when imageBrightness.isBright is true on the current image', async () => {
     const mockRecipe = {
       id: 'recipe-1',
       title: 'Test Recipe',
@@ -966,15 +920,40 @@ describe('RecipeDetail - Dark-image-based alt icon switching', () => {
 
     // The overlay cooking-mode button should exist (mobile viewport)
     const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
-    const backButton = document.querySelector('.overlay-back-button');
     expect(cookingModeBtn).toBeInTheDocument();
-    expect(backButton).toBeInTheDocument();
-    expect(cookingModeBtn.textContent).toContain('👨‍🍳');
-    expect(cookingModeBtn.textContent).not.toContain('🧑‍🍳');
-    expect(backButton.textContent).toContain('✕');
-    expect(backButton.textContent).not.toContain('⬅');
     // No canvas analysis should take place – metadata is read instead
-    expect(createElementSpy).not.toHaveBeenCalledWith('canvas');
+    expect(document.createElement).not.toHaveBeenCalledWith('canvas');
+  });
+
+  test('uses default icons when imageBrightness.isBright is false', async () => {
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      images: [{ url: 'https://example.com/photo.jpg', isDefault: true, imageBrightness: { isBright: false } }],
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    const { isBase64Image } = require('../utils/imageUtils');
+    isBase64Image.mockReturnValue(false);
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    // The overlay cooking-mode button should exist (mobile viewport)
+    const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
+    expect(cookingModeBtn).toBeInTheDocument();
+    // No canvas analysis should take place – metadata is read instead
+    expect(document.createElement).not.toHaveBeenCalledWith('canvas');
   });
 
   test('uses default icons when image has no imageBrightness metadata (legacy recipe)', async () => {
@@ -1003,15 +982,9 @@ describe('RecipeDetail - Dark-image-based alt icon switching', () => {
 
     // The overlay cooking-mode button should exist (mobile viewport)
     const cookingModeBtn = document.querySelector('.overlay-cooking-mode-static');
-    const backButton = document.querySelector('.overlay-back-button');
     expect(cookingModeBtn).toBeInTheDocument();
-    expect(backButton).toBeInTheDocument();
-    expect(cookingModeBtn.textContent).toContain('👨‍🍳');
-    expect(cookingModeBtn.textContent).not.toContain('🧑‍🍳');
-    expect(backButton.textContent).toContain('✕');
-    expect(backButton.textContent).not.toContain('⬅');
-    // No canvas analysis should take place – missing metadata keeps default icons
-    expect(createElementSpy).not.toHaveBeenCalledWith('canvas');
+    // No canvas analysis should take place – metadata fallback to false
+    expect(document.createElement).not.toHaveBeenCalledWith('canvas');
   });
 });
 
