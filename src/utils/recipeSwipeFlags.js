@@ -295,3 +295,39 @@ export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityD
     return false;
   }
 };
+
+/**
+ * Set all existing swipe flags for one recipe within one list to "geparkt"
+ * across all users.
+ *
+ * @param {string} listId      - ID of the interactive list
+ * @param {string} recipeId    - ID of the recipe
+ * @param {number|null} [validityDays] - Number of days until expiry, or null/undefined for permanent
+ * @returns {Promise<boolean>} true if all updates succeeded
+ */
+export const parkAllRecipeSwipeFlagsForRecipeInList = async (listId, recipeId, validityDays) => {
+  if (!listId || !recipeId) return false;
+
+  let expiresAt = null;
+  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
+    expiresAt = timestampInDays(validityDays);
+  }
+
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId),
+      where('recipeId', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const updates = [];
+    snapshot.forEach((docSnap) => {
+      updates.push(updateDoc(docSnap.ref, { flag: 'geparkt', expiresAt }));
+    });
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error('Error parking all recipe swipe flags for recipe in list:', error);
+    return false;
+  }
+};
