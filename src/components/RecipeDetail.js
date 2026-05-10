@@ -299,6 +299,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   // Both useCookingModeAlt and useCloseButtonAlt always share the same value so
   // there is never a mixed icon state.
+  // Alt icons are used for explicitly recognized dark images.
   // Also detects whether the current image is a default category image.
   useEffect(() => {
     const allImages = Array.isArray(selectedRecipe.images) && selectedRecipe.images.length > 0
@@ -310,9 +311,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     ];
     const safeIdx = Math.min(carouselIndex, Math.max(0, orderedImages.length - 1));
     const currentImage = orderedImages[safeIdx];
-    const isBright = currentImage?.imageBrightness?.isBright || false;
-    setUseCookingModeAlt(isBright);
-    setUseCloseButtonAlt(isBright);
+    const isBright = currentImage?.imageBrightness?.isBright;
+    // Legacy images without brightness metadata keep standard icons.
+    const isDark = isBright === false;
+    setUseCookingModeAlt(isDark);
+    setUseCloseButtonAlt(isDark);
     const isCatImage = Boolean(currentImage?.url) && categoryImageSet.has(currentImage.url);
     setIsDefaultCategoryImage(isCatImage);
   }, [selectedRecipe.images, selectedRecipe.image, carouselIndex, categoryImageSet]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1928,7 +1931,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         aria-label="Kochmodus aktivieren"
                       >
                         {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                            otherwise fall back to alt icon for dark images or the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
                             ? cookingModeDefaultImgIcon
@@ -1944,7 +1947,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                         title="Zurück"
                       >
                         {/* Use default-category-image icon when the displayed image is a category image,
-                            otherwise fall back to alt icon for bright corners or the normal icon */}
+                            otherwise fall back to alt icon for dark images or the normal icon */}
                         {(() => {
                           const icon = isDefaultCategoryImage
                             ? closeButtonDefaultImgIcon

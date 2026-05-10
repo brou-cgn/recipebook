@@ -2,12 +2,13 @@ import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 import { parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
+import { archiveRecipeForAllUsersInList } from '../utils/recipeSwipeFlags';
 
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
 let mockMaxKandidatenSchwelle = null;
 let mockComputeGroupRecipeStatus = () => 'kandidat';
-let mockStatusValiditySettingsValue = {
+let mockStatusValiditySettings = {
   statusValidityDaysKandidat: null,
   statusValidityDaysGeparkt: null,
   statusValidityDaysArchiv: null,
@@ -16,6 +17,8 @@ let mockStatusValiditySettingsValue = {
 jest.mock('../utils/recipeSwipeFlags', () => ({
   setRecipeSwipeFlag: jest.fn(),
   parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
+  archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
+  archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
   getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
   getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
   computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
@@ -23,7 +26,7 @@ jest.mock('../utils/recipeSwipeFlags', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getStatusValiditySettings: () => Promise.resolve(mockStatusValiditySettingsValue),
+  getStatusValiditySettings: () => Promise.resolve(mockStatusValiditySettings),
   getGroupStatusThresholds: () => Promise.resolve({
     groupThresholdKandidatMinKandidat: 50,
     groupThresholdKandidatMaxArchiv: 50,
@@ -61,12 +64,15 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  mockStatusValiditySettingsValue = {
+  jest.clearAllMocks();
+  mockStatusValiditySettings = {
     statusValidityDaysKandidat: null,
     statusValidityDaysGeparkt: null,
     statusValidityDaysArchiv: null,
   };
   parkAllRecipeSwipeFlagsForRecipeInList.mockClear();
+  archiveRecipeForAllUsersInList.mockResolvedValue(true);
+  parkAllRecipeSwipeFlagsForRecipeInList.mockResolvedValue(true);
 });
 
 const makeRecipe = (id, title) => ({ id, title, groupId: 'list1' });
@@ -1434,6 +1440,11 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {};
     mockMaxKandidatenSchwelle = null;
+    mockStatusValiditySettings = {
+      statusValidityDaysKandidat: null,
+      statusValidityDaysGeparkt: null,
+      statusValidityDaysArchiv: 14,
+    };
   });
 
   test('zeigt das Icon nur in den Kandidaten-Kacheln und öffnet darüber das Kontextmenü', async () => {
@@ -1472,7 +1483,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   });
 
   test('Option "Vielleicht kann ich das besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
-    mockStatusValiditySettingsValue = {
+    mockStatusValiditySettings = {
       statusValidityDaysKandidat: null,
       statusValidityDaysGeparkt: 14,
       statusValidityDaysArchiv: null,
@@ -1495,6 +1506,25 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledWith('list1', 'r-special', 14);
+    expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
+  });
+
+  test('setzt bei "Ich bin enttäuscht" alle Flags des aktuellen Rezepts in der aktuellen Liste auf archiv', async () => {
+    await act(async () => { renderMenu(); });
+    swipeAllCardsToResults();
+
+    const firstTile = document.querySelectorAll('.tagesmenu-results-tile')[0];
+    const trigger = firstTile.querySelector('.tagesmenu-kachel-context-trigger');
+    act(() => { fireEvent.click(trigger); });
+
+    const menuEntry = Array.from(
+      document.querySelectorAll('.tagesmenu-kachel-context-menu button')
+    ).find((el) => el.textContent === 'Ich bin enttäuscht');
+    expect(menuEntry).not.toBeUndefined();
+
+    await act(async () => { fireEvent.click(menuEntry); });
+
+    expect(archiveRecipeForAllUsersInList).toHaveBeenCalledWith('list1', 'r1', 14);
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 });

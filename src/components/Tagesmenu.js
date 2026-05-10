@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
@@ -28,8 +28,9 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
 const TAGESMENU_KACHEL_MENU_ITEMS = [
-  'Ich bin enttäuscht',
+  DISAPPOINTED_MENU_ITEM,
   'Vielleicht kann ich das besser',
   'Will ich mal wieder kochen',
   'Will ich regelmäßig kochen',
@@ -115,7 +116,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
   const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
   const [showKachelContextMenu, setShowKachelContextMenu] = useState(false);
-  const [kachelContextRecipeId, setKachelContextRecipeId] = useState(null);
+  const [selectedKachelContextRecipeId, setSelectedKachelContextRecipeId] = useState(null);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -145,7 +146,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setForceShowResults(false);
       setShowMeineAuswahl(false);
       setShowKachelContextMenu(false);
-      setKachelContextRecipeId(null);
+      setSelectedKachelContextRecipeId(null);
       // Reload the global threshold setting to ensure it is not lost during list switches
       getMaxKandidatenSchwelle()
         .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -650,33 +651,78 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   const closeKachelContextMenu = useCallback(() => {
     setShowKachelContextMenu(false);
-    setKachelContextRecipeId(null);
+    setSelectedKachelContextRecipeId(null);
   }, []);
 
   const handleKachelMenuItemClick = useCallback(async (item) => {
+    const targetListId = selectedListId;
+    const targetRecipeId = selectedKachelContextRecipeId;
+    closeKachelContextMenu();
+
     if (
-      item === 'Vielleicht kann ich das besser' &&
-      selectedList?.id &&
-      kachelContextRecipeId
+      item === DISAPPOINTED_MENU_ITEM &&
+      targetListId &&
+      targetRecipeId
     ) {
-      const validityDays = statusValiditySettings.statusValidityDaysGeparkt;
-      await parkAllRecipeSwipeFlagsForRecipeInList(
-        selectedList.id,
-        kachelContextRecipeId,
-        validityDays
-      );
-      setSwipeResults((prev) => ({ ...prev, [kachelContextRecipeId]: 'geparkt' }));
-      setActiveFlags((prev) => ({ ...prev, [kachelContextRecipeId]: 'geparkt' }));
-      setAllMembersFlags((prev) => Object.fromEntries(
-        Object.entries(prev).map(([uid, flags]) => [
-          uid,
-          { ...(flags || {}), [kachelContextRecipeId]: 'geparkt' },
-        ])
-      ));
+      const archiveValidityDays = statusValiditySettings.statusValidityDaysArchiv;
+      try {
+        const didArchive = await archiveRecipeForAllUsersInList(
+          targetListId,
+          targetRecipeId,
+          archiveValidityDays
+        );
+        if (didArchive) {
+          setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+          setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+          setAllMembersFlags((prev) => Object.fromEntries(
+            Object.entries(prev).map(([userId, userFlags]) => {
+              if (userFlags?.[targetRecipeId] === undefined) {
+                return [userId, userFlags];
+              }
+              return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
+            })
+          ));
+        }
+      } catch (err) {
+        console.error('Failed to archive recipe swipe flags for all users:', err);
+      }
     }
 
-    closeKachelContextMenu();
-  }, [selectedList, kachelContextRecipeId, statusValiditySettings.statusValidityDaysGeparkt, closeKachelContextMenu]);
+    if (
+      item === 'Vielleicht kann ich das besser' &&
+      targetListId &&
+      targetRecipeId
+    ) {
+      const parkedValidityDays = statusValiditySettings.statusValidityDaysGeparkt;
+      try {
+        const didPark = await parkAllRecipeSwipeFlagsForRecipeInList(
+          targetListId,
+          targetRecipeId,
+          parkedValidityDays
+        );
+        if (didPark) {
+          setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+          setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+          setAllMembersFlags((prev) => Object.fromEntries(
+            Object.entries(prev).map(([userId, userFlags]) => {
+              if (userFlags?.[targetRecipeId] === undefined) {
+                return [userId, userFlags];
+              }
+              return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
+            })
+          ));
+        }
+      } catch (err) {
+        console.error('Failed to park recipe swipe flags for all users:', err);
+      }
+    }
+  }, [
+    selectedListId,
+    selectedKachelContextRecipeId,
+    statusValiditySettings.statusValidityDaysArchiv,
+    statusValiditySettings.statusValidityDaysGeparkt,
+    closeKachelContextMenu
+  ]);
 
   useEffect(() => {
     if (!allSwiped && !showMeineAuswahl && showKachelContextMenu) {
@@ -769,7 +815,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setKachelContextRecipeId(recipe.id);
+                            setSelectedKachelContextRecipeId(recipe.id);
                             setShowKachelContextMenu(true);
                           }}
                         >
@@ -855,7 +901,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setKachelContextRecipeId(recipe.id);
+                      setSelectedKachelContextRecipeId(recipe.id);
                       setShowKachelContextMenu(true);
                     }}
                   >
@@ -962,7 +1008,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setKachelContextRecipeId(recipe.id);
+                            setSelectedKachelContextRecipeId(recipe.id);
                             setShowKachelContextMenu(true);
                           }}
                         >
