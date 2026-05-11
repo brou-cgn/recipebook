@@ -1008,6 +1008,39 @@ function App() {
     }
   };
 
+  const handleEditGroupProperties = async (groupId, editData) => {
+    if (!currentUser) return;
+    try {
+      let targetListId = editData.targetListId;
+
+      // When changing to interactive list with a new target list, first create the target list
+      if (editData.listKind === 'interactive' && editData.newTargetListName) {
+        const group = groups.find((g) => g.id === groupId);
+        const newTargetList = await addGroupToFirestore(
+          {
+            name: editData.newTargetListName,
+            memberIds: group ? group.memberIds : [currentUser.id],
+            memberRoles: {},
+            listKind: 'classic',
+          },
+          currentUser.id
+        );
+        targetListId = newTargetList.id;
+      }
+
+      const updates = { name: editData.name, listKind: editData.listKind };
+      if (editData.listKind === 'interactive' && targetListId) {
+        updates.targetListId = targetListId;
+      } else {
+        updates.targetListId = null;
+      }
+      await updateGroupInFirestore(groupId, updates);
+    } catch (error) {
+      console.error('Error editing group properties:', error);
+      alert('Fehler beim Bearbeiten der Liste. Bitte versuchen Sie es erneut.');
+    }
+  };
+
   const handleDeleteGroup = async (groupId) => {
     try {
       await deleteGroupFromFirestore(groupId);
@@ -1414,6 +1447,8 @@ function App() {
             onAddRecipe={handleAddRecipe}
             recipes={selectedGroupRecipes}
             onSelectRecipe={handleSelectRecipe}
+            privateLists={privateListsForUser}
+            onEditGroupProperties={handleEditGroupProperties}
           />
         ) : (
           <GroupList

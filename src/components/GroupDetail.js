@@ -5,6 +5,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
+import GroupEditDialog from './GroupEditDialog';
 
 /**
  * Displays details of a single group including members and associated recipes.
@@ -20,8 +21,10 @@ import ShoppingListModal from './ShoppingListModal';
  * @param {Function} [props.onAddRecipe] - Called with groupId to open the recipe form
  * @param {Array}  [props.recipes] - All recipes (filtered to this group's recipes)
  * @param {Function} [props.onSelectRecipe] - Called with a recipe when a tile is clicked
+ * @param {Array}  [props.privateLists] - Private lists available as target lists when editing an interactive list
+ * @param {Function} [props.onEditGroupProperties] - Called with (groupId, editData) to save list property changes
  */
-function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe }) {
+function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe, privateLists = [], onEditGroupProperties }) {
   const [saving, setSaving] = useState(false);
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
@@ -34,6 +37,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [inviteEmail, setInviteEmail] = useState('');
   const [addMemberError, setAddMemberError] = useState('');
   const [addMemberSuccess, setAddMemberSuccess] = useState('');
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -86,6 +90,13 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const handleDelete = async () => {
     if (!window.confirm(`Liste "${group.name}" wirklich löschen?`)) return;
     await onDeleteGroup(group.id);
+  };
+
+  const handleEditSave = async (editData) => {
+    if (onEditGroupProperties) {
+      await onEditGroupProperties(group.id, editData);
+    }
+    setShowEditDialog(false);
   };
 
   // Users that are not yet members of this group
@@ -362,6 +373,14 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       {isOwner && !isPublic && (
         <div className="group-recipes-footer">
           <button
+            className="group-edit-btn"
+            onClick={() => setShowEditDialog(true)}
+            disabled={saving}
+            aria-label="Liste bearbeiten"
+          >
+            Liste bearbeiten
+          </button>
+          <button
             className="group-delete-btn"
             onClick={handleDelete}
             disabled={saving}
@@ -370,6 +389,14 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             Liste löschen
           </button>
         </div>
+      )}
+      {showEditDialog && (
+        <GroupEditDialog
+          group={group}
+          privateLists={privateLists.filter((l) => l.id !== group.id)}
+          onSave={handleEditSave}
+          onCancel={() => setShowEditDialog(false)}
+        />
       )}
       {showShoppingListModal && (
         <ShoppingListModal
