@@ -387,47 +387,47 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         </div>
       )}
       {isOwner && !isPublic && (
-        <button
-          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
-          onClick={handleDelete}
-          onTouchStart={() => setDeleteFabPressed(true)}
-          onTouchEnd={() => setDeleteFabPressed(false)}
-          onTouchCancel={() => setDeleteFabPressed(false)}
-          onMouseDown={() => setDeleteFabPressed(true)}
-          onMouseUp={() => setDeleteFabPressed(false)}
-          onMouseLeave={() => setDeleteFabPressed(false)}
-          title="Liste löschen"
-          aria-label="Liste löschen"
-          type="button"
-          disabled={saving}
-        >
-          {isBase64Image(deleteGroupIcon) ? (
-            <img src={deleteGroupIcon} alt="Löschen" className="button-icon-image" draggable="false" />
-          ) : (
-            deleteGroupIcon
-          )}
-        </button>
-      )}
-      {isOwner && !isPublic && (
-        <button
-          className={`group-edit-fab-button${editFabPressed ? ' pressed' : ''}`}
-          onClick={() => setShowEditDialog(true)}
-          onTouchStart={() => setEditFabPressed(true)}
-          onTouchEnd={() => setEditFabPressed(false)}
-          onTouchCancel={() => setEditFabPressed(false)}
-          onMouseDown={() => setEditFabPressed(true)}
-          onMouseUp={() => setEditFabPressed(false)}
-          onMouseLeave={() => setEditFabPressed(false)}
-          title="Liste bearbeiten"
-          aria-label="Liste bearbeiten"
-          type="button"
-        >
-          {isBase64Image(editGroupIcon) ? (
-            <img src={editGroupIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
-          ) : (
-            editGroupIcon
-          )}
-        </button>
+        <>
+          <button
+            className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
+            onClick={handleDelete}
+            onTouchStart={() => setDeleteFabPressed(true)}
+            onTouchEnd={() => setDeleteFabPressed(false)}
+            onTouchCancel={() => setDeleteFabPressed(false)}
+            onMouseDown={() => setDeleteFabPressed(true)}
+            onMouseUp={() => setDeleteFabPressed(false)}
+            onMouseLeave={() => setDeleteFabPressed(false)}
+            title="Liste löschen"
+            aria-label="Liste löschen"
+            type="button"
+            disabled={saving}
+          >
+            {isBase64Image(deleteGroupIcon) ? (
+              <img src={deleteGroupIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+            ) : (
+              deleteGroupIcon
+            )}
+          </button>
+          <button
+            className={`group-edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+            onClick={() => setShowEditDialog(true)}
+            onTouchStart={() => setEditFabPressed(true)}
+            onTouchEnd={() => setEditFabPressed(false)}
+            onTouchCancel={() => setEditFabPressed(false)}
+            onMouseDown={() => setEditFabPressed(true)}
+            onMouseUp={() => setEditFabPressed(false)}
+            onMouseLeave={() => setEditFabPressed(false)}
+            title="Liste bearbeiten"
+            aria-label="Liste bearbeiten"
+            type="button"
+          >
+            {isBase64Image(editGroupIcon) ? (
+              <img src={editGroupIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+            ) : (
+              editGroupIcon
+            )}
+          </button>
+        </>
       )}
       {showEditDialog && (
         <GroupEditDialog
