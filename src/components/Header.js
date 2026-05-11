@@ -244,12 +244,6 @@ const Header = forwardRef(function Header({
                       >
                         Menüs
                       </button>
-                      <button
-                        className={`menu-item ${currentView === 'kueche' ? 'active' : ''}`}
-                        onClick={() => handleViewChangeInternal('kueche')}
-                      >
-                        Küche
-                      </button>
                       {interactiveLists.length > 0 && (
                         <button
                           className={`menu-item ${currentView === 'tagesmenu' ? 'active' : ''}`}
@@ -258,6 +252,12 @@ const Header = forwardRef(function Header({
                           Tagesmenü
                         </button>
                       )}
+                      <button
+                        className={`menu-item ${currentView === 'kueche' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('kueche')}
+                      >
+                        Küche
+                      </button>
                     </div>
                   )}
                   {visibleFaqs.length > 0 && (

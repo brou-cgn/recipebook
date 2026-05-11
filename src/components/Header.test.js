@@ -1,5 +1,5 @@
 import React, { createRef, act } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Header from './Header';
 
 // Mock the custom lists utility
@@ -121,6 +121,40 @@ describe('Header - Hamburger Menu Visibility', () => {
 
     // Restore original environment variable
     process.env.REACT_APP_VERSION = originalVersion;
+  });
+
+  test('navigation items are ordered as Rezepte, Menüs, Tagesmenü, Küche', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        interactiveLists={[{ id: 'list-1' }]}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+
+    const navigationSection = screen.getByText('Navigation').closest('.menu-section');
+    expect(navigationSection).not.toBeNull();
+
+    const menuItems = within(navigationSection)
+      .getAllByRole('button')
+      .map((button) => button.textContent?.trim());
+
+    const rezeptIndex = menuItems.indexOf('Rezepte');
+    const menusIndex = menuItems.indexOf('Menüs');
+    const tagesmenuIndex = menuItems.indexOf('Tagesmenü');
+    const kuecheIndex = menuItems.indexOf('Küche');
+
+    expect(rezeptIndex).not.toBe(-1);
+    expect(menusIndex).not.toBe(-1);
+    expect(tagesmenuIndex).not.toBe(-1);
+    expect(kuecheIndex).not.toBe(-1);
+    expect(rezeptIndex).toBeLessThan(menusIndex);
+    expect(menusIndex).toBeLessThan(tagesmenuIndex);
+    expect(tagesmenuIndex).toBeLessThan(kuecheIndex);
   });
 
   test('pressing Enter in the search input blurs it (dismisses keyboard)', () => {
