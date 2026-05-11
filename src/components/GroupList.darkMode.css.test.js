@@ -53,9 +53,14 @@ describe('GroupList dark mode styles', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const rule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field select');
+    const focusRule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field select:focus');
+    const optionRule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field select option');
 
     expect(rule).toContain('background: #2a2a2a;');
     expect(rule).toContain('color: #e8e8e8;');
     expect(rule).toContain('border-color: #555;');
+    expect(focusRule).toContain('border-color: #b07a40;');
+    expect(optionRule).toContain('background: #2a2a2a;');
+    expect(optionRule).toContain('color: #e8e8e8;');
   });
 });
