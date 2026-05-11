@@ -833,6 +833,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               return { ...img, thumbnailUrl, thumbnailUrlDark };
             } catch (thumbErr) {
               console.warn('Category thumbnail generation/upload failed (non-critical):', thumbErr);
+              return img;
             }
           }
           return img;
