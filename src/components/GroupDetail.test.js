@@ -4,8 +4,8 @@ import GroupDetail from './GroupDetail';
 
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎' }),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '←', editRecipe: '✎' },
+  getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑' }),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -282,5 +282,13 @@ describe('GroupDetail – edit list properties feature', () => {
     const editFabButton = container.querySelector('.group-edit-fab-button');
     expect(editFabButton).toBeInTheDocument();
     expect(editFabButton).toHaveTextContent('✎');
+  });
+
+  it('renders the delete FAB with recipe delete FAB class and icon for private owner lists', () => {
+    const { container } = render(<GroupDetail {...defaultProps} />);
+    const deleteFabButton = container.querySelector('.delete-fab-button');
+    expect(deleteFabButton).toBeInTheDocument();
+    expect(deleteFabButton).toHaveTextContent('🗑');
+    expect(deleteFabButton).toHaveAttribute('aria-label', 'Liste löschen');
   });
 });

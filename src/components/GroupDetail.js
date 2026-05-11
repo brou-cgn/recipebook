@@ -39,6 +39,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [addMemberSuccess, setAddMemberSuccess] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
+  const [deleteFabPressed, setDeleteFabPressed] = useState(false);
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -69,6 +70,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const addRecipeLabel = isPublic ? 'Rezept hinzufügen' : 'Privates Rezept hinzufügen';
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
   const editGroupIcon = getEffectiveIcon(allButtonIcons, 'editRecipe', isDarkMode);
+  const deleteGroupIcon = getEffectiveIcon(allButtonIcons, 'deleteRecipe', isDarkMode);
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -380,17 +382,31 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             disabled={saving}
             aria-label="Liste bearbeiten"
           >
-            Liste bearbeiten
-          </button>
-          <button
-            className="group-delete-btn"
-            onClick={handleDelete}
-            disabled={saving}
-            aria-label="Liste löschen"
-          >
-            Liste löschen
-          </button>
+              Liste bearbeiten
+            </button>
         </div>
+      )}
+      {isOwner && !isPublic && (
+        <button
+          className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
+          onClick={handleDelete}
+          onTouchStart={() => setDeleteFabPressed(true)}
+          onTouchEnd={() => setDeleteFabPressed(false)}
+          onTouchCancel={() => setDeleteFabPressed(false)}
+          onMouseDown={() => setDeleteFabPressed(true)}
+          onMouseUp={() => setDeleteFabPressed(false)}
+          onMouseLeave={() => setDeleteFabPressed(false)}
+          title="Liste löschen"
+          aria-label="Liste löschen"
+          type="button"
+          disabled={saving}
+        >
+          {isBase64Image(deleteGroupIcon) ? (
+            <img src={deleteGroupIcon} alt="Löschen" className="button-icon-image" draggable="false" />
+          ) : (
+            deleteGroupIcon
+          )}
+        </button>
       )}
       {isOwner && !isPublic && (
         <button
