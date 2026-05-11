@@ -107,26 +107,6 @@
   cursor: not-allowed;
 }
 
-/* Override add-icon-button fixed positioning when used inline in the group header */
-@media (max-width: 768px) {
-  .group-header-actions .add-icon-button {
-    position: relative;
-    bottom: auto;
-    right: auto;
-    z-index: auto;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    opacity: 1;
-    transform: none;
-  }
-
-  .group-header-actions .add-icon-button.pressed {
-    transform: scale(1.15);
-  }
-}
-
 .group-header-actions {
   display: flex;
   align-items: center;
