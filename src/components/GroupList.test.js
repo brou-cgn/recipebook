@@ -4,8 +4,8 @@ import GroupList from './GroupList';
 
 // Mock customLists so icon loading resolves immediately
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ privateListBack: '✕' }),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '✕' },
+  getButtonIcons: () => Promise.resolve({ privateListBack: '✕', addRecipe: '+' }),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '✕', addRecipe: '+' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -211,5 +211,33 @@ describe('GroupList', () => {
     expect(actions).toBeInTheDocument();
     const closeBtnInActions = actions.querySelector('.group-list-close-btn');
     expect(closeBtnInActions).not.toBeInTheDocument();
+  });
+
+  it('renders the FAB button with aria-label "Liste erstellen"', () => {
+    const { container } = render(
+      <GroupList
+        groups={[]}
+        allUsers={mockAllUsers}
+        currentUser={mockCurrentUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+      />
+    );
+    expect(container.querySelector('.add-group-fab-button')).toBeInTheDocument();
+    expect(container.querySelector('.add-group-fab-button')).toHaveAttribute('aria-label', 'Liste erstellen');
+  });
+
+  it('opens the create dialog when the FAB button is clicked', () => {
+    const { container } = render(
+      <GroupList
+        groups={[]}
+        allUsers={mockAllUsers}
+        currentUser={mockCurrentUser}
+        onSelectGroup={jest.fn()}
+        onCreateGroup={jest.fn()}
+      />
+    );
+    fireEvent.click(container.querySelector('.add-group-fab-button'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
