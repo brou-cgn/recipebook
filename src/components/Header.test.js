@@ -1,5 +1,5 @@
 import React, { createRef, act } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Header from './Header';
 
 // Mock the custom lists utility
@@ -136,7 +136,10 @@ describe('Header - Hamburger Menu Visibility', () => {
 
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
 
-    const menuItems = screen
+    const navigationSection = screen.getByText('Navigation').closest('.menu-section');
+    expect(navigationSection).not.toBeNull();
+
+    const menuItems = within(navigationSection)
       .getAllByRole('button')
       .map((button) => button.textContent?.trim());
 
@@ -145,10 +148,10 @@ describe('Header - Hamburger Menu Visibility', () => {
     const tagesmenuIndex = menuItems.indexOf('Tagesmenü');
     const kuecheIndex = menuItems.indexOf('Küche');
 
-    expect(rezeptIndex).toBeGreaterThan(-1);
-    expect(menusIndex).toBeGreaterThan(-1);
-    expect(tagesmenuIndex).toBeGreaterThan(-1);
-    expect(kuecheIndex).toBeGreaterThan(-1);
+    expect(rezeptIndex).not.toBe(-1);
+    expect(menusIndex).not.toBe(-1);
+    expect(tagesmenuIndex).not.toBe(-1);
+    expect(kuecheIndex).not.toBe(-1);
     expect(rezeptIndex).toBeLessThan(menusIndex);
     expect(menusIndex).toBeLessThan(tagesmenuIndex);
     expect(tagesmenuIndex).toBeLessThan(kuecheIndex);
