@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './RecipeImageCarousel.css';
+import { getDarkModePreference } from '../utils/customLists';
 
 /**
  * A reusable image carousel with scroll-snap, dot indicators, and desktop arrow navigation.
@@ -12,17 +13,19 @@ import './RecipeImageCarousel.css';
  *
  * Props:
  *   images        - Array of image objects with at least a `url` property (required).
- *                   Objects may also carry a `thumbnailUrl` for faster list-view loading.
+ *                   Objects may also carry `thumbnailUrl` (light) and
+ *                   `thumbnailUrlDark` (dark mode) for faster list-view loading.
  *   altText       - Alt text for the images (required)
  *   className     - Additional CSS class(es) for the wrapper div (optional)
  *   onImageClick  - Callback when a slide image is clicked (optional)
- *   useThumbnails - When true, prefer `thumbnailUrl` over `url` for each slide (optional,
- *                   default false).  Use in list/overview contexts for faster loading.
+ *   useThumbnails - When true, prefer mode-aware thumbnail over `url` for each slide
+ *                   (optional, default false). Use in list/overview contexts for faster loading.
  */
 function RecipeImageCarousel({ images, altText, className = '', onImageClick, useThumbnails = false }) {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [loadedImages, setLoadedImages] = useState({});
   const [isVisible, setIsVisible] = useState(false);
+  const [isDark, setIsDark] = useState(() => getDarkModePreference());
   const trackRef = useRef(null);
   const containerRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
@@ -70,6 +73,12 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => setIsDark(Boolean(e.detail?.isDark));
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
   const hasMultiple = images.length > 1;
 
   const scrollToIndex = (index) => {
@@ -113,25 +122,32 @@ function RecipeImageCarousel({ images, altText, className = '', onImageClick, us
         ref={trackRef}
         onScroll={hasMultiple ? handleScroll : undefined}
       >
-        {images.map((img, idx) => (
-          <div
-            key={idx}
-            className="ric-slide"
-            onClick={onImageClick}
-          >
-            <div className={`ric-placeholder${loadedImages[idx] ? ' ric-placeholder--hidden' : ''}`} />
-            {isVisible && (
-              <img
-                src={useThumbnails && img.thumbnailUrl ? img.thumbnailUrl : img.url}
-                alt={altText}
-                loading="lazy"
-                className={`ric-image${loadedImages[idx] ? ' ric-image--loaded' : ''}`}
-                onLoad={() => setLoadedImages(prev => ({ ...prev, [idx]: true }))}
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            )}
-          </div>
-        ))}
+        {images.map((img, idx) => {
+          const effectiveThumbnail = isDark
+            ? (img.thumbnailUrlDark || img.thumbnailUrl)
+            : img.thumbnailUrl;
+          const imageSrc = useThumbnails && effectiveThumbnail ? effectiveThumbnail : img.url;
+
+          return (
+            <div
+              key={idx}
+              className="ric-slide"
+              onClick={onImageClick}
+            >
+              <div className={`ric-placeholder${loadedImages[idx] ? ' ric-placeholder--hidden' : ''}`} />
+              {isVisible && (
+                <img
+                  src={imageSrc}
+                  alt={altText}
+                  loading="lazy"
+                  className={`ric-image${loadedImages[idx] ? ' ric-image--loaded' : ''}`}
+                  onLoad={() => setLoadedImages(prev => ({ ...prev, [idx]: true }))}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
       {hasMultiple && (
         <>

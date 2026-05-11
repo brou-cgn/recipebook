@@ -2,9 +2,13 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import RecipeImageCarousel from './RecipeImageCarousel';
 
+jest.mock('../utils/customLists', () => ({
+  getDarkModePreference: jest.fn(() => false),
+}));
+
 const sampleImages = [
-  { url: 'https://example.com/img1.jpg', thumbnailUrl: 'https://example.com/thumb1.jpg' },
-  { url: 'https://example.com/img2.jpg', thumbnailUrl: 'https://example.com/thumb2.jpg' },
+  { url: 'https://example.com/img1.jpg', thumbnailUrl: 'https://example.com/thumb1.jpg', thumbnailUrlDark: 'https://example.com/thumb1-dark.jpg' },
+  { url: 'https://example.com/img2.jpg', thumbnailUrl: 'https://example.com/thumb2.jpg', thumbnailUrlDark: 'https://example.com/thumb2-dark.jpg' },
 ];
 
 // ---- IntersectionObserver mock helpers ----
@@ -129,5 +133,27 @@ describe('RecipeImageCarousel – lazy loading / IntersectionObserver', () => {
     imgs.forEach((img, idx) => {
       expect(img.getAttribute('src')).toBe(sampleImages[idx].thumbnailUrl);
     });
+  });
+
+  test('useThumbnails renders thumbnailUrlDark after darkModeChange', () => {
+    render(<RecipeImageCarousel images={sampleImages} altText="Test" useThumbnails={true} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark: true } }));
+    });
+    triggerIntersection(true);
+    const imgs = screen.getAllByAltText('Test');
+    imgs.forEach((img, idx) => {
+      expect(img.getAttribute('src')).toBe(sampleImages[idx].thumbnailUrlDark);
+    });
+  });
+
+  test('falls back to light thumbnail in dark mode when thumbnailUrlDark is missing', () => {
+    const withoutDark = [{ url: 'https://example.com/img3.jpg', thumbnailUrl: 'https://example.com/thumb3.jpg' }];
+    render(<RecipeImageCarousel images={withoutDark} altText="Test" useThumbnails={true} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('darkModeChange', { detail: { isDark: true } }));
+    });
+    triggerIntersection(true);
+    expect(screen.getByAltText('Test')).toHaveAttribute('src', withoutDark[0].thumbnailUrl);
   });
 });

@@ -215,9 +215,11 @@ export function analyzeImageBrightness(imageSrc) {
  * @param {number} [maxWidth=400]  - Maximum thumbnail width in pixels.
  * @param {number} [maxHeight=300] - Maximum thumbnail height in pixels.
  * @param {number} [quality=0.75]  - JPEG encoding quality (0–1).
+ * @param {string} [backgroundColor='#ffffff'] - Canvas background color used
+ *   before drawing (prevents black fill for transparent PNG areas in JPEG).
  * @returns {Promise<Blob>} A JPEG Blob of the resized thumbnail.
  */
-export function generateThumbnailBlob(file, maxWidth = 400, maxHeight = 300, quality = 0.75) {
+export function generateThumbnailBlob(file, maxWidth = 400, maxHeight = 300, quality = 0.75, backgroundColor = '#ffffff') {
   return new Promise((resolve, reject) => {
     if (!file) {
       reject(new Error('generateThumbnailBlob: no file provided'));
@@ -243,6 +245,8 @@ export function generateThumbnailBlob(file, maxWidth = 400, maxHeight = 300, qua
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob(
@@ -267,6 +271,66 @@ export function generateThumbnailBlob(file, maxWidth = 400, maxHeight = 300, qua
     };
 
     img.src = objectUrl;
+  });
+}
+
+/**
+ * Generate a thumbnail Blob from a base64 data-URL string.
+ *
+ * @param {string} base64 - Full data-URL (e.g. "data:image/png;base64,...").
+ * @param {number} [maxWidth=400]  - Maximum thumbnail width in pixels.
+ * @param {number} [maxHeight=300] - Maximum thumbnail height in pixels.
+ * @param {number} [quality=0.75]  - JPEG encoding quality (0–1).
+ * @param {string} [backgroundColor='#ffffff'] - Canvas background color used
+ *   before drawing (prevents black fill for transparent PNG areas in JPEG).
+ * @returns {Promise<Blob>} A JPEG Blob of the resized thumbnail.
+ */
+export function generateThumbnailBlobFromBase64(base64, maxWidth = 400, maxHeight = 300, quality = 0.75, backgroundColor = '#ffffff') {
+  return new Promise((resolve, reject) => {
+    if (!base64 || !isBase64Image(base64)) {
+      reject(new Error('generateThumbnailBlobFromBase64: invalid base64 image'));
+      return;
+    }
+
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('generateThumbnailBlobFromBase64: canvas.toBlob returned null'));
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = () => reject(new Error('generateThumbnailBlobFromBase64: failed to load image'));
+    img.src = base64;
   });
 }
 
