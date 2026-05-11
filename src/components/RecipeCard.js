@@ -9,6 +9,7 @@ const MAX_KULINARIK_TAGS = 5;
 const SWIPE_HORIZONTAL_THRESHOLD = 10;
 const MAX_SWIPE_OFFSET = 80;
 const SWIPE_REVEAL_THRESHOLD = 50;
+const isRemoteUrl = (url) => url?.startsWith('https://') || url?.startsWith('http://');
 
 function renderKulinarikTags(kulinarik) {
   if (!Array.isArray(kulinarik)) {
@@ -141,11 +142,11 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     ...allImages.filter(img => !img.isDefault),
   ];
   const defaultImageUrl = orderedImages[0]?.url || '';
-  const defaultImageIsRemoteUrl = defaultImageUrl.startsWith('https://') || defaultImageUrl.startsWith('http://');
+  const isDefaultImageRemoteUrl = isRemoteUrl(defaultImageUrl);
   const hasValidImageThumbnail =
     recipe.imageThumbnail &&
-    (recipe.imageThumbnail.startsWith('https://') || recipe.imageThumbnail.startsWith('http://')) &&
-    defaultImageIsRemoteUrl;
+    isRemoteUrl(recipe.imageThumbnail) &&
+    isDefaultImageRemoteUrl;
   if (hasValidImageThumbnail && orderedImages.length > 0) {
     orderedImages[0] = { ...orderedImages[0], thumbnailUrl: recipe.imageThumbnail };
   }
