@@ -12,6 +12,8 @@ jest.mock('../utils/imageUtils', () => ({
   fileToBase64: jest.fn(),
   isBase64Image: jest.fn(() => false),
   analyzeImageBrightness: jest.fn(() => Promise.resolve({ isBright: false })),
+  generateThumbnailBlob: jest.fn(),
+  generateThumbnailBlobFromBase64: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -86,6 +88,7 @@ jest.mock('../utils/userManagement', () => ({
 
 jest.mock('../utils/categoryImages', () => ({
   getImageForCategories: jest.fn(),
+  getCategoryImages: jest.fn(),
 }));
 
 jest.mock('../utils/ingredientUtils', () => {
@@ -98,6 +101,7 @@ jest.mock('../utils/ingredientUtils', () => {
 jest.mock('../utils/storageUtils', () => ({
   uploadRecipeImage: jest.fn(),
   deleteRecipeImage: jest.fn(),
+  uploadRecipeThumbnail: jest.fn(),
 }));
 
 jest.mock('../utils/recipeLinks', () => ({
@@ -914,8 +918,13 @@ describe('RecipeForm - Category Image Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset the mock implementation
-    const { getImageForCategories } = require('../utils/categoryImages');
+    const { getImageForCategories, getCategoryImages } = require('../utils/categoryImages');
+    const { generateThumbnailBlobFromBase64 } = require('../utils/imageUtils');
+    const { uploadRecipeThumbnail } = require('../utils/storageUtils');
     getImageForCategories.mockReset();
+    getCategoryImages.mockResolvedValue([]);
+    generateThumbnailBlobFromBase64.mockResolvedValue(new Blob(['thumb'], { type: 'image/jpeg' }));
+    uploadRecipeThumbnail.mockImplementation(async (_blob) => 'https://example.com/thumb-upload.jpg');
   });
 
   test('uses category image as title image for new recipe without image', async () => {
@@ -1027,6 +1036,123 @@ describe('RecipeForm - Category Image Integration', () => {
           speisekategorie: ['Main Course'],
         })
       );
+    });
+  });
+
+  test('generates and saves light/dark thumbnails for default category fallback image', async () => {
+    const { getImageForCategories, getCategoryImages } = require('../utils/categoryImages');
+    const { generateThumbnailBlobFromBase64 } = require('../utils/imageUtils');
+    const { uploadRecipeThumbnail } = require('../utils/storageUtils');
+    const categoryBase64 = 'data:image/png;base64,category-image';
+    getImageForCategories.mockResolvedValue(categoryBase64);
+    getCategoryImages.mockResolvedValue([{ id: 'cat-1', image: categoryBase64, categories: ['Main Course'] }]);
+    uploadRecipeThumbnail
+      .mockResolvedValueOnce('https://example.com/thumb-light.jpg')
+      .mockResolvedValueOnce('https://example.com/thumb-dark.jpg');
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieField.options.length).toBeGreaterThan(0));
+    const mainCourseOption = screen.getByRole('option', { name: 'Main Course' });
+    mainCourseOption.selected = true;
+    fireEvent.change(speisekategorieField);
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => {
+      expect(generateThumbnailBlobFromBase64).toHaveBeenNthCalledWith(1, categoryBase64, 400, 300, 0.75, '#ffffff');
+      expect(generateThumbnailBlobFromBase64).toHaveBeenNthCalledWith(2, categoryBase64, 400, 300, 0.75, '#1e1e1e');
+      expect(uploadRecipeThumbnail).toHaveBeenCalledTimes(2);
+      expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
+        image: categoryBase64,
+        images: [
+          expect.objectContaining({
+            url: categoryBase64,
+            thumbnailUrl: 'https://example.com/thumb-light.jpg',
+            thumbnailUrlDark: 'https://example.com/thumb-dark.jpg',
+            isDefault: true,
+          }),
+        ],
+      }));
+    });
+  });
+
+  test('does not generate dark thumbnail pair for non-category fallback image', async () => {
+    const { getImageForCategories, getCategoryImages } = require('../utils/categoryImages');
+    const { generateThumbnailBlobFromBase64 } = require('../utils/imageUtils');
+    const { uploadRecipeThumbnail } = require('../utils/storageUtils');
+    const fallbackImage = 'data:image/png;base64,user-image';
+    getImageForCategories.mockResolvedValue(fallbackImage);
+    getCategoryImages.mockResolvedValue([{ id: 'cat-1', image: 'data:image/png;base64,other-category', categories: ['Main Course'] }]);
+
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieField.options.length).toBeGreaterThan(0));
+    const mainCourseOption = screen.getByRole('option', { name: 'Main Course' });
+    mainCourseOption.selected = true;
+    fireEvent.change(speisekategorieField);
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => {
+      expect(generateThumbnailBlobFromBase64).not.toHaveBeenCalled();
+      expect(uploadRecipeThumbnail).not.toHaveBeenCalled();
+      expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
+        images: [
+          expect.objectContaining({
+            url: fallbackImage,
+            thumbnailUrl: null,
+            thumbnailUrlDark: null,
+            isDefault: true,
+          }),
+        ],
+      }));
     });
   });
 
