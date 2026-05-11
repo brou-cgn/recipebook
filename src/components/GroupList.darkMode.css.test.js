@@ -48,4 +48,14 @@ describe('GroupList dark mode styles', () => {
     expect(listKindPillRule).toContain('background: #1f2540;');
     expect(listKindPillRule).toContain('color: #b3c0ff;');
   });
+
+  test('styles list kind and target list selects in group dialogs for dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-dialog-field select');
+
+    expect(rule).toContain('background: #2a2a2a;');
+    expect(rule).toContain('color: #e8e8e8;');
+    expect(rule).toContain('border-color: #555;');
+  });
 });
