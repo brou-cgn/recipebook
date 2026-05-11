@@ -1497,7 +1497,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   test('verwendet das Alt-Icon im Kachel-Menü bei dunklem Bild (isBright === false)', async () => {
     const darkRecipe = {
       ...makeRecipe('r-dark', 'Dunkles Rezept'),
-      images: [{ url: 'https://example.com/dark.jpg', isDefault: true, imageBrightness: { isBright: false } }],
+      images: [{ url: '/test/dark.jpg', isDefault: true, imageBrightness: { isBright: false } }],
     };
     await act(async () => { renderMenu([darkRecipe]); });
 
@@ -1513,13 +1513,13 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   test('verwendet beim Kachel-Menü das normale Icon bei hellem oder unbekanntem Bild', async () => {
     const brightRecipe = {
       ...makeRecipe('r-bright', 'Helles Rezept'),
-      images: [{ url: 'https://example.com/bright.jpg', isDefault: true, imageBrightness: { isBright: true } }],
+      images: [{ url: '/test/bright.jpg', isDefault: true, imageBrightness: { isBright: true } }],
     };
     await act(async () => { renderMenu([brightRecipe]); });
 
-    let topCard = document.querySelector('.tagesmenu-card-top');
-    swipeLeft(topCard);
-    finishSwipeAnimation(topCard);
+    const topCardBright = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCardBright);
+    finishSwipeAnimation(topCardBright);
 
     let icon = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-icon');
     expect(icon).not.toBeNull();
@@ -1528,13 +1528,13 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     const unknownRecipe = {
       ...makeRecipe('r-unknown', 'Unbekanntes Rezept'),
-      images: [{ url: 'https://example.com/unknown.jpg', isDefault: true }],
+      images: [{ url: '/test/unknown.jpg', isDefault: true }],
     };
     await act(async () => { renderMenu([unknownRecipe]); });
 
-    topCard = document.querySelector('.tagesmenu-card-top');
-    swipeLeft(topCard);
-    finishSwipeAnimation(topCard);
+    const topCardUnknown = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCardUnknown);
+    finishSwipeAnimation(topCardUnknown);
 
     icon = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-icon');
     expect(icon).not.toBeNull();
