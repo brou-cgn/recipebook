@@ -979,8 +979,23 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .group-card-content h3 {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .group-card-meta {
   color: #aaa;
+}
+
+[data-theme="dark"] .add-group-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+  opacity: 1;
+}
+
+[data-theme="dark"] .add-group-fab-button:active {
+  background: #2a2a2a;
 }
 
 /* ---- Group Detail ---- */
