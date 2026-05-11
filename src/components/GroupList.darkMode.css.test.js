@@ -26,6 +26,16 @@ describe('GroupList dark mode styles', () => {
     expect(rule).toContain('border-color: #555;');
   });
 
+  test('styles the mobile list-edit FAB like dark mode publish FAB', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-edit-fab-button');
+
+    expect(rule).toContain('background: #2a2a2a;');
+    expect(rule).toContain('color: #e8e8e8;');
+    expect(rule).toContain('border-color: #555;');
+  });
+
   test('defines readable dark mode styles for private and list-kind pills', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
