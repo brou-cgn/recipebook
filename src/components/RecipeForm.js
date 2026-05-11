@@ -31,6 +31,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+const THUMBNAIL_MAX_WIDTH = 400;
+const THUMBNAIL_MAX_HEIGHT = 300;
+const THUMBNAIL_QUALITY = 0.75;
+const THUMBNAIL_BG_LIGHT = '#ffffff';
+const THUMBNAIL_BG_DARK = '#1e1e1e';
+
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType }) {
   const {
@@ -815,8 +821,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
           if (!img.thumbnailUrl && categoryImageSet.has(img.url)) {
             try {
               const [lightThumbnailBlob, darkThumbnailBlob] = await Promise.all([
-                generateThumbnailBlobFromBase64(img.url, 400, 300, 0.75, '#ffffff'),
-                generateThumbnailBlobFromBase64(img.url, 400, 300, 0.75, '#1e1e1e'),
+                generateThumbnailBlobFromBase64(img.url, THUMBNAIL_MAX_WIDTH, THUMBNAIL_MAX_HEIGHT, THUMBNAIL_QUALITY, THUMBNAIL_BG_LIGHT),
+                generateThumbnailBlobFromBase64(img.url, THUMBNAIL_MAX_WIDTH, THUMBNAIL_MAX_HEIGHT, THUMBNAIL_QUALITY, THUMBNAIL_BG_DARK),
               ]);
 
               const [thumbnailUrl, thumbnailUrlDark] = await Promise.all([
