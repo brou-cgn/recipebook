@@ -4,8 +4,8 @@ import GroupDetail from './GroupDetail';
 
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ privateListBack: '←' }),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '←' },
+  getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎' }),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '←', editRecipe: '✎' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -213,7 +213,7 @@ describe('GroupDetail – edit list properties feature', () => {
 
   it('shows "Liste bearbeiten" button for the owner of a private group', () => {
     render(<GroupDetail {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /Liste bearbeiten/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Liste bearbeiten/i })).toHaveLength(2);
   });
 
   it('does NOT show "Liste bearbeiten" button for a non-owner member', () => {
@@ -230,19 +230,19 @@ describe('GroupDetail – edit list properties feature', () => {
     render(<GroupDetail {...defaultProps} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
     expect(screen.getByRole('dialog', { name: /Liste bearbeiten/i })).toBeInTheDocument();
   });
 
   it('pre-populates the edit dialog with the current group name', () => {
     render(<GroupDetail {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
     expect(screen.getByLabelText('Listenname *')).toHaveValue('Familie');
   });
 
   it('closes the edit dialog when Abbrechen is clicked', () => {
     render(<GroupDetail {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
     expect(screen.getByRole('dialog', { name: /Liste bearbeiten/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Abbrechen'));
@@ -253,7 +253,7 @@ describe('GroupDetail – edit list properties feature', () => {
     const onEditGroupProperties = jest.fn().mockResolvedValue(undefined);
     render(<GroupDetail {...defaultProps} group={mockPrivateGroupWithKind} onEditGroupProperties={onEditGroupProperties} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
     fireEvent.change(screen.getByLabelText('Listenname *'), { target: { value: 'Neue Familie' } });
     fireEvent.click(screen.getByText('Speichern'));
 
@@ -269,11 +269,18 @@ describe('GroupDetail – edit list properties feature', () => {
     const onEditGroupProperties = jest.fn().mockResolvedValue(undefined);
     render(<GroupDetail {...defaultProps} group={mockPrivateGroupWithKind} onEditGroupProperties={onEditGroupProperties} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
     fireEvent.click(screen.getByText('Speichern'));
 
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('renders the mobile edit FAB with the edit icon', () => {
+    const { container } = render(<GroupDetail {...defaultProps} />);
+    const editFabButton = container.querySelector('.group-edit-fab-button');
+    expect(editFabButton).toBeInTheDocument();
+    expect(editFabButton).toHaveTextContent('✎');
   });
 });

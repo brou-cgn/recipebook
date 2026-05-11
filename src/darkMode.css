@@ -1012,6 +1012,16 @@
   border-color: #3d3d3d;
 }
 
+[data-theme="dark"] .group-edit-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .group-edit-fab-button:active {
+  background: #2a2a2a;
+}
+
 /* ---- Tagesmenu ---- */
 [data-theme="dark"] .tagesmenu-container {
   background: #121212;

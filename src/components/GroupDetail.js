@@ -38,6 +38,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [addMemberError, setAddMemberError] = useState('');
   const [addMemberSuccess, setAddMemberSuccess] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editFabPressed, setEditFabPressed] = useState(false);
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -67,6 +68,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const groupRecipes = recipes || [];
   const addRecipeLabel = isPublic ? 'Rezept hinzufügen' : 'Privates Rezept hinzufügen';
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
+  const editGroupIcon = getEffectiveIcon(allButtonIcons, 'editRecipe', isDarkMode);
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -389,6 +391,27 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             Liste löschen
           </button>
         </div>
+      )}
+      {isOwner && !isPublic && (
+        <button
+          className={`group-edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+          onClick={() => setShowEditDialog(true)}
+          onTouchStart={() => setEditFabPressed(true)}
+          onTouchEnd={() => setEditFabPressed(false)}
+          onTouchCancel={() => setEditFabPressed(false)}
+          onMouseDown={() => setEditFabPressed(true)}
+          onMouseUp={() => setEditFabPressed(false)}
+          onMouseLeave={() => setEditFabPressed(false)}
+          title="Liste bearbeiten"
+          aria-label="Liste bearbeiten"
+          type="button"
+        >
+          {isBase64Image(editGroupIcon) ? (
+            <img src={editGroupIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+          ) : (
+            editGroupIcon
+          )}
+        </button>
       )}
       {showEditDialog && (
         <GroupEditDialog
