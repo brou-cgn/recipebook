@@ -243,15 +243,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Auto-activate cooking mode when rotating to mobile landscape, deactivate on rotation back
   useEffect(() => {
     if (isMobileLandscape) {
+      landscapeAutoActivatedRef.current = true;
       if (!cookingMode) {
-        landscapeAutoActivatedRef.current = true;
         setCookingMode(true);
         setCurrentStepIndex(0);
       }
     } else {
       if (landscapeAutoActivatedRef.current) {
         landscapeAutoActivatedRef.current = false;
-        setCookingMode(false);
+        if (cookingMode) {
+          setCookingMode(false);
+        }
       }
     }
   }, [isMobileLandscape, cookingMode]); // cookingMode needed to prevent stale closure when user manually activates before rotating

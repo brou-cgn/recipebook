@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 
 // Mock the utility modules
@@ -159,14 +159,33 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
     setMockWindowHeight(900);
   };
 
+  let wakeLockRequestMock;
+  let wakeLockReleaseMock;
+
+  const waitForResponsiveUpdate = async () => {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 220));
+    });
+  };
+
+  const rotateViewport = async (setViewportMode) => {
+    setViewportMode();
+    await act(async () => {
+      window.dispatchEvent(new Event('resize'));
+      await new Promise(resolve => setTimeout(resolve, 220));
+    });
+  };
+
   // Mock Wake Lock API
   beforeEach(() => {
+    wakeLockReleaseMock = jest.fn().mockResolvedValue(undefined);
+    wakeLockRequestMock = jest.fn().mockResolvedValue({
+      release: wakeLockReleaseMock,
+    });
     Object.defineProperty(navigator, 'wakeLock', {
       writable: true,
       value: {
-        request: jest.fn().mockResolvedValue({
-          release: jest.fn().mockResolvedValue(undefined),
-        }),
+        request: wakeLockRequestMock,
       },
     });
   });
@@ -714,6 +733,41 @@ describe('RecipeDetail - Cooking Mode Layout', () => {
       const dots = document.querySelectorAll('.step-dot');
       expect(dots.length).toBe(3);
       expect(dots[0]).toHaveClass('active');
+    });
+
+    test('deactivates cooking mode after rotating back to portrait', async () => {
+      setPortraitMode();
+
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      // Manually activate in portrait first
+      const staticIcon = document.querySelector('.overlay-cooking-mode-static');
+      fireEvent.click(staticIcon);
+
+      const content = document.querySelector('.recipe-detail-content');
+      expect(content).toHaveClass('cooking-mode-active');
+      await waitForResponsiveUpdate();
+      expect(wakeLockRequestMock).toHaveBeenCalledWith('screen');
+
+      // Rotate to landscape -> landscape cooking mode should be active
+      await rotateViewport(setLandscapeMode);
+      expect(content).toHaveClass('cooking-mode-active');
+      expect(content).toHaveClass('cooking-mode-landscape');
+
+      // Rotate back to portrait -> cooking mode should end and wake lock released
+      await rotateViewport(setPortraitMode);
+
+      expect(content).not.toHaveClass('cooking-mode-active');
+      expect(content).not.toHaveClass('cooking-mode-landscape');
+      expect(wakeLockReleaseMock).toHaveBeenCalled();
     });
   });
 });
