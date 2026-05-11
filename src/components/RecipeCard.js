@@ -140,9 +140,12 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
     ...allImages.filter(img => img.isDefault),
     ...allImages.filter(img => !img.isDefault),
   ];
+  const defaultImageUrl = orderedImages[0]?.url || '';
+  const defaultImageIsRemoteUrl = defaultImageUrl.startsWith('https://') || defaultImageUrl.startsWith('http://');
   const hasValidImageThumbnail =
     recipe.imageThumbnail &&
-    (recipe.imageThumbnail.startsWith('https://') || recipe.imageThumbnail.startsWith('http://'));
+    (recipe.imageThumbnail.startsWith('https://') || recipe.imageThumbnail.startsWith('http://')) &&
+    defaultImageIsRemoteUrl;
   if (hasValidImageThumbnail && orderedImages.length > 0) {
     orderedImages[0] = { ...orderedImages[0], thumbnailUrl: recipe.imageThumbnail };
   }
