@@ -123,6 +123,37 @@ describe('Header - Hamburger Menu Visibility', () => {
     process.env.REACT_APP_VERSION = originalVersion;
   });
 
+  test('navigation items are ordered as Rezepte, Menüs, Tagesmenü, Küche', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        interactiveLists={[{ id: 'list-1' }]}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+
+    const menuItems = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent?.trim());
+
+    const rezeptIndex = menuItems.indexOf('Rezepte');
+    const menusIndex = menuItems.indexOf('Menüs');
+    const tagesmenuIndex = menuItems.indexOf('Tagesmenü');
+    const kuecheIndex = menuItems.indexOf('Küche');
+
+    expect(rezeptIndex).toBeGreaterThan(-1);
+    expect(menusIndex).toBeGreaterThan(-1);
+    expect(tagesmenuIndex).toBeGreaterThan(-1);
+    expect(kuecheIndex).toBeGreaterThan(-1);
+    expect(rezeptIndex).toBeLessThan(menusIndex);
+    expect(menusIndex).toBeLessThan(tagesmenuIndex);
+    expect(tagesmenuIndex).toBeLessThan(kuecheIndex);
+  });
+
   test('pressing Enter in the search input blurs it (dismisses keyboard)', () => {
     render(
       <Header
