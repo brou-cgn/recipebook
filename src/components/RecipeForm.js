@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './RecipeForm.css';
 import { removeEmojis, containsEmojis } from '../utils/emojiUtils';
-import { fileToBase64, isBase64Image, analyzeImageBrightness, generateThumbnailBlob, generateThumbnailBlobFromBase64 } from '../utils/imageUtils';
+import { fileToBase64, isBase64Image, analyzeImageBrightness, generateThumbnailBlob } from '../utils/imageUtils';
 import { uploadRecipeImage, deleteRecipeImage, uploadRecipeThumbnail } from '../utils/storageUtils';
 import { getCustomLists, saveCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
-import { getImageForCategories, getCategoryImages } from '../utils/categoryImages';
+import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing } from '../utils/ingredientUtils';
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import RecipeImportModal from './RecipeImportModal';
@@ -30,12 +30,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-const THUMBNAIL_MAX_WIDTH = 400;
-const THUMBNAIL_MAX_HEIGHT = 300;
-const THUMBNAIL_QUALITY = 0.75;
-const THUMBNAIL_BG_LIGHT = '#ffffff';
-const THUMBNAIL_BG_DARK = '#1e1e1e';
 
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType }) {
@@ -703,7 +697,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       // Add to images array; first image is default, others are not
       setImages(prev => {
         const isFirst = prev.length === 0;
-        return [...prev, { url: downloadURL, thumbnailUrl, thumbnailUrlDark: null, isDefault: isFirst, imageBrightness }];
+        return [...prev, { url: downloadURL, thumbnailUrl, isDefault: isFirst, imageBrightness }];
       });
       // Keep legacy image field in sync with default image
       setImage(prev => prev || downloadURL);
@@ -807,41 +801,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
 
     // Build final images array, ensuring default is correct
-    const finalImagesBase = images.length > 0
-      ? images.map(img => ({ url: img.url, thumbnailUrl: img.thumbnailUrl || null, thumbnailUrlDark: img.thumbnailUrlDark || null, isDefault: img.url === finalImage, imageBrightness: img.imageBrightness || null }))
-      : (finalImage ? [{ url: finalImage, thumbnailUrl: null, thumbnailUrlDark: null, isDefault: true, imageBrightness: null }] : []);
-
-    let finalImages = finalImagesBase;
-    if (finalImagesBase.length > 0) {
-      try {
-        const categoryImages = await getCategoryImages();
-        const categoryImageSet = new Set(categoryImages.map(img => img.image).filter(Boolean));
-
-        finalImages = await Promise.all(finalImagesBase.map(async (img) => {
-          if (!img.thumbnailUrl && categoryImageSet.has(img.url)) {
-            try {
-              const [lightThumbnailBlob, darkThumbnailBlob] = await Promise.all([
-                generateThumbnailBlobFromBase64(img.url, THUMBNAIL_MAX_WIDTH, THUMBNAIL_MAX_HEIGHT, THUMBNAIL_QUALITY, THUMBNAIL_BG_LIGHT),
-                generateThumbnailBlobFromBase64(img.url, THUMBNAIL_MAX_WIDTH, THUMBNAIL_MAX_HEIGHT, THUMBNAIL_QUALITY, THUMBNAIL_BG_DARK),
-              ]);
-
-              const [thumbnailUrl, thumbnailUrlDark] = await Promise.all([
-                uploadRecipeThumbnail(lightThumbnailBlob),
-                uploadRecipeThumbnail(darkThumbnailBlob),
-              ]);
-
-              return { ...img, thumbnailUrl, thumbnailUrlDark };
-            } catch (thumbErr) {
-              console.warn('Category thumbnail generation/upload failed (non-critical):', thumbErr);
-              return img;
-            }
-          }
-          return img;
-        }));
-      } catch (categoryErr) {
-        console.warn('Loading category images failed (non-critical):', categoryErr);
-      }
-    }
+    const finalImages = images.length > 0
+      ? images.map(img => ({ url: img.url, thumbnailUrl: img.thumbnailUrl || null, isDefault: img.url === finalImage, imageBrightness: img.imageBrightness || null }))
+      : (finalImage ? [{ url: finalImage, thumbnailUrl: null, isDefault: true }] : []);
 
     // Filter out empty items and convert to storage format
     const filteredIngredients = ingredients.filter(i => i.text.trim() !== '');
