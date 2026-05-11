@@ -1891,6 +1891,16 @@
   color: #ce93d8;
 }
 
+[data-theme="dark"] .group-type-indicator.private {
+  background: #2a1a2f;
+  color: #ce93d8;
+}
+
+[data-theme="dark"] .group-list-kind-indicator {
+  background: #1f2540;
+  color: #b3c0ff;
+}
+
 [data-theme="dark"] .group-empty-hint {
   color: #aaa;
 }
