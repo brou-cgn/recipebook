@@ -10,6 +10,15 @@ jest.mock('../utils/customLists', () => ({
   getDarkModePreference: () => false,
 }));
 
+// Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
+jest.mock('../utils/groupFirestore', () => ({
+  sendGroupInvitation: jest.fn().mockResolvedValue({ alreadyRegistered: false, alreadyInvited: false }),
+  LIST_KIND_OPTIONS: [
+    { value: 'interactive', label: 'Interaktive Liste' },
+    { value: 'classic', label: 'Klassische Sammlung' },
+  ],
+}));
+
 // Mock imageUtils
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn().mockReturnValue(false),
@@ -188,6 +197,83 @@ describe('GroupDetail – add member feature', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/Fehler beim Hinzufügen/i);
+    });
+  });
+});
+
+describe('GroupDetail – edit list properties feature', () => {
+  const mockPrivateGroupWithKind = {
+    ...mockPrivateGroup,
+    listKind: 'classic',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows "Liste bearbeiten" button for the owner of a private group', () => {
+    render(<GroupDetail {...defaultProps} />);
+    expect(screen.getByRole('button', { name: /Liste bearbeiten/i })).toBeInTheDocument();
+  });
+
+  it('does NOT show "Liste bearbeiten" button for a non-owner member', () => {
+    render(<GroupDetail {...defaultProps} currentUser={mockMember} />);
+    expect(screen.queryByRole('button', { name: /Liste bearbeiten/i })).not.toBeInTheDocument();
+  });
+
+  it('does NOT show "Liste bearbeiten" button for a public group', () => {
+    render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
+    expect(screen.queryByRole('button', { name: /Liste bearbeiten/i })).not.toBeInTheDocument();
+  });
+
+  it('opens the edit dialog when "Liste bearbeiten" is clicked', () => {
+    render(<GroupDetail {...defaultProps} />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    expect(screen.getByRole('dialog', { name: /Liste bearbeiten/i })).toBeInTheDocument();
+  });
+
+  it('pre-populates the edit dialog with the current group name', () => {
+    render(<GroupDetail {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    expect(screen.getByLabelText('Listenname *')).toHaveValue('Familie');
+  });
+
+  it('closes the edit dialog when Abbrechen is clicked', () => {
+    render(<GroupDetail {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    expect(screen.getByRole('dialog', { name: /Liste bearbeiten/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Abbrechen'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('calls onEditGroupProperties with updated data when saved', async () => {
+    const onEditGroupProperties = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} group={mockPrivateGroupWithKind} onEditGroupProperties={onEditGroupProperties} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.change(screen.getByLabelText('Listenname *'), { target: { value: 'Neue Familie' } });
+    fireEvent.click(screen.getByText('Speichern'));
+
+    await waitFor(() => {
+      expect(onEditGroupProperties).toHaveBeenCalledWith('grp1', expect.objectContaining({
+        name: 'Neue Familie',
+        listKind: 'classic',
+      }));
+    });
+  });
+
+  it('closes the edit dialog after successful save', async () => {
+    const onEditGroupProperties = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} group={mockPrivateGroupWithKind} onEditGroupProperties={onEditGroupProperties} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Liste bearbeiten/i }));
+    fireEvent.click(screen.getByText('Speichern'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });
