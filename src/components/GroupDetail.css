@@ -107,21 +107,24 @@
   cursor: not-allowed;
 }
 
-.group-add-recipe-btn {
-  background: #402C1C;
-  color: white;
-  border: none;
-  padding: 0.55rem 1.1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
-}
+/* Override add-icon-button fixed positioning when used inline in the group header */
+@media (max-width: 768px) {
+  .group-header-actions .add-icon-button {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    z-index: auto;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    opacity: 1;
+    transform: none;
+  }
 
-.group-add-recipe-btn:hover {
-  background: #5a3e28;
-  transform: translateY(-1px);
+  .group-header-actions .add-icon-button.pressed {
+    transform: scale(1.15);
+  }
 }
 
 .group-header-actions {

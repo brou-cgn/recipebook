@@ -27,6 +27,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [addPressed, setAddPressed] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberIds, setAddMemberIds] = useState([]);
@@ -60,6 +61,8 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const isMember = (group.memberIds || []).includes(currentUser?.id);
 
   const groupRecipes = recipes || [];
+  const addRecipeLabel = isPublic ? 'Rezept hinzufügen' : 'Privates Rezept hinzufügen';
+  const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -190,11 +193,22 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         <div className="group-header-actions">
           {onAddRecipe && (isOwner || isMember) && (
             <button
-              className="group-add-recipe-btn"
+              className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
               onClick={() => onAddRecipe(group.id)}
-              aria-label={isPublic ? 'Rezept hinzufügen' : 'privates Rezept hinzufügen'}
+              onTouchStart={() => setAddPressed(true)}
+              onTouchEnd={() => setAddPressed(false)}
+              onTouchCancel={() => setAddPressed(false)}
+              onMouseDown={() => setAddPressed(true)}
+              onMouseUp={() => setAddPressed(false)}
+              onMouseLeave={() => setAddPressed(false)}
+              title={addRecipeLabel}
+              aria-label={addRecipeLabel}
             >
-              {isPublic ? '+ Rezept hinzufügen' : '+ privates Rezept hinzufügen'}
+              {isBase64Image(addRecipeIcon) ? (
+                <img src={addRecipeIcon} alt={addRecipeLabel} className="button-icon-image" draggable="false" />
+              ) : (
+                addRecipeIcon
+              )}
             </button>
           )}
           {groupRecipes.length > 0 && (
