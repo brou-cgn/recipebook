@@ -29,7 +29,7 @@
 
 .tagesmenu-card {
   position: absolute;
-  inset: 12px 12px 24px;
+  inset: 0.75rem 0.75rem 1.5rem;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
