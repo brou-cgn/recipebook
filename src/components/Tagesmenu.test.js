@@ -41,12 +41,14 @@ jest.mock('../utils/customLists', () => ({
     swipeLeft: '👎',
     swipeUp: '⭐',
     tagesmenuKachelMenu: '⋯',
+    tagesmenuKachelMenuAlt: '⚪',
   }),
   DEFAULT_BUTTON_ICONS: {
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
     tagesmenuKachelMenu: '⋯',
+    tagesmenuKachelMenuAlt: '⚪',
   },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
@@ -1490,6 +1492,54 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
     expect(select.value).toBe('');
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
+  });
+
+  test('verwendet das Alt-Icon im Kachel-Menü bei dunklem Bild (isBright === false)', async () => {
+    const darkRecipe = {
+      ...makeRecipe('r-dark', 'Dunkles Rezept'),
+      images: [{ url: 'https://example.com/dark.jpg', isDefault: true, imageBrightness: { isBright: false } }],
+    };
+    await act(async () => { renderMenu([darkRecipe]); });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCard);
+    finishSwipeAnimation(topCard);
+
+    const icon = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-icon');
+    expect(icon).not.toBeNull();
+    expect(icon.textContent).toContain('⚪');
+  });
+
+  test('verwendet beim Kachel-Menü das normale Icon bei hellem oder unbekanntem Bild', async () => {
+    const brightRecipe = {
+      ...makeRecipe('r-bright', 'Helles Rezept'),
+      images: [{ url: 'https://example.com/bright.jpg', isDefault: true, imageBrightness: { isBright: true } }],
+    };
+    await act(async () => { renderMenu([brightRecipe]); });
+
+    let topCard = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCard);
+    finishSwipeAnimation(topCard);
+
+    let icon = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-icon');
+    expect(icon).not.toBeNull();
+    expect(icon.textContent).toContain('⋯');
+    expect(icon.textContent).not.toContain('⚪');
+
+    const unknownRecipe = {
+      ...makeRecipe('r-unknown', 'Unbekanntes Rezept'),
+      images: [{ url: 'https://example.com/unknown.jpg', isDefault: true }],
+    };
+    await act(async () => { renderMenu([unknownRecipe]); });
+
+    topCard = document.querySelector('.tagesmenu-card-top');
+    swipeLeft(topCard);
+    finishSwipeAnimation(topCard);
+
+    icon = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-icon');
+    expect(icon).not.toBeNull();
+    expect(icon.textContent).toContain('⋯');
+    expect(icon.textContent).not.toContain('⚪');
   });
 
   test('Option "Vielleicht kann ich das besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {

@@ -112,6 +112,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const [meineAuswahlIcon, setMeineAuswahlIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuMeineAuswahl);
   // Configurable menu icon shown on the top-right corner of the Tagesmenü tile
   const [kachelMenuIcon, setKachelMenuIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuKachelMenu);
+  // Alt icon for the Kachel-Menü shown when the recipe tile image is dark
+  const [kachelMenuAltIcon, setKachelMenuAltIcon] = useState(DEFAULT_BUTTON_ICONS.tagesmenuKachelMenuAlt || DEFAULT_BUTTON_ICONS.tagesmenuKachelMenu);
 
   // Full icons object and dark mode state for dark mode icon variants
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -187,6 +189,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     setZumTagesMenuIcon(eff('tagesmenuZumTagesMenu'));
     setMeineAuswahlIcon(eff('tagesmenuMeineAuswahl'));
     setKachelMenuIcon(eff('tagesmenuKachelMenu'));
+    setKachelMenuAltIcon(eff('tagesmenuKachelMenuAlt') || eff('tagesmenuKachelMenu'));
   }, [allButtonIcons, isDarkMode]);
 
   // Listen for dark mode changes
@@ -828,11 +831,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                         >
                           <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
-                            {isBase64Image(kachelMenuIcon) ? (
-                              <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
-                            ) : (
-                              <span>{kachelMenuIcon}</span>
-                            )}
+                            {(() => {
+                              const tileIsNotBright = orderedImages.length > 0 && orderedImages[0]?.imageBrightness?.isBright === false;
+                              const icon = tileIsNotBright ? kachelMenuAltIcon : kachelMenuIcon;
+                              return isBase64Image(icon)
+                                ? <img src={icon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                                : <span>{icon}</span>;
+                            })()}
                           </span>
                           <select
                             onChange={(e) => {
@@ -927,11 +932,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     onPointerDown={(e) => e.stopPropagation()}
                   >
                     <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
-                      {isBase64Image(kachelMenuIcon) ? (
-                        <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
-                      ) : (
-                        <span>{kachelMenuIcon}</span>
-                      )}
+                      {(() => {
+                        const tileIsNotBright = orderedImages.length > 0 && orderedImages[0]?.imageBrightness?.isBright === false;
+                        const icon = tileIsNotBright ? kachelMenuAltIcon : kachelMenuIcon;
+                        return isBase64Image(icon)
+                          ? <img src={icon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                          : <span>{icon}</span>;
+                      })()}
                     </span>
                     <select
                       onChange={(e) => {
@@ -1047,11 +1054,13 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           onPointerDown={(e) => e.stopPropagation()}
                         >
                           <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
-                            {isBase64Image(kachelMenuIcon) ? (
-                              <img src={kachelMenuIcon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
-                            ) : (
-                              <span>{kachelMenuIcon}</span>
-                            )}
+                            {(() => {
+                              const tileIsNotBright = orderedImages.length > 0 && orderedImages[0]?.imageBrightness?.isBright === false;
+                              const icon = tileIsNotBright ? kachelMenuAltIcon : kachelMenuIcon;
+                              return isBase64Image(icon)
+                                ? <img src={icon} alt="" className="tagesmenu-kachel-context-trigger-img" draggable="false" />
+                                : <span>{icon}</span>;
+                            })()}
                           </span>
                           <select
                             onChange={(e) => {

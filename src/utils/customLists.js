@@ -601,6 +601,8 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuZumTagesMenu: 'Menü',
   tagesmenuMeineAuswahl: 'Liste',
   tagesmenuKachelMenu: '⋯',
+  // Alt icon shown when the tile image is dark (low luminance)
+  tagesmenuKachelMenuAlt: '⋯',
   cancelRecipe: '×',
   newVersion: 'Version',
   publishRecipe: '↑',
@@ -650,6 +652,7 @@ export const DEFAULT_BUTTON_ICONS = {
   tagesmenuZumTagesMenuDark: '',
   tagesmenuMeineAuswahlDark: '',
   tagesmenuKachelMenuDark: '',
+  tagesmenuKachelMenuAltDark: '',
   cancelRecipeDark: '',
   newVersionDark: '',
   publishRecipeDark: '',
