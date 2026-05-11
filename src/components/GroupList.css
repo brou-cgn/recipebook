@@ -196,6 +196,71 @@
   .group-list-header h2 {
     text-align: left;
   }
+
+  .group-list-actions {
+    display: none;
+  }
+}
+
+/* FAB button for mobile: hidden on desktop, shown as fixed bottom-right on mobile */
+.add-group-fab-button {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .add-group-fab-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1101;
+
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    padding: 0;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0.85;
+
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    will-change: transform;
+
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .add-group-fab-button.pressed {
+    transform: scale(1.15);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+  }
+
+  .add-group-fab-button:focus,
+  .add-group-fab-button:focus-visible {
+    outline: none;
+  }
+
+  .add-group-fab-button .button-icon-image {
+    width: 1.4rem;
+    height: 1.4rem;
+    object-fit: contain;
+  }
 }
 
 @media (max-width: 480px) {

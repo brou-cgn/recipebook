@@ -22,6 +22,7 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [addFabPressed, setAddFabPressed] = useState(false);
 
   useEffect(() => {
     getButtonIcons().then((icons) => {
@@ -155,6 +156,25 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
           )}
         />
       )}
+
+      <button
+        className={`add-group-fab-button${addFabPressed ? ' pressed' : ''}`}
+        onClick={() => setIsDialogOpen(true)}
+        onTouchStart={() => setAddFabPressed(true)}
+        onTouchEnd={() => setAddFabPressed(false)}
+        onTouchCancel={() => setAddFabPressed(false)}
+        onMouseDown={() => setAddFabPressed(true)}
+        onMouseUp={() => setAddFabPressed(false)}
+        onMouseLeave={() => setAddFabPressed(false)}
+        title="Liste erstellen"
+        aria-label="Liste erstellen"
+      >
+        {isBase64Image(getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)} alt="Liste erstellen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(allButtonIcons, 'addRecipe', isDarkMode)
+        )}
+      </button>
     </div>
   );
 }
