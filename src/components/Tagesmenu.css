@@ -38,6 +38,7 @@
   overflow: hidden;
   user-select: none;
   will-change: transform;
+  padding-bottom: 1.5rem;
 }
 
 /* Native select overlay für Kachel-Menü-Button */
