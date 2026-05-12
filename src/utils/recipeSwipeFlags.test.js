@@ -36,6 +36,12 @@ jest.mock('firebase/firestore', () => ({
   },
 }));
 
+// Mock customLists to control threshold loading
+const mockGetGroupStatusThresholds = jest.fn();
+jest.mock('./customLists', () => ({
+  getGroupStatusThresholds: (...args) => mockGetGroupStatusThresholds(...args),
+}));
+
 import {
   setRecipeSwipeFlag,
   getActiveSwipeFlags,
@@ -47,6 +53,13 @@ import {
   archiveRecipeForAllUsersInList,
   parkAllRecipeSwipeFlagsForRecipeInList,
 } from './recipeSwipeFlags';
+
+const DEFAULT_TEST_THRESHOLDS = {
+  groupThresholdKandidatMinKandidat: 50,
+  groupThresholdKandidatMaxArchiv: 50,
+  groupThresholdArchivMinArchiv: 50,
+  groupThresholdArchivMaxKandidat: 50,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -63,6 +76,7 @@ beforeEach(() => {
   mockQuery.mockReturnValue('mock-query-ref');
   mockWhere.mockReturnValue('mock-where-ref');
   mockTimestampFromMillis.mockImplementation((ms) => ({ _ms: ms, _isMock: true }));
+  mockGetGroupStatusThresholds.mockResolvedValue(DEFAULT_TEST_THRESHOLDS);
 });
 
 describe('setRecipeSwipeFlag', () => {
