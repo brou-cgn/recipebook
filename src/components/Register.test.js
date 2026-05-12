@@ -83,8 +83,8 @@ describe('Register Component', () => {
     });
   });
 
-  test('displays success message and does not switch to login after successful registration', async () => {
-    mockOnRegister.mockResolvedValue({ success: true, message: 'Registrierung erfolgreich!' });
+  test('switches to login immediately after successful registration', async () => {
+    mockOnRegister.mockResolvedValue({ success: true, message: 'Registrierung erfolgreich! Bitte melden Sie sich an.' });
 
     render(<Register onRegister={mockOnRegister} onSwitchToLogin={mockOnSwitchToLogin} />);
     
@@ -96,15 +96,8 @@ describe('Register Component', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Registrieren/i }));
 
-    await waitFor(() => expect(screen.getByText(/Registrierung erfolgreich!/i)).toBeInTheDocument());
-    
-    // onSwitchToLogin must NOT be called – Firebase has already logged the user in
-    expect(mockOnSwitchToLogin).not.toHaveBeenCalled();
-
-    // Fast-forward time by 3 seconds – success message should be cleared
-    jest.advanceTimersByTime(3000);
-    
-    await waitFor(() => expect(screen.queryByText(/Registrierung erfolgreich!/i)).not.toBeInTheDocument());
+    // onSwitchToLogin must be called immediately after successful registration
+    await waitFor(() => expect(mockOnSwitchToLogin).toHaveBeenCalled());
   });
 
   test('displays error message on failed registration', async () => {
