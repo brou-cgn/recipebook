@@ -692,7 +692,7 @@ describe('computeCalculatedRecipeSwipeFlag', () => {
       'kandidat',
     ],
     [
-      'geparkt with two open swipes returns kandidat',
+      'one geparkt with two open swipes returns kandidat',
       {
         'user-1': { 'recipe-1': 'geparkt' },
       },
@@ -722,7 +722,7 @@ describe('computeCalculatedRecipeSwipeFlag', () => {
       'kandidat',
     ],
     [
-      'geparkt plus geparkt with one open swipe returns geparkt',
+      'two geparkt with one open swipe returns geparkt',
       {
         'user-1': { 'recipe-1': 'geparkt' },
         'user-2': { 'recipe-1': 'geparkt' },
