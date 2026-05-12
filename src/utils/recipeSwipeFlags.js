@@ -371,6 +371,47 @@ export const getActiveSwipeFlags = async (userId, listId) => {
 };
 
 /**
+ * Load all swipe-flag documents (including expired ones) for a given user and list.
+ * Used for swipe-stack prioritization where we need to know whether a document exists
+ * and (if expired) how old it is.
+ *
+ * @param {string} userId
+ * @param {string} listId
+ * @returns {Promise<Object>} Map of recipeId → { flag, calculatedFlag, expiresAt, expiresAtMillis, isExpired }
+ */
+export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
+  if (!userId || !listId) return {};
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('userId', '==', userId),
+      where('listId', '==', listId)
+    );
+    const snapshot = await getDocs(q);
+    const now = Date.now();
+    const docsByRecipe = {};
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data() || {};
+      if (!data.recipeId) return;
+      const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
+      docsByRecipe[data.recipeId] = {
+        flag: data.flag,
+        calculatedFlag: data.calculatedFlag,
+        expiresAt: data.expiresAt ?? null,
+        expiresAtMillis,
+        isExpired: expiresAtMillis !== null && expiresAtMillis <= now,
+      };
+    });
+
+    return docsByRecipe;
+  } catch (error) {
+    console.error('Error loading swipe flag documents by recipe for user:', error);
+    return {};
+  }
+};
+
+/**
  * Load all active (non-expired) swipe flags for all specified members of a list.
  * Used for group status determination across all list members.
  *

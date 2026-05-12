@@ -9,6 +9,7 @@ import { addFavorite } from '../utils/userFavorites';
 
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
+let mockSwipeFlagDocsByRecipeValue = {};
 let mockMaxKandidatenSchwelle = null;
 let mockComputeGroupRecipeStatus = () => 'kandidat';
 let mockStatusValiditySettings = {
@@ -17,15 +18,20 @@ let mockStatusValiditySettings = {
   statusValidityDaysArchiv: null,
 };
 
-jest.mock('../utils/recipeSwipeFlags', () => ({
-  setRecipeSwipeFlag: jest.fn(),
-  parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
-  archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
-  getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
-  getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
-  computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
-  clearExpiryForArchivedRecipe: () => Promise.resolve(true),
-}));
+jest.mock('../utils/recipeSwipeFlags', () => {
+  const actual = jest.requireActual('../utils/recipeSwipeFlags');
+  return {
+    setRecipeSwipeFlag: jest.fn(),
+    parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
+    archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
+    getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
+    getSwipeFlagDocsByRecipeForUser: () => Promise.resolve(mockSwipeFlagDocsByRecipeValue),
+    getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
+    computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
+    computeCalculatedRecipeSwipeFlag: actual.computeCalculatedRecipeSwipeFlag,
+    clearExpiryForArchivedRecipe: () => Promise.resolve(true),
+  };
+});
 
 jest.mock('../utils/customLists', () => ({
   getStatusValiditySettings: () => Promise.resolve(mockStatusValiditySettings),
@@ -82,6 +88,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockActiveFlagsValue = {};
+  mockAllMembersFlagsValue = {};
+  mockSwipeFlagDocsByRecipeValue = {};
+  mockMaxKandidatenSchwelle = null;
   mockStatusValiditySettings = {
     statusValidityDaysKandidat: null,
     statusValidityDaysGeparkt: null,
@@ -107,6 +117,18 @@ function renderMenu(recipeList = recipes) {
   return render(
     <Tagesmenu
       interactiveLists={[list]}
+      recipes={recipeList}
+      allUsers={[]}
+      onSelectRecipe={() => {}}
+      currentUser={currentUser}
+    />
+  );
+}
+
+function renderMenuWithListOverrides(recipeList = recipes, listOverride = {}) {
+  return render(
+    <Tagesmenu
+      interactiveLists={[{ ...list, ...listOverride }]}
       recipes={recipeList}
       allUsers={[]}
       onSelectRecipe={() => {}}
@@ -233,6 +255,96 @@ describe('Tagesmenu – swipe card consistency', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('Tagesmenu – swipe stack prioritization', () => {
+  test('prioritizes recipes with valid kandidat calculatedFlag or pessimistic archiv potential before recipes without a swipe document', async () => {
+    const now = Date.now();
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: {},
+      user2: {
+        r1: 'archiv',
+        r2: 'kandidat',
+      },
+    };
+    mockSwipeFlagDocsByRecipeValue = {
+      r1: {
+        flag: 'geparkt',
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: () => now - 2 * 24 * 60 * 60 * 1000 },
+        expiresAtMillis: now - 2 * 24 * 60 * 60 * 1000,
+        isExpired: true,
+      },
+      r2: {
+        flag: 'kandidat',
+        calculatedFlag: 'kandidat',
+        expiresAt: null,
+        expiresAtMillis: null,
+        isExpired: false,
+      },
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+  });
+
+  test('orders expired swipe documents by oldest expiresAt first after higher priorities', async () => {
+    const now = Date.now();
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+      user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+    };
+    mockSwipeFlagDocsByRecipeValue = {
+      r1: {
+        flag: 'geparkt',
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: () => now - 3 * 24 * 60 * 60 * 1000 },
+        expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000,
+        isExpired: true,
+      },
+      r2: {
+        flag: 'archiv',
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: () => now - 7 * 24 * 60 * 60 * 1000 },
+        expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000,
+        isExpired: true,
+      },
+      r3: {
+        flag: 'kandidat',
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: () => now - 1 * 24 * 60 * 60 * 1000 },
+        expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000,
+        isExpired: true,
+      },
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
   });
 });
 

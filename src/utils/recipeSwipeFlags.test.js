@@ -47,6 +47,7 @@ jest.mock('./customLists', () => ({
 import {
   setRecipeSwipeFlag,
   getActiveSwipeFlags,
+  getSwipeFlagDocsByRecipeForUser,
   getAllMembersSwipeFlags,
   computeGroupRecipeStatus,
   computeCalculatedRecipeSwipeFlag,
@@ -367,6 +368,81 @@ describe('getActiveSwipeFlags', () => {
     expect(result).toEqual({});
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error loading active swipe flags:',
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('getSwipeFlagDocsByRecipeForUser', () => {
+  it('returns empty object when userId is missing', async () => {
+    const result = await getSwipeFlagDocsByRecipeForUser('', 'list-1');
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns empty object when listId is missing', async () => {
+    const result = await getSwipeFlagDocsByRecipeForUser('user-1', '');
+    expect(result).toEqual({});
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns swipe-flag document metadata keyed by recipeId', async () => {
+    const now = Date.now();
+    const pastMs = now - 1000;
+    const futureMs = now + 1000;
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          data: () => ({
+            userId: 'user-1',
+            listId: 'list-1',
+            recipeId: 'recipe-1',
+            flag: 'archiv',
+            calculatedFlag: 'kandidat',
+            expiresAt: { toMillis: () => pastMs },
+          }),
+        });
+        cb({
+          data: () => ({
+            userId: 'user-1',
+            listId: 'list-1',
+            recipeId: 'recipe-2',
+            flag: 'geparkt',
+            calculatedFlag: 'geparkt',
+            expiresAt: { toMillis: () => futureMs },
+          }),
+        });
+      },
+    });
+
+    const result = await getSwipeFlagDocsByRecipeForUser('user-1', 'list-1');
+    expect(result).toEqual({
+      'recipe-1': {
+        flag: 'archiv',
+        calculatedFlag: 'kandidat',
+        expiresAt: { toMillis: expect.any(Function) },
+        expiresAtMillis: pastMs,
+        isExpired: true,
+      },
+      'recipe-2': {
+        flag: 'geparkt',
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: expect.any(Function) },
+        expiresAtMillis: futureMs,
+        isExpired: false,
+      },
+    });
+  });
+
+  it('returns empty object and logs error when getDocs fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs.mockRejectedValue(new Error('Firestore error'));
+
+    const result = await getSwipeFlagDocsByRecipeForUser('user-1', 'list-1');
+    expect(result).toEqual({});
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error loading swipe flag documents by recipe for user:',
       expect.any(Error)
     );
     consoleSpy.mockRestore();
