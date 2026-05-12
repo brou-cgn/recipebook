@@ -882,6 +882,64 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { expiresAt: syncedExpiresAt });
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { expiresAt: syncedExpiresAt });
   });
+
+  it('does not sync expiresAt for expired docs and treats expired flags as open swipes for calculation', async () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(20_000);
+    try {
+      const syncedExpiresAt = { toMillis: () => 40_000 };
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ ownerId: 'user-1', memberIds: ['user-2', 'user-3'] }),
+      });
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'ref-1',
+            data: () => ({
+              userId: 'user-1',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'archiv',
+              calculatedFlag: 'archiv',
+              expiresAt: { toMillis: () => 10_000 },
+            }),
+          });
+          cb({
+            ref: 'ref-2',
+            data: () => ({
+              userId: 'user-2',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'archiv',
+              calculatedFlag: 'archiv',
+              expiresAt: null,
+            }),
+          });
+          cb({
+            ref: 'ref-3',
+            data: () => ({
+              userId: 'user-3',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'kandidat',
+              calculatedFlag: 'archiv',
+              expiresAt: null,
+            }),
+          });
+        },
+      });
+
+      const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1', undefined, syncedExpiresAt);
+
+      expect(result).toBe(true);
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'kandidat' });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-3', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
+      expect(mockUpdateDoc).not.toHaveBeenCalledWith('ref-1', expect.objectContaining({ expiresAt: syncedExpiresAt }));
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 });
 
 describe('reconcileRecipeSwipeFlagsForMemberChange', () => {

@@ -57,6 +57,11 @@ const expiresAtEqual = (a, b) => {
   return false;
 };
 
+const isExpiredSwipeFlag = (expiresAt, now) => {
+  const expiresAtMillis = typeof expiresAt?.toMillis === 'function' ? expiresAt.toMillis() : undefined;
+  return expiresAtMillis !== null && expiresAtMillis !== undefined && expiresAtMillis <= now;
+};
+
 const DEFAULT_GROUP_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,
   groupThresholdKandidatMaxArchiv: 50,
@@ -150,6 +155,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
   if (!listId || !recipeId) return false;
 
   try {
+    const now = Date.now();
     const q = query(
       collection(db, 'recipeSwipeFlags'),
       where('listId', '==', listId),
@@ -169,7 +175,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
     const allMembersFlags = Object.fromEntries(memberIds.map((id) => [id, {}]));
     docs.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data?.userId && data?.recipeId) {
+      if (data?.userId && data?.recipeId && !isExpiredSwipeFlag(data.expiresAt, now)) {
         if (!allMembersFlags[data.userId]) allMembersFlags[data.userId] = {};
         allMembersFlags[data.userId][data.recipeId] = data.flag;
       }
@@ -186,7 +192,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
         if (data.calculatedFlag !== calculatedFlag) {
           payload.calculatedFlag = calculatedFlag;
         }
-        if (shouldSyncExpiresAt && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
+        if (shouldSyncExpiresAt && !isExpiredSwipeFlag(data.expiresAt, now) && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
           payload.expiresAt = synchronizedExpiresAt;
         }
         return Object.keys(payload).length > 0
