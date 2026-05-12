@@ -20,6 +20,7 @@
 
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
+import { getGroupStatusThresholds } from './customLists';
 
 /**
  * Build a deterministic Firestore document ID for a flag.
@@ -202,7 +203,8 @@ const calculateProjectedCalculatedFlagForPendingSwipe = async (listId, recipeId,
   if (!allMembersFlags[userId]) allMembersFlags[userId] = {};
   allMembersFlags[userId][recipeId] = flag;
 
-  return computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId) || flag;
+  const thresholds = await getGroupStatusThresholds();
+  return computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds) || flag;
 };
 
 /**
@@ -237,7 +239,8 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
       expiresAt,
       createdAt: Timestamp.now(),
     });
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    const thresholds = await getGroupStatusThresholds();
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
     }
@@ -458,7 +461,8 @@ export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityD
     });
     if (updates.length === 0) return false;
     await Promise.all(updates);
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    const thresholds = await getGroupStatusThresholds();
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after archiving recipe swipe flags.');
     }
@@ -498,7 +502,8 @@ export const parkAllRecipeSwipeFlagsForRecipeInList = async (listId, recipeId, v
       updates.push(updateDoc(docSnap.ref, { flag: 'geparkt', expiresAt }));
     });
     await Promise.all(updates);
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    const thresholds = await getGroupStatusThresholds();
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after parking recipe swipe flags.');
     }
