@@ -166,15 +166,19 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
 
     const expiresAtEqual = (a, b) => {
       if (a === b) return true;
-      if ((a == null) && (b == null)) return true;
-      if ((a == null) !== (b == null)) return false;
+      const aIsNullish = a === null || a === undefined;
+      const bIsNullish = b === null || b === undefined;
+      if (aIsNullish && bIsNullish) return true;
+      if (aIsNullish !== bIsNullish) return false;
       const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : a?._ms;
       const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : b?._ms;
-      if (aMillis != null || bMillis != null) return aMillis === bMillis;
+      const aMillisDefined = aMillis !== null && aMillis !== undefined;
+      const bMillisDefined = bMillis !== null && bMillis !== undefined;
+      if (aMillisDefined || bMillisDefined) return aMillis === bMillis;
       return false;
     };
 
-    const syncExpiresAt = synchronizedExpiresAt !== undefined;
+    const shouldSyncExpiresAt = synchronizedExpiresAt !== undefined;
     const updates = docs
       .map((docSnap) => {
         const data = docSnap.data() || {};
@@ -182,7 +186,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
         if (data.calculatedFlag !== calculatedFlag) {
           payload.calculatedFlag = calculatedFlag;
         }
-        if (syncExpiresAt && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
+        if (shouldSyncExpiresAt && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
           payload.expiresAt = synchronizedExpiresAt;
         }
         return Object.keys(payload).length > 0
