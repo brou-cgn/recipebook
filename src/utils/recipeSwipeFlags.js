@@ -19,7 +19,7 @@
  */
 
 import { db } from '../firebase';
-import { doc, setDoc, updateDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 import { getGroupStatusThresholds } from './customLists';
 
 /**
@@ -276,6 +276,54 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
     return true;
   } catch (error) {
     console.error('Error setting recipe swipe flag:', error);
+    return false;
+  }
+};
+
+/**
+ * Reconcile all recipe swipe flags after member changes in an interactive list:
+ * - delete documents for removed members
+ * - recalculate calculatedFlag for all remaining recipes in the list
+ *
+ * @param {string} listId
+ * @param {string[]} [removedMemberIds]
+ * @returns {Promise<boolean>}
+ */
+export const reconcileRecipeSwipeFlagsForMemberChange = async (listId, removedMemberIds = []) => {
+  if (!listId) return false;
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId)
+    );
+    const snapshot = await getDocs(q);
+    const docs = [];
+    snapshot.forEach((docSnap) => docs.push(docSnap));
+    if (docs.length === 0) return true;
+
+    const removedMemberIdSet = new Set((Array.isArray(removedMemberIds) ? removedMemberIds : []).filter(Boolean));
+    if (removedMemberIdSet.size > 0) {
+      const deleteOperations = docs
+        .filter((docSnap) => removedMemberIdSet.has(docSnap.data()?.userId))
+        .map((docSnap) => deleteDoc(docSnap.ref));
+      await Promise.all(deleteOperations);
+    }
+
+    const affectedRecipeIds = [...new Set(
+      docs
+        .filter((docSnap) => !removedMemberIdSet.has(docSnap.data()?.userId))
+        .map((docSnap) => docSnap.data()?.recipeId)
+        .filter(Boolean)
+    )];
+    if (affectedRecipeIds.length === 0) return true;
+
+    const thresholds = await getGroupStatusThresholds();
+    const recalculationResults = await Promise.all(
+      affectedRecipeIds.map((recipeId) => recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds))
+    );
+    return recalculationResults.every(Boolean);
+  } catch (error) {
+    console.error('Error reconciling recipe swipe flags after member change:', error);
     return false;
   }
 };
