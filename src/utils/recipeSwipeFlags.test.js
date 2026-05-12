@@ -19,7 +19,7 @@ const mockCollection = jest.fn();
 const mockQuery = jest.fn();
 const mockWhere = jest.fn();
 const mockTimestampNow = jest.fn();
-const mockTimestampFromMillis = jest.fn((ms) => ({ _ms: ms, _isMock: true }));
+const mockTimestampFromMillis = jest.fn((ms) => ({ toMillis: () => ms, _isMock: true }));
 
 jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
@@ -75,7 +75,7 @@ beforeEach(() => {
   mockCollection.mockReturnValue('mock-collection-ref');
   mockQuery.mockReturnValue('mock-query-ref');
   mockWhere.mockReturnValue('mock-where-ref');
-  mockTimestampFromMillis.mockImplementation((ms) => ({ _ms: ms, _isMock: true }));
+  mockTimestampFromMillis.mockImplementation((ms) => ({ toMillis: () => ms, _isMock: true }));
   mockGetGroupStatusThresholds.mockResolvedValue(DEFAULT_TEST_THRESHOLDS);
 });
 
@@ -271,6 +271,39 @@ describe('setRecipeSwipeFlag', () => {
       'Failed to recalculate calculatedFlag after setting recipe swipe flag.'
     );
     consoleSpy.mockRestore();
+  });
+
+  it('synchronizes expiresAt for other docs of the same list+recipe', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
+    mockGetDocs
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'existing-ref',
+            data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', calculatedFlag: 'geparkt', expiresAt: null }),
+          });
+        },
+      })
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'existing-ref',
+            data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', calculatedFlag: 'geparkt', expiresAt: null }),
+          });
+        },
+      });
+
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'kandidat', 3);
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(mockUpdateDoc).toHaveBeenCalledWith('existing-ref', {
+      calculatedFlag: 'kandidat',
+      expiresAt: data.expiresAt,
+    });
   });
 });
 
@@ -819,6 +852,32 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
     expect(result).toBe(true);
     expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
+
+  it('updates expiresAt for all docs when a synchronized expiresAt is provided', async () => {
+    const syncedExpiresAt = { toMillis: () => 12345 };
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          ref: 'ref-1',
+          data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', calculatedFlag: 'kandidat', expiresAt: null }),
+        });
+        cb({
+          ref: 'ref-2',
+          data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', calculatedFlag: 'kandidat', expiresAt: null }),
+        });
+      },
+    });
+
+    const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1', undefined, syncedExpiresAt);
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { expiresAt: syncedExpiresAt });
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { expiresAt: syncedExpiresAt });
+  });
 });
 
 describe('clearExpiryForArchivedRecipe', () => {
@@ -1037,8 +1096,8 @@ describe('parkAllRecipeSwipeFlagsForRecipeInList', () => {
     );
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
     const after = Date.now();
-    expect(expiryTimestamp._ms).toBeGreaterThanOrEqual(before + sevenDays);
-    expect(expiryTimestamp._ms).toBeLessThanOrEqual(after + sevenDays);
+    expect(expiryTimestamp.toMillis()).toBeGreaterThanOrEqual(before + sevenDays);
+    expect(expiryTimestamp.toMillis()).toBeLessThanOrEqual(after + sevenDays);
   });
 
   it('updates all matching docs to geparkt without expiry when validity is null', async () => {

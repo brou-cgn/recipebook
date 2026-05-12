@@ -43,6 +43,20 @@ const timestampInDays = (days) => {
   return Timestamp.fromMillis(ms);
 };
 
+const expiresAtEqual = (a, b) => {
+  if (a === b) return true;
+  const aIsNullish = a === null || a === undefined;
+  const bIsNullish = b === null || b === undefined;
+  if (aIsNullish && bIsNullish) return true;
+  if (aIsNullish !== bIsNullish) return false;
+  const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : undefined;
+  const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : undefined;
+  const aMillisDefined = aMillis !== null && aMillis !== undefined;
+  const bMillisDefined = bMillis !== null && bMillis !== undefined;
+  if (aMillisDefined && bMillisDefined) return aMillis === bMillis;
+  return false;
+};
+
 const DEFAULT_GROUP_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,
   groupThresholdKandidatMaxArchiv: 50,
@@ -124,13 +138,15 @@ const getListMemberIds = async (listId) => {
 
 /**
  * Recalculate and persist calculatedFlag for all swipe documents of one recipe in one list.
+ * Optionally, also synchronize expiresAt for all matching documents.
  *
  * @param {string} listId
  * @param {string} recipeId
  * @param {Object} [thresholds]
+ * @param {Timestamp|null} [synchronizedExpiresAt] - When provided, this expiresAt value is written to all docs
  * @returns {Promise<boolean>}
  */
-export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds) => {
+export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds, synchronizedExpiresAt) => {
   if (!listId || !recipeId) return false;
 
   try {
@@ -162,9 +178,22 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
     if (!calculatedFlag) return false;
 
+    const shouldSyncExpiresAt = synchronizedExpiresAt !== undefined;
     const updates = docs
-      .filter((docSnap) => docSnap.data()?.calculatedFlag !== calculatedFlag)
-      .map((docSnap) => updateDoc(docSnap.ref, { calculatedFlag }));
+      .map((docSnap) => {
+        const data = docSnap.data() || {};
+        const payload = {};
+        if (data.calculatedFlag !== calculatedFlag) {
+          payload.calculatedFlag = calculatedFlag;
+        }
+        if (shouldSyncExpiresAt && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
+          payload.expiresAt = synchronizedExpiresAt;
+        }
+        return Object.keys(payload).length > 0
+          ? updateDoc(docSnap.ref, payload)
+          : null;
+      })
+      .filter(Boolean);
 
     await Promise.all(updates);
     return true;
@@ -240,7 +269,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
       createdAt: Timestamp.now(),
     });
     const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds, expiresAt);
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
     }
