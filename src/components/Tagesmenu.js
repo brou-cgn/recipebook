@@ -595,6 +595,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       if (aIsExpired !== bIsExpired) return aIsExpired ? -1 : 1;
 
       if (aIsExpired && bIsExpired) {
+        // Defensive fallback: if metadata is manually injected/inconsistent and misses expiresAtMillis,
+        // use MAX_SAFE_INTEGER so such entries are ordered after valid expired docs deterministically.
         return (aMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER) - (bMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER);
       }
 

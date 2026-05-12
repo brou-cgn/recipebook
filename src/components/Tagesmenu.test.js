@@ -125,7 +125,7 @@ function renderMenu(recipeList = recipes) {
   );
 }
 
-function renderMenuWithList(recipeList = recipes, listOverride = {}) {
+function renderMenuWithListOverrides(recipeList = recipes, listOverride = {}) {
   return render(
     <Tagesmenu
       interactiveLists={[{ ...list, ...listOverride }]}
@@ -287,7 +287,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     };
 
     await act(async () => {
-      renderMenuWithList(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
@@ -333,7 +333,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     };
 
     await act(async () => {
-      renderMenuWithList(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');

@@ -394,12 +394,7 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
     snapshot.forEach((docSnap) => {
       const data = docSnap.data() || {};
       if (!data.recipeId) return;
-      const expiresAtMillis =
-        data.expiresAt !== null &&
-        data.expiresAt !== undefined &&
-        typeof data.expiresAt.toMillis === 'function'
-          ? data.expiresAt.toMillis()
-          : null;
+      const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
       docsByRecipe[data.recipeId] = {
         flag: data.flag,
         calculatedFlag: data.calculatedFlag,
