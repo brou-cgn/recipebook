@@ -108,9 +108,12 @@ export const registerUser = async (userData) => {
       email: email.toLowerCase().trim()
     });
 
+    // Sign out immediately after registration – no automatic login after sign-up
+    await signOut(auth);
+
     return {
       success: true,
-      message: 'Registrierung erfolgreich!',
+      message: 'Registrierung erfolgreich! Bitte melden Sie sich an.',
       user: result.data.user
     };
   } catch (error) {

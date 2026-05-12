@@ -14,7 +14,6 @@ function Register({ onRegister, onSwitchToLogin }) {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const lastSubmitRef = useRef(null);
 
@@ -28,7 +27,6 @@ function Register({ onRegister, onSwitchToLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     // Client-side cooldown: prevent rapid repeated submission attempts
     const now = Date.now();
@@ -71,19 +69,8 @@ function Register({ onRegister, onSwitchToLogin }) {
       });
       
       if (result.success) {
-        setSuccess(result.message);
-        // Reset form
-        setFormData({
-          vorname: '',
-          nachname: '',
-          email: '',
-          password: '',
-          confirmPassword: ''
-        });
-        // Clear success message after 3 seconds (Firebase has already logged the user in)
-        setTimeout(() => {
-          setSuccess('');
-        }, 3000);
+        // Redirect to login immediately – no automatic login after registration
+        onSwitchToLogin();
       } else {
         setError(result.message);
       }
@@ -169,7 +156,6 @@ function Register({ onRegister, onSwitchToLogin }) {
             />
           </div>
           {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
           <button type="submit" className="submit-btn" disabled={isLoading}>
             {isLoading ? 'Registrierung läuft...' : 'Registrieren'}
           </button>
