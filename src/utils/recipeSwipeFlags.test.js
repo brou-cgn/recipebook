@@ -19,7 +19,7 @@ const mockCollection = jest.fn();
 const mockQuery = jest.fn();
 const mockWhere = jest.fn();
 const mockTimestampNow = jest.fn();
-const mockTimestampFromMillis = jest.fn((ms) => ({ _ms: ms, _isMock: true }));
+const mockTimestampFromMillis = jest.fn((ms) => ({ toMillis: () => ms, _isMock: true }));
 
 jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
@@ -75,7 +75,7 @@ beforeEach(() => {
   mockCollection.mockReturnValue('mock-collection-ref');
   mockQuery.mockReturnValue('mock-query-ref');
   mockWhere.mockReturnValue('mock-where-ref');
-  mockTimestampFromMillis.mockImplementation((ms) => ({ _ms: ms, _isMock: true }));
+  mockTimestampFromMillis.mockImplementation((ms) => ({ toMillis: () => ms, _isMock: true }));
   mockGetGroupStatusThresholds.mockResolvedValue(DEFAULT_TEST_THRESHOLDS);
 });
 
@@ -1096,8 +1096,8 @@ describe('parkAllRecipeSwipeFlagsForRecipeInList', () => {
     );
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
     const after = Date.now();
-    expect(expiryTimestamp._ms).toBeGreaterThanOrEqual(before + sevenDays);
-    expect(expiryTimestamp._ms).toBeLessThanOrEqual(after + sevenDays);
+    expect(expiryTimestamp.toMillis()).toBeGreaterThanOrEqual(before + sevenDays);
+    expect(expiryTimestamp.toMillis()).toBeLessThanOrEqual(after + sevenDays);
   });
 
   it('updates all matching docs to geparkt without expiry when validity is null', async () => {

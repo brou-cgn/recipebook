@@ -170,8 +170,8 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
       const bIsNullish = b === null || b === undefined;
       if (aIsNullish && bIsNullish) return true;
       if (aIsNullish !== bIsNullish) return false;
-      const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : a?._ms;
-      const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : b?._ms;
+      const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : undefined;
+      const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : undefined;
       const aMillisDefined = aMillis !== null && aMillis !== undefined;
       const bMillisDefined = bMillis !== null && bMillis !== undefined;
       if (aMillisDefined || bMillisDefined) return aMillis === bMillis;
