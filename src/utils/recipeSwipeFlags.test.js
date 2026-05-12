@@ -11,6 +11,7 @@ jest.mock('../firebase', () => ({
 const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
 const mockDoc = jest.fn();
+const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockCollection = jest.fn();
 const mockQuery = jest.fn();
@@ -22,6 +23,7 @@ jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
   updateDoc: (...args) => mockUpdateDoc(...args),
+  getDoc: (...args) => mockGetDoc(...args),
   getDocs: (...args) => mockGetDocs(...args),
   collection: (...args) => mockCollection(...args),
   query: (...args) => mockQuery(...args),
@@ -37,6 +39,8 @@ import {
   getActiveSwipeFlags,
   getAllMembersSwipeFlags,
   computeGroupRecipeStatus,
+  computeCalculatedRecipeSwipeFlag,
+  recalculateCalculatedFlagForRecipeInList,
   clearExpiryForArchivedRecipe,
   archiveRecipeForAllUsersInList,
   parkAllRecipeSwipeFlagsForRecipeInList,
@@ -48,6 +52,10 @@ beforeEach(() => {
   mockTimestampNow.mockReturnValue('mock-now');
   mockSetDoc.mockResolvedValue(undefined);
   mockUpdateDoc.mockResolvedValue(undefined);
+  mockGetDoc.mockResolvedValue({
+    exists: () => false,
+    data: () => ({}),
+  });
   mockGetDocs.mockResolvedValue({ forEach: jest.fn() });
   mockCollection.mockReturnValue('mock-collection-ref');
   mockQuery.mockReturnValue('mock-query-ref');
@@ -100,6 +108,7 @@ describe('setRecipeSwipeFlag', () => {
 
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('geparkt');
     expect(data.userId).toBe('user-1');
     expect(data.listId).toBe('list-1');
     expect(data.recipeId).toBe('recipe-1');
@@ -118,6 +127,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('geparkt');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -127,6 +137,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('geparkt');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -136,6 +147,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('archiv');
+    expect(data.calculatedFlag).toBe('archiv');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -147,6 +159,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('archiv');
+    expect(data.calculatedFlag).toBe('archiv');
 
     const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
@@ -162,6 +175,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('kandidat');
+    expect(data.calculatedFlag).toBe('kandidat');
 
     const expiresMs = mockTimestampFromMillis.mock.calls[0][0];
     const threeDays = 3 * 24 * 60 * 60 * 1000;
@@ -175,6 +189,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('kandidat');
+    expect(data.calculatedFlag).toBe('kandidat');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -532,6 +547,122 @@ describe('computeGroupRecipeStatus', () => {
       'user-1'
     );
     expect(result).toBe('kandidat');
+  });
+});
+
+describe('computeCalculatedRecipeSwipeFlag', () => {
+  const defaultThresholds = {
+    groupThresholdKandidatMinKandidat: 50,
+    groupThresholdKandidatMaxArchiv: 50,
+    groupThresholdArchivMinArchiv: 50,
+    groupThresholdArchivMaxKandidat: 50,
+  };
+
+  it('treats open swipes as kandidat and returns kandidat when thresholds are met', () => {
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'archiv' },
+    };
+    const result = computeCalculatedRecipeSwipeFlag(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      defaultThresholds
+    );
+    expect(result).toBe('kandidat');
+  });
+
+  it('returns archiv when archiv thresholds are met', () => {
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 90,
+      groupThresholdKandidatMaxArchiv: 10,
+      groupThresholdArchivMinArchiv: 60,
+      groupThresholdArchivMaxKandidat: 40,
+    };
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'archiv' },
+      'user-2': { 'recipe-1': 'archiv' },
+      'user-3': { 'recipe-1': 'kandidat' },
+    };
+    const result = computeCalculatedRecipeSwipeFlag(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      strictThresholds
+    );
+    expect(result).toBe('archiv');
+  });
+
+  it('returns geparkt when neither kandidat nor archiv thresholds are met', () => {
+    const strictThresholds = {
+      groupThresholdKandidatMinKandidat: 80,
+      groupThresholdKandidatMaxArchiv: 20,
+      groupThresholdArchivMinArchiv: 80,
+      groupThresholdArchivMaxKandidat: 20,
+    };
+    const allMembersFlags = {
+      'user-1': { 'recipe-1': 'kandidat' },
+      'user-2': { 'recipe-1': 'archiv' },
+      'user-3': { 'recipe-1': 'geparkt' },
+    };
+    const result = computeCalculatedRecipeSwipeFlag(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      strictThresholds
+    );
+    expect(result).toBe('geparkt');
+  });
+});
+
+describe('recalculateCalculatedFlagForRecipeInList', () => {
+  it('updates calculatedFlag for all matching recipe swipe docs based on projected flag', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2', 'user-3'] }),
+    });
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          ref: 'ref-1',
+          data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }),
+        });
+        cb({
+          ref: 'ref-2',
+          data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv' }),
+        });
+      },
+    });
+
+    const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1');
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'kandidat' });
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { calculatedFlag: 'kandidat' });
+  });
+
+  it('returns true without updates when all docs already have the calculatedFlag', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          ref: 'ref-1',
+          data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', calculatedFlag: 'kandidat' }),
+        });
+        cb({
+          ref: 'ref-2',
+          data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', calculatedFlag: 'kandidat' }),
+        });
+      },
+    });
+
+    const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1');
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 });
 

@@ -19,7 +19,7 @@
  */
 
 import { db } from '../firebase';
-import { doc, setDoc, updateDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
 
 /**
  * Build a deterministic Firestore document ID for a flag.
@@ -40,6 +40,133 @@ const buildFlagId = (userId, listId, recipeId) =>
 const timestampInDays = (days) => {
   const ms = Date.now() + days * 24 * 60 * 60 * 1000;
   return Timestamp.fromMillis(ms);
+};
+
+const DEFAULT_GROUP_THRESHOLDS = {
+  groupThresholdKandidatMinKandidat: 50,
+  groupThresholdKandidatMaxArchiv: 50,
+  groupThresholdArchivMinArchiv: 50,
+  groupThresholdArchivMaxKandidat: 50,
+};
+
+const normalizeGroupThresholds = (thresholds) => ({
+  ...DEFAULT_GROUP_THRESHOLDS,
+  ...(thresholds || {}),
+});
+
+/**
+ * Compute the calculated (expected) flag for a recipe.
+ *
+ * For this optimistic projection, open votes are treated as "kandidat".
+ * Threshold checks are then applied in the order kandidat → archiv,
+ * otherwise "geparkt" is used as fallback.
+ *
+ * @param {string[]} memberIds
+ * @param {Object} allMembersFlags
+ * @param {string} recipeId
+ * @param {Object} [thresholds]
+ * @returns {'kandidat'|'geparkt'|'archiv'|null}
+ */
+export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds) {
+  if (!Array.isArray(memberIds) || memberIds.length === 0 || !recipeId) return null;
+
+  let kandidatCount = 0;
+  let archivCount = 0;
+
+  for (const uid of memberIds) {
+    const flag = allMembersFlags[uid]?.[recipeId];
+    if (flag === 'archiv') {
+      archivCount++;
+    } else {
+      // Open swipes and all non-archiv votes are projected as kandidat.
+      kandidatCount++;
+    }
+  }
+
+  const total = memberIds.length;
+  const kandidatPct = (kandidatCount / total) * 100;
+  const archivPct = (archivCount / total) * 100;
+  const {
+    groupThresholdKandidatMinKandidat,
+    groupThresholdKandidatMaxArchiv,
+    groupThresholdArchivMinArchiv,
+    groupThresholdArchivMaxKandidat,
+  } = normalizeGroupThresholds(thresholds);
+
+  if (kandidatPct >= groupThresholdKandidatMinKandidat && archivPct <= groupThresholdKandidatMaxArchiv) {
+    return 'kandidat';
+  }
+  if (archivPct >= groupThresholdArchivMinArchiv && kandidatPct <= groupThresholdArchivMaxKandidat) {
+    return 'archiv';
+  }
+  return 'geparkt';
+}
+
+const getListMemberIds = async (listId) => {
+  if (!listId) return [];
+  try {
+    const groupSnap = await getDoc(doc(db, 'groups', listId));
+    if (!groupSnap.exists()) return [];
+    const data = groupSnap.data() || {};
+    const memberIds = Array.isArray(data.memberIds) ? data.memberIds : [];
+    return data.ownerId
+      ? [...new Set([data.ownerId, ...memberIds])]
+      : [...new Set(memberIds)];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Recalculate and persist calculatedFlag for all swipe documents of one recipe in one list.
+ *
+ * @param {string} listId
+ * @param {string} recipeId
+ * @param {Object} [thresholds]
+ * @returns {Promise<boolean>}
+ */
+export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds) => {
+  if (!listId || !recipeId) return false;
+
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId),
+      where('recipeId', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const docs = [];
+    snapshot.forEach((docSnap) => docs.push(docSnap));
+    if (docs.length === 0) return true;
+
+    let memberIds = await getListMemberIds(listId);
+    if (memberIds.length === 0) {
+      memberIds = [...new Set(docs.map((docSnap) => docSnap.data().userId).filter(Boolean))];
+    }
+    if (memberIds.length === 0) return false;
+
+    const allMembersFlags = Object.fromEntries(memberIds.map((id) => [id, {}]));
+    docs.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data?.userId && data?.recipeId) {
+        if (!allMembersFlags[data.userId]) allMembersFlags[data.userId] = {};
+        allMembersFlags[data.userId][data.recipeId] = data.flag;
+      }
+    });
+
+    const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
+    if (!calculatedFlag) return false;
+
+    const updates = docs
+      .filter((docSnap) => docSnap.data()?.calculatedFlag !== calculatedFlag)
+      .map((docSnap) => updateDoc(docSnap.ref, { calculatedFlag }));
+
+    await Promise.all(updates);
+    return true;
+  } catch (error) {
+    console.error('Error recalculating calculatedFlag for recipe swipe flags:', error);
+    return false;
+  }
 };
 
 /**
@@ -69,9 +196,12 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
       listId,
       recipeId,
       flag,
+      calculatedFlag: flag,
       expiresAt,
       createdAt: Timestamp.now(),
     });
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    if (!didRecalculate) return false;
     return true;
   } catch (error) {
     console.error('Error setting recipe swipe flag:', error);
@@ -289,6 +419,8 @@ export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityD
     });
     if (updates.length === 0) return false;
     await Promise.all(updates);
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    if (!didRecalculate) return false;
     return true;
   } catch (error) {
     console.error('Error archiving recipe swipe flags for all users:', error);
@@ -325,6 +457,8 @@ export const parkAllRecipeSwipeFlagsForRecipeInList = async (listId, recipeId, v
       updates.push(updateDoc(docSnap.ref, { flag: 'geparkt', expiresAt }));
     });
     await Promise.all(updates);
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
+    if (!didRecalculate) return false;
     return true;
   } catch (error) {
     console.error('Error parking all recipe swipe flags for recipe in list:', error);
