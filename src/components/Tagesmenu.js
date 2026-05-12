@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList, getSwipeFlagDocsByRecipeForUser, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -67,6 +67,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Active swipe flags from Firestore (non-expired), used to filter the stack
   const [activeFlags, setActiveFlags] = useState({});
+  const [swipeFlagDocsByRecipe, setSwipeFlagDocsByRecipe] = useState({});
 
   // True once the initial active-flags fetch for the current list has resolved.
   // Prevents showing swipe cards before we know which recipes are already flagged.
@@ -144,7 +145,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   }, [recipes, selectedList]);
 
   // Recipes still available for swiping (those without an active flag)
-  const listRecipes = useMemo(() => {
+  const availableRecipes = useMemo(() => {
     return allListRecipes.filter((r) => !activeFlags[r.id]);
   }, [allListRecipes, activeFlags]);
 
@@ -155,6 +156,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setCurrentIndex(0);
       setSwipeResults({});
       setActiveFlags({});
+      setSwipeFlagDocsByRecipe({});
       setAllMembersFlags({});
       setAllMembersFlagsLoaded(false);
       setFlagsLoaded(false);
@@ -219,13 +221,25 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     if (!currentUser?.id || !selectedListId) {
       setActiveFlags({});
+      setSwipeFlagDocsByRecipe({});
       setFlagsLoaded(true);
       return;
     }
     setFlagsLoaded(false);
-    getActiveSwipeFlags(currentUser.id, selectedListId)
-      .then((flags) => { setActiveFlags(flags); setFlagsLoaded(true); })
-      .catch(() => { setFlagsLoaded(true); });
+    Promise.all([
+      getActiveSwipeFlags(currentUser.id, selectedListId),
+      getSwipeFlagDocsByRecipeForUser(currentUser.id, selectedListId),
+    ])
+      .then(([flags, docsByRecipe]) => {
+        setActiveFlags(flags);
+        setSwipeFlagDocsByRecipe(docsByRecipe);
+        setFlagsLoaded(true);
+      })
+      .catch(() => {
+        setActiveFlags({});
+        setSwipeFlagDocsByRecipe({});
+        setFlagsLoaded(true);
+      });
   }, [currentUser, selectedListId]);
 
   // Load all members' swipe flags for group status determination.
@@ -277,9 +291,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // handlers (which have empty dependency arrays) can still read the latest values.
   const topRecipeRef = useRef(null);
   const selectedListRef = useRef(null);
-  useEffect(() => {
-    topRecipeRef.current = listRecipes[currentIndex] ?? null;
-  }, [listRecipes, currentIndex]);
   useEffect(() => {
     selectedListRef.current = selectedList;
   }, [selectedList]);
@@ -536,6 +547,68 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         .map((r) => r.id)
     );
   }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId]);
+
+  const pessimisticCalculatedFlagByRecipeId = useMemo(() => {
+    if (listMemberIds.length === 0) return {};
+    return Object.fromEntries(
+      allListRecipes.map((recipe) => {
+        const pessimisticFlags = Object.fromEntries(
+          listMemberIds.map((uid) => {
+            const memberFlags = { ...(allMembersFlags[uid] || {}) };
+            if (memberFlags[recipe.id] === undefined) {
+              memberFlags[recipe.id] = 'archiv';
+            }
+            return [uid, memberFlags];
+          })
+        );
+        return [
+          recipe.id,
+          computeCalculatedRecipeSwipeFlag(listMemberIds, pessimisticFlags, recipe.id, groupThresholds),
+        ];
+      })
+    );
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
+
+  const listRecipes = useMemo(() => {
+    const isPriorityOneRecipe = (recipeId) => {
+      const meta = swipeFlagDocsByRecipe[recipeId];
+      if (!meta) return false;
+      return (
+        (!meta.isExpired && meta.calculatedFlag === 'kandidat') ||
+        pessimisticCalculatedFlagByRecipeId[recipeId] === 'archiv'
+      );
+    };
+
+    return [...availableRecipes].sort((a, b) => {
+      const aPriorityOne = isPriorityOneRecipe(a.id);
+      const bPriorityOne = isPriorityOneRecipe(b.id);
+      if (aPriorityOne !== bPriorityOne) return aPriorityOne ? -1 : 1;
+
+      const aMeta = swipeFlagDocsByRecipe[a.id];
+      const bMeta = swipeFlagDocsByRecipe[b.id];
+      const aHasNoDoc = !aMeta;
+      const bHasNoDoc = !bMeta;
+      if (aHasNoDoc !== bHasNoDoc) return aHasNoDoc ? -1 : 1;
+
+      const aIsExpired = aMeta?.isExpired === true;
+      const bIsExpired = bMeta?.isExpired === true;
+      if (aIsExpired !== bIsExpired) return aIsExpired ? -1 : 1;
+
+      if (aIsExpired && bIsExpired) {
+        return (aMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER) - (bMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER);
+      }
+
+      return 0;
+    });
+  }, [
+    availableRecipes,
+    swipeFlagDocsByRecipe,
+    pessimisticCalculatedFlagByRecipeId,
+  ]);
+
+  useEffect(() => {
+    topRecipeRef.current = listRecipes[currentIndex] ?? null;
+  }, [listRecipes, currentIndex]);
 
   // Candidate score S = Σ 1/(1+nᵢ) where nᵢ = open votings for recipe i.
   // Used to end the swipe stack early when S reaches maxKandidatenSchwelle.
