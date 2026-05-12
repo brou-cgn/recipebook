@@ -333,6 +333,9 @@ function App() {
       if (user && user.requiresPasswordChange) {
         setRequiresPasswordChange(true);
       }
+      if (user) {
+        setAuthView('login');
+      }
       setAuthLoading(false);
     });
     
