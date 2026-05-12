@@ -58,8 +58,10 @@ const normalizeGroupThresholds = (thresholds) => ({
  * Compute the calculated (expected) flag for a recipe.
  *
  * For this optimistic projection, open votes are treated as "kandidat".
- * Threshold checks are then applied in the order kandidat → archiv,
- * otherwise "geparkt" is used as fallback.
+ * Explicit "kandidat" and "archiv" votes are counted as-is, while explicit
+ * "geparkt" votes are ignored for both counters. Threshold checks are then
+ * applied in the order kandidat → archiv, otherwise "geparkt" is used as
+ * fallback.
  *
  * @param {string[]} memberIds
  * @param {Object} allMembersFlags
@@ -75,10 +77,12 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
 
   for (const uid of memberIds) {
     const flag = allMembersFlags[uid]?.[recipeId];
-    if (flag === 'archiv') {
+    if (flag === 'kandidat') {
+      kandidatCount++;
+    } else if (flag === 'archiv') {
       archivCount++;
-    } else {
-      // Open swipes and all non-archiv votes are projected as kandidat.
+    } else if (flag === undefined) {
+      // Open swipes are optimistically projected as kandidat.
       kandidatCount++;
     }
   }
