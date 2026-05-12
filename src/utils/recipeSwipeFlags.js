@@ -43,6 +43,20 @@ const timestampInDays = (days) => {
   return Timestamp.fromMillis(ms);
 };
 
+const expiresAtEqual = (a, b) => {
+  if (a === b) return true;
+  const aIsNullish = a === null || a === undefined;
+  const bIsNullish = b === null || b === undefined;
+  if (aIsNullish && bIsNullish) return true;
+  if (aIsNullish !== bIsNullish) return false;
+  const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : undefined;
+  const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : undefined;
+  const aMillisDefined = aMillis !== null && aMillis !== undefined;
+  const bMillisDefined = bMillis !== null && bMillis !== undefined;
+  if (aMillisDefined && bMillisDefined) return aMillis === bMillis;
+  return false;
+};
+
 const DEFAULT_GROUP_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,
   groupThresholdKandidatMaxArchiv: 50,
@@ -163,20 +177,6 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
 
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
     if (!calculatedFlag) return false;
-
-    const expiresAtEqual = (a, b) => {
-      if (a === b) return true;
-      const aIsNullish = a === null || a === undefined;
-      const bIsNullish = b === null || b === undefined;
-      if (aIsNullish && bIsNullish) return true;
-      if (aIsNullish !== bIsNullish) return false;
-      const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : undefined;
-      const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : undefined;
-      const aMillisDefined = aMillis !== null && aMillis !== undefined;
-      const bMillisDefined = bMillis !== null && bMillis !== undefined;
-      if (aMillisDefined || bMillisDefined) return aMillis === bMillis;
-      return false;
-    };
 
     const shouldSyncExpiresAt = synchronizedExpiresAt !== undefined;
     const updates = docs
