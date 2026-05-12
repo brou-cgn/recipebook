@@ -124,13 +124,15 @@ const getListMemberIds = async (listId) => {
 
 /**
  * Recalculate and persist calculatedFlag for all swipe documents of one recipe in one list.
+ * Optionally, also synchronize expiresAt for all matching documents.
  *
  * @param {string} listId
  * @param {string} recipeId
  * @param {Object} [thresholds]
+ * @param {Timestamp|null} [synchronizedExpiresAt] - When provided, this expiresAt value is written to all docs
  * @returns {Promise<boolean>}
  */
-export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds) => {
+export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds, synchronizedExpiresAt) => {
   if (!listId || !recipeId) return false;
 
   try {
@@ -162,9 +164,32 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
     if (!calculatedFlag) return false;
 
+    const expiresAtEqual = (a, b) => {
+      if (a === b) return true;
+      if ((a == null) && (b == null)) return true;
+      if ((a == null) !== (b == null)) return false;
+      const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : a?._ms;
+      const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : b?._ms;
+      if (aMillis != null || bMillis != null) return aMillis === bMillis;
+      return false;
+    };
+
+    const syncExpiresAt = synchronizedExpiresAt !== undefined;
     const updates = docs
-      .filter((docSnap) => docSnap.data()?.calculatedFlag !== calculatedFlag)
-      .map((docSnap) => updateDoc(docSnap.ref, { calculatedFlag }));
+      .map((docSnap) => {
+        const data = docSnap.data() || {};
+        const payload = {};
+        if (data.calculatedFlag !== calculatedFlag) {
+          payload.calculatedFlag = calculatedFlag;
+        }
+        if (syncExpiresAt && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
+          payload.expiresAt = synchronizedExpiresAt;
+        }
+        return Object.keys(payload).length > 0
+          ? updateDoc(docSnap.ref, payload)
+          : null;
+      })
+      .filter(Boolean);
 
     await Promise.all(updates);
     return true;
@@ -240,7 +265,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
       createdAt: Timestamp.now(),
     });
     const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds, expiresAt);
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
     }
