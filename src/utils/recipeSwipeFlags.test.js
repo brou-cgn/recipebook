@@ -97,6 +97,10 @@ describe('setRecipeSwipeFlag', () => {
   });
 
   it('sets geparkt flag with custom validity days', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
     const before = Date.now();
     const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', 14);
     const after = Date.now();
@@ -124,6 +128,10 @@ describe('setRecipeSwipeFlag', () => {
   });
 
   it('sets geparkt flag with no expiry when validityDays is null', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
     const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', null);
 
     expect(result).toBe(true);
@@ -134,6 +142,10 @@ describe('setRecipeSwipeFlag', () => {
   });
 
   it('sets geparkt flag with no expiry when validityDays is omitted', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
     const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt');
 
     expect(result).toBe(true);
@@ -576,6 +588,12 @@ describe('computeCalculatedRecipeSwipeFlag', () => {
     groupThresholdArchivMinArchiv: 50,
     groupThresholdArchivMaxKandidat: 50,
   };
+  const projectedThresholds = {
+    groupThresholdKandidatMinKandidat: 66,
+    groupThresholdKandidatMaxArchiv: 10,
+    groupThresholdArchivMinArchiv: 66,
+    groupThresholdArchivMaxKandidat: 10,
+  };
 
   it('treats open swipes as kandidat and returns kandidat when thresholds are met', () => {
     const allMembersFlags = {
@@ -631,6 +649,110 @@ describe('computeCalculatedRecipeSwipeFlag', () => {
       strictThresholds
     );
     expect(result).toBe('geparkt');
+  });
+
+  it.each([
+    [
+      'kandidat with one open swipe returns kandidat',
+      {
+        'user-1': { 'recipe-1': 'kandidat' },
+      },
+      'kandidat',
+    ],
+    [
+      'geparkt with one open swipe returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'geparkt' },
+      },
+      'geparkt',
+    ],
+    [
+      'archiv with one open swipe returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'archiv' },
+      },
+      'geparkt',
+    ],
+  ])('2 members: %s', (_label, allMembersFlags, expected) => {
+    const result = computeCalculatedRecipeSwipeFlag(
+      ['user-1', 'user-2'],
+      allMembersFlags,
+      'recipe-1',
+      projectedThresholds
+    );
+    expect(result).toBe(expected);
+  });
+
+  it.each([
+    [
+      'kandidat with two open swipes returns kandidat',
+      {
+        'user-1': { 'recipe-1': 'kandidat' },
+      },
+      'kandidat',
+    ],
+    [
+      'one geparkt with two open swipes returns kandidat',
+      {
+        'user-1': { 'recipe-1': 'geparkt' },
+      },
+      'kandidat',
+    ],
+    [
+      'archiv with two open swipes returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'archiv' },
+      },
+      'geparkt',
+    ],
+    [
+      'kandidat plus kandidat with one open swipe returns kandidat',
+      {
+        'user-1': { 'recipe-1': 'kandidat' },
+        'user-2': { 'recipe-1': 'kandidat' },
+      },
+      'kandidat',
+    ],
+    [
+      'geparkt plus kandidat with one open swipe returns kandidat',
+      {
+        'user-1': { 'recipe-1': 'geparkt' },
+        'user-2': { 'recipe-1': 'kandidat' },
+      },
+      'kandidat',
+    ],
+    [
+      'two geparkt with one open swipe returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'geparkt' },
+        'user-2': { 'recipe-1': 'geparkt' },
+      },
+      'geparkt',
+    ],
+    [
+      'archiv plus kandidat with one open swipe returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'archiv' },
+        'user-2': { 'recipe-1': 'kandidat' },
+      },
+      'geparkt',
+    ],
+    [
+      'archiv plus geparkt with one open swipe returns geparkt',
+      {
+        'user-1': { 'recipe-1': 'archiv' },
+        'user-2': { 'recipe-1': 'geparkt' },
+      },
+      'geparkt',
+    ],
+  ])('3 members: %s', (_label, allMembersFlags, expected) => {
+    const result = computeCalculatedRecipeSwipeFlag(
+      ['user-1', 'user-2', 'user-3'],
+      allMembersFlags,
+      'recipe-1',
+      projectedThresholds
+    );
+    expect(result).toBe(expected);
   });
 });
 
