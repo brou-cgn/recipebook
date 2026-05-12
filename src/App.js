@@ -74,6 +74,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import { reconcileRecipeSwipeFlagsForMemberChange } from './utils/recipeSwipeFlags';
 
 // IndexedDB helpers to read/clear shared data written by the service worker
 function readSharedDataFromDB() {
@@ -1000,8 +1001,26 @@ function App() {
   };
 
   const handleUpdateGroup = async (groupId, updates) => {
+    const group = groups.find((g) => g.id === groupId);
+    const hasMemberUpdate = Array.isArray(updates?.memberIds);
+    const previousMemberIds = Array.isArray(group?.memberIds) ? group.memberIds : [];
+    const nextMemberIds = hasMemberUpdate ? updates.memberIds : previousMemberIds;
+    const hasMembershipChanged = hasMemberUpdate && (
+      previousMemberIds.length !== nextMemberIds.length ||
+      previousMemberIds.some((memberId) => !nextMemberIds.includes(memberId))
+    );
+    const removedMemberIds = hasMembershipChanged
+      ? previousMemberIds.filter((memberId) => !nextMemberIds.includes(memberId))
+      : [];
+
     try {
       await updateGroupInFirestore(groupId, updates);
+      if (group?.listKind === 'interactive' && hasMembershipChanged) {
+        const didReconcile = await reconcileRecipeSwipeFlagsForMemberChange(groupId, removedMemberIds);
+        if (!didReconcile) {
+          console.error('Failed to reconcile recipe swipe flags after member change.');
+        }
+      }
     } catch (error) {
       console.error('Error updating group:', error);
       alert('Fehler beim Aktualisieren der Gruppe. Bitte versuchen Sie es erneut.');

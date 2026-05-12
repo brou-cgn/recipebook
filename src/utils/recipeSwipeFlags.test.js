@@ -12,6 +12,7 @@ jest.mock('../firebase', () => ({
 // Mock Firestore functions
 const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
 const mockDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
@@ -25,6 +26,7 @@ jest.mock('firebase/firestore', () => ({
   doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
   updateDoc: (...args) => mockUpdateDoc(...args),
+  deleteDoc: (...args) => mockDeleteDoc(...args),
   getDoc: (...args) => mockGetDoc(...args),
   getDocs: (...args) => mockGetDocs(...args),
   collection: (...args) => mockCollection(...args),
@@ -49,6 +51,7 @@ import {
   computeGroupRecipeStatus,
   computeCalculatedRecipeSwipeFlag,
   recalculateCalculatedFlagForRecipeInList,
+  reconcileRecipeSwipeFlagsForMemberChange,
   clearExpiryForArchivedRecipe,
   archiveRecipeForAllUsersInList,
   parkAllRecipeSwipeFlagsForRecipeInList,
@@ -67,6 +70,7 @@ beforeEach(() => {
   mockTimestampNow.mockReturnValue('mock-now');
   mockSetDoc.mockResolvedValue(undefined);
   mockUpdateDoc.mockResolvedValue(undefined);
+  mockDeleteDoc.mockResolvedValue(undefined);
   mockGetDoc.mockResolvedValue({
     exists: () => false,
     data: () => ({}),
@@ -877,6 +881,76 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
     expect(result).toBe(true);
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { expiresAt: syncedExpiresAt });
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { expiresAt: syncedExpiresAt });
+  });
+});
+
+describe('reconcileRecipeSwipeFlagsForMemberChange', () => {
+  it('deletes removed-member documents before recalculating calculatedFlag for remaining recipes', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ ownerId: 'owner-1', memberIds: ['user-2', 'user-3'] }),
+    });
+    mockGetDocs
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'remove-ref-1',
+            data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv' }),
+          });
+          cb({
+            ref: 'keep-ref-1',
+            data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }),
+          });
+          cb({
+            ref: 'keep-ref-2',
+            data: () => ({ userId: 'user-3', listId: 'list-1', recipeId: 'recipe-2', flag: 'archiv' }),
+          });
+        },
+      })
+      .mockResolvedValue({
+        forEach: (cb) => {
+          cb({ ref: 'keep-ref-1', data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }) });
+        },
+      });
+
+    const result = await reconcileRecipeSwipeFlagsForMemberChange('list-1', ['user-1']);
+
+    expect(result).toBe(true);
+    expect(mockDeleteDoc).toHaveBeenCalledWith('remove-ref-1');
+    expect(mockUpdateDoc).toHaveBeenCalled();
+    expect(mockDeleteDoc.mock.invocationCallOrder[0]).toBeLessThan(mockUpdateDoc.mock.invocationCallOrder[0]);
+    expect(mockWhere).toHaveBeenCalledWith('listId', '==', 'list-1');
+  });
+
+  it('recalculates calculatedFlag for all list recipes when members are added', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ ownerId: 'owner-1', memberIds: ['user-2', 'user-3', 'user-4'] }),
+    });
+    mockGetDocs
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'keep-ref-1',
+            data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }),
+          });
+          cb({
+            ref: 'keep-ref-2',
+            data: () => ({ userId: 'user-3', listId: 'list-1', recipeId: 'recipe-2', flag: 'archiv' }),
+          });
+        },
+      })
+      .mockResolvedValue({
+        forEach: (cb) => {
+          cb({ ref: 'keep-ref-1', data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }) });
+        },
+      });
+
+    const result = await reconcileRecipeSwipeFlagsForMemberChange('list-1', []);
+
+    expect(result).toBe(true);
+    expect(mockDeleteDoc).not.toHaveBeenCalled();
+    expect(mockGetDocs).toHaveBeenCalledTimes(3);
   });
 });
 
