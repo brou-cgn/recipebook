@@ -8,17 +8,17 @@ describe('Tagesmenu CSS sizing for kachel menu button', () => {
     return match ? match[1] : '';
   };
 
-  test('uses reduced 70% dimensions for wrapper, icon, and trigger image', () => {
+  test('uses enlarged dimensions for wrapper, icon, and trigger image', () => {
     const cssPath = path.join(__dirname, 'Tagesmenu.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const wrapperRule = getRuleBody(css, '.tagesmenu-kachel-menu-wrapper');
     const iconRule = getRuleBody(css, '.tagesmenu-kachel-context-icon');
     const triggerImgRule = getRuleBody(css, '.tagesmenu-kachel-context-trigger-img');
 
-    expect(wrapperRule).toContain('width: 1.75rem;');
-    expect(wrapperRule).toContain('height: 1.75rem;');
-    expect(iconRule).toContain('font-size: 1.05rem;');
-    expect(triggerImgRule).toContain('width: 1.05rem;');
-    expect(triggerImgRule).toContain('height: 1.05rem;');
+    expect(wrapperRule).toContain('width: 2.625rem;');
+    expect(wrapperRule).toContain('height: 2.625rem;');
+    expect(iconRule).toContain('font-size: 1.575rem;');
+    expect(triggerImgRule).toContain('width: 1.575rem;');
+    expect(triggerImgRule).toContain('height: 1.575rem;');
   });
 });
