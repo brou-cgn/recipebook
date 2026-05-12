@@ -80,10 +80,10 @@ function Register({ onRegister, onSwitchToLogin }) {
           password: '',
           confirmPassword: ''
         });
-        // Automatically switch to login after 2 seconds
+        // Clear success message after 3 seconds (Firebase has already logged the user in)
         setTimeout(() => {
-          onSwitchToLogin();
-        }, 2000);
+          setSuccess('');
+        }, 3000);
       } else {
         setError(result.message);
       }
