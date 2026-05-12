@@ -17,7 +17,8 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-const BATCH_LIMIT = 500;
+// Keep a safety margin below Firestore's hard 500-op batch limit.
+const BATCH_LIMIT = 450;
 
 const DEFAULT_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,

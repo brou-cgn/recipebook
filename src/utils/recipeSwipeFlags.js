@@ -169,6 +169,38 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
   }
 };
 
+const calculateProjectedCalculatedFlagForPendingSwipe = async (listId, recipeId, userId, flag) => {
+  if (!listId || !recipeId || !userId || !flag) return flag;
+
+  const q = query(
+    collection(db, 'recipeSwipeFlags'),
+    where('listId', '==', listId),
+    where('recipeId', '==', recipeId)
+  );
+  const snapshot = await getDocs(q);
+  const docs = [];
+  snapshot.forEach((docSnap) => docs.push(docSnap));
+
+  let memberIds = await getListMemberIds(listId);
+  if (memberIds.length === 0) {
+    memberIds = [...new Set([...docs.map((docSnap) => docSnap.data().userId).filter(Boolean), userId])];
+  }
+  if (memberIds.length === 0) return flag;
+
+  const allMembersFlags = Object.fromEntries(memberIds.map((id) => [id, {}]));
+  docs.forEach((docSnap) => {
+    const data = docSnap.data();
+    if (data?.userId && data?.recipeId) {
+      if (!allMembersFlags[data.userId]) allMembersFlags[data.userId] = {};
+      allMembersFlags[data.userId][data.recipeId] = data.flag;
+    }
+  });
+  if (!allMembersFlags[userId]) allMembersFlags[userId] = {};
+  allMembersFlags[userId][recipeId] = flag;
+
+  return computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId) || flag;
+};
+
 /**
  * Record a swipe action for a recipe.
  * Overwrites any existing flag for the same user+list+recipe combination.
@@ -190,18 +222,21 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
   }
 
   try {
+    const calculatedFlag = await calculateProjectedCalculatedFlagForPendingSwipe(listId, recipeId, userId, flag);
     const flagId = buildFlagId(userId, listId, recipeId);
     await setDoc(doc(db, 'recipeSwipeFlags', flagId), {
       userId,
       listId,
       recipeId,
       flag,
-      calculatedFlag: flag,
+      calculatedFlag,
       expiresAt,
       createdAt: Timestamp.now(),
     });
     const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
-    if (!didRecalculate) return false;
+    if (!didRecalculate) {
+      console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
+    }
     return true;
   } catch (error) {
     console.error('Error setting recipe swipe flag:', error);
@@ -420,7 +455,9 @@ export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityD
     if (updates.length === 0) return false;
     await Promise.all(updates);
     const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
-    if (!didRecalculate) return false;
+    if (!didRecalculate) {
+      console.error('Failed to recalculate calculatedFlag after archiving recipe swipe flags.');
+    }
     return true;
   } catch (error) {
     console.error('Error archiving recipe swipe flags for all users:', error);
@@ -458,7 +495,9 @@ export const parkAllRecipeSwipeFlagsForRecipeInList = async (listId, recipeId, v
     });
     await Promise.all(updates);
     const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId);
-    if (!didRecalculate) return false;
+    if (!didRecalculate) {
+      console.error('Failed to recalculate calculatedFlag after parking recipe swipe flags.');
+    }
     return true;
   } catch (error) {
     console.error('Error parking all recipe swipe flags for recipe in list:', error);

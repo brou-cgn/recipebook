@@ -2,6 +2,8 @@
  * Tests for Recipe Swipe Flags Firestore Utilities
  */
 
+const RECIPE_SWIPE_FLAGS_COLLECTION = 'recipeSwipeFlags';
+
 // Mock Firebase
 jest.mock('../firebase', () => ({
   db: {}
@@ -108,7 +110,7 @@ describe('setRecipeSwipeFlag', () => {
 
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
-    expect(data.calculatedFlag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('kandidat');
     expect(data.userId).toBe('user-1');
     expect(data.listId).toBe('list-1');
     expect(data.recipeId).toBe('recipe-1');
@@ -127,7 +129,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
-    expect(data.calculatedFlag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('kandidat');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -137,7 +139,7 @@ describe('setRecipeSwipeFlag', () => {
     expect(result).toBe(true);
     const [, data] = mockSetDoc.mock.calls[0];
     expect(data.flag).toBe('geparkt');
-    expect(data.calculatedFlag).toBe('geparkt');
+    expect(data.calculatedFlag).toBe('kandidat');
     expect(data.expiresAt).toBeNull();
   });
 
@@ -208,8 +210,9 @@ describe('setRecipeSwipeFlag', () => {
     await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv');
 
     // Both calls should target the same document ID
-    const firstDocId = mockDoc.mock.calls[0][2];
-    const secondDocId = mockDoc.mock.calls[1][2];
+    const recipeSwipeDocCalls = mockDoc.mock.calls.filter((call) => call[1] === RECIPE_SWIPE_FLAGS_COLLECTION);
+    const firstDocId = recipeSwipeDocCalls[0][2];
+    const secondDocId = recipeSwipeDocCalls[1][2];
     expect(firstDocId).toBe(secondDocId);
     expect(mockSetDoc).toHaveBeenCalledTimes(2);
   });
@@ -224,6 +227,22 @@ describe('setRecipeSwipeFlag', () => {
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error setting recipe swipe flag:',
       expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('returns true when setDoc succeeds but recalculation fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs
+      .mockResolvedValueOnce({ forEach: jest.fn() })
+      .mockRejectedValueOnce(new Error('Recalculation failed'));
+
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', 14);
+
+    expect(result).toBe(true);
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to recalculate calculatedFlag after setting recipe swipe flag.'
     );
     consoleSpy.mockRestore();
   });
@@ -824,6 +843,22 @@ describe('archiveRecipeForAllUsersInList', () => {
     );
     consoleSpy.mockRestore();
   });
+
+  it('returns true when archiving succeeds but calculatedFlag recalculation fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs
+      .mockResolvedValueOnce({ forEach: (cb) => cb({ ref: 'mock-ref-1' }) })
+      .mockRejectedValueOnce(new Error('Recalculation failed'));
+
+    const result = await archiveRecipeForAllUsersInList('list-1', 'recipe-1', 3);
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-ref-1', expect.objectContaining({ flag: 'archiv' }));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to recalculate calculatedFlag after archiving recipe swipe flags.'
+    );
+    consoleSpy.mockRestore();
+  });
 });
 
 describe('parkAllRecipeSwipeFlagsForRecipeInList', () => {
@@ -898,6 +933,26 @@ describe('parkAllRecipeSwipeFlagsForRecipeInList', () => {
     expect(consoleSpy).toHaveBeenCalledWith(
       'Error parking all recipe swipe flags for recipe in list:',
       expect.any(Error)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('returns true when parking succeeds but calculatedFlag recalculation fails', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetDocs
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ ref: 'mock-ref-1' });
+        },
+      })
+      .mockRejectedValueOnce(new Error('Recalculation failed'));
+
+    const result = await parkAllRecipeSwipeFlagsForRecipeInList('list-1', 'recipe-1', 7);
+
+    expect(result).toBe(true);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('mock-ref-1', expect.objectContaining({ flag: 'geparkt' }));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to recalculate calculatedFlag after parking recipe swipe flags.'
     );
     consoleSpy.mockRestore();
   });
