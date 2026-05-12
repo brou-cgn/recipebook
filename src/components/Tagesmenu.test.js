@@ -1475,11 +1475,11 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     const optionLabels = Array.from(selects[0].querySelectorAll('option')).map((option) => option.textContent);
     expect(optionLabels).toEqual([
-      'Aktion wählen...',
+      'Erzähl, wie war es?',
       'Ich bin enttäuscht',
-      'Vielleicht kann ich das besser',
-      'Will ich mal wieder kochen',
-      'Will ich regelmäßig kochen',
+      'Das kann ich besser',
+      'Koche ich mal wieder',
+      'Koche ich regelmäßig',
     ]);
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
@@ -1542,7 +1542,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(icon.textContent).not.toContain('⚪');
   });
 
-  test('Option "Vielleicht kann ich das besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
+  test('Option "Das kann ich besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
     mockStatusValiditySettings = {
       statusValidityDaysKandidat: null,
       statusValidityDaysGeparkt: 14,
@@ -1556,7 +1556,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
     await act(async () => {
-      fireEvent.change(select, { target: { value: 'Vielleicht kann ich das besser' } });
+      fireEvent.change(select, { target: { value: 'Das kann ich besser' } });
     });
 
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
@@ -1574,7 +1574,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(archiveRecipeForAllUsersInList).toHaveBeenCalledWith('list1', 'r1', 14);
   });
 
-  test('Option "Will ich mal wieder kochen" weist Rezept der Zielliste zu', async () => {
+  test('Option "Koche ich mal wieder" weist Rezept der Zielliste zu', async () => {
     const interactiveListWithTarget = {
       ...list,
       targetListId: 'target-list-1',
@@ -1598,7 +1598,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     finishSwipeAnimation(topCard);
 
     const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
-    await act(async () => { fireEvent.change(select, { target: { value: 'Will ich mal wieder kochen' } }); });
+    await act(async () => { fireEvent.change(select, { target: { value: 'Koche ich mal wieder' } }); });
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-target');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-1', 'r-target');
@@ -1606,7 +1606,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(addFavorite).not.toHaveBeenCalled();
   });
 
-  test('Option "Will ich regelmäßig kochen" setzt zusätzlich den Favoritenstatus', async () => {
+  test('Option "Koche ich regelmäßig" setzt zusätzlich den Favoritenstatus', async () => {
     const interactiveListWithTarget = {
       ...list,
       targetListId: 'target-list-2',
@@ -1630,7 +1630,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     finishSwipeAnimation(topCard);
 
     const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
-    await act(async () => { fireEvent.change(select, { target: { value: 'Will ich regelmäßig kochen' } }); });
+    await act(async () => { fireEvent.change(select, { target: { value: 'Koche ich regelmäßig' } }); });
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-fav');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-2', 'r-fav');

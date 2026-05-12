@@ -31,16 +31,20 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const KACHEL_MENU_PROMPT_LABEL = 'Erzähl, wie war es?';
 const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
+const PARK_MENU_ITEM = 'Das kann ich besser';
+const COOK_AGAIN_MENU_ITEM = 'Koche ich mal wieder';
+const COOK_REGULARLY_MENU_ITEM = 'Koche ich regelmäßig';
 const TAGESMENU_KACHEL_MENU_ITEMS = [
   DISAPPOINTED_MENU_ITEM,
-  'Vielleicht kann ich das besser',
-  'Will ich mal wieder kochen',
-  'Will ich regelmäßig kochen',
+  PARK_MENU_ITEM,
+  COOK_AGAIN_MENU_ITEM,
+  COOK_REGULARLY_MENU_ITEM,
 ];
 const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
-  'Will ich mal wieder kochen': { markAsFavorite: false },
-  'Will ich regelmäßig kochen': { markAsFavorite: true },
+  [COOK_AGAIN_MENU_ITEM]: { markAsFavorite: false },
+  [COOK_REGULARLY_MENU_ITEM]: { markAsFavorite: true },
 };
 
 function getKachelMenuAltIconValue(eff) {
@@ -707,7 +711,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     }
 
     if (
-      item === 'Vielleicht kann ich das besser' &&
+      item === PARK_MENU_ITEM &&
       targetListId &&
       targetRecipeId
     ) {
@@ -746,7 +750,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         // - Verbindung des Rezepts zur interaktiven Liste entfernen
         // - Rezept in die definierte Zielliste übernehmen
         // - Falls groupId noch auf die interaktive Liste zeigt, auf Zielliste umhängen
-        // - Bei "Will ich regelmäßig kochen" zusätzlich als Favorit markieren
+        // - Bei "Koche ich regelmäßig" zusätzlich als Favorit markieren
         await Promise.all([
           removeRecipeFromGroup(targetListId, targetRecipeId),
           addRecipeToGroup(interactiveTargetListId, targetRecipeId),
@@ -859,7 +863,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                             className="tagesmenu-kachel-context-select"
                             aria-label="Kachel-Kontextmenü öffnen"
                           >
-                            <option value="" disabled>Aktion wählen...</option>
+                            <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
                             {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
                               <option key={item} value={item}>{item}</option>
                             ))}
@@ -954,7 +958,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                       className="tagesmenu-kachel-context-select"
                       aria-label="Kachel-Kontextmenü öffnen"
                     >
-                      <option value="" disabled>Aktion wählen...</option>
+                      <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
                       {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
                         <option key={item} value={item}>{item}</option>
                       ))}
@@ -1070,7 +1074,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                             className="tagesmenu-kachel-context-select"
                             aria-label="Kachel-Kontextmenü öffnen"
                           >
-                            <option value="" disabled>Aktion wählen...</option>
+                            <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
                             {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
                               <option key={item} value={item}>{item}</option>
                             ))}
