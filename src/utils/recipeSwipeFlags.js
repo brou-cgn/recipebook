@@ -458,6 +458,48 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
 };
 
 /**
+ * Load all swipe flag docs (including expired) with full metadata for all specified members of a list.
+ * Used for swipe-stack prioritization where expired flag timestamps are needed.
+ *
+ * Uses a single query filtered by listId so that all members' docs are fetched in one round-trip.
+ *
+ * @param {string} listId      - ID of the interactive list
+ * @param {string[]} memberIds - Array of user IDs (all list members including owner)
+ * @returns {Promise<Object>} Map of userId → { recipeId → { flag, expiresAt, expiresAtMillis, isExpired } }
+ */
+export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
+  if (!listId || !Array.isArray(memberIds) || memberIds.length === 0) return {};
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listId', '==', listId)
+    );
+    const snapshot = await getDocs(q);
+    const now = Date.now();
+
+    const result = Object.fromEntries(memberIds.map((id) => [id, {}]));
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (!memberIds.includes(data.userId)) return;
+      if (!data.recipeId) return;
+      const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
+      result[data.userId][data.recipeId] = {
+        flag: data.flag,
+        expiresAt: data.expiresAt ?? null,
+        expiresAtMillis,
+        isExpired: expiresAtMillis !== null && expiresAtMillis <= now,
+      };
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error loading all members swipe flag docs for list:', error);
+    return {};
+  }
+};
+
+/**
  * Compute the shared group status for a single recipe based on all list members' swipes.
  *
  * Logic for missing swipes:

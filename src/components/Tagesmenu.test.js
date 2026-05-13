@@ -9,7 +9,7 @@ import { addFavorite } from '../utils/userFavorites';
 
 let mockActiveFlagsValue = {};
 let mockAllMembersFlagsValue = {};
-let mockSwipeFlagDocsByRecipeValue = {};
+let mockAllMembersFlagDocsValue = {};
 let mockMaxKandidatenSchwelle = null;
 let mockComputeGroupRecipeStatus = () => 'kandidat';
 let mockStatusValiditySettings = {
@@ -25,8 +25,8 @@ jest.mock('../utils/recipeSwipeFlags', () => {
     parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
     archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
     getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
-    getSwipeFlagDocsByRecipeForUser: () => Promise.resolve(mockSwipeFlagDocsByRecipeValue),
     getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
+    getAllMembersSwipeFlagDocsForList: () => Promise.resolve(mockAllMembersFlagDocsValue),
     computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
     computeCalculatedRecipeSwipeFlag: actual.computeCalculatedRecipeSwipeFlag,
     clearExpiryForArchivedRecipe: () => Promise.resolve(true),
@@ -90,7 +90,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockActiveFlagsValue = {};
   mockAllMembersFlagsValue = {};
-  mockSwipeFlagDocsByRecipeValue = {};
+  mockAllMembersFlagDocsValue = {};
   mockMaxKandidatenSchwelle = null;
   mockStatusValiditySettings = {
     statusValidityDaysKandidat: null,
@@ -259,9 +259,10 @@ describe('Tagesmenu – swipe card consistency', () => {
 });
 
 describe('Tagesmenu – swipe stack prioritization', () => {
-  test('prioritizes recipes with valid kandidat calculatedFlag or pessimistic archiv potential before recipes without a swipe document', async () => {
+  test('prioritizes recipes with valid kandidat flag or pessimistic archiv potential before recipes without a swipe document', async () => {
     const now = Date.now();
     mockActiveFlagsValue = {};
+    // user1 has no swipe docs; user2 has active flags: r1=archiv, r2=kandidat
     mockAllMembersFlagsValue = {
       user1: {},
       user2: {
@@ -269,20 +270,12 @@ describe('Tagesmenu – swipe stack prioritization', () => {
         r2: 'kandidat',
       },
     };
-    mockSwipeFlagDocsByRecipeValue = {
-      r1: {
-        flag: 'geparkt',
-        calculatedFlag: 'geparkt',
-        expiresAt: { toMillis: () => now - 2 * 24 * 60 * 60 * 1000 },
-        expiresAtMillis: now - 2 * 24 * 60 * 60 * 1000,
-        isExpired: true,
-      },
-      r2: {
-        flag: 'kandidat',
-        calculatedFlag: 'kandidat',
-        expiresAt: null,
-        expiresAtMillis: null,
-        isExpired: false,
+    // allMembersFlagDocs reflects the same active flags (no expired docs here)
+    mockAllMembersFlagDocsValue = {
+      user1: {},
+      user2: {
+        r1: { flag: 'archiv', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'kandidat', expiresAt: null, expiresAtMillis: null, isExpired: false },
       },
     };
 
@@ -290,6 +283,10 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
+    // r1: user2 has 'archiv' → pessimistic archiv → P1
+    // r2: user2 has 'kandidat' (active) → P1
+    // r3: no flags from anyone → pessimistic archiv (both treated as archiv) → P1
+    // All are P1; original order r1, r2, r3 is maintained
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
@@ -304,31 +301,22 @@ describe('Tagesmenu – swipe stack prioritization', () => {
   test('orders expired swipe documents by oldest expiresAt first after higher priorities', async () => {
     const now = Date.now();
     mockActiveFlagsValue = {};
+    // Both members have active geparkt flags → not kandidat, pessimistic flag = geparkt (not archiv)
     mockAllMembersFlagsValue = {
       user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
       user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
     };
-    mockSwipeFlagDocsByRecipeValue = {
-      r1: {
-        flag: 'geparkt',
-        calculatedFlag: 'geparkt',
-        expiresAt: { toMillis: () => now - 3 * 24 * 60 * 60 * 1000 },
-        expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000,
-        isExpired: true,
+    // allMembersFlagDocs has expired docs across all members; sorting uses the oldest expiresAt
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000, isExpired: true },
+        r2: { flag: 'archiv', expiresAt: null, expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000, isExpired: true },
+        r3: { flag: 'kandidat', expiresAt: null, expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000, isExpired: true },
       },
-      r2: {
-        flag: 'archiv',
-        calculatedFlag: 'geparkt',
-        expiresAt: { toMillis: () => now - 7 * 24 * 60 * 60 * 1000 },
-        expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000,
-        isExpired: true,
-      },
-      r3: {
-        flag: 'kandidat',
-        calculatedFlag: 'geparkt',
-        expiresAt: { toMillis: () => now - 1 * 24 * 60 * 60 * 1000 },
-        expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000,
-        isExpired: true,
+      user2: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000, isExpired: true },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000, isExpired: true },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000, isExpired: true },
       },
     };
 
@@ -336,11 +324,48 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
+    // Not P1 (all geparkt, pessimistic = geparkt not archiv), has docs → not P2
+    // P3: sort by oldest expired expiresAt: r2 (7d ago), r1 (3d ago), r3 (1d ago)
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+  });
+
+  test('second user sees prioritization based on first user swipes', async () => {
+    // Simulate the bug scenario: user2 opens Tagesmenu after user1 has swiped
+    mockActiveFlagsValue = {};  // user2 has no own active flags yet
+    // user1 has already swiped: r2=kandidat, r3=archiv; user2 has nothing
+    mockAllMembersFlagsValue = {
+      user1: { r2: 'kandidat', r3: 'archiv' },
+      user2: {},
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r2: { flag: 'kandidat', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'archiv', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+      user2: {},
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    // r1: no flags → pessimistic archiv (both = archiv) → P1
+    // r2: user1 has kandidat → hasActiveKandidat → P1; user2 has nothing → pessimistic archiv too
+    // r3: user1 has archiv, user2 nothing → pessimistic archiv → P1
+    // All P1 → original order r1, r2, r3
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
