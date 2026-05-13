@@ -69,8 +69,9 @@ export const requestNotificationPermission = async () => {
 
     const swRegistration = await registerMessagingServiceWorker();
 
-    // Dynamically import messaging to avoid issues in non-browser envs
-    const { messaging: messagingInstance } = await import('../firebase');
+    // Dynamically import messagingPromise and await the resolved instance
+    const { messagingPromise } = await import('../firebase');
+    const messagingInstance = await messagingPromise;
     if (!messagingInstance) return null;
 
     const token = await getToken(messagingInstance, {
@@ -98,20 +99,22 @@ export const setupForegroundMessageListener = () => {
   isMessagingSupported()
     .then((supported) => {
       if (!supported) return;
-      import('../firebase').then(({ messaging: messagingInstance }) => {
-        if (!messagingInstance) return;
-        unsubscribe = onMessage(messagingInstance, (payload) => {
-          const title = payload.notification?.title || 'RecipeBook';
-          const body = payload.notification?.body || '';
-          if (Notification.permission === 'granted') {
-            // eslint-disable-next-line no-new
-            new Notification(title, {
-              body,
-              icon: '/logo192.png',
-            });
-          }
+      import('../firebase')
+        .then(({ messagingPromise }) => messagingPromise)
+        .then((messagingInstance) => {
+          if (!messagingInstance) return;
+          unsubscribe = onMessage(messagingInstance, (payload) => {
+            const title = payload.notification?.title || 'RecipeBook';
+            const body = payload.notification?.body || '';
+            if (Notification.permission === 'granted') {
+              // eslint-disable-next-line no-new
+              new Notification(title, {
+                body,
+                icon: '/logo192.png',
+              });
+            }
+          });
         });
-      });
     })
     .catch(() => {});
   return () => unsubscribe();

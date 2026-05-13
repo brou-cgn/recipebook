@@ -58,14 +58,13 @@ enableIndexedDbPersistence(db).catch((err) => {
 });
 
 // Initialize Firebase Cloud Messaging (only in supported environments)
-// isMessagingSupported() returns a Promise, so we resolve lazily.
-let messaging = null;
-isMessagingSupported().then((supported) => {
-  if (supported) {
-    messaging = getMessaging(app);
-  }
-}).catch(() => {
-  // Silently ignore environments where FCM is not available (e.g. SSR, test)
-});
+// Exported as a Promise so consumers can await the resolved Messaging instance
+// instead of relying on a synchronous null value that may not be set yet.
+const messagingPromise = isMessagingSupported()
+  .then((supported) => {
+    if (supported) return getMessaging(app);
+    return null;
+  })
+  .catch(() => null); // Silently ignore environments where FCM is not available (e.g. SSR, test)
 
-export { app, db, auth, functions, storage, messaging, firebaseConfig, isMessagingSupported };
+export { app, db, auth, functions, storage, messagingPromise, firebaseConfig, isMessagingSupported };

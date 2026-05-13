@@ -10,7 +10,7 @@ jest.mock('../firebase', () => ({
     messagingSenderId: '12345',
   },
   isMessagingSupported: jest.fn(),
-  messaging: null,
+  messagingPromise: Promise.resolve(null),
   functions: {},
 }));
 
@@ -96,8 +96,8 @@ describe('pushNotifications', () => {
       mockGetToken.mockResolvedValue('mock-fcm-token');
 
       // In the test environment the dynamic import of '../firebase' returns
-      // the module-level mock which has messaging: null.  The function
-      // therefore returns null gracefully rather than the token.
+      // the module-level mock which has messagingPromise: Promise.resolve(null).
+      // The function therefore returns null gracefully rather than the token.
       // We verify the function returns null (safe degradation) and does NOT throw.
       const token = await requestNotificationPermission();
       expect(token).toBeNull();
