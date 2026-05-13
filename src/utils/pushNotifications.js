@@ -55,6 +55,7 @@ export const requestNotificationPermission = async () => {
   try {
     const supported = await isMessagingSupported();
     if (!supported) return null;
+    if (typeof Notification === 'undefined') return null;
     const vapidKey = getVapidKey();
 
     if (!vapidKey) {
@@ -64,8 +65,6 @@ export const requestNotificationPermission = async () => {
       );
       return null;
     }
-
-    if (typeof Notification === 'undefined') return null;
 
     if (Notification.permission === 'denied') return null;
 
