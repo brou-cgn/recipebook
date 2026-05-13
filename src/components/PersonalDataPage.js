@@ -124,14 +124,13 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           success: false,
           text: 'Benachrichtigungen wurden nicht aktiviert. Bitte erteile die Berechtigung und versuche es erneut.',
         });
-        return;
+      } else {
+        await saveFcmToken(currentUser.id, token);
+        setPushActivationMessage({
+          success: true,
+          text: 'Benachrichtigungen sind auf diesem Gerät aktiviert.',
+        });
       }
-
-      await saveFcmToken(currentUser.id, token);
-      setPushActivationMessage({
-        success: true,
-        text: 'Benachrichtigungen sind auf diesem Gerät aktiviert.',
-      });
     } catch (err) {
       console.warn('pushNotifications: activation failed', err);
       setPushActivationMessage({
