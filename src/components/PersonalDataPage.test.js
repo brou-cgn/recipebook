@@ -1,11 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PersonalDataPage from './PersonalDataPage';
-import { updateUserProfile, changePassword } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userManagement';
 
 jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(),
   changePassword: jest.fn(),
+  saveFcmToken: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -555,6 +556,10 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     requestNotificationPermission.mockResolvedValue(null);
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (X11; Linux x86_64)',
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -626,6 +631,33 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
     });
   });
 
+  test('saves returned FCM token when "Aktivieren" is clicked', async () => {
+    global.Notification = { permission: 'default' };
+    requestNotificationPermission.mockResolvedValue('some-token');
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Mitteilungen.*Aktivieren/i }));
+
+    await waitFor(() => {
+      expect(saveFcmToken).toHaveBeenCalledWith('user-1', 'some-token');
+    });
+  });
+
+  test('does not save FCM token when permission request returns null', async () => {
+    global.Notification = { permission: 'default' };
+    requestNotificationPermission.mockResolvedValue(null);
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Mitteilungen.*Aktivieren/i }));
+
+    await waitFor(() => {
+      expect(requestNotificationPermission).toHaveBeenCalledTimes(1);
+    });
+    expect(saveFcmToken).not.toHaveBeenCalled();
+  });
+
   test('updates status to "Aktiv" after permission is granted', async () => {
     global.Notification = { permission: 'default' };
     requestNotificationPermission.mockImplementation(async () => {
@@ -656,5 +688,25 @@ describe('PersonalDataPage - PWA-Mitteilungen', () => {
 
     expect(screen.queryByText(/Mitteilungen wurden abgelehnt/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
+  });
+
+  test('shows the iOS install hint on iPhone/iPad user agents', () => {
+    global.Notification = { permission: 'default' };
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+      configurable: true,
+    });
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText(/iOS 16\.4\+/i)).toBeInTheDocument();
+    expect(screen.getByText(/Zum Home-Bildschirm hinzufügen/i)).toBeInTheDocument();
+  });
+
+  test('does not show the iOS install hint on non-iOS user agents', () => {
+    global.Notification = { permission: 'default' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.queryByText(/iOS 16\.4\+/i)).not.toBeInTheDocument();
   });
 });

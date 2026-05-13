@@ -90,6 +90,24 @@ describe('pushNotifications', () => {
       expect(token).toBeNull();
     });
 
+    it('returns null without calling requestPermission when permission is already denied', async () => {
+      global.Notification.permission = 'denied';
+
+      const token = await requestNotificationPermission();
+
+      expect(token).toBeNull();
+      expect(global.Notification.requestPermission).not.toHaveBeenCalled();
+    });
+
+    it('does not call requestPermission again when permission is already granted', async () => {
+      global.Notification.permission = 'granted';
+
+      const token = await requestNotificationPermission();
+
+      expect(token).toBeNull();
+      expect(global.Notification.requestPermission).not.toHaveBeenCalled();
+    });
+
     it('returns the FCM token when getToken resolves', async () => {
       global.Notification.requestPermission = jest.fn().mockResolvedValue('granted');
       // getToken is already mocked at module level – return a token value

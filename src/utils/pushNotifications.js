@@ -64,8 +64,14 @@ export const requestNotificationPermission = async () => {
       return null;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return null;
+    if (typeof Notification === 'undefined') return null;
+
+    if (Notification.permission === 'denied') return null;
+
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return null;
+    }
 
     const swRegistration = await registerMessagingServiceWorker();
 

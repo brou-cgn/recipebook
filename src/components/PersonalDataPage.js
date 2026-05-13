@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './PersonalDataPage.css';
-import { updateUserProfile, changePassword } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
 import { requestNotificationPermission } from '../utils/pushNotifications';
@@ -14,6 +14,7 @@ const THEME_MODES = [
 ];
 
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
+  const isIosDevice = typeof navigator !== 'undefined' && /iPhone|iPad/.test(navigator.userAgent);
   const [vorname, setVorname] = useState(currentUser?.vorname || '');
   const [nachname, setNachname] = useState(currentUser?.nachname || '');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -57,7 +58,10 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     if (requestingNotification || notificationPermission === 'granted') return;
     setRequestingNotification(true);
     try {
-      await requestNotificationPermission();
+      const token = await requestNotificationPermission();
+      if (token && currentUser?.id) {
+        await saveFcmToken(currentUser.id, token);
+      }
       if (typeof Notification !== 'undefined') {
         setNotificationPermission(Notification.permission);
       }
@@ -365,6 +369,11 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         <p className="personal-data-password-hint">
           Erhalten Sie Benachrichtigungen über neue Rezepte und Aktivitäten in Ihren Listen – auch wenn brouBook gerade nicht geöffnet ist.
         </p>
+        {isIosDevice && (
+          <p className="personal-data-password-hint">
+            Auf iPhone/iPad funktionieren Mitteilungen nur ab iOS 16.4+, wenn brouBook über „Zum Home-Bildschirm hinzufügen“ installiert wurde.
+          </p>
+        )}
         <div className="preferences-group">
           <button
             type="button"
