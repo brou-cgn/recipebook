@@ -114,7 +114,7 @@ export const requestNotificationPermission = async () => {
  */
 const shownNotificationIds = new Set();
 const NOTIFICATION_DEDUP_WINDOW_MS = 5000;
-const SW_READY_TIMEOUT_MS = 3000;
+const SW_READY_TIMEOUT_MS = 5000;
 
 export const setupForegroundMessageListener = () => {
   const unsubscribeRef = { current: () => {} };
