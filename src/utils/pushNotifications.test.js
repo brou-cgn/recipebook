@@ -3,7 +3,6 @@
  */
 
 let mockMessagingPromise = Promise.resolve({});
-process.env.REACT_APP_FIREBASE_VAPID_KEY = 'test-vapid-key';
 
 // Mock firebase module
 jest.mock('../firebase', () => ({
@@ -33,10 +32,10 @@ jest.mock('firebase/functions', () => ({
   httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
-const {
+import {
   requestNotificationPermission,
   notifyPrivateListMembers,
-} = require('./pushNotifications');
+} from './pushNotifications';
 
 const { isMessagingSupported: mockIsSupported } = jest.requireMock('../firebase');
 
