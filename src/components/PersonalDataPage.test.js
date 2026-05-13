@@ -24,6 +24,10 @@ jest.mock('../utils/alarmAudioUtils', () => ({
   previewAlarmSound: jest.fn(),
 }));
 
+jest.mock('../utils/pushNotifications', () => ({
+  requestNotificationPermission: jest.fn(),
+}));
+
 describe('PersonalDataPage', () => {
   const mockUser = {
     id: 'user-1',
@@ -534,5 +538,123 @@ describe('PersonalDataPage - Alarmton', () => {
     fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
     expect(screen.queryByRole('heading', { name: 'Alarmton' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+  });
+});
+
+describe('PersonalDataPage - PWA-Mitteilungen', () => {
+  const mockUser = {
+    id: 'user-1',
+    vorname: 'John',
+    nachname: 'Doe',
+    email: 'john@example.com',
+    signatureSatz: '',
+  };
+
+  const { requestNotificationPermission } = require('../utils/pushNotifications');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    requestNotificationPermission.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    delete global.Notification;
+  });
+
+  test('renders PWA-Mitteilungen section heading and description', () => {
+    global.Notification = { permission: 'default' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByRole('heading', { name: 'PWA-Mitteilungen' })).toBeInTheDocument();
+    expect(screen.getByText(/Erhalten Sie Benachrichtigungen/i)).toBeInTheDocument();
+  });
+
+  test('shows "Aktivieren" status and chevron when permission is default', () => {
+    global.Notification = { permission: 'default' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText('Aktivieren')).toBeInTheDocument();
+    // Button is enabled and clickable
+    const btn = screen.getByRole('button', { name: /Mitteilungen.*Aktivieren/i });
+    expect(btn).not.toBeDisabled();
+  });
+
+  test('shows "Aktiv" and disabled button when permission is granted', () => {
+    global.Notification = { permission: 'granted' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText('Aktiv')).toBeInTheDocument();
+    const btn = screen.getByRole('button', { name: /Mitteilungen.*Aktiv/i });
+    expect(btn).toBeDisabled();
+  });
+
+  test('shows "Deaktiviert" and disabled button when permission is denied', () => {
+    global.Notification = { permission: 'denied' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText('Deaktiviert')).toBeInTheDocument();
+    const btn = screen.getByRole('button', { name: /Mitteilungen.*Deaktiviert/i });
+    expect(btn).toBeDisabled();
+  });
+
+  test('shows warning hint when permission is denied', () => {
+    global.Notification = { permission: 'denied' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText(/Mitteilungen wurden abgelehnt/i)).toBeInTheDocument();
+  });
+
+  test('shows "Nicht verfügbar" and info hint when Notification API is not available', () => {
+    // No global.Notification set
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.getByText('Nicht verfügbar')).toBeInTheDocument();
+    expect(screen.getByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).toBeInTheDocument();
+  });
+
+  test('calls requestNotificationPermission when "Aktivieren" button is clicked', async () => {
+    global.Notification = { permission: 'default' };
+    requestNotificationPermission.mockResolvedValue('some-token');
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    const btn = screen.getByRole('button', { name: /Mitteilungen.*Aktivieren/i });
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(requestNotificationPermission).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test('updates status to "Aktiv" after permission is granted', async () => {
+    global.Notification = { permission: 'default' };
+    requestNotificationPermission.mockImplementation(async () => {
+      global.Notification = { permission: 'granted' };
+      return 'some-token';
+    });
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Mitteilungen.*Aktivieren/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Aktiv')).toBeInTheDocument();
+    });
+  });
+
+  test('does not show warning or info hints when permission is default', () => {
+    global.Notification = { permission: 'default' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.queryByText(/Mitteilungen wurden abgelehnt/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
+  });
+
+  test('does not show warning hint when permission is granted', () => {
+    global.Notification = { permission: 'granted' };
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    expect(screen.queryByText(/Mitteilungen wurden abgelehnt/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen/i)).not.toBeInTheDocument();
   });
 });

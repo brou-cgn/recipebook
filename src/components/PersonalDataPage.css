@@ -328,3 +328,25 @@
 .personal-data-field--inline label {
   margin-bottom: 0.5rem;
 }
+
+.personal-data-notifications-section {
+  margin-top: 0;
+}
+
+.pwa-notification-hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+}
+
+.pwa-notification-hint--info {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.pwa-notification-hint--warning {
+  background: #fff3cd;
+  color: #856404;
+}
