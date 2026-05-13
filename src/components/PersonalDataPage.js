@@ -13,6 +13,9 @@ const THEME_MODES = [
   { key: 'auto', label: 'Automatisch' },
 ];
 
+const isNotificationPermissionGranted = () =>
+  typeof Notification !== 'undefined' && Notification.permission === 'granted';
+
 function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists = [] }) {
   const [vorname, setVorname] = useState(currentUser?.vorname || '');
   const [nachname, setNachname] = useState(currentUser?.nachname || '');
@@ -35,6 +38,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
   const [pushActivationMessage, setPushActivationMessage] = useState(null);
   const [isActivatingPush, setIsActivatingPush] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(isNotificationPermissionGranted);
 
   const handleDarkModeSelect = (mode) => {
     setDarkMode(mode);
@@ -120,12 +124,14 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
     try {
       const token = await requestNotificationPermission();
       if (!token) {
+        setNotificationsEnabled(isNotificationPermissionGranted());
         setPushActivationMessage({
           success: false,
           text: 'Benachrichtigungen wurden nicht aktiviert. Bitte erteile die Berechtigung und versuche es erneut.',
         });
       } else {
         await saveFcmToken(currentUser.id, token);
+        setNotificationsEnabled(true);
         setPushActivationMessage({
           success: true,
           text: 'Benachrichtigungen sind auf diesem Gerät aktiviert.',
@@ -133,6 +139,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       }
     } catch (err) {
       console.warn('pushNotifications: activation failed', err);
+      setNotificationsEnabled(isNotificationPermissionGranted());
       setPushActivationMessage({
         success: false,
         text: 'Benachrichtigungen konnten nicht aktiviert werden. Bitte versuche es erneut.',
@@ -141,9 +148,6 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       setIsActivatingPush(false);
     }
   };
-
-  const notificationsEnabled =
-    typeof Notification !== 'undefined' && Notification.permission === 'granted';
 
   return (
     <div className="personal-data-page">
