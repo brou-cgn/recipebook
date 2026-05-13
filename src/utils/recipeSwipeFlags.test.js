@@ -551,10 +551,12 @@ describe('getAllMembersSwipeFlagDocsForList', () => {
     const now = Date.now();
     const pastMs = now - 1000;
     const futureMs = now + 1000;
+    const docUser1 = { userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: { toMillis: () => futureMs } };
+    const docUser2 = { userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: { toMillis: () => pastMs } };
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: { toMillis: () => futureMs } }) });
-        cb({ data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', expiresAt: { toMillis: () => pastMs } }) });
+        cb({ data: () => docUser1 });
+        cb({ data: () => docUser2 });
       },
     });
 
@@ -581,9 +583,10 @@ describe('getAllMembersSwipeFlagDocsForList', () => {
 
   it('includes expired docs (unlike getAllMembersSwipeFlags)', async () => {
     const pastMs = Date.now() - 1000;
+    const expiredDoc = { userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: { toMillis: () => pastMs } };
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', expiresAt: { toMillis: () => pastMs } }) });
+        cb({ data: () => expiredDoc });
       },
     });
 

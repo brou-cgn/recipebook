@@ -605,7 +605,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       const aPriorityOne = isPriorityOneRecipe(a.id);
       const bPriorityOne = isPriorityOneRecipe(b.id);
       if (aPriorityOne !== bPriorityOne) return aPriorityOne ? -1 : 1;
-      // Both are P1 → maintain original list order; skip lower-priority checks
+      // Both are P1: preserve the original list order and skip P2/P3 comparisons.
+      // Without this guard, P2 ("no doc") would incorrectly re-sort recipes that
+      // qualify as P1 via pessimistic archiv but happen to have no swipe docs yet.
       if (aPriorityOne) return 0;
 
       // Priority 2: recipes without any swipe doc from any member

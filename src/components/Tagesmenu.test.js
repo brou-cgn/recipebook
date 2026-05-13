@@ -307,16 +307,19 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
     };
     // allMembersFlagDocs has expired docs across all members; sorting uses the oldest expiresAt
+    const r1ExpMs = now - 3 * 24 * 60 * 60 * 1000;
+    const r2ExpMs = now - 7 * 24 * 60 * 60 * 1000;
+    const r3ExpMs = now - 1 * 24 * 60 * 60 * 1000;
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000, isExpired: true },
-        r2: { flag: 'archiv', expiresAt: null, expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000, isExpired: true },
-        r3: { flag: 'kandidat', expiresAt: null, expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000, isExpired: true },
+        r1: { flag: 'geparkt', expiresAt: { toMillis: () => r1ExpMs }, expiresAtMillis: r1ExpMs, isExpired: true },
+        r2: { flag: 'archiv', expiresAt: { toMillis: () => r2ExpMs }, expiresAtMillis: r2ExpMs, isExpired: true },
+        r3: { flag: 'kandidat', expiresAt: { toMillis: () => r3ExpMs }, expiresAtMillis: r3ExpMs, isExpired: true },
       },
       user2: {
-        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 3 * 24 * 60 * 60 * 1000, isExpired: true },
-        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 7 * 24 * 60 * 60 * 1000, isExpired: true },
-        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: now - 1 * 24 * 60 * 60 * 1000, isExpired: true },
+        r1: { flag: 'geparkt', expiresAt: { toMillis: () => r1ExpMs }, expiresAtMillis: r1ExpMs, isExpired: true },
+        r2: { flag: 'geparkt', expiresAt: { toMillis: () => r2ExpMs }, expiresAtMillis: r2ExpMs, isExpired: true },
+        r3: { flag: 'geparkt', expiresAt: { toMillis: () => r3ExpMs }, expiresAtMillis: r3ExpMs, isExpired: true },
       },
     };
 
