@@ -2,6 +2,8 @@
  * Push Notification Utilities Tests
  */
 
+let mockMessagingPromise = Promise.resolve({});
+
 // Mock firebase module
 jest.mock('../firebase', () => ({
   firebaseConfig: {
@@ -10,7 +12,9 @@ jest.mock('../firebase', () => ({
     messagingSenderId: '12345',
   },
   isMessagingSupported: jest.fn(),
-  messagingPromise: Promise.resolve(null),
+  get messagingPromise() {
+    return mockMessagingPromise;
+  },
   functions: {},
 }));
 
@@ -38,6 +42,7 @@ const { isMessagingSupported: mockIsSupported } = jest.requireMock('../firebase'
 describe('pushNotifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMessagingPromise = Promise.resolve({});
 
     // Default: messaging is supported
     mockIsSupported.mockResolvedValue(true);
@@ -68,7 +73,7 @@ describe('pushNotifications', () => {
   });
 
   afterEach(() => {
-    delete process.env.REACT_APP_FIREBASE_VAPID_KEY;
+    process.env.REACT_APP_FIREBASE_VAPID_KEY = 'test-vapid-key';
   });
 
   describe('requestNotificationPermission', () => {
@@ -90,17 +95,31 @@ describe('pushNotifications', () => {
       expect(token).toBeNull();
     });
 
+    it('returns null without calling requestPermission when permission is already denied', async () => {
+      global.Notification.permission = 'denied';
+
+      const token = await requestNotificationPermission();
+
+      expect(token).toBeNull();
+      expect(global.Notification.requestPermission).not.toHaveBeenCalled();
+    });
+
+    it('does not call requestPermission again when permission is already granted', async () => {
+      global.Notification.permission = 'granted';
+      mockGetToken.mockResolvedValue('granted-token');
+
+      const token = await requestNotificationPermission();
+
+      expect(token).toBe('granted-token');
+      expect(global.Notification.requestPermission).not.toHaveBeenCalled();
+    });
+
     it('returns the FCM token when getToken resolves', async () => {
       global.Notification.requestPermission = jest.fn().mockResolvedValue('granted');
-      // getToken is already mocked at module level – return a token value
       mockGetToken.mockResolvedValue('mock-fcm-token');
 
-      // In the test environment the dynamic import of '../firebase' returns
-      // the module-level mock which has messagingPromise: Promise.resolve(null).
-      // The function therefore returns null gracefully rather than the token.
-      // We verify the function returns null (safe degradation) and does NOT throw.
       const token = await requestNotificationPermission();
-      expect(token).toBeNull();
+      expect(token).toBe('mock-fcm-token');
     });
 
     it('returns null and does not throw on getToken error', async () => {

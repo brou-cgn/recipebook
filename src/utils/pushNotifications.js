@@ -13,7 +13,7 @@ import { httpsCallable } from 'firebase/functions';
 import { isMessagingSupported, firebaseConfig, functions } from '../firebase';
 
 /** Env-var: Web-push VAPID key generated in the Firebase Console */
-const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY;
+const getVapidKey = () => process.env.REACT_APP_FIREBASE_VAPID_KEY;
 
 /**
  * Register the FCM service worker and forward the Firebase config so the SW
@@ -55,8 +55,10 @@ export const requestNotificationPermission = async () => {
   try {
     const supported = await isMessagingSupported();
     if (!supported) return null;
+    if (typeof Notification === 'undefined') return null;
+    const vapidKey = getVapidKey();
 
-    if (!VAPID_KEY) {
+    if (!vapidKey) {
       console.warn(
         'pushNotifications: REACT_APP_FIREBASE_VAPID_KEY is not set. ' +
         'Push notifications will not work until a VAPID key is configured.'
@@ -64,8 +66,12 @@ export const requestNotificationPermission = async () => {
       return null;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return null;
+    if (Notification.permission === 'denied') return null;
+
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return null;
+    }
 
     const swRegistration = await registerMessagingServiceWorker();
 
@@ -75,7 +81,7 @@ export const requestNotificationPermission = async () => {
     if (!messagingInstance) return null;
 
     const token = await getToken(messagingInstance, {
-      vapidKey: VAPID_KEY,
+      vapidKey,
       serviceWorkerRegistration: swRegistration ?? undefined,
     });
 
