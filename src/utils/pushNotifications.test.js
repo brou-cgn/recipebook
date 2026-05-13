@@ -34,6 +34,7 @@ jest.mock('firebase/functions', () => ({
 
 import {
   requestNotificationPermission,
+  setupForegroundMessageListener,
   notifyPrivateListMembers,
 } from './pushNotifications';
 
@@ -182,6 +183,34 @@ describe('pushNotifications', () => {
       await expect(
         notifyPrivateListMembers('group1', 'recipe1', 'actor1', 'added')
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('setupForegroundMessageListener', () => {
+    it('prefers title and body from payload.data', async () => {
+      const NotificationMock = jest.fn();
+      NotificationMock.permission = 'granted';
+      NotificationMock.requestPermission = jest.fn();
+      global.Notification = NotificationMock;
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'visible',
+      });
+
+      setupForegroundMessageListener();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockOnMessage).toHaveBeenCalledTimes(1);
+      const onMessageHandler = mockOnMessage.mock.calls[0][1];
+      onMessageHandler({
+        data: { title: 'Data Title', body: 'Data Body' },
+        notification: { title: 'Notification Title', body: 'Notification Body' },
+      });
+
+      expect(NotificationMock).toHaveBeenCalledWith('Data Title', {
+        body: 'Data Body',
+        icon: '/logo192.png',
+      });
     });
   });
 });

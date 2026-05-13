@@ -28,9 +28,9 @@ function initFirebase(config) {
     messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
-      const notificationTitle = payload.notification?.title || 'RecipeBook';
+      const notificationTitle = payload.data?.title || 'RecipeBook';
       const notificationOptions = {
-        body: payload.notification?.body || '',
+        body: payload.data?.body || '',
         icon: '/logo192.png',
         badge: '/favicon.ico',
         data: payload.data || {},

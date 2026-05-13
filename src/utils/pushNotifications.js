@@ -116,8 +116,8 @@ export const setupForegroundMessageListener = () => {
             if (document.visibilityState !== 'visible') {
               return;
             }
-            const title = payload.notification?.title || 'RecipeBook';
-            const body = payload.notification?.body || '';
+            const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
+            const body = payload.data?.body || payload.notification?.body || '';
             if (Notification.permission === 'granted') {
               // eslint-disable-next-line no-new
               new Notification(title, {
