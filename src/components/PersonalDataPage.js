@@ -38,7 +38,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
   const [pushActivationMessage, setPushActivationMessage] = useState(null);
   const [isActivatingPush, setIsActivatingPush] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(isNotificationPermissionGranted);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(isNotificationPermissionGranted());
 
   const handleDarkModeSelect = (mode) => {
     setDarkMode(mode);
