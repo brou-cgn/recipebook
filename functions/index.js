@@ -3355,11 +3355,9 @@ exports.notifyPrivateListMembers = onCall(
       const actionLabel =
         action === 'created' ? 'erstellt' : 'hinzugefügt';
       const notificationPayload = {
-        notification: {
+        data: {
           title: `Neues Rezept in „${listName}"`,
           body: `„${recipeTitle}" wurde ${actionLabel}.`,
-        },
-        data: {
           groupId,
           recipeId,
           action: action || 'added',
