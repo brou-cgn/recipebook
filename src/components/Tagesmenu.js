@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList, getSwipeFlagDocsByRecipeForUser, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -67,7 +67,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Active swipe flags from Firestore (non-expired), used to filter the stack
   const [activeFlags, setActiveFlags] = useState({});
-  const [swipeFlagDocsByRecipe, setSwipeFlagDocsByRecipe] = useState({});
+  // All members' swipe flag docs (including expired) for sorting the swipe stack.
+  // Map of userId → { recipeId → { flag, expiresAt, expiresAtMillis, isExpired } }
+  const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
 
   // True once the initial active-flags fetch for the current list has resolved.
   // Prevents showing swipe cards before we know which recipes are already flagged.
@@ -156,7 +158,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setCurrentIndex(0);
       setSwipeResults({});
       setActiveFlags({});
-      setSwipeFlagDocsByRecipe({});
+      setAllMembersFlagDocs({});
       setAllMembersFlags({});
       setAllMembersFlagsLoaded(false);
       setFlagsLoaded(false);
@@ -221,23 +223,17 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     if (!currentUser?.id || !selectedListId) {
       setActiveFlags({});
-      setSwipeFlagDocsByRecipe({});
       setFlagsLoaded(true);
       return;
     }
     setFlagsLoaded(false);
-    Promise.all([
-      getActiveSwipeFlags(currentUser.id, selectedListId),
-      getSwipeFlagDocsByRecipeForUser(currentUser.id, selectedListId),
-    ])
-      .then(([flags, docsByRecipe]) => {
+    getActiveSwipeFlags(currentUser.id, selectedListId)
+      .then((flags) => {
         setActiveFlags(flags);
-        setSwipeFlagDocsByRecipe(docsByRecipe);
         setFlagsLoaded(true);
       })
       .catch(() => {
         setActiveFlags({});
-        setSwipeFlagDocsByRecipe({});
         setFlagsLoaded(true);
       });
   }, [currentUser, selectedListId]);
@@ -247,6 +243,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   useEffect(() => {
     if (!selectedListId || !selectedList) {
       setAllMembersFlags({});
+      setAllMembersFlagDocs({});
       setAllMembersFlagsLoaded(true);
       return;
     }
@@ -256,6 +253,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       : memberIds;
     if (allMemberIds.length === 0) {
       setAllMembersFlags({});
+      setAllMembersFlagDocs({});
       setAllMembersFlagsLoaded(true);
       return;
     }
@@ -263,6 +261,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setAllMembersFlags(flags);
       setAllMembersFlagsLoaded(true);
     }).catch(() => { setAllMembersFlagsLoaded(true); });
+    getAllMembersSwipeFlagDocsForList(selectedListId, allMemberIds).then((flagDocs) => {
+      setAllMembersFlagDocs(flagDocs);
+    }).catch(() => { setAllMembersFlagDocs({}); });
   }, [selectedListId, selectedList, currentUser]);
 
   // Drag / animation state
@@ -571,40 +572,68 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   const listRecipes = useMemo(() => {
     const isPriorityOneRecipe = (recipeId) => {
-      const meta = swipeFlagDocsByRecipe[recipeId];
-      if (!meta) return false;
-      return (
-        (!meta.isExpired && meta.calculatedFlag === 'kandidat') ||
-        pessimisticCalculatedFlagByRecipeId[recipeId] === 'archiv'
+      // Any member has an active (non-expired) kandidat flag
+      const hasActiveKandidat = listMemberIds.some(
+        (uid) => allMembersFlags[uid]?.[recipeId] === 'kandidat'
       );
+      // Or the pessimistic calculated flag is archiv
+      const pessimisticArchiv = pessimisticCalculatedFlagByRecipeId[recipeId] === 'archiv';
+      return hasActiveKandidat || pessimisticArchiv;
+    };
+
+    const hasAnySwipeDoc = (recipeId) => {
+      // Any member has any doc (active or expired) for this recipe
+      return listMemberIds.some((uid) => allMembersFlagDocs[uid]?.[recipeId] !== undefined);
+    };
+
+    const getOldestExpiredExpiresAtMillis = (recipeId) => {
+      // Oldest (minimum) expiresAt across all members' expired docs for this recipe.
+      // Returns null if no member has an expired doc.
+      let oldest = null;
+      for (const uid of listMemberIds) {
+        const flagDoc = allMembersFlagDocs[uid]?.[recipeId];
+        if (!flagDoc || !flagDoc.isExpired || flagDoc.expiresAtMillis === null) continue;
+        if (oldest === null || flagDoc.expiresAtMillis < oldest) {
+          oldest = flagDoc.expiresAtMillis;
+        }
+      }
+      return oldest;
     };
 
     return [...availableRecipes].sort((a, b) => {
+      // Priority 1: active kandidat from any member or pessimistic archiv
       const aPriorityOne = isPriorityOneRecipe(a.id);
       const bPriorityOne = isPriorityOneRecipe(b.id);
       if (aPriorityOne !== bPriorityOne) return aPriorityOne ? -1 : 1;
+      // Both are P1: preserve the original list order and skip P2/P3 comparisons.
+      // Without this guard, P2 ("no doc") would incorrectly re-sort recipes that
+      // qualify as P1 via pessimistic archiv but happen to have no swipe docs yet.
+      if (aPriorityOne) return 0;
 
-      const aMeta = swipeFlagDocsByRecipe[a.id];
-      const bMeta = swipeFlagDocsByRecipe[b.id];
-      const aHasNoDoc = !aMeta;
-      const bHasNoDoc = !bMeta;
+      // Priority 2: recipes without any swipe doc from any member
+      const aHasNoDoc = !hasAnySwipeDoc(a.id);
+      const bHasNoDoc = !hasAnySwipeDoc(b.id);
       if (aHasNoDoc !== bHasNoDoc) return aHasNoDoc ? -1 : 1;
 
-      const aIsExpired = aMeta?.isExpired === true;
-      const bIsExpired = bMeta?.isExpired === true;
-      if (aIsExpired !== bIsExpired) return aIsExpired ? -1 : 1;
-
-      if (aIsExpired && bIsExpired) {
-        // Defensive fallback: if metadata is manually injected/inconsistent and misses expiresAtMillis,
-        // use MAX_SAFE_INTEGER so such entries are ordered after valid expired docs deterministically.
-        return (aMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER) - (bMeta.expiresAtMillis ?? Number.MAX_SAFE_INTEGER);
+      // Priority 3: expired docs across all members, oldest expiresAt first
+      const aOldestExpiry = getOldestExpiredExpiresAtMillis(a.id);
+      const bOldestExpiry = getOldestExpiredExpiresAtMillis(b.id);
+      const aHasExpired = aOldestExpiry !== null;
+      const bHasExpired = bOldestExpiry !== null;
+      if (aHasExpired !== bHasExpired) return aHasExpired ? -1 : 1;
+      if (aHasExpired && bHasExpired) {
+        // Defensive fallback: use MAX_SAFE_INTEGER so entries without a valid timestamp
+        // are ordered after valid expired docs deterministically.
+        return (aOldestExpiry ?? Number.MAX_SAFE_INTEGER) - (bOldestExpiry ?? Number.MAX_SAFE_INTEGER);
       }
 
       return 0;
     });
   }, [
     availableRecipes,
-    swipeFlagDocsByRecipe,
+    allMembersFlags,
+    allMembersFlagDocs,
+    listMemberIds,
     pessimisticCalculatedFlagByRecipeId,
   ]);
 
