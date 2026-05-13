@@ -110,6 +110,12 @@ export const setupForegroundMessageListener = () => {
         .then((messagingInstance) => {
           if (!messagingInstance) return;
           unsubscribe = onMessage(messagingInstance, (payload) => {
+            // Only show a notification when the app is actually in the foreground.
+            // When the app is hidden or closed the service worker handles delivery,
+            // so returning early here prevents duplicate notifications on iOS.
+            if (document.visibilityState !== 'visible') {
+              return;
+            }
             const title = payload.notification?.title || 'RecipeBook';
             const body = payload.notification?.body || '';
             if (Notification.permission === 'granted') {
