@@ -24,6 +24,15 @@ describe('GroupDetail dark mode styles', () => {
     expect(rule).toContain('color: #e8e8e8;');
   });
 
+  test('group-detail-section has no border-color in dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-detail-section');
+
+    expect(rule).not.toContain('border-color');
+    expect(rule).not.toContain('border:');
+  });
+
   test('group-member-row has no border-color in dark mode', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
@@ -35,6 +44,14 @@ describe('GroupDetail dark mode styles', () => {
 });
 
 describe('GroupDetail light mode styles', () => {
+  test('group-detail-section has no box-shadow in light mode', () => {
+    const cssPath = path.join(__dirname, 'GroupDetail.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '.group-detail-section');
+
+    expect(rule).not.toContain('box-shadow');
+  });
+
   test('group-member-row has no border in light mode', () => {
     const cssPath = path.join(__dirname, 'GroupDetail.css');
     const css = fs.readFileSync(cssPath, 'utf8');
