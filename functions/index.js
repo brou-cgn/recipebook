@@ -3355,12 +3355,29 @@ exports.notifyPrivateListMembers = onCall(
       const actionLabel =
         action === 'created' ? 'erstellt' : 'hinzugefügt';
       const notificationPayload = {
+        notification: {
+          title: `Neues Rezept in „${listName}"`,
+          body: `„${recipeTitle}" wurde ${actionLabel}.`,
+        },
         data: {
           title: `Neues Rezept in „${listName}"`,
           body: `„${recipeTitle}" wurde ${actionLabel}.`,
           groupId,
           recipeId,
           action: action || 'added',
+          notificationId: `${groupId}-${recipeId}-${Date.now()}`,
+        },
+        apns: {
+          payload: {
+            aps: {
+              'content-available': 1,
+            },
+          },
+        },
+        webpush: {
+          fcm_options: {
+            link: '/',
+          },
         },
       };
 

@@ -203,13 +203,14 @@ describe('pushNotifications', () => {
       expect(mockOnMessage).toHaveBeenCalledTimes(1);
       const onMessageHandler = mockOnMessage.mock.calls[0][1];
       onMessageHandler({
-        data: { title: 'Data Title', body: 'Data Body' },
+        data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
         notification: { title: 'Notification Title', body: 'Notification Body' },
       });
 
       expect(NotificationMock).toHaveBeenCalledWith('Data Title', {
         body: 'Data Body',
         icon: '/logo192.png',
+        tag: 'test-id-1',
       });
     });
   });

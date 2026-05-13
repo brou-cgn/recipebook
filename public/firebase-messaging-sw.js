@@ -14,6 +14,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 let messaging = null;
+const shownNotifications = new Set();
+const NOTIFICATION_DEDUP_WINDOW_MS = 5000;
 
 /**
  * Initialise Firebase and register the background message handler.
@@ -28,12 +30,22 @@ function initFirebase(config) {
     messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
+      const notificationId = payload.data?.notificationId;
+      if (notificationId && shownNotifications.has(notificationId)) {
+        return;
+      }
+      if (notificationId) {
+        shownNotifications.add(notificationId);
+        setTimeout(() => shownNotifications.delete(notificationId), NOTIFICATION_DEDUP_WINDOW_MS);
+      }
+
       const notificationTitle =
         payload.data?.title || payload.notification?.title || 'RecipeBook';
       const notificationOptions = {
         body: payload.data?.body || payload.notification?.body || '',
         icon: '/logo192.png',
         badge: '/favicon.ico',
+        tag: notificationId || 'default',
         data: payload.data || {},
       };
       self.registration.showNotification(notificationTitle, notificationOptions);

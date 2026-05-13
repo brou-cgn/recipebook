@@ -100,6 +100,9 @@ export const requestNotificationPermission = async () => {
  *
  * @returns {Function} Unsubscribe function
  */
+const shownNotificationIds = new Set();
+const NOTIFICATION_DEDUP_WINDOW_MS = 5000;
+
 export const setupForegroundMessageListener = () => {
   let unsubscribe = () => {};
   isMessagingSupported()
@@ -116,6 +119,16 @@ export const setupForegroundMessageListener = () => {
             if (document.visibilityState !== 'visible') {
               return;
             }
+
+            const notificationId = payload.data?.notificationId;
+            if (notificationId && shownNotificationIds.has(notificationId)) {
+              return;
+            }
+            if (notificationId) {
+              shownNotificationIds.add(notificationId);
+              setTimeout(() => shownNotificationIds.delete(notificationId), NOTIFICATION_DEDUP_WINDOW_MS);
+            }
+
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
             if (Notification.permission === 'granted') {
@@ -123,6 +136,7 @@ export const setupForegroundMessageListener = () => {
               new Notification(title, {
                 body,
                 icon: '/logo192.png',
+                tag: notificationId || 'default',
               });
             }
           });
