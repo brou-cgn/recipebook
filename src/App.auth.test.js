@@ -114,12 +114,12 @@ jest.mock('./utils/userManagement', () => ({
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
   getRolePermissions: () => Promise.resolve({}),
-  saveFcmToken: () => Promise.resolve(),
+  saveFcmToken: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('./utils/pushNotifications', () => ({
-  requestNotificationPermission: () => Promise.resolve('default'),
-  setupForegroundMessageListener: () => () => {},
+  requestNotificationPermission: jest.fn(() => Promise.resolve('default')),
+  setupForegroundMessageListener: jest.fn(() => () => {}),
   notifyPrivateListMembers: () => Promise.resolve(),
 }));
 
@@ -192,6 +192,11 @@ jest.mock('./utils/recipeSwipeFlags', () => ({
 describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
+    const { saveFcmToken } = jest.requireMock('./utils/userManagement');
+    const { requestNotificationPermission, setupForegroundMessageListener } = jest.requireMock('./utils/pushNotifications');
+    saveFcmToken.mockClear();
+    requestNotificationPermission.mockClear();
+    setupForegroundMessageListener.mockClear();
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -222,5 +227,25 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('login-view')).toBeInTheDocument();
     expect(screen.queryByTestId('register-view')).not.toBeInTheDocument();
+  });
+
+  test('does not request push permission automatically after login', async () => {
+    const { saveFcmToken } = jest.requireMock('./utils/userManagement');
+    const { requestNotificationPermission, setupForegroundMessageListener } = jest.requireMock('./utils/pushNotifications');
+
+    render(<App />);
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-1',
+        vorname: 'Test',
+        nachname: 'User',
+        email: 'test@example.com',
+      });
+    });
+
+    expect(setupForegroundMessageListener).toHaveBeenCalledTimes(1);
+    expect(requestNotificationPermission).not.toHaveBeenCalled();
+    expect(saveFcmToken).not.toHaveBeenCalled();
   });
 });
