@@ -236,6 +236,8 @@ function App() {
   const recipeCountsInitialized = useRef(false);
   const recipeListScrollPositionRef = useRef(0);
   const shouldRestoreRecipeListScrollRef = useRef(false);
+  const [pushToast, setPushToast] = useState(null); // { title, body }
+  const pushToastTimerRef = useRef(null);
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
@@ -397,23 +399,55 @@ function App() {
   // current user.  Runs once when a real (non-guest) user logs in.
   useEffect(() => {
     if (!currentUser?.id || currentUser.isGuest) return;
-    let foregroundUnsubscribe = () => {};
     const initPush = async () => {
       try {
         const token = await requestNotificationPermission();
         if (token) {
           await saveFcmToken(currentUser.id, token);
         }
-        foregroundUnsubscribe = setupForegroundMessageListener();
       } catch (err) {
         // Push notifications are optional – never break the main app
         console.warn('pushNotifications: init failed', err);
       }
     };
     initPush();
-    return () => foregroundUnsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
+
+  // Register the FCM foreground message listener synchronously so that the
+  // cancelled-flag / ref-pattern inside setupForegroundMessageListener can
+  // reliably prevent listener leaks under React Strict Mode.
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isGuest) return;
+    const unsubscribe = setupForegroundMessageListener();
+    return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  // Register the in-app foreground notification toast handler.
+  // Sets window.__fcmForegroundHandlerActive so setupForegroundMessageListener
+  // knows to dispatch a CustomEvent instead of calling reg.showNotification().
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isGuest) return;
+
+    window.__fcmForegroundHandlerActive = true;
+
+    const handleForegroundMessage = (event) => {
+      const { title, body } = event.detail;
+      console.debug('[App] fcm-foreground-message received', title);
+      setPushToast({ title, body });
+      clearTimeout(pushToastTimerRef.current);
+      pushToastTimerRef.current = setTimeout(() => setPushToast(null), 5000);
+    };
+
+    window.addEventListener('fcm-foreground-message', handleForegroundMessage);
+
+    return () => {
+      window.__fcmForegroundHandlerActive = false;
+      window.removeEventListener('fcm-foreground-message', handleForegroundMessage);
+      clearTimeout(pushToastTimerRef.current);
+    };
+  }, [currentUser?.id, currentUser?.isGuest]);
 
   // Apply tile size preference on mount
   useEffect(() => {
@@ -1348,6 +1382,32 @@ function App() {
 
   return (
     <div className="App">
+      {pushToast && (
+        <div
+          role="alert"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            right: '1rem',
+            zIndex: 9999,
+            background: '#323232',
+            color: '#fff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            maxWidth: '320px',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+          }}
+          onClick={() => setPushToast(null)}
+        >
+          <strong>{pushToast.title}</strong>
+          {pushToast.body && (
+            <div style={{ marginTop: '0.25rem', opacity: 0.85 }}>{pushToast.body}</div>
+          )}
+        </div>
+      )}
       <Header 
         ref={headerRef}
         onSettingsClick={handleOpenSettings}
