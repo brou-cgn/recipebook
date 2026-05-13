@@ -1,11 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PersonalDataPage from './PersonalDataPage';
-import { updateUserProfile, changePassword } from '../utils/userManagement';
+import { updateUserProfile, changePassword, saveFcmToken } from '../utils/userManagement';
+import { requestNotificationPermission } from '../utils/pushNotifications';
 
 jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(),
   changePassword: jest.fn(),
+  saveFcmToken: jest.fn(),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -24,6 +26,10 @@ jest.mock('../utils/alarmAudioUtils', () => ({
   previewAlarmSound: jest.fn(),
 }));
 
+jest.mock('../utils/pushNotifications', () => ({
+  requestNotificationPermission: jest.fn(),
+}));
+
 describe('PersonalDataPage', () => {
   const mockUser = {
     id: 'user-1',
@@ -37,6 +43,8 @@ describe('PersonalDataPage', () => {
     jest.clearAllMocks();
     updateUserProfile.mockResolvedValue({ success: true, message: 'Profil erfolgreich aktualisiert.' });
     changePassword.mockResolvedValue({ success: true, message: 'Passwort erfolgreich geändert.' });
+    requestNotificationPermission.mockResolvedValue('fcm-token-123');
+    saveFcmToken.mockResolvedValue();
   });
 
   test('renders page with title "Chefkoch"', () => {
@@ -218,6 +226,31 @@ describe('PersonalDataPage', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
 
     expect(screen.getByText(/Mindestanforderungen/i)).toBeInTheDocument();
+  });
+
+  test('activates notifications from settings and stores FCM token', async () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Benachrichtigungen aktivieren/i }));
+
+    await waitFor(() => {
+      expect(requestNotificationPermission).toHaveBeenCalledTimes(1);
+      expect(saveFcmToken).toHaveBeenCalledWith('user-1', 'fcm-token-123');
+      expect(screen.getByText('Benachrichtigungen sind auf diesem Gerät aktiviert.')).toBeInTheDocument();
+    });
+  });
+
+  test('shows error when notifications are not granted', async () => {
+    requestNotificationPermission.mockResolvedValueOnce(null);
+
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Benachrichtigungen aktivieren/i }));
+
+    await waitFor(() => {
+      expect(saveFcmToken).not.toHaveBeenCalled();
+      expect(screen.getByText('Benachrichtigungen wurden nicht aktiviert. Bitte erteile die Berechtigung und versuche es erneut.')).toBeInTheDocument();
+    });
   });
 });
 

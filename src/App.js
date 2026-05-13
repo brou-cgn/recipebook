@@ -31,11 +31,9 @@ import {
   onAuthStateChange,
   canEditMenu,
   canDeleteMenu,
-  getRolePermissions,
-  saveFcmToken
+  getRolePermissions
 } from './utils/userManagement';
 import {
-  requestNotificationPermission,
   setupForegroundMessageListener,
   notifyPrivateListMembers
 } from './utils/pushNotifications';
@@ -393,26 +391,16 @@ function App() {
     loadFavicon();
   }, [currentUser]);
 
-  // Initialise push notification permission and register FCM token for the
-  // current user.  Runs once when a real (non-guest) user logs in.
+  // Set up foreground push listener for real users.
+  // Permission and token registration are triggered explicitly from settings.
   useEffect(() => {
     if (!currentUser?.id || currentUser.isGuest) return;
-    let foregroundUnsubscribe = () => {};
-    const initPush = async () => {
-      try {
-        const token = await requestNotificationPermission();
-        if (token) {
-          await saveFcmToken(currentUser.id, token);
-        }
-        foregroundUnsubscribe = setupForegroundMessageListener();
-      } catch (err) {
-        // Push notifications are optional – never break the main app
-        console.warn('pushNotifications: init failed', err);
+    const foregroundUnsubscribe = setupForegroundMessageListener();
+    return () => {
+      if (typeof foregroundUnsubscribe === 'function') {
+        foregroundUnsubscribe();
       }
     };
-    initPush();
-    return () => foregroundUnsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
   // Apply tile size preference on mount
