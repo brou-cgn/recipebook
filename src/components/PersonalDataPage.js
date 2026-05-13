@@ -3,6 +3,7 @@ import './PersonalDataPage.css';
 import { updateUserProfile, changePassword } from '../utils/userManagement';
 import { ALARM_SOUNDS, getAlarmSoundPreference, saveAlarmSoundPreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference } from '../utils/customLists';
 import { previewAlarmSound } from '../utils/alarmAudioUtils';
+import { requestNotificationPermission } from '../utils/pushNotifications';
 
 const NO_LIST_OPTION = { id: '', name: '– Keine Vorauswahl –' };
 
@@ -33,10 +34,38 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [showAppearancePicker, setShowAppearancePicker] = useState(false);
   const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
 
+  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [notificationSupported, setNotificationSupported] = useState(false);
+  const [requestingNotification, setRequestingNotification] = useState(false);
+
+  useEffect(() => {
+    if (typeof Notification === 'undefined') {
+      setNotificationSupported(false);
+      return;
+    }
+    setNotificationSupported(true);
+    setNotificationPermission(Notification.permission);
+  }, []);
+
   const handleDarkModeSelect = (mode) => {
     setDarkMode(mode);
     saveDarkModePreference(mode);
     applyDarkModePreference(mode);
+  };
+
+  const handleEnableNotifications = async () => {
+    if (requestingNotification || notificationPermission === 'granted') return;
+    setRequestingNotification(true);
+    try {
+      await requestNotificationPermission();
+      if (typeof Notification !== 'undefined') {
+        setNotificationPermission(Notification.permission);
+      }
+    } catch (err) {
+      console.warn('Fehler beim Anfordern der Benachrichtigungserlaubnis:', err);
+    } finally {
+      setRequestingNotification(false);
+    }
   };
 
   const handleWebImportListSelect = async (listId) => {
@@ -327,6 +356,56 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             </span>
           </button>
         </div>
+      </section>
+
+      <div className="personal-data-section-divider" />
+
+      <section className="personal-data-notifications-section">
+        <h3 className="personal-data-section-title">PWA-Mitteilungen</h3>
+        <p className="personal-data-password-hint">
+          Erhalten Sie Benachrichtigungen über neue Rezepte und Aktivitäten in Ihren Listen – auch wenn brouBook gerade nicht geöffnet ist.
+        </p>
+        <div className="preferences-group">
+          <button
+            type="button"
+            className="settings-row"
+            onClick={notificationSupported && notificationPermission === 'default' ? handleEnableNotifications : undefined}
+            disabled={!notificationSupported || notificationPermission !== 'default' || requestingNotification}
+            aria-label={
+              !notificationSupported
+                ? 'Mitteilungen: Nicht verfügbar'
+                : `Mitteilungen: ${
+                    notificationPermission === 'granted' ? 'Aktiv' :
+                    notificationPermission === 'denied' ? 'Deaktiviert' :
+                    requestingNotification ? 'Wird aktiviert…' : 'Aktivieren. Zum Aktivieren klicken.'
+                  }`
+            }
+          >
+            <span className="settings-row-label">Mitteilungen</span>
+            <span className="settings-row-right">
+              <span className="settings-row-value">
+                {!notificationSupported ? 'Nicht verfügbar' :
+                 requestingNotification ? 'Wird aktiviert…' :
+                 notificationPermission === 'granted' ? 'Aktiv' :
+                 notificationPermission === 'denied' ? 'Deaktiviert' :
+                 'Aktivieren'}
+              </span>
+              {notificationSupported && notificationPermission === 'default' && !requestingNotification && (
+                <span className="settings-row-chevron" aria-hidden="true">›</span>
+              )}
+            </span>
+          </button>
+        </div>
+        {!notificationSupported && (
+          <p className="pwa-notification-hint pwa-notification-hint--info">
+            Ihr Browser oder Gerät unterstützt keine PWA-Mitteilungen. Auf iOS müssen Sie brouBook zunächst zum Home-Bildschirm hinzufügen (Safari → Teilen → Zum Startbildschirm).
+          </p>
+        )}
+        {notificationSupported && notificationPermission === 'denied' && (
+          <p className="pwa-notification-hint pwa-notification-hint--warning">
+            Mitteilungen wurden abgelehnt. Um sie zu aktivieren, erlauben Sie brouBook in Ihren Browsereinstellungen den Zugriff auf Benachrichtigungen.
+          </p>
+        )}
       </section>
 
       <div className="personal-data-section-divider" />
