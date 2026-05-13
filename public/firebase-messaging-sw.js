@@ -13,38 +13,56 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-// Firebase configuration is injected at runtime via the 'firebase-config'
-// message sent from the main app thread (see pushNotifications.js).
-// Until we receive the config, we store a pending flag.
 let messaging = null;
 
+/**
+ * Initialise Firebase and register the background message handler.
+ * Safe to call multiple times – subsequent calls are ignored.
+ */
+function initFirebase(config) {
+  if (messaging) return; // already initialised
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+    messaging = firebase.messaging();
+
+    messaging.onBackgroundMessage((payload) => {
+      const notificationTitle = payload.notification?.title || 'RecipeBook';
+      const notificationOptions = {
+        body: payload.notification?.body || '',
+        icon: '/logo192.png',
+        badge: '/favicon.ico',
+        data: payload.data || {},
+      };
+      self.registration.showNotification(notificationTitle, notificationOptions);
+    });
+  } catch (err) {
+    console.error('[firebase-messaging-sw] initFirebase failed', err);
+  }
+}
+
+// ── Primary: Firebase Hosting auto-config ─────────────────────────────────────
+// Firebase Hosting automatically serves /__/firebase/init.js with the project
+// config.  Using this means Firebase is initialised as soon as the SW starts,
+// even when the main app window is closed.
+try {
+  importScripts('/__/firebase/init.js');
+  // After the script runs, firebase.app().options contains the config.
+  initFirebase(firebase.app().options);
+} catch (e) {
+  // Running locally or outside Firebase Hosting – fall back to postMessage.
+  console.warn('[firebase-messaging-sw] /__/firebase/init.js not available, waiting for FIREBASE_CONFIG message');
+}
+
+// ── Fallback: config injected from the main app thread ────────────────────────
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'FIREBASE_CONFIG') {
-    if (!messaging) {
-      firebase.initializeApp(event.data.config);
-      messaging = firebase.messaging();
-
-      // Handle background messages
-      messaging.onBackgroundMessage((payload) => {
-        const notificationTitle =
-          payload.notification?.title || 'RecipeBook';
-        const notificationOptions = {
-          body: payload.notification?.body || '',
-          icon: '/logo192.png',
-          badge: '/favicon.ico',
-          data: payload.data || {},
-        };
-
-        self.registration.showNotification(
-            notificationTitle,
-            notificationOptions,
-        );
-      });
-    }
+    initFirebase(event.data.config);
   }
 });
 
-// Handle notification click – bring the app window to focus
+// ── Notification click – bring the app to the foreground ──────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
