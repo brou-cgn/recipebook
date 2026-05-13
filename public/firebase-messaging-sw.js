@@ -29,29 +29,9 @@ function initFirebase(config) {
     }
     messaging = firebase.messaging();
 
-    messaging.onBackgroundMessage(async (payload) => {
-      console.debug('[SW onBackgroundMessage] fired', payload.data?.notificationId);
-
-      // Guard: if a visible client is already handling the message via onMessage,
-      // skip here to prevent duplicate notifications.
-      try {
-        const clientList = await clients.matchAll({
-          type: 'window',
-          includeUncontrolled: true,
-        });
-        const hasVisibleClient = clientList.some((c) => c.visibilityState === 'visible');
-        if (hasVisibleClient) {
-          console.debug('[SW onBackgroundMessage] visible client active – skipping showNotification');
-          return;
-        }
-      } catch (clientErr) {
-        console.warn('[SW onBackgroundMessage] clients.matchAll failed', clientErr);
-        // Proceed with notification on error
-      }
-
+    messaging.onBackgroundMessage((payload) => {
       const notificationId = payload.data?.notificationId;
       if (notificationId && shownNotifications.has(notificationId)) {
-        console.debug('[SW onBackgroundMessage] duplicate – skipped', notificationId);
         return;
       }
       if (notificationId) {
@@ -68,8 +48,7 @@ function initFirebase(config) {
         tag: notificationId || 'default',
         data: payload.data || {},
       };
-      console.debug('[SW onBackgroundMessage] calling showNotification', notificationTitle);
-      return self.registration.showNotification(notificationTitle, notificationOptions);
+      self.registration.showNotification(notificationTitle, notificationOptions);
     });
   } catch (err) {
     console.error('[firebase-messaging-sw] initFirebase failed', err);

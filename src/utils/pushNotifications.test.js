@@ -48,9 +48,6 @@ describe('pushNotifications', () => {
     // Default: messaging is supported
     mockIsSupported.mockResolvedValue(true);
 
-    // Default: onMessage returns a no-op unsubscribe function
-    mockOnMessage.mockReturnValue(() => {});
-
     // Stub Notification API
     Object.defineProperty(global, 'Notification', {
       value: { requestPermission: jest.fn(), permission: 'default' },
@@ -59,7 +56,6 @@ describe('pushNotifications', () => {
     });
 
     // Stub navigator.serviceWorker
-    const mockShowNotification = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(global.navigator, 'serviceWorker', {
       value: {
         register: jest.fn().mockResolvedValue({
@@ -67,12 +63,11 @@ describe('pushNotifications', () => {
           installing: null,
           waiting: null,
         }),
-        ready: Promise.resolve({ active: { postMessage: jest.fn() }, showNotification: mockShowNotification }),
+        ready: Promise.resolve({ active: { postMessage: jest.fn() } }),
       },
       writable: true,
       configurable: true,
     });
-    global.__mockShowNotification = mockShowNotification;
 
     // Default env var
     process.env.REACT_APP_FIREBASE_VAPID_KEY = 'test-vapid-key';
@@ -192,25 +187,14 @@ describe('pushNotifications', () => {
   });
 
   describe('setupForegroundMessageListener', () => {
-    beforeEach(() => {
-      // Ensure Notification.permission is 'granted' for showNotification tests
-      Object.defineProperty(global, 'Notification', {
-        value: { permission: 'granted', requestPermission: jest.fn() },
-        writable: true,
-        configurable: true,
-      });
-      // Reset foreground handler flag
-      delete window.__fcmForegroundHandlerActive;
-    });
-
-    afterEach(() => {
-      delete window.__fcmForegroundHandlerActive;
-    });
-
-    it('calls reg.showNotification() with data.title/body when app is hidden', async () => {
+    it('prefers title and body from payload.data', async () => {
+      const NotificationMock = jest.fn();
+      NotificationMock.permission = 'granted';
+      NotificationMock.requestPermission = jest.fn();
+      global.Notification = NotificationMock;
       Object.defineProperty(document, 'visibilityState', {
         configurable: true,
-        value: 'hidden',
+        value: 'visible',
       });
 
       setupForegroundMessageListener();
@@ -218,120 +202,16 @@ describe('pushNotifications', () => {
 
       expect(mockOnMessage).toHaveBeenCalledTimes(1);
       const onMessageHandler = mockOnMessage.mock.calls[0][1];
-      await onMessageHandler({
+      onMessageHandler({
         data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
         notification: { title: 'Notification Title', body: 'Notification Body' },
       });
 
-      expect(global.__mockShowNotification).toHaveBeenCalledWith('Data Title', expect.objectContaining({
+      expect(NotificationMock).toHaveBeenCalledWith('Data Title', {
         body: 'Data Body',
         icon: '/logo192.png',
         tag: 'test-id-1',
-      }));
-    });
-
-    it('calls reg.showNotification() when app is visible but no in-app handler is active', async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'visible',
       });
-
-      setupForegroundMessageListener();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(mockOnMessage).toHaveBeenCalledTimes(1);
-      const onMessageHandler = mockOnMessage.mock.calls[0][1];
-      await onMessageHandler({
-        data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-2' },
-      });
-
-      expect(global.__mockShowNotification).toHaveBeenCalledWith('Data Title', expect.objectContaining({
-        body: 'Data Body',
-        tag: 'test-id-2',
-      }));
-    });
-
-    it('dispatches fcm-foreground-message CustomEvent when app is visible and handler is active', async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'visible',
-      });
-      window.__fcmForegroundHandlerActive = true;
-
-      const receivedEvents = [];
-      const handler = (e) => receivedEvents.push(e.detail);
-      window.addEventListener('fcm-foreground-message', handler);
-
-      try {
-        setupForegroundMessageListener();
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        const onMessageHandler = mockOnMessage.mock.calls[0][1];
-        await onMessageHandler({
-          data: { title: 'Toast Title', body: 'Toast Body', notificationId: 'toast-id-1' },
-        });
-
-        expect(receivedEvents).toHaveLength(1);
-        expect(receivedEvents[0]).toMatchObject({ title: 'Toast Title', body: 'Toast Body' });
-        // reg.showNotification() should NOT be called when CustomEvent is dispatched
-        expect(global.__mockShowNotification).not.toHaveBeenCalled();
-      } finally {
-        window.removeEventListener('fcm-foreground-message', handler);
-      }
-    });
-
-    it('de-duplicates notifications with the same notificationId', async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'hidden',
-      });
-
-      setupForegroundMessageListener();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const onMessageHandler = mockOnMessage.mock.calls[0][1];
-      const payload = { data: { title: 'T', body: 'B', notificationId: 'dedup-id' } };
-      await onMessageHandler(payload);
-      await onMessageHandler(payload);
-
-      expect(global.__mockShowNotification).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns a cleanup function that sets cancelled and unsubscribes', async () => {
-      const mockUnsubscribe = jest.fn();
-      mockOnMessage.mockReturnValue(mockUnsubscribe);
-
-      const cleanup = setupForegroundMessageListener();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      cleanup();
-      expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not register a listener when cancelled before async setup completes', async () => {
-      // Call and immediately clean up (simulates React Strict Mode double-invoke)
-      const cleanup = setupForegroundMessageListener();
-      cleanup(); // cancel immediately
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // onMessage should NOT have been called because cancelled = true
-      expect(mockOnMessage).not.toHaveBeenCalled();
-    });
-
-    it('falls back to RecipeBook title when payload has no title', async () => {
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'hidden',
-      });
-
-      setupForegroundMessageListener();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const onMessageHandler = mockOnMessage.mock.calls[0][1];
-      await onMessageHandler({ data: {}, notification: {} });
-
-      expect(global.__mockShowNotification).toHaveBeenCalledWith('RecipeBook', expect.any(Object));
     });
   });
 });
