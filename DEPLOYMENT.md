@@ -35,6 +35,7 @@ Die Anwendung benötigt Firebase-Zugangsdaten für die Authentifizierung und Dat
    - `REACT_APP_FIREBASE_MESSAGING_SENDER_ID`
    - `REACT_APP_FIREBASE_APP_ID`
    - `REACT_APP_FIREBASE_MEASUREMENT_ID`
+   - `REACT_APP_FIREBASE_VAPID_KEY`
 
 **Wo finde ich diese Werte?**
 1. Gehe zu [Firebase Console](https://console.firebase.google.com/)
