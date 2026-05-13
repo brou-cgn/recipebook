@@ -2236,6 +2236,12 @@
   outline: none;
 }
 
+.reset-thumbnail-fab-button .button-icon-image {
+  max-width: 1.4rem;
+  max-height: 1.4rem;
+  object-fit: contain;
+}
+
 .reset-thumbnail-fab-button.pressed {
   transform: scale(1.15);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
