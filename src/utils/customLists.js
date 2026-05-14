@@ -330,7 +330,7 @@ export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
 // S = Σ 1/(1+nᵢ) where nᵢ = number of open votings for recipe i
 export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
 
-// Default empty-state text for the Gemeinsame Kandidaten carousel on the Startseite
+// Default empty-state text for the Meine Kochideen carousel on the Startseite
 export const DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT = 'Keine gemeinsamen Kandidaten vorhanden.';
 
 // Tile size options for grid views
@@ -1788,7 +1788,7 @@ export async function saveMaxKandidatenSchwelle(value) {
 }
 
 /**
- * Get the configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite.
+ * Get the configurable empty-state text for the Meine Kochideen carousel on the Startseite.
  * @returns {Promise<string>} Promise resolving to the text
  */
 export async function getStartseitenKandidatenLeertext() {
@@ -1797,7 +1797,7 @@ export async function getStartseitenKandidatenLeertext() {
 }
 
 /**
- * Save the configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite.
+ * Save the configurable empty-state text for the Meine Kochideen carousel on the Startseite.
  * @param {string} text - The text to display when no candidates are available
  * @returns {Promise<void>}
  */

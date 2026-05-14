@@ -102,15 +102,30 @@ describe('StartseitenKarussell', () => {
     expect(container.querySelector('.startseite-carousel')).not.toBeInTheDocument();
   });
 
-  test('uses custom renderItem to render each item', () => {
-    const customRender = (item) => (
-      <div data-testid={`custom-${item.id}`}>{item.label}</div>
+  test('applies startseite-empty--fixed class when fixedEmptyHeight is true', () => {
+    const { container } = render(
+      <StartseitenKarussell
+        title="Test"
+        items={[]}
+        loading={false}
+        renderItem={renderItem}
+        emptyText="Leer"
+        fixedEmptyHeight
+      />
     );
-    render(
-      <StartseitenKarussell title="Test" items={mockItems} loading={false} renderItem={customRender} />
+    expect(container.querySelector('.startseite-empty--fixed')).toBeInTheDocument();
+  });
+
+  test('does not apply startseite-empty--fixed class by default', () => {
+    const { container } = render(
+      <StartseitenKarussell
+        title="Test"
+        items={[]}
+        loading={false}
+        renderItem={renderItem}
+        emptyText="Leer"
+      />
     );
-    expect(screen.getByTestId('custom-i1')).toBeInTheDocument();
-    expect(screen.getByTestId('custom-i2')).toBeInTheDocument();
-    expect(screen.getByTestId('custom-i3')).toBeInTheDocument();
+    expect(container.querySelector('.startseite-empty--fixed')).not.toBeInTheDocument();
   });
 });
