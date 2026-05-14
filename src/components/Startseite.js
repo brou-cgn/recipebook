@@ -11,11 +11,12 @@ const TRENDING_TOP = 10;
 const NEUE_REZEPTE_TOP = 10;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [] }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [isCreatingInspiration, setIsCreatingInspiration] = useState(false);
 
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlags, setAllMembersFlags] = useState({});
@@ -204,8 +205,33 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     onViewChange?.('neueRezepte');
   };
 
+  const handleCreateInspirationClick = async () => {
+    if (!onCreateInspirationList || isCreatingInspiration) return;
+    setIsCreatingInspiration(true);
+    try {
+      await onCreateInspirationList();
+    } finally {
+      setIsCreatingInspiration(false);
+    }
+  };
+
+  // Condition: show setup button when no default list or the list is not interactive
+  const showInspirationSetupButton = !defaultWebImportList || defaultWebImportList.listKind !== 'interactive';
+
   return (
     <div className="startseite-container">
+      {showInspirationSetupButton && onCreateInspirationList && (
+        <div className="startseite-inspiration-setup">
+          <button
+            type="button"
+            className="startseite-inspiration-btn"
+            onClick={handleCreateInspirationClick}
+            disabled={isCreatingInspiration}
+          >
+            {isCreatingInspiration ? 'Wird angelegt…' : 'Inspirationssammlung anlegen'}
+          </button>
+        </div>
+      )}
       <StartseitenKarussell
         title="Meine Kochideen"
         items={gemeinsameKandidaten}

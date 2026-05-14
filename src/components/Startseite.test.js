@@ -344,4 +344,70 @@ describe('Startseite', () => {
     expect(kandidatenSection).toBeTruthy();
     expect(kandidatenSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(0);
   });
+
+  // ─── Inspirationssammlung setup button ─────────────────────────────────────
+
+  test('shows setup button when no defaultWebImportList and onCreateInspirationList is provided', async () => {
+    const onCreateInspirationList = jest.fn();
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        onCreateInspirationList={onCreateInspirationList}
+      />
+    );
+    expect(await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i })).toBeInTheDocument();
+  });
+
+  test('shows setup button when default list is a classic collection', async () => {
+    const onCreateInspirationList = jest.fn();
+    const classicGroup = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'classic' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'g1' }}
+        groups={[classicGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+      />
+    );
+    expect(await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i })).toBeInTheDocument();
+  });
+
+  test('does not show setup button when default list is interactive', async () => {
+    const onCreateInspirationList = jest.fn();
+    const interactiveGroup = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'interactive' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'g1' }}
+        groups={[interactiveGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryByRole('button', { name: /Inspirationssammlung anlegen/i })).not.toBeInTheDocument();
+  });
+
+  test('does not show setup button when onCreateInspirationList is not provided', async () => {
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryByRole('button', { name: /Inspirationssammlung anlegen/i })).not.toBeInTheDocument();
+  });
+
+  test('calls onCreateInspirationList when setup button is clicked', async () => {
+    const onCreateInspirationList = jest.fn(() => Promise.resolve());
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        onCreateInspirationList={onCreateInspirationList}
+      />
+    );
+    const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
+    fireEvent.click(btn);
+    expect(onCreateInspirationList).toHaveBeenCalledTimes(1);
+  });
 });

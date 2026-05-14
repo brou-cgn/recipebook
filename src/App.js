@@ -33,7 +33,8 @@ import {
   canEditMenu,
   canDeleteMenu,
   getRolePermissions,
-  saveFcmToken
+  saveFcmToken,
+  updateUserProfile
 } from './utils/userManagement';
 import {
   requestNotificationPermission,
@@ -1045,6 +1046,50 @@ function App() {
     }
   };
 
+  const handleCreateInspirationList = async () => {
+    if (!currentUser) return;
+    try {
+      // 1. Create classic target list "Für jeden Tag"
+      const targetList = await addGroupToFirestore(
+        {
+          name: 'Für jeden Tag',
+          memberIds: [currentUser.id],
+          memberRoles: {},
+          listKind: 'classic',
+        },
+        currentUser.id
+      );
+
+      // 2. Create interactive list "Inspirationen" linked to target list
+      const inspirationList = await addGroupToFirestore(
+        {
+          name: 'Inspirationen',
+          memberIds: [currentUser.id],
+          memberRoles: {},
+          listKind: 'interactive',
+          targetListId: targetList.id,
+        },
+        currentUser.id
+      );
+
+      // 3. Set the new interactive list as the default web import list
+      const result = await updateUserProfile(currentUser.id, {
+        vorname: currentUser.vorname,
+        nachname: currentUser.nachname,
+        email: currentUser.email,
+        signatureSatz: currentUser.signatureSatz || '',
+        defaultWebImportListId: inspirationList.id,
+      });
+
+      if (result.success) {
+        setCurrentUser(prev => ({ ...prev, defaultWebImportListId: inspirationList.id }));
+      }
+    } catch (error) {
+      console.error('Error creating inspiration list:', error);
+      alert('Fehler beim Anlegen der Inspirationssammlung. Bitte versuchen Sie es erneut.');
+    }
+  };
+
   const handleUpdateGroup = async (groupId, updates) => {
     const group = groups.find((g) => g.id === groupId);
     const hasMemberUpdate = Array.isArray(updates?.memberIds);
@@ -1538,7 +1583,7 @@ function App() {
           allUsers={allUsers}
         />
       ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} />
       ) : (
         // Recipe views
         <>
