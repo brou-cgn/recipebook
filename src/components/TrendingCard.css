@@ -76,6 +76,13 @@
   line-height: 1;
 }
 
+.trending-card-meta-icon-img {
+  height: 0.85rem;
+  width: auto;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .trending-card-stars {
   display: inline-flex;
   font-size: 0.65rem;
