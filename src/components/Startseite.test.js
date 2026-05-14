@@ -118,6 +118,15 @@ describe('Startseite', () => {
     expect(mehrButtons.length).toBe(4);
   });
 
+  test('shows "Meine Alltagsklassiker" directly below "Meine Kochideen"', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const sectionTitles = Array.from(container.querySelectorAll('.startseite-section-title')).map((title) => title.textContent);
+    expect(sectionTitles.indexOf('Meine Alltagsklassiker')).toBe(sectionTitles.indexOf('Meine Kochideen') + 1);
+  });
+
   test('"mehr" button of "Im Trend" calls onViewChange with trendingRecipes', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
@@ -125,7 +134,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[1]);
+    fireEvent.click(mehrButtons[2]);
     expect(onViewChange).toHaveBeenCalledWith('trendingRecipes');
   });
 
@@ -136,7 +145,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[1]);
+    fireEvent.click(mehrButtons[2]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('trending');
   });
 
@@ -248,7 +257,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[2]);
+    fireEvent.click(mehrButtons[3]);
     expect(onViewChange).toHaveBeenCalledWith('neueRezepte');
   });
 
@@ -259,7 +268,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[2]);
+    fireEvent.click(mehrButtons[3]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
   });
 
@@ -492,7 +501,7 @@ describe('Startseite', () => {
 
     await screen.findByText('Meine Alltagsklassiker');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[3]);
+    fireEvent.click(mehrButtons[1]);
     expect(onOpenPrivateListRecipes).toHaveBeenCalledWith('g-classics');
   });
 });
