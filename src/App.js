@@ -49,7 +49,7 @@ import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
-import { deleteField } from 'firebase/firestore';
+import { deleteField, serverTimestamp } from 'firebase/firestore';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -810,7 +810,7 @@ function App() {
     if (!currentUser) return;
 
     try {
-      await updateRecipeInFirestore(recipeId, { publishedToPublic: true });
+      await updateRecipeInFirestore(recipeId, { publishedToPublic: true, publishedAt: serverTimestamp() });
     } catch (error) {
       console.error('Error publishing recipe:', error);
       alert('Fehler beim Veröffentlichen des Rezepts. Bitte versuchen Sie es erneut.');
@@ -1142,6 +1142,7 @@ function App() {
       await updateRecipeInFirestore(recipeId, {
         groupId: publicGroupId,
         publishedToPublic: true,
+        publishedAt: serverTimestamp(),
       });
     } catch (error) {
       console.error('Error moving recipe to public group:', error);

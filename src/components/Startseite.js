@@ -80,8 +80,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
       if (typeof ts.toDate === 'function') return ts.toDate().getTime();
       return new Date(ts).getTime();
     };
+    const effectiveMs = (recipe) => toMs(recipe.publishedAt || recipe.createdAt);
     return [...recipes]
-      .sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
+      .sort((a, b) => effectiveMs(b) - effectiveMs(a))
       .slice(0, NEUE_REZEPTE_TOP);
   }, [recipes]);
 

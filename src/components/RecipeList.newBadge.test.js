@@ -84,6 +84,32 @@ describe('isNewRecipe helper', () => {
     expect(isNewRecipe({ createdAt: eightDaysAgo }, { newRecipeDays: 7 })).toBe(false);
     expect(isNewRecipe({ createdAt: fiveDaysAgo }, { newRecipeDays: 7 })).toBe(true);
   });
+
+  test('uses publishedAt instead of createdAt when publishedAt is present', () => {
+    const oldCreatedAt = new Date(now - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const recentPublishedAt = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const recipe = { createdAt: oldCreatedAt, publishedAt: recentPublishedAt };
+    expect(isNewRecipe(recipe, { newRecipeDays: 30 })).toBe(true);
+  });
+
+  test('falls back to createdAt when publishedAt is absent', () => {
+    const recentCreatedAt = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const recipe = { createdAt: recentCreatedAt };
+    expect(isNewRecipe(recipe, { newRecipeDays: 30 })).toBe(true);
+  });
+
+  test('returns false when only publishedAt is older than cutoff', () => {
+    const oldPublishedAt = new Date(now - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const recentCreatedAt = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const recipe = { createdAt: recentCreatedAt, publishedAt: oldPublishedAt };
+    expect(isNewRecipe(recipe, { newRecipeDays: 30 })).toBe(false);
+  });
+
+  test('returns true for a recipe with only publishedAt (no createdAt) within cutoff', () => {
+    const recentPublishedAt = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const recipe = { publishedAt: recentPublishedAt };
+    expect(isNewRecipe(recipe, { newRecipeDays: 30 })).toBe(true);
+  });
 });
 
 // ─── Integration tests: "Neu" badge in RecipeList ────────────────────────────
