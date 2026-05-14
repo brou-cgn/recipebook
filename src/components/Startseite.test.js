@@ -357,6 +357,7 @@ describe('Startseite', () => {
       />
     );
     expect(await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i })).toBeInTheDocument();
+    expect(screen.queryByText('Keine gemeinsamen Kandidaten vorhanden.')).not.toBeInTheDocument();
   });
 
   test('shows setup button when default list is a classic collection', async () => {
@@ -370,6 +371,7 @@ describe('Startseite', () => {
       />
     );
     expect(await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i })).toBeInTheDocument();
+    expect(screen.queryByText('Keine gemeinsamen Kandidaten vorhanden.')).not.toBeInTheDocument();
   });
 
   test('does not show setup button when default list is interactive', async () => {
