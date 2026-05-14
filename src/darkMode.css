@@ -1882,6 +1882,46 @@
   color: #f08080;
 }
 
+/* ---- Cuisine list management (AppCallsPage Kulinariktypen sections) ---- */
+[data-theme="dark"] .cuisine-group-item {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .cuisine-group-header strong {
+  color: #c8a882;
+}
+
+[data-theme="dark"] .cuisine-group-child-tag {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .remove-child-btn {
+  color: #999;
+}
+
+[data-theme="dark"] .remove-child-btn:hover {
+  color: #f08080;
+}
+
+[data-theme="dark"] .cuisine-group-add-child {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .list-item-edit-input {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #7a8fdf;
+}
+
+[data-theme="dark"] .list-input button {
+  background: linear-gradient(135deg, #5a3c2c 0%, #2a2a2a 100%);
+}
+
 /* ---- GroupDetail additional ---- */
 [data-theme="dark"] .group-detail-section h3 {
   color: #e8e8e8;

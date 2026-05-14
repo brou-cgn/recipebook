@@ -257,3 +257,132 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
     ));
   });
 });
+
+describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const { getCustomLists, saveCustomLists, getButtonIcons } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({
+      cuisineTypes: ['Spanisch', 'Italienisch'],
+      cuisineGroups: [{ name: 'Europäisch', children: ['Spanisch'] }],
+    });
+    saveCustomLists.mockResolvedValue();
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+  });
+
+  test('Kulinariktypen tab shows existing cuisineTypes list', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+
+    const spanischItems = await screen.findAllByText('Spanisch');
+    expect(spanischItems.length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Italienisch').length).toBeGreaterThan(0);
+  });
+
+  test('Kulinariktypen tab shows existing cuisineGroups', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+
+    expect(await screen.findByText('Europäisch')).toBeInTheDocument();
+  });
+
+  test('adding a new cuisineType saves it', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+
+    const input = await screen.findByPlaceholderText('Neuen Kulinarik-Typ hinzufügen...');
+    fireEvent.change(input, { target: { value: 'Mexikanisch' } });
+    fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[0]);
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuisineTypes: expect.arrayContaining(['Spanisch', 'Italienisch', 'Mexikanisch']),
+      })
+    ));
+  });
+
+  test('removing a cuisineType saves the updated list', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+
+    await screen.findAllByText('Spanisch');
+    const removeButtons = screen.getAllByTitle('Entfernen');
+    fireEvent.click(removeButtons[0]);
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalled());
+    const savedArg = saveCustomLists.mock.calls[0][0];
+    expect(savedArg.cuisineTypes).not.toContain('Spanisch');
+    expect(savedArg.cuisineTypes).toContain('Italienisch');
+  });
+
+  test('adding a new cuisineGroup saves it', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kulinariktypen'));
+
+    const input = await screen.findByPlaceholderText('Neue Gruppe hinzufügen (z.B. Asiatische Küche)...');
+    fireEvent.change(input, { target: { value: 'Asiatisch' } });
+
+    const addButtons = screen.getAllByRole('button', { name: /Hinzufügen/i });
+    fireEvent.click(addButtons[1]);
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cuisineGroups: expect.arrayContaining([
+          expect.objectContaining({ name: 'Asiatisch' }),
+        ]),
+      })
+    ));
+  });
+});
