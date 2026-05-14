@@ -30,7 +30,7 @@ function TrendingCard({ recipe, onSelectRecipe }) {
 
   return (
     <div className="trending-card" onClick={handleClick} role="button" tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
     >
       <div className="trending-card-image">
         {imageUrl ? (
