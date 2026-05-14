@@ -9,9 +9,11 @@ jest.mock('../utils/recipeCallsFirestore', () => ({
 jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
   DEFAULT_BUTTON_ICONS: {},
+  getButtonIcons: jest.fn(() => Promise.resolve({})),
+  getEffectiveIcon: jest.fn((icons, key) => ''),
 }));
 
-jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe }) => (
+jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
   <div data-testid="trending-card" onClick={() => onSelectRecipe?.(recipe)}>{recipe.title}</div>
 ));
 

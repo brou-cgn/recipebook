@@ -16,7 +16,7 @@ function renderDifficultyStars(level) {
   );
 }
 
-function TrendingCard({ recipe, onSelectRecipe }) {
+function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon = null }) {
   if (!recipe) return null;
 
   const imageUrl =
@@ -42,9 +42,21 @@ function TrendingCard({ recipe, onSelectRecipe }) {
       <div className="trending-card-content">
         <h3 className="trending-card-title">{recipe.title}</h3>
         <div className="trending-card-meta">
-          {recipe.schwierigkeit && renderDifficultyStars(recipe.schwierigkeit)}
+          {recipe.schwierigkeit && (
+            <span className="trending-card-meta-left">
+              {difficultyIcon && (
+                <span className="trending-card-meta-icon">{difficultyIcon}</span>
+              )}
+              {renderDifficultyStars(recipe.schwierigkeit)}
+            </span>
+          )}
           {recipe.kochdauer && (
-            <span className="trending-card-time">{recipe.kochdauer} Min.</span>
+            <span className="trending-card-time">
+              {timeIcon && (
+                <span className="trending-card-meta-icon">{timeIcon}</span>
+              )}
+              {recipe.kochdauer} Min.
+            </span>
           )}
         </div>
       </div>
