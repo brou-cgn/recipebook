@@ -48,6 +48,34 @@ describe('TrendingCard', () => {
     expect(screen.queryByText(/Min\./)).toBeNull();
   });
 
+  test('renders difficulty icon when difficultyIcon prop is provided', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} difficultyIcon="★" />);
+    const icons = container.querySelectorAll('.trending-card-meta-icon');
+    expect(icons.length).toBeGreaterThan(0);
+    expect(icons[0]).toHaveTextContent('★');
+  });
+
+  test('renders time icon when timeIcon prop is provided', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} timeIcon="⏱" />);
+    const icons = container.querySelectorAll('.trending-card-meta-icon');
+    expect(icons.length).toBeGreaterThan(0);
+  });
+
+  test('does not render meta icons when icon props are omitted', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} />);
+    expect(container.querySelectorAll('.trending-card-meta-icon').length).toBe(0);
+  });
+
+  test('time is rendered in trending-card-time span', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} />);
+    expect(container.querySelector('.trending-card-time')).toBeInTheDocument();
+  });
+
+  test('difficulty stars wrapped in trending-card-meta-left when schwierigkeit set', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} />);
+    expect(container.querySelector('.trending-card-meta-left')).toBeInTheDocument();
+  });
+
   test('calls onSelectRecipe when clicked', () => {
     const onSelectRecipe = jest.fn();
     render(<TrendingCard recipe={mockRecipe} onSelectRecipe={onSelectRecipe} />);

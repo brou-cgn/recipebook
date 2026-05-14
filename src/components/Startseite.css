@@ -14,8 +14,7 @@
    ========================================================= */
 
 .startseite-trending-section {
-  /* Sized so that exactly 3 carousel sections fit in the viewport without scrolling.
-     Uses min-content height; the carousel items are compact enough to satisfy this. */
+  /* Sized so that exactly 2 tiles are fully visible in the carousel. */
   margin-bottom: 1rem;
 }
 
@@ -49,8 +48,8 @@
 }
 
 .startseite-carousel-item {
-  flex: 0 0 auto;
-  width: 160px;
+  flex: 0 0 calc((100% - 1rem) / 2);
+  width: calc((100% - 1rem) / 2);
   scroll-snap-align: start;
 }
 
@@ -67,7 +66,7 @@
 .startseite-mehr-btn {
   background: transparent;
   border: none;
-  color: #007aff;
+  color: #DF7A00;
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0.25rem 0;
@@ -79,7 +78,7 @@
 }
 
 [data-theme="dark"] .startseite-mehr-btn {
-  color: #4da6ff;
+  color: #f59e2a;
 }
 
 /* =========================================================

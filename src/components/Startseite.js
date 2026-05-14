@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import TrendingCard from './TrendingCard';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -10,6 +11,8 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +43,26 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
     return () => { cancelled = true; };
   }, [recipes]);
 
+  // Load button icons on mount
+  useEffect(() => {
+    const loadIcons = async () => {
+      try {
+        const icons = await getButtonIcons();
+        setButtonIcons(icons);
+      } catch (error) {
+        // Keep default values if loading fails
+      }
+    };
+    loadIcons();
+  }, []);
+
+  // Listen for dark mode changes
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
   const handleMehrClick = () => {
     try {
       sessionStorage.setItem(SORT_STORAGE_KEY, 'trending');
@@ -64,6 +87,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
                 <TrendingCard
                   recipe={recipe}
                   onSelectRecipe={onSelectRecipe}
+                  difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+                  timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
                 />
               </div>
             ))}

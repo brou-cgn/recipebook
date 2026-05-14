@@ -611,7 +611,11 @@ export const DEFAULT_BUTTON_ICONS = {
   addSection: '+',
   resetThumbnail: '📷',
   recipeCardSwipeRight: '📋',
+  trendingDifficultyIcon: '★',
+  trendingTimeIcon: '⏱',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
+  trendingDifficultyIconDark: '',
+  trendingTimeIconDark: '',
   cookingModeDark: '',
   cookingModeAltDark: '',
   // Dark mode variant for the default category image icon
