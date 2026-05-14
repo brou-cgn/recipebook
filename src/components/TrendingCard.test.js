@@ -59,6 +59,8 @@ describe('TrendingCard', () => {
     const { container } = render(<TrendingCard recipe={mockRecipe} timeIcon="⏱" />);
     const icons = container.querySelectorAll('.trending-card-meta-icon');
     expect(icons.length).toBeGreaterThan(0);
+    const timeIconEl = Array.from(icons).find(el => el.textContent === '⏱');
+    expect(timeIconEl).toBeInTheDocument();
   });
 
   test('does not render meta icons when icon props are omitted', () => {
