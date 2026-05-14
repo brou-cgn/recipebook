@@ -220,7 +220,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild und Rezept drucken haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild, Rezept drucken und Startseite haben.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
               <thead>
@@ -239,11 +239,12 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Testmodus Tagesmenü</th>
                   <th>Erscheinungsbild</th>
                   <th>Drucken</th>
+                  <th>Startseite</th>
                 </tr>
               </thead>
               <tbody>
                 {[ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].map((role) => {
-                  const perms = rolePermissions?.[role] || { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true };
+                  const perms = rolePermissions?.[role] || { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, startseite: false };
                   return (
                     <tr key={role}>
                       <td>
@@ -366,6 +367,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.printRecipe ? 'Drucken deaktivieren' : 'Drucken aktivieren'}
                         >
                           {perms.printRecipe ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.startseite ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'startseite', perms.startseite)}
+                          title={perms.startseite ? 'Startseite deaktivieren' : 'Startseite aktivieren'}
+                        >
+                          {perms.startseite ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>
