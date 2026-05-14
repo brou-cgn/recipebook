@@ -72,12 +72,12 @@
 }
 
 .trending-card-meta-icon {
-  font-size: 0.65rem;
+  font-size: 0.44rem;
   line-height: 1;
 }
 
 .trending-card-meta-icon-img {
-  height: 0.85rem;
+  height: 0.57rem;
   width: auto;
   object-fit: contain;
   vertical-align: middle;
@@ -85,7 +85,7 @@
 
 .trending-card-stars {
   display: inline-flex;
-  font-size: 0.65rem;
+  font-size: 0.44rem;
   color: #DF7A00;
   letter-spacing: -0.05em;
 }
