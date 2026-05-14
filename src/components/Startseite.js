@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import TrendingCard from './TrendingCard';
+import StartseitenKarussell from './StartseitenKarussell';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 
 const TRENDING_DAYS = 7;
@@ -74,35 +75,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
 
   return (
     <div className="startseite-container">
-      <div className="startseite-trending-section">
-        <h2 className="startseite-section-title">Im Trend</h2>
-        {loading ? (
-          <div className="startseite-loading">Laden…</div>
-        ) : topRecipes.length === 0 ? (
-          <div className="startseite-empty">Keine Trendrezepte vorhanden.</div>
-        ) : (
-          <div className="startseite-carousel">
-            {topRecipes.map(recipe => (
-              <div key={recipe.id} className="startseite-carousel-item">
-                <TrendingCard
-                  recipe={recipe}
-                  onSelectRecipe={onSelectRecipe}
-                  difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
-                  timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
-                />
-              </div>
-            ))}
-          </div>
+      <StartseitenKarussell
+        title="Im Trend"
+        items={topRecipes}
+        loading={loading}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
         )}
-        <div className="startseite-mehr-container">
-          <button
-            className="startseite-mehr-btn"
-            onClick={handleMehrClick}
-          >
-            mehr
-          </button>
-        </div>
-      </div>
+        emptyText="Keine Trendrezepte vorhanden."
+        onMehr={handleMehrClick}
+      />
     </div>
   );
 }
