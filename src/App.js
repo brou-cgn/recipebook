@@ -20,6 +20,7 @@ import AppCallsPage from './components/AppCallsPage';
 import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
 import Tagesmenu from './components/Tagesmenu';
 import UniversalImportModal from './components/UniversalImportModal';
+import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import { 
   loginUser, 
@@ -377,6 +378,7 @@ function App() {
           tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
           themeToggle: rolePerms.themeToggle ?? false,
           printRecipe: rolePerms.printRecipe ?? true,
+          startseite: rolePerms.startseite ?? false,
         };
       });
     };
@@ -1495,7 +1497,10 @@ function App() {
           allUsers={allUsers}
         />
       ) : (
-        // Recipe views
+        // Recipe views (or Startseite for users with startseite permission)
+        currentUser?.startseite ? (
+          <Startseite currentUser={currentUser} />
+        ) : (
         <>
           <RecipeList
             recipes={recipes.filter(recipe => 
@@ -1528,6 +1533,7 @@ function App() {
             onMoveRecipeToPublic={handleMoveRecipeToPublic}
           />
         </>
+        )
       )}
       {requiresPasswordChange && currentUser && (
         <PasswordChangeModal 

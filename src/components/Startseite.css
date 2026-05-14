@@ -1,0 +1,11 @@
+.startseite-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 60vh;
+}
+
+[data-theme="dark"] .startseite-container {
+  background: #121212;
+  color: #e8e8e8;
+}
