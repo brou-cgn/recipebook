@@ -154,9 +154,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
             >
               ‹ Zurück
             </button>
-            <h2 className="alarm-sound-picker-title">Standard-Liste für Webimport</h2>
+            <h2 className="alarm-sound-picker-title">Inspirationssammlung</h2>
           </div>
-          <ul className="alarm-sound-picker-list" aria-label="Standard-Liste für Webimport auswählen">
+          <ul className="alarm-sound-picker-list" aria-label="Inspirationssammlung auswählen">
             {[NO_LIST_OPTION, ...privateLists].map(list => (
               <li key={list.id}>
                 <button
@@ -317,9 +317,9 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 type="button"
                 className="settings-row"
                 onClick={() => setShowWebImportListPicker(true)}
-                aria-label={`Standard-Liste für Webimport: ${privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
+                aria-label={`Inspirationssammlung: ${privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
               >
-                <span className="settings-row-label">Standard-Liste für Webimport</span>
+                <span className="settings-row-label">Inspirationssammlung</span>
                 <span className="settings-row-right">
                   <span className="settings-row-value">
                     {privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}

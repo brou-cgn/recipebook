@@ -14,3 +14,38 @@
     max-width: 1120px;
   }
 }
+
+.startseite-inspiration-setup {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.startseite-inspiration-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.startseite-inspiration-btn:hover:not(:disabled) {
+  background-color: #388E3C;
+}
+
+.startseite-inspiration-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-theme="dark"] .startseite-inspiration-btn {
+  background-color: #2e7d32;
+}
+
+[data-theme="dark"] .startseite-inspiration-btn:hover:not(:disabled) {
+  background-color: #1b5e20;
+}

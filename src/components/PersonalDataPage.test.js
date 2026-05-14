@@ -248,14 +248,14 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   test('renders Standard-Liste row with chevron when privateLists are provided', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    expect(screen.getByText('Standard-Liste für Webimport')).toBeInTheDocument();
+    expect(screen.getByText('Inspirationssammlung')).toBeInTheDocument();
     expect(screen.getByText('– Keine Vorauswahl –')).toBeInTheDocument();
   });
 
   test('does not render Standard-Liste row when privateLists is empty', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={[]} />);
 
-    expect(screen.queryByText('Standard-Liste für Webimport')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inspirationssammlung')).not.toBeInTheDocument();
   });
 
   test('shows current selection in the row when defaultWebImportListId is set', () => {
@@ -268,9 +268,9 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   test('opens web import list picker when row is clicked', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
 
-    expect(screen.getByRole('heading', { name: 'Standard-Liste für Webimport' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Inspirationssammlung' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Keine Vorauswahl/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Meine Favoriten/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Wochenplan/i })).toBeInTheDocument();
@@ -279,7 +279,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   test('no-preselection option shows checkmark by default', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
 
     const noListOption = screen.getByRole('option', { name: /Keine Vorauswahl/i });
     expect(noListOption).toHaveAttribute('aria-selected', 'true');
@@ -291,7 +291,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
     render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
 
     const list1Option = screen.getByRole('option', { name: /Meine Favoriten/i });
     expect(list1Option).toHaveAttribute('aria-selected', 'true');
@@ -302,7 +302,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   test('clicking a list in picker saves profile immediately and updates the row', async () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
     fireEvent.click(screen.getByRole('option', { name: /Meine Favoriten/i }));
 
     await waitFor(() => {
@@ -319,7 +319,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     const userWithList = { ...mockUser, defaultWebImportListId: 'list-1' };
     render(<PersonalDataPage currentUser={userWithList} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
     fireEvent.click(screen.getByRole('option', { name: /Keine Vorauswahl/i }));
 
     await waitFor(() => {
@@ -343,7 +343,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
     fireEvent.click(screen.getByRole('option', { name: /Wochenplan/i }));
 
     await waitFor(() => {
@@ -356,11 +356,11 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
   test('back button in picker returns to main page', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Standard-Liste für Webimport/i }));
-    expect(screen.getByRole('heading', { name: 'Standard-Liste für Webimport' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Inspirationssammlung/i }));
+    expect(screen.getByRole('heading', { name: 'Inspirationssammlung' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.queryByRole('heading', { name: 'Standard-Liste für Webimport' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Inspirationssammlung' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
   });
 });
