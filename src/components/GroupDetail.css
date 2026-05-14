@@ -277,7 +277,7 @@
 
 .group-add-member-panel {
   background: #f9f6f3;
-  border: 1px solid #e0d8d0;
+  /* border: 1px solid #e0d8d0;*/
   border-radius: 10px;
   padding: 1rem 1.1rem;
   margin-bottom: 1rem;
