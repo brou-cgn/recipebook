@@ -9,3 +9,90 @@
   background: #121212;
   color: #e8e8e8;
 }
+
+/* =========================================================
+   Trending Section
+   ========================================================= */
+
+.startseite-trending-section {
+  margin-bottom: 2rem;
+}
+
+.startseite-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 0.75rem 0;
+}
+
+[data-theme="dark"] .startseite-section-title {
+  color: #e8e8e8;
+}
+
+/* =========================================================
+   Carousel
+   ========================================================= */
+
+.startseite-carousel {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 0.5rem;
+}
+
+.startseite-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.startseite-carousel-item {
+  flex: 0 0 auto;
+  width: 200px;
+  scroll-snap-align: start;
+}
+
+/* =========================================================
+   "mehr" Button
+   ========================================================= */
+
+.startseite-mehr-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.startseite-mehr-btn {
+  background: transparent;
+  border: none;
+  color: #007aff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.startseite-mehr-btn:hover {
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .startseite-mehr-btn {
+  color: #4da6ff;
+}
+
+/* =========================================================
+   Loading / Empty States
+   ========================================================= */
+
+.startseite-loading,
+.startseite-empty {
+  padding: 2rem 0;
+  color: #999;
+  font-style: italic;
+}
+
+[data-theme="dark"] .startseite-loading,
+[data-theme="dark"] .startseite-empty {
+  color: #666;
+}
