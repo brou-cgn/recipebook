@@ -276,6 +276,53 @@ describe('Header - Erscheinungsbild (themeToggle) permission', () => {
   });
 });
 
+describe('Header - Einstellungen permission', () => {
+  test('Einstellungen menu item is shown for admins even without settingsAccess', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={{ ...mockCurrentUser, isAdmin: true, settingsAccess: false }}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onSettingsClick={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByText('Einstellungen')).toBeInTheDocument();
+  });
+
+  test('Einstellungen menu item is shown for users with settingsAccess', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={{ ...mockCurrentUser, settingsAccess: true }}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onSettingsClick={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.getByText('Einstellungen')).toBeInTheDocument();
+  });
+
+  test('Einstellungen menu item is hidden without settingsAccess', () => {
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={{ ...mockCurrentUser, settingsAccess: false }}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        onSettingsClick={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    expect(screen.queryByText('Einstellungen')).not.toBeInTheDocument();
+  });
+});
+
 describe('Header - Chefkoch user name click', () => {
   test('user name button has aria-label when onChefkochClick is provided', () => {
     render(

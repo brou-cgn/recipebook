@@ -366,6 +366,7 @@ function App() {
         if (!prev || prev.id !== currentUser.id) return prev;
         return {
           ...prev,
+          settingsAccess: rolePerms.settingsAccess ?? false,
           fotoscan: rolePerms.fotoscan ?? false,
           webimport: rolePerms.webimport ?? false,
           appCalls: rolePerms.appCalls ?? false,
