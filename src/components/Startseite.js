@@ -360,6 +360,33 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         onMehr={handleKandidatenMehrClick}
       />
       <StartseitenKarussell
+        title="Meine Alltagsklassiker"
+        items={alltagsklassikerRecipes}
+        loading={false}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText={showAlltagsklassikerSetupButton ? '' : 'Keine Alltagsklassiker vorhanden.'}
+        emptyContent={showAlltagsklassikerSetupButton ? (
+          <div className="startseite-inspiration-setup">
+            <button
+              type="button"
+              className="startseite-inspiration-btn"
+              onClick={() => setShowAlltagsklassikerPicker(true)}
+              disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0 || isAssigningAlltagsklassiker}
+            >
+              Alltagsklassiker zuordnen
+            </button>
+          </div>
+        ) : null}
+        onMehr={handleAlltagsklassikerMehrClick}
+      />
+      <StartseitenKarussell
         title="Im Trend"
         items={topRecipes}
         loading={loading}
@@ -388,33 +415,6 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         )}
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
-      />
-      <StartseitenKarussell
-        title="Meine Alltagsklassiker"
-        items={alltagsklassikerRecipes}
-        loading={false}
-        renderItem={(recipe) => (
-          <TrendingCard
-            recipe={recipe}
-            onSelectRecipe={onSelectRecipe}
-            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
-            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
-          />
-        )}
-        emptyText={showAlltagsklassikerSetupButton ? '' : 'Keine Alltagsklassiker vorhanden.'}
-        emptyContent={showAlltagsklassikerSetupButton ? (
-          <div className="startseite-inspiration-setup">
-            <button
-              type="button"
-              className="startseite-inspiration-btn"
-              onClick={() => setShowAlltagsklassikerPicker(true)}
-              disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0 || isAssigningAlltagsklassiker}
-            >
-              Alltagsklassiker zuordnen
-            </button>
-          </div>
-        ) : null}
-        onMehr={handleAlltagsklassikerMehrClick}
       />
     </div>
   );
