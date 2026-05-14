@@ -11,8 +11,8 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_BUTTON_ICONS: {},
 }));
 
-jest.mock('./RecipeCard', () => ({ recipe }) => (
-  <div data-testid="recipe-card">{recipe.title}</div>
+jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe }) => (
+  <div data-testid="trending-card" onClick={() => onSelectRecipe?.(recipe)}>{recipe.title}</div>
 ));
 
 const mockRecipes = [
@@ -105,5 +105,23 @@ describe('Startseite', () => {
     await screen.findByText('Keine Trendrezepte vorhanden.');
     fireEvent.click(screen.getByRole('button', { name: /mehr/i }));
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('trending');
+  });
+
+  test('clicking a trending card calls onSelectRecipe with the recipe', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([
+      { id: 'c1', recipeId: 'r1' },
+    ]);
+    const onSelectRecipe = jest.fn();
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        recipes={mockRecipes}
+        onSelectRecipe={onSelectRecipe}
+      />
+    );
+    const card = await screen.findByText('Rezept 1');
+    fireEvent.click(card);
+    expect(onSelectRecipe).toHaveBeenCalledWith(mockRecipes[0]);
   });
 });

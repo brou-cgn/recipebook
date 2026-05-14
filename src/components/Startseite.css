@@ -2,7 +2,6 @@
   max-width: 900px;
   margin: 0 auto;
   padding: 20px;
-  min-height: 60vh;
 }
 
 [data-theme="dark"] .startseite-container {
@@ -15,7 +14,9 @@
    ========================================================= */
 
 .startseite-trending-section {
-  margin-bottom: 2rem;
+  /* Sized so that exactly 3 carousel sections fit in the viewport without scrolling.
+     Uses min-content height; the carousel items are compact enough to satisfy this. */
+  margin-bottom: 1rem;
 }
 
 .startseite-section-title {
@@ -49,9 +50,8 @@
 
 .startseite-carousel-item {
   flex: 0 0 auto;
-  width: 200px;
+  width: 160px;
   scroll-snap-align: start;
-  overflow: hidden;
 }
 
 /* =========================================================
