@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import './Header.css';
 import { getHeaderSlogan, getAppLogoImage } from '../utils/customLists';
 import { subscribeToFaqs } from '../utils/faqFirestore';
-import { ROLES } from '../utils/userManagement';
 import SearchIcon from './icons/SearchIcon';
 
 /**
@@ -275,7 +274,7 @@ const Header = forwardRef(function Header({
                       </button>
                     </div>
                   )}
-                  {onSettingsClick && (currentUser?.isAdmin || currentUser?.role === ROLES.MODERATOR) && (
+                  {onSettingsClick && (currentUser?.isAdmin || currentUser?.settingsAccess) && (
                     <div className="menu-section">
                       <div className="menu-section-title">Verwaltung</div>
                       <button className="menu-item" onClick={() => {

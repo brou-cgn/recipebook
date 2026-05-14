@@ -918,6 +918,15 @@ describe("User Management Utilities", () => {
   });
 
   describe("ROLE_PERMISSIONS_DEFAULT", () => {
+    test("should have settingsAccess enabled for admin and moderator", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].settingsAccess).toBe(true);
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.MODERATOR].settingsAccess).toBe(true);
+    });
+    test("should have settingsAccess disabled for edit/comment/read roles", () => {
+      [ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].settingsAccess).toBe(false);
+      });
+    });
     test("should have fotoscan and webimport enabled for admin", () => {
       expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].fotoscan).toBe(true);
       expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].webimport).toBe(true);

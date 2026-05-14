@@ -1096,21 +1096,21 @@ export const removeFcmToken = async (userId, token) => {
 };
 
 /**
- * Default role permissions for fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle and printRecipe features.
+ * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle and printRecipe features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; all other features start with all disabled for non-admin roles.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true },
-  [ROLES.MODERATOR]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
-  [ROLES.EDIT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
-  [ROLES.COMMENT]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
-  [ROLES.READ]: { fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
+  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true },
+  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
+  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
+  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
+  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true },
 };
 
 /**
- * Get role-based feature permissions (fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe) from Firestore.
+ * Get role-based feature permissions (settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe) from Firestore.
  * Falls back to ROLE_PERMISSIONS_DEFAULT if no Firestore data exists.
- * @returns {Promise<Object>} Map of role -> { fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean, tagesmenuTestmode: boolean, themeToggle: boolean, printRecipe: boolean }
+ * @returns {Promise<Object>} Map of role -> { settingsAccess: boolean, fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean, tagesmenuTestmode: boolean, themeToggle: boolean, printRecipe: boolean }
  */
 export const getRolePermissions = async () => {
   try {
@@ -1133,7 +1133,7 @@ export const getRolePermissions = async () => {
 /**
  * Update a feature permission for a specific role.
  * @param {string} role - Role constant (from ROLES, excluding GUEST)
- * @param {string} feature - Feature name ('fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel', 'editLists', 'tagesmenuTestmode' or 'themeToggle')
+ * @param {string} feature - Feature name ('settingsAccess', 'fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel', 'editLists', 'tagesmenuTestmode', 'themeToggle' or 'printRecipe')
  * @param {boolean} value - New boolean value
  * @returns {Promise<{success: boolean, message: string}>} Result object
  */
