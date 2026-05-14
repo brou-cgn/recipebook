@@ -37,4 +37,10 @@ describe('Startseite carousel desktop layout CSS', () => {
     expect(carouselItemRule).toContain('width: calc((100% - 3rem) / 4);');
     expect(imageRule).toContain('height: 148px;');
   });
+
+  test('reduces spacing above "mehr" button container', () => {
+    const mehrContainerRule = getRuleBody(css, '.startseite-mehr-container');
+
+    expect(mehrContainerRule).toContain('margin-top: 0.4rem;');
+  });
 });
