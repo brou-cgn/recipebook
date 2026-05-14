@@ -1,4 +1,5 @@
 import React from 'react';
+import { isBase64Image } from '../utils/imageUtils';
 import './TrendingCard.css';
 
 function renderDifficultyStars(level) {
@@ -45,7 +46,11 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
           {recipe.schwierigkeit && (
             <span className="trending-card-meta-left">
               {difficultyIcon && (
-                <span className="trending-card-meta-icon">{difficultyIcon}</span>
+                isBase64Image(difficultyIcon) ? (
+                  <img src={difficultyIcon} alt="" className="trending-card-meta-icon-img" />
+                ) : (
+                  <span className="trending-card-meta-icon">{difficultyIcon}</span>
+                )
               )}
               {renderDifficultyStars(recipe.schwierigkeit)}
             </span>
@@ -53,7 +58,11 @@ function TrendingCard({ recipe, onSelectRecipe, difficultyIcon = null, timeIcon 
           {recipe.kochdauer && (
             <span className="trending-card-time">
               {timeIcon && (
-                <span className="trending-card-meta-icon">{timeIcon}</span>
+                isBase64Image(timeIcon) ? (
+                  <img src={timeIcon} alt="" className="trending-card-meta-icon-img" />
+                ) : (
+                  <span className="trending-card-meta-icon">{timeIcon}</span>
+                )
               )}
               {recipe.kochdauer} Min.
             </span>

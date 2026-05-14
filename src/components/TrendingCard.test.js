@@ -9,6 +9,7 @@ const mockRecipe = {
   schwierigkeit: 3,
   kochdauer: 30,
 };
+const mockBase64Icon = 'data:image/png;base64,iVBORw0KGgo=';
 
 describe('TrendingCard', () => {
   test('renders without crashing', () => {
@@ -61,6 +62,20 @@ describe('TrendingCard', () => {
     expect(icons.length).toBeGreaterThan(0);
     const timeIconEl = Array.from(icons).find(el => el.textContent === '⏱');
     expect(timeIconEl).toBeInTheDocument();
+  });
+
+  test('renders difficulty icon as image when difficultyIcon is base64', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} difficultyIcon={mockBase64Icon} />);
+    const iconImg = container.querySelector('.trending-card-meta-left .trending-card-meta-icon-img');
+    expect(iconImg).toBeInTheDocument();
+    expect(iconImg).toHaveAttribute('src', mockBase64Icon);
+  });
+
+  test('renders time icon as image when timeIcon is base64', () => {
+    const { container } = render(<TrendingCard recipe={mockRecipe} timeIcon={mockBase64Icon} />);
+    const iconImg = container.querySelector('.trending-card-time .trending-card-meta-icon-img');
+    expect(iconImg).toBeInTheDocument();
+    expect(iconImg).toHaveAttribute('src', mockBase64Icon);
   });
 
   test('does not render meta icons when icon props are omitted', () => {
