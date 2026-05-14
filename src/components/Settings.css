@@ -79,6 +79,7 @@
 
 .list-input input {
   flex: 1;
+  min-width: 0;
   padding: 0.75rem;
   border: 2px solid #ddd;
   border-radius: 8px;
@@ -101,6 +102,8 @@
   font-size: 0.95rem;
   font-weight: 600;
   transition: all 0.3s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .list-input button:hover {

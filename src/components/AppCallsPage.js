@@ -692,101 +692,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
           </>
         ) : (
           <>
-            {/* Kulinarik-Typen section */}
-            <div className="settings-section">
-              <h3>Kulinarik-Typen</h3>
-              <div className="list-input">
-                <input
-                  type="text"
-                  value={newCuisineTypeName}
-                  onChange={(e) => setNewCuisineTypeName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineType()}
-                  placeholder="Neuen Kulinarik-Typ hinzufügen..."
-                  aria-label="Neuen Kulinarik-Typ eingeben"
-                />
-                <button onClick={handleAddCuisineType}>Hinzufügen</button>
-              </div>
-              <div className="list-items">
-                {cuisineTypes.length === 0 ? (
-                  <p className="section-description">Noch keine Kulinarik-Typen vorhanden.</p>
-                ) : (
-                  cuisineTypes.map((type) => (
-                    <CuisineTypeListItem
-                      key={type}
-                      label={type}
-                      onRemove={() => handleRemoveCuisineType(type)}
-                      onRename={handleRenameCuisineType}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Kulinarik-Gruppen section */}
-            <div className="settings-section">
-              <h3>Kulinarik-Gruppen</h3>
-              <p className="section-description">
-                Übergeordnete Kategorien für die Suchfilterung. Untergeordnete Typen können aus der Liste der Kulinarik-Typen ausgewählt werden.
-              </p>
-              <div className="list-input">
-                <input
-                  type="text"
-                  value={newCuisineGroupName}
-                  onChange={(e) => setNewCuisineGroupName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineGroup()}
-                  placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
-                  aria-label="Neue Kulinarik-Gruppe eingeben"
-                />
-                <button onClick={handleAddCuisineGroup}>Hinzufügen</button>
-              </div>
-              <div className="list-items">
-                {cuisineGroups.length === 0 ? (
-                  <p className="section-description">Noch keine Kulinarik-Gruppen vorhanden.</p>
-                ) : (
-                  cuisineGroups.map(group => (
-                    <div key={group.name} className="cuisine-group-item">
-                      <div className="cuisine-group-header">
-                        <strong>{group.name}</strong>
-                        <button
-                          className="remove-btn"
-                          onClick={() => handleRemoveCuisineGroup(group.name)}
-                          title="Gruppe entfernen"
-                        >×</button>
-                      </div>
-                      <div className="cuisine-group-children">
-                        {group.children.map(child => (
-                          <span key={child} className="cuisine-group-child-tag">
-                            {child}
-                            <button
-                              className="remove-child-btn"
-                              onClick={() => handleRemoveChildFromGroup(group.name, child)}
-                              title="Untertyp entfernen"
-                              aria-label={`${child} aus Gruppe entfernen`}
-                            >×</button>
-                          </span>
-                        ))}
-                        <select
-                          className="cuisine-group-add-child"
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) handleAddChildToGroup(group.name, e.target.value);
-                          }}
-                          aria-label={`Untertyp zu ${group.name} hinzufügen`}
-                        >
-                          <option value="">+ Untertyp hinzufügen...</option>
-                          {cuisineTypes
-                            .filter(c => !group.children.includes(c))
-                            .map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             {/* Offene Vorschläge section */}
             <div className="settings-section">
               <h3>Offene Vorschläge</h3>
@@ -892,6 +797,101 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
               )}
               <div className="app-calls-stats">
                 Gesamt: <strong>{cuisineProposals.length}</strong> {cuisineProposals.length === 1 ? 'offener Kulinariktyp' : 'offene Kulinariktypen'}
+              </div>
+            </div>
+
+            {/* Kulinarik-Typen section */}
+            <div className="settings-section">
+              <h3>Kulinarik-Typen</h3>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCuisineTypeName}
+                  onChange={(e) => setNewCuisineTypeName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineType()}
+                  placeholder="Neuen Kulinarik-Typ hinzufügen..."
+                  aria-label="Neuen Kulinarik-Typ eingeben"
+                />
+                <button onClick={handleAddCuisineType}>Hinzufügen</button>
+              </div>
+              <div className="list-items">
+                {cuisineTypes.length === 0 ? (
+                  <p className="section-description">Noch keine Kulinarik-Typen vorhanden.</p>
+                ) : (
+                  cuisineTypes.map((type) => (
+                    <CuisineTypeListItem
+                      key={type}
+                      label={type}
+                      onRemove={() => handleRemoveCuisineType(type)}
+                      onRename={handleRenameCuisineType}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Kulinarik-Gruppen section */}
+            <div className="settings-section">
+              <h3>Kulinarik-Gruppen</h3>
+              <p className="section-description">
+                Übergeordnete Kategorien für die Suchfilterung. Untergeordnete Typen können aus der Liste der Kulinarik-Typen ausgewählt werden.
+              </p>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCuisineGroupName}
+                  onChange={(e) => setNewCuisineGroupName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineGroup()}
+                  placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
+                  aria-label="Neue Kulinarik-Gruppe eingeben"
+                />
+                <button onClick={handleAddCuisineGroup}>Hinzufügen</button>
+              </div>
+              <div className="list-items">
+                {cuisineGroups.length === 0 ? (
+                  <p className="section-description">Noch keine Kulinarik-Gruppen vorhanden.</p>
+                ) : (
+                  cuisineGroups.map(group => (
+                    <div key={group.name} className="cuisine-group-item">
+                      <div className="cuisine-group-header">
+                        <strong>{group.name}</strong>
+                        <button
+                          className="remove-btn"
+                          onClick={() => handleRemoveCuisineGroup(group.name)}
+                          title="Gruppe entfernen"
+                        >×</button>
+                      </div>
+                      <div className="cuisine-group-children">
+                        {group.children.map(child => (
+                          <span key={child} className="cuisine-group-child-tag">
+                            {child}
+                            <button
+                              className="remove-child-btn"
+                              onClick={() => handleRemoveChildFromGroup(group.name, child)}
+                              title="Untertyp entfernen"
+                              aria-label={`${child} aus Gruppe entfernen`}
+                            >×</button>
+                          </span>
+                        ))}
+                        <select
+                          className="cuisine-group-add-child"
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) handleAddChildToGroup(group.name, e.target.value);
+                          }}
+                          aria-label={`Untertyp zu ${group.name} hinzufügen`}
+                        >
+                          <option value="">+ Untertyp hinzufügen...</option>
+                          {cuisineTypes
+                            .filter(c => !group.children.includes(c))
+                            .map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </>
