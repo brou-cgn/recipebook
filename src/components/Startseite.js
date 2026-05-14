@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getAllCookDates } from '../utils/recipeCookDates';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
@@ -9,15 +10,19 @@ import { getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/reci
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
 const NEUE_REZEPTE_TOP = 10;
+const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [isCreatingInspiration, setIsCreatingInspiration] = useState(false);
+  const [showAlltagsklassikerPicker, setShowAlltagsklassikerPicker] = useState(false);
+  const [isAssigningAlltagsklassiker, setIsAssigningAlltagsklassiker] = useState(false);
+  const [lastOwnCookDateByRecipeId, setLastOwnCookDateByRecipeId] = useState({});
 
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlags, setAllMembersFlags] = useState({});
@@ -104,6 +109,16 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return groups.find(g => g.id === listId) || null;
   }, [groups, currentUser?.defaultWebImportListId]);
 
+  const privateListsForCurrentUser = useMemo(() => (
+    groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))
+  ), [groups, currentUser?.id]);
+
+  const defaultEverydayClassicsList = useMemo(() => {
+    const listId = currentUser?.defaultEverydayClassicsListId;
+    if (!listId) return null;
+    return privateListsForCurrentUser.find(g => g.id === listId) || null;
+  }, [privateListsForCurrentUser, currentUser?.defaultEverydayClassicsListId]);
+
   // Load allMembersFlags whenever the default web import list changes
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +168,14 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       (r) => r.groupId === defaultWebImportList.id || groupRecipeIds.includes(r.id)
     );
   }, [recipes, defaultWebImportList]);
+
+  const allAlltagsklassikerRecipes = useMemo(() => {
+    if (!defaultEverydayClassicsList) return [];
+    const groupRecipeIds = Array.isArray(defaultEverydayClassicsList.recipeIds) ? defaultEverydayClassicsList.recipeIds : [];
+    return recipes.filter(
+      (r) => r.groupId === defaultEverydayClassicsList.id || groupRecipeIds.includes(r.id)
+    );
+  }, [recipes, defaultEverydayClassicsList]);
 
   // Precompute group status for each recipe in the list
   const groupStatusByRecipeId = useMemo(() => {
@@ -216,12 +239,99 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     }
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentUser?.id || allAlltagsklassikerRecipes.length === 0) {
+      setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
+      return;
+    }
+    Promise.all(allAlltagsklassikerRecipes.map((recipe) => getAllCookDates(recipe.id)))
+      .then((cookDateLists) => {
+        if (cancelled) return;
+        const nextMap = {};
+        allAlltagsklassikerRecipes.forEach((recipe, index) => {
+          const ownCookDates = (cookDateLists[index] || []).filter((cd) => cd.userId === currentUser.id);
+          const lastOwn = ownCookDates.reduce((latest, current) => {
+            const currentDate = current?.date instanceof Date ? current.date : new Date(current?.date);
+            if (Number.isNaN(currentDate?.getTime?.())) return latest;
+            return !latest || currentDate > latest ? currentDate : latest;
+          }, null);
+          nextMap[recipe.id] = lastOwn ? lastOwn.getTime() : 0;
+        });
+        setLastOwnCookDateByRecipeId(nextMap);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
+      });
+    return () => { cancelled = true; };
+  }, [allAlltagsklassikerRecipes, currentUser?.id]);
+
+  const alltagsklassikerRecipes = useMemo(() => (
+    [...allAlltagsklassikerRecipes]
+      .sort((a, b) => (lastOwnCookDateByRecipeId[b.id] || 0) - (lastOwnCookDateByRecipeId[a.id] || 0))
+      .slice(0, ALLTAGSKLASSIKER_TOP)
+  ), [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId]);
+
+  const handleAssignAlltagsklassikerList = async (listId) => {
+    if (!onAssignEverydayClassicsList || isAssigningAlltagsklassiker) return;
+    setIsAssigningAlltagsklassiker(true);
+    try {
+      const success = await onAssignEverydayClassicsList(listId);
+      if (success) {
+        setShowAlltagsklassikerPicker(false);
+      }
+    } finally {
+      setIsAssigningAlltagsklassiker(false);
+    }
+  };
+
+  const handleAlltagsklassikerMehrClick = () => {
+    if (defaultEverydayClassicsList?.id && onOpenPrivateListRecipes) {
+      onOpenPrivateListRecipes(defaultEverydayClassicsList.id);
+      return;
+    }
+    onViewChange?.('recipes');
+  };
+
   // Condition: show setup button when no default list or the list is not interactive
   const showInspirationSetupButton = !defaultWebImportList || defaultWebImportList.listKind !== 'interactive';
   const showInspirationButtonInKochideen = showInspirationSetupButton && onCreateInspirationList;
+  const showAlltagsklassikerSetupButton = !defaultEverydayClassicsList;
 
   return (
     <div className="startseite-container">
+      {showAlltagsklassikerPicker && (
+        <div className="startseite-alltagsklassiker-picker-overlay">
+          <div className="startseite-alltagsklassiker-picker">
+            <div className="startseite-alltagsklassiker-picker-header">
+              <h3>Alltagsklassiker zuordnen</h3>
+              <button
+                type="button"
+                className="startseite-alltagsklassiker-picker-close"
+                onClick={() => setShowAlltagsklassikerPicker(false)}
+                aria-label="Schließen"
+                disabled={isAssigningAlltagsklassiker}
+              >
+                ×
+              </button>
+            </div>
+            <div className="startseite-alltagsklassiker-picker-list">
+              {privateListsForCurrentUser.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  className="startseite-alltagsklassiker-picker-item"
+                  onClick={() => handleAssignAlltagsklassikerList(list.id)}
+                  disabled={isAssigningAlltagsklassiker}
+                >
+                  {list.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <StartseitenKarussell
         title="Meine Kochideen"
         items={gemeinsameKandidaten.slice(0, KOCHIDEEN_KARUSSELL_MAX)}
@@ -278,6 +388,33 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         )}
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
+      />
+      <StartseitenKarussell
+        title="Meine Alltagsklassiker"
+        items={alltagsklassikerRecipes}
+        loading={false}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText={showAlltagsklassikerSetupButton ? '' : 'Keine Alltagsklassiker vorhanden.'}
+        emptyContent={showAlltagsklassikerSetupButton ? (
+          <div className="startseite-inspiration-setup">
+            <button
+              type="button"
+              className="startseite-inspiration-btn"
+              onClick={() => setShowAlltagsklassikerPicker(true)}
+              disabled={!onAssignEverydayClassicsList || privateListsForCurrentUser.length === 0 || isAssigningAlltagsklassiker}
+            >
+              Alltagsklassiker zuordnen
+            </button>
+          </div>
+        ) : null}
+        onMehr={handleAlltagsklassikerMehrClick}
       />
     </div>
   );

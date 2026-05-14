@@ -20,6 +20,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [email, setEmail] = useState(currentUser?.email || '');
   const [signatureSatz, setSignatureSatz] = useState(currentUser?.signatureSatz || '');
   const [defaultWebImportListId, setDefaultWebImportListId] = useState(currentUser?.defaultWebImportListId || '');
+  const [defaultEverydayClassicsListId, setDefaultEverydayClassicsListId] = useState(currentUser?.defaultEverydayClassicsListId || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -34,6 +35,7 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
   const [showAlarmPicker, setShowAlarmPicker] = useState(false);
   const [showAppearancePicker, setShowAppearancePicker] = useState(false);
   const [showWebImportListPicker, setShowWebImportListPicker] = useState(false);
+  const [showEverydayClassicsListPicker, setShowEverydayClassicsListPicker] = useState(false);
 
   const [notificationPermission, setNotificationPermission] = useState('default');
   const [notificationSupported, setNotificationSupported] = useState(false);
@@ -80,17 +82,33 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       email: currentUser.email,
       signatureSatz: currentUser.signatureSatz,
       defaultWebImportListId: listId,
+      defaultEverydayClassicsListId,
     });
     if (result.success && onProfileUpdated) {
-      onProfileUpdated({ ...currentUser, defaultWebImportListId: listId });
+      onProfileUpdated({ ...currentUser, defaultWebImportListId: listId, defaultEverydayClassicsListId });
+    }
+  };
+
+  const handleEverydayClassicsListSelect = async (listId) => {
+    setDefaultEverydayClassicsListId(listId);
+    const result = await updateUserProfile(currentUser.id, {
+      vorname: currentUser.vorname,
+      nachname: currentUser.nachname,
+      email: currentUser.email,
+      signatureSatz: currentUser.signatureSatz,
+      defaultWebImportListId,
+      defaultEverydayClassicsListId: listId,
+    });
+    if (result.success && onProfileUpdated) {
+      onProfileUpdated({ ...currentUser, defaultWebImportListId, defaultEverydayClassicsListId: listId });
     }
   };
 
   useEffect(() => {
-    if (showAlarmPicker || showAppearancePicker || showWebImportListPicker) {
+    if (showAlarmPicker || showAppearancePicker || showWebImportListPicker || showEverydayClassicsListPicker) {
       window.scrollTo(0, 0);
     }
-  }, [showAlarmPicker, showAppearancePicker, showWebImportListPicker]);
+  }, [showAlarmPicker, showAppearancePicker, showWebImportListPicker, showEverydayClassicsListPicker]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,7 +120,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
       nachname: nachname.trim(),
       email: email.trim(),
       signatureSatz: signatureSatz.trim(),
-      defaultWebImportListId: defaultWebImportListId
+      defaultWebImportListId: defaultWebImportListId,
+      defaultEverydayClassicsListId: defaultEverydayClassicsListId
     });
 
     setSaving(false);
@@ -115,7 +134,8 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
         nachname: nachname.trim(),
         email: email.trim(),
         signatureSatz: signatureSatz.trim(),
-        defaultWebImportListId: defaultWebImportListId
+        defaultWebImportListId: defaultWebImportListId,
+        defaultEverydayClassicsListId: defaultEverydayClassicsListId
       });
     }
   };
@@ -246,7 +266,40 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
           </ul>
         </div>
       )}
-      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker || showWebImportListPicker ? ' personal-data-main--hidden' : ''}`}>
+      {showEverydayClassicsListPicker && (
+        <div className="alarm-sound-picker-page">
+          <div className="alarm-sound-picker-header">
+            <button
+              type="button"
+              className="alarm-sound-picker-back-btn"
+              onClick={() => setShowEverydayClassicsListPicker(false)}
+              aria-label="Zurück"
+            >
+              ‹ Zurück
+            </button>
+            <h2 className="alarm-sound-picker-title">Alltagsklassiker</h2>
+          </div>
+          <ul className="alarm-sound-picker-list" aria-label="Alltagsklassiker auswählen">
+            {[NO_LIST_OPTION, ...privateLists].map(list => (
+              <li key={list.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={defaultEverydayClassicsListId === list.id}
+                  className={`alarm-sound-picker-item${defaultEverydayClassicsListId === list.id ? ' selected' : ''}`}
+                  onClick={() => handleEverydayClassicsListSelect(list.id)}
+                >
+                  <span className="alarm-sound-picker-checkmark" aria-hidden="true">
+                    {defaultEverydayClassicsListId === list.id ? '✓' : ''}
+                  </span>
+                  <span className="alarm-sound-picker-name">{list.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className={`personal-data-main${showAlarmPicker || showAppearancePicker || showWebImportListPicker || showEverydayClassicsListPicker ? ' personal-data-main--hidden' : ''}`}>
       <div className="personal-data-header">
         <h2>Chefkoch</h2>
       </div>
@@ -323,6 +376,21 @@ function PersonalDataPage({ currentUser, onBack, onProfileUpdated, privateLists 
                 <span className="settings-row-right">
                   <span className="settings-row-value">
                     {privateLists.find(l => l.id === defaultWebImportListId)?.name || NO_LIST_OPTION.name}
+                  </span>
+                  <span className="settings-row-chevron" aria-hidden="true">›</span>
+                </span>
+              </button>
+              <div className="preferences-group-divider" />
+              <button
+                type="button"
+                className="settings-row"
+                onClick={() => setShowEverydayClassicsListPicker(true)}
+                aria-label={`Alltagsklassiker: ${privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name}. Zum Ändern klicken.`}
+              >
+                <span className="settings-row-label">Alltagsklassiker</span>
+                <span className="settings-row-right">
+                  <span className="settings-row-value">
+                    {privateLists.find(l => l.id === defaultEverydayClassicsListId)?.name || NO_LIST_OPTION.name}
                   </span>
                   <span className="settings-row-chevron" aria-hidden="true">›</span>
                 </span>
