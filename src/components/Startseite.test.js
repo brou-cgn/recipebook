@@ -114,7 +114,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[0]);
+    fireEvent.click(mehrButtons[1]);
     expect(onViewChange).toHaveBeenCalledWith('trendingRecipes');
   });
 
@@ -125,7 +125,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[0]);
+    fireEvent.click(mehrButtons[1]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('trending');
   });
 
@@ -237,7 +237,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[1]);
+    fireEvent.click(mehrButtons[2]);
     expect(onViewChange).toHaveBeenCalledWith('neueRezepte');
   });
 
@@ -248,7 +248,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[1]);
+    fireEvent.click(mehrButtons[2]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
   });
 
@@ -278,7 +278,7 @@ describe('Startseite', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[2]);
+    fireEvent.click(mehrButtons[0]);
     expect(onViewChange).toHaveBeenCalledWith('tagesmenu');
   });
 

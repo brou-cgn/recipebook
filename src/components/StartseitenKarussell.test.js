@@ -102,7 +102,7 @@ describe('StartseitenKarussell', () => {
     expect(container.querySelector('.startseite-carousel')).not.toBeInTheDocument();
   });
 
-  test('applies startseite-empty--fixed class when fixedEmptyHeight is true', () => {
+  test('always renders .startseite-carousel-wrap in empty state', () => {
     const { container } = render(
       <StartseitenKarussell
         title="Test"
@@ -110,22 +110,22 @@ describe('StartseitenKarussell', () => {
         loading={false}
         renderItem={renderItem}
         emptyText="Leer"
-        fixedEmptyHeight
       />
     );
-    expect(container.querySelector('.startseite-empty--fixed')).toBeInTheDocument();
+    expect(container.querySelector('.startseite-carousel-wrap')).toBeInTheDocument();
   });
 
-  test('does not apply startseite-empty--fixed class by default', () => {
+  test('renders .startseite-carousel-wrap with .startseite-carousel when items exist', () => {
     const { container } = render(
       <StartseitenKarussell
         title="Test"
-        items={[]}
+        items={mockItems}
         loading={false}
         renderItem={renderItem}
-        emptyText="Leer"
       />
     );
-    expect(container.querySelector('.startseite-empty--fixed')).not.toBeInTheDocument();
+    const wrap = container.querySelector('.startseite-carousel-wrap');
+    expect(wrap).toBeInTheDocument();
+    expect(wrap.querySelector('.startseite-carousel')).toBeInTheDocument();
   });
 });

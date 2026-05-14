@@ -12,8 +12,6 @@ import './StartseitenKarussell.css';
  *   emptyText       {string}   Text, der bei leerer Liste angezeigt wird
  *   onMehr          {Function} Optionaler Klick-Handler für den „mehr"-Button
  *   mehrText        {string}   Beschriftung des „mehr"-Buttons (Standard: „mehr")
- *   fixedEmptyHeight {boolean} Legt eine feste Mindesthöhe für den Leerstand fest,
- *                              damit die Karussellhöhe konsistent bleibt
  */
 function StartseitenKarussell({
   title,
@@ -23,24 +21,25 @@ function StartseitenKarussell({
   emptyText = '',
   onMehr,
   mehrText = 'mehr',
-  fixedEmptyHeight = false,
 }) {
   return (
     <div className="startseite-trending-section">
       <h2 className="startseite-section-title">{title}</h2>
-      {loading ? (
-        <div className="startseite-loading">Laden…</div>
-      ) : items.length === 0 ? (
-        <div className={`startseite-empty${fixedEmptyHeight ? ' startseite-empty--fixed' : ''}`}>{emptyText}</div>
-      ) : (
-        <div className="startseite-carousel">
-          {items.map((item, index) => (
-            <div key={item.id ?? index} className="startseite-carousel-item">
-              {renderItem(item)}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="startseite-carousel-wrap">
+        {loading ? (
+          <div className="startseite-loading">Laden…</div>
+        ) : items.length === 0 ? (
+          <div className="startseite-empty">{emptyText}</div>
+        ) : (
+          <div className="startseite-carousel">
+            {items.map((item, index) => (
+              <div key={item.id ?? index} className="startseite-carousel-item">
+                {renderItem(item)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       {onMehr && (
         <div className="startseite-mehr-container">
           <button className="startseite-mehr-btn" onClick={onMehr}>
