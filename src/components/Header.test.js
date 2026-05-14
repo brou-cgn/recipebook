@@ -157,6 +157,50 @@ describe('Header - Hamburger Menu Visibility', () => {
     expect(tagesmenuIndex).toBeLessThan(kuecheIndex);
   });
 
+  test('shows "Zu Tisch" as first navigation item when startseite is enabled', () => {
+    render(
+      <Header
+        currentView="startseite"
+        currentUser={mockCurrentUser}
+        onViewChange={() => {}}
+        onLogout={() => {}}
+        interactiveLists={[{ id: 'list-1' }]}
+        startseiteEnabled
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+
+    const navigationSection = screen.getByText('Navigation').closest('.menu-section');
+    expect(navigationSection).not.toBeNull();
+
+    const menuItems = within(navigationSection)
+      .getAllByRole('button')
+      .map((button) => button.textContent?.trim());
+
+    expect(menuItems[0]).toBe('Zu Tisch');
+    expect(menuItems[1]).toBe('Rezepte');
+  });
+
+  test('clicking "Zu Tisch" triggers onViewChange with startseite', () => {
+    const onViewChange = jest.fn();
+
+    render(
+      <Header
+        currentView="recipes"
+        currentUser={mockCurrentUser}
+        onViewChange={onViewChange}
+        onLogout={() => {}}
+        startseiteEnabled
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Menü öffnen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zu Tisch' }));
+
+    expect(onViewChange).toHaveBeenCalledWith('startseite');
+  });
+
   test('pressing Enter in the search input blurs it (dismisses keyboard)', () => {
     render(
       <Header

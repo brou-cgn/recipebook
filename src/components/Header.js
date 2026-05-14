@@ -30,6 +30,7 @@ const Header = forwardRef(function Header({
   visible = true,
   onSearchChange,
   interactiveLists = [],
+  startseiteEnabled = false,
   onChefkochClick
 }, ref) {
   const [headerSlogan, setHeaderSlogan] = useState('');
@@ -231,6 +232,14 @@ const Header = forwardRef(function Header({
                   {onViewChange && (
                     <div className="menu-section">
                       <div className="menu-section-title">Navigation</div>
+                      {startseiteEnabled && (
+                        <button
+                          className={`menu-item ${currentView === 'startseite' ? 'active' : ''}`}
+                          onClick={() => handleViewChangeInternal('startseite')}
+                        >
+                          Zu Tisch
+                        </button>
+                      )}
                       <button
                         className={`menu-item ${currentView === 'recipes' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('recipes')}
