@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import TrendingCard from './TrendingCard';
@@ -7,6 +7,7 @@ import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
+const NEUE_REZEPTE_TOP = 10;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] }) {
@@ -73,6 +74,26 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
     onViewChange?.('trendingRecipes');
   };
 
+  const neueRezepte = useMemo(() => {
+    const toMs = (ts) => {
+      if (!ts) return 0;
+      if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+      return new Date(ts).getTime();
+    };
+    return [...recipes]
+      .sort((a, b) => toMs(b.createdAt) - toMs(a.createdAt))
+      .slice(0, NEUE_REZEPTE_TOP);
+  }, [recipes]);
+
+  const handleNeueRezepteMehrClick = () => {
+    try {
+      sessionStorage.setItem(SORT_STORAGE_KEY, 'newest');
+    } catch (e) {
+      // sessionStorage might be unavailable in some environments
+    }
+    onViewChange?.('neueRezepte');
+  };
+
   return (
     <div className="startseite-container">
       <StartseitenKarussell
@@ -89,6 +110,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
         )}
         emptyText="Keine Trendrezepte vorhanden."
         onMehr={handleMehrClick}
+      />
+      <StartseitenKarussell
+        title="Neue Rezepte"
+        items={neueRezepte}
+        loading={false}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText="Keine Rezepte vorhanden."
+        onMehr={handleNeueRezepteMehrClick}
       />
     </div>
   );
