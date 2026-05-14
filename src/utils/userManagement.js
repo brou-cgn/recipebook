@@ -793,7 +793,7 @@ export const updateUserName = async (userId, vorname, nachname) => {
  * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
  */
 export const updateUserProfile = async (userId, profileData) => {
-  const { vorname, nachname, email, signatureSatz, defaultWebImportListId } = profileData;
+  const { vorname, nachname, email, signatureSatz, defaultWebImportListId, defaultEverydayClassicsListId } = profileData;
 
   if (!vorname || !nachname || !email) {
     return {
@@ -808,7 +808,8 @@ export const updateUserProfile = async (userId, profileData) => {
       nachname,
       email: email.toLowerCase().trim(),
       signatureSatz: signatureSatz || '',
-      defaultWebImportListId: defaultWebImportListId || ''
+      defaultWebImportListId: defaultWebImportListId || '',
+      defaultEverydayClassicsListId: defaultEverydayClassicsListId || ''
     };
 
     await updateDoc(doc(db, 'users', userId), updates);

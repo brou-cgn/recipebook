@@ -878,6 +878,17 @@ function App() {
     setKuecheOpenPersonalData(true);
   };
 
+  const handleOpenPrivateListRecipes = (groupId) => {
+    handleViewChange('recipes');
+    setRecipeFilters({
+      showDrafts: 'all',
+      selectedCuisines: [],
+      selectedAuthors: [],
+      selectedPrivateLists: [],
+      selectedGroup: groupId || ''
+    });
+  };
+
   const handleCategoryFilterChange = (category) => {
     setCategoryFilter(category);
   };
@@ -1079,6 +1090,7 @@ function App() {
         email: currentUser.email,
         signatureSatz: currentUser.signatureSatz || '',
         defaultWebImportListId: inspirationList.id,
+        defaultEverydayClassicsListId: currentUser.defaultEverydayClassicsListId || '',
       });
 
       if (result.success) {
@@ -1088,6 +1100,27 @@ function App() {
       console.error('Error creating inspiration list:', error);
       alert('Fehler beim Anlegen der Inspirationssammlung. Bitte versuchen Sie es erneut.');
     }
+  };
+
+  const handleAssignEverydayClassicsList = async (listId) => {
+    if (!currentUser) return false;
+    try {
+      const result = await updateUserProfile(currentUser.id, {
+        vorname: currentUser.vorname,
+        nachname: currentUser.nachname,
+        email: currentUser.email,
+        signatureSatz: currentUser.signatureSatz || '',
+        defaultWebImportListId: currentUser.defaultWebImportListId || '',
+        defaultEverydayClassicsListId: listId || '',
+      });
+      if (result.success) {
+        setCurrentUser(prev => ({ ...prev, defaultEverydayClassicsListId: listId || '' }));
+        return true;
+      }
+    } catch (error) {
+      console.error('Error assigning everyday classics list:', error);
+    }
+    return false;
   };
 
   const handleUpdateGroup = async (groupId, updates) => {
@@ -1583,7 +1616,7 @@ function App() {
           allUsers={allUsers}
         />
       ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} />
       ) : (
         // Recipe views
         <>

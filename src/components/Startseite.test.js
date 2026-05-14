@@ -1,9 +1,13 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Startseite from './Startseite';
 
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: jest.fn(),
+}));
+
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: jest.fn(() => Promise.resolve([])),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -35,6 +39,8 @@ const mockRecipes = [
 beforeEach(() => {
   const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
   getRecentRecipeCalls.mockResolvedValue([]);
+  const { getAllCookDates } = require('../utils/recipeCookDates');
+  getAllCookDates.mockResolvedValue([]);
   const { getAllMembersSwipeFlags } = require('../utils/recipeSwipeFlags');
   getAllMembersSwipeFlags.mockResolvedValue({});
   const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext } = require('../utils/customLists');
@@ -57,6 +63,11 @@ describe('Startseite', () => {
   test('shows "Im Trend" section title', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     expect(screen.getByText('Im Trend')).toBeInTheDocument();
+  });
+
+  test('shows "Meine Alltagsklassiker" section title', () => {
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    expect(screen.getByText('Meine Alltagsklassiker')).toBeInTheDocument();
   });
 
   test('shows loading state initially', () => {
@@ -97,14 +108,14 @@ describe('Startseite', () => {
     expect(items.length).toBe(20);
   });
 
-  test('renders "mehr" buttons for all three carousels', async () => {
+  test('renders "mehr" buttons for all four carousels', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    expect(mehrButtons.length).toBe(3);
+    expect(mehrButtons.length).toBe(4);
   });
 
   test('"mehr" button of "Im Trend" calls onViewChange with trendingRecipes', async () => {
@@ -411,5 +422,77 @@ describe('Startseite', () => {
     const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
     fireEvent.click(btn);
     expect(onCreateInspirationList).toHaveBeenCalledTimes(1);
+  });
+
+  test('shows "Alltagsklassiker zuordnen" button when no list is configured', async () => {
+    render(<Startseite currentUser={{ id: 'u1' }} groups={[]} />);
+    expect(await screen.findByRole('button', { name: /Alltagsklassiker zuordnen/i })).toBeInTheDocument();
+  });
+
+  test('opens picker and assigns alltagsklassiker list', async () => {
+    const onAssignEverydayClassicsList = jest.fn(() => Promise.resolve(true));
+    const privateGroup = { id: 'g1', name: 'Liste A', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[privateGroup]}
+        onAssignEverydayClassicsList={onAssignEverydayClassicsList}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Alltagsklassiker zuordnen/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Liste A' }));
+
+    await waitFor(() => {
+      expect(onAssignEverydayClassicsList).toHaveBeenCalledWith('g1');
+    });
+  });
+
+  test('sorts alltagsklassiker by last own cook date descending and limits to 10', async () => {
+    const { getAllCookDates } = require('../utils/recipeCookDates');
+    const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
+      id: `r${idx + 1}`,
+      title: `Rezept ${idx + 1}`,
+      groupId: 'g-classics',
+    }));
+    getAllCookDates.mockImplementation((recipeId) => {
+      const number = Number(recipeId.replace('r', ''));
+      return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
+    });
+
+    const { container } = render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
+        groups={[{ id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: alltagsRecipes.map(r => r.id) }]}
+        recipes={alltagsRecipes}
+      />
+    );
+
+    await screen.findByText('Rezept 11');
+    const sections = container.querySelectorAll('.startseite-trending-section');
+    const alltagsSection = Array.from(sections).find(
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Alltagsklassiker'
+    );
+    expect(alltagsSection).toBeTruthy();
+    const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
+    expect(cards).toHaveLength(10);
+    expect(cards[0]).toHaveTextContent('Rezept 11');
+  });
+
+  test('"mehr" button of "Meine Alltagsklassiker" opens filtered recipe overview', async () => {
+    const onOpenPrivateListRecipes = jest.fn();
+    const alltagsGroup = { id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
+        groups={[alltagsGroup]}
+        onOpenPrivateListRecipes={onOpenPrivateListRecipes}
+      />
+    );
+
+    await screen.findByText('Meine Alltagsklassiker');
+    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
+    fireEvent.click(mehrButtons[3]);
+    expect(onOpenPrivateListRecipes).toHaveBeenCalledWith('g-classics');
   });
 });

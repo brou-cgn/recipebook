@@ -29,6 +29,13 @@ jest.mock('../utils/pushNotifications', () => ({
   requestNotificationPermission: jest.fn(),
 }));
 
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    value: jest.fn(),
+    writable: true,
+  });
+});
+
 describe('PersonalDataPage', () => {
   const mockUser = {
     id: 'user-1',
@@ -82,6 +89,7 @@ describe('PersonalDataPage', () => {
         email: 'john@example.com',
         signatureSatz: 'Guten Appetit!',
         defaultWebImportListId: '',
+        defaultEverydayClassicsListId: '',
       });
     });
   });
@@ -249,13 +257,15 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
 
     expect(screen.getByText('Inspirationssammlung')).toBeInTheDocument();
-    expect(screen.getByText('– Keine Vorauswahl –')).toBeInTheDocument();
+    expect(screen.getByText('Alltagsklassiker')).toBeInTheDocument();
+    expect(screen.getAllByText('– Keine Vorauswahl –').length).toBeGreaterThan(0);
   });
 
   test('does not render Standard-Liste row when privateLists is empty', () => {
     render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={[]} />);
 
     expect(screen.queryByText('Inspirationssammlung')).not.toBeInTheDocument();
+    expect(screen.queryByText('Alltagsklassiker')).not.toBeInTheDocument();
   });
 
   test('shows current selection in the row when defaultWebImportListId is set', () => {
@@ -329,7 +339,7 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
-    expect(screen.getByText('– Keine Vorauswahl –')).toBeInTheDocument();
+    expect(screen.getAllByText('– Keine Vorauswahl –').length).toBeGreaterThan(0);
   });
 
   test('calls onProfileUpdated when list is selected', async () => {
@@ -362,6 +372,21 @@ describe('PersonalDataPage - Standard-Liste für Webimport', () => {
     fireEvent.click(screen.getByRole('button', { name: /Zurück/i }));
     expect(screen.queryByRole('heading', { name: 'Inspirationssammlung' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Chefkoch' })).toBeInTheDocument();
+  });
+
+  test('opens alltagsklassiker picker and saves selected list', async () => {
+    render(<PersonalDataPage currentUser={mockUser} onBack={() => {}} privateLists={privateLists} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Alltagsklassiker/i }));
+    expect(screen.getByRole('heading', { name: 'Alltagsklassiker' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('option', { name: /Wochenplan/i }));
+
+    await waitFor(() => {
+      expect(updateUserProfile).toHaveBeenCalledWith('user-1', expect.objectContaining({
+        defaultEverydayClassicsListId: 'list-2',
+      }));
+    });
   });
 });
 
