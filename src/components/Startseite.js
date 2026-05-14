@@ -217,21 +217,10 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   // Condition: show setup button when no default list or the list is not interactive
   const showInspirationSetupButton = !defaultWebImportList || defaultWebImportList.listKind !== 'interactive';
+  const showInspirationButtonInKochideen = showInspirationSetupButton && onCreateInspirationList;
 
   return (
     <div className="startseite-container">
-      {showInspirationSetupButton && onCreateInspirationList && (
-        <div className="startseite-inspiration-setup">
-          <button
-            type="button"
-            className="startseite-inspiration-btn"
-            onClick={handleCreateInspirationClick}
-            disabled={isCreatingInspiration}
-          >
-            {isCreatingInspiration ? 'Wird angelegt…' : 'Inspirationssammlung anlegen'}
-          </button>
-        </div>
-      )}
       <StartseitenKarussell
         title="Meine Kochideen"
         items={gemeinsameKandidaten}
@@ -244,7 +233,19 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText={kandidatenLeertext}
+        emptyText={showInspirationButtonInKochideen ? '' : kandidatenLeertext}
+        emptyContent={showInspirationButtonInKochideen ? (
+          <div className="startseite-inspiration-setup">
+            <button
+              type="button"
+              className="startseite-inspiration-btn"
+              onClick={handleCreateInspirationClick}
+              disabled={isCreatingInspiration}
+            >
+              {isCreatingInspiration ? 'Wird angelegt…' : 'Inspirationssammlung anlegen'}
+            </button>
+          </div>
+        ) : null}
         onMehr={handleKandidatenMehrClick}
       />
       <StartseitenKarussell

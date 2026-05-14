@@ -10,6 +10,7 @@ import './StartseitenKarussell.css';
  *   loading    {boolean}  Ladezustand – zeigt "Laden…" an
  *   renderItem {Function} (item) => ReactNode – rendert eine einzelne Karte
  *   emptyText       {string}   Text, der bei leerer Liste angezeigt wird
+ *   emptyContent    {ReactNode} Optionaler Inhalt statt emptyText bei leerer Liste
  *   onMehr          {Function} Optionaler Klick-Handler für den „mehr"-Button
  *   mehrText        {string}   Beschriftung des „mehr"-Buttons (Standard: „mehr")
  */
@@ -19,6 +20,7 @@ function StartseitenKarussell({
   loading = false,
   renderItem,
   emptyText = '',
+  emptyContent = null,
   onMehr,
   mehrText = 'mehr',
 }) {
@@ -29,7 +31,7 @@ function StartseitenKarussell({
         {loading ? (
           <div className="startseite-loading">Laden…</div>
         ) : items.length === 0 ? (
-          <div className="startseite-empty">{emptyText}</div>
+          emptyContent || <div className="startseite-empty">{emptyText}</div>
         ) : (
           <div className="startseite-carousel">
             {items.map((item, index) => (
