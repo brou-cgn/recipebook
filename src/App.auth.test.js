@@ -3,7 +3,6 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 
 let mockAuthStateCallback;
-let mockRolePermissions = {};
 const mockRecipeListRender = jest.fn();
 
 jest.mock('./components/RecipeList', () => function MockRecipeList() {
@@ -127,9 +126,11 @@ jest.mock('./utils/userManagement', () => ({
   },
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
-  getRolePermissions: jest.fn(() => Promise.resolve(mockRolePermissions)),
+  getRolePermissions: jest.fn(() => Promise.resolve({})),
   saveFcmToken: () => Promise.resolve(),
 }));
+
+const { getRolePermissions: mockGetRolePermissions } = jest.requireMock('./utils/userManagement');
 
 jest.mock('./utils/pushNotifications', () => ({
   requestNotificationPermission: () => Promise.resolve('default'),
@@ -206,7 +207,7 @@ jest.mock('./utils/recipeSwipeFlags', () => ({
 describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
-    mockRolePermissions = {};
+    mockGetRolePermissions.mockResolvedValue({});
     mockRecipeListRender.mockClear();
     localStorage.clear();
     sessionStorage.clear();
@@ -244,7 +245,7 @@ describe('App authentication view handling', () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
-    mockRolePermissions = { user: { startseite: true } };
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
 
     await act(async () => {
       mockAuthStateCallback({
@@ -266,7 +267,7 @@ describe('App authentication view handling', () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
-    mockRolePermissions = { user: { startseite: true } };
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
 
     await act(async () => {
       mockAuthStateCallback({

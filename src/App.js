@@ -212,8 +212,16 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
     themeToggle: rolePerms.themeToggle ?? false,
     printRecipe: rolePerms.printRecipe ?? true,
-    startseite: rolePerms.startseite ?? user.startseite ?? false,
+    startseite: rolePerms.startseite ?? false,
   };
+}
+
+/**
+ * Determines the initial top-level view after authentication state is known
+ * and role permissions have been applied to the user object.
+ */
+function getInitialViewForUser(user) {
+  return user?.startseite ? 'startseite' : 'recipes';
 }
 
 function App() {
@@ -356,7 +364,7 @@ function App() {
 
         if (!user) {
           setCurrentUser(null);
-          setCurrentView('recipes');
+          setCurrentView(getInitialViewForUser(null));
           setAuthLoading(false);
           return;
         }
@@ -372,7 +380,7 @@ function App() {
 
         if (cancelled) return;
         setCurrentUser(effectiveUser);
-        setCurrentView(effectiveUser.startseite ? 'startseite' : 'recipes');
+        setCurrentView(getInitialViewForUser(effectiveUser));
         if (effectiveUser.requiresPasswordChange) {
           setRequiresPasswordChange(true);
         }
