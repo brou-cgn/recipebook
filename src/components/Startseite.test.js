@@ -70,13 +70,13 @@ describe('Startseite', () => {
 
   test('limits carousel to top 10 recipes', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
-    const manyRecipes = Array.from({ length: 15 }, (_, i) => ({ id: `r${i}`, title: `Rezept ${i}` }));
+    const manyRecipes = Array.from({ length: 11 }, (_, i) => ({ id: `r${i}`, title: `Rezept ${i}` }));
     const calls = manyRecipes.map((r, i) => ({ id: `c${i}`, recipeId: r.id }));
     getRecentRecipeCalls.mockResolvedValue(calls);
     const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={manyRecipes} />);
     await screen.findByText('Rezept 0');
     const items = container.querySelectorAll('.startseite-carousel-item');
-    expect(items.length).toBeLessThanOrEqual(10);
+    expect(items.length).toBe(10);
   });
 
   test('renders "mehr" button', async () => {
