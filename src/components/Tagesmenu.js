@@ -1005,7 +1005,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       ) : allSwiped ? (
         <div className="tagesmenu-results">
           <div className="tagesmenu-results-page-header">
-            <h2 className="tagesmenu-results-page-title">Tagesmenü</h2>
+            <h2 className="tagesmenu-results-page-title">Kochatelier</h2>
           </div>
           {/* Group status section – only shown for lists with multiple members */}
           {listMemberIds.length > 1 && (() => {

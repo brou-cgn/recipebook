@@ -319,7 +319,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       ) : (
         <>
           <div className="kueche-header">
-            <h2>Küche</h2>
+            <h2>Chefkoch &amp; mehr</h2>
           </div>
           <div
             className="kueche-tile kueche-tile--chefkoch"

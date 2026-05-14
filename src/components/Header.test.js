@@ -123,7 +123,7 @@ describe('Header - Hamburger Menu Visibility', () => {
     process.env.REACT_APP_VERSION = originalVersion;
   });
 
-  test('navigation items are ordered as Rezepte, Menüs, Tagesmenü, Küche', () => {
+  test('navigation items are ordered as Kochbuch, Festtafel, Kochatelier, Chefkoch & mehr', () => {
     render(
       <Header
         currentView="recipes"
@@ -143,21 +143,21 @@ describe('Header - Hamburger Menu Visibility', () => {
       .getAllByRole('button')
       .map((button) => button.textContent?.trim());
 
-    const rezeptIndex = menuItems.indexOf('Rezepte');
-    const menusIndex = menuItems.indexOf('Menüs');
-    const tagesmenuIndex = menuItems.indexOf('Tagesmenü');
-    const kuecheIndex = menuItems.indexOf('Küche');
+    const kochbuchIndex = menuItems.indexOf('Kochbuch');
+    const festtafelIndex = menuItems.indexOf('Festtafel');
+    const kochatelierIndex = menuItems.indexOf('Kochatelier');
+    const chefkochIndex = menuItems.indexOf('Chefkoch & mehr');
 
-    expect(rezeptIndex).not.toBe(-1);
-    expect(menusIndex).not.toBe(-1);
-    expect(tagesmenuIndex).not.toBe(-1);
-    expect(kuecheIndex).not.toBe(-1);
-    expect(rezeptIndex).toBeLessThan(menusIndex);
-    expect(menusIndex).toBeLessThan(tagesmenuIndex);
-    expect(tagesmenuIndex).toBeLessThan(kuecheIndex);
+    expect(kochbuchIndex).not.toBe(-1);
+    expect(festtafelIndex).not.toBe(-1);
+    expect(kochatelierIndex).not.toBe(-1);
+    expect(chefkochIndex).not.toBe(-1);
+    expect(kochbuchIndex).toBeLessThan(festtafelIndex);
+    expect(festtafelIndex).toBeLessThan(kochatelierIndex);
+    expect(kochatelierIndex).toBeLessThan(chefkochIndex);
   });
 
-  test('shows "Zu Tisch" as first navigation item when startseite is enabled', () => {
+  test('shows "Küche" as first navigation item when startseite is enabled', () => {
     render(
       <Header
         currentView="startseite"
@@ -178,11 +178,11 @@ describe('Header - Hamburger Menu Visibility', () => {
       .getAllByRole('button')
       .map((button) => button.textContent?.trim());
 
-    expect(menuItems[0]).toBe('Zu Tisch');
-    expect(menuItems[1]).toBe('Rezepte');
+    expect(menuItems[0]).toBe('Küche');
+    expect(menuItems[1]).toBe('Kochbuch');
   });
 
-  test('clicking "Zu Tisch" triggers onViewChange with startseite', () => {
+  test('clicking "Küche" triggers onViewChange with startseite', () => {
     const onViewChange = jest.fn();
 
     render(
@@ -196,7 +196,7 @@ describe('Header - Hamburger Menu Visibility', () => {
     );
 
     fireEvent.click(screen.getByLabelText('Menü öffnen'));
-    fireEvent.click(screen.getByRole('button', { name: 'Zu Tisch' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Küche' }));
 
     expect(onViewChange).toHaveBeenCalledWith('startseite');
   });

@@ -107,7 +107,7 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
   return (
     <div className="menu-list-container">
       <div className="menu-list-header">
-        <h2>{showFavoritesOnly ? 'Meine Menüs' : 'Menüs'}</h2>
+        <h2>{showFavoritesOnly ? 'Meine Festtafel' : 'Festtafel'}</h2>
       </div>
       
       {filteredMenus.length === 0 ? (
@@ -203,8 +203,8 @@ function MenuList({ menus, recipes, onSelectMenu, onAddMenu, onToggleMenuFavorit
         onMouseDown={() => setFavPressed(true)}
         onMouseUp={() => setFavPressed(false)}
         onMouseLeave={() => setFavPressed(false)}
-        title={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
-        aria-label={showFavoritesOnly ? 'Alle Menüs anzeigen' : 'Nur Favoriten anzeigen'}
+        title={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
+        aria-label={showFavoritesOnly ? 'Alle Festtafeln anzeigen' : 'Nur Favoriten anzeigen'}
       >
         {showFavoritesOnly ? (
           isBase64Image(getEffectiveIcon(buttonIcons, 'menuFavoritesButtonActive', isDarkMode)) ? (

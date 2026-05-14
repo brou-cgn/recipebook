@@ -269,9 +269,11 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     if (activePrivateListName) {
       return activePrivateListName;
     }
+    if (!categoryFilter) {
+      return showFavoritesOnly ? 'Mein Kochbuch' : 'Kochbuch';
+    }
     const prefix = showFavoritesOnly ? 'Meine ' : '';
-    const category = categoryFilter || 'Rezepte';
-    return `${prefix}${category}`;
+    return `${prefix}${categoryFilter}`;
   };
 
   const userCanEdit = canEditRecipes(currentUser);
