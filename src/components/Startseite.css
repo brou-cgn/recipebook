@@ -53,6 +53,32 @@
   scroll-snap-align: start;
 }
 
+@media (min-width: 768px) {
+  .startseite-container {
+    max-width: 1120px;
+  }
+
+  .startseite-carousel-item {
+    flex: 0 0 calc((100% - 2rem) / 3);
+    width: calc((100% - 2rem) / 3);
+  }
+
+  .startseite-carousel-item .trending-card-image {
+    height: 132px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .startseite-carousel-item {
+    flex: 0 0 calc((100% - 3rem) / 4);
+    width: calc((100% - 3rem) / 4);
+  }
+
+  .startseite-carousel-item .trending-card-image {
+    height: 148px;
+  }
+}
+
 /* =========================================================
    "mehr" Button
    ========================================================= */
