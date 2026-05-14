@@ -123,7 +123,7 @@ describe('MenuList - dynamic title', () => {
     { id: '1', name: 'Testmenü', menuDate: '2024-01-01', recipeIds: [], isPrivate: false, authorId: 'user1' },
   ];
 
-  test('shows "Menüs" by default', async () => {
+  test('shows "Festtafel" by default', async () => {
     render(
       <MenuList
         menus={menus}
@@ -136,10 +136,10 @@ describe('MenuList - dynamic title', () => {
       />
     );
 
-    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent('Menüs');
+    expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent('Festtafel');
   });
 
-  test('shows "Meine Menüs" when favorites filter is active', async () => {
+  test('shows "Meine Festtafel" when favorites filter is active', async () => {
     menuFavorites.getUserMenuFavorites.mockResolvedValue(['1']);
 
     render(
@@ -157,10 +157,10 @@ describe('MenuList - dynamic title', () => {
     const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
     fireEvent.click(favButton);
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Menüs');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Festtafel');
   });
 
-  test('reverts to "Menüs" when favorites filter is deactivated', async () => {
+  test('reverts to "Festtafel" when favorites filter is deactivated', async () => {
     menuFavorites.getUserMenuFavorites.mockResolvedValue(['1']);
 
     render(
@@ -177,10 +177,10 @@ describe('MenuList - dynamic title', () => {
 
     const favButton = await screen.findByTitle('Nur Favoriten anzeigen');
     fireEvent.click(favButton);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Menüs');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Meine Festtafel');
 
-    const allButton = screen.getByTitle('Alle Menüs anzeigen');
+    const allButton = screen.getByTitle('Alle Festtafeln anzeigen');
     fireEvent.click(allButton);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Menüs');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Festtafel');
   });
 });

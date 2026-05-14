@@ -58,7 +58,7 @@ const mockRecipes = [
 ];
 
 describe('RecipeList - Dynamic Heading', () => {
-  test('shows "Rezepte" when no filters are active', () => {
+  test('shows "Kochbuch" when no filters are active', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -68,10 +68,10 @@ describe('RecipeList - Dynamic Heading', () => {
       />
     );
     
-    expect(screen.getByText('Rezepte')).toBeInTheDocument();
+    expect(screen.getByText('Kochbuch')).toBeInTheDocument();
   });
 
-  test('shows "Meine Rezepte" when favorites filter is active and no category selected', () => {
+  test('shows "Mein Kochbuch" when favorites filter is active and no category selected', () => {
     render(
       <RecipeList
         recipes={mockRecipes}
@@ -82,7 +82,7 @@ describe('RecipeList - Dynamic Heading', () => {
       />
     );
     
-    expect(screen.getByText('Meine Rezepte')).toBeInTheDocument();
+    expect(screen.getByText('Mein Kochbuch')).toBeInTheDocument();
   });
 
   test('shows category name when category filter is active and favorites filter is off', () => {
@@ -177,7 +177,7 @@ describe('RecipeList - Dynamic Heading', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Rezepte');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Kochbuch');
   });
 });
 

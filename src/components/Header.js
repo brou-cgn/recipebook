@@ -237,34 +237,34 @@ const Header = forwardRef(function Header({
                           className={`menu-item ${currentView === 'startseite' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('startseite')}
                         >
-                          Zu Tisch
+                          Küche
                         </button>
                       )}
                       <button
                         className={`menu-item ${currentView === 'recipes' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('recipes')}
                       >
-                        Rezepte
+                        Kochbuch
                       </button>
                       <button
                         className={`menu-item ${currentView === 'menus' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('menus')}
                       >
-                        Menüs
+                        Festtafel
                       </button>
                       {interactiveLists.length > 0 && (
                         <button
                           className={`menu-item ${currentView === 'tagesmenu' ? 'active' : ''}`}
                           onClick={() => handleViewChangeInternal('tagesmenu')}
                         >
-                          Tagesmenü
+                          Kochatelier
                         </button>
                       )}
                       <button
                         className={`menu-item ${currentView === 'kueche' ? 'active' : ''}`}
                         onClick={() => handleViewChangeInternal('kueche')}
                       >
-                        Küche
+                        Chefkoch & mehr
                       </button>
                     </div>
                   )}
