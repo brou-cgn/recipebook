@@ -1817,6 +1817,7 @@ export async function saveStartseitenKandidatenLeertext(text) {
 }
 
 /**
+ * Migrates a print format from layoutVersion 1 (y/h as % of page height) to
  * layoutVersion 2 (all coordinates as % of page width).
  *
  * In v1, element y and h values were stored as percentage of the page HEIGHT.

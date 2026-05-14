@@ -82,7 +82,7 @@ describe('Startseite', () => {
     ]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     expect(await screen.findAllByText('Rezept 2')).not.toHaveLength(0);
-    expect(screen.getAllByText('Rezept 1')).not.toHaveLength(0);
+    expect(screen.getAllByText('Rezept 1').length).toBeGreaterThan(0);
   });
 
   test('limits trending carousel to top 10 recipes', async () => {
