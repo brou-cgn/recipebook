@@ -196,6 +196,26 @@ function matchesPrivateListsFilter(recipe, selectedPrivateLists, groups) {
   });
 }
 
+function applyRolePermissionsToUser(user, permissionsMap = {}) {
+  if (!user) return user;
+  const rolePerms = (permissionsMap && permissionsMap[user.role]) || {};
+  return {
+    ...user,
+    settingsAccess: rolePerms.settingsAccess ?? false,
+    fotoscan: rolePerms.fotoscan ?? false,
+    webimport: rolePerms.webimport ?? false,
+    appCalls: rolePerms.appCalls ?? false,
+    appCallsMenu: rolePerms.appCallsMenu ?? false,
+    recipeImport: rolePerms.recipeImport ?? false,
+    deleteRating: rolePerms.deleteRating ?? false,
+    sortCarousel: rolePerms.sortCarousel ?? false,
+    tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
+    themeToggle: rolePerms.themeToggle ?? false,
+    printRecipe: rolePerms.printRecipe ?? true,
+    startseite: rolePerms.startseite ?? user.startseite ?? false,
+  };
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -329,19 +349,45 @@ function App() {
 
   // Set up Firebase auth state observer
   useEffect(() => {
+    let cancelled = false;
     const unsubscribe = onAuthStateChange((user) => {
-      setCurrentUser(user);
-      if (user && user.requiresPasswordChange) {
-        setRequiresPasswordChange(true);
-      }
-      if (user) {
+      const applyAuthState = async () => {
+        if (cancelled) return;
+
+        if (!user) {
+          setCurrentUser(null);
+          setCurrentView('recipes');
+          setAuthLoading(false);
+          return;
+        }
+
+        let effectiveUser = user;
+        try {
+          const permissionsMap = await getRolePermissions();
+          if (cancelled) return;
+          effectiveUser = applyRolePermissionsToUser(user, permissionsMap);
+        } catch (error) {
+          console.error('Error loading role permissions during auth initialization:', error);
+        }
+
+        if (cancelled) return;
+        setCurrentUser(effectiveUser);
+        setCurrentView(effectiveUser.startseite ? 'startseite' : 'recipes');
+        if (effectiveUser.requiresPasswordChange) {
+          setRequiresPasswordChange(true);
+        }
         setAuthView('login');
-      }
-      setAuthLoading(false);
+        setAuthLoading(false);
+      };
+
+      applyAuthState();
     });
     
     // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   // Load all users when current user is authenticated (for admin features)
@@ -362,24 +408,9 @@ function App() {
     const applyRolePermissions = async () => {
       const perms = await getRolePermissions();
       if (cancelled) return;
-      const rolePerms = perms[currentUser.role] || {};
       setCurrentUser(prev => {
         if (!prev || prev.id !== currentUser.id) return prev;
-        return {
-          ...prev,
-          settingsAccess: rolePerms.settingsAccess ?? false,
-          fotoscan: rolePerms.fotoscan ?? false,
-          webimport: rolePerms.webimport ?? false,
-          appCalls: rolePerms.appCalls ?? false,
-          appCallsMenu: rolePerms.appCallsMenu ?? false,
-          recipeImport: rolePerms.recipeImport ?? false,
-          deleteRating: rolePerms.deleteRating ?? false,
-          sortCarousel: rolePerms.sortCarousel ?? false,
-          tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
-          themeToggle: rolePerms.themeToggle ?? false,
-          printRecipe: rolePerms.printRecipe ?? true,
-          startseite: rolePerms.startseite ?? false,
-        };
+        return applyRolePermissionsToUser(prev, perms);
       });
     };
     applyRolePermissions();
@@ -1363,6 +1394,7 @@ function App() {
         visible={headerVisible}
         onSearchChange={handleSearchChange}
         interactiveLists={interactiveLists}
+        startseiteEnabled={!!currentUser?.startseite}
         onChefkochClick={currentUser ? handleChefkochClick : undefined}
       />
       {isSettingsOpen ? (
@@ -1496,11 +1528,10 @@ function App() {
           currentUser={currentUser}
           allUsers={allUsers}
         />
+      ) : currentView === 'startseite' ? (
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} recipes={recipes} />
       ) : (
-        // Recipe views (or Startseite for users with startseite permission)
-        currentUser?.startseite && currentView !== 'trendingRecipes' ? (
-          <Startseite currentUser={currentUser} onViewChange={handleViewChange} recipes={recipes} />
-        ) : (
+        // Recipe views
         <>
           <RecipeList
             recipes={recipes.filter(recipe => 
@@ -1533,7 +1564,6 @@ function App() {
             onMoveRecipeToPublic={handleMoveRecipeToPublic}
           />
         </>
-        )
       )}
       {requiresPasswordChange && currentUser && (
         <PasswordChangeModal 

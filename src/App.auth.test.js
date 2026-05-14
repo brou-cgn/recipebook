@@ -3,9 +3,16 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 
 let mockAuthStateCallback;
+let mockRolePermissions = {};
+const mockRecipeListRender = jest.fn();
 
 jest.mock('./components/RecipeList', () => function MockRecipeList() {
+  mockRecipeListRender();
   return <div data-testid="recipe-list-view">Recipe List</div>;
+});
+
+jest.mock('./components/Startseite', () => function MockStartseite() {
+  return <div data-testid="startseite-view">Startseite</div>;
 });
 
 jest.mock('./components/RecipeDetail', () => function MockRecipeDetail() {
@@ -19,7 +26,14 @@ jest.mock('./components/RecipeForm', () => function MockRecipeForm() {
 jest.mock('./components/Header', () => {
   const React = require('react');
   return React.forwardRef(function MockHeader(props, ref) {
-    return <div ref={ref} data-testid="header">Header</div>;
+    return (
+      <div ref={ref} data-testid="header" data-current-view={props.currentView}>
+        <button type="button" onClick={() => props.onViewChange?.('recipes')}>go-recipes</button>
+        {props.startseiteEnabled && (
+          <button type="button" onClick={() => props.onViewChange?.('startseite')}>go-startseite</button>
+        )}
+      </div>
+    );
   });
 });
 
@@ -113,7 +127,7 @@ jest.mock('./utils/userManagement', () => ({
   },
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
-  getRolePermissions: () => Promise.resolve({}),
+  getRolePermissions: jest.fn(() => Promise.resolve(mockRolePermissions)),
   saveFcmToken: () => Promise.resolve(),
 }));
 
@@ -192,6 +206,8 @@ jest.mock('./utils/recipeSwipeFlags', () => ({
 describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
+    mockRolePermissions = {};
+    mockRecipeListRender.mockClear();
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -222,5 +238,52 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('login-view')).toBeInTheDocument();
     expect(screen.queryByTestId('register-view')).not.toBeInTheDocument();
+  });
+
+  test('loads startseite directly on login when startseite permission is active', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockRolePermissions = { user: { startseite: true } };
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-2',
+        vorname: 'Start',
+        nachname: 'Seite',
+        email: 'start@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('recipe-list-view')).not.toBeInTheDocument();
+    expect(mockRecipeListRender).not.toHaveBeenCalled();
+  });
+
+  test('recipes navigation stays on recipe list even when startseite is enabled', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockRolePermissions = { user: { startseite: true } };
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-3',
+        vorname: 'Menu',
+        nachname: 'Test',
+        email: 'menu@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
+
+    expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('startseite-view')).not.toBeInTheDocument();
   });
 });
