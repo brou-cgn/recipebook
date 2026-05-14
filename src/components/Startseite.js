@@ -11,6 +11,7 @@ const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
 const NEUE_REZEPTE_TOP = 10;
 const ALLTAGSKLASSIKER_TOP = 10;
+const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes }) {
@@ -333,7 +334,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       )}
       <StartseitenKarussell
         title="Meine Kochideen"
-        items={gemeinsameKandidaten}
+        items={gemeinsameKandidaten.slice(0, KOCHIDEEN_KARUSSELL_MAX)}
         loading={kandidatenLoading}
         renderItem={(recipe) => (
           <TrendingCard
