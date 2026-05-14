@@ -335,6 +335,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const handleRenameCuisineType = async (oldLabel, newLabel) => {
     const trimmed = newLabel.trim();
     if (!trimmed || trimmed === oldLabel) return;
+    if (cuisineTypes.some(t => t !== oldLabel && t.toLowerCase() === trimmed.toLowerCase())) return;
     const updatedTypes = cuisineTypes.map(t => t === oldLabel ? trimmed : t);
     const updatedGroups = cuisineGroups.map(g => ({
       ...g,
@@ -725,7 +726,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
             <div className="settings-section">
               <h3>Kulinarik-Gruppen</h3>
               <p className="section-description">
-                Übergeordnete Kulinariktypen für die Suchfilterung. Untergeordnete Typen müssen aus der Liste der Kulinarik-Typen ausgewählt werden.
+                Übergeordnete Kategorien für die Suchfilterung. Untergeordnete Typen können aus der Liste der Kulinarik-Typen ausgewählt werden.
               </p>
               <div className="list-input">
                 <input

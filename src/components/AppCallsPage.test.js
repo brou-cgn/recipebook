@@ -288,9 +288,11 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
 
     fireEvent.click(await screen.findByText('Kulinariktypen'));
 
+    // 'Spanisch' appears in both the types list item and in the Europäisch group children
     const spanischItems = await screen.findAllByText('Spanisch');
-    expect(spanischItems.length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Italienisch').length).toBeGreaterThan(0);
+    expect(spanischItems.length).toBe(2);
+    expect(screen.getByText('Kulinarik-Typen')).toBeInTheDocument();
+    expect(screen.getAllByText('Italienisch').length).toBeGreaterThanOrEqual(1);
   });
 
   test('Kulinariktypen tab shows existing cuisineGroups', async () => {
