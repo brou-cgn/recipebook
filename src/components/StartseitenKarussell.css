@@ -42,6 +42,7 @@
 
 .startseite-carousel-wrap {
   height: calc(var(--card-image-h) + 3.4rem);
+  overflow: hidden;
 }
 
 .startseite-carousel::-webkit-scrollbar {
