@@ -1498,8 +1498,8 @@ function App() {
         />
       ) : (
         // Recipe views (or Startseite for users with startseite permission)
-        currentUser?.startseite ? (
-          <Startseite currentUser={currentUser} />
+        currentUser?.startseite && currentView !== 'trendingRecipes' ? (
+          <Startseite currentUser={currentUser} onViewChange={handleViewChange} recipes={recipes} />
         ) : (
         <>
           <RecipeList
