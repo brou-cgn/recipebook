@@ -252,11 +252,11 @@ describe('Startseite', () => {
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
   });
 
-  // ─── Gemeinsame Kandidaten carousel ──────────────────────────────────────
+  // ─── Meine Kochideen carousel ──────────────────────────────────────
 
-  test('shows "Gemeinsame Kandidaten" section title', async () => {
+  test('shows "Meine Kochideen" section title', async () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
-    expect(screen.getByText('Gemeinsame Kandidaten')).toBeInTheDocument();
+    expect(screen.getByText('Meine Kochideen')).toBeInTheDocument();
   });
 
   test('shows configurable empty text when no candidates available', async () => {
@@ -271,7 +271,7 @@ describe('Startseite', () => {
     expect(await screen.findByText('Noch keine Kandidaten da.')).toBeInTheDocument();
   });
 
-  test('"mehr" button of "Gemeinsame Kandidaten" calls onViewChange with tagesmenu', async () => {
+  test('"mehr" button of "Meine Kochideen" calls onViewChange with tagesmenu', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     const onViewChange = jest.fn();
@@ -311,10 +311,10 @@ describe('Startseite', () => {
     // Wait for the candidates carousel to finish loading
     await screen.findByText('Apfelkuchen');
 
-    // Find the "Gemeinsame Kandidaten" section and check the order of items
+    // Find the "Meine Kochideen" section and check the order of items
     const sections = container.querySelectorAll('.startseite-trending-section');
     const kandidatenSection = Array.from(sections).find(
-      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Gemeinsame Kandidaten'
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Kochideen'
     );
     expect(kandidatenSection).toBeTruthy();
     const kandidatenCards = kandidatenSection.querySelectorAll('[data-testid="trending-card"]');
@@ -339,7 +339,7 @@ describe('Startseite', () => {
     // The candidates carousel section should show the empty text, not a card
     const sections = container.querySelectorAll('.startseite-trending-section');
     const kandidatenSection = Array.from(sections).find(
-      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Gemeinsame Kandidaten'
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Kochideen'
     );
     expect(kandidatenSection).toBeTruthy();
     expect(kandidatenSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(0);

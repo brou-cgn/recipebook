@@ -108,6 +108,27 @@
   font-style: italic;
 }
 
+/* Fixed min-height variant – keeps the carousel height consistent regardless
+   of how many lines the empty-state text occupies. Heights mirror the
+   TrendingCard image heights at each breakpoint plus the card text area. */
+.startseite-empty--fixed {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .startseite-empty--fixed {
+    min-height: 175px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .startseite-empty--fixed {
+    min-height: 190px;
+  }
+}
+
 [data-theme="dark"] .startseite-loading,
 [data-theme="dark"] .startseite-empty {
   color: #666;

@@ -237,9 +237,10 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         onMehr={handleNeueRezepteMehrClick}
       />
       <StartseitenKarussell
-        title="Gemeinsame Kandidaten"
+        title="Meine Kochideen"
         items={gemeinsameKandidaten}
         loading={kandidatenLoading}
+        fixedEmptyHeight
         renderItem={(recipe) => (
           <TrendingCard
             recipe={recipe}

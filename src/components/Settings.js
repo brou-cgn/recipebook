@@ -2444,9 +2444,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Startseite – Gemeinsame Kandidaten</h3>
+              <h3>Startseite – Meine Kochideen</h3>
               <p className="section-description">
-                Konfigurieren Sie den Hinweistext, der auf der Startseite im Karussell „Gemeinsame Kandidaten" angezeigt wird, wenn keine gemeinsamen Kandidaten vorhanden sind.
+                Konfigurieren Sie den Hinweistext, der auf der Startseite im Karussell „Meine Kochideen" angezeigt wird, wenn keine gemeinsamen Kandidaten vorhanden sind.
               </p>
               <div className="sort-settings-grid">
                 <div className="sort-settings-group">
