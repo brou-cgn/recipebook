@@ -176,6 +176,44 @@ describe('Startseite', () => {
     expect(cards[0].textContent).toBe('Neues Rezept');
   });
 
+  test('Neue Rezepte carousel uses publishedAt over createdAt when present', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const now = Date.now();
+    const recipes = [
+      {
+        id: 'old-created-recent-published',
+        title: 'Neues Rezept',
+        createdAt: new Date(now - 20000).toISOString(),
+        publishedAt: new Date(now).toISOString(),
+      },
+      {
+        id: 'recent-created-no-published',
+        title: 'Altes Rezept',
+        createdAt: new Date(now - 10000).toISOString(),
+      },
+    ];
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const cards = screen.getAllByTestId('trending-card');
+    // Recipe with more recent publishedAt should appear first
+    expect(cards[0].textContent).toBe('Neues Rezept');
+  });
+
+  test('Neue Rezepte carousel falls back to createdAt when publishedAt absent', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const now = Date.now();
+    const recipes = [
+      { id: 'r1', title: 'Altes Rezept', createdAt: new Date(now - 10000).toISOString() },
+      { id: 'r2', title: 'Neues Rezept', createdAt: new Date(now).toISOString() },
+    ];
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const cards = screen.getAllByTestId('trending-card');
+    expect(cards[0].textContent).toBe('Neues Rezept');
+  });
+
   test('"mehr" button of "Neue Rezepte" calls onViewChange with neueRezepte', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);

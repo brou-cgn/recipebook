@@ -10,10 +10,10 @@ import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import RecipeCard from './RecipeCard';
 
 export function isNewRecipe(recipe, sortSettings) {
-  if (!recipe?.createdAt) return false;
+  if (!recipe?.createdAt && !recipe?.publishedAt) return false;
   const days = sortSettings?.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS;
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  const ts = recipe.createdAt;
+  const ts = recipe.publishedAt || recipe.createdAt;
   const ms = typeof ts?.toDate === 'function' ? ts.toDate().getTime() : new Date(ts).getTime();
   return ms >= cutoff;
 }
@@ -39,9 +39,10 @@ function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
   } else if (sortType === 'newest') {
     const days = sortSettings?.newRecipeDays ?? DEFAULT_NEW_RECIPE_DAYS;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const filtered = sorted.filter(g => toMs(g.primaryRecipe?.createdAt) >= cutoff);
+    const effectiveMs = (recipe) => toMs(recipe?.publishedAt || recipe?.createdAt);
+    const filtered = sorted.filter(g => effectiveMs(g.primaryRecipe) >= cutoff);
     filtered.sort((a, b) => {
-      const dateDiff = toMs(b.primaryRecipe?.createdAt) - toMs(a.primaryRecipe?.createdAt);
+      const dateDiff = effectiveMs(b.primaryRecipe) - effectiveMs(a.primaryRecipe);
       if (dateDiff !== 0) return dateDiff;
       const titleA = a.primaryRecipe?.title?.toLowerCase() || '';
       const titleB = b.primaryRecipe?.title?.toLowerCase() || '';
