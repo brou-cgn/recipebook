@@ -207,6 +207,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   return (
     <div className="startseite-container">
       <StartseitenKarussell
+        title="Meine Kochideen"
+        items={gemeinsameKandidaten}
+        loading={kandidatenLoading}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText={kandidatenLeertext}
+        onMehr={handleKandidatenMehrClick}
+      />
+      <StartseitenKarussell
         title="Im Trend"
         items={topRecipes}
         loading={loading}
@@ -235,22 +250,6 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         )}
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
-      />
-      <StartseitenKarussell
-        title="Meine Kochideen"
-        items={gemeinsameKandidaten}
-        loading={kandidatenLoading}
-        fixedEmptyHeight
-        renderItem={(recipe) => (
-          <TrendingCard
-            recipe={recipe}
-            onSelectRecipe={onSelectRecipe}
-            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
-            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
-          />
-        )}
-        emptyText={kandidatenLeertext}
-        onMehr={handleKandidatenMehrClick}
       />
     </div>
   );
