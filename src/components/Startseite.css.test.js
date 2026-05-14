@@ -64,4 +64,10 @@ describe('StartseitenKarussell carousel desktop layout CSS', () => {
 
     expect(mehrContainerRule).toContain('margin-top: 0.4rem;');
   });
+
+  test('prevents empty-state text overflow from escaping carousel wrapper', () => {
+    const wrapRule = getRuleBody(css, '.startseite-carousel-wrap');
+
+    expect(wrapRule).toContain('overflow: hidden;');
+  });
 });
