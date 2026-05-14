@@ -12,6 +12,52 @@ import {
   releaseCuisineProposal,
 } from '../utils/cuisineProposalsFirestore';
 
+function CuisineTypeListItem({ label, onRemove, onRename }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+
+  const handleEditStart = () => {
+    setEditValue(label);
+    setIsEditing(true);
+  };
+
+  const handleEditConfirm = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== label && onRename) {
+      onRename(label, trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter') handleEditConfirm();
+    else if (e.key === 'Escape') setIsEditing(false);
+  };
+
+  return (
+    <div className="list-item">
+      {isEditing ? (
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleEditConfirm}
+          onKeyDown={handleEditKeyDown}
+          autoFocus
+          className="list-item-edit-input"
+          aria-label="Kulinariktyp umbenennen"
+        />
+      ) : (
+        <span>{label}</span>
+      )}
+      {onRename && !isEditing && (
+        <button className="edit-btn" onClick={handleEditStart} title="Umbenennen">✎</button>
+      )}
+      <button className="remove-btn" onClick={onRemove} title="Entfernen">×</button>
+    </div>
+  );
+}
+
 function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
@@ -30,6 +76,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
 
   // Kulinariktypen state
   const [cuisineProposals, setCuisineProposals] = useState([]);
+  const [cuisineTypes, setCuisineTypes] = useState([]);
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [newCuisineName, setNewCuisineName] = useState('');
   const [newCuisineGroup, setNewCuisineGroup] = useState('');
@@ -39,6 +86,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [editingGroup, setEditingGroup] = useState('');
   const [cuisineLoading, setCuisineLoading] = useState(false);
   const [releasingId, setReleasingId] = useState(null);
+
+  // Cuisine list management state
+  const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
+  const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,8 +102,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     getButtonIcons().then((icons) => {
       setAllButtonIcons(icons);
     });
-    // Load cuisine data (groups + proposals)
+    // Load cuisine data (types + groups + proposals)
     getCustomLists().then((lists) => {
+      setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
     }).catch(() => {});
     getCuisineProposals().then((proposals) => {
@@ -249,6 +301,84 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
       return <span className="cuisine-proposal-source-badge cuisine-proposal-source-recipe">Rezept-Formular</span>;
     }
     return <span className="cuisine-proposal-source-badge cuisine-proposal-source-manual">Manuell</span>;
+  };
+
+  // Cuisine list management helpers
+  const saveCuisineLists = async (updatedTypes, updatedGroups) => {
+    try {
+      await saveCustomLists({ cuisineTypes: updatedTypes, cuisineGroups: updatedGroups });
+    } catch (err) {
+      console.error('Error saving cuisine lists:', err);
+    }
+  };
+
+  const handleAddCuisineType = async () => {
+    const name = newCuisineTypeName.trim();
+    if (!name || cuisineTypes.some(t => t.toLowerCase() === name.toLowerCase())) return;
+    const updated = [...cuisineTypes, name];
+    setCuisineTypes(updated);
+    setNewCuisineTypeName('');
+    await saveCuisineLists(updated, cuisineGroups);
+  };
+
+  const handleRemoveCuisineType = async (typeLabel) => {
+    const updatedTypes = cuisineTypes.filter(t => t !== typeLabel);
+    const updatedGroups = cuisineGroups.map(g => ({
+      ...g,
+      children: g.children.filter(c => c !== typeLabel),
+    }));
+    setCuisineTypes(updatedTypes);
+    setCuisineGroups(updatedGroups);
+    await saveCuisineLists(updatedTypes, updatedGroups);
+  };
+
+  const handleRenameCuisineType = async (oldLabel, newLabel) => {
+    const trimmed = newLabel.trim();
+    if (!trimmed || trimmed === oldLabel) return;
+    if (cuisineTypes.some(t => t !== oldLabel && t.toLowerCase() === trimmed.toLowerCase())) return;
+    const updatedTypes = cuisineTypes.map(t => t === oldLabel ? trimmed : t);
+    const updatedGroups = cuisineGroups.map(g => ({
+      ...g,
+      children: g.children.map(c => c === oldLabel ? trimmed : c),
+    }));
+    setCuisineTypes(updatedTypes);
+    setCuisineGroups(updatedGroups);
+    await saveCuisineLists(updatedTypes, updatedGroups);
+  };
+
+  const handleAddCuisineGroup = async () => {
+    const name = newCuisineGroupName.trim();
+    if (!name || cuisineGroups.some(g => g.name === name)) return;
+    const updated = [...cuisineGroups, { name, children: [] }];
+    setCuisineGroups(updated);
+    setNewCuisineGroupName('');
+    await saveCuisineLists(cuisineTypes, updated);
+  };
+
+  const handleRemoveCuisineGroup = async (groupName) => {
+    const updated = cuisineGroups.filter(g => g.name !== groupName);
+    setCuisineGroups(updated);
+    await saveCuisineLists(cuisineTypes, updated);
+  };
+
+  const handleAddChildToGroup = async (groupName, childName) => {
+    const updated = cuisineGroups.map(g =>
+      g.name === groupName && !g.children.includes(childName)
+        ? { ...g, children: [...g.children, childName] }
+        : g
+    );
+    setCuisineGroups(updated);
+    await saveCuisineLists(cuisineTypes, updated);
+  };
+
+  const handleRemoveChildFromGroup = async (groupName, childName) => {
+    const updated = cuisineGroups.map(g =>
+      g.name === groupName
+        ? { ...g, children: g.children.filter(c => c !== childName) }
+        : g
+    );
+    setCuisineGroups(updated);
+    await saveCuisineLists(cuisineTypes, updated);
   };
 
   if (!currentUser?.appCalls) {
@@ -562,108 +692,207 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
           </>
         ) : (
           <>
-            <p className="app-calls-info-text">
-              Hier können neue Kulinariktypen bestehenden Kulinarikgruppen zugeordnet, bearbeitet und freigegeben werden.
-              Freigegebene Kulinariktypen werden in der Hauptliste der Einstellungen ergänzt und erscheinen nicht mehr hier.
-            </p>
-            {cuisineProposals.length === 0 ? (
-              <div className="app-calls-empty">Keine offenen Kulinariktypen vorhanden.</div>
-            ) : (
-              <div className="app-calls-table-container">
-                <table className="app-calls-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Gruppe</th>
-                      <th>Quelle</th>
-                      <th>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cuisineProposals.map(proposal => (
-                      <tr key={proposal.id}>
-                        {editingProposalId === proposal.id ? (
-                          <>
-                            <td>
-                              <input
-                                type="text"
-                                className="cuisine-proposal-edit-input"
-                                value={editingName}
-                                onChange={(e) => setEditingName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveEdit(proposal.id);
-                                  if (e.key === 'Escape') handleCancelEdit();
-                                }}
-                                aria-label="Kulinariktyp Name bearbeiten"
-                                autoFocus
-                              />
-                            </td>
-                            <td>
-                              <select
-                                className="cuisine-proposal-group-select"
-                                value={editingGroup}
-                                onChange={(e) => setEditingGroup(e.target.value)}
-                                aria-label="Kulinarikgruppe bearbeiten"
-                              >
-                                <option value="">Keine Gruppe</option>
-                                {cuisineGroups.map(g => (
-                                  <option key={g.name} value={g.name}>{g.name}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>
-                              {renderSourceBadge(proposal.source)}
-                            </td>
-                            <td className="cuisine-proposal-actions">
-                              <button
-                                className="app-calls-share-btn"
-                                onClick={() => handleSaveEdit(proposal.id)}
-                                disabled={!editingName.trim()}
-                              >
-                                Speichern
-                              </button>
-                              <button
-                                className="cuisine-proposal-cancel-btn"
-                                onClick={handleCancelEdit}
-                              >
-                                Abbrechen
-                              </button>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td>{proposal.name}</td>
-                            <td>{proposal.groupName || <span className="cuisine-proposal-no-group">–</span>}</td>
-                            <td>
-                              {renderSourceBadge(proposal.source)}
-                            </td>
-                            <td className="cuisine-proposal-actions">
-                              <button
-                                className="cuisine-proposal-edit-btn"
-                                onClick={() => handleStartEdit(proposal)}
-                                title="Kulinariktyp bearbeiten"
-                              >
-                                Bearbeiten
-                              </button>
-                              <button
-                                className="cuisine-proposal-release-btn"
-                                onClick={() => handleRelease(proposal)}
-                                disabled={releasingId === proposal.id}
-                                title="Kulinariktyp freigeben"
-                              >
-                                {releasingId === proposal.id ? 'Wird freigegeben…' : '✓ Freigeben'}
-                              </button>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Kulinarik-Typen section */}
+            <div className="settings-section">
+              <h3>Kulinarik-Typen</h3>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCuisineTypeName}
+                  onChange={(e) => setNewCuisineTypeName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineType()}
+                  placeholder="Neuen Kulinarik-Typ hinzufügen..."
+                  aria-label="Neuen Kulinarik-Typ eingeben"
+                />
+                <button onClick={handleAddCuisineType}>Hinzufügen</button>
               </div>
-            )}
-            <div className="app-calls-stats">
-              Gesamt: <strong>{cuisineProposals.length}</strong> {cuisineProposals.length === 1 ? 'offener Kulinariktyp' : 'offene Kulinariktypen'}
+              <div className="list-items">
+                {cuisineTypes.length === 0 ? (
+                  <p className="section-description">Noch keine Kulinarik-Typen vorhanden.</p>
+                ) : (
+                  cuisineTypes.map((type) => (
+                    <CuisineTypeListItem
+                      key={type}
+                      label={type}
+                      onRemove={() => handleRemoveCuisineType(type)}
+                      onRename={handleRenameCuisineType}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Kulinarik-Gruppen section */}
+            <div className="settings-section">
+              <h3>Kulinarik-Gruppen</h3>
+              <p className="section-description">
+                Übergeordnete Kategorien für die Suchfilterung. Untergeordnete Typen können aus der Liste der Kulinarik-Typen ausgewählt werden.
+              </p>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCuisineGroupName}
+                  onChange={(e) => setNewCuisineGroupName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCuisineGroup()}
+                  placeholder="Neue Gruppe hinzufügen (z.B. Asiatische Küche)..."
+                  aria-label="Neue Kulinarik-Gruppe eingeben"
+                />
+                <button onClick={handleAddCuisineGroup}>Hinzufügen</button>
+              </div>
+              <div className="list-items">
+                {cuisineGroups.length === 0 ? (
+                  <p className="section-description">Noch keine Kulinarik-Gruppen vorhanden.</p>
+                ) : (
+                  cuisineGroups.map(group => (
+                    <div key={group.name} className="cuisine-group-item">
+                      <div className="cuisine-group-header">
+                        <strong>{group.name}</strong>
+                        <button
+                          className="remove-btn"
+                          onClick={() => handleRemoveCuisineGroup(group.name)}
+                          title="Gruppe entfernen"
+                        >×</button>
+                      </div>
+                      <div className="cuisine-group-children">
+                        {group.children.map(child => (
+                          <span key={child} className="cuisine-group-child-tag">
+                            {child}
+                            <button
+                              className="remove-child-btn"
+                              onClick={() => handleRemoveChildFromGroup(group.name, child)}
+                              title="Untertyp entfernen"
+                              aria-label={`${child} aus Gruppe entfernen`}
+                            >×</button>
+                          </span>
+                        ))}
+                        <select
+                          className="cuisine-group-add-child"
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) handleAddChildToGroup(group.name, e.target.value);
+                          }}
+                          aria-label={`Untertyp zu ${group.name} hinzufügen`}
+                        >
+                          <option value="">+ Untertyp hinzufügen...</option>
+                          {cuisineTypes
+                            .filter(c => !group.children.includes(c))
+                            .map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Offene Vorschläge section */}
+            <div className="settings-section">
+              <h3>Offene Vorschläge</h3>
+              <p className="app-calls-info-text">
+                Hier können neue Kulinariktypen bestehenden Kulinarikgruppen zugeordnet, bearbeitet und freigegeben werden.
+                Freigegebene Kulinariktypen werden in der Hauptliste ergänzt und erscheinen nicht mehr hier.
+              </p>
+              {cuisineProposals.length === 0 ? (
+                <div className="app-calls-empty">Keine offenen Kulinariktypen vorhanden.</div>
+              ) : (
+                <div className="app-calls-table-container">
+                  <table className="app-calls-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Gruppe</th>
+                        <th>Quelle</th>
+                        <th>Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cuisineProposals.map(proposal => (
+                        <tr key={proposal.id}>
+                          {editingProposalId === proposal.id ? (
+                            <>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="cuisine-proposal-edit-input"
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEdit(proposal.id);
+                                    if (e.key === 'Escape') handleCancelEdit();
+                                  }}
+                                  aria-label="Kulinariktyp Name bearbeiten"
+                                  autoFocus
+                                />
+                              </td>
+                              <td>
+                                <select
+                                  className="cuisine-proposal-group-select"
+                                  value={editingGroup}
+                                  onChange={(e) => setEditingGroup(e.target.value)}
+                                  aria-label="Kulinarikgruppe bearbeiten"
+                                >
+                                  <option value="">Keine Gruppe</option>
+                                  {cuisineGroups.map(g => (
+                                    <option key={g.name} value={g.name}>{g.name}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                {renderSourceBadge(proposal.source)}
+                              </td>
+                              <td className="cuisine-proposal-actions">
+                                <button
+                                  className="app-calls-share-btn"
+                                  onClick={() => handleSaveEdit(proposal.id)}
+                                  disabled={!editingName.trim()}
+                                >
+                                  Speichern
+                                </button>
+                                <button
+                                  className="cuisine-proposal-cancel-btn"
+                                  onClick={handleCancelEdit}
+                                >
+                                  Abbrechen
+                                </button>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td>{proposal.name}</td>
+                              <td>{proposal.groupName || <span className="cuisine-proposal-no-group">–</span>}</td>
+                              <td>
+                                {renderSourceBadge(proposal.source)}
+                              </td>
+                              <td className="cuisine-proposal-actions">
+                                <button
+                                  className="cuisine-proposal-edit-btn"
+                                  onClick={() => handleStartEdit(proposal)}
+                                  title="Kulinariktyp bearbeiten"
+                                >
+                                  Bearbeiten
+                                </button>
+                                <button
+                                  className="cuisine-proposal-release-btn"
+                                  onClick={() => handleRelease(proposal)}
+                                  disabled={releasingId === proposal.id}
+                                  title="Kulinariktyp freigeben"
+                                >
+                                  {releasingId === proposal.id ? 'Wird freigegeben…' : '✓ Freigeben'}
+                                </button>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="app-calls-stats">
+                Gesamt: <strong>{cuisineProposals.length}</strong> {cuisineProposals.length === 1 ? 'offener Kulinariktyp' : 'offene Kulinariktypen'}
+              </div>
             </div>
           </>
         )}
