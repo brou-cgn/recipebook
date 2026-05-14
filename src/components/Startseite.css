@@ -51,6 +51,7 @@
   flex: 0 0 auto;
   width: 200px;
   scroll-snap-align: start;
+  overflow: hidden;
 }
 
 /* =========================================================
