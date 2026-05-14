@@ -38,6 +38,8 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [swipeRevealed, setSwipeRevealed] = useState(false);
 
+  const hasSwipeAction = Boolean(privateLists && privateLists.length > 0);
+
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -60,7 +62,7 @@ function RecipeCard({ recipe, onClick, isFavorite, favoriteActiveIcon, isNew, au
       }
     }
 
-    if (swipeDirectionLocked.current === 'horizontal' && deltaX > SWIPE_HORIZONTAL_THRESHOLD) {
+    if (hasSwipeAction && swipeDirectionLocked.current === 'horizontal' && deltaX > SWIPE_HORIZONTAL_THRESHOLD) {
       isSwiping.current = true;
       e.preventDefault();
       const offset = Math.min(deltaX, MAX_SWIPE_OFFSET);

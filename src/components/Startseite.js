@@ -4,7 +4,7 @@ import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { getDarkModePreference } from '../utils/customLists';
 import RecipeCard from './RecipeCard';
 
-const TRENDING_DAYS = 14;
+const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
