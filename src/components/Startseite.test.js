@@ -11,6 +11,19 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_BUTTON_ICONS: {},
   getButtonIcons: jest.fn(() => Promise.resolve({})),
   getEffectiveIcon: jest.fn((icons, key) => ''),
+  getGroupStatusThresholds: jest.fn(() => Promise.resolve({
+    groupThresholdKandidatMinKandidat: 50,
+    groupThresholdKandidatMaxArchiv: 50,
+    groupThresholdArchivMinArchiv: 50,
+    groupThresholdArchivMaxKandidat: 50,
+  })),
+  getStartseitenKandidatenHinweis: jest.fn(() => Promise.resolve('Aktuell gibt es keine gemeinsamen Kandidaten.')),
+  DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS: 'Aktuell gibt es keine gemeinsamen Kandidaten.',
+}));
+
+jest.mock('../utils/recipeSwipeFlags', () => ({
+  getAllMembersSwipeFlags: jest.fn(() => Promise.resolve({})),
+  computeGroupRecipeStatus: jest.fn(() => null),
 }));
 
 jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
@@ -26,6 +39,9 @@ const mockRecipes = [
 beforeEach(() => {
   const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
   getRecentRecipeCalls.mockResolvedValue([]);
+  const { getAllMembersSwipeFlags, computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
+  getAllMembersSwipeFlags.mockResolvedValue({});
+  computeGroupRecipeStatus.mockReturnValue(null);
 });
 
 describe('Startseite', () => {
@@ -234,5 +250,133 @@ describe('Startseite', () => {
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
     fireEvent.click(mehrButtons[1]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
+  });
+
+  // ─── Gemeinsame Kandidaten carousel ───────────────────────────────────────
+
+  test('does not show "Gemeinsame Kandidaten" carousel when no defaultWebImportListId', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} groups={[]} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    expect(screen.queryByText('Gemeinsame Kandidaten')).not.toBeInTheDocument();
+  });
+
+  test('does not show "Gemeinsame Kandidaten" carousel when list is not found in groups', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'missing-list' }}
+        recipes={mockRecipes}
+        groups={[]}
+      />
+    );
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    expect(screen.queryByText('Gemeinsame Kandidaten')).not.toBeInTheDocument();
+  });
+
+  test('shows "Gemeinsame Kandidaten" carousel when defaultWebImportListId is set', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const groups = [
+      { id: 'list1', ownerId: 'u1', memberIds: ['u2'], recipeIds: [], type: 'private' },
+    ];
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'list1' }}
+        recipes={mockRecipes}
+        groups={groups}
+      />
+    );
+    expect(await screen.findByText('Gemeinsame Kandidaten')).toBeInTheDocument();
+  });
+
+  test('"mehr" button of "Gemeinsame Kandidaten" calls onViewChange with tagesmenu', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const onViewChange = jest.fn();
+    const groups = [
+      { id: 'list1', ownerId: 'u1', memberIds: ['u2'], recipeIds: [], type: 'private' },
+    ];
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'list1' }}
+        recipes={mockRecipes}
+        groups={groups}
+        onViewChange={onViewChange}
+      />
+    );
+    await screen.findByText('Gemeinsame Kandidaten');
+    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
+    fireEvent.click(mehrButtons[mehrButtons.length - 1]);
+    expect(onViewChange).toHaveBeenCalledWith('tagesmenu');
+  });
+
+  test('shows empty hint text when no gemeinsame Kandidaten', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    const { computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    computeGroupRecipeStatus.mockReturnValue(null);
+    const groups = [
+      { id: 'list1', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1', 'r2'], type: 'private' },
+    ];
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'list1' }}
+        recipes={mockRecipes}
+        groups={groups}
+      />
+    );
+    expect(await screen.findByText('Aktuell gibt es keine gemeinsamen Kandidaten.')).toBeInTheDocument();
+  });
+
+  test('shows gemeinsame Kandidaten recipes alphabetically', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    const { computeGroupRecipeStatus, getAllMembersSwipeFlags } = require('../utils/recipeSwipeFlags');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    getAllMembersSwipeFlags.mockResolvedValue({ u1: { r1: 'kandidat', r2: 'kandidat' }, u2: { r1: 'kandidat', r2: 'kandidat' } });
+    computeGroupRecipeStatus.mockImplementation((memberIds, flags, recipeId) => {
+      if (recipeId === 'r1' || recipeId === 'r2') return 'kandidat';
+      return null;
+    });
+    const recipes = [
+      { id: 'r1', title: 'Zebra-Suppe' },
+      { id: 'r2', title: 'Apfel-Kuchen' },
+      { id: 'r3', title: 'Mittelding' },
+    ];
+    const groups = [
+      { id: 'list1', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1', 'r2'], type: 'private' },
+    ];
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'list1' }}
+        recipes={recipes}
+        groups={groups}
+      />
+    );
+    await screen.findByText('Gemeinsame Kandidaten');
+    const cards = await screen.findAllByTestId('trending-card');
+    // Find cards in the Gemeinsame Kandidaten section
+    const kandidatenCards = cards.filter(c => c.textContent === 'Apfel-Kuchen' || c.textContent === 'Zebra-Suppe');
+    expect(kandidatenCards[0].textContent).toBe('Apfel-Kuchen');
+    expect(kandidatenCards[1].textContent).toBe('Zebra-Suppe');
+  });
+
+  test('shows "Gemeinsame Kandidaten" carousel with empty hint when list has only one member', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const groups = [
+      { id: 'list1', ownerId: 'u1', memberIds: [], recipeIds: [], type: 'private' },
+    ];
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'list1' }}
+        recipes={mockRecipes}
+        groups={groups}
+      />
+    );
+    expect(await screen.findByText('Gemeinsame Kandidaten')).toBeInTheDocument();
+    expect(await screen.findByText('Aktuell gibt es keine gemeinsamen Kandidaten.')).toBeInTheDocument();
   });
 });

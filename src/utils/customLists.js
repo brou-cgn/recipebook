@@ -330,6 +330,9 @@ export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
 // S = Σ 1/(1+nᵢ) where nᵢ = number of open votings for recipe i
 export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
 
+// Default hint text shown on the Startseite carousel when no gemeinsame Kandidaten exist
+export const DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS = 'Aktuell gibt es keine gemeinsamen Kandidaten.';
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -844,6 +847,7 @@ export async function getSettings() {
         groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
         maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+        startseitenKandidatenHinweis: settings.startseitenKandidatenHinweis || DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
@@ -885,6 +889,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      startseitenKandidatenHinweis: DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
     
@@ -943,6 +948,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      startseitenKandidatenHinweis: DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
   }
@@ -1782,7 +1788,35 @@ export async function saveMaxKandidatenSchwelle(value) {
 }
 
 /**
- * Migrates a print format from layoutVersion 1 (y/h as % of page height) to
+ * Get the hint text shown on the Startseite carousel when no gemeinsame Kandidaten exist.
+ * @returns {Promise<string>} Promise resolving to the hint text
+ */
+export async function getStartseitenKandidatenHinweis() {
+  const settings = await getSettings();
+  return settings.startseitenKandidatenHinweis || DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS;
+}
+
+/**
+ * Save the hint text shown on the Startseite carousel when no gemeinsame Kandidaten exist.
+ * @param {string} text - The hint text to display
+ * @returns {Promise<void>}
+ */
+export async function saveStartseitenKandidatenHinweis(text) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { startseitenKandidatenHinweis: text });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.startseitenKandidatenHinweis = text;
+    }
+  } catch (error) {
+    console.error('Error saving startseitenKandidatenHinweis:', error);
+    throw error;
+  }
+}
+
+
  * layoutVersion 2 (all coordinates as % of page width).
  *
  * In v1, element y and h values were stored as percentage of the page HEIGHT.

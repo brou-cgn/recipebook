@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenHinweis, saveStartseitenKandidatenHinweis, DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
@@ -319,6 +319,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Maximum candidate score threshold for ending the swipe stack early ('' = disabled)
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState('');
 
+  // Hint text shown on the Startseite carousel when no gemeinsame Kandidaten exist
+  const [startseitenKandidatenHinweis, setStartseitenKandidatenHinweis] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS);
+
   // Print format settings
   const [printFormats, setPrintFormats] = useState(DEFAULT_PRINT_FORMATS);
   const [savingPrintFormats, setSavingPrintFormats] = useState(false);
@@ -379,6 +382,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setGroupThresholdArchivMinArchiv(groupThresholds.groupThresholdArchivMinArchiv);
       setGroupThresholdArchivMaxKandidat(groupThresholds.groupThresholdArchivMaxKandidat);
       setMaxKandidatenSchwelle(maxSchwelle != null ? String(maxSchwelle) : '');
+      const hinweis = await getStartseitenKandidatenHinweis();
+      setStartseitenKandidatenHinweis(hinweis || DEFAULT_STARTSEITEN_KANDIDATEN_HINWEIS);
       const formats = await getPrintFormats();
       setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
@@ -639,6 +644,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         groupThresholdArchivMaxKandidat,
       });
       await saveMaxKandidatenSchwelle(maxKandidatenSchwelle !== '' ? parseFloat(maxKandidatenSchwelle) : null);
+      await saveStartseitenKandidatenHinweis(startseitenKandidatenHinweis);
 
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
@@ -2432,6 +2438,27 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       }}
                     />
                     <span className="sort-settings-hint">Sobald S ≥ Grenzwert, wird der Swipe-Stapel beendet. Leer = kein automatischer Abbruch.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Startseite – Gemeinsame Kandidaten</h3>
+              <p className="section-description">
+                Konfigurieren Sie den Hinweistext, der auf der Startseite im Karussell „Gemeinsame Kandidaten“ angezeigt wird, wenn keine gemeinsamen Kandidaten vorhanden sind.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <div className="sort-settings-field">
+                    <label htmlFor="startseitenKandidatenHinweis">Hinweistext:</label>
+                    <input
+                      id="startseitenKandidatenHinweis"
+                      type="text"
+                      value={startseitenKandidatenHinweis}
+                      onChange={(e) => setStartseitenKandidatenHinweis(e.target.value)}
+                    />
+                    <span className="sort-settings-hint">Wird angezeigt, wenn aktuell keine gemeinsamen Kandidaten in der Standard-Liste für Webimport vorhanden sind.</span>
                   </div>
                 </div>
               </div>
