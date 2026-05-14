@@ -330,6 +330,9 @@ export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
 // S = Σ 1/(1+nᵢ) where nᵢ = number of open votings for recipe i
 export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
 
+// Default empty-state text for the Gemeinsame Kandidaten carousel on the Startseite
+export const DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT = 'Keine gemeinsamen Kandidaten vorhanden.';
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -844,6 +847,7 @@ export async function getSettings() {
         groupThresholdArchivMinArchiv: settings.groupThresholdArchivMinArchiv ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
         maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+        startseitenKandidatenLeertext: settings.startseitenKandidatenLeertext ?? DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
@@ -885,6 +889,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
     
@@ -943,6 +948,7 @@ export async function getSettings() {
       groupThresholdArchivMinArchiv: DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV,
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
+      startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
   }
@@ -1777,6 +1783,35 @@ export async function saveMaxKandidatenSchwelle(value) {
     }
   } catch (error) {
     console.error('Error saving max kandidaten schwelle:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite.
+ * @returns {Promise<string>} Promise resolving to the text
+ */
+export async function getStartseitenKandidatenLeertext() {
+  const settings = await getSettings();
+  return settings.startseitenKandidatenLeertext ?? DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT;
+}
+
+/**
+ * Save the configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite.
+ * @param {string} text - The text to display when no candidates are available
+ * @returns {Promise<void>}
+ */
+export async function saveStartseitenKandidatenLeertext(text) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { startseitenKandidatenLeertext: text });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.startseitenKandidatenLeertext = text;
+    }
+  } catch (error) {
+    console.error('Error saving startseitenKandidatenLeertext:', error);
     throw error;
   }
 }

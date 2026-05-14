@@ -3,18 +3,26 @@ import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
+import { getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
 const NEUE_REZEPTE_TOP = 10;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [] }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+
+  // State for Gemeinsame Kandidaten carousel
+  const [allMembersFlags, setAllMembersFlags] = useState({});
+  const [groupThresholds, setGroupThresholds] = useState({});
+  const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
+  const [kandidatenLoading, setKandidatenLoading] = useState(true);
+  const [kandidatenLeertext, setKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +72,107 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
     window.addEventListener('darkModeChange', handler);
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
+
+  // Load settings and swipe flags for Gemeinsame Kandidaten carousel
+  useEffect(() => {
+    let cancelled = false;
+    const loadKandidatenSettings = async () => {
+      try {
+        const [thresholds, schwelle, leertext] = await Promise.all([
+          getGroupStatusThresholds(),
+          getMaxKandidatenSchwelle(),
+          getStartseitenKandidatenLeertext(),
+        ]);
+        if (cancelled) return;
+        setGroupThresholds(thresholds);
+        setMaxKandidatenSchwelle(schwelle);
+        setKandidatenLeertext(leertext);
+      } catch (error) {
+        // Keep defaults on error
+      }
+    };
+    loadKandidatenSettings();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Derive the default web import list from groups and currentUser
+  const defaultWebImportList = useMemo(() => {
+    const listId = currentUser?.defaultWebImportListId;
+    if (!listId) return null;
+    return groups.find(g => g.id === listId) || null;
+  }, [groups, currentUser?.defaultWebImportListId]);
+
+  // Load allMembersFlags whenever the default web import list changes
+  useEffect(() => {
+    let cancelled = false;
+    if (!defaultWebImportList) {
+      setAllMembersFlags({});
+      setKandidatenLoading(false);
+      return;
+    }
+    setKandidatenLoading(true);
+    const memberIds = Array.isArray(defaultWebImportList.memberIds) ? defaultWebImportList.memberIds : [];
+    const allMemberIds = defaultWebImportList.ownerId
+      ? [...new Set([defaultWebImportList.ownerId, ...memberIds])]
+      : memberIds;
+    if (allMemberIds.length === 0) {
+      setAllMembersFlags({});
+      setKandidatenLoading(false);
+      return;
+    }
+    getAllMembersSwipeFlags(defaultWebImportList.id, allMemberIds)
+      .then((flags) => {
+        if (cancelled) return;
+        setAllMembersFlags(flags);
+        setKandidatenLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAllMembersFlags({});
+        setKandidatenLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [defaultWebImportList]);
+
+  // Compute list member IDs for the default web import list
+  const listMemberIds = useMemo(() => {
+    if (!defaultWebImportList) return [];
+    const memberIds = Array.isArray(defaultWebImportList.memberIds) ? defaultWebImportList.memberIds : [];
+    return defaultWebImportList.ownerId
+      ? [...new Set([defaultWebImportList.ownerId, ...memberIds])]
+      : memberIds;
+  }, [defaultWebImportList]);
+
+  // All recipes belonging to the default web import list
+  const allListRecipes = useMemo(() => {
+    if (!defaultWebImportList) return [];
+    const groupRecipeIds = Array.isArray(defaultWebImportList.recipeIds) ? defaultWebImportList.recipeIds : [];
+    return recipes.filter(
+      (r) => r.groupId === defaultWebImportList.id || groupRecipeIds.includes(r.id)
+    );
+  }, [recipes, defaultWebImportList]);
+
+  // Precompute group status for each recipe in the list
+  const groupStatusByRecipeId = useMemo(() => {
+    if (listMemberIds.length <= 1) return {};
+    return Object.fromEntries(
+      allListRecipes.map((r) => {
+        const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds, currentUser?.id);
+        return [r.id, status];
+      })
+    );
+  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds, currentUser?.id]);
+
+  // Gemeinsame Kandidaten: all recipes with group status 'kandidat', sorted alphabetically
+  const gemeinsameKandidaten = useMemo(() => {
+    if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
+    const pool = allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === 'kandidat');
+    return [...pool].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+  }, [allListRecipes, listMemberIds, groupStatusByRecipeId, maxKandidatenSchwelle]);
+
+  const handleKandidatenMehrClick = () => {
+    onViewChange?.('tagesmenu');
+  };
 
   const handleMehrClick = () => {
     try {
@@ -126,6 +235,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] })
         )}
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
+      />
+      <StartseitenKarussell
+        title="Gemeinsame Kandidaten"
+        items={gemeinsameKandidaten}
+        loading={kandidatenLoading}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText={kandidatenLeertext}
+        onMehr={handleKandidatenMehrClick}
       />
     </div>
   );

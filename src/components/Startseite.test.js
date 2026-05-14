@@ -9,8 +9,17 @@ jest.mock('../utils/recipeCallsFirestore', () => ({
 jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
   DEFAULT_BUTTON_ICONS: {},
+  DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT: 'Keine gemeinsamen Kandidaten vorhanden.',
   getButtonIcons: jest.fn(() => Promise.resolve({})),
   getEffectiveIcon: jest.fn((icons, key) => ''),
+  getGroupStatusThresholds: jest.fn(() => Promise.resolve({})),
+  getMaxKandidatenSchwelle: jest.fn(() => Promise.resolve(null)),
+  getStartseitenKandidatenLeertext: jest.fn(() => Promise.resolve('Keine gemeinsamen Kandidaten vorhanden.')),
+}));
+
+jest.mock('../utils/recipeSwipeFlags', () => ({
+  getAllMembersSwipeFlags: jest.fn(() => Promise.resolve({})),
+  computeGroupRecipeStatus: jest.fn(() => null),
 }));
 
 jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
@@ -26,6 +35,12 @@ const mockRecipes = [
 beforeEach(() => {
   const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
   getRecentRecipeCalls.mockResolvedValue([]);
+  const { getAllMembersSwipeFlags } = require('../utils/recipeSwipeFlags');
+  getAllMembersSwipeFlags.mockResolvedValue({});
+  const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext } = require('../utils/customLists');
+  getGroupStatusThresholds.mockResolvedValue({});
+  getMaxKandidatenSchwelle.mockResolvedValue(null);
+  getStartseitenKandidatenLeertext.mockResolvedValue('Keine gemeinsamen Kandidaten vorhanden.');
 });
 
 describe('Startseite', () => {
@@ -66,8 +81,8 @@ describe('Startseite', () => {
       { id: 'c3', recipeId: 'r1' },
     ]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
-    expect(await screen.findByText('Rezept 2')).toBeInTheDocument();
-    expect(screen.getByText('Rezept 1')).toBeInTheDocument();
+    expect(await screen.findAllByText('Rezept 2')).not.toHaveLength(0);
+    expect(screen.getAllByText('Rezept 1').length).toBeGreaterThan(0);
   });
 
   test('limits trending carousel to top 10 recipes', async () => {
@@ -82,13 +97,14 @@ describe('Startseite', () => {
     expect(items.length).toBe(20);
   });
 
-  test('renders "mehr" buttons for both carousels', async () => {
+  test('renders "mehr" buttons for all three carousels', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    expect(mehrButtons.length).toBe(2);
+    expect(mehrButtons.length).toBe(3);
   });
 
   test('"mehr" button of "Im Trend" calls onViewChange with trendingRecipes', async () => {
@@ -234,5 +250,98 @@ describe('Startseite', () => {
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
     fireEvent.click(mehrButtons[1]);
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
+  });
+
+  // ─── Gemeinsame Kandidaten carousel ──────────────────────────────────────
+
+  test('shows "Gemeinsame Kandidaten" section title', async () => {
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    expect(screen.getByText('Gemeinsame Kandidaten')).toBeInTheDocument();
+  });
+
+  test('shows configurable empty text when no candidates available', async () => {
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    expect(await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.')).toBeInTheDocument();
+  });
+
+  test('uses custom empty text from settings', async () => {
+    const { getStartseitenKandidatenLeertext } = require('../utils/customLists');
+    getStartseitenKandidatenLeertext.mockResolvedValue('Noch keine Kandidaten da.');
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    expect(await screen.findByText('Noch keine Kandidaten da.')).toBeInTheDocument();
+  });
+
+  test('"mehr" button of "Gemeinsame Kandidaten" calls onViewChange with tagesmenu', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const onViewChange = jest.fn();
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
+    fireEvent.click(mehrButtons[2]);
+    expect(onViewChange).toHaveBeenCalledWith('tagesmenu');
+  });
+
+  test('shows empty state when no defaultWebImportList is set', async () => {
+    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} groups={[]} />);
+    expect(await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.')).toBeInTheDocument();
+  });
+
+  test('shows candidates from default web import list sorted alphabetically', async () => {
+    const { getMaxKandidatenSchwelle, getGroupStatusThresholds } = require('../utils/customLists');
+    const { getAllMembersSwipeFlags, computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
+    getMaxKandidatenSchwelle.mockResolvedValue(5);
+    getGroupStatusThresholds.mockResolvedValue({});
+    getAllMembersSwipeFlags.mockResolvedValue({
+      'u1': { 'r1': 'kandidat', 'r2': 'kandidat', 'r3': 'kandidat' },
+      'u2': { 'r1': 'kandidat', 'r2': 'kandidat', 'r3': 'kandidat' },
+    });
+    computeGroupRecipeStatus.mockReturnValue('kandidat');
+
+    const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1', 'r2', 'r3'] };
+    const user = { id: 'u1', defaultWebImportListId: 'g1' };
+    const recipes = [
+      { id: 'r1', title: 'Zitronenhuhn', groupId: 'g1' },
+      { id: 'r2', title: 'Apfelkuchen', groupId: 'g1' },
+      { id: 'r3', title: 'Möhrensuppe', groupId: 'g1' },
+    ];
+
+    const { container } = render(<Startseite currentUser={user} recipes={recipes} groups={[group]} />);
+
+    // Wait for the candidates carousel to finish loading
+    await screen.findByText('Apfelkuchen');
+
+    // Find the "Gemeinsame Kandidaten" section and check the order of items
+    const sections = container.querySelectorAll('.startseite-trending-section');
+    const kandidatenSection = Array.from(sections).find(
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Gemeinsame Kandidaten'
+    );
+    expect(kandidatenSection).toBeTruthy();
+    const kandidatenCards = kandidatenSection.querySelectorAll('[data-testid="trending-card"]');
+    const titles = Array.from(kandidatenCards).map((c) => c.textContent);
+    expect(titles).toEqual(['Apfelkuchen', 'Möhrensuppe', 'Zitronenhuhn']);
+  });
+
+  test('does not show candidates when maxKandidatenSchwelle is null', async () => {
+    const { getMaxKandidatenSchwelle } = require('../utils/customLists');
+    const { computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
+    getMaxKandidatenSchwelle.mockResolvedValue(null);
+    computeGroupRecipeStatus.mockReturnValue('kandidat');
+
+    const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1'] };
+    const user = { id: 'u1', defaultWebImportListId: 'g1' };
+    const recipes = [{ id: 'r1', title: 'Rezept A', groupId: 'g1' }];
+
+    const { container } = render(<Startseite currentUser={user} recipes={recipes} groups={[group]} />);
+
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+
+    // The candidates carousel section should show the empty text, not a card
+    const sections = container.querySelectorAll('.startseite-trending-section');
+    const kandidatenSection = Array.from(sections).find(
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Gemeinsame Kandidaten'
+    );
+    expect(kandidatenSection).toBeTruthy();
+    expect(kandidatenSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(0);
   });
 });
