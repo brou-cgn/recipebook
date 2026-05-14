@@ -1,23 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
-import { getDarkModePreference } from '../utils/customLists';
-import RecipeCard from './RecipeCard';
+import TrendingCard from './TrendingCard';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, recipes = [] }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [] }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,10 +61,9 @@ function Startseite({ currentUser, onViewChange, recipes = [] }) {
           <div className="startseite-carousel">
             {topRecipes.map(recipe => (
               <div key={recipe.id} className="startseite-carousel-item">
-                <RecipeCard
+                <TrendingCard
                   recipe={recipe}
-                  currentUser={currentUser}
-                  isDarkMode={isDarkMode}
+                  onSelectRecipe={onSelectRecipe}
                 />
               </div>
             ))}
