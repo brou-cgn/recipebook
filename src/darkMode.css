@@ -1361,9 +1361,9 @@
 }
 
 [data-theme="dark"] .app-calls-tab.active {
-  background: #402C1C;
-  color: #fff;
-  border-color: #402C1C;
+  background: transparent;
+  color: #DF7A00;
+  border-bottom-color: #DF7A00;
 }
 
 [data-theme="dark"] .app-calls-tabs {
@@ -1912,6 +1912,15 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .list-item {
+  background: #2a2a2a;
+  border-color: #555;
+}
+
+[data-theme="dark"] .list-item span {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .list-item-edit-input {
   background: #2a2a2a;
   color: #e8e8e8;
@@ -1919,7 +1928,7 @@
 }
 
 [data-theme="dark"] .list-input button {
-  background: linear-gradient(135deg, #5a3c2c 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
 }
 
 /* ---- GroupDetail additional ---- */
