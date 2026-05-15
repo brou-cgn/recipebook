@@ -501,13 +501,13 @@ describe('Startseite', () => {
       'Rezept 01',
       'Rezept 03',
       'Rezept 07',
+      'Rezept 11',
       'Rezept 02',
       'Rezept 04',
       'Rezept 05',
       'Rezept 06',
       'Rezept 08',
       'Rezept 09',
-      'Rezept 10',
     ]);
   });
 

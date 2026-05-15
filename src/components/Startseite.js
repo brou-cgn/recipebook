@@ -296,8 +296,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         const isFavoriteB = favoriteRecipeIds.includes(b.id);
         if (isFavoriteA !== isFavoriteB) return isFavoriteA ? -1 : 1;
 
-        const cookDateA = Number.isFinite(lastOwnCookDateByRecipeId[a.id]) ? lastOwnCookDateByRecipeId[a.id] : Number.MAX_SAFE_INTEGER;
-        const cookDateB = Number.isFinite(lastOwnCookDateByRecipeId[b.id]) ? lastOwnCookDateByRecipeId[b.id] : Number.MAX_SAFE_INTEGER;
+        const cookDateA = Number.isFinite(lastOwnCookDateByRecipeId[a.id]) ? lastOwnCookDateByRecipeId[a.id] : 0;
+        const cookDateB = Number.isFinite(lastOwnCookDateByRecipeId[b.id]) ? lastOwnCookDateByRecipeId[b.id] : 0;
         const cookDateDiff = cookDateA - cookDateB;
         if (cookDateDiff !== 0) return cookDateDiff;
 
