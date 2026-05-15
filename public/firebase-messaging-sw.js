@@ -30,11 +30,6 @@ function initFirebase(config) {
     messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
-      // notification+data payloads are auto-displayed by browser/OS.
-      if (payload.notification) {
-        return;
-      }
-
       const notificationId = payload.data?.notificationId;
       if (notificationId && shownNotifications.has(notificationId)) {
         return;
@@ -45,9 +40,9 @@ function initFirebase(config) {
       }
 
       const notificationTitle =
-        payload.data?.title || payload.notification?.title || 'RecipeBook';
+        payload.notification?.title || payload.data?.title || 'RecipeBook';
       const notificationOptions = {
-        body: payload.data?.body || payload.notification?.body || '',
+        body: payload.notification?.body || payload.data?.body || '',
         icon: '/logo192.png',
         badge: '/favicon.ico',
         tag: notificationId || 'default',
