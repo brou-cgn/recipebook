@@ -30,6 +30,9 @@ function initFirebase(config) {
     messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
+      // Even when payload.notification exists, we must explicitly show a
+      // notification here because onBackgroundMessage handling suppresses
+      // automatic browser/OS display.
       const notificationId = payload.data?.notificationId;
       if (notificationId && shownNotifications.has(notificationId)) {
         return;
