@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './Startseite.css';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { getAllCookDates } from '../utils/recipeCookDates';
+import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
@@ -23,6 +24,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [showAlltagsklassikerPicker, setShowAlltagsklassikerPicker] = useState(false);
   const [isAssigningAlltagsklassiker, setIsAssigningAlltagsklassiker] = useState(false);
   const [lastOwnCookDateByRecipeId, setLastOwnCookDateByRecipeId] = useState({});
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
 
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlags, setAllMembersFlags] = useState({});
@@ -241,6 +243,26 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   useEffect(() => {
     let cancelled = false;
+    if (!currentUser?.id) {
+      setFavoriteRecipeIds((prev) => (prev.length > 0 ? [] : prev));
+      return;
+    }
+
+    getUserFavorites(currentUser.id)
+      .then((favoriteIds) => {
+        if (cancelled) return;
+        setFavoriteRecipeIds(Array.isArray(favoriteIds) ? favoriteIds : []);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFavoriteRecipeIds((prev) => (prev.length > 0 ? [] : prev));
+      });
+
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
     if (!currentUser?.id || allAlltagsklassikerRecipes.length === 0) {
       setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
       return;
@@ -269,9 +291,18 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   const alltagsklassikerRecipes = useMemo(() => (
     [...allAlltagsklassikerRecipes]
-      .sort((a, b) => (lastOwnCookDateByRecipeId[b.id] || 0) - (lastOwnCookDateByRecipeId[a.id] || 0))
+      .sort((a, b) => {
+        const isFavoriteA = favoriteRecipeIds.includes(a.id);
+        const isFavoriteB = favoriteRecipeIds.includes(b.id);
+        if (isFavoriteA !== isFavoriteB) return isFavoriteA ? -1 : 1;
+
+        const cookDateDiff = (lastOwnCookDateByRecipeId[a.id] || 0) - (lastOwnCookDateByRecipeId[b.id] || 0);
+        if (cookDateDiff !== 0) return cookDateDiff;
+
+        return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+      })
       .slice(0, ALLTAGSKLASSIKER_TOP)
-  ), [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId]);
+  ), [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId, favoriteRecipeIds]);
 
   const handleAssignAlltagsklassikerList = async (listId) => {
     if (!onAssignEverydayClassicsList || isAssigningAlltagsklassiker) return;
