@@ -10,6 +10,10 @@ jest.mock('../utils/recipeCookDates', () => ({
   getAllCookDates: jest.fn(() => Promise.resolve([])),
 }));
 
+jest.mock('../utils/userFavorites', () => ({
+  getUserFavorites: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
   DEFAULT_BUTTON_ICONS: {},
@@ -41,6 +45,8 @@ beforeEach(() => {
   getRecentRecipeCalls.mockResolvedValue([]);
   const { getAllCookDates } = require('../utils/recipeCookDates');
   getAllCookDates.mockResolvedValue([]);
+  const { getUserFavorites } = require('../utils/userFavorites');
+  getUserFavorites.mockResolvedValue([]);
   const { getAllMembersSwipeFlags } = require('../utils/recipeSwipeFlags');
   getAllMembersSwipeFlags.mockResolvedValue({});
   const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext } = require('../utils/customLists');
@@ -457,15 +463,18 @@ describe('Startseite', () => {
     });
   });
 
-  test('sorts alltagsklassiker by last own cook date descending and limits to 10', async () => {
+  test('sorts alltagsklassiker with favorites first and then by last own cook date ascending', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
+    const { getUserFavorites } = require('../utils/userFavorites');
     const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
       id: `r${idx + 1}`,
-      title: `Rezept ${idx + 1}`,
+      title: `Rezept ${String(idx + 1).padStart(2, '0')}`,
       groupId: 'g-classics',
     }));
+    getUserFavorites.mockResolvedValue(['r3', 'r1', 'r7']);
     getAllCookDates.mockImplementation((recipeId) => {
       const number = Number(recipeId.replace('r', ''));
+      if (recipeId === 'r11') return Promise.resolve([]);
       return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
     });
 
@@ -477,15 +486,29 @@ describe('Startseite', () => {
       />
     );
 
-    await screen.findByText('Rezept 11');
     const sections = container.querySelectorAll('.startseite-trending-section');
     const alltagsSection = Array.from(sections).find(
       (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Alltagsklassiker'
     );
     expect(alltagsSection).toBeTruthy();
+    await waitFor(() => {
+      expect(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(10);
+    });
     const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
     expect(cards).toHaveLength(10);
-    expect(cards[0]).toHaveTextContent('Rezept 11');
+    const titles = Array.from(cards).map((card) => card.textContent);
+    expect(titles).toEqual([
+      'Rezept 01',
+      'Rezept 03',
+      'Rezept 07',
+      'Rezept 02',
+      'Rezept 04',
+      'Rezept 05',
+      'Rezept 06',
+      'Rezept 08',
+      'Rezept 09',
+      'Rezept 10',
+    ]);
   });
 
   test('"mehr" button of "Meine Alltagsklassiker" opens filtered recipe overview', async () => {
