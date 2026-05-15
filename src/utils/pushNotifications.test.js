@@ -192,7 +192,7 @@ describe('pushNotifications', () => {
   });
 
   describe('setupForegroundMessageListener', () => {
-    it('prefers title and body from payload.data', async () => {
+    it('prefers title and body from payload.data and always uses service worker notifications', async () => {
       const NotificationMock = jest.fn();
       NotificationMock.permission = 'granted';
       NotificationMock.requestPermission = jest.fn();
@@ -211,8 +211,10 @@ describe('pushNotifications', () => {
         data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
         notification: { title: 'Notification Title', body: 'Notification Body' },
       });
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(NotificationMock).toHaveBeenCalledWith('Data Title', {
+      expect(NotificationMock).not.toHaveBeenCalled();
+      expect(mockShowNotification).toHaveBeenCalledWith('Data Title', {
         body: 'Data Body',
         icon: '/logo192.png',
         tag: 'test-id-1',

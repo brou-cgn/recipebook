@@ -94,10 +94,8 @@ export const requestNotificationPermission = async () => {
 
 /**
  * Set up a foreground message listener.
- * When the app is visible in the browser, FCM delivers notification+data
- * payloads here instead of auto-showing them via the browser.  We manually
- * show a notification via the service worker so the user is always informed,
- * regardless of whether the app is in the foreground or background.
+ * We always show notifications via the service worker so behavior stays
+ * consistent across browsers (including iOS Safari PWA).
  * Deduplication via notificationId/tag prevents double-display.
  *
  * @returns {Function} Unsubscribe function
@@ -130,25 +128,15 @@ export const setupForegroundMessageListener = () => {
 
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
-            const isVisible = document.visibilityState === 'visible';
             if (Notification.permission === 'granted') {
-              if (isVisible) {
-                new Notification(title, {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title, {
                   body,
                   icon: '/logo192.png',
                   tag: notificationId || 'default',
                   data: payload.data || {},
                 });
-              } else {
-                navigator.serviceWorker.ready.then((registration) => {
-                  registration.showNotification(title, {
-                    body,
-                    icon: '/logo192.png',
-                    tag: notificationId || 'default',
-                    data: payload.data || {},
-                  });
-                });
-              }
+              });
             }
           });
         });
