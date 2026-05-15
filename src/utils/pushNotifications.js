@@ -130,15 +130,25 @@ export const setupForegroundMessageListener = () => {
 
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
+            const isVisible = document.visibilityState === 'visible';
             if (Notification.permission === 'granted') {
-              navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(title, {
+              if (isVisible) {
+                new Notification(title, {
                   body,
                   icon: '/logo192.png',
                   tag: notificationId || 'default',
                   data: payload.data || {},
                 });
-              });
+              } else {
+                navigator.serviceWorker.ready.then((registration) => {
+                  registration.showNotification(title, {
+                    body,
+                    icon: '/logo192.png',
+                    tag: notificationId || 'default',
+                    data: payload.data || {},
+                  });
+                });
+              }
             }
           });
         });
