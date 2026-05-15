@@ -94,9 +94,11 @@ export const requestNotificationPermission = async () => {
 
 /**
  * Set up a foreground message listener.
- * When the app is open in the browser, FCM delivers the payload here instead
- * of via the service worker.  We show a simple browser notification if
- * Notification permission is already granted.
+ * When the app is visible in the browser, FCM delivers notification+data
+ * payloads here instead of auto-showing them via the browser.  We manually
+ * show a notification via the service worker so the user is always informed,
+ * regardless of whether the app is in the foreground or background.
+ * Deduplication via notificationId/tag prevents double-display.
  *
  * @returns {Function} Unsubscribe function
  */
@@ -113,14 +115,10 @@ export const setupForegroundMessageListener = () => {
         .then((messagingInstance) => {
           if (!messagingInstance) return;
           unsubscribe = onMessage(messagingInstance, (payload) => {
-            // Only show a notification when the app is actually in the foreground.
-            // When the app is hidden or closed the service worker handles delivery,
-            // so returning early here prevents duplicate notifications on iOS.
-            /*if (document.visibilityState !== 'visible') {
-              return;
-            }*/
-            const isVisible = document.visibilityState === 'visible';
-
+            // onMessage fires when the app is in the foreground (page visible).
+            // For notification+data payloads in the background, the browser
+            // auto-shows the notification and onMessage is not called, so there
+            // is no risk of duplicates here.
             const notificationId = payload.data?.notificationId;
             if (notificationId && shownNotificationIds.has(notificationId)) {
               return;
@@ -132,15 +130,7 @@ export const setupForegroundMessageListener = () => {
 
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
-            /*if (Notification.permission === 'granted') {
-              // eslint-disable-next-line no-new
-              new Notification(title, {
-                body,
-                icon: '/logo192.png',
-                tag: notificationId || 'default',
-              });
-            }*/
-            if (Notification.permission === 'granted' && !isVisible) {
+            if (Notification.permission === 'granted') {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(title, {
                   body,
