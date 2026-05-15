@@ -116,9 +116,10 @@ export const setupForegroundMessageListener = () => {
             // Only show a notification when the app is actually in the foreground.
             // When the app is hidden or closed the service worker handles delivery,
             // so returning early here prevents duplicate notifications on iOS.
-            if (document.visibilityState !== 'visible') {
+            /*if (document.visibilityState !== 'visible') {
               return;
-            }
+            }*/
+            const isVisible = document.visibilityState === 'visible';
 
             const notificationId = payload.data?.notificationId;
             if (notificationId && shownNotificationIds.has(notificationId)) {
@@ -131,12 +132,22 @@ export const setupForegroundMessageListener = () => {
 
             const title = payload.data?.title || payload.notification?.title || 'RecipeBook';
             const body = payload.data?.body || payload.notification?.body || '';
-            if (Notification.permission === 'granted') {
+            /*if (Notification.permission === 'granted') {
               // eslint-disable-next-line no-new
               new Notification(title, {
                 body,
                 icon: '/logo192.png',
                 tag: notificationId || 'default',
+              });
+            }*/
+            if (Notification.permission === 'granted' && !isVisible) {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title, {
+                  body,
+                  icon: '/logo192.png',
+                  tag: notificationId || 'default',
+                  data: payload.data || {},
+                });
               });
             }
           });
