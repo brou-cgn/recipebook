@@ -192,7 +192,7 @@ describe('pushNotifications', () => {
   });
 
   describe('setupForegroundMessageListener', () => {
-    it('prefers title and body from payload.data', async () => {
+    it('displays notification via service worker using payload.data', async () => {
       const NotificationMock = jest.fn();
       NotificationMock.permission = 'granted';
       NotificationMock.requestPermission = jest.fn();
@@ -211,10 +211,13 @@ describe('pushNotifications', () => {
         data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
         notification: { title: 'Notification Title', body: 'Notification Body' },
       });
+      await global.navigator.serviceWorker.ready;
 
-      expect(NotificationMock).toHaveBeenCalledWith('Data Title', {
+      expect(NotificationMock).not.toHaveBeenCalled();
+      expect(mockShowNotification).toHaveBeenCalledWith('Data Title', {
         body: 'Data Body',
         icon: '/logo192.png',
+        badge: '/favicon.ico',
         tag: 'test-id-1',
         data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
       });
@@ -237,12 +240,13 @@ describe('pushNotifications', () => {
       onMessageHandler({
         data: { title: 'Hidden Title', body: 'Hidden Body', notificationId: 'hidden-id' },
       });
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await global.navigator.serviceWorker.ready;
 
       expect(NotificationMock).not.toHaveBeenCalled();
       expect(mockShowNotification).toHaveBeenCalledWith('Hidden Title', {
         body: 'Hidden Body',
         icon: '/logo192.png',
+        badge: '/favicon.ico',
         tag: 'hidden-id',
         data: { title: 'Hidden Title', body: 'Hidden Body', notificationId: 'hidden-id' },
       });

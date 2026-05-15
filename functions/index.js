@@ -3357,13 +3357,11 @@ exports.notifyPrivateListMembers = onCall(
       const notificationTitle = `Neues Rezept in „${listName}"`;
       const notificationBody = `„${recipeTitle}" wurde ${actionLabel}.`;
       const notificationPayload = {
-        notification: {
-          title: notificationTitle,
-          body: notificationBody,
-        },
         data: {
           title: notificationTitle,
           body: notificationBody,
+          icon: '/logo192.png',
+          badge: '/favicon.ico',
           groupId,
           recipeId,
           action: action || 'added',
@@ -3386,12 +3384,6 @@ exports.notifyPrivateListMembers = onCall(
           },
         },
         webpush: {
-          notification: {
-            title: notificationTitle,
-            body: notificationBody,
-            icon: '/logo192.png',
-            badge: '/favicon.ico',
-          },
           fcm_options: {
             link: '/',
           },
