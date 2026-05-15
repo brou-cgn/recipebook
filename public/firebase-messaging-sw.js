@@ -30,6 +30,11 @@ function initFirebase(config) {
     messaging = firebase.messaging();
 
     messaging.onBackgroundMessage((payload) => {
+      // notification+data payloads are auto-displayed by browser/OS.
+      if (payload.notification) {
+        return;
+      }
+
       const notificationId = payload.data?.notificationId;
       if (notificationId && shownNotifications.has(notificationId)) {
         return;

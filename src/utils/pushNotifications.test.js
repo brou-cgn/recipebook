@@ -3,6 +3,7 @@
  */
 
 let mockMessagingPromise = Promise.resolve({});
+let mockShowNotification;
 
 // Mock firebase module
 jest.mock('../firebase', () => ({
@@ -44,6 +45,7 @@ describe('pushNotifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockMessagingPromise = Promise.resolve({});
+    mockShowNotification = jest.fn();
 
     // Default: messaging is supported
     mockIsSupported.mockResolvedValue(true);
@@ -63,7 +65,10 @@ describe('pushNotifications', () => {
           installing: null,
           waiting: null,
         }),
-        ready: Promise.resolve({ active: { postMessage: jest.fn() } }),
+        ready: Promise.resolve({
+          active: { postMessage: jest.fn() },
+          showNotification: mockShowNotification,
+        }),
       },
       writable: true,
       configurable: true,
@@ -211,6 +216,34 @@ describe('pushNotifications', () => {
         body: 'Data Body',
         icon: '/logo192.png',
         tag: 'test-id-1',
+      });
+    });
+
+    it('uses service worker notifications when app is not visible', async () => {
+      const NotificationMock = jest.fn();
+      NotificationMock.permission = 'granted';
+      NotificationMock.requestPermission = jest.fn();
+      global.Notification = NotificationMock;
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'hidden',
+      });
+
+      setupForegroundMessageListener();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const onMessageHandler = mockOnMessage.mock.calls[0][1];
+      onMessageHandler({
+        data: { title: 'Hidden Title', body: 'Hidden Body', notificationId: 'hidden-id' },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(NotificationMock).not.toHaveBeenCalled();
+      expect(mockShowNotification).toHaveBeenCalledWith('Hidden Title', {
+        body: 'Hidden Body',
+        icon: '/logo192.png',
+        tag: 'hidden-id',
+        data: { title: 'Hidden Title', body: 'Hidden Body', notificationId: 'hidden-id' },
       });
     });
   });

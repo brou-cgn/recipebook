@@ -3354,27 +3354,44 @@ exports.notifyPrivateListMembers = onCall(
       const listName = groupData.name || 'einer privaten Liste';
       const actionLabel =
         action === 'created' ? 'erstellt' : 'hinzugefügt';
+      const notificationTitle = `Neues Rezept in „${listName}"`;
+      const notificationBody = `„${recipeTitle}" wurde ${actionLabel}.`;
       const notificationPayload = {
         notification: {
-          title: `Neues Rezept in „${listName}"`,
-          body: `„${recipeTitle}" wurde ${actionLabel}.`,
+          title: notificationTitle,
+          body: notificationBody,
         },
         data: {
-          title: `Neues Rezept in „${listName}"`,
-          body: `„${recipeTitle}" wurde ${actionLabel}.`,
+          title: notificationTitle,
+          body: notificationBody,
           groupId,
           recipeId,
           action: action || 'added',
           notificationId: `${groupId}-${recipeId}-${Date.now()}`,
         },
         apns: {
+          headers: {
+            'apns-push-type': 'alert',
+            'apns-priority': '10',
+          },
           payload: {
             aps: {
-              'content-available': 1,
+              alert: {
+                title: notificationTitle,
+                body: notificationBody,
+              },
+              sound: 'default',
+              'mutable-content': 1,
             },
           },
         },
         webpush: {
+          notification: {
+            title: notificationTitle,
+            body: notificationBody,
+            icon: '/logo192.png',
+            badge: '/favicon.ico',
+          },
           fcm_options: {
             link: '/',
           },
