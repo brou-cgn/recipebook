@@ -216,6 +216,7 @@ describe('pushNotifications', () => {
         body: 'Data Body',
         icon: '/logo192.png',
         tag: 'test-id-1',
+        data: { title: 'Data Title', body: 'Data Body', notificationId: 'test-id-1' },
       });
     });
 

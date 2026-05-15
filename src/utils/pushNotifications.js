@@ -137,6 +137,7 @@ export const setupForegroundMessageListener = () => {
                   body,
                   icon: '/logo192.png',
                   tag: notificationId || 'default',
+                  data: payload.data || {},
                 });
               } else {
                 navigator.serviceWorker.ready.then((registration) => {
