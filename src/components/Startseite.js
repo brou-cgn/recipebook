@@ -244,7 +244,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   useEffect(() => {
     let cancelled = false;
     if (!currentUser?.id) {
-      setFavoriteRecipeIds((prev) => (prev.length > 0 ? [] : prev));
+      setFavoriteRecipeIds([]);
       return;
     }
 
@@ -255,7 +255,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       })
       .catch(() => {
         if (cancelled) return;
-        setFavoriteRecipeIds((prev) => (prev.length > 0 ? [] : prev));
+        setFavoriteRecipeIds([]);
       });
 
     return () => { cancelled = true; };
@@ -278,7 +278,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             if (Number.isNaN(currentDate?.getTime?.())) return latest;
             return !latest || currentDate > latest ? currentDate : latest;
           }, null);
-          nextMap[recipe.id] = lastOwn ? lastOwn.getTime() : 0;
+          nextMap[recipe.id] = lastOwn ? lastOwn.getTime() : null;
         });
         setLastOwnCookDateByRecipeId(nextMap);
       })
@@ -296,7 +296,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         const isFavoriteB = favoriteRecipeIds.includes(b.id);
         if (isFavoriteA !== isFavoriteB) return isFavoriteA ? -1 : 1;
 
-        const cookDateDiff = (lastOwnCookDateByRecipeId[a.id] || 0) - (lastOwnCookDateByRecipeId[b.id] || 0);
+        const cookDateA = Number.isFinite(lastOwnCookDateByRecipeId[a.id]) ? lastOwnCookDateByRecipeId[a.id] : Number.MAX_SAFE_INTEGER;
+        const cookDateB = Number.isFinite(lastOwnCookDateByRecipeId[b.id]) ? lastOwnCookDateByRecipeId[b.id] : Number.MAX_SAFE_INTEGER;
+        const cookDateDiff = cookDateA - cookDateB;
         if (cookDateDiff !== 0) return cookDateDiff;
 
         return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });

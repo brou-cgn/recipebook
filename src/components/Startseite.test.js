@@ -474,6 +474,7 @@ describe('Startseite', () => {
     getUserFavorites.mockResolvedValue(['r3', 'r1', 'r7']);
     getAllCookDates.mockImplementation((recipeId) => {
       const number = Number(recipeId.replace('r', ''));
+      if (recipeId === 'r11') return Promise.resolve([]);
       return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
     });
 
@@ -485,12 +486,14 @@ describe('Startseite', () => {
       />
     );
 
-    expect(await screen.findAllByText('Rezept 10')).not.toHaveLength(0);
     const sections = container.querySelectorAll('.startseite-trending-section');
     const alltagsSection = Array.from(sections).find(
       (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Alltagsklassiker'
     );
     expect(alltagsSection).toBeTruthy();
+    await waitFor(() => {
+      expect(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(10);
+    });
     const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
     expect(cards).toHaveLength(10);
     const titles = Array.from(cards).map((card) => card.textContent);
