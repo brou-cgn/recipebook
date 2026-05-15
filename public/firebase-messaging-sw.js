@@ -46,8 +46,8 @@ function initFirebase(config) {
         payload.notification?.title || payload.data?.title || 'RecipeBook';
       const notificationOptions = {
         body: payload.notification?.body || payload.data?.body || '',
-        icon: '/logo192.png',
-        badge: '/favicon.ico',
+        icon: payload.data?.icon || '/logo192.png',
+        badge: payload.data?.badge || '/favicon.ico',
         tag: notificationId || 'default',
         data: payload.data || {},
       };

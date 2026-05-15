@@ -132,7 +132,8 @@ export const setupForegroundMessageListener = () => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(title, {
                   body,
-                  icon: '/logo192.png',
+                  icon: payload.data?.icon || '/logo192.png',
+                  badge: payload.data?.badge || '/favicon.ico',
                   tag: notificationId || 'default',
                   data: payload.data || {},
                 });
