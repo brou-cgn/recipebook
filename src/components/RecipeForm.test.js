@@ -495,7 +495,7 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(speisekategorieField).toHaveAttribute('multiple');
   });
 
-  test('Speisekategorie has a pill-based search selection without creating new categories', async () => {
+  test('prevents creation of new meal categories in pill-based search', async () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',

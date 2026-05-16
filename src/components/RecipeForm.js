@@ -554,7 +554,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   const handleMealCategoryPillToggle = (name) => {
     setSpeisekategorie((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+      prev.includes(name) ? prev.filter((category) => category !== name) : [...prev, name]
     );
   };
 
