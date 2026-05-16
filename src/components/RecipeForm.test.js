@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { useSensor, TouchSensor } from '@dnd-kit/core';
 import RecipeForm from './RecipeForm';
 
 // Mock the utility modules
@@ -2102,6 +2103,93 @@ describe('RecipeForm - Drag and Drop', () => {
     // Should have 4 drag handles
     const dragHandles = screen.getAllByLabelText('Schritt verschieben');
     expect(dragHandles).toHaveLength(4);
+  });
+
+  test('uses touch sensor activation constraint to avoid accidental drags', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    expect(useSensor).toHaveBeenCalledWith(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    });
+  });
+
+  test('renders drag handle as right sibling outside ingredient input wrapper', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    const ingredientInput = screen.getByPlaceholderText('Zutat 1');
+    const handle = screen.getByLabelText('Zutat verschieben');
+    const row = ingredientInput.closest('.form-list-item');
+    const inputWrapper = ingredientInput.closest('.input-wrapper');
+
+    expect(row).not.toBeNull();
+    expect(inputWrapper).not.toBeNull();
+    expect(inputWrapper.contains(handle)).toBe(false);
+    expect(row.lastElementChild).toBe(handle);
+  });
+
+  test('renders drag handle as right sibling outside step input wrapper', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    const stepInput = screen.getByPlaceholderText('Schritt 1');
+    const handle = screen.getByLabelText('Schritt verschieben');
+    const row = stepInput.closest('.form-list-item');
+    const inputWrapper = stepInput.closest('.input-wrapper');
+
+    expect(row).not.toBeNull();
+    expect(inputWrapper).not.toBeNull();
+    expect(inputWrapper.contains(handle)).toBe(false);
+    expect(row.lastElementChild).toBe(handle);
   });
 });
 

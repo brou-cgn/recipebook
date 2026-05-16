@@ -99,16 +99,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <div className={`input-with-handle${canRemove ? ' has-remove-btn' : ''}`}>
-        <button
-          type="button"
-          className="drag-handle"
-          {...attributes}
-          {...listeners}
-          aria-label="Zutat verschieben"
-        >
-          ⋮⋮
-        </button>
+      <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
         <input
           ref={inputRef}
           type="text"
@@ -135,6 +126,15 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           </button>
         )}
       </div>
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Zutat verschieben"
+      >
+        ⋮⋮
+      </button>
       {showContextMenu && (
         <>
           <div
@@ -227,16 +227,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
       style={style}
       className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
-      <div className={`input-with-handle${canRemove ? ' has-remove-btn' : ''}`}>
-        <button
-          type="button"
-          className="drag-handle"
-          {...attributes}
-          {...listeners}
-          aria-label="Schritt verschieben"
-        >
-          ⋮⋮
-        </button>
+      <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
         <textarea
           ref={textareaRef}
           value={text}
@@ -261,6 +252,15 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           </button>
         )}
       </div>
+      <button
+        type="button"
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Schritt verschieben"
+      >
+        ⋮⋮
+      </button>
       {showContextMenu && (
         <>
           <div
@@ -369,7 +369,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   // Drag and drop sensors with touch support
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(TouchSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
