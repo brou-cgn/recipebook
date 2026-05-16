@@ -495,6 +495,34 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(speisekategorieField).toHaveAttribute('multiple');
   });
 
+  test('does not render selected Speisekategorie banner in edit view', async () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    const speisekategorieField = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieField.options.length).toBeGreaterThan(0));
+
+    speisekategorieField.options[0].selected = true;
+    fireEvent.change(speisekategorieField);
+
+    expect(screen.queryByText(/Ausgewählt:/i)).not.toBeInTheDocument();
+  });
+
   test('prevents creation of new meal categories in pill-based search', async () => {
     const regularUser = {
       id: 'user-1',
