@@ -314,6 +314,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [newCuisineInput, setNewCuisineInput] = useState('');
   const [newCuisineLoading, setNewCuisineLoading] = useState(false);
   const [newCuisineDuplicateHint, setNewCuisineDuplicateHint] = useState(false);
+  const [mealCategorySearchInput, setMealCategorySearchInput] = useState('');
   const [allUsers, setAllUsers] = useState([]);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -347,6 +348,19 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     const inactive = visibleCuisinePills.filter((name) => !kulinarik.includes(name));
     return [...active, ...inactive];
   }, [visibleCuisinePills, kulinarik]);
+
+  const visibleMealCategoryPills = useMemo(() => {
+    const allCategories = customLists.mealCategories || [];
+    const term = mealCategorySearchInput.trim().toLowerCase();
+    if (!term) return allCategories;
+    return allCategories.filter((name) => name.toLowerCase().includes(term));
+  }, [customLists.mealCategories, mealCategorySearchInput]);
+
+  const orderedMealCategoryPills = useMemo(() => {
+    const active = visibleMealCategoryPills.filter((name) => speisekategorie.includes(name));
+    const inactive = visibleMealCategoryPills.filter((name) => !speisekategorie.includes(name));
+    return [...active, ...inactive];
+  }, [visibleMealCategoryPills, speisekategorie]);
 
   // Auto-open WebImportModal when initialWebImportUrl is provided on mount
   useEffect(() => {
@@ -536,6 +550,12 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     } finally {
       setNewCuisineLoading(false);
     }
+  };
+
+  const handleMealCategoryPillToggle = (name) => {
+    setSpeisekategorie((prev) =>
+      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+    );
   };
 
   const handleAddIngredient = () => {
@@ -1329,8 +1349,37 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
         <div className="form-group">
           <label htmlFor="speisekategorie">Speisekategorie (Mehrfachauswahl möglich)</label>
+          <div className="recipe-form-mobile-only">
+            <input
+              type="text"
+              id="speisekategorie-search"
+              className="recipe-form-cuisine-search"
+              value={mealCategorySearchInput}
+              onChange={(e) => setMealCategorySearchInput(e.target.value)}
+              placeholder="Speisekategorien suchen …"
+              aria-label="Speisekategorien suchen"
+              autoComplete="off"
+            />
+            {orderedMealCategoryPills.length > 0 && (
+              <div className="recipe-form-cuisine-grid">
+                {orderedMealCategoryPills.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`recipe-form-cuisine-pill${speisekategorie.includes(category) ? ' active' : ''}`}
+                    onClick={() => handleMealCategoryPillToggle(category)}
+                    aria-pressed={speisekategorie.includes(category)}
+                    title={speisekategorie.includes(category) ? 'Auswahl aufheben' : `${category} auswählen`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <select
             id="speisekategorie"
+            className="recipe-form-desktop-only"
             multiple
             value={speisekategorie}
             onChange={(e) => {
