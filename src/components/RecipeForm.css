@@ -306,6 +306,14 @@
   margin: 4px 0 0;
 }
 
+.recipe-form-mobile-only {
+  display: none;
+}
+
+.recipe-form-desktop-only {
+  display: block;
+}
+
 
 .form-group input:focus,
 .form-group select:focus {
@@ -1092,6 +1100,14 @@
 
 /* Mobile: Larger FAB button with pressed animation */
 @media (max-width: 768px) {
+  .recipe-form-mobile-only {
+    display: block;
+  }
+
+  .recipe-form-desktop-only {
+    display: none;
+  }
+
   .save-fab-button {
     width: 56px;
     height: 56px;

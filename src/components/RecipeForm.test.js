@@ -495,6 +495,35 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(speisekategorieField).toHaveAttribute('multiple');
   });
 
+  test('prevents creation of new meal categories in pill-based search', async () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    const speisekategorieSearch = screen.getByLabelText('Speisekategorien suchen');
+    expect(speisekategorieSearch.tagName).toBe('INPUT');
+    expect(speisekategorieSearch).toHaveAttribute('type', 'text');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Appetizer' })).toBeInTheDocument());
+
+    fireEvent.change(speisekategorieSearch, { target: { value: 'Neue Kategorie' } });
+    expect(screen.queryByRole('button', { name: 'Neue Kategorie' })).not.toBeInTheDocument();
+  });
+
   test('can select multiple cuisines in Kulinarik field', async () => {
     const regularUser = {
       id: 'user-1',
@@ -592,6 +621,45 @@ describe('RecipeForm - Multi-Select Fields', () => {
     fireEvent.submit(document.querySelector('.recipe-form'));
 
     // Check that onSave was called with multiple categories
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        speisekategorie: expect.arrayContaining(['Appetizer', 'Main Course']),
+      })
+    ));
+  });
+
+  test('can select multiple categories with Speisekategorie pills', async () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Appetizer' })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Appetizer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Main Course' }));
+
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Recipe' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
     await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         speisekategorie: expect.arrayContaining(['Appetizer', 'Main Course']),
