@@ -473,48 +473,20 @@
 
 .form-list-item {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
-.input-with-handle {
+.input-wrapper {
   position: relative;
   flex: 1;
   display: flex;
   align-items: stretch;
 }
-
-.input-with-handle .drag-handle {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 1;
-  border-radius: 6px 0 0 6px;
-  border-right: none;
-  min-width: 36px;
-  width: 36px;
-  opacity: 0;
-  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.form-list-item:hover .input-with-handle .drag-handle,
-.form-list-item.dragging .input-with-handle .drag-handle {
-  opacity: 1;
-}
-
-/* Always show drag handle on touch devices since hover is not available */
-@media (hover: none) {
-  .input-with-handle .drag-handle {
-    opacity: 1;
-  }
-}
-
-.input-with-handle input,
-.input-with-handle textarea {
+.input-wrapper input,
+.input-wrapper textarea {
   flex: 1;
-  padding-left: calc(36px + 0.5rem);
   width: 100%;
 }
 
@@ -601,27 +573,29 @@
 }
 
 /* Extra padding for input/textarea when inline remove button is present */
-.input-with-handle.has-remove-btn input,
-.input-with-handle.has-remove-btn textarea {
+.input-wrapper.has-remove-btn input,
+.input-wrapper.has-remove-btn textarea {
   padding-right: 1.5rem;
 }
 
 /* Drag and drop styles */
 .drag-handle {
   background: #f5f5f5;
-  color: #666;
+  color: #999;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: grab;
-  padding: 0.5rem 0.4rem;
-  font-size: 1rem;
+  font-size: 1.2rem;
   line-height: 1;
-  transition: all 0.2s ease;
-  min-width: 36px;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.15s ease;
+  min-width: 44px;
+  width: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: pan-y;
+  touch-action: none;
+  flex-shrink: 0;
+  opacity: 1;
 }
 
 .drag-handle:hover {
@@ -630,9 +604,32 @@
   border-color: #402C1C;
 }
 
-.drag-handle:active {
+.drag-handle:active,
+.drag-handle:focus-visible {
   cursor: grabbing;
-  background: #ddd;
+  background: #e0dbd5;
+  color: #402C1C;
+  outline: 2px solid #402C1C;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .drag-handle {
+    opacity: 0;
+  }
+
+  .form-list-item:hover .drag-handle,
+  .form-list-item.dragging .drag-handle {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .drag-handle {
+    opacity: 1;
+    background: #f0ece8;
+    color: #666;
+  }
 }
 
 /* Context menu styles */
