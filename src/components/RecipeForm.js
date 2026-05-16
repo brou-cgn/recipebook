@@ -1392,11 +1392,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
-          {speisekategorie.length > 0 && (
-            <div className="selected-items">
-              Ausgewählt: {speisekategorie.join(', ')}
-            </div>
-          )}
         </div>
 
         <div className="form-group">
