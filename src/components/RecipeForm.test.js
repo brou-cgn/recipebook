@@ -2161,6 +2161,36 @@ describe('RecipeForm - Drag and Drop', () => {
     expect(inputWrapper.contains(handle)).toBe(false);
     expect(row.lastElementChild).toBe(handle);
   });
+
+  test('renders drag handle as right sibling outside step input wrapper', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    const stepInput = screen.getByPlaceholderText('Schritt 1');
+    const handle = screen.getByLabelText('Schritt verschieben');
+    const row = stepInput.closest('.form-list-item');
+    const inputWrapper = stepInput.closest('.input-wrapper');
+
+    expect(row).not.toBeNull();
+    expect(inputWrapper).not.toBeNull();
+    expect(inputWrapper.contains(handle)).toBe(false);
+    expect(row.lastElementChild).toBe(handle);
+  });
 });
 
 describe('RecipeForm - Heading Functionality', () => {

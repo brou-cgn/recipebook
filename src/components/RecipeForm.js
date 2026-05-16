@@ -97,7 +97,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item form-list-item-row ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
       <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
         <input
@@ -225,7 +225,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
     <div
       ref={setNodeRef}
       style={style}
-      className={`form-list-item form-list-item-row ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
+      className={`form-list-item ${isDragging ? 'dragging' : ''} ${isHeading ? 'heading-item' : ''}`}
     >
       <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
         <textarea
