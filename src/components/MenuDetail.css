@@ -125,6 +125,28 @@
   background: #1b5e20;
 }
 
+.menu-edit-button,
+.menu-delete-button {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.menu-edit-button {
+  color: #402C1C;
+  border-color: #402C1C;
+}
+
+.menu-delete-button {
+  color: #f44336;
+  border-color: #f44336;
+}
+
 .favorite-button.favorite-active {
   color: white;
   border-color: #DF7A00;
@@ -300,7 +322,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .action-buttons {
     flex: 1;
     flex-direction: row;
