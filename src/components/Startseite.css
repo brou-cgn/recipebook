@@ -77,7 +77,7 @@
   background: rgba(245, 158, 42, 0.15);
 }
 
-
+.startseite-alltagsklassiker-picker-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);

@@ -22,6 +22,15 @@ describe('Startseite container CSS', () => {
 
     expect(containerRule).toContain('max-width: 1120px;');
   });
+
+  test('defines the Alltagsklassiker picker overlay rule', () => {
+    const overlayRule = getRuleBody(css, '.startseite-alltagsklassiker-picker-overlay');
+
+    expect(overlayRule).toContain('position: fixed;');
+    expect(overlayRule).toContain('inset: 0;');
+    expect(overlayRule).toContain('justify-content: center;');
+    expect(overlayRule).toContain('z-index: 2000;');
+  });
 });
 
 describe('StartseitenKarussell carousel desktop layout CSS', () => {
