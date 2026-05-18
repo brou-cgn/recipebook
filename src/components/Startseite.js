@@ -395,7 +395,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         titleAction={!showInspirationSetupButton && onAddRecipe ? (
           <button
             type="button"
-            className="startseite-add-recipe-btn add-icon-button"
+            className="startseite-add-recipe-btn"
             onClick={() => onAddRecipe(defaultWebImportList.id)}
             title="Neues Rezept hinzufügen"
             aria-label="Neues Rezept hinzufügen"
@@ -437,7 +437,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         titleAction={!showAlltagsklassikerSetupButton && onAddRecipe ? (
           <button
             type="button"
-            className="startseite-add-recipe-btn add-icon-button"
+            className="startseite-add-recipe-btn"
             onClick={() => onAddRecipe(defaultEverydayClassicsList.id)}
             title="Neues Rezept hinzufügen"
             aria-label="Neues Rezept hinzufügen"

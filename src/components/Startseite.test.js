@@ -547,6 +547,8 @@ describe('Startseite', () => {
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
     expect(addButtons.length).toBeGreaterThanOrEqual(1);
+    expect(addButtons[0]).toHaveClass('startseite-add-recipe-btn');
+    expect(addButtons[0]).not.toHaveClass('add-icon-button');
   });
 
   test('does not show add-recipe button next to "Meine Kochideen" when list is not configured', async () => {
@@ -604,6 +606,8 @@ describe('Startseite', () => {
     await screen.findByText('Meine Alltagsklassiker');
     const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
     expect(addButtons.length).toBeGreaterThanOrEqual(1);
+    expect(addButtons[0]).toHaveClass('startseite-add-recipe-btn');
+    expect(addButtons[0]).not.toHaveClass('add-icon-button');
   });
 
   test('does not show add-recipe button next to "Meine Alltagsklassiker" when list is not configured', async () => {
