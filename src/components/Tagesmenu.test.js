@@ -1617,7 +1617,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(optionLabels).toEqual([
       'Erzähl, wie war es?',
       'Ich bin enttäuscht',
-      'Das kann ich besser',
+      'Zweite Chance, bitte',
       'Koche ich mal wieder',
       'Koche ich regelmäßig',
     ]);
@@ -1682,7 +1682,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(icon.textContent).not.toContain('⚪');
   });
 
-  test('Option "Das kann ich besser" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
+  test('Option "Zweite Chance, bitte" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
     mockStatusValiditySettings = {
       statusValidityDaysKandidat: null,
       statusValidityDaysGeparkt: 14,
@@ -1696,7 +1696,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
     await act(async () => {
-      fireEvent.change(select, { target: { value: 'Das kann ich besser' } });
+      fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
     });
 
     expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
