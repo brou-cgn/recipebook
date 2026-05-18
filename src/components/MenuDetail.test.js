@@ -73,6 +73,15 @@ const mockMenuWithMeta = {
 const currentUser = { id: 'user-1' };
 
 describe('MenuDetail - Action Buttons', () => {
+  const setViewportWidth = (width) => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+    window.dispatchEvent(new Event('resize'));
+  };
+
+  afterEach(() => {
+    setViewportWidth(1024);
+  });
+
   test('renders favorite, edit, delete and share buttons', () => {
     render(
       <MenuDetail
@@ -112,10 +121,10 @@ describe('MenuDetail - Action Buttons', () => {
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
     const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(5);
   });
 
-  test('delete fab button is not inside action-buttons', () => {
+  test('desktop view does not render floating action buttons', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -130,12 +139,14 @@ describe('MenuDetail - Action Buttons', () => {
       />
     );
 
-    const actionButtons = container.querySelector('.action-buttons');
-    const deleteInHeader = actionButtons.querySelector('.delete-fab-button');
-    expect(deleteInHeader).not.toBeInTheDocument();
+    expect(container.querySelector('.delete-fab-button')).not.toBeInTheDocument();
+    expect(container.querySelector('.edit-fab-button')).not.toBeInTheDocument();
+    expect(container.querySelector('.publish-fab-button')).not.toBeInTheDocument();
   });
 
-  test('delete fab button is rendered as a fixed FAB outside menu-detail-content', () => {
+  test('tablet view uses mobile FABs and hides desktop header action buttons', () => {
+    setViewportWidth(768);
+
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -153,12 +164,8 @@ describe('MenuDetail - Action Buttons', () => {
     const deleteFab = container.querySelector('.delete-fab-button');
     expect(deleteFab).toBeInTheDocument();
     expect(deleteFab).toHaveAttribute('aria-label', 'Menü löschen');
-
-    // Verify delete-fab-button appears after menu-detail-content
-    const menuContent = container.querySelector('.menu-detail-content');
-    expect(
-      menuContent.compareDocumentPosition(deleteFab) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
+    expect(container.querySelector('.menu-delete-button')).not.toBeInTheDocument();
+    expect(container.querySelector('.menu-edit-button')).not.toBeInTheDocument();
   });
 });
 

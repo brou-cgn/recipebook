@@ -12,6 +12,8 @@ import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
 
+const MOBILE_TABLET_BREAKPOINT = 768;
+
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
@@ -29,6 +31,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [publishMenuIcon, setPublishMenuIcon] = useState('↑');
   const [publishFabPressed, setPublishFabPressed] = useState(false);
   const [publishLoading, setPublishLoading] = useState(false);
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth <= MOBILE_TABLET_BREAKPOINT);
   const [allButtonIcons, setAllButtonIcons] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [shareLoading, setShareLoading] = useState(false);
@@ -71,6 +74,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const handler = (e) => setIsDarkMode(e.detail.isDark);
     window.addEventListener('darkModeChange', handler);
     return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileOrTablet(window.innerWidth <= MOBILE_TABLET_BREAKPOINT);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Load favorite IDs when user changes
@@ -446,6 +455,34 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )}
             </button>
           )}
+          {!isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
+            <button
+              className="menu-edit-button"
+              onClick={() => onEdit(menu)}
+              title="Menü bearbeiten"
+            >
+              Bearbeiten
+            </button>
+          )}
+          {!isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
+            <button
+              className="publish-menu-button"
+              onClick={handlePublish}
+              disabled={publishLoading}
+              title="Menü veröffentlichen"
+            >
+              {publishLoading ? '…' : 'Veröffentlichen'}
+            </button>
+          )}
+          {!isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
+            <button
+              className="menu-delete-button"
+              onClick={handleDelete}
+              title="Menü löschen"
+            >
+              Löschen
+            </button>
+          )}
         </div>
       </div>
 
@@ -499,7 +536,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           </section>
         ))}
       </div>
-      {canDeleteMenu(currentUser, menu) && onDelete && (
+      {isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
         <button
           className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
           onClick={handleDelete}
@@ -519,7 +556,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           )}
         </button>
       )}
-      {menu.privat && canEditMenu(currentUser, menu) && onPublish && (
+      {isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
         <button
           className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
           onClick={handlePublish}
@@ -661,7 +698,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           </div>
         </div>
       )}
-      {canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
+      {isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
         <button
           className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
           onClick={handleEditFabClick}

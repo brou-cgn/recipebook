@@ -21,6 +21,7 @@ import CookDateModal from './CookDateModal';
 
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
+const TABLET_BREAKPOINT = 768;
 
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
@@ -31,6 +32,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+  const [isTablet, setIsTablet] = useState(
+    window.innerWidth > MOBILE_BREAKPOINT && window.innerWidth <= TABLET_BREAKPOINT
+  );
   const [isMobileLandscape, setIsMobileLandscape] = useState(
     window.innerHeight <= MOBILE_BREAKPOINT && window.innerWidth > MOBILE_BREAKPOINT
   );
@@ -227,6 +231,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
       timeoutId = setTimeout(() => {
         setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+        setIsTablet(window.innerWidth > MOBILE_BREAKPOINT && window.innerWidth <= TABLET_BREAKPOINT);
         setIsMobileLandscape(window.innerHeight <= MOBILE_BREAKPOINT && window.innerWidth > MOBILE_BREAKPOINT);
       }, 150);
     };
@@ -1556,7 +1561,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         </div>
       )}
       
-      {!isMobile && !isMobileLandscape && !cookingMode && (
+      {!isMobile && !isTablet && !isMobileLandscape && !cookingMode && (
         <div className="recipe-detail-header">
           <button className="back-button" onClick={handleBackFromLinkedRecipe}>
             ← Zurück
@@ -1564,7 +1569,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           
           <div className="action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
             {userCanDirectlyEdit && !showShoppingListModal && !showPortionSelector && (
-              <button className="edit-button" onClick={() => onEdit(recipe)}>
+              <button
+                className="edit-button"
+                onClick={() => onEdit(recipe)}
+                title="Rezept bearbeiten"
+                aria-label="Rezept bearbeiten"
+              >
                 Bearbeiten
               </button>
             )}
@@ -1652,6 +1662,35 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 title="Rezept teilen"
               >
                 {shareLoading ? '…' : '↑ Teilen'}
+              </button>
+            )}
+            {userCanPublish && onPublish && (
+              <button
+                className="publish-button"
+                onClick={handlePublish}
+                disabled={publishLoading}
+                title="Rezept veröffentlichen"
+              >
+                {publishLoading ? '…' : 'Veröffentlichen'}
+              </button>
+            )}
+            {userCanDelete && onDelete && (
+              <button
+                className="delete-button"
+                onClick={handleDelete}
+                title="Rezept löschen"
+              >
+                Löschen
+              </button>
+            )}
+            {userCanResetThumbnail && (
+              <button
+                className="reset-thumbnail-button"
+                onClick={handleResetThumbnail}
+                disabled={resetThumbnailLoading}
+                title="WhatsApp-Thumbnail zurücksetzen"
+              >
+                {resetThumbnailLoading ? '…' : 'Thumbnail zurücksetzen'}
               </button>
             )}
             {recipe.shareId && (
@@ -1918,7 +1957,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       </div>
                     </>
                   )}
-                  {(isMobile || isMobileLandscape) && (
+                  {(isMobile || isTablet || isMobileLandscape) && (
                     <div className={`image-overlay-actions${categoryImageSetLoaded ? '' : ' image-overlay-actions--hidden'}`}>
                       <div 
                         className="overlay-cooking-mode-static" 
@@ -1963,7 +2002,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               );
             })()}
 
-            {(isMobile || isMobileLandscape) && (
+            {(isMobile || isTablet || isMobileLandscape) && (
               <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
                 {onToggleFavorite && (
                 <button
@@ -2426,7 +2465,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           </div>
         </div>
       )}
-      {userCanDirectlyEdit && onEdit && !cookingMode && !showShoppingListModal && !showPortionSelector && (
+      {(isMobile || isTablet || isMobileLandscape) && userCanDirectlyEdit && onEdit && !cookingMode && !showShoppingListModal && !showPortionSelector && (
         <button
           className={`edit-fab-button${editFabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
@@ -2447,7 +2486,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {userCanCreateVersion && !userCanDirectlyEdit && onCreateVersion && !cookingMode && (
+      {(isMobile || isTablet || isMobileLandscape) && userCanCreateVersion && !userCanDirectlyEdit && onCreateVersion && !cookingMode && (
         <button
           className={`new-version-fab-button${newVersionFabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
@@ -2468,7 +2507,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {userCanDelete && onDelete && !cookingMode && (
+      {(isMobile || isTablet || isMobileLandscape) && userCanDelete && onDelete && !cookingMode && (
         <button
           className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}${deleteAtPublishPosition ? ' at-publish-position' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
@@ -2489,7 +2528,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {userCanPublish && onPublish && !cookingMode && (
+      {(isMobile || isTablet || isMobileLandscape) && userCanPublish && onPublish && !cookingMode && (
         <button
           className={`publish-fab-button${publishFabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
@@ -2513,7 +2552,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           )}
         </button>
       )}
-      {userCanResetThumbnail && !cookingMode && (
+      {(isMobile || isTablet || isMobileLandscape) && userCanResetThumbnail && !cookingMode && (
         <button
           className={`reset-thumbnail-fab-button${resetThumbnailFabPressed ? ' pressed' : ''}${thumbnailResetAtSecondPosition ? ' at-second-position' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}

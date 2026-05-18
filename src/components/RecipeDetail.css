@@ -211,7 +211,7 @@
 }
 
 .edit-button,
-.-button,
+.delete-button,
 .version-button,
 .share-button,
 .publish-button {
@@ -407,13 +407,13 @@
   color: white;
 }*/
 
-.-button {
+.delete-button {
   color: #f44336;
   border-color: #f44336;
   height: 48px;
 }
 
-/*.-button:hover {
+/*.delete-button:hover {
   background: #f44336;
   color: white;
 }*/
@@ -458,6 +458,18 @@
 .publish-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.reset-thumbnail-button {
+  background: white;
+  border: 1px solid #DF7A00;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #DF7A00;
 }
 
 .bottom-action-buttons {
@@ -722,8 +734,8 @@
   right: 0.5rem;
 }
 
-/* Hide arrows on mobile */
-@media (max-width: 480px) {
+/* Hide arrows on mobile/tablet */
+@media (max-width: 768px) {
   .carousel-arrow {
     display: none;
   }
@@ -1037,7 +1049,7 @@
   margin-top: 0;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .recipe-detail-container {
     padding-top: 0;
     padding-left: 0;
