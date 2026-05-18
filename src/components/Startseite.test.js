@@ -30,6 +30,10 @@ jest.mock('../utils/recipeSwipeFlags', () => ({
   computeGroupRecipeStatus: jest.fn(() => null),
 }));
 
+jest.mock('../utils/imageUtils', () => ({
+  isBase64Image: jest.fn(() => false),
+}));
+
 jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
   <div data-testid="trending-card" onClick={() => onSelectRecipe?.(recipe)}>{recipe.title}</div>
 ));
@@ -526,5 +530,108 @@ describe('Startseite', () => {
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
     fireEvent.click(mehrButtons[1]);
     expect(onOpenPrivateListRecipes).toHaveBeenCalledWith('g-classics');
+  });
+
+  // ─── Add-recipe buttons next to carousel headings ──────────────────────────
+
+  test('shows add-recipe button next to "Meine Kochideen" when interactive list is configured', async () => {
+    const onAddRecipe = jest.fn();
+    const interactiveGroup = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], listKind: 'interactive', recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'g1' }}
+        groups={[interactiveGroup]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
+    expect(addButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('does not show add-recipe button next to "Meine Kochideen" when list is not configured', async () => {
+    const onAddRecipe = jest.fn();
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const addButtons = screen.queryAllByRole('button', { name: /Neues Rezept hinzufügen/i });
+    expect(addButtons).toHaveLength(0);
+  });
+
+  test('does not show add-recipe button next to "Meine Kochideen" when onAddRecipe is not provided', async () => {
+    const interactiveGroup = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], listKind: 'interactive', recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'g1' }}
+        groups={[interactiveGroup]}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryAllByRole('button', { name: /Neues Rezept hinzufügen/i })).toHaveLength(0);
+  });
+
+  test('clicking add-recipe button next to "Meine Kochideen" calls onAddRecipe with the list id', async () => {
+    const onAddRecipe = jest.fn();
+    const interactiveGroup = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], listKind: 'interactive', recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultWebImportListId: 'g1' }}
+        groups={[interactiveGroup]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
+    fireEvent.click(addButtons[0]);
+    expect(onAddRecipe).toHaveBeenCalledWith('g1');
+  });
+
+  test('shows add-recipe button next to "Meine Alltagsklassiker" when list is configured', async () => {
+    const onAddRecipe = jest.fn();
+    const alltagsGroup = { id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
+        groups={[alltagsGroup]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Meine Alltagsklassiker');
+    const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
+    expect(addButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('does not show add-recipe button next to "Meine Alltagsklassiker" when list is not configured', async () => {
+    const onAddRecipe = jest.fn();
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Meine Alltagsklassiker');
+    expect(screen.queryAllByRole('button', { name: /Neues Rezept hinzufügen/i })).toHaveLength(0);
+  });
+
+  test('clicking add-recipe button next to "Meine Alltagsklassiker" calls onAddRecipe with the list id', async () => {
+    const onAddRecipe = jest.fn();
+    const alltagsGroup = { id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
+        groups={[alltagsGroup]}
+        onAddRecipe={onAddRecipe}
+      />
+    );
+    await screen.findByText('Meine Alltagsklassiker');
+    const addButtons = screen.getAllByRole('button', { name: /Neues Rezept hinzufügen/i });
+    fireEvent.click(addButtons[0]);
+    expect(onAddRecipe).toHaveBeenCalledWith('g-classics');
   });
 });

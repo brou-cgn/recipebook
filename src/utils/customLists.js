@@ -594,6 +594,7 @@ export const DEFAULT_BUTTON_ICONS = {
   editRecipe: 'Edit',
   addMenu: 'Menü+',
   addPrivateRecipe: 'Privat',
+  addRecipeToList: '+',
   saveRecipe: 'Speich.',
   swipeRight: '✓',
   swipeLeft: '×',

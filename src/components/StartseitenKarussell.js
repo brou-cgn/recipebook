@@ -13,6 +13,7 @@ import './StartseitenKarussell.css';
  *   emptyContent    {ReactNode} Optionaler Inhalt statt emptyText bei leerer Liste
  *   onMehr          {Function} Optionaler Klick-Handler für den „mehr"-Button
  *   mehrText        {string}   Beschriftung des „mehr"-Buttons (Standard: „mehr")
+ *   titleAction     {ReactNode} Optionale Aktion (z. B. Button) neben der Überschrift
  */
 function StartseitenKarussell({
   title,
@@ -23,10 +24,14 @@ function StartseitenKarussell({
   emptyContent = null,
   onMehr,
   mehrText = 'mehr',
+  titleAction = null,
 }) {
   return (
     <div className="startseite-trending-section">
-      <h2 className="startseite-section-title">{title}</h2>
+      <div className="startseite-section-header">
+        <h2 className="startseite-section-title">{title}</h2>
+        {titleAction && <div className="startseite-section-title-action">{titleAction}</div>}
+      </div>
       <div className="startseite-carousel-wrap">
         {loading ? (
           <div className="startseite-loading">Laden…</div>

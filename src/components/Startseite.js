@@ -7,6 +7,7 @@ import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
+import { isBase64Image } from '../utils/imageUtils';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -15,7 +16,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onAddRecipe }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -391,6 +392,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           </div>
         ) : null}
         onMehr={handleKandidatenMehrClick}
+        titleAction={!showInspirationSetupButton && onAddRecipe ? (
+          <button
+            type="button"
+            className="startseite-add-recipe-btn add-icon-button"
+            onClick={() => onAddRecipe(defaultWebImportList.id)}
+            title="Neues Rezept hinzufügen"
+            aria-label="Neues Rezept hinzufügen"
+          >
+            {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)) ? (
+              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt="Neues Rezept hinzufügen" className="button-icon-image" draggable="false" />
+            ) : (
+              getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)
+            )}
+          </button>
+        ) : null}
       />
       <StartseitenKarussell
         title="Meine Alltagsklassiker"
@@ -418,6 +434,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           </div>
         ) : null}
         onMehr={handleAlltagsklassikerMehrClick}
+        titleAction={!showAlltagsklassikerSetupButton && onAddRecipe ? (
+          <button
+            type="button"
+            className="startseite-add-recipe-btn add-icon-button"
+            onClick={() => onAddRecipe(defaultEverydayClassicsList.id)}
+            title="Neues Rezept hinzufügen"
+            aria-label="Neues Rezept hinzufügen"
+          >
+            {isBase64Image(getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)) ? (
+              <img src={getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)} alt="Neues Rezept hinzufügen" className="button-icon-image" draggable="false" />
+            ) : (
+              getEffectiveIcon(buttonIcons, 'addRecipeToList', isDarkMode)
+            )}
+          </button>
+        ) : null}
       />
       <StartseitenKarussell
         title="Im Trend"

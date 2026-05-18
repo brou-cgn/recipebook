@@ -50,7 +50,34 @@
   background-color: #1b5e20;
 }
 
-.startseite-alltagsklassiker-picker-overlay {
+.startseite-add-recipe-btn {
+  background: transparent;
+  border: none;
+  color: #DF7A00;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.startseite-add-recipe-btn:hover {
+  background: rgba(223, 122, 0, 0.1);
+}
+
+[data-theme="dark"] .startseite-add-recipe-btn {
+  color: #f59e2a;
+}
+
+[data-theme="dark"] .startseite-add-recipe-btn:hover {
+  background: rgba(245, 158, 42, 0.15);
+}
+
+
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);

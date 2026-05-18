@@ -128,4 +128,37 @@ describe('StartseitenKarussell', () => {
     expect(wrap).toBeInTheDocument();
     expect(wrap.querySelector('.startseite-carousel')).toBeInTheDocument();
   });
+
+  test('renders titleAction next to the title when provided', () => {
+    render(
+      <StartseitenKarussell
+        title="Testbereich"
+        items={[]}
+        renderItem={renderItem}
+        titleAction={<button>Aktion</button>}
+      />
+    );
+    expect(screen.getByRole('button', { name: /Aktion/i })).toBeInTheDocument();
+  });
+
+  test('does not render .startseite-section-title-action when titleAction is not provided', () => {
+    const { container } = render(
+      <StartseitenKarussell title="Testbereich" items={[]} renderItem={renderItem} />
+    );
+    expect(container.querySelector('.startseite-section-title-action')).not.toBeInTheDocument();
+  });
+
+  test('calls titleAction handler when clicked', () => {
+    const handleClick = jest.fn();
+    render(
+      <StartseitenKarussell
+        title="Testbereich"
+        items={[]}
+        renderItem={renderItem}
+        titleAction={<button onClick={handleClick}>Aktion</button>}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Aktion/i }));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
 });

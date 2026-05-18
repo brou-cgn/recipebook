@@ -13,15 +13,27 @@
   margin-bottom: 1rem;
 }
 
+.startseite-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
 .startseite-section-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: #333;
-  margin: 0 0 0.75rem 0;
+  margin: 0;
+  flex: 1;
 }
 
 [data-theme="dark"] .startseite-section-title {
   color: #e8e8e8;
+}
+
+.startseite-section-title-action {
+  flex-shrink: 0;
 }
 
 /* =========================================================
