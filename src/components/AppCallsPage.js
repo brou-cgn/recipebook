@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './AppCallsPage.css';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
@@ -72,7 +72,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
-  const [now, setNow] = useState(Date.now);
+  const [now, setNow] = useState(() => Date.now());
   const tabsRef = useRef(null);
 
   // Kulinariktypen state
@@ -133,7 +133,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     [recipes, sharedRecipeIds]
   );
 
-  const formatCalcDuration = (calcPendingAt) => {
+  const formatCalcDuration = useCallback((calcPendingAt) => {
     if (!calcPendingAt) return null;
     const startTime = new Date(calcPendingAt);
     const elapsedMs = now - calcPendingAt;
@@ -144,7 +144,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     const h = Math.floor(elapsedMin / 60);
     const m = elapsedMin % 60;
     return `${timeStr} Uhr (${h} h ${m} min)`;
-  };
+  }, [now]);
 
   const handleCreateShareLink = async (recipe) => {
     setCreatingShareIds(prev => ({ ...prev, [recipe.id]: true }));
