@@ -577,7 +577,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (ingredients.length === 0) return;
 
     // Persist a pending state so the loading indicator survives navigation
-    const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcError: null };
+    const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcPendingAt: Date.now(), calcError: null };
     try {
       await updateRecipe(recipe.id, { naehrwerte: pending });
     } catch (persistErr) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './AppCallsPage.css';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
@@ -72,6 +72,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
   const tabsRef = useRef(null);
 
   // Kulinariktypen state
@@ -122,10 +123,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const recipesWithoutLink = useMemo(
     () => recipes.filter(r => r.publishedToPublic && !r.shareId && !sharedRecipeIds.has(r.id)),
     [recipes, sharedRecipeIds]
   );
+
+  const formatCalcDuration = useCallback((calcPendingAt) => {
+    if (!calcPendingAt) return null;
+    const startTime = new Date(calcPendingAt);
+    const elapsedMs = now - calcPendingAt;
+    const elapsedMin = Math.floor(elapsedMs / 60000);
+    const timeStr = startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    if (elapsedMin < 1) return `${timeStr} Uhr (< 1 min)`;
+    if (elapsedMin < 60) return `${timeStr} Uhr (${elapsedMin} min)`;
+    const h = Math.floor(elapsedMin / 60);
+    const m = elapsedMin % 60;
+    return `${timeStr} Uhr (${h} h ${m} min)`;
+  }, [now]);
 
   const handleCreateShareLink = async (recipe) => {
     setCreatingShareIds(prev => ({ ...prev, [recipe.id]: true }));
@@ -661,13 +680,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                       <thead>
                         <tr>
                           <th>Rezept</th>
+                          <th>Gestartet</th>
                           <th>Aktion</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pending.map(recipe => (
                           <tr key={recipe.id}>
-                            <td>{recipe.titel || recipe.name || recipe.id}</td>
+                            <td>{recipe.title || recipe.id}</td>
+                            <td className="app-calls-calc-duration">{formatCalcDuration(recipe.naehrwerte?.calcPendingAt) || '—'}</td>
                             <td>
                               <button
                                 className="nutrition-abort-settings-button"
