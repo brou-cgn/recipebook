@@ -388,3 +388,85 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
     ));
   });
 });
+
+describe('AppCallsPage – Nährwertberechnungen tab', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const { getCustomLists, getButtonIcons } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+  });
+
+  test('shows recipe title for pending calculations', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'r1', title: 'Spaghetti Carbonara', naehrwerte: { calcPending: true, calcPendingAt: Date.now() } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    expect(await screen.findByText('Spaghetti Carbonara')).toBeInTheDocument();
+  });
+
+  test('shows "—" when calcPendingAt is not set', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'r1', title: 'Gemüsesuppe', naehrwerte: { calcPending: true } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    await screen.findByText('Gemüsesuppe');
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  test('shows recipe id as fallback when title is missing', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'recipe-42', naehrwerte: { calcPending: true } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    expect(await screen.findByText('recipe-42')).toBeInTheDocument();
+  });
+
+  test('shows "Keine aktiven Berechnungen vorhanden." when no pending', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[{ id: 'r1', title: 'Kuchen', naehrwerte: { calcPending: false } }]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    expect(await screen.findByText('Keine aktiven Berechnungen vorhanden.')).toBeInTheDocument();
+  });
+});

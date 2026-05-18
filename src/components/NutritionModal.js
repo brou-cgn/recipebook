@@ -244,7 +244,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
 
     // Persist calcPending so the loading indicator survives navigation away from this modal
     try {
-      await onSave({ ...(recipe?.naehrwerte || {}), calcPending: true, calcError: null });
+      await onSave({ ...(recipe?.naehrwerte || {}), calcPending: true, calcPendingAt: Date.now(), calcError: null });
     } catch (err) {
       console.error('Could not set calcPending:', err);
     }

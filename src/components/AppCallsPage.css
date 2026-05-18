@@ -108,6 +108,12 @@
   color: #999;
 }
 
+.app-calls-calc-duration {
+  white-space: nowrap;
+  color: #666;
+  font-size: 13px;
+}
+
 .app-calls-stats {
   padding-top: 20px;
   border-top: 1px solid #eee;
