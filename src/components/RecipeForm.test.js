@@ -31,7 +31,8 @@ jest.mock('../utils/customLists', () => ({
     scanImage: '📷',
     webImport: '🌐',
     saveRecipe: '💾',
-    cancelRecipe: '✕'
+    cancelRecipe: '✕',
+    addImage: '🖼'
   }),
   DEFAULT_BUTTON_ICONS: {
     cookingMode: '👨‍🍳',
@@ -59,6 +60,7 @@ jest.mock('../utils/customLists', () => ({
     addRecipe: '➕',
     addMenu: '📋',
     addPrivateRecipe: '🔒',
+    addImage: '🖼',
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
@@ -3033,7 +3035,7 @@ describe('RecipeForm - Group Assignment Indicator', () => {
     jest.clearAllMocks();
   });
 
-  test('shows public group indicator when no activeGroupId is set', async () => {
+  test('does not show group assignment banner for new recipes (banner removed)', () => {
     render(
       <RecipeForm
         recipe={null}
@@ -3045,12 +3047,10 @@ describe('RecipeForm - Group Assignment Indicator', () => {
       />
     );
 
-    const banner = await screen.findByText(/Wird in Liste/i);
-    expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('Öffentlich');
+    expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
   });
 
-  test('shows private group indicator when activeGroupId is a private group', async () => {
+  test('does not show group assignment banner when activeGroupId is a private group', () => {
     render(
       <RecipeForm
         recipe={null}
@@ -3062,9 +3062,7 @@ describe('RecipeForm - Group Assignment Indicator', () => {
       />
     );
 
-    const banner = await screen.findByText(/Wird in Liste/i);
-    expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('Familie');
+    expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
   });
 
   test('does not show group indicator when editing an existing recipe', () => {
@@ -3100,7 +3098,7 @@ describe('RecipeForm - Group Assignment Indicator', () => {
     expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
   });
 
-  test('shows public group indicator with fallback name when groups list is empty', () => {
+  test('does not show group assignment banner when groups list is empty', () => {
     render(
       <RecipeForm
         recipe={null}
@@ -3112,9 +3110,7 @@ describe('RecipeForm - Group Assignment Indicator', () => {
       />
     );
 
-    const banner = screen.getByText(/Wird in Liste/i);
-    expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('Öffentlich');
+    expect(screen.queryByText(/Wird in Liste/i)).not.toBeInTheDocument();
   });
 });
 
@@ -3227,7 +3223,7 @@ describe('RecipeForm - Private List Selector', () => {
     expect(screen.queryByLabelText('Private Liste:')).not.toBeInTheDocument();
   });
 
-  test('updates group assignment banner when a private list is selected', async () => {
+  test('selector value updates when a private list is selected', () => {
     render(
       <RecipeForm
         recipe={null}
@@ -3240,19 +3236,17 @@ describe('RecipeForm - Private List Selector', () => {
       />
     );
 
-    // Initially shows public
-    const banner = await screen.findByText(/Wird in Liste/i);
-    expect(banner.textContent).toContain('Öffentlich');
+    const selector = screen.getByLabelText('Private Liste:');
+    expect(selector.value).toBe('');
 
     // Select a private list
-    const selector = screen.getByLabelText('Private Liste:');
     fireEvent.change(selector, { target: { value: 'private-1' } });
 
-    // Banner should now show the private list name
-    expect(screen.getByText(/Wird in Liste/i).textContent).toContain('Familie');
+    // Selector should show the selected list
+    expect(selector.value).toBe('private-1');
   });
 
-  test('banner shows private styling when a private list is selected', async () => {
+  test('pre-selects private list matching activeGroupId', async () => {
     render(
       <RecipeForm
         recipe={null}
@@ -3261,17 +3255,13 @@ describe('RecipeForm - Private List Selector', () => {
         currentUser={mockUser}
         groups={mockGroups}
         privateLists={mockPrivateLists}
-        activeGroupId={null}
+        activeGroupId="private-1"
       />
     );
 
-    // Select a private list
-    const selector = screen.getByLabelText('Private Liste:');
-    fireEvent.change(selector, { target: { value: 'private-1' } });
-
-    // Banner should have 'private' class
-    const bannerContainer = screen.getByText(/Wird in Liste/i).closest('.group-assignment-banner');
-    expect(bannerContainer).toHaveClass('private');
-    expect(bannerContainer).not.toHaveClass('public');
+    await waitFor(() => {
+      const selector = screen.getByLabelText('Private Liste:');
+      expect(selector.value).toBe('private-1');
+    });
   });
 });

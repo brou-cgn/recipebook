@@ -201,6 +201,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'addSection', label: 'Abschnitt hinzufügen (Menü bearbeiten)' },
   { key: 'resetThumbnail', label: 'Thumbnail-Löschen-Button (FAB)' },
   { key: 'recipeCardSwipeRight', label: 'Rezeptkarte: Rechts-Swipe-Button' },
+  { key: 'addImage', label: 'Bild hinzufügen (neben Titel)' },
   { key: 'trendingDifficultyIcon', label: 'Trend-Kachel: Icon vor Schwierigkeitsgrad' },
   { key: 'trendingTimeIcon', label: 'Trend-Kachel: Icon vor Zubereitungszeit' },
 ];

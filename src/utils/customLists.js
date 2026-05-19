@@ -615,6 +615,7 @@ export const DEFAULT_BUTTON_ICONS = {
   addSection: '+',
   resetThumbnail: '📷',
   recipeCardSwipeRight: '📋',
+  addImage: '🖼',
   trendingDifficultyIcon: '★',
   trendingTimeIcon: '⏱',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
@@ -669,6 +670,7 @@ export const DEFAULT_BUTTON_ICONS = {
   addSectionDark: '',
   resetThumbnailDark: '',
   recipeCardSwipeRightDark: '',
+  addImageDark: '',
 };
 
 /**

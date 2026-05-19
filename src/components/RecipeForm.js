@@ -471,6 +471,17 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     }
   }, [recipe, currentUser, isCreatingVersion, initialWebImportUrl]);
 
+  // Pre-select the private list matching activeGroupId when creating a new recipe.
+  // This runs after the recipe loading effect so it can override the reset to ''.
+  useEffect(() => {
+    if (recipe || isCreatingVersion || initialWebImportUrl) return;
+    if (!activeGroupId || !privateLists.length) return;
+    const matchingList = privateLists.find(l => l.id === activeGroupId);
+    if (matchingList) {
+      setSelectedPrivateListId(activeGroupId);
+    }
+  }, [activeGroupId, privateLists, recipe, isCreatingVersion, initialWebImportUrl]);
+
   useEffect(() => {
     const loadCustomLists = async () => {
       const lists = await getCustomLists();
@@ -1045,75 +1056,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         <h2>
           {isCreatingVersion ? 'Eigene Version erstellen' : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
         </h2>
-        {!recipe && !isCreatingVersion && (
-          <div className="header-buttons">
-            {currentUser?.webimport && (
-              <button
-                type="button"
-                className="webimport-button-header"
-                onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
-                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
-                aria-label="Webimport"
-                disabled={aiOcrLimitReached}
-              >
-                {isBase64Image(getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)) ? (
-                  <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt="Webimport" className="button-icon-img" />
-                ) : (
-                  getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)
-                )}
-              </button>
-            )}
-            {currentUser?.fotoscan && (
-              <>
-                <label
-                  htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
-                  className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
-                  title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
-                  aria-label="Rezept mit Kamera scannen"
-                  aria-disabled={aiOcrLimitReached}
-                  style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (!aiOcrLimitReached && (e.key === 'Enter' || e.key === ' ')) {
-                      e.preventDefault();
-                      document.getElementById('ocrImageUpload').click();
-                    }
-                  }}
-                >
-                  {isBase64Image(getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)) ? (
-                    <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt="Scan" className="button-icon-img" />
-                  ) : (
-                    getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)
-                  )}
-                </label>
-                <input
-                  type="file"
-                  id="ocrImageUpload"
-                  accept="image/jpeg,image/jpg,image/png"
-                  multiple
-                  onChange={handleOcrImageUpload}
-                  disabled={aiOcrLimitReached}
-                  style={{ display: 'none' }}
-                />
-              </>
-            )}
-            {currentUser?.recipeImport && (
-              <button
-                type="button"
-                className="import-button-header"
-                onClick={() => setShowImportModal(true)}
-                title="Rezept aus externer Quelle importieren"
-                aria-label="Rezept importieren"
-              >
-                {isBase64Image(getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)) ? (
-                  <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt="Import" className="button-icon-img" />
-                ) : (
-                  getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)
-                )}
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {isCreatingVersion && (
@@ -1124,47 +1066,94 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
       )}
 
-      {!recipe && !isCreatingVersion && (() => {
-        const selectedPrivateList = selectedPrivateListId
-          ? privateLists.find((l) => l.id === selectedPrivateListId)
-          : null;
-        const targetGroup = selectedPrivateList
-          ? selectedPrivateList
-          : activeGroupId
-            ? groups.find((g) => g.id === activeGroupId)
-            : groups.find((g) => g.type === 'public');
-        const isPublicTarget = !selectedPrivateListId && (!activeGroupId || targetGroup?.type === 'public');
-        const groupName = targetGroup?.name || (isPublicTarget ? 'Öffentlich' : null);
-        if (!groupName) return null;
-        return (
-          <div className={`group-assignment-banner ${isPublicTarget ? 'public' : 'private'}`}>
-            <span className="group-assignment-text">
-              Wird in Liste <strong>{groupName}</strong> gespeichert
-            </span>
-          </div>
-        );
-      })()}
+      {!recipe && !isCreatingVersion && (
+        <div className="recipe-form-toolbar">
+          {privateLists.length > 0 && (
+            <div className="toolbar-private-list">
+              <label htmlFor="private-list-select">Private Liste:</label>
+              <select
+                id="private-list-select"
+                value={selectedPrivateListId}
+                onChange={(e) => setSelectedPrivateListId(e.target.value)}
+              >
+                <option value="">– Keine (öffentlich) –</option>
+                {privateLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {currentUser?.webimport && (
+            <button
+              type="button"
+              className="webimport-button-header"
+              onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
+              title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
+              aria-label="Webimport"
+              disabled={aiOcrLimitReached}
+            >
+              {isBase64Image(getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)) ? (
+                <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt="Webimport" className="button-icon-img" />
+              ) : (
+                getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)
+              )}
+            </button>
+          )}
+          {currentUser?.fotoscan && (
+            <>
+              <label
+                htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
+                className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
+                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
+                aria-label="Rezept mit Kamera scannen"
+                aria-disabled={aiOcrLimitReached}
+                style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (!aiOcrLimitReached && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    document.getElementById('ocrImageUpload').click();
+                  }
+                }}
+              >
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)) ? (
+                  <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt="Scan" className="button-icon-img" />
+                ) : (
+                  getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)
+                )}
+              </label>
+              <input
+                type="file"
+                id="ocrImageUpload"
+                accept="image/jpeg,image/jpg,image/png"
+                multiple
+                onChange={handleOcrImageUpload}
+                disabled={aiOcrLimitReached}
+                style={{ display: 'none' }}
+              />
+            </>
+          )}
+          {currentUser?.recipeImport && (
+            <button
+              type="button"
+              className="import-button-header"
+              onClick={() => setShowImportModal(true)}
+              title="Rezept aus externer Quelle importieren"
+              aria-label="Rezept importieren"
+            >
+              {isBase64Image(getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)) ? (
+                <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt="Import" className="button-icon-img" />
+              ) : (
+                getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       <form ref={formRef} className="recipe-form" onSubmit={handleSubmit}>
-        {/* Private list selector - only shown when creating a new recipe */}
-        {!recipe && !isCreatingVersion && privateLists.length > 0 && (
-          <div className="form-group private-list-selector">
-            <label htmlFor="private-list-select">Private Liste:</label>
-            <select
-              id="private-list-select"
-              value={selectedPrivateListId}
-              onChange={(e) => setSelectedPrivateListId(e.target.value)}
-            >
-              <option value="">– Keine (öffentlich) –</option>
-              {privateLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div className="form-group">
           <div className="form-group-header">
             <label htmlFor="title">Rezepttitel *</label>
@@ -1179,21 +1168,25 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               </button>
             )}
           </div>
-          <input
-            type="text"
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="z.B. Spaghetti Carbonara"
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="image">Rezeptbilder (optional)</label>
-          <div className="image-input-container">
-            <label htmlFor="imageFile" className="image-upload-label">
-              {uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
+          <div className="title-image-row">
+            <input
+              type="text"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="z.B. Spaghetti Carbonara"
+              required
+            />
+            <label
+              htmlFor="imageFile"
+              className="add-image-btn"
+              title={uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
+            >
+              {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
+                <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="button-icon-img" />
+              ) : (
+                getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
+              )}
             </label>
             <input
               type="file"
@@ -1204,7 +1197,11 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               disabled={uploadingImage}
             />
           </div>
-          {images.length > 0 && (
+        </div>
+
+        {images.length > 0 && (
+          <div className="form-group">
+            <label>Rezeptbilder</label>
             <div className="multi-image-grid">
               {images.map((img, idx) => (
                 <div key={img.url} className={`multi-image-item${img.isDefault ? ' multi-image-item--default' : ''}`}>
@@ -1235,8 +1232,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {currentUser?.isAdmin && (
           <div className="form-group">
