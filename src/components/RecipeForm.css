@@ -21,18 +21,17 @@
 .recipe-form-toolbar {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  overflow-x: auto;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .toolbar-private-list {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
-  flex: 1 1 auto;
+  flex: 1 1 260px;
   min-width: 0;
 }
 
@@ -46,7 +45,8 @@
 .toolbar-private-list select {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0.5rem 0.6rem;
+  padding: 0 0.75rem;
+  height: 46px;
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -66,7 +66,8 @@
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 10px 16px;
+  height: 46px;
+  padding: 0 14px;
   font-size: 0.95rem;
   cursor: pointer;
   display: flex;
@@ -486,6 +487,7 @@
 .title-image-row input[type="text"] {
   flex: 1;
   min-width: 0;
+  height: 46px;
 }
 
 /* Add-image inline button (transparent background and border) */
@@ -493,7 +495,8 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 8px 10px;
+  height: 46px;
+  padding: 0 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
