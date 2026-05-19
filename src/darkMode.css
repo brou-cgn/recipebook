@@ -490,7 +490,7 @@
 }
 
 [data-theme="dark"] .recipe-form-header {
-  background: #1e1e1e;
+  background: transparent;
   border-bottom-color: #3d3d3d;
 }
 
@@ -509,6 +509,10 @@
 }
 
 [data-theme="dark"] .form-group label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .toolbar-private-list label {
   color: #ccc;
 }
 
@@ -925,6 +929,10 @@
 [data-theme="dark"] .form-group input {
   background: #2a2a2a;
   color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .portionen-inline select {
   border-color: #555;
 }
 
