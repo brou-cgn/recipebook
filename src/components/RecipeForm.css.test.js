@@ -27,7 +27,7 @@ describe('RecipeForm toolbar CSS layout', () => {
     const addImageIconRule = getRuleBody(css, '.add-image-icon-img');
     const shareCopyIconRule = getRuleBody(recipeDetailCss, '.copy-link-icon-img');
 
-    ['background: transparent;', 'border: none;', 'font-size: 1.5rem;', 'transition: all 0.3s ease;', 'width: 1.5rem;', 'height: 1.5rem;']
+    ['background: transparent;', 'border: none;', 'font-size: 1.5rem;', 'transition: all 0.3s ease;', 'height: 1.5rem;']
       .forEach((declaration) => {
         expect(addImageButtonRule).toContain(declaration);
         expect(shareCopyButtonRule).toContain(declaration);
@@ -36,7 +36,11 @@ describe('RecipeForm toolbar CSS layout', () => {
     expect(addImageButtonRule).toContain('color: #555;');
     expect(shareCopyButtonRule).toContain('color: #555;');
 
-    expect(addImageIconRule).toContain('width: 1.5rem;');
+    // add-image button is 50% wider than the share copy button
+    expect(addImageButtonRule).toContain('width: 2.25rem;');
+    expect(shareCopyButtonRule).toContain('width: 1.5rem;');
+
+    expect(addImageIconRule).toContain('width: 2.25rem;');
     expect(addImageIconRule).toContain('height: 1.5rem;');
     expect(shareCopyIconRule).toContain('width: 1.5rem;');
     expect(shareCopyIconRule).toContain('height: 1.5rem;');
