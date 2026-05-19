@@ -1066,94 +1066,94 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
       )}
 
-      {!recipe && !isCreatingVersion && (
-        <div className="recipe-form-toolbar">
-          {privateLists.length > 0 && (
-            <div className="toolbar-private-list">
-              <label htmlFor="private-list-select">Private Liste:</label>
-              <select
-                id="private-list-select"
-                value={selectedPrivateListId}
-                onChange={(e) => setSelectedPrivateListId(e.target.value)}
-              >
-                <option value="">– Keine (öffentlich) –</option>
-                {privateLists.map((list) => (
-                  <option key={list.id} value={list.id}>
-                    {list.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {currentUser?.webimport && (
-            <button
-              type="button"
-              className="webimport-button-header"
-              onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
-              title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
-              aria-label="Webimport"
-              disabled={aiOcrLimitReached}
-            >
-              {isBase64Image(getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)) ? (
-                <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt="Webimport" className="button-icon-img" />
-              ) : (
-                getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)
-              )}
-            </button>
-          )}
-          {currentUser?.fotoscan && (
-            <>
-              <label
-                htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
-                className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
-                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
-                aria-label="Rezept mit Kamera scannen"
-                aria-disabled={aiOcrLimitReached}
-                style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (!aiOcrLimitReached && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    document.getElementById('ocrImageUpload').click();
-                  }
-                }}
-              >
-                {isBase64Image(getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)) ? (
-                  <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt="Scan" className="button-icon-img" />
-                ) : (
-                  getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)
-                )}
-              </label>
-              <input
-                type="file"
-                id="ocrImageUpload"
-                accept="image/jpeg,image/jpg,image/png"
-                multiple
-                onChange={handleOcrImageUpload}
-                disabled={aiOcrLimitReached}
-                style={{ display: 'none' }}
-              />
-            </>
-          )}
-          {currentUser?.recipeImport && (
-            <button
-              type="button"
-              className="import-button-header"
-              onClick={() => setShowImportModal(true)}
-              title="Rezept aus externer Quelle importieren"
-              aria-label="Rezept importieren"
-            >
-              {isBase64Image(getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)) ? (
-                <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt="Import" className="button-icon-img" />
-              ) : (
-                getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)
-              )}
-            </button>
-          )}
-        </div>
-      )}
-
       <form ref={formRef} className="recipe-form" onSubmit={handleSubmit}>
+        {!recipe && !isCreatingVersion && (
+          <div className="recipe-form-toolbar">
+            {privateLists.length > 0 && (
+              <div className="toolbar-private-list">
+                <label htmlFor="private-list-select">Private Liste:</label>
+                <select
+                  id="private-list-select"
+                  value={selectedPrivateListId}
+                  onChange={(e) => setSelectedPrivateListId(e.target.value)}
+                >
+                  <option value="">– Keine (öffentlich) –</option>
+                  {privateLists.map((list) => (
+                    <option key={list.id} value={list.id}>
+                      {list.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {currentUser?.webimport && (
+              <button
+                type="button"
+                className="webimport-button-header"
+                onClick={() => !aiOcrLimitReached && setShowWebImportModal(true)}
+                title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Import nicht verfügbar.' : 'Rezept von Website importieren'}
+                aria-label="Webimport"
+                disabled={aiOcrLimitReached}
+              >
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)) ? (
+                  <img src={getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)} alt="Webimport" className="button-icon-img" />
+                ) : (
+                  getEffectiveIcon(buttonIcons, 'webImport', isDarkMode)
+                )}
+              </button>
+            )}
+            {currentUser?.fotoscan && (
+              <>
+                <label
+                  htmlFor={aiOcrLimitReached ? undefined : 'ocrImageUpload'}
+                  className={`ocr-scan-button-header${aiOcrLimitReached ? ' disabled' : ''}`}
+                  title={aiOcrLimitReached ? 'KI-OCR Tageslimit erreicht (20/Tag). Scan nicht verfügbar.' : 'Rezept mit Kamera scannen'}
+                  aria-label="Rezept mit Kamera scannen"
+                  aria-disabled={aiOcrLimitReached}
+                  style={{ cursor: aiOcrLimitReached ? 'not-allowed' : 'pointer' }}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (!aiOcrLimitReached && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      document.getElementById('ocrImageUpload').click();
+                    }
+                  }}
+                >
+                  {isBase64Image(getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)) ? (
+                    <img src={getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)} alt="Scan" className="button-icon-img" />
+                  ) : (
+                    getEffectiveIcon(buttonIcons, 'scanImage', isDarkMode)
+                  )}
+                </label>
+                <input
+                  type="file"
+                  id="ocrImageUpload"
+                  accept="image/jpeg,image/jpg,image/png"
+                  multiple
+                  onChange={handleOcrImageUpload}
+                  disabled={aiOcrLimitReached}
+                  style={{ display: 'none' }}
+                />
+              </>
+            )}
+            {currentUser?.recipeImport && (
+              <button
+                type="button"
+                className="import-button-header"
+                onClick={() => setShowImportModal(true)}
+                title="Rezept aus externer Quelle importieren"
+                aria-label="Rezept importieren"
+              >
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)) ? (
+                  <img src={getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)} alt="Import" className="button-icon-img" />
+                ) : (
+                  getEffectiveIcon(buttonIcons, 'importRecipe', isDarkMode)
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="form-group">
           <div className="form-group-header">
             <label htmlFor="title">Rezepttitel *</label>

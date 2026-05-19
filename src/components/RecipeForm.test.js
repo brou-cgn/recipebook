@@ -3264,4 +3264,34 @@ describe('RecipeForm - Private List Selector', () => {
       expect(selector.value).toBe('private-1');
     });
   });
+
+  test('renders private list and import/scan controls inside recipe form above title for new recipes', () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={{ ...mockUser, webimport: true, fotoscan: true, recipeImport: true }}
+        groups={mockGroups}
+        privateLists={mockPrivateLists}
+        activeGroupId={null}
+      />
+    );
+
+    const form = document.querySelector('.recipe-form');
+    const titleInput = screen.getByLabelText('Rezepttitel *');
+    const privateListSelector = screen.getByLabelText('Private Liste:');
+    const webImportButton = screen.getByTitle('Rezept von Website importieren');
+    const ocrScanButton = screen.getByTitle('Rezept mit Kamera scannen');
+    const importButton = screen.getByTitle('Rezept aus externer Quelle importieren');
+
+    expect(form).toContainElement(privateListSelector);
+    expect(form).toContainElement(webImportButton);
+    expect(form).toContainElement(ocrScanButton);
+    expect(form).toContainElement(importButton);
+
+    const toolbar = privateListSelector.closest('.recipe-form-toolbar');
+    expect(toolbar).toBeInTheDocument();
+    expect(toolbar.compareDocumentPosition(titleInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });
