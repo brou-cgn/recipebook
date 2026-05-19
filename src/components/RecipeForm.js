@@ -1183,7 +1183,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               title={uploadingImage ? 'Hochladen...' : 'Bild hinzufügen'}
             >
               {isBase64Image(getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)) ? (
-                <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="button-icon-img" />
+                <img src={getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)} alt="Bild hinzufügen" className="button-icon-img add-image-icon-img" />
               ) : (
                 getEffectiveIcon(buttonIcons, 'addImage', isDarkMode)
               )}
