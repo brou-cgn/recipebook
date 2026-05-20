@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -423,6 +423,12 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         const flagMap = { right: 'geparkt', left: 'archiv', up: 'kandidat' };
         const flag = flagMap[swipe.direction];
         if (flag && currentUser?.id && swipe.list?.id) {
+          const userName = [currentUser?.vorname, currentUser?.nachname].filter(Boolean).join(' ').trim();
+          setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, {
+            userName,
+            recipeTitle: swipe.recipe.title || '',
+            calculatedFlag: flag,
+          });
           // Keep allMembersFlags in sync with the current user's new swipe
           setAllMembersFlags((prev) => ({
             ...prev,

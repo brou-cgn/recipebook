@@ -20,14 +20,11 @@ jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
   return {
     setRecipeSwipeFlag: jest.fn(),
-    parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
-    archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
     getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
     getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
     getAllMembersSwipeFlagDocsForList: () => Promise.resolve(mockAllMembersFlagDocsValue),
     computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
     computeCalculatedRecipeSwipeFlag: actual.computeCalculatedRecipeSwipeFlag,
-    clearExpiryForArchivedRecipe: () => Promise.resolve(true),
   };
 });
 
@@ -212,6 +209,7 @@ describe('Tagesmenu – swipe card consistency', () => {
   });
 
   test('after swiping, the card that was second becomes the new top card', async () => {
+    const { setRecipeSwipeFlag } = require('../utils/recipeSwipeFlags');
     await act(async () => { renderMenu(); });
 
     const topCard = document.querySelector('.tagesmenu-card-top');
@@ -220,6 +218,16 @@ describe('Tagesmenu – swipe card consistency', () => {
 
     // Rezept 2 was behind Rezept 1 and must now be the top card
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+    expect(setRecipeSwipeFlag).toHaveBeenCalledWith(
+      'user1',
+      'list1',
+      'r1',
+      'archiv',
+      expect.objectContaining({
+        recipeTitle: 'Rezept 1',
+        calculatedFlag: 'archiv',
+      })
+    );
   });
 
   test('background card transitions are suppressed immediately after a swipe (justSwiped)', async () => {

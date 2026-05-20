@@ -10,21 +10,26 @@ const mockGetDocs = jest.fn();
 const mockCollection = jest.fn();
 const mockQuery = jest.fn();
 const mockWhere = jest.fn();
+const mockDoc = jest.fn();
+const mockSetDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
+const mockTimestampNow = jest.fn();
 
 jest.mock('firebase/firestore', () => ({
   getDocs: (...args) => mockGetDocs(...args),
   collection: (...args) => mockCollection(...args),
   query: (...args) => mockQuery(...args),
   where: (...args) => mockWhere(...args),
+  doc: (...args) => mockDoc(...args),
+  setDoc: (...args) => mockSetDoc(...args),
+  deleteDoc: (...args) => mockDeleteDoc(...args),
+  Timestamp: {
+    now: (...args) => mockTimestampNow(...args),
+  },
 }));
 
 import {
   setRecipeSwipeFlag,
-  recalculateCalculatedFlagForRecipeInList,
-  reconcileRecipeSwipeFlagsForMemberChange,
-  clearExpiryForArchivedRecipe,
-  archiveRecipeForAllUsersInList,
-  parkAllRecipeSwipeFlagsForRecipeInList,
   getActiveSwipeFlags,
   getSwipeFlagDocsByRecipeForUser,
   getAllMembersSwipeFlags,
@@ -37,15 +42,68 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('disabled recipeSwipeFlags write operations', () => {
-  it('returns false for all write/update/delete related APIs', async () => {
-    expect(await setRecipeSwipeFlag('u', 'l', 'r', 'archiv')).toBe(false);
-    expect(await recalculateCalculatedFlagForRecipeInList('l', 'r')).toBe(false);
-    expect(await reconcileRecipeSwipeFlagsForMemberChange('l', ['u'])).toBe(false);
-    expect(await clearExpiryForArchivedRecipe('l', 'r')).toBe(false);
-    expect(await archiveRecipeForAllUsersInList('l', 'r', 7)).toBe(false);
-    expect(await parkAllRecipeSwipeFlagsForRecipeInList('l', 'r', 7)).toBe(false);
+describe('recipeSwipeFlags write operations', () => {
+  it('stores required swipe flag fields and removes expired calculated flags first', async () => {
+    const now = Date.now();
+    const expiresAt = { toMillis: () => now + 1000 };
+    const calculatedExpiresAt = { toMillis: () => now + 2000 };
+
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          ref: { id: 'expired-ref' },
+          data: () => ({ listID: 'l', calculatedExpiresAt: { toMillis: () => now - 1000 } }),
+        });
+        cb({
+          ref: { id: 'future-ref' },
+          data: () => ({ listID: 'l', calculatedExpiresAt: { toMillis: () => now + 1000 } }),
+        });
+        cb({
+          ref: { id: 'null-ref' },
+          data: () => ({ listID: 'l', calculatedExpiresAt: null }),
+        });
+      },
+    });
+    mockDoc.mockReturnValueOnce('flag-doc-ref');
+    mockSetDoc.mockResolvedValueOnce();
+    mockDeleteDoc.mockResolvedValue();
+    mockTimestampNow.mockReturnValue('created-ts');
+
+    const result = await setRecipeSwipeFlag('u', 'l', 'r', 'archiv', {
+      userName: 'Max Mustermann',
+      recipeTitle: 'Kartoffelsuppe',
+      expiresAt,
+      calculatedFlag: 'archiv',
+      calculatedExpiresAt,
+    });
+
+    expect(result).toBe(true);
+    expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'l');
+    expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ id: 'expired-ref' });
+    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'future-ref' });
+    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'null-ref' });
+    expect(mockDoc).toHaveBeenCalledWith({}, 'recipeSwipeFlags', 'u_l_r');
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      'flag-doc-ref',
+      expect.objectContaining({
+        userId: 'u',
+        userID: 'u',
+        userName: 'Max Mustermann',
+        listId: 'l',
+        listID: 'l',
+        recipeId: 'r',
+        recipeID: 'r',
+        recipeTitle: 'Kartoffelsuppe',
+        flag: 'archiv',
+        createdAt: 'created-ts',
+        expiresAt,
+        calculatedFlag: 'archiv',
+        calculatedExpiresAt,
+      })
+    );
   });
+
 });
 
 describe('getActiveSwipeFlags', () => {
