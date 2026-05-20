@@ -429,7 +429,7 @@ describe('Startseite', () => {
     expect(screen.queryByRole('button', { name: /Inspirationssammlung anlegen/i })).not.toBeInTheDocument();
   });
 
-  test('calls onCreateInspirationList when setup button is clicked', async () => {
+  test('calls onCreateInspirationList when setup button is clicked and no interactive lists exist', async () => {
     const onCreateInspirationList = jest.fn(() => Promise.resolve());
     render(
       <Startseite
@@ -441,6 +441,89 @@ describe('Startseite', () => {
     const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
     fireEvent.click(btn);
     expect(onCreateInspirationList).toHaveBeenCalledTimes(1);
+  });
+
+  test('shows inspiration picker when interactive lists exist and setup button is clicked', async () => {
+    const onCreateInspirationList = jest.fn(() => Promise.resolve());
+    const onSelectExistingInspirationList = jest.fn(() => Promise.resolve());
+    const interactiveGroup = { id: 'g1', name: 'Meine Inspirationen', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'interactive' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[interactiveGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+        onSelectExistingInspirationList={onSelectExistingInspirationList}
+      />
+    );
+    const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
+    fireEvent.click(btn);
+    expect(await screen.findByRole('heading', { name: /Inspirationssammlung auswählen/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Meine Inspirationen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Neue Liste erstellen/i })).toBeInTheDocument();
+    expect(onCreateInspirationList).not.toHaveBeenCalled();
+  });
+
+  test('selecting existing list from picker calls onSelectExistingInspirationList', async () => {
+    const onCreateInspirationList = jest.fn(() => Promise.resolve());
+    const onSelectExistingInspirationList = jest.fn(() => Promise.resolve());
+    const interactiveGroup = { id: 'g1', name: 'Meine Inspirationen', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'interactive' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[interactiveGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+        onSelectExistingInspirationList={onSelectExistingInspirationList}
+      />
+    );
+    const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
+    fireEvent.click(btn);
+    fireEvent.click(await screen.findByRole('button', { name: 'Meine Inspirationen' }));
+    await waitFor(() => {
+      expect(onSelectExistingInspirationList).toHaveBeenCalledWith('g1');
+    });
+    expect(onCreateInspirationList).not.toHaveBeenCalled();
+  });
+
+  test('"Neue Liste erstellen" in picker calls onCreateInspirationList', async () => {
+    const onCreateInspirationList = jest.fn(() => Promise.resolve());
+    const onSelectExistingInspirationList = jest.fn(() => Promise.resolve());
+    const interactiveGroup = { id: 'g1', name: 'Meine Inspirationen', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'interactive' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[interactiveGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+        onSelectExistingInspirationList={onSelectExistingInspirationList}
+      />
+    );
+    const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
+    fireEvent.click(btn);
+    fireEvent.click(await screen.findByRole('button', { name: /Neue Liste erstellen/i }));
+    await waitFor(() => {
+      expect(onCreateInspirationList).toHaveBeenCalledTimes(1);
+    });
+    expect(onSelectExistingInspirationList).not.toHaveBeenCalled();
+  });
+
+  test('closes inspiration picker when close button is clicked', async () => {
+    const onCreateInspirationList = jest.fn(() => Promise.resolve());
+    const onSelectExistingInspirationList = jest.fn(() => Promise.resolve());
+    const interactiveGroup = { id: 'g1', name: 'Meine Inspirationen', type: 'private', ownerId: 'u1', memberIds: ['u1'], listKind: 'interactive' };
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[interactiveGroup]}
+        onCreateInspirationList={onCreateInspirationList}
+        onSelectExistingInspirationList={onSelectExistingInspirationList}
+      />
+    );
+    const btn = await screen.findByRole('button', { name: /Inspirationssammlung anlegen/i });
+    fireEvent.click(btn);
+    expect(await screen.findByRole('heading', { name: /Inspirationssammlung auswählen/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /Inspirationssammlung auswählen/i })).not.toBeInTheDocument();
+    });
   });
 
   test('shows "Alltagsklassiker zuordnen" button when no list is configured', async () => {

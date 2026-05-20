@@ -1102,6 +1102,51 @@ function App() {
     }
   };
 
+  const handleSelectExistingInspirationList = async (listId) => {
+    if (!currentUser) return;
+    try {
+      // Find the selected interactive list
+      const selectedList = groups.find((g) => g.id === listId);
+
+      // Determine if the user is a member of the target list
+      let everydayClassicsListId = currentUser.defaultEverydayClassicsListId || '';
+      if (selectedList?.targetListId) {
+        const targetList = groups.find((g) => g.id === selectedList.targetListId);
+        if (targetList) {
+          const targetMemberIds = Array.isArray(targetList.memberIds) ? targetList.memberIds : [];
+          const allTargetMemberIds = targetList.ownerId
+            ? [...new Set([targetList.ownerId, ...targetMemberIds])]
+            : targetMemberIds;
+          everydayClassicsListId = allTargetMemberIds.includes(currentUser.id)
+            ? targetList.id
+            : '';
+        } else {
+          everydayClassicsListId = '';
+        }
+      }
+
+      const result = await updateUserProfile(currentUser.id, {
+        vorname: currentUser.vorname,
+        nachname: currentUser.nachname,
+        email: currentUser.email,
+        signatureSatz: currentUser.signatureSatz || '',
+        defaultWebImportListId: listId,
+        defaultEverydayClassicsListId: everydayClassicsListId,
+      });
+
+      if (result.success) {
+        setCurrentUser(prev => ({
+          ...prev,
+          defaultWebImportListId: listId,
+          defaultEverydayClassicsListId: everydayClassicsListId,
+        }));
+      }
+    } catch (error) {
+      console.error('Error selecting existing inspiration list:', error);
+      alert('Fehler beim Hinterlegen der Inspirationssammlung. Bitte versuchen Sie es erneut.');
+    }
+  };
+
   const handleAssignEverydayClassicsList = async (listId) => {
     if (!currentUser) return false;
     try {
@@ -1616,7 +1661,7 @@ function App() {
           allUsers={allUsers}
         />
       ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onAddRecipe={handleAddRecipe} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onAddRecipe={handleAddRecipe} />
       ) : (
         // Recipe views
         <>
