@@ -32,7 +32,7 @@ const cleanupExpiredCalculatedFlagsForList = async (listId) => {
   const deleteOperations = [];
 
   snapshot.forEach((docSnap) => {
-    const data = docSnap.data?.() || {};
+    const data = docSnap.data() || {};
     const calculatedExpiresAt = data.calculatedExpiresAt;
     const calculatedExpiresAtMillis = calculatedExpiresAt?.toMillis?.();
     const isExpiredCalculated =
@@ -128,7 +128,11 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       calculatedExpiresAt = expiresAt,
     } = metadata;
 
-    const flagDocRef = doc(db, 'recipeSwipeFlags', `${userId}_${listId}_${recipeId}`);
+    const flagDocRef = doc(
+      db,
+      'recipeSwipeFlags',
+      `${encodeURIComponent(userId)}_${encodeURIComponent(listId)}_${encodeURIComponent(recipeId)}`
+    );
     await setDoc(flagDocRef, {
       userId,
       userID: userId,

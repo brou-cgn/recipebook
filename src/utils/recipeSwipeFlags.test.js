@@ -51,15 +51,15 @@ describe('recipeSwipeFlags write operations', () => {
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
         cb({
-          ref: 'expired-ref',
+          ref: { id: 'expired-ref' },
           data: () => ({ listID: 'l', calculatedExpiresAt: { toMillis: () => now - 1000 } }),
         });
         cb({
-          ref: 'future-ref',
+          ref: { id: 'future-ref' },
           data: () => ({ listID: 'l', calculatedExpiresAt: { toMillis: () => now + 1000 } }),
         });
         cb({
-          ref: 'null-ref',
+          ref: { id: 'null-ref' },
           data: () => ({ listID: 'l', calculatedExpiresAt: null }),
         });
       },
@@ -80,9 +80,9 @@ describe('recipeSwipeFlags write operations', () => {
     expect(result).toBe(true);
     expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'l');
     expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
-    expect(mockDeleteDoc).toHaveBeenCalledWith('expired-ref');
-    expect(mockDeleteDoc).not.toHaveBeenCalledWith('future-ref');
-    expect(mockDeleteDoc).not.toHaveBeenCalledWith('null-ref');
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ id: 'expired-ref' });
+    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'future-ref' });
+    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'null-ref' });
     expect(mockDoc).toHaveBeenCalledWith({}, 'recipeSwipeFlags', 'u_l_r');
     expect(mockSetDoc).toHaveBeenCalledWith(
       'flag-doc-ref',
