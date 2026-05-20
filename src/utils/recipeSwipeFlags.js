@@ -27,6 +27,11 @@ const resolveMemberIds = (memberIds, fallbackMemberIds = []) => (
     : fallbackMemberIds.filter(Boolean)
 );
 
+const computeExpiresAtFromDays = (days) => {
+  if (!days) return null;
+  return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+};
+
 const cleanupExpiredCalculatedFlagsForList = async (listId) => {
   if (!listId) return;
 
@@ -154,18 +159,13 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
     if (!calculatedFlag) return;
 
     const validitySettings = await getStatusValiditySettings();
-    const computeExpiresAt = (days) => {
-      if (!days) return null;
-      return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
-    };
-
     let calculatedExpiresAt;
     if (calculatedFlag === 'archiv') {
-      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysArchiv);
+      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysArchiv);
     } else if (calculatedFlag === 'geparkt') {
-      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysGeparkt);
+      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysGeparkt);
     } else {
-      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysKandidat);
+      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
     }
 
     await Promise.all(
@@ -207,18 +207,13 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       thresholds,
     } = metadata;
 
-    const computeExpiresAt = (days) => {
-      if (!days) return null;
-      return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
-    };
-
     let expiresAt;
     if (flag === 'archiv') {
-      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysArchiv);
+      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysArchiv);
     } else if (flag === 'geparkt') {
-      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysGeparkt);
+      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysGeparkt);
     } else {
-      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysKandidat);
+      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
     }
 
     const flagDocRef = doc(
