@@ -40,8 +40,10 @@ jest.mock('firebase/firestore', () => ({
 
 // Mock customLists to control threshold loading
 const mockGetGroupStatusThresholds = jest.fn();
+const mockGetStatusValiditySettings = jest.fn();
 jest.mock('./customLists', () => ({
   getGroupStatusThresholds: (...args) => mockGetGroupStatusThresholds(...args),
+  getStatusValiditySettings: (...args) => mockGetStatusValiditySettings(...args),
 }));
 
 import {
@@ -83,6 +85,11 @@ beforeEach(() => {
   mockWhere.mockReturnValue('mock-where-ref');
   mockTimestampFromMillis.mockImplementation((ms) => ({ toMillis: () => ms, _isMock: true }));
   mockGetGroupStatusThresholds.mockResolvedValue(DEFAULT_TEST_THRESHOLDS);
+  mockGetStatusValiditySettings.mockResolvedValue({
+    statusValidityDaysKandidat: null,
+    statusValidityDaysGeparkt: null,
+    statusValidityDaysArchiv: null,
+  });
 });
 
 describe('setRecipeSwipeFlag', () => {
@@ -1313,6 +1320,88 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
       expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
       expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
       expect(mockUpdateDoc).toHaveBeenCalledWith('ref-3', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('synchronizes expiresAt using loaded validity settings when no 4th argument is passed', async () => {
+    const mockedNow = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockedNow);
+    try {
+      // 30-day validity for geparkt, permanent for archiv and kandidat
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: null,
+        statusValidityDaysGeparkt: 30,
+        statusValidityDaysArchiv: null,
+      });
+      // 3 members: ownerId=user-1, memberIds=[user-2, user-3]
+      // user-1: archiv, user-2: kandidat, user-3: geparkt
+      // archivPct = 33.3 < 50 → not archiv; kandidatPct = 33.3 < 50 → not kandidat → geparkt
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ ownerId: 'user-1', memberIds: ['user-2', 'user-3'] }),
+      });
+      const expectedMillis = mockedNow + 30 * 24 * 60 * 60 * 1000;
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          // Older doc: archiv flag, stale expiresAt: null — must be synchronized
+          cb({
+            ref: 'ref-1',
+            data: () => ({
+              userId: 'user-1',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'archiv',
+              calculatedFlag: 'geparkt',
+              expiresAt: null,
+            }),
+          });
+          // Newer doc: kandidat flag, already has the correct 30-day expiresAt
+          cb({
+            ref: 'ref-2',
+            data: () => ({
+              userId: 'user-2',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'kandidat',
+              calculatedFlag: 'geparkt',
+              expiresAt: { toMillis: () => expectedMillis },
+            }),
+          });
+          // Third doc: geparkt flag, stale expiresAt: null — must be synchronized
+          cb({
+            ref: 'ref-3',
+            data: () => ({
+              userId: 'user-3',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'geparkt',
+              calculatedFlag: 'geparkt',
+              expiresAt: null,
+            }),
+          });
+        },
+      });
+
+      const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1');
+
+      expect(result).toBe(true);
+      expect(mockGetStatusValiditySettings).toHaveBeenCalled();
+      // ref-1 had stale expiresAt: null — must be synchronized to the 30-day timestamp
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', {
+        expiresAt: { toMillis: expect.any(Function), _isMock: true },
+      });
+      const ref1ExpiresAt = mockUpdateDoc.mock.calls.find(([ref]) => ref === 'ref-1')[1].expiresAt;
+      expect(ref1ExpiresAt.toMillis()).toBe(expectedMillis);
+      // ref-2 already had the correct expiresAt — no update needed
+      expect(mockUpdateDoc).not.toHaveBeenCalledWith('ref-2', expect.anything());
+      // ref-3 had stale expiresAt: null — must be synchronized to the 30-day timestamp
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-3', {
+        expiresAt: { toMillis: expect.any(Function), _isMock: true },
+      });
+      const ref3ExpiresAt = mockUpdateDoc.mock.calls.find(([ref]) => ref === 'ref-3')[1].expiresAt;
+      expect(ref3ExpiresAt.toMillis()).toBe(expectedMillis);
     } finally {
       nowSpy.mockRestore();
     }
