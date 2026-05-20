@@ -558,6 +558,10 @@
   margin-bottom: 0rem;
 }
 
+.form-section .section-header + .form-list-item {
+  margin-top: -0.35rem;
+}
+
 .form-section h3 {
   margin: 0;
   color: #1a1a1a;
