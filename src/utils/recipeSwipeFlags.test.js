@@ -12,6 +12,7 @@ const mockQuery = jest.fn();
 const mockWhere = jest.fn();
 const mockDoc = jest.fn();
 const mockSetDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockTimestampNow = jest.fn();
 const mockTimestampFromDate = jest.fn();
@@ -28,6 +29,7 @@ jest.mock('firebase/firestore', () => ({
   where: (...args) => mockWhere(...args),
   doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
+  updateDoc: (...args) => mockUpdateDoc(...args),
   deleteDoc: (...args) => mockDeleteDoc(...args),
   Timestamp: {
     now: (...args) => mockTimestampNow(...args),
@@ -43,10 +45,12 @@ import {
   getAllMembersSwipeFlagDocsForList,
   computeGroupRecipeStatus,
   computeCalculatedRecipeSwipeFlag,
+  updateCalculatedSwipeFlagsForRecipe,
 } from './recipeSwipeFlags';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetDocs.mockResolvedValue({ forEach: () => {} });
   mockGetStatusValiditySettings.mockResolvedValue({
     statusValidityDaysKandidat: null,
     statusValidityDaysGeparkt: null,
@@ -226,6 +230,147 @@ describe('recipeSwipeFlags write operations', () => {
     );
   });
 
+  it('falls back to current user memberIds when metadata.memberIds is missing', async () => {
+    mockGetDocs
+      .mockResolvedValueOnce({ forEach: () => {} })
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l', recipeID: 'r', flag: 'geparkt' }) });
+          cb({ ref: 'ref-u2', data: () => ({ userID: 'u2', listID: 'l', recipeID: 'r', flag: 'archiv' }) });
+        },
+      });
+    mockDoc.mockReturnValueOnce('flag-doc-ref');
+    mockSetDoc.mockResolvedValueOnce();
+    mockUpdateDoc.mockResolvedValue();
+    mockTimestampNow.mockReturnValue('created-ts');
+
+    await setRecipeSwipeFlag('u1', 'l', 'r', 'kandidat', { userName: 'U', recipeTitle: 'R' });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u2', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+  });
+
+});
+
+describe('updateCalculatedSwipeFlagsForRecipe', () => {
+  it('computes kandidat with open swipes and updates matching recipe docs', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1', flag: 'kandidat' }) });
+        cb({ ref: 'ref-u2', data: () => ({ userID: 'u2', listID: 'l1', recipeID: 'r1', flag: 'geparkt' }) });
+      },
+    });
+    mockUpdateDoc.mockResolvedValue();
+
+    await updateCalculatedSwipeFlagsForRecipe(
+      'l1',
+      'r1',
+      ['u1', 'u2', 'u3'],
+      {
+        groupThresholdKandidatMinKandidat: 66,
+        groupThresholdKandidatMaxArchiv: 10,
+        groupThresholdArchivMinArchiv: 66,
+        groupThresholdArchivMaxKandidat: 10,
+      }
+    );
+
+    expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'l1');
+    expect(mockWhere).toHaveBeenCalledWith('recipeID', '==', 'r1');
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+    expect(mockUpdateDoc).toHaveBeenNthCalledWith(1, 'ref-u1', { calculatedFlag: 'kandidat', calculatedExpiresAt: null });
+    expect(mockUpdateDoc).toHaveBeenNthCalledWith(2, 'ref-u2', { calculatedFlag: 'kandidat', calculatedExpiresAt: null });
+  });
+
+  it('computes geparkt for archiv prognosis scenario', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1', flag: 'archiv' }) });
+      },
+    });
+    mockUpdateDoc.mockResolvedValue();
+
+    await updateCalculatedSwipeFlagsForRecipe(
+      'l1',
+      'r1',
+      ['u1', 'u2', 'u3'],
+      {
+        groupThresholdKandidatMinKandidat: 66,
+        groupThresholdKandidatMaxArchiv: 10,
+        groupThresholdArchivMinArchiv: 66,
+        groupThresholdArchivMaxKandidat: 10,
+      }
+    );
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', { calculatedFlag: 'geparkt', calculatedExpiresAt: null });
+  });
+
+  it('sets calculatedExpiresAt based on calculatedFlag validity settings', async () => {
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(4_000_000);
+    const candidateCalculatedExpiresAt = { id: 'candidate-calculated-expires-at' };
+
+    try {
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1', flag: 'kandidat' }) });
+        },
+      });
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: 9,
+        statusValidityDaysGeparkt: 3,
+        statusValidityDaysArchiv: 7,
+      });
+      mockTimestampFromDate.mockReturnValueOnce(candidateCalculatedExpiresAt);
+      mockUpdateDoc.mockResolvedValue();
+
+      await updateCalculatedSwipeFlagsForRecipe(
+        'l1',
+        'r1',
+        ['u1', 'u2', 'u3'],
+        {
+          groupThresholdKandidatMinKandidat: 66,
+          groupThresholdKandidatMaxArchiv: 10,
+          groupThresholdArchivMinArchiv: 66,
+          groupThresholdArchivMaxKandidat: 10,
+        }
+      );
+
+      expect(mockTimestampFromDate).toHaveBeenCalledWith(new Date(4_000_000 + 9 * 24 * 60 * 60 * 1000));
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', {
+        calculatedFlag: 'kandidat',
+        calculatedExpiresAt: candidateCalculatedExpiresAt,
+      });
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it('updates all matching recipe swipe documents', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1', flag: 'kandidat' }) });
+        cb({ ref: 'ref-u2', data: () => ({ userID: 'u2', listID: 'l1', recipeID: 'r1', flag: 'kandidat' }) });
+        cb({ ref: 'ref-u3', data: () => ({ userID: 'u3', listID: 'l1', recipeID: 'r1', flag: 'archiv' }) });
+      },
+    });
+    mockUpdateDoc.mockResolvedValue();
+
+    await updateCalculatedSwipeFlagsForRecipe(
+      'l1',
+      'r1',
+      ['u1', 'u2', 'u3'],
+      {
+        groupThresholdKandidatMinKandidat: 66,
+        groupThresholdKandidatMaxArchiv: 10,
+        groupThresholdArchivMinArchiv: 66,
+        groupThresholdArchivMaxKandidat: 10,
+      }
+    );
+
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(3);
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u2', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u3', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+  });
 });
 
 describe('getActiveSwipeFlags', () => {

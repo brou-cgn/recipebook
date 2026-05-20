@@ -6,7 +6,7 @@
  */
 
 import { db } from '../firebase';
-import { getDocs, collection, query, where, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { getStatusValiditySettings } from '../utils/customLists';
 
 const DEFAULT_GROUP_THRESHOLDS = {
@@ -103,6 +103,74 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
 }
 
 /**
+ * Recalculate and persist calculated swipe fields for all swipe docs of one recipe in one list.
+ *
+ * @param {string} listId
+ * @param {string} recipeId
+ * @param {string[]} [memberIds]
+ * @param {Object} [thresholds]
+ * @returns {Promise<void>}
+ */
+export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memberIds, thresholds) => {
+  if (!listId || !recipeId) return;
+
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listID', '==', listId),
+      where('recipeID', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const docs = [];
+    const allMembersFlags = {};
+
+    snapshot.forEach((docSnap) => {
+      docs.push(docSnap);
+      const data = docSnap.data() || {};
+      if (!data.userID) return;
+      if (!allMembersFlags[data.userID]) allMembersFlags[data.userID] = {};
+      allMembersFlags[data.userID][recipeId] = data.flag;
+    });
+
+    if (docs.length === 0) return;
+
+    const resolvedMemberIds =
+      Array.isArray(memberIds) && memberIds.length > 0
+        ? memberIds
+        : docs.map((docSnap) => docSnap.data()?.userID).filter(Boolean);
+
+    const calculatedFlag = computeCalculatedRecipeSwipeFlag(
+      resolvedMemberIds,
+      allMembersFlags,
+      recipeId,
+      thresholds
+    );
+    if (!calculatedFlag) return;
+
+    const validitySettings = await getStatusValiditySettings();
+    const computeExpiresAt = (days) => {
+      if (!days) return null;
+      return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+    };
+
+    let calculatedExpiresAt;
+    if (calculatedFlag === 'archiv') {
+      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysArchiv);
+    } else if (calculatedFlag === 'geparkt') {
+      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysGeparkt);
+    } else {
+      calculatedExpiresAt = computeExpiresAt(validitySettings.statusValidityDaysKandidat);
+    }
+
+    await Promise.all(
+      docs.map((docSnap) => updateDoc(docSnap.ref, { calculatedFlag, calculatedExpiresAt }))
+    );
+  } catch (error) {
+    console.error('Error updating calculated swipe flags for recipe:', error);
+  }
+};
+
+/**
  * Store/update a swipe flag document for a user/list/recipe combination.
  *
  * Before storing, remove all expired calculated flags in the same list where
@@ -115,6 +183,8 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
  * @param {Object} [metadata]
  * @param {string} [metadata.userName]
  * @param {string} [metadata.recipeTitle]
+ * @param {string[]} [metadata.memberIds]
+ * @param {Object} [metadata.thresholds]
  * @returns {Promise<boolean>}
  */
 export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadata = {}) => {
@@ -127,6 +197,8 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
     const {
       userName = '',
       recipeTitle = '',
+      memberIds,
+      thresholds,
     } = metadata;
 
     const computeExpiresAt = (days) => {
@@ -158,6 +230,13 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       createdAt: Timestamp.now(),
       expiresAt,
     });
+
+    await updateCalculatedSwipeFlagsForRecipe(
+      listId,
+      recipeId,
+      Array.isArray(memberIds) && memberIds.length > 0 ? memberIds : [userId],
+      thresholds
+    );
 
     return true;
   } catch (error) {
