@@ -565,6 +565,38 @@
   align-items: stretch;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.swipe-delete-background {
+  position: absolute;
+  inset: 0;
+  background: #e05245;
+  color: #fff;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.form-list-item.swipe-delete-active .swipe-delete-background {
+  opacity: 1;
+}
+
+.swipe-delete-icon-image {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+}
+
+.swipe-delete-icon-text {
+  font-size: 1.1rem;
 }
 
 .input-wrapper {
@@ -572,6 +604,7 @@
   flex: 1;
   display: flex;
   align-items: stretch;
+  z-index: 1;
 }
 .input-wrapper input,
 .input-wrapper textarea {
@@ -685,6 +718,7 @@
   touch-action: none;
   flex-shrink: 0;
   opacity: 1;
+  z-index: 1;
 }
 
 .drag-handle:hover {
@@ -831,6 +865,33 @@
   justify-content: center;
   position: relative;
   z-index: 1;
+}
+
+.swipe-undo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #f0c5bf;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: #8b2d21;
+  font-size: 0.9rem;
+}
+
+.swipe-undo-button {
+  border: none;
+  background: transparent;
+  color: #8b2d21;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swipe-undo-button:hover {
+  text-decoration: underline;
 }
 
 .add-item-button .button-icon-image {
