@@ -221,7 +221,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
         if (data.calculatedFlag !== calculatedFlag) {
           payload.calculatedFlag = calculatedFlag;
         }
-        if (shouldSyncExpiresAt && !isExpiredSwipeFlag(data.expiresAt, now) && !expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
+        if (shouldSyncExpiresAt && !expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
           payload.expiresAt = syncedExpiresAt;
         }
         return Object.keys(payload).length > 0

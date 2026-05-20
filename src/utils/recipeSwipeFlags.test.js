@@ -1261,7 +1261,7 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
     }
   });
 
-  it('does not sync expiresAt for expired docs and treats expired flags as open swipes for calculation', async () => {
+  it('syncs expiresAt for expired docs and treats expired flags as open swipes for calculation', async () => {
     const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(20_000);
     try {
       const syncedExpiresAt = { toMillis: () => 40_000 };
@@ -1310,10 +1310,9 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
       const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1', undefined, syncedExpiresAt);
 
       expect(result).toBe(true);
-      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'kandidat' });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
       expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
       expect(mockUpdateDoc).toHaveBeenCalledWith('ref-3', { calculatedFlag: 'kandidat', expiresAt: syncedExpiresAt });
-      expect(mockUpdateDoc).not.toHaveBeenCalledWith('ref-1', expect.objectContaining({ expiresAt: syncedExpiresAt }));
     } finally {
       nowSpy.mockRestore();
     }
