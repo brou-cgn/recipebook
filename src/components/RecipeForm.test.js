@@ -34,7 +34,8 @@ jest.mock('../utils/customLists', () => ({
     cancelRecipe: '✕',
     addImage: '🖼',
     addIngredient: '🥕',
-    addStep: '📝'
+    addStep: '📝',
+    swipeDelete: '🗑'
   }),
   DEFAULT_BUTTON_ICONS: {
     cookingMode: '👨‍🍳',
@@ -68,6 +69,7 @@ jest.mock('../utils/customLists', () => ({
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
+    swipeDelete: '🗑',
     menuFavoritesButton: '★',
     tagesmenuFilterButton: '☰'
   },
@@ -1922,6 +1924,109 @@ describe('RecipeForm - Ingredient Formatting', () => {
         ingredients: ['100 ml Milch'],
       })
     ));
+  });
+});
+
+describe('RecipeForm - Swipe Delete', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+  const regularUser = {
+    id: 'user-1',
+    vorname: 'Regular',
+    nachname: 'User',
+    email: 'user@example.com',
+    isAdmin: false,
+    role: 'edit',
+  };
+
+  const swipeLeft = (element) => {
+    fireEvent.touchStart(element, { touches: [{ clientX: 220, clientY: 24 }] });
+    fireEvent.touchMove(element, { touches: [{ clientX: 80, clientY: 24 }] });
+    fireEvent.touchEnd(element, { changedTouches: [{ clientX: 80, clientY: 24 }] });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('deletes ingredients with left swipe and restores them via undo', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Milch' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+    fireEvent.change(screen.getByPlaceholderText('Zutat 2'), { target: { value: 'Mehl' } });
+
+    swipeLeft(screen.getByPlaceholderText('Zutat 1'));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(1));
+    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Mehl');
+    expect(screen.getByText('Zutat gelöscht.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(2));
+    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Milch');
+    expect(screen.getByPlaceholderText('Zutat 2')).toHaveValue('Mehl');
+  });
+
+  test('deletes steps with left swipe and restores them via undo', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Mischen' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
+    fireEvent.change(screen.getByPlaceholderText('Schritt 2'), { target: { value: 'Backen' } });
+
+    swipeLeft(screen.getByPlaceholderText('Schritt 1'));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(1));
+    expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Backen');
+    expect(screen.getByText('Schritt gelöscht.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(2));
+    expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Mischen');
+    expect(screen.getByPlaceholderText('Schritt 2')).toHaveValue('Backen');
+  });
+
+  test('uses configurable swipe delete icon from settings', async () => {
+    const customLists = require('../utils/customLists');
+    const iconSpy = jest.spyOn(customLists, 'getButtonIcons').mockResolvedValueOnce({
+      swipeDelete: 'DEL',
+    });
+
+    try {
+      render(
+        <RecipeForm
+          recipe={null}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          currentUser={regularUser}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+
+      await waitFor(() => {
+        expect(screen.getAllByText('DEL').length).toBeGreaterThan(0);
+      });
+    } finally {
+      iconSpy.mockRestore();
+    }
   });
 });
 

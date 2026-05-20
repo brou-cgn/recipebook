@@ -187,6 +187,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'swipeRight', label: 'Swipe rechts (Ja)' },
   { key: 'swipeLeft', label: 'Swipe links (Nein)' },
   { key: 'swipeUp', label: 'Swipe hoch (Favorit)' },
+  { key: 'swipeDelete', label: 'Swipe löschen (Rezeptformular)' },
   { key: 'menuFavoritesButton', label: 'Menü-Favoriten' },
   { key: 'menuFavoritesButtonActive', label: 'Menü-Favoriten (aktiv)' },
   { key: 'tagesmenuFilterButton', label: 'Tagesmenü-Filter' },
