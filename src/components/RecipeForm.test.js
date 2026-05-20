@@ -500,6 +500,12 @@ describe('RecipeForm - Multi-Select Fields', () => {
     const kulinarikSearch = screen.getByLabelText('Kulinarik und Speisekategorien suchen');
     expect(kulinarikSearch.tagName).toBe('INPUT');
     expect(kulinarikSearch).toHaveAttribute('type', 'text');
+    expect(screen.getByText('Kulinarik (Mehrfachauswahl möglich)')).toBeInTheDocument();
+
+    const speisekategorieLabel = screen.getByText('Speisekategorie (Mehrfachauswahl möglich)');
+    const kulinarikHeading = screen.getByText('Kulinarik (Mehrfachauswahl möglich)');
+    expect(speisekategorieLabel.compareDocumentPosition(kulinarikSearch) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(kulinarikSearch.compareDocumentPosition(kulinarikHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test('Speisekategorie field is a multi-select dropdown', () => {
@@ -2370,7 +2376,7 @@ describe('RecipeForm - Drag and Drop', () => {
     });
   });
 
-  test('renders drag handle as right sibling outside ingredient input wrapper', () => {
+  test('renders drag handle inside ingredient input wrapper', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -2396,11 +2402,10 @@ describe('RecipeForm - Drag and Drop', () => {
 
     expect(row).not.toBeNull();
     expect(inputWrapper).not.toBeNull();
-    expect(inputWrapper.contains(handle)).toBe(false);
-    expect(row.lastElementChild).toBe(handle);
+    expect(inputWrapper.contains(handle)).toBe(true);
   });
 
-  test('renders drag handle as right sibling outside step input wrapper', () => {
+  test('renders drag handle inside step input wrapper', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -2426,8 +2431,30 @@ describe('RecipeForm - Drag and Drop', () => {
 
     expect(row).not.toBeNull();
     expect(inputWrapper).not.toBeNull();
-    expect(inputWrapper.contains(handle)).toBe(false);
-    expect(row.lastElementChild).toBe(handle);
+    expect(inputWrapper.contains(handle)).toBe(true);
+  });
+
+  test('does not render inline x remove buttons for ingredients and steps', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    expect(screen.queryByLabelText('Zutat entfernen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Schritt entfernen')).not.toBeInTheDocument();
   });
 });
 
