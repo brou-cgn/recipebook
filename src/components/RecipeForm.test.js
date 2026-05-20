@@ -576,7 +576,14 @@ describe('RecipeForm - Multi-Select Fields', () => {
     expect(combinedSearch).toHaveAttribute('type', 'text');
     expect(screen.queryByLabelText('Speisekategorien suchen')).not.toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Appetizer' })).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Italian' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Appetizer' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(combinedSearch, { target: { value: 'App' } });
+    expect(screen.getByRole('button', { name: 'Appetizer' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Italian' })).not.toBeInTheDocument();
 
     fireEvent.change(combinedSearch, { target: { value: 'zzzz' } });
     expect(screen.queryByRole('button', { name: 'Appetizer' })).not.toBeInTheDocument();
