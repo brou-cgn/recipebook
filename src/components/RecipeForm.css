@@ -829,6 +829,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 1;
 }
 
 .add-item-button .button-icon-image {
@@ -837,7 +839,7 @@
   object-fit: contain;
 }
 
-.add-item-button--ingredient {
+/*.add-item-button--ingredient {
   color: #5f4a3d;
   border-color: #d9c1ab;
 }
@@ -845,7 +847,7 @@
 .add-item-button--step {
   color: #365979;
   border-color: #b7cde0;
-}
+}*/
 
 .add-item-button:hover {
   background: #f5f5f5;
