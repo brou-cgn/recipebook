@@ -68,6 +68,8 @@
 .form-group textarea:focus {
   outline: none;
   border-color: #402C1C;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .form-group textarea {
