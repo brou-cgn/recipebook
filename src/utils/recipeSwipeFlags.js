@@ -21,6 +21,12 @@ const normalizeGroupThresholds = (thresholds) => ({
   ...(thresholds || {}),
 });
 
+const resolveMemberIds = (memberIds, fallbackMemberIds = []) => (
+  Array.isArray(memberIds) && memberIds.length > 0
+    ? memberIds
+    : fallbackMemberIds.filter(Boolean)
+);
+
 const cleanupExpiredCalculatedFlagsForList = async (listId) => {
   if (!listId) return;
 
@@ -134,10 +140,10 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
 
     if (docs.length === 0) return;
 
-    const resolvedMemberIds =
-      Array.isArray(memberIds) && memberIds.length > 0
-        ? memberIds
-        : docs.map((docSnap) => docSnap.data()?.userID).filter(Boolean);
+    const resolvedMemberIds = resolveMemberIds(
+      memberIds,
+      docs.map((docSnap) => docSnap.data()?.userID)
+    );
 
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(
       resolvedMemberIds,
@@ -234,7 +240,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
     await updateCalculatedSwipeFlagsForRecipe(
       listId,
       recipeId,
-      Array.isArray(memberIds) && memberIds.length > 0 ? memberIds : [userId],
+      resolveMemberIds(memberIds, [userId]),
       thresholds
     );
 
