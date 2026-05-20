@@ -78,6 +78,7 @@ describe('RecipeForm toolbar CSS layout', () => {
       .forEach((declaration) => {
         expect(addItemButtonRule).toContain(declaration);
       });
+    expect(addItemButtonRule).toContain('margin: -14px auto 0;');
 
     expect(ingredientButtonRule).toContain('border-color: #d9c1ab;');
     expect(stepButtonRule).toContain('border-color: #b7cde0;');
