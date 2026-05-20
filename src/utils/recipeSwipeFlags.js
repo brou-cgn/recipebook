@@ -165,8 +165,8 @@ export const getActiveSwipeFlags = async (userId, listId) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('userId', '==', userId),
-      where('listId', '==', listId)
+      where('userID', '==', userId),
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -178,7 +178,7 @@ export const getActiveSwipeFlags = async (userId, listId) => {
         data.expiresAt !== undefined &&
         data.expiresAt.toMillis() <= now;
       if (!expired) {
-        activeFlags[data.recipeId] = data.flag;
+        activeFlags[data.recipeID] = data.flag;
       }
     });
     return activeFlags;
@@ -202,8 +202,8 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('userId', '==', userId),
-      where('listId', '==', listId)
+      where('userID', '==', userId),
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -211,9 +211,9 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
 
     snapshot.forEach((docSnap) => {
       const data = docSnap.data() || {};
-      if (!data.recipeId) return;
+      if (!data.recipeID) return;
       const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
-      docsByRecipe[data.recipeId] = {
+      docsByRecipe[data.recipeID] = {
         flag: data.flag,
         calculatedFlag: data.calculatedFlag,
         expiresAt: data.expiresAt ?? null,
@@ -233,7 +233,7 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
  * Load all active (non-expired) swipe flags for all specified members of a list.
  * Used for group status determination across all list members.
  *
- * Uses a single query filtered by listId so that all members' flags are fetched
+ * Uses a single query filtered by listID so that all members' flags are fetched
  * in one round-trip. Requires the Firestore security rule for recipeSwipeFlags to
  * allow list members to read each other's flags (i.e. any authenticated user who
  * is the owner or a member of the list may read all flags for that list).
@@ -247,7 +247,7 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId)
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -258,13 +258,13 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       // Skip documents for users outside the expected member list
-      if (!memberIds.includes(data.userId)) return;
+      if (!memberIds.includes(data.userID)) return;
       const expired =
         data.expiresAt !== null &&
         data.expiresAt !== undefined &&
         data.expiresAt.toMillis() <= now;
       if (!expired) {
-        result[data.userId][data.recipeId] = data.flag;
+        result[data.userID][data.recipeID] = data.flag;
       }
     });
 
@@ -279,7 +279,7 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
  * Load all swipe flag docs (including expired) with full metadata for all specified members of a list.
  * Used for swipe-stack prioritization where expired flag timestamps are needed.
  *
- * Uses a single query filtered by listId so that all members' docs are fetched in one round-trip.
+ * Uses a single query filtered by listID so that all members' docs are fetched in one round-trip.
  *
  * @param {string} listId      - ID of the interactive list
  * @param {string[]} memberIds - Array of user IDs (all list members including owner)
@@ -290,7 +290,7 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId)
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -299,10 +299,10 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
 
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      if (!memberIds.includes(data.userId)) return;
-      if (!data.recipeId) return;
+      if (!memberIds.includes(data.userID)) return;
+      if (!data.recipeID) return;
       const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
-      result[data.userId][data.recipeId] = {
+      result[data.userID][data.recipeID] = {
         flag: data.flag,
         expiresAt: data.expiresAt ?? null,
         expiresAtMillis,

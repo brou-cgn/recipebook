@@ -112,17 +112,17 @@ describe('getActiveSwipeFlags', () => {
     const now = Date.now();
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ recipeId: 'a', flag: 'kandidat', expiresAt: null }) });
-        cb({ data: () => ({ recipeId: 'b', flag: 'archiv', expiresAt: { toMillis: () => now - 1000 } }) });
-        cb({ data: () => ({ recipeId: 'c', flag: 'geparkt', expiresAt: { toMillis: () => now + 1000 } }) });
+        cb({ data: () => ({ recipeID: 'a', flag: 'kandidat', expiresAt: null }) });
+        cb({ data: () => ({ recipeID: 'b', flag: 'archiv', expiresAt: { toMillis: () => now - 1000 } }) });
+        cb({ data: () => ({ recipeID: 'c', flag: 'geparkt', expiresAt: { toMillis: () => now + 1000 } }) });
       },
     });
 
     const result = await getActiveSwipeFlags('user-1', 'list-1');
 
     expect(result).toEqual({ a: 'kandidat', c: 'geparkt' });
-    expect(mockWhere).toHaveBeenCalledWith('userId', '==', 'user-1');
-    expect(mockWhere).toHaveBeenCalledWith('listId', '==', 'list-1');
+    expect(mockWhere).toHaveBeenCalledWith('userID', '==', 'user-1');
+    expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'list-1');
   });
 });
 
@@ -133,7 +133,7 @@ describe('getSwipeFlagDocsByRecipeForUser', () => {
       forEach: (cb) => {
         cb({
           data: () => ({
-            recipeId: 'r1',
+            recipeID: 'r1',
             flag: 'archiv',
             calculatedFlag: 'archiv',
             expiresAt: { toMillis: () => now - 1000 },
@@ -155,9 +155,9 @@ describe('getAllMembersSwipeFlags', () => {
     const now = Date.now();
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ userId: 'u1', recipeId: 'r1', flag: 'kandidat', expiresAt: null }) });
-        cb({ data: () => ({ userId: 'u2', recipeId: 'r1', flag: 'archiv', expiresAt: { toMillis: () => now + 1000 } }) });
-        cb({ data: () => ({ userId: 'u3', recipeId: 'r1', flag: 'geparkt', expiresAt: null }) });
+        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', flag: 'kandidat', expiresAt: null }) });
+        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', flag: 'archiv', expiresAt: { toMillis: () => now + 1000 } }) });
+        cb({ data: () => ({ userID: 'u3', recipeID: 'r1', flag: 'geparkt', expiresAt: null }) });
       },
     });
 
@@ -178,8 +178,8 @@ describe('getAllMembersSwipeFlagDocsForList', () => {
       forEach: (cb) => {
         cb({
           data: () => ({
-            userId: 'u1',
-            recipeId: 'r1',
+            userID: 'u1',
+            recipeID: 'r1',
             flag: 'geparkt',
             expiresAt: { toMillis: () => expired },
           }),
