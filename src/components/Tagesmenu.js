@@ -427,7 +427,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, {
             userName,
             recipeTitle: swipe.recipe.title || '',
-            calculatedFlag: flag,
           });
           // Keep allMembersFlags in sync with the current user's new swipe
           setAllMembersFlags((prev) => ({

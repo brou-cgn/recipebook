@@ -87,19 +87,14 @@ describe('recipeSwipeFlags write operations', () => {
     expect(mockSetDoc).toHaveBeenCalledWith(
       'flag-doc-ref',
       expect.objectContaining({
-        userId: 'u',
         userID: 'u',
         userName: 'Max Mustermann',
-        listId: 'l',
         listID: 'l',
-        recipeId: 'r',
         recipeID: 'r',
         recipeTitle: 'Kartoffelsuppe',
         flag: 'archiv',
         createdAt: 'created-ts',
         expiresAt,
-        calculatedFlag: 'archiv',
-        calculatedExpiresAt,
       })
     );
   });

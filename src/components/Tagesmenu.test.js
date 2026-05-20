@@ -225,7 +225,6 @@ describe('Tagesmenu – swipe card consistency', () => {
       'archiv',
       expect.objectContaining({
         recipeTitle: 'Rezept 1',
-        calculatedFlag: 'archiv',
       })
     );
   });

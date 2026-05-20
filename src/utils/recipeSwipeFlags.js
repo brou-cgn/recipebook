@@ -112,6 +112,9 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
  * @param {string} recipeId
  * @param {'kandidat'|'geparkt'|'archiv'} flag
  * @param {Object} [metadata]
+ * @param {string} [metadata.userName]
+ * @param {string} [metadata.recipeTitle]
+ * @param {import('firebase/firestore').Timestamp|null} [metadata.expiresAt]
  * @returns {Promise<boolean>}
  */
 export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadata = {}) => {
@@ -124,8 +127,6 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       userName = '',
       recipeTitle = '',
       expiresAt = null,
-      calculatedFlag = flag,
-      calculatedExpiresAt = expiresAt,
     } = metadata;
 
     const flagDocRef = doc(
@@ -134,19 +135,14 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       `${encodeURIComponent(userId)}_${encodeURIComponent(listId)}_${encodeURIComponent(recipeId)}`
     );
     await setDoc(flagDocRef, {
-      userId,
       userID: userId,
       userName,
-      listId,
       listID: listId,
-      recipeId,
       recipeID: recipeId,
       recipeTitle,
       flag,
       createdAt: Timestamp.now(),
       expiresAt,
-      calculatedFlag,
-      calculatedExpiresAt,
     });
 
     return true;
