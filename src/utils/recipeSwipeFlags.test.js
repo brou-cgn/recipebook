@@ -14,6 +14,12 @@ const mockDoc = jest.fn();
 const mockSetDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockTimestampNow = jest.fn();
+const mockTimestampFromDate = jest.fn();
+const mockGetStatusValiditySettings = jest.fn();
+
+jest.mock('../utils/customLists', () => ({
+  getStatusValiditySettings: (...args) => mockGetStatusValiditySettings(...args),
+}));
 
 jest.mock('firebase/firestore', () => ({
   getDocs: (...args) => mockGetDocs(...args),
@@ -25,6 +31,7 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: (...args) => mockDeleteDoc(...args),
   Timestamp: {
     now: (...args) => mockTimestampNow(...args),
+    fromDate: (...args) => mockTimestampFromDate(...args),
   },
 }));
 
@@ -40,13 +47,21 @@ import {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetStatusValiditySettings.mockResolvedValue({
+    statusValidityDaysKandidat: null,
+    statusValidityDaysGeparkt: null,
+    statusValidityDaysArchiv: null,
+  });
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe('recipeSwipeFlags write operations', () => {
   it('stores required swipe flag fields and removes expired calculated flags first', async () => {
     const now = Date.now();
     const expiresAt = { toMillis: () => now + 1000 };
-    const calculatedExpiresAt = { toMillis: () => now + 2000 };
 
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
@@ -68,13 +83,16 @@ describe('recipeSwipeFlags write operations', () => {
     mockSetDoc.mockResolvedValueOnce();
     mockDeleteDoc.mockResolvedValue();
     mockTimestampNow.mockReturnValue('created-ts');
+    mockGetStatusValiditySettings.mockResolvedValue({
+      statusValidityDaysKandidat: null,
+      statusValidityDaysGeparkt: null,
+      statusValidityDaysArchiv: 7,
+    });
+    mockTimestampFromDate.mockReturnValue(expiresAt);
 
     const result = await setRecipeSwipeFlag('u', 'l', 'r', 'archiv', {
       userName: 'Max Mustermann',
       recipeTitle: 'Kartoffelsuppe',
-      expiresAt,
-      calculatedFlag: 'archiv',
-      calculatedExpiresAt,
     });
 
     expect(result).toBe(true);
@@ -84,6 +102,7 @@ describe('recipeSwipeFlags write operations', () => {
     expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'future-ref' });
     expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'null-ref' });
     expect(mockDoc).toHaveBeenCalledWith({}, 'recipeSwipeFlags', 'u_l_r');
+    expect(mockTimestampFromDate).toHaveBeenCalledTimes(1);
     expect(mockSetDoc).toHaveBeenCalledWith(
       'flag-doc-ref',
       expect.objectContaining({
@@ -96,6 +115,114 @@ describe('recipeSwipeFlags write operations', () => {
         createdAt: 'created-ts',
         expiresAt,
       })
+    );
+  });
+
+  it('computes expiresAt from archiv validity days', async () => {
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const archivExpiresAt = { id: 'archiv-expires-at' };
+
+    try {
+      mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
+      mockDoc.mockReturnValueOnce('flag-doc-ref');
+      mockSetDoc.mockResolvedValueOnce();
+      mockDeleteDoc.mockResolvedValue();
+      mockTimestampNow.mockReturnValue('created-ts');
+      mockTimestampFromDate.mockReturnValueOnce(archivExpiresAt);
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: 3,
+        statusValidityDaysGeparkt: 5,
+        statusValidityDaysArchiv: 7,
+      });
+
+      await setRecipeSwipeFlag('u', 'l', 'r', 'archiv', { userName: 'U', recipeTitle: 'R' });
+
+      expect(mockTimestampFromDate).toHaveBeenCalledWith(new Date(1_000_000 + 7 * 24 * 60 * 60 * 1000));
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        'flag-doc-ref',
+        expect.objectContaining({ expiresAt: archivExpiresAt })
+      );
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it('computes expiresAt from geparkt validity days', async () => {
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(2_000_000);
+    const geparktExpiresAt = { id: 'geparkt-expires-at' };
+
+    try {
+      mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
+      mockDoc.mockReturnValueOnce('flag-doc-ref');
+      mockSetDoc.mockResolvedValueOnce();
+      mockDeleteDoc.mockResolvedValue();
+      mockTimestampNow.mockReturnValue('created-ts');
+      mockTimestampFromDate.mockReturnValueOnce(geparktExpiresAt);
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: 3,
+        statusValidityDaysGeparkt: 2,
+        statusValidityDaysArchiv: 7,
+      });
+
+      await setRecipeSwipeFlag('u', 'l', 'r', 'geparkt', { userName: 'U', recipeTitle: 'R' });
+
+      expect(mockTimestampFromDate).toHaveBeenCalledWith(new Date(2_000_000 + 2 * 24 * 60 * 60 * 1000));
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        'flag-doc-ref',
+        expect.objectContaining({ expiresAt: geparktExpiresAt })
+      );
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it('computes expiresAt from kandidat validity days', async () => {
+    const kandidatExpiresAt = { id: 'kandidat-expires-at' };
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(3_000_000);
+
+    try {
+      mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
+      mockDoc.mockReturnValueOnce('flag-doc-ref');
+      mockSetDoc.mockResolvedValueOnce();
+      mockDeleteDoc.mockResolvedValue();
+      mockTimestampNow.mockReturnValue('created-ts');
+      mockTimestampFromDate.mockReturnValueOnce(kandidatExpiresAt);
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: 4,
+        statusValidityDaysGeparkt: 2,
+        statusValidityDaysArchiv: 7,
+      });
+
+      await setRecipeSwipeFlag('u', 'l', 'r', 'kandidat', { userName: 'U', recipeTitle: 'R' });
+
+      expect(mockTimestampFromDate).toHaveBeenCalledWith(new Date(3_000_000 + 4 * 24 * 60 * 60 * 1000));
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        'flag-doc-ref',
+        expect.objectContaining({ expiresAt: kandidatExpiresAt })
+      );
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it('sets expiresAt to null when kandidat validity days is empty', async () => {
+    mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
+    mockDoc.mockReturnValueOnce('flag-doc-ref');
+    mockSetDoc.mockResolvedValueOnce();
+    mockDeleteDoc.mockResolvedValue();
+    mockTimestampNow.mockReturnValue('created-ts');
+    mockGetStatusValiditySettings.mockResolvedValueOnce({
+      statusValidityDaysKandidat: null,
+      statusValidityDaysGeparkt: 2,
+      statusValidityDaysArchiv: 7,
+    });
+
+    await setRecipeSwipeFlag('u', 'l', 'r', 'kandidat', { userName: 'U', recipeTitle: 'R' });
+
+    expect(mockTimestampFromDate).not.toHaveBeenCalled();
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      'flag-doc-ref',
+      expect.objectContaining({ expiresAt: null })
     );
   });
 
