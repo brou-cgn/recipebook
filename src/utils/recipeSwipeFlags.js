@@ -134,12 +134,9 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       `${encodeURIComponent(userId)}_${encodeURIComponent(listId)}_${encodeURIComponent(recipeId)}`
     );
     await setDoc(flagDocRef, {
-      userId,
       userID: userId,
       userName,
-      listId,
       listID: listId,
-      recipeId,
       recipeID: recipeId,
       recipeTitle,
       flag,
@@ -169,8 +166,8 @@ export const getActiveSwipeFlags = async (userId, listId) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('userId', '==', userId),
-      where('listId', '==', listId)
+      where('userID', '==', userId),
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -182,7 +179,7 @@ export const getActiveSwipeFlags = async (userId, listId) => {
         data.expiresAt !== undefined &&
         data.expiresAt.toMillis() <= now;
       if (!expired) {
-        activeFlags[data.recipeId] = data.flag;
+        activeFlags[data.recipeID] = data.flag;
       }
     });
     return activeFlags;
@@ -206,8 +203,8 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('userId', '==', userId),
-      where('listId', '==', listId)
+      where('userID', '==', userId),
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -215,9 +212,9 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
 
     snapshot.forEach((docSnap) => {
       const data = docSnap.data() || {};
-      if (!data.recipeId) return;
+      if (!data.recipeID) return;
       const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
-      docsByRecipe[data.recipeId] = {
+      docsByRecipe[data.recipeID] = {
         flag: data.flag,
         calculatedFlag: data.calculatedFlag,
         expiresAt: data.expiresAt ?? null,
@@ -251,7 +248,7 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId)
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -262,13 +259,13 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       // Skip documents for users outside the expected member list
-      if (!memberIds.includes(data.userId)) return;
+      if (!memberIds.includes(data.userID)) return;
       const expired =
         data.expiresAt !== null &&
         data.expiresAt !== undefined &&
         data.expiresAt.toMillis() <= now;
       if (!expired) {
-        result[data.userId][data.recipeId] = data.flag;
+        result[data.userID][data.recipeID] = data.flag;
       }
     });
 
@@ -294,7 +291,7 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
   try {
     const q = query(
       collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId)
+      where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
     const now = Date.now();
@@ -303,10 +300,10 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
 
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      if (!memberIds.includes(data.userId)) return;
-      if (!data.recipeId) return;
+      if (!memberIds.includes(data.userID)) return;
+      if (!data.recipeID) return;
       const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
-      result[data.userId][data.recipeId] = {
+      result[data.userID][data.recipeID] = {
         flag: data.flag,
         expiresAt: data.expiresAt ?? null,
         expiresAtMillis,
