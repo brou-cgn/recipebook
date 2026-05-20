@@ -199,6 +199,8 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'deleteRecipe', label: 'Rezept löschen' },
   { key: 'printRecipe', label: 'Rezept drucken' },
   { key: 'addSection', label: 'Abschnitt hinzufügen (Menü bearbeiten)' },
+  { key: 'addIngredient', label: 'Zutat hinzufügen' },
+  { key: 'addStep', label: 'Schritt hinzufügen' },
   { key: 'resetThumbnail', label: 'Thumbnail-Löschen-Button (FAB)' },
   { key: 'recipeCardSwipeRight', label: 'Rezeptkarte: Rechts-Swipe-Button' },
   { key: 'addImage', label: 'Bild hinzufügen (neben Titel)' },

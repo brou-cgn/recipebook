@@ -32,7 +32,9 @@ jest.mock('../utils/customLists', () => ({
     webImport: '🌐',
     saveRecipe: '💾',
     cancelRecipe: '✕',
-    addImage: '🖼'
+    addImage: '🖼',
+    addIngredient: '🥕',
+    addStep: '📝'
   }),
   DEFAULT_BUTTON_ICONS: {
     cookingMode: '👨‍🍳',
@@ -61,6 +63,8 @@ jest.mock('../utils/customLists', () => ({
     addMenu: '📋',
     addPrivateRecipe: '🔒',
     addImage: '🖼',
+    addIngredient: '🥕',
+    addStep: '📝',
     swipeRight: '👍',
     swipeLeft: '👎',
     swipeUp: '⭐',
@@ -159,6 +163,29 @@ describe('RecipeForm - Author Field', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  test('renders dedicated icon buttons for adding ingredients and steps', () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Zutat hinzufügen' })).toHaveTextContent('🥕');
+    expect(screen.getByRole('button', { name: 'Schritt hinzufügen' })).toHaveTextContent('📝');
   });
 
   test('shows author dropdown for admin user', async () => {
@@ -1716,11 +1743,11 @@ describe('RecipeForm - Ingredient Formatting', () => {
     fireEvent.change(ingredientInputs[0], { target: { value: '100ml Milch' } });
     
     // Add more ingredients
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
     const updatedIngredientInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(updatedIngredientInputs[1], { target: { value: '250g Mehl' } });
 
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
     const finalIngredientInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(finalIngredientInputs[2], { target: { value: '2EL Öl' } });
 
@@ -1867,7 +1894,7 @@ describe('RecipeForm - Ingredient Formatting', () => {
     fireEvent.change(ingredientInputs[0], { target: { value: '100ml Milch' } });
 
     // Add empty ingredient
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
 
     // Fill in a step
     fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
@@ -1957,7 +1984,7 @@ describe('RecipeForm - Drag and Drop', () => {
     );
 
     // Add a second ingredient to ensure drag handles are visible
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
 
     // Check for drag handles (⋮⋮ symbol)
     const dragHandles = screen.getAllByLabelText('Zutat verschieben');
@@ -1984,7 +2011,7 @@ describe('RecipeForm - Drag and Drop', () => {
     );
 
     // Add a second step to ensure drag handles are visible
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
 
     // Check for drag handles (⋮⋮ symbol)
     const dragHandles = screen.getAllByLabelText('Schritt verschieben');
@@ -2019,11 +2046,11 @@ describe('RecipeForm - Drag and Drop', () => {
     const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(ingredientInputs[0], { target: { value: 'First Ingredient' } });
     
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
     const updatedInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(updatedInputs[1], { target: { value: 'Second Ingredient' } });
 
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
     const finalInputs = screen.getAllByPlaceholderText(/Zutat/);
     fireEvent.change(finalInputs[2], { target: { value: 'Third Ingredient' } });
 
@@ -2075,11 +2102,11 @@ describe('RecipeForm - Drag and Drop', () => {
     const stepInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(stepInputs[0], { target: { value: 'First Step' } });
     
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
     const updatedInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(updatedInputs[1], { target: { value: 'Second Step' } });
 
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
     const finalInputs = screen.getAllByPlaceholderText(/Schritt/);
     fireEvent.change(finalInputs[2], { target: { value: 'Third Step' } });
 
@@ -2157,9 +2184,9 @@ describe('RecipeForm - Drag and Drop', () => {
     );
 
     // Add multiple ingredients
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
-    fireEvent.click(screen.getByText('+ Zutat hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
 
     // Should have 4 ingredients total (1 initial + 3 added)
     const ingredientInputs = screen.getAllByPlaceholderText(/Zutat/);
@@ -2190,9 +2217,9 @@ describe('RecipeForm - Drag and Drop', () => {
     );
 
     // Add multiple steps
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
-    fireEvent.click(screen.getByText('+ Schritt hinzufügen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schritt hinzufügen' }));
 
     // Should have 4 steps total (1 initial + 3 added)
     const stepInputs = screen.getAllByPlaceholderText(/Schritt/);

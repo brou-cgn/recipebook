@@ -1050,6 +1050,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setTypeaheadIngredientIndex(null);
   };
 
+  const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || '🥕';
+  const addStepIcon = getEffectiveIcon(buttonIcons, 'addStep', isDarkMode) || '📝';
+
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
@@ -1443,8 +1446,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               ))}
             </SortableContext>
           </DndContext>
-          <button type="button" className="add-item-button" onClick={handleAddIngredient}>
-            + Zutat hinzufügen
+          <button
+            type="button"
+            className="add-item-button add-item-button--ingredient"
+            onClick={handleAddIngredient}
+            title="Zutat hinzufügen"
+            aria-label="Zutat hinzufügen"
+          >
+            {isBase64Image(addIngredientIcon) ? (
+              <img src={addIngredientIcon} alt="Zutat hinzufügen" className="button-icon-image" draggable="false" />
+            ) : (
+              addIngredientIcon
+            )}
           </button>
         </div>
 
@@ -1490,8 +1503,18 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               })}
             </SortableContext>
           </DndContext>
-          <button type="button" className="add-item-button" onClick={handleAddStep}>
-            + Schritt hinzufügen
+          <button
+            type="button"
+            className="add-item-button add-item-button--step"
+            onClick={handleAddStep}
+            title="Schritt hinzufügen"
+            aria-label="Schritt hinzufügen"
+          >
+            {isBase64Image(addStepIcon) ? (
+              <img src={addStepIcon} alt="Schritt hinzufügen" className="button-icon-image" draggable="false" />
+            ) : (
+              addStepIcon
+            )}
           </button>
         </div>
 

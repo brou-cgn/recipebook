@@ -67,4 +67,21 @@ describe('RecipeForm toolbar CSS layout', () => {
     expect(optionRule).toContain('background: #2a2a2a;');
     expect(optionRule).toContain('color: #e8e8e8;');
   });
+
+  test('styles ingredient and step add buttons as shared icon buttons with distinct variants', () => {
+    const addItemButtonRule = getRuleBody(css, '.add-item-button');
+    const ingredientButtonRule = getRuleBody(css, '.add-item-button--ingredient');
+    const stepButtonRule = getRuleBody(css, '.add-item-button--step');
+    const addItemButtonDarkRule = getRuleBody(darkModeCss, '[data-theme="dark"] .add-item-button');
+
+    ['width: 44px;', 'height: 44px;', 'border-radius: 50%;', 'display: flex;', 'justify-content: center;']
+      .forEach((declaration) => {
+        expect(addItemButtonRule).toContain(declaration);
+      });
+
+    expect(ingredientButtonRule).toContain('border-color: #d9c1ab;');
+    expect(stepButtonRule).toContain('border-color: #b7cde0;');
+    expect(addItemButtonDarkRule).toContain('background: #2a2a2a;');
+    expect(addItemButtonDarkRule).toContain('border-color: #555;');
+  });
 });
