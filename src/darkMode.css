@@ -2486,11 +2486,22 @@
 /* ---- RecipeForm additional ---- */
 [data-theme="dark"] .add-item-button {
   background: #2a2a2a;
-  color: #c08060;
+  color: #e8e8e8;
+  border-color: #555;
 }
 
 [data-theme="dark"] .add-item-button:hover {
   background: #333;
+}
+
+[data-theme="dark"] .add-item-button--ingredient {
+  color: #f0c674;
+  border-color: #8f6d45;
+}
+
+[data-theme="dark"] .add-item-button--step {
+  color: #8ab4f8;
+  border-color: #4f78ad;
 }
 
 [data-theme="dark"] .cancel-button {
