@@ -593,6 +593,7 @@
 
 .form-list-item.swipe-delete-active .swipe-delete-background {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .swipe-delete-icon-image {
@@ -603,6 +604,18 @@
 
 .swipe-delete-icon-text {
   font-size: 1.1rem;
+}
+
+.swipe-delete-action {
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 2.5rem;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .input-wrapper {
@@ -859,7 +872,7 @@
 .swipe-undo-banner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 0.75rem;
   margin: 0.35rem 0 0.5rem;
   padding: 0.5rem 0.7rem;
@@ -868,19 +881,6 @@
   background: #fff5f4;
   color: #8b2d21;
   font-size: 0.9rem;
-}
-
-.swipe-undo-button {
-  border: none;
-  background: transparent;
-  color: #8b2d21;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
-}
-
-.swipe-undo-button:hover {
-  text-decoration: underline;
 }
 
 .add-item-button .button-icon-image {

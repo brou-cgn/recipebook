@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useSensor, TouchSensor } from '@dnd-kit/core';
 import RecipeForm from './RecipeForm';
 
@@ -1955,7 +1955,7 @@ describe('RecipeForm - Swipe Delete', () => {
     jest.clearAllMocks();
   });
 
-  test('deletes ingredients with left swipe and restores them via undo', async () => {
+  test('reveals delete button on ingredient swipe and deletes after click', async () => {
     render(
       <RecipeForm
         recipe={null}
@@ -1971,18 +1971,15 @@ describe('RecipeForm - Swipe Delete', () => {
 
     swipeLeft(screen.getByPlaceholderText('Zutat 1'));
 
+    const deleteButton = await screen.findByRole('button', { name: 'Zutat löschen' });
+    fireEvent.click(deleteButton);
+
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(1));
-    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Mehl');
     expect(screen.getByText('Zutat gelöscht.')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
-
-    await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(2));
-    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Milch');
-    expect(screen.getByPlaceholderText('Zutat 2')).toHaveValue('Mehl');
+    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('Mehl');
   });
 
-  test('deletes steps with left swipe and restores them via undo', async () => {
+  test('reveals delete button on step swipe and deletes after click', async () => {
     render(
       <RecipeForm
         recipe={null}
@@ -1998,15 +1995,66 @@ describe('RecipeForm - Swipe Delete', () => {
 
     swipeLeft(screen.getByPlaceholderText('Schritt 1'));
 
+    const deleteButton = await screen.findByRole('button', { name: 'Schritt löschen' });
+    fireEvent.click(deleteButton);
+
     await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(1));
-    expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Backen');
     expect(screen.getByText('Schritt gelöscht.')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Backen');
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+  test('deleting the last ingredient replaces it with a new empty ingredient input', async () => {
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
 
-    await waitFor(() => expect(screen.getAllByPlaceholderText(/Schritt/)).toHaveLength(2));
-    expect(screen.getByPlaceholderText('Schritt 1')).toHaveValue('Mischen');
-    expect(screen.getByPlaceholderText('Schritt 2')).toHaveValue('Backen');
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Milch' } });
+    swipeLeft(screen.getByPlaceholderText('Zutat 1'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
+
+    await waitFor(() => expect(screen.getAllByPlaceholderText(/Zutat/)).toHaveLength(1));
+    expect(screen.getByPlaceholderText('Zutat 1')).toHaveValue('');
+  });
+
+  test('auto-hides delete banners after 10 seconds and allows multiple banners', async () => {
+    jest.useFakeTimers();
+    try {
+      render(
+        <RecipeForm
+          recipe={null}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          currentUser={regularUser}
+        />
+      );
+
+      fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Milch' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+      fireEvent.change(screen.getByPlaceholderText('Zutat 2'), { target: { value: 'Mehl' } });
+
+      swipeLeft(screen.getByPlaceholderText('Zutat 2'));
+      fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
+
+      swipeLeft(screen.getByPlaceholderText('Zutat 1'));
+      fireEvent.click(await screen.findByRole('button', { name: 'Zutat löschen' }));
+
+      await waitFor(() => expect(screen.getAllByText('Zutat gelöscht.')).toHaveLength(2));
+
+      act(() => {
+        jest.advanceTimersByTime(10000);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Zutat gelöscht.')).not.toBeInTheDocument();
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('uses configurable swipe delete icon from settings', async () => {
@@ -2026,9 +2074,10 @@ describe('RecipeForm - Swipe Delete', () => {
       );
 
       fireEvent.click(screen.getByRole('button', { name: 'Zutat hinzufügen' }));
+      swipeLeft(screen.getByPlaceholderText('Zutat 1'));
 
       await waitFor(() => {
-        expect(screen.getAllByText('DEL').length).toBeGreaterThan(0);
+        expect(screen.getByRole('button', { name: 'Zutat löschen' })).toHaveTextContent('DEL');
       });
     } finally {
       iconSpy.mockRestore();
