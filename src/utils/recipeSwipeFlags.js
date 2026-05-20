@@ -7,6 +7,7 @@
 
 import { db } from '../firebase';
 import { getDocs, collection, query, where, doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { getStatusValiditySettings } from '../utils/customLists';
 
 const DEFAULT_GROUP_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,
@@ -114,7 +115,6 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
  * @param {Object} [metadata]
  * @param {string} [metadata.userName]
  * @param {string} [metadata.recipeTitle]
- * @param {import('firebase/firestore').Timestamp|null} [metadata.expiresAt]
  * @returns {Promise<boolean>}
  */
 export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadata = {}) => {
@@ -122,12 +122,26 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
 
   try {
     await cleanupExpiredCalculatedFlagsForList(listId);
+    const validitySettings = await getStatusValiditySettings();
 
     const {
       userName = '',
       recipeTitle = '',
-      expiresAt = null,
     } = metadata;
+
+    const computeExpiresAt = (days) => {
+      if (!days) return null;
+      return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+    };
+
+    let expiresAt;
+    if (flag === 'archiv') {
+      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysArchiv);
+    } else if (flag === 'geparkt') {
+      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysGeparkt);
+    } else {
+      expiresAt = computeExpiresAt(validitySettings.statusValidityDaysKandidat);
+    }
 
     const flagDocRef = doc(
       db,
