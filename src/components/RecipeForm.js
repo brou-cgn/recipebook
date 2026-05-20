@@ -34,6 +34,12 @@ import { CSS } from '@dnd-kit/utilities';
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
 const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+const DELETE_BANNER_TIMEOUT_MS = 10000;
+
+const clearBannerTimeouts = (bannerTimeoutsRef) => {
+  bannerTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+  bannerTimeoutsRef.current.clear();
+};
 
 // Sortable Ingredient Item Component
 function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, onToggleType, swipeDeleteIcon }) {
@@ -513,7 +519,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const [stepDeleteBanners, setStepDeleteBanners] = useState([]);
   const ingredientDeleteBannerTimeoutsRef = useRef(new Map());
   const stepDeleteBannerTimeoutsRef = useRef(new Map());
-  const swipeDeleteBannerIdRef = useRef(0);
+  const swipeDeleteBannerCounterRef = useRef(0);
 
   // Derived cuisine pill lists for the pill-based cuisine selector
   const visibleCuisinePills = useMemo(() => {
@@ -754,13 +760,14 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   };
 
   const showTimedDeleteBanner = (setBanners, bannerTimeoutsRef, message) => {
-    const id = `swipe-delete-${swipeDeleteBannerIdRef.current}`;
-    swipeDeleteBannerIdRef.current += 1;
+    const counter = swipeDeleteBannerCounterRef.current;
+    swipeDeleteBannerCounterRef.current = (counter + 1) % 100000;
+    const id = `swipe-delete-${Date.now()}-${counter}`;
     setBanners((prev) => [...prev, { id, message }]);
     const timeoutId = setTimeout(() => {
       setBanners((prev) => prev.filter((banner) => banner.id !== id));
       bannerTimeoutsRef.current.delete(id);
-    }, 10000);
+    }, DELETE_BANNER_TIMEOUT_MS);
     bannerTimeoutsRef.current.set(id, timeoutId);
   };
 
@@ -830,10 +837,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   };
 
   useEffect(() => () => {
-    ingredientDeleteBannerTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-    ingredientDeleteBannerTimeoutsRef.current.clear();
-    stepDeleteBannerTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-    stepDeleteBannerTimeoutsRef.current.clear();
+    clearBannerTimeouts(ingredientDeleteBannerTimeoutsRef);
+    clearBannerTimeouts(stepDeleteBannerTimeoutsRef);
   }, []);
 
   const handleStepChange = (index, value) => {
