@@ -30,11 +30,6 @@ jest.mock('firebase/firestore', () => ({
 
 import {
   setRecipeSwipeFlag,
-  recalculateCalculatedFlagForRecipeInList,
-  reconcileRecipeSwipeFlagsForMemberChange,
-  clearExpiryForArchivedRecipe,
-  archiveRecipeForAllUsersInList,
-  parkAllRecipeSwipeFlagsForRecipeInList,
   getActiveSwipeFlags,
   getSwipeFlagDocsByRecipeForUser,
   getAllMembersSwipeFlags,
@@ -107,13 +102,6 @@ describe('recipeSwipeFlags write operations', () => {
     );
   });
 
-  it('returns false for all other disabled write/update/delete related APIs', async () => {
-    expect(await recalculateCalculatedFlagForRecipeInList('l', 'r')).toBe(false);
-    expect(await reconcileRecipeSwipeFlagsForMemberChange('l', ['u'])).toBe(false);
-    expect(await clearExpiryForArchivedRecipe('l', 'r')).toBe(false);
-    expect(await archiveRecipeForAllUsersInList('l', 'r', 7)).toBe(false);
-    expect(await parkAllRecipeSwipeFlagsForRecipeInList('l', 'r', 7)).toBe(false);
-  });
 });
 
 describe('getActiveSwipeFlags', () => {

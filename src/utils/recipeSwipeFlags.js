@@ -2,8 +2,7 @@
  * Recipe Swipe Flags Firestore Utilities
  *
  * Important:
- * Most write operations for recipeSwipeFlags are intentionally disabled.
- * Only setRecipeSwipeFlag currently persists swipe data.
+ * setRecipeSwipeFlag persists swipe data.
  */
 
 import { db } from '../firebase';
@@ -20,10 +19,6 @@ const normalizeGroupThresholds = (thresholds) => ({
   ...DEFAULT_GROUP_THRESHOLDS,
   ...(thresholds || {}),
 });
-
-const logSwipeFlagWriteDisabled = (operation) => {
-  console.warn(`recipeSwipeFlags write operation not implemented: ${operation}`);
-};
 
 const cleanupExpiredCalculatedSwipeFlagsForList = async (listId) => {
   if (!listId) return;
@@ -107,16 +102,6 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
 }
 
 /**
- * Write operation disabled.
- *
- * @returns {Promise<boolean>} always false
- */
-export const recalculateCalculatedFlagForRecipeInList = async () => {
-  logSwipeFlagWriteDisabled('recalculateCalculatedFlagForRecipeInList');
-  return false;
-};
-
-/**
  * Store/update a swipe flag document for a user/list/recipe combination.
  *
  * Before storing, remove all expired calculated flags in the same list where
@@ -140,8 +125,8 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       recipeTitle = '',
       expiresAt = null,
       calculatedFlag = flag,
-      calculatedExpiresAt = expiresAt ?? null,
-    } = metadata || {};
+      calculatedExpiresAt = expiresAt,
+    } = metadata;
 
     const flagDocRef = doc(db, 'recipeSwipeFlags', `${userId}_${listId}_${recipeId}`);
     await setDoc(flagDocRef, {
@@ -165,16 +150,6 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
     console.error('Error setting recipe swipe flag:', error);
     return false;
   }
-};
-
-/**
- * Write operation disabled.
- *
- * @returns {Promise<boolean>} always false
- */
-export const reconcileRecipeSwipeFlagsForMemberChange = async () => {
-  logSwipeFlagWriteDisabled('reconcileRecipeSwipeFlagsForMemberChange');
-  return false;
 };
 
 /**
@@ -405,33 +380,3 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
 
   return null;
 }
-
-/**
- * Write operation disabled.
- *
- * @returns {Promise<boolean>} always false
- */
-export const clearExpiryForArchivedRecipe = async () => {
-  logSwipeFlagWriteDisabled('clearExpiryForArchivedRecipe');
-  return false;
-};
-
-/**
- * Write operation disabled.
- *
- * @returns {Promise<boolean>} always false
- */
-export const archiveRecipeForAllUsersInList = async () => {
-  logSwipeFlagWriteDisabled('archiveRecipeForAllUsersInList');
-  return false;
-};
-
-/**
- * Write operation disabled.
- *
- * @returns {Promise<boolean>} always false
- */
-export const parkAllRecipeSwipeFlagsForRecipeInList = async () => {
-  logSwipeFlagWriteDisabled('parkAllRecipeSwipeFlagsForRecipeInList');
-  return false;
-};

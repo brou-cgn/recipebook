@@ -20,14 +20,11 @@ jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
   return {
     setRecipeSwipeFlag: jest.fn(),
-    parkAllRecipeSwipeFlagsForRecipeInList: jest.fn(() => Promise.resolve(true)),
-    archiveRecipeForAllUsersInList: jest.fn(() => Promise.resolve(true)),
     getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
     getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
     getAllMembersSwipeFlagDocsForList: () => Promise.resolve(mockAllMembersFlagDocsValue),
     computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
     computeCalculatedRecipeSwipeFlag: actual.computeCalculatedRecipeSwipeFlag,
-    clearExpiryForArchivedRecipe: () => Promise.resolve(true),
   };
 });
 
