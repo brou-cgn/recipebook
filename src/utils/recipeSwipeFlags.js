@@ -24,7 +24,7 @@ const normalizeGroupThresholds = (thresholds) => ({
 const resolveMemberIds = (memberIds, fallbackMemberIds = []) => (
   Array.isArray(memberIds) && memberIds.length > 0
     ? memberIds
-    : fallbackMemberIds.filter(Boolean)
+    : fallbackMemberIds.filter((id) => id !== null && id !== undefined)
 );
 
 const computeExpiresAtFromDays = (days) => {
