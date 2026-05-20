@@ -16,12 +16,13 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onAddRecipe }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onAddRecipe }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [isCreatingInspiration, setIsCreatingInspiration] = useState(false);
+  const [showInspirationPicker, setShowInspirationPicker] = useState(false);
   const [showAlltagsklassikerPicker, setShowAlltagsklassikerPicker] = useState(false);
   const [isAssigningAlltagsklassiker, setIsAssigningAlltagsklassiker] = useState(false);
   const [lastOwnCookDateByRecipeId, setLastOwnCookDateByRecipeId] = useState({});
@@ -115,6 +116,10 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const privateListsForCurrentUser = useMemo(() => (
     groups.filter(g => g.type === 'private' && (g.ownerId === currentUser?.id || (Array.isArray(g.memberIds) && g.memberIds.includes(currentUser?.id))))
   ), [groups, currentUser?.id]);
+
+  const interactiveListsForCurrentUser = useMemo(() => (
+    privateListsForCurrentUser.filter(g => g.listKind === 'interactive')
+  ), [privateListsForCurrentUser]);
 
   const defaultEverydayClassicsList = useMemo(() => {
     const listId = currentUser?.defaultEverydayClassicsListId;
@@ -234,9 +239,34 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   const handleCreateInspirationClick = async () => {
     if (!onCreateInspirationList || isCreatingInspiration) return;
+    if (interactiveListsForCurrentUser.length > 0 && onSelectExistingInspirationList) {
+      setShowInspirationPicker(true);
+      return;
+    }
     setIsCreatingInspiration(true);
     try {
       await onCreateInspirationList();
+    } finally {
+      setIsCreatingInspiration(false);
+    }
+  };
+
+  const handleInspirationPickerSelect = async (listId) => {
+    if (listId === '__new__') {
+      setShowInspirationPicker(false);
+      setIsCreatingInspiration(true);
+      try {
+        await onCreateInspirationList();
+      } finally {
+        setIsCreatingInspiration(false);
+      }
+      return;
+    }
+    if (!onSelectExistingInspirationList) return;
+    setIsCreatingInspiration(true);
+    try {
+      await onSelectExistingInspirationList(listId);
+      setShowInspirationPicker(false);
     } finally {
       setIsCreatingInspiration(false);
     }
@@ -335,6 +365,45 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   return (
     <div className="startseite-container">
+      {showInspirationPicker && (
+        <div className="startseite-inspiration-picker-overlay">
+          <div className="startseite-inspiration-picker">
+            <div className="startseite-inspiration-picker-header">
+              <h3>Inspirationssammlung auswählen</h3>
+              <button
+                type="button"
+                className="startseite-inspiration-picker-close"
+                onClick={() => setShowInspirationPicker(false)}
+                aria-label="Schließen"
+                disabled={isCreatingInspiration}
+              >
+                ×
+              </button>
+            </div>
+            <div className="startseite-inspiration-picker-list">
+              {interactiveListsForCurrentUser.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  className="startseite-inspiration-picker-item"
+                  onClick={() => handleInspirationPickerSelect(list.id)}
+                  disabled={isCreatingInspiration}
+                >
+                  {list.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="startseite-inspiration-picker-item startseite-inspiration-picker-item--new"
+                onClick={() => handleInspirationPickerSelect('__new__')}
+                disabled={isCreatingInspiration}
+              >
+                Neue Liste erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showAlltagsklassikerPicker && (
         <div className="startseite-alltagsklassiker-picker-overlay">
           <div className="startseite-alltagsklassiker-picker">
