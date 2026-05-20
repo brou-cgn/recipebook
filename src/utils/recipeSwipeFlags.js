@@ -1,89 +1,13 @@
 /**
  * Recipe Swipe Flags Firestore Utilities
- * Handles storing swipe-based internal flags for recipes in the Tagesmenü view.
  *
- * Data model: recipeSwipeFlags/{userId}_{listId}_{recipeId}
- *   - userId:    string  – the user who performed the swipe
- *   - listId:    string  – the interactive list the recipe was shown in
- *   - recipeId:  string  – the recipe that was swiped
- *   - flag:      'geparkt' | 'archiv' | 'kandidat'
- *   - expiresAt: Timestamp | null  – null means no expiry (permanent)
- *   - createdAt: Timestamp
- *
- * Swipe directions:
- *   - Right → 'geparkt'
- *   - Left  → 'archiv'
- *   - Up    → 'kandidat'
- *
- * Flags are internal only and must not be displayed in the UI.
+ * Important:
+ * Write operations for recipeSwipeFlags are intentionally disabled.
+ * This module only provides read and pure-computation helpers.
  */
 
 import { db } from '../firebase';
-import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
-import { getGroupStatusThresholds, getStatusValiditySettings } from './customLists';
-
-/**
- * Build a deterministic Firestore document ID for a flag.
- * Using a composite key ensures at most one flag per user+list+recipe combination.
- * @param {string} userId
- * @param {string} listId
- * @param {string} recipeId
- * @returns {string}
- */
-const buildFlagId = (userId, listId, recipeId) =>
-  `${userId}_${listId}_${recipeId}`;
-
-/**
- * Add `days` days to the current moment and return a Firestore Timestamp.
- * @param {number} days
- * @returns {Timestamp}
- */
-const timestampInDays = (days) => {
-  const ms = Date.now() + days * 24 * 60 * 60 * 1000;
-  return Timestamp.fromMillis(ms);
-};
-
-const isStatusValiditySettingsMap = (value) =>
-  value !== null &&
-  value !== undefined &&
-  typeof value === 'object' &&
-  !Array.isArray(value) &&
-  ['kandidat', 'geparkt', 'archiv'].every((key) => (
-    Object.prototype.hasOwnProperty.call(value, key) &&
-    (
-      value[key] === null ||
-      value[key] === undefined ||
-      (Number.isFinite(value[key]) && value[key] > 0)
-    )
-  ));
-
-const resolveExpiresAtForCalculatedFlag = (calculatedFlag, statusValiditySettingsByFlag) => {
-  if (!calculatedFlag || !isStatusValiditySettingsMap(statusValiditySettingsByFlag)) return null;
-  const validityDays = statusValiditySettingsByFlag[calculatedFlag];
-  if (Number.isFinite(validityDays) && validityDays > 0) {
-    return timestampInDays(validityDays);
-  }
-  return null;
-};
-
-const expiresAtEqual = (a, b) => {
-  if (a === b) return true;
-  const aIsNullish = a === null || a === undefined;
-  const bIsNullish = b === null || b === undefined;
-  if (aIsNullish && bIsNullish) return true;
-  if (aIsNullish !== bIsNullish) return false;
-  const aMillis = typeof a?.toMillis === 'function' ? a.toMillis() : undefined;
-  const bMillis = typeof b?.toMillis === 'function' ? b.toMillis() : undefined;
-  const aMillisDefined = aMillis !== null && aMillis !== undefined;
-  const bMillisDefined = bMillis !== null && bMillis !== undefined;
-  if (aMillisDefined && bMillisDefined) return aMillis === bMillis;
-  return false;
-};
-
-const isExpiredSwipeFlag = (expiresAt, now) => {
-  const expiresAtMillis = typeof expiresAt?.toMillis === 'function' ? expiresAt.toMillis() : undefined;
-  return expiresAtMillis !== null && expiresAtMillis !== undefined && expiresAtMillis <= now;
-};
+import { getDocs, collection, query, where } from 'firebase/firestore';
 
 const DEFAULT_GROUP_THRESHOLDS = {
   groupThresholdKandidatMinKandidat: 50,
@@ -96,6 +20,10 @@ const normalizeGroupThresholds = (thresholds) => ({
   ...DEFAULT_GROUP_THRESHOLDS,
   ...(thresholds || {}),
 });
+
+const logSwipeFlagWriteDisabled = (operation) => {
+  console.warn(`recipeSwipeFlags write operation disabled: ${operation}`);
+};
 
 /**
  * Compute the calculated (expected) flag for a recipe.
@@ -149,238 +77,34 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
   return 'geparkt';
 }
 
-const getListMemberIds = async (listId) => {
-  if (!listId) return [];
-  try {
-    const groupSnap = await getDoc(doc(db, 'groups', listId));
-    if (!groupSnap.exists()) return [];
-    const data = groupSnap.data() || {};
-    const memberIds = Array.isArray(data.memberIds) ? data.memberIds : [];
-    return data.ownerId
-      ? [...new Set([data.ownerId, ...memberIds])]
-      : [...new Set(memberIds)];
-  } catch {
-    return [];
-  }
+/**
+ * Write operation disabled.
+ *
+ * @returns {Promise<boolean>} always false
+ */
+export const recalculateCalculatedFlagForRecipeInList = async () => {
+  logSwipeFlagWriteDisabled('recalculateCalculatedFlagForRecipeInList');
+  return false;
 };
 
 /**
- * Recalculate and persist calculatedFlag for all swipe documents of one recipe in one list.
- * Also synchronizes expiresAt for all matching documents, either from the explicitly provided
- * 4th argument or – when omitted – by loading the current status validity settings.
+ * Write operation disabled.
  *
- * @param {string} listId
- * @param {string} recipeId
- * @param {Object} [thresholds]
- * @param {Timestamp|null|{kandidat: number|null, geparkt: number|null, archiv: number|null}} [expiresAtOrValiditySettings]
- *   - When provided as Timestamp|null, this expiresAt value is written to all docs.
- *   - When provided as a status validity map, expiresAt is derived from calculatedFlag.
- *   - When omitted (undefined), the current status validity settings are loaded automatically
- *     and expiresAt is derived from the computed calculatedFlag.
- * @returns {Promise<boolean>}
+ * @returns {Promise<boolean>} always false
  */
-export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds, expiresAtOrValiditySettings) => {
-  if (!listId || !recipeId) return false;
-
-  try {
-    const now = Date.now();
-    const q = query(
-      collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId),
-      where('recipeId', '==', recipeId)
-    );
-    const snapshot = await getDocs(q);
-    const docs = [];
-    snapshot.forEach((docSnap) => docs.push(docSnap));
-    if (docs.length === 0) return true;
-
-    let memberIds = await getListMemberIds(listId);
-    if (memberIds.length === 0) {
-      memberIds = [...new Set(docs.map((docSnap) => docSnap.data().userId).filter(Boolean))];
-    }
-    if (memberIds.length === 0) return false;
-
-    const allMembersFlags = Object.fromEntries(memberIds.map((id) => [id, {}]));
-    docs.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data?.userId && data?.recipeId && !isExpiredSwipeFlag(data.expiresAt, now)) {
-        if (!allMembersFlags[data.userId]) allMembersFlags[data.userId] = {};
-        allMembersFlags[data.userId][data.recipeId] = data.flag;
-      }
-    });
-
-    const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
-    if (!calculatedFlag) return false;
-
-    let resolvedValidityOrExpiry = expiresAtOrValiditySettings;
-    if (expiresAtOrValiditySettings === undefined) {
-      const statusValiditySettings = await getStatusValiditySettings();
-      resolvedValidityOrExpiry = {
-        kandidat: statusValiditySettings.statusValidityDaysKandidat,
-        geparkt: statusValiditySettings.statusValidityDaysGeparkt,
-        archiv: statusValiditySettings.statusValidityDaysArchiv,
-      };
-    }
-    const hasStatusValiditySettingsByFlag = isStatusValiditySettingsMap(resolvedValidityOrExpiry);
-    const syncedExpiresAt = hasStatusValiditySettingsByFlag
-      ? resolveExpiresAtForCalculatedFlag(calculatedFlag, resolvedValidityOrExpiry)
-      : resolvedValidityOrExpiry;
-    const updates = docs
-      .map((docSnap) => {
-        const data = docSnap.data() || {};
-        const payload = {};
-        if (data.calculatedFlag !== calculatedFlag) {
-          payload.calculatedFlag = calculatedFlag;
-        }
-        if (!expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
-          payload.expiresAt = syncedExpiresAt;
-        }
-        return Object.keys(payload).length > 0
-          ? updateDoc(docSnap.ref, payload)
-          : null;
-      })
-      .filter(Boolean);
-
-    await Promise.all(updates);
-    return true;
-  } catch (error) {
-    console.error('Error recalculating calculatedFlag for recipe swipe flags:', error);
-    return false;
-  }
-};
-
-const calculateProjectedCalculatedFlagForPendingSwipe = async (listId, recipeId, userId, flag) => {
-  if (!listId || !recipeId || !userId || !flag) return flag;
-
-  const q = query(
-    collection(db, 'recipeSwipeFlags'),
-    where('listId', '==', listId),
-    where('recipeId', '==', recipeId)
-  );
-  const snapshot = await getDocs(q);
-  const docs = [];
-  snapshot.forEach((docSnap) => docs.push(docSnap));
-
-  let memberIds = await getListMemberIds(listId);
-  if (memberIds.length === 0) {
-    memberIds = [...new Set([...docs.map((docSnap) => docSnap.data().userId).filter(Boolean), userId])];
-  }
-  if (memberIds.length === 0) return flag;
-
-  const allMembersFlags = Object.fromEntries(memberIds.map((id) => [id, {}]));
-  docs.forEach((docSnap) => {
-    const data = docSnap.data();
-    if (data?.userId && data?.recipeId) {
-      if (!allMembersFlags[data.userId]) allMembersFlags[data.userId] = {};
-      allMembersFlags[data.userId][data.recipeId] = data.flag;
-    }
-  });
-  if (!allMembersFlags[userId]) allMembersFlags[userId] = {};
-  allMembersFlags[userId][recipeId] = flag;
-
-  const thresholds = await getGroupStatusThresholds();
-  return computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds) || flag;
+export const setRecipeSwipeFlag = async () => {
+  logSwipeFlagWriteDisabled('setRecipeSwipeFlag');
+  return false;
 };
 
 /**
- * Record a swipe action for a recipe.
- * Overwrites any existing flag for the same user+list+recipe combination.
+ * Write operation disabled.
  *
- * @param {string} userId   - ID of the current user
- * @param {string} listId   - ID of the interactive list
- * @param {string} recipeId - ID of the recipe that was swiped
- * @param {'geparkt'|'archiv'|'kandidat'} flag - The flag to set
- * @param {number|null|{kandidat: number|null, geparkt: number|null, archiv: number|null}} [validityDays]
- *   - Number of days until the flag expires, or null/undefined for permanent.
- *   Alternatively, pass a status validity map to derive expiresAt from calculatedFlag.
- * @returns {Promise<boolean>} true if saved successfully
+ * @returns {Promise<boolean>} always false
  */
-export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validityDays) => {
-  if (!userId || !listId || !recipeId || !flag) return false;
-  if (!['geparkt', 'archiv', 'kandidat'].includes(flag)) return false;
-
-  try {
-    const calculatedFlag = await calculateProjectedCalculatedFlagForPendingSwipe(listId, recipeId, userId, flag);
-    const useStatusValiditySettingsByFlag = isStatusValiditySettingsMap(validityDays);
-    let expiresAt = null;
-    if (useStatusValiditySettingsByFlag) {
-      expiresAt = resolveExpiresAtForCalculatedFlag(calculatedFlag, validityDays);
-    } else if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
-      expiresAt = timestampInDays(validityDays);
-    }
-    const flagId = buildFlagId(userId, listId, recipeId);
-    await setDoc(doc(db, 'recipeSwipeFlags', flagId), {
-      userId,
-      listId,
-      recipeId,
-      flag,
-      calculatedFlag,
-      expiresAt,
-      createdAt: Timestamp.now(),
-    });
-    const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(
-      listId,
-      recipeId,
-      thresholds,
-      useStatusValiditySettingsByFlag ? validityDays : expiresAt
-    );
-    if (!didRecalculate) {
-      console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
-    }
-    return true;
-  } catch (error) {
-    console.error('Error setting recipe swipe flag:', error);
-    return false;
-  }
-};
-
-/**
- * Reconcile all recipe swipe flags after member changes in an interactive list:
- * - delete documents for removed members
- * - recalculate calculatedFlag for all remaining recipes in the list
- *
- * @param {string} listId
- * @param {string[]} [removedMemberIds]
- * @returns {Promise<boolean>}
- */
-export const reconcileRecipeSwipeFlagsForMemberChange = async (listId, removedMemberIds = []) => {
-  if (!listId) return false;
-  try {
-    const q = query(
-      collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId)
-    );
-    const snapshot = await getDocs(q);
-    const docs = [];
-    snapshot.forEach((docSnap) => docs.push(docSnap));
-    if (docs.length === 0) return true;
-
-    const removedMemberIdSet = new Set((Array.isArray(removedMemberIds) ? removedMemberIds : []).filter(Boolean));
-    if (removedMemberIdSet.size > 0) {
-      const deleteOperations = docs
-        .filter((docSnap) => removedMemberIdSet.has(docSnap.data()?.userId))
-        .map((docSnap) => deleteDoc(docSnap.ref));
-      await Promise.all(deleteOperations);
-    }
-
-    const affectedRecipeIds = [...new Set(
-      docs
-        .filter((docSnap) => !removedMemberIdSet.has(docSnap.data()?.userId))
-        .map((docSnap) => docSnap.data()?.recipeId)
-        .filter(Boolean)
-    )];
-    if (affectedRecipeIds.length === 0) return true;
-
-    const thresholds = await getGroupStatusThresholds();
-    const recalculationResults = await Promise.all(
-      affectedRecipeIds.map((recipeId) => recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds))
-    );
-    return recalculationResults.every(Boolean);
-  } catch (error) {
-    console.error('Error reconciling recipe swipe flags after member change:', error);
-    return false;
-  }
+export const reconcileRecipeSwipeFlagsForMemberChange = async () => {
+  logSwipeFlagWriteDisabled('reconcileRecipeSwipeFlagsForMemberChange');
+  return false;
 };
 
 /**
@@ -559,11 +283,7 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
  * @param {string[]} memberIds       - All member user IDs of the list
  * @param {Object}   allMembersFlags - Map of userId → { recipeId → flag }
  * @param {string}   recipeId        - ID of the recipe to evaluate
- * @param {Object}   thresholds      - Threshold configuration:
- *   - groupThresholdKandidatMinKandidat {number} Min % of kandidat votes for Kandidat status
- *   - groupThresholdKandidatMaxArchiv   {number} Max % of archiv votes for Kandidat status
- *   - groupThresholdArchivMinArchiv     {number} Min % of archiv votes for Archiv status
- *   - groupThresholdArchivMaxKandidat   {number} Max % of kandidat votes for Archiv status
+ * @param {Object}   thresholds      - Threshold configuration
  * @param {string}   [currentUserId] - ID of the current user (to distinguish their missing swipe)
  * @returns {'kandidat'|'archiv'|null} Group status, or null if no threshold is met
  */
@@ -617,114 +337,31 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
 }
 
 /**
- * Remove the expiry date from all swipe flag documents for a given recipe in a list.
- * Called when the group status of a recipe is permanently 'archiv' (all members have voted
- * and the result is 'archiv'), ensuring the recipe stays in the archive indefinitely.
+ * Write operation disabled.
  *
- * @param {string} listId    - ID of the interactive list
- * @param {string} recipeId  - ID of the recipe to permanently archive
- * @returns {Promise<boolean>} true if all updates succeeded
+ * @returns {Promise<boolean>} always false
  */
-export const clearExpiryForArchivedRecipe = async (listId, recipeId) => {
-  if (!listId || !recipeId) return false;
-  try {
-    const q = query(
-      collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId),
-      where('recipeId', '==', recipeId)
-    );
-    const snapshot = await getDocs(q);
-    const updates = [];
-    snapshot.forEach((docSnap) => {
-      updates.push(updateDoc(docSnap.ref, { expiresAt: null }));
-    });
-    await Promise.all(updates);
-    return true;
-  } catch (error) {
-    console.error('Error clearing expiry for archived recipe:', error);
-    return false;
-  }
+export const clearExpiryForArchivedRecipe = async () => {
+  logSwipeFlagWriteDisabled('clearExpiryForArchivedRecipe');
+  return false;
 };
 
 /**
- * Set all swipe flag documents for a specific recipe in a list to "archiv".
- * The expiry is re-written based on validityDays (null = permanent archive).
+ * Write operation disabled.
  *
- * @param {string} listId
- * @param {string} recipeId
- * @param {number|null} [validityDays]
- * @returns {Promise<boolean>} true if all updates succeeded
+ * @returns {Promise<boolean>} always false
  */
-export const archiveRecipeForAllUsersInList = async (listId, recipeId, validityDays) => {
-  if (!listId || !recipeId) return false;
-
-  let expiresAt = null;
-  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
-    expiresAt = timestampInDays(validityDays);
-  }
-
-  try {
-    const q = query(
-      collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId),
-      where('recipeId', '==', recipeId)
-    );
-    const snapshot = await getDocs(q);
-    const updates = [];
-    snapshot.forEach((docSnap) => {
-      updates.push(updateDoc(docSnap.ref, { flag: 'archiv', expiresAt }));
-    });
-    if (updates.length === 0) return false;
-    await Promise.all(updates);
-    const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
-    if (!didRecalculate) {
-      console.error('Failed to recalculate calculatedFlag after archiving recipe swipe flags.');
-    }
-    return true;
-  } catch (error) {
-    console.error('Error archiving recipe swipe flags for all users:', error);
-    return false;
-  }
+export const archiveRecipeForAllUsersInList = async () => {
+  logSwipeFlagWriteDisabled('archiveRecipeForAllUsersInList');
+  return false;
 };
 
 /**
- * Set all existing swipe flags for one recipe within one list to "geparkt"
- * across all users.
+ * Write operation disabled.
  *
- * @param {string} listId      - ID of the interactive list
- * @param {string} recipeId    - ID of the recipe
- * @param {number|null} [validityDays] - Number of days until expiry, or null/undefined for permanent
- * @returns {Promise<boolean>} true if all updates succeeded
+ * @returns {Promise<boolean>} always false
  */
-export const parkAllRecipeSwipeFlagsForRecipeInList = async (listId, recipeId, validityDays) => {
-  if (!listId || !recipeId) return false;
-
-  let expiresAt = null;
-  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
-    expiresAt = timestampInDays(validityDays);
-  }
-
-  try {
-    const q = query(
-      collection(db, 'recipeSwipeFlags'),
-      where('listId', '==', listId),
-      where('recipeId', '==', recipeId)
-    );
-    const snapshot = await getDocs(q);
-    const updates = [];
-    snapshot.forEach((docSnap) => {
-      updates.push(updateDoc(docSnap.ref, { flag: 'geparkt', expiresAt }));
-    });
-    await Promise.all(updates);
-    const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds);
-    if (!didRecalculate) {
-      console.error('Failed to recalculate calculatedFlag after parking recipe swipe flags.');
-    }
-    return true;
-  } catch (error) {
-    console.error('Error parking all recipe swipe flags for recipe in list:', error);
-    return false;
-  }
+export const parkAllRecipeSwipeFlagsForRecipeInList = async () => {
+  logSwipeFlagWriteDisabled('parkAllRecipeSwipeFlagsForRecipeInList');
+  return false;
 };

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { setRecipeSwipeFlag, getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, clearExpiryForArchivedRecipe, archiveRecipeForAllUsersInList, parkAllRecipeSwipeFlagsForRecipeInList, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
-import { getStatusValiditySettings, getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
+import { getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
 import { addFavorite } from '../utils/userFavorites';
@@ -74,13 +74,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // True once the initial active-flags fetch for the current list has resolved.
   // Prevents showing swipe cards before we know which recipes are already flagged.
   const [flagsLoaded, setFlagsLoaded] = useState(false);
-
-  // Configured validity durations (number of days or null for permanent)
-  const [statusValiditySettings, setStatusValiditySettings] = useState({
-    statusValidityDaysKandidat: null,
-    statusValidityDaysGeparkt: null,
-    statusValidityDaysArchiv: null,
-  });
 
   // Group status thresholds for shared status determination across all list members
   const [groupThresholds, setGroupThresholds] = useState({
@@ -175,7 +168,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Load status validity settings once on mount
   useEffect(() => {
-    getStatusValiditySettings().then(setStatusValiditySettings).catch(() => {});
     getGroupStatusThresholds().then(setGroupThresholds).catch(() => {});
     getMaxKandidatenSchwelle()
       .then((val) => { setMaxKandidatenSchwelle(val); setMaxKandidatenSchwelleLoaded(true); })
@@ -298,11 +290,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Refs that mirror frequently-changing state so handleTransitionEnd (useCallback)
   // can always read the latest values without being re-created on every render.
-  const allMembersFlagsRef = useRef(allMembersFlags);
-  useEffect(() => { allMembersFlagsRef.current = allMembersFlags; }, [allMembersFlags]);
-  const listMemberIdsRef = useRef([]);
-  const groupThresholdsRef = useRef(groupThresholds);
-
   const getAuthorName = (authorId) => {
     if (!authorId || !allUsers) return '';
     const user = allUsers.find((u) => u.id === authorId);
@@ -435,53 +422,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       if (swipe && swipe.recipe?.id) {
         const flagMap = { right: 'geparkt', left: 'archiv', up: 'kandidat' };
         const flag = flagMap[swipe.direction];
-        if (flag) {
-          if (currentUser?.id && swipe.list?.id) {
-            const validityDaysMap = {
-              geparkt: statusValiditySettings.statusValidityDaysGeparkt,
-              archiv: statusValiditySettings.statusValidityDaysArchiv,
-              kandidat: statusValiditySettings.statusValidityDaysKandidat,
-            };
-            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, validityDaysMap);
-            // Keep allMembersFlags in sync with the current user's new swipe
-            setAllMembersFlags((prev) => ({
-              ...prev,
-              [currentUser.id]: {
-                ...(prev[currentUser.id] || {}),
-                [swipe.recipe.id]: flag,
-              },
-            }));
-
-            // After updating flags, check if all members have voted and group status is permanently 'archiv'.
-            // Use refs to read the latest values without adding them to useCallback dependencies.
-            const currentMemberIds = listMemberIdsRef.current;
-            if (currentMemberIds.length > 1) {
-              const updatedFlags = {
-                ...allMembersFlagsRef.current,
-                [currentUser.id]: {
-                  ...(allMembersFlagsRef.current[currentUser.id] || {}),
-                  [swipe.recipe.id]: flag,
-                },
-              };
-              const allVoted = currentMemberIds.every(
-                (uid) => updatedFlags[uid]?.[swipe.recipe.id] !== undefined
-              );
-              if (allVoted) {
-                const groupStatus = computeGroupRecipeStatus(
-                  currentMemberIds,
-                  updatedFlags,
-                  swipe.recipe.id,
-                  groupThresholdsRef.current,
-                  currentUser.id
-                );
-                if (groupStatus === 'archiv') {
-                  clearExpiryForArchivedRecipe(swipe.list.id, swipe.recipe.id).catch((err) => {
-                    console.error('Failed to clear expiry for permanently archived recipe:', err);
-                  });
-                }
-              }
-            }
-          }
+        if (flag && currentUser?.id && swipe.list?.id) {
+          // Keep allMembersFlags in sync with the current user's new swipe
+          setAllMembersFlags((prev) => ({
+            ...prev,
+            [currentUser.id]: {
+              ...(prev[currentUser.id] || {}),
+              [swipe.recipe.id]: flag,
+            },
+          }));
           setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
       }
@@ -492,7 +441,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     } else if (cardPhase === 'snap') {
       setCardPhase('idle');
     }
-  }, [cardPhase, currentUser, statusValiditySettings]);
+  }, [cardPhase, currentUser]);
 
   // ---- Derived values -------------------------------------------------
 
@@ -504,10 +453,6 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       ? [...new Set([selectedList.ownerId, ...memberIds])]
       : memberIds;
   }, [selectedList]);
-
-  // Keep refs in sync with derived/state values for use in memoised callbacks
-  useEffect(() => { listMemberIdsRef.current = listMemberIds; }, [listMemberIds]);
-  useEffect(() => { groupThresholdsRef.current = groupThresholds; }, [groupThresholds]);
 
   // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
   const groupStatusByRecipeId = useMemo(() => {
@@ -790,28 +735,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetListId &&
       targetRecipeId
     ) {
-      const archiveValidityDays = statusValiditySettings.statusValidityDaysArchiv;
-      try {
-        const didArchive = await archiveRecipeForAllUsersInList(
-          targetListId,
-          targetRecipeId,
-          archiveValidityDays
-        );
-        if (didArchive) {
-          setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
-          setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
-          setAllMembersFlags((prev) => Object.fromEntries(
-            Object.entries(prev).map(([userId, userFlags]) => {
-              if (userFlags?.[targetRecipeId] === undefined) {
-                return [userId, userFlags];
-              }
-              return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
-            })
-          ));
-        }
-      } catch (err) {
-        console.error('Failed to archive recipe swipe flags for all users:', err);
-      }
+      setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+      setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+      setAllMembersFlags((prev) => Object.fromEntries(
+        Object.entries(prev).map(([userId, userFlags]) => {
+          if (userFlags?.[targetRecipeId] === undefined) {
+            return [userId, userFlags];
+          }
+          return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
+        })
+      ));
     }
 
     if (
@@ -819,28 +752,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetListId &&
       targetRecipeId
     ) {
-      const parkedValidityDays = statusValiditySettings.statusValidityDaysGeparkt;
-      try {
-        const didPark = await parkAllRecipeSwipeFlagsForRecipeInList(
-          targetListId,
-          targetRecipeId,
-          parkedValidityDays
-        );
-        if (didPark) {
-          setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
-          setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
-          setAllMembersFlags((prev) => Object.fromEntries(
-            Object.entries(prev).map(([userId, userFlags]) => {
-              if (userFlags?.[targetRecipeId] === undefined) {
-                return [userId, userFlags];
-              }
-              return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
-            })
-          ));
-        }
-      } catch (err) {
-        console.error('Failed to park recipe swipe flags for all users:', err);
-      }
+      setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+      setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+      setAllMembersFlags((prev) => Object.fromEntries(
+        Object.entries(prev).map(([userId, userFlags]) => {
+          if (userFlags?.[targetRecipeId] === undefined) {
+            return [userId, userFlags];
+          }
+          return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
+        })
+      ));
     }
 
     if (
@@ -875,9 +796,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     selectedList,
     allListRecipes,
     currentUser,
-    contextMenuRecipeId,
-    statusValiditySettings.statusValidityDaysArchiv,
-    statusValiditySettings.statusValidityDaysGeparkt
+    contextMenuRecipeId
   ]);
 
   // ---- Render ---------------------------------------------------------

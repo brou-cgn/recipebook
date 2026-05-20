@@ -1,8 +1,6 @@
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
-import { parkAllRecipeSwipeFlagsForRecipeInList } from '../utils/recipeSwipeFlags';
-import { archiveRecipeForAllUsersInList } from '../utils/recipeSwipeFlags';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
 import { addFavorite } from '../utils/userFavorites';
@@ -97,9 +95,6 @@ beforeEach(() => {
     statusValidityDaysGeparkt: null,
     statusValidityDaysArchiv: null,
   };
-  parkAllRecipeSwipeFlagsForRecipeInList.mockClear();
-  archiveRecipeForAllUsersInList.mockResolvedValue(true);
-  parkAllRecipeSwipeFlagsForRecipeInList.mockResolvedValue(true);
 });
 
 const makeRecipe = (id, title) => ({ id, title, groupId: 'list1' });
@@ -1682,7 +1677,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(icon.textContent).not.toContain('⚪');
   });
 
-  test('Option "Zweite Chance, bitte" parkt alle Flags für aktuelles Rezept in aktueller Liste', async () => {
+  test('Option "Zweite Chance, bitte" setzt das aktuelle Rezept lokal auf geparkt', async () => {
     mockStatusValiditySettings = {
       statusValidityDaysKandidat: null,
       statusValidityDaysGeparkt: 14,
@@ -1699,11 +1694,10 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
       fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
     });
 
-    expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledTimes(1);
-    expect(parkAllRecipeSwipeFlagsForRecipeInList).toHaveBeenCalledWith('list1', 'r-special', 14);
+    expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Für später');
   });
 
-  test('setzt bei "Ich bin enttäuscht" alle Flags des aktuellen Rezepts in der aktuellen Liste auf archiv', async () => {
+  test('setzt bei "Ich bin enttäuscht" das aktuelle Rezept lokal auf archiv', async () => {
     await act(async () => { renderMenu(); });
     swipeAllCardsToResults();
 
@@ -1711,7 +1705,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     const select = firstTile.querySelector('.tagesmenu-kachel-context-select');
     await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
 
-    expect(archiveRecipeForAllUsersInList).toHaveBeenCalledWith('list1', 'r1', 14);
+    expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Archiviert');
   });
 
   test('Option "Koche ich mal wieder" weist Rezept der Zielliste zu', async () => {

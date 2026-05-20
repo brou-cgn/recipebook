@@ -200,10 +200,6 @@ jest.mock('./utils/groupFirestore', () => ({
   removeRecipeFromGroup: jest.fn(),
 }));
 
-jest.mock('./utils/recipeSwipeFlags', () => ({
-  reconcileRecipeSwipeFlagsForMemberChange: () => Promise.resolve(),
-}));
-
 describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
