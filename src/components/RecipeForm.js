@@ -175,7 +175,7 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           )}
         </div>
       )}
-      <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
+      <div className="input-wrapper has-drag-handle">
         <input
           ref={inputRef}
           type="text"
@@ -191,26 +191,16 @@ function SortableIngredient({ id, item, index, onChange, onRemove, canRemove, on
           onTouchCancel={resetSwipe}
           onTouchMove={handleTouchMove}
         />
-        {canRemove && (
-          <button
-            type="button"
-            className="inline-remove-button"
-            onClick={() => onRemove(index)}
-            aria-label="Zutat entfernen"
-          >
-            ×
-          </button>
-        )}
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Zutat verschieben"
+        >
+          ⋮⋮
+        </button>
       </div>
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Zutat verschieben"
-      >
-        ⋮⋮
-      </button>
       {showContextMenu && (
         <>
           <div
@@ -375,7 +365,7 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           )}
         </div>
       )}
-      <div className={`input-wrapper${canRemove ? ' has-remove-btn' : ''}`}>
+      <div className="input-wrapper has-drag-handle">
         <textarea
           ref={textareaRef}
           value={text}
@@ -389,26 +379,16 @@ function SortableStep({ id, item, index, stepNumber, onChange, onRemove, canRemo
           onTouchCancel={resetSwipe}
           onTouchMove={handleTouchMove}
         />
-        {canRemove && (
-          <button
-            type="button"
-            className="inline-remove-button"
-            onClick={() => onRemove(index)}
-            aria-label="Schritt entfernen"
-          >
-            ×
-          </button>
-        )}
+        <button
+          type="button"
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          aria-label="Schritt verschieben"
+        >
+          ⋮⋮
+        </button>
       </div>
-      <button
-        type="button"
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        aria-label="Schritt verschieben"
-      >
-        ⋮⋮
-      </button>
       {showContextMenu && (
         <>
           <div
@@ -1473,56 +1453,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
 
         <div className="form-group">
-          <input
-            type="text"
-            id="kulinarik-search"
-            className="recipe-form-cuisine-search"
-            value={newCuisineInput}
-            onChange={handleCuisineInputChange}
-            placeholder="Kulinarik oder Speisekategorien suchen …"
-            aria-label="Kulinarik und Speisekategorien suchen"
-            autoComplete="off"
-          />
-          {newCuisineDuplicateHint && (
-            <p className="recipe-form-cuisine-duplicate-hint">
-              Dieser Kulinariktyp ist bereits vorhanden und wurde ausgewählt.
-            </p>
-          )}
-          {(orderedCuisinePills.length > 0 || newCuisineInput.trim()) && (
-            <div className="recipe-form-cuisine-grid">
-              {orderedCuisinePills.map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={`recipe-form-cuisine-pill${kulinarik.includes(name) ? ' active' : ''}`}
-                  onClick={() => handleCuisinePillToggle(name)}
-                  aria-pressed={kulinarik.includes(name)}
-                  title={kulinarik.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
-                >
-                  {name}
-                </button>
-              ))}
-              {newCuisineInput.trim() &&
-                !visibleCuisinePills.some(
-                  (p) => p.toLowerCase() === newCuisineInput.trim().toLowerCase()
-                ) && (
-                  <button
-                    key={`new-${newCuisineInput.trim()}`}
-                    type="button"
-                    className={`recipe-form-cuisine-pill recipe-form-cuisine-pill--new${kulinarik.includes(newCuisineInput.trim()) ? ' active' : ''}`}
-                    onClick={() => handleNewCuisinePillClick(newCuisineInput.trim())}
-                    disabled={newCuisineLoading}
-                    aria-pressed={kulinarik.includes(newCuisineInput.trim())}
-                    title={`„${newCuisineInput.trim()}" als neuen Kulinariktyp vorschlagen und auswählen`}
-                  >
-                    {newCuisineLoading ? '…' : newCuisineInput.trim()}
-                  </button>
-                )}
-            </div>
-          )}
-        </div>
-
-        <div className="form-group">
           <label htmlFor="speisekategorie">Speisekategorie (Mehrfachauswahl möglich)</label>
           <div className="recipe-form-mobile-only">
             {orderedMealCategoryPills.length > 0 && (
@@ -1557,6 +1487,60 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               <option key={category} value={category}>{category}</option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <input
+            type="text"
+            id="kulinarik-search"
+            className="recipe-form-cuisine-search"
+            value={newCuisineInput}
+            onChange={handleCuisineInputChange}
+            placeholder="Kulinarik oder Speisekategorien suchen …"
+            aria-label="Kulinarik und Speisekategorien suchen"
+            autoComplete="off"
+          />
+          {newCuisineDuplicateHint && (
+            <p className="recipe-form-cuisine-duplicate-hint">
+              Dieser Kulinariktyp ist bereits vorhanden und wurde ausgewählt.
+            </p>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label>Kulinarik (Mehrfachauswahl möglich)</label>
+          {(orderedCuisinePills.length > 0 || newCuisineInput.trim()) && (
+            <div className="recipe-form-cuisine-grid">
+              {orderedCuisinePills.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`recipe-form-cuisine-pill${kulinarik.includes(name) ? ' active' : ''}`}
+                  onClick={() => handleCuisinePillToggle(name)}
+                  aria-pressed={kulinarik.includes(name)}
+                  title={kulinarik.includes(name) ? 'Auswahl aufheben' : `${name} auswählen`}
+                >
+                  {name}
+                </button>
+              ))}
+              {newCuisineInput.trim() &&
+                !visibleCuisinePills.some(
+                  (p) => p.toLowerCase() === newCuisineInput.trim().toLowerCase()
+                ) && (
+                  <button
+                    key={`new-${newCuisineInput.trim()}`}
+                    type="button"
+                    className={`recipe-form-cuisine-pill recipe-form-cuisine-pill--new${kulinarik.includes(newCuisineInput.trim()) ? ' active' : ''}`}
+                    onClick={() => handleNewCuisinePillClick(newCuisineInput.trim())}
+                    disabled={newCuisineLoading}
+                    aria-pressed={kulinarik.includes(newCuisineInput.trim())}
+                    title={`„${newCuisineInput.trim()}" als neuen Kulinariktyp vorschlagen und auswählen`}
+                  >
+                    {newCuisineLoading ? '…' : newCuisineInput.trim()}
+                  </button>
+                )}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
