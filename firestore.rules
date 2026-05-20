@@ -195,10 +195,10 @@ service cloud.firestore {
       }
 
       allow read: if isAuthenticated()
-                  && (request.auth.uid == resource.data.userId
-                      || isListMemberOf(resource.data.listId));
-      allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
-      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userId)
+                  && (request.auth.uid == resource.data.userID
+                      || isListMemberOf(resource.data.listID));
+      allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.userID;
+      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.userID)
                     || isAdmin();
     }
 
