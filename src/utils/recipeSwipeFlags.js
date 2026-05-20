@@ -43,6 +43,26 @@ const timestampInDays = (days) => {
   return Timestamp.fromMillis(ms);
 };
 
+const isStatusValiditySettingsMap = (value) =>
+  value !== null &&
+  value !== undefined &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  (
+    Object.prototype.hasOwnProperty.call(value, 'kandidat') ||
+    Object.prototype.hasOwnProperty.call(value, 'geparkt') ||
+    Object.prototype.hasOwnProperty.call(value, 'archiv')
+  );
+
+const resolveExpiresAtForCalculatedFlag = (calculatedFlag, statusValiditySettingsByFlag) => {
+  if (!calculatedFlag || !isStatusValiditySettingsMap(statusValiditySettingsByFlag)) return null;
+  const validityDays = statusValiditySettingsByFlag[calculatedFlag];
+  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
+    return timestampInDays(validityDays);
+  }
+  return null;
+};
+
 const expiresAtEqual = (a, b) => {
   if (a === b) return true;
   const aIsNullish = a === null || a === undefined;
@@ -148,7 +168,8 @@ const getListMemberIds = async (listId) => {
  * @param {string} listId
  * @param {string} recipeId
  * @param {Object} [thresholds]
- * @param {Timestamp|null} [synchronizedExpiresAt] - When provided, this expiresAt value is written to all docs
+ * @param {Timestamp|null|Object} [synchronizedExpiresAt] - When provided as Timestamp|null, this expiresAt value
+ *   is written to all docs. When provided as { kandidat, geparkt, archiv }, expiresAt is derived from calculatedFlag.
  * @returns {Promise<boolean>}
  */
 export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds, synchronizedExpiresAt) => {
@@ -184,6 +205,10 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
     if (!calculatedFlag) return false;
 
+    const hasStatusValiditySettingsByFlag = isStatusValiditySettingsMap(synchronizedExpiresAt);
+    const syncedExpiresAt = hasStatusValiditySettingsByFlag
+      ? resolveExpiresAtForCalculatedFlag(calculatedFlag, synchronizedExpiresAt)
+      : synchronizedExpiresAt;
     const shouldSyncExpiresAt = synchronizedExpiresAt !== undefined;
     const updates = docs
       .map((docSnap) => {
@@ -192,8 +217,8 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
         if (data.calculatedFlag !== calculatedFlag) {
           payload.calculatedFlag = calculatedFlag;
         }
-        if (shouldSyncExpiresAt && !isExpiredSwipeFlag(data.expiresAt, now) && !expiresAtEqual(data.expiresAt, synchronizedExpiresAt)) {
-          payload.expiresAt = synchronizedExpiresAt;
+        if (shouldSyncExpiresAt && !isExpiredSwipeFlag(data.expiresAt, now) && !expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
+          payload.expiresAt = syncedExpiresAt;
         }
         return Object.keys(payload).length > 0
           ? updateDoc(docSnap.ref, payload)
@@ -250,20 +275,23 @@ const calculateProjectedCalculatedFlagForPendingSwipe = async (listId, recipeId,
  * @param {string} listId   - ID of the interactive list
  * @param {string} recipeId - ID of the recipe that was swiped
  * @param {'geparkt'|'archiv'|'kandidat'} flag - The flag to set
- * @param {number|null} [validityDays] - Number of days until the flag expires, or null/undefined for permanent
+ * @param {number|null|Object} [validityDays] - Number of days until the flag expires, or null/undefined for permanent.
+ *   Alternatively, pass { kandidat, geparkt, archiv } to derive expiresAt from calculatedFlag.
  * @returns {Promise<boolean>} true if saved successfully
  */
 export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validityDays) => {
   if (!userId || !listId || !recipeId || !flag) return false;
   if (!['geparkt', 'archiv', 'kandidat'].includes(flag)) return false;
 
-  let expiresAt = null;
-  if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
-    expiresAt = timestampInDays(validityDays);
-  }
-
   try {
     const calculatedFlag = await calculateProjectedCalculatedFlagForPendingSwipe(listId, recipeId, userId, flag);
+    const useStatusValiditySettingsByFlag = isStatusValiditySettingsMap(validityDays);
+    let expiresAt = null;
+    if (useStatusValiditySettingsByFlag) {
+      expiresAt = resolveExpiresAtForCalculatedFlag(calculatedFlag, validityDays);
+    } else if (validityDays != null && Number.isFinite(validityDays) && validityDays > 0) {
+      expiresAt = timestampInDays(validityDays);
+    }
     const flagId = buildFlagId(userId, listId, recipeId);
     await setDoc(doc(db, 'recipeSwipeFlags', flagId), {
       userId,
@@ -275,7 +303,12 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, validit
       createdAt: Timestamp.now(),
     });
     const thresholds = await getGroupStatusThresholds();
-    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(listId, recipeId, thresholds, expiresAt);
+    const didRecalculate = await recalculateCalculatedFlagForRecipeInList(
+      listId,
+      recipeId,
+      thresholds,
+      useStatusValiditySettingsByFlag ? validityDays : expiresAt
+    );
     if (!didRecalculate) {
       console.error('Failed to recalculate calculatedFlag after setting recipe swipe flag.');
     }

@@ -442,7 +442,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               archiv: statusValiditySettings.statusValidityDaysArchiv,
               kandidat: statusValiditySettings.statusValidityDaysKandidat,
             };
-            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, validityDaysMap[flag]);
+            setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, validityDaysMap);
             // Keep allMembersFlags in sync with the current user's new swipe
             setAllMembersFlags((prev) => ({
               ...prev,
