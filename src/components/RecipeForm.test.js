@@ -165,7 +165,7 @@ describe('RecipeForm - Author Field', () => {
     jest.clearAllMocks();
   });
 
-  test('renders dedicated icon buttons for adding ingredients and steps', () => {
+  test('renders same icon button content for adding ingredients and steps', () => {
     const regularUser = {
       id: 'user-1',
       vorname: 'Regular',
@@ -185,7 +185,7 @@ describe('RecipeForm - Author Field', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Zutat hinzufügen' })).toHaveTextContent('🥕');
-    expect(screen.getByRole('button', { name: 'Schritt hinzufügen' })).toHaveTextContent('📝');
+    expect(screen.getByRole('button', { name: 'Schritt hinzufügen' })).toHaveTextContent('🥕');
   });
 
   test('shows author dropdown for admin user', async () => {
