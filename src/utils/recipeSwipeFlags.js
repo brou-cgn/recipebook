@@ -20,7 +20,7 @@
 
 import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, query, where, Timestamp } from 'firebase/firestore';
-import { getGroupStatusThresholds } from './customLists';
+import { getGroupStatusThresholds, getStatusValiditySettings } from './customLists';
 
 /**
  * Build a deterministic Firestore document ID for a flag.
@@ -166,14 +166,17 @@ const getListMemberIds = async (listId) => {
 
 /**
  * Recalculate and persist calculatedFlag for all swipe documents of one recipe in one list.
- * Optionally, also synchronize expiresAt for all matching documents.
+ * Also synchronizes expiresAt for all matching documents, either from the explicitly provided
+ * 4th argument or – when omitted – by loading the current status validity settings.
  *
  * @param {string} listId
  * @param {string} recipeId
  * @param {Object} [thresholds]
  * @param {Timestamp|null|{kandidat: number|null, geparkt: number|null, archiv: number|null}} [expiresAtOrValiditySettings]
  *   - When provided as Timestamp|null, this expiresAt value is written to all docs.
- *   When provided as a status validity map, expiresAt is derived from calculatedFlag.
+ *   - When provided as a status validity map, expiresAt is derived from calculatedFlag.
+ *   - When omitted (undefined), the current status validity settings are loaded automatically
+ *     and expiresAt is derived from the computed calculatedFlag.
  * @returns {Promise<boolean>}
  */
 export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId, thresholds, expiresAtOrValiditySettings) => {
@@ -209,11 +212,19 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
     const calculatedFlag = computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, recipeId, thresholds);
     if (!calculatedFlag) return false;
 
-    const hasStatusValiditySettingsByFlag = isStatusValiditySettingsMap(expiresAtOrValiditySettings);
+    let resolvedValidityOrExpiry = expiresAtOrValiditySettings;
+    if (expiresAtOrValiditySettings === undefined) {
+      const statusValiditySettings = await getStatusValiditySettings();
+      resolvedValidityOrExpiry = {
+        kandidat: statusValiditySettings.statusValidityDaysKandidat,
+        geparkt: statusValiditySettings.statusValidityDaysGeparkt,
+        archiv: statusValiditySettings.statusValidityDaysArchiv,
+      };
+    }
+    const hasStatusValiditySettingsByFlag = isStatusValiditySettingsMap(resolvedValidityOrExpiry);
     const syncedExpiresAt = hasStatusValiditySettingsByFlag
-      ? resolveExpiresAtForCalculatedFlag(calculatedFlag, expiresAtOrValiditySettings)
-      : expiresAtOrValiditySettings;
-    const shouldSyncExpiresAt = expiresAtOrValiditySettings !== undefined;
+      ? resolveExpiresAtForCalculatedFlag(calculatedFlag, resolvedValidityOrExpiry)
+      : resolvedValidityOrExpiry;
     const updates = docs
       .map((docSnap) => {
         const data = docSnap.data() || {};
@@ -221,7 +232,7 @@ export const recalculateCalculatedFlagForRecipeInList = async (listId, recipeId,
         if (data.calculatedFlag !== calculatedFlag) {
           payload.calculatedFlag = calculatedFlag;
         }
-        if (shouldSyncExpiresAt && !expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
+        if (!expiresAtEqual(data.expiresAt, syncedExpiresAt)) {
           payload.expiresAt = syncedExpiresAt;
         }
         return Object.keys(payload).length > 0
