@@ -1051,7 +1051,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   };
 
   const addIngredientIcon = getEffectiveIcon(buttonIcons, 'addIngredient', isDarkMode) || '🥕';
-  const addStepIcon = getEffectiveIcon(buttonIcons, 'addStep', isDarkMode) || '📝';
+  const addStepIcon = addIngredientIcon;
 
   return (
     <div className="recipe-form-container">
