@@ -252,21 +252,14 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   };
 
   const handleInspirationPickerSelect = async (listId) => {
-    if (listId === '__new__') {
-      setShowInspirationPicker(false);
-      setIsCreatingInspiration(true);
-      try {
-        await onCreateInspirationList();
-      } finally {
-        setIsCreatingInspiration(false);
-      }
-      return;
-    }
-    if (!onSelectExistingInspirationList) return;
+    setShowInspirationPicker(false);
     setIsCreatingInspiration(true);
     try {
-      await onSelectExistingInspirationList(listId);
-      setShowInspirationPicker(false);
+      if (listId === '__new__') {
+        await onCreateInspirationList();
+      } else if (onSelectExistingInspirationList) {
+        await onSelectExistingInspirationList(listId);
+      }
     } finally {
       setIsCreatingInspiration(false);
     }
