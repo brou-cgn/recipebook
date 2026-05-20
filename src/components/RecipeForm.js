@@ -1296,7 +1296,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         </div>
 
         <div className="form-group">
-          <label htmlFor="kulinarik-search">Kulinarik &amp; Speisekategorie (Mehrfachauswahl möglich)</label>
           <input
             type="text"
             id="kulinarik-search"
