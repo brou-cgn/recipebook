@@ -227,6 +227,91 @@ describe('setRecipeSwipeFlag', () => {
     expect(data.expiresAt).toBeNull();
   });
 
+  it('uses calculatedFlag kandidat validity when status validity settings are provided', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+    });
+    const before = Date.now();
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', {
+      kandidat: 5,
+      geparkt: 15,
+      archiv: null,
+    });
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.calculatedFlag).toBe('kandidat');
+    const expiresMs = data.expiresAt.toMillis();
+    const fiveDays = 5 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + fiveDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + fiveDays);
+  });
+
+  it('uses calculatedFlag geparkt validity when status validity settings are provided', async () => {
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ ownerId: 'user-1', memberIds: ['user-2', 'user-3'] }),
+    });
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv' }),
+        });
+        cb({
+          data: () => ({ userId: 'user-3', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat' }),
+        });
+      },
+    });
+    const before = Date.now();
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'geparkt', {
+      kandidat: 5,
+      geparkt: 9,
+      archiv: null,
+    });
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.calculatedFlag).toBe('geparkt');
+    const expiresMs = data.expiresAt.toMillis();
+    const nineDays = 9 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + nineDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + nineDays);
+  });
+
+  it('sets expiresAt to null for calculatedFlag archiv when archiv validity is empty', async () => {
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv', {
+      kandidat: 5,
+      geparkt: 9,
+      archiv: null,
+    });
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.calculatedFlag).toBe('archiv');
+    expect(data.expiresAt).toBeNull();
+  });
+
+  it('uses archiv validity when calculatedFlag is archiv and archiv validity is set', async () => {
+    const before = Date.now();
+    const result = await setRecipeSwipeFlag('user-1', 'list-1', 'recipe-1', 'archiv', {
+      kandidat: 5,
+      geparkt: 9,
+      archiv: 12,
+    });
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    const [, data] = mockSetDoc.mock.calls[0];
+    expect(data.calculatedFlag).toBe('archiv');
+    const expiresMs = data.expiresAt.toMillis();
+    const twelveDays = 12 * 24 * 60 * 60 * 1000;
+    expect(expiresMs).toBeGreaterThanOrEqual(before + twelveDays);
+    expect(expiresMs).toBeLessThanOrEqual(after + twelveDays);
+  });
+
   it('uses a deterministic composite document ID (userId_listId_recipeId)', async () => {
     await setRecipeSwipeFlag('user-42', 'list-7', 'recipe-99', 'archiv');
 
@@ -1073,6 +1158,107 @@ describe('recalculateCalculatedFlagForRecipeInList', () => {
     expect(result).toBe(true);
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { expiresAt: syncedExpiresAt });
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { expiresAt: syncedExpiresAt });
+  });
+
+  it('derives synchronized expiresAt from calculatedFlag when status validity settings map is provided', async () => {
+    const mockedNow = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockedNow);
+    try {
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ ownerId: 'user-1', memberIds: ['user-2', 'user-3'] }),
+      });
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'ref-1',
+            data: () => ({ userId: 'user-1', listId: 'list-1', recipeId: 'recipe-1', flag: 'geparkt', calculatedFlag: 'kandidat', expiresAt: null }),
+          });
+          cb({
+            ref: 'ref-2',
+            data: () => ({ userId: 'user-2', listId: 'list-1', recipeId: 'recipe-1', flag: 'archiv', calculatedFlag: 'kandidat', expiresAt: null }),
+          });
+          cb({
+            ref: 'ref-3',
+            data: () => ({ userId: 'user-3', listId: 'list-1', recipeId: 'recipe-1', flag: 'kandidat', calculatedFlag: 'kandidat', expiresAt: null }),
+          });
+        },
+      });
+
+      const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1', undefined, {
+        kandidat: 5,
+        geparkt: 9,
+        archiv: null,
+      });
+
+      expect(result).toBe(true);
+      const expectedMillis = mockedNow + (9 * 24 * 60 * 60 * 1000);
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', {
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: expect.any(Function), _isMock: true },
+      });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', {
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: expect.any(Function), _isMock: true },
+      });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-3', {
+        calculatedFlag: 'geparkt',
+        expiresAt: { toMillis: expect.any(Function), _isMock: true },
+      });
+      const expiresAtFromUpdate = mockUpdateDoc.mock.calls[0][1].expiresAt;
+      expect(expiresAtFromUpdate.toMillis()).toBe(expectedMillis);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('sets synchronized expiresAt to null when calculatedFlag is archiv and archiv validity is empty', async () => {
+    const mockedNow = 1_700_000_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockedNow);
+    try {
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ ownerId: 'user-1', memberIds: ['user-2'] }),
+      });
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({
+            ref: 'ref-1',
+            data: () => ({
+              userId: 'user-1',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'archiv',
+              calculatedFlag: 'kandidat',
+              expiresAt: { toMillis: () => mockedNow + 50_000 },
+            }),
+          });
+          cb({
+            ref: 'ref-2',
+            data: () => ({
+              userId: 'user-2',
+              listId: 'list-1',
+              recipeId: 'recipe-1',
+              flag: 'archiv',
+              calculatedFlag: 'kandidat',
+              expiresAt: { toMillis: () => mockedNow + 50_000 },
+            }),
+          });
+        },
+      });
+
+      const result = await recalculateCalculatedFlagForRecipeInList('list-1', 'recipe-1', undefined, {
+        kandidat: 5,
+        geparkt: 9,
+        archiv: null,
+      });
+
+      expect(result).toBe(true);
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-1', { calculatedFlag: 'archiv', expiresAt: null });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-2', { calculatedFlag: 'archiv', expiresAt: null });
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('does not sync expiresAt for expired docs and treats expired flags as open swipes for calculation', async () => {
