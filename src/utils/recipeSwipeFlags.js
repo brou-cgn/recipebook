@@ -147,32 +147,8 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
   }
 };
 
-const resetExpiredCalculatedFlagsForList = async (listId) => {
-  const q = query(
-    collection(db, 'recipeSwipeFlags'),
-    where('listID', '==', listId)
-  );
-  const snapshot = await getDocs(q);
-  const now = Date.now();
-  const updates = [];
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    if (
-      data.calculatedExpiresAt !== null &&
-      data.calculatedExpiresAt !== undefined &&
-      data.calculatedExpiresAt.toMillis() <= now
-    ) {
-      updates.push(updateDoc(docSnap.ref, { flag: null, expiresAt: null }));
-    }
-  });
-  await Promise.all(updates);
-};
-
 /**
  * Store/update a swipe flag document for a user/list/recipe combination.
- *
- * Before storing, reset flag and expiresAt to null for all expired calculated flags in the same list where
- * calculatedExpiresAt is set (not null) and already in the past.
  *
  * @param {string} userId
  * @param {string} listId
@@ -206,8 +182,6 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
     } else {
       expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
     }
-
-    await resetExpiredCalculatedFlagsForList(listId);
 
     const flagDocRef = doc(
       db,
