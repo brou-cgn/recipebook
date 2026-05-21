@@ -206,8 +206,38 @@ describe('recipeSwipeFlags write operations', () => {
     );
   });
 
+  it('resets flag and expiresAt to null for expired calculated flags before storing', async () => {
+    const fixedNow = 5_000_000;
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(fixedNow);
+
+    try {
+      const expiredRef = 'ref-expired';
+
+      mockGetDocs.mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ ref: expiredRef, data: () => ({ calculatedExpiresAt: { toMillis: () => fixedNow - 1000 } }) });
+          cb({ ref: 'ref-valid', data: () => ({ calculatedExpiresAt: { toMillis: () => fixedNow + 1000 } }) });
+          cb({ ref: 'ref-null', data: () => ({ calculatedExpiresAt: null }) });
+        },
+      });
+      mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
+      mockDoc.mockReturnValueOnce('flag-doc-ref');
+      mockSetDoc.mockResolvedValueOnce();
+      mockUpdateDoc.mockResolvedValue();
+      mockTimestampNow.mockReturnValue('created-ts');
+
+      await setRecipeSwipeFlag('u', 'l', 'r', 'kandidat', { userName: 'U', recipeTitle: 'R' });
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockUpdateDoc).toHaveBeenCalledWith(expiredRef, { flag: null, expiresAt: null });
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it('falls back to current user memberIds when metadata.memberIds is missing', async () => {
     mockGetDocs
+      .mockResolvedValueOnce({ forEach: () => {} })
       .mockResolvedValueOnce({
         forEach: (cb) => {
           cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l', recipeID: 'r', flag: 'geparkt' }) });
