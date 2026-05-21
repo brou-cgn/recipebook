@@ -440,10 +440,20 @@ describe('getAllMembersSwipeFlags', () => {
   });
 
   it('excludes docs where flag=null (reset flag)', async () => {
+    const futureMillis = Date.now() + 60_000;
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        // flag=null means the flag was reset – treat as not yet swiped
-        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', flag: null }) });
+        // flag=null means the flag was reset – treat as not yet swiped,
+        // even if calculated fields still contain a projected kandidat value.
+        cb({
+          data: () => ({
+            userID: 'u1',
+            recipeID: 'r1',
+            flag: null,
+            calculatedFlag: 'kandidat',
+            calculatedExpiresAt: { toMillis: () => futureMillis },
+          }),
+        });
         cb({ data: () => ({ userID: 'u2', recipeID: 'r1', flag: 'kandidat' }) });
       },
     });
