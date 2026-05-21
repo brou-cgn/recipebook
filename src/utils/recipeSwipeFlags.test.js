@@ -39,6 +39,7 @@ jest.mock('firebase/firestore', () => ({
 
 import {
   setRecipeSwipeFlag,
+  bulkUpdateSwipeFlagsByListAndRecipe,
   getActiveSwipeFlags,
   getSwipeFlagDocsByRecipeForUser,
   getAllMembersSwipeFlags,
@@ -243,6 +244,79 @@ describe('recipeSwipeFlags write operations', () => {
 
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', expect.objectContaining({ calculatedFlag: 'geparkt' }));
     expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u2', expect.objectContaining({ calculatedFlag: 'geparkt' }));
+  });
+
+  it('bulk-updates all recipe swipe docs of one list/recipe combination to geparkt', async () => {
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(5_000_000);
+    const geparktExpiresAt = { id: 'geparkt-expires-at' };
+
+    try {
+      mockGetDocs
+        .mockResolvedValueOnce({ forEach: () => {} })
+        .mockResolvedValueOnce({
+          forEach: (cb) => {
+            cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1' }) });
+            cb({ ref: 'ref-u2', data: () => ({ userID: 'u2', listID: 'l1', recipeID: 'r1' }) });
+          },
+        });
+      mockGetStatusValiditySettings.mockResolvedValueOnce({
+        statusValidityDaysKandidat: 3,
+        statusValidityDaysGeparkt: 4,
+        statusValidityDaysArchiv: 7,
+      });
+      mockTimestampFromDate.mockReturnValue(geparktExpiresAt);
+      mockUpdateDoc.mockResolvedValue();
+
+      const result = await bulkUpdateSwipeFlagsByListAndRecipe('l1', 'r1', 'geparkt');
+
+      expect(result).toBe(true);
+      expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'l1');
+      expect(mockWhere).toHaveBeenCalledWith('recipeID', '==', 'r1');
+      expect(mockTimestampFromDate).toHaveBeenCalledTimes(2);
+      expect(mockTimestampFromDate).toHaveBeenCalledWith(new Date(5_000_000 + 4 * 24 * 60 * 60 * 1000));
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', {
+        flag: 'geparkt',
+        expiresAt: geparktExpiresAt,
+        calculatedFlag: 'geparkt',
+        calculatedExpiresAt: geparktExpiresAt,
+      });
+      expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u2', {
+        flag: 'geparkt',
+        expiresAt: geparktExpiresAt,
+        calculatedFlag: 'geparkt',
+        calculatedExpiresAt: geparktExpiresAt,
+      });
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it('bulk-updates archiv with null expiry when archiv validity is empty', async () => {
+    mockGetDocs
+      .mockResolvedValueOnce({ forEach: () => {} })
+      .mockResolvedValueOnce({
+        forEach: (cb) => {
+          cb({ ref: 'ref-u1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1' }) });
+        },
+      });
+    mockGetStatusValiditySettings.mockResolvedValueOnce({
+      statusValidityDaysKandidat: 3,
+      statusValidityDaysGeparkt: 4,
+      statusValidityDaysArchiv: null,
+    });
+    mockUpdateDoc.mockResolvedValue();
+
+    const result = await bulkUpdateSwipeFlagsByListAndRecipe('l1', 'r1', 'archiv');
+
+    expect(result).toBe(true);
+    expect(mockTimestampFromDate).not.toHaveBeenCalled();
+    expect(mockUpdateDoc).toHaveBeenCalledWith('ref-u1', {
+      flag: 'archiv',
+      expiresAt: null,
+      calculatedFlag: 'archiv',
+      calculatedExpiresAt: null,
+    });
   });
 
 });
