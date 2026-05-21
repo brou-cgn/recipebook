@@ -189,8 +189,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
   // with a future calculatedExpiresAt. Sorted alphabetically.
-  // Note: in allMembersFlagDocs, the `.flag` field stores calculatedFlag and `.expiresAt` stores
-  // calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList).
+  // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag and `.expiresAtMillis` stores
+  // the numeric ms representation of calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList).
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
     const pool = allListRecipes.filter((r) =>

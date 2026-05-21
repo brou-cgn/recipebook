@@ -559,9 +559,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
      * the stale `calculatedFlag` stored in Firestore.
      */
     const isPriorityOneRecipe = (recipeId) => {
-      // P1 only applies when at least one member has submitted an explicit non-null flag.
-      // Recipes where nobody has voted yet (no explicit flags from any member) are fresh
-      // and fall into P2 instead of being vacuously treated as P1 via projection.
+      // P1 requires at least one explicit vote; recipes with no votes fall into P2
+      // to avoid vacuous P1 classification via projection of all-undefined flags.
       const hasAnyExplicitFlag = listMemberIds.some(
         (uid) => allMembersFlags[uid]?.[recipeId] !== undefined
       );
@@ -584,6 +583,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       return listMemberIds.every((uid) => allMembersFlagDocs[uid]?.[recipeId] === undefined);
     };
 
+    /** Extract a recipe's createdAt as a numeric timestamp (ms), or null if absent. */
+    const getCreatedAtMillis = (recipe) =>
+      recipe.createdAt?.toMillis?.() ??
+      (typeof recipe.createdAt === 'number' ? recipe.createdAt : null);
+
     return [...availableRecipes].sort((a, b) => {
       // Priority 1: outcome already determinable via projection
       const aPriorityOne = isPriorityOneRecipe(a.id);
@@ -597,8 +601,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
       // Priority 3: remaining recipes ordered by createdAt descending (newest first).
       // "absteigend nach Alter (createdAt)" = higher timestamp first.
-      const aCreatedAt = a.createdAt?.toMillis?.() ?? (typeof a.createdAt === 'number' ? a.createdAt : null);
-      const bCreatedAt = b.createdAt?.toMillis?.() ?? (typeof b.createdAt === 'number' ? b.createdAt : null);
+      const aCreatedAt = getCreatedAtMillis(a);
+      const bCreatedAt = getCreatedAtMillis(b);
       if (aCreatedAt !== null && bCreatedAt !== null) return bCreatedAt - aCreatedAt;
       if (aCreatedAt !== null) return -1;
       if (bCreatedAt !== null) return 1;
