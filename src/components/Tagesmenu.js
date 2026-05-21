@@ -442,10 +442,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             },
           }));
           setSwipeResults((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
+          // Remove the swiped recipe from availableRecipes immediately.
+          // This replaces the currentIndex increment: because the swiped recipe
+          // disappears from listRecipes, the next recipe naturally moves to the
+          // current position (index 0), avoiding any re-sort side-effects from
+          // the allMembersFlags update above that could skip a recipe.
+          setActiveFlags((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
         }
       }
       setJustSwiped(true);
-      setCurrentIndex((prev) => prev + 1);
       setDragOffset({ x: 0, y: 0 });
       setCardPhase('idle');
     } else if (cardPhase === 'snap') {
