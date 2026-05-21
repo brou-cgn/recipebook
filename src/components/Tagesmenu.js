@@ -521,9 +521,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
 
   const listRecipes = useMemo(() => {
+    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
+
     const isPriorityOneRecipe = (recipeId) => {
       // Any member has an active (non-expired) kandidat flag
-      const hasActiveKandidat = listMemberIds.some(
+      const hasActiveKandidat = otherMemberIds.some(
         (uid) => allMembersFlags[uid]?.[recipeId] === 'kandidat'
       );
       // Or the pessimistic calculated flag is archiv
@@ -533,14 +535,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
     const hasAnySwipeDoc = (recipeId) => {
       // Any member has any doc (active or expired) for this recipe
-      return listMemberIds.some((uid) => allMembersFlagDocs[uid]?.[recipeId] !== undefined);
+      return otherMemberIds.some((uid) => allMembersFlagDocs[uid]?.[recipeId] !== undefined);
     };
 
     const getOldestExpiredExpiresAtMillis = (recipeId) => {
       // Oldest (minimum) expiresAt across all members' expired docs for this recipe.
       // Returns null if no member has an expired doc.
       let oldest = null;
-      for (const uid of listMemberIds) {
+      for (const uid of otherMemberIds) {
         const flagDoc = allMembersFlagDocs[uid]?.[recipeId];
         if (!flagDoc || !flagDoc.isExpired || flagDoc.expiresAtMillis === null) continue;
         if (oldest === null || flagDoc.expiresAtMillis < oldest) {
@@ -584,6 +586,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     allMembersFlags,
     allMembersFlagDocs,
     listMemberIds,
+    currentUser?.id,
     pessimisticCalculatedFlagByRecipeId,
   ]);
 

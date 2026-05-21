@@ -261,6 +261,50 @@ describe('Tagesmenu – swipe card consistency', () => {
 });
 
 describe('Tagesmenu – swipe stack prioritization', () => {
+  test('ignores current user kandidat flags for priority-1 ordering', async () => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: { r2: 'kandidat' },
+      user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r2: { flag: 'kandidat', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  test('ignores current user swipe docs for priority-2 ordering', async () => {
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+      user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+      user2: {},
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
   test('prioritizes recipes with valid kandidat flag or pessimistic archiv potential before recipes without a swipe document', async () => {
     const now = Date.now();
     mockActiveFlagsValue = {};
@@ -342,20 +386,20 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
   });
 
-  test('second user sees prioritization based on first user swipes', async () => {
-    // Simulate the bug scenario: user2 opens Tagesmenu after user1 has swiped
-    mockActiveFlagsValue = {};  // user2 has no own active flags yet
-    // user1 has already swiped: r2=kandidat, r3=archiv; user2 has nothing
+  test('current user is prioritized based on other member swipes', async () => {
+    mockActiveFlagsValue = {};
+    // currentUser=user1, other member=user2
+    // user2 has already swiped: r2=kandidat, r3=archiv; user1 has nothing
     mockAllMembersFlagsValue = {
-      user1: { r2: 'kandidat', r3: 'archiv' },
-      user2: {},
+      user1: {},
+      user2: { r2: 'kandidat', r3: 'archiv' },
     };
     mockAllMembersFlagDocsValue = {
-      user1: {
+      user1: {},
+      user2: {
         r2: { flag: 'kandidat', expiresAt: null, expiresAtMillis: null, isExpired: false },
         r3: { flag: 'archiv', expiresAt: null, expiresAtMillis: null, isExpired: false },
       },
-      user2: {},
     };
 
     await act(async () => {
@@ -363,8 +407,8 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     });
 
     // r1: no flags → pessimistic archiv (both = archiv) → P1
-    // r2: user1 has kandidat → hasActiveKandidat → P1; user2 has nothing → pessimistic archiv too
-    // r3: user1 has archiv, user2 nothing → pessimistic archiv → P1
+    // r2: user2 has kandidat → hasActiveKandidat → P1
+    // r3: user2 has archiv, user1 nothing → pessimistic archiv → P1
     // All P1 → original order r1, r2, r3
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
 
