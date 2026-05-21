@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe('recipeSwipeFlags write operations', () => {
-  it('stores required swipe flag fields and removes expired calculated flags first', async () => {
+  it('stores required swipe flag fields and resets expired calculated flags first', async () => {
     const now = Date.now();
     const expiresAt = { toMillis: () => now + 1000 };
 
@@ -85,7 +85,7 @@ describe('recipeSwipeFlags write operations', () => {
     });
     mockDoc.mockReturnValueOnce('flag-doc-ref');
     mockSetDoc.mockResolvedValueOnce();
-    mockDeleteDoc.mockResolvedValue();
+    mockUpdateDoc.mockResolvedValue();
     mockTimestampNow.mockReturnValue('created-ts');
     mockGetStatusValiditySettings.mockResolvedValue({
       statusValidityDaysKandidat: null,
@@ -101,10 +101,9 @@ describe('recipeSwipeFlags write operations', () => {
 
     expect(result).toBe(true);
     expect(mockWhere).toHaveBeenCalledWith('listID', '==', 'l');
-    expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
-    expect(mockDeleteDoc).toHaveBeenCalledWith({ id: 'expired-ref' });
-    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'future-ref' });
-    expect(mockDeleteDoc).not.toHaveBeenCalledWith({ id: 'null-ref' });
+    expect(mockUpdateDoc).toHaveBeenCalledWith({ id: 'expired-ref' }, { expiresAt: null, flag: null });
+    expect(mockUpdateDoc).not.toHaveBeenCalledWith({ id: 'future-ref' }, { expiresAt: null, flag: null });
+    expect(mockUpdateDoc).not.toHaveBeenCalledWith({ id: 'null-ref' }, { expiresAt: null, flag: null });
     expect(mockDoc).toHaveBeenCalledWith({}, 'recipeSwipeFlags', 'u_l_r');
     expect(mockTimestampFromDate).toHaveBeenCalledTimes(1);
     expect(mockSetDoc).toHaveBeenCalledWith(
@@ -130,7 +129,6 @@ describe('recipeSwipeFlags write operations', () => {
       mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
       mockDoc.mockReturnValueOnce('flag-doc-ref');
       mockSetDoc.mockResolvedValueOnce();
-      mockDeleteDoc.mockResolvedValue();
       mockTimestampNow.mockReturnValue('created-ts');
       mockTimestampFromDate.mockReturnValueOnce(archivExpiresAt);
       mockGetStatusValiditySettings.mockResolvedValueOnce({
@@ -159,7 +157,6 @@ describe('recipeSwipeFlags write operations', () => {
       mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
       mockDoc.mockReturnValueOnce('flag-doc-ref');
       mockSetDoc.mockResolvedValueOnce();
-      mockDeleteDoc.mockResolvedValue();
       mockTimestampNow.mockReturnValue('created-ts');
       mockTimestampFromDate.mockReturnValueOnce(geparktExpiresAt);
       mockGetStatusValiditySettings.mockResolvedValueOnce({
@@ -188,7 +185,6 @@ describe('recipeSwipeFlags write operations', () => {
       mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
       mockDoc.mockReturnValueOnce('flag-doc-ref');
       mockSetDoc.mockResolvedValueOnce();
-      mockDeleteDoc.mockResolvedValue();
       mockTimestampNow.mockReturnValue('created-ts');
       mockTimestampFromDate.mockReturnValueOnce(kandidatExpiresAt);
       mockGetStatusValiditySettings.mockResolvedValueOnce({
@@ -213,7 +209,6 @@ describe('recipeSwipeFlags write operations', () => {
     mockGetDocs.mockResolvedValueOnce({ forEach: () => {} });
     mockDoc.mockReturnValueOnce('flag-doc-ref');
     mockSetDoc.mockResolvedValueOnce();
-    mockDeleteDoc.mockResolvedValue();
     mockTimestampNow.mockReturnValue('created-ts');
     mockGetStatusValiditySettings.mockResolvedValueOnce({
       statusValidityDaysKandidat: null,
