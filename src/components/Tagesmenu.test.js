@@ -262,6 +262,8 @@ describe('Tagesmenu – swipe card consistency', () => {
 
 describe('Tagesmenu – swipe stack prioritization', () => {
   test('ignores current user kandidat flags for priority-1 ordering', async () => {
+    expect(currentUser.id).toBe('user1');
+
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {
       user1: { r2: 'kandidat' },
@@ -286,6 +288,8 @@ describe('Tagesmenu – swipe stack prioritization', () => {
   });
 
   test('ignores current user swipe docs for priority-2 ordering', async () => {
+    expect(currentUser.id).toBe('user1');
+
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {
       user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
