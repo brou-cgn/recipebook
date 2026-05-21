@@ -20,7 +20,25 @@ jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
   return {
     setRecipeSwipeFlag: jest.fn(),
-    getActiveSwipeFlags: () => Promise.resolve(mockActiveFlagsValue),
+    // getSwipeFlagDocsByRecipeForUser replaces getActiveSwipeFlags.
+    // mockActiveFlagsValue is a { recipeId: flag } map (legacy format).
+    // We convert it to the full doc format: flag=null means "open" (in stack),
+    // non-null flag means "decided" (removed from stack).
+    getSwipeFlagDocsByRecipeForUser: () => {
+      const docs = {};
+      for (const [recipeId, flag] of Object.entries(mockActiveFlagsValue)) {
+        docs[recipeId] = {
+          flag,
+          calculatedFlag: null,
+          expiresAt: null,
+          expiresAtMillis: null,
+          isExpired: false,
+        };
+      }
+      return Promise.resolve(docs);
+    },
+    isRecipeAvailableForStack: actual.isRecipeAvailableForStack,
+    computeNegativeProjection: actual.computeNegativeProjection,
     getAllMembersSwipeFlags: () => Promise.resolve(mockAllMembersFlagsValue),
     getAllMembersSwipeFlagDocsForList: () => Promise.resolve(mockAllMembersFlagDocsValue),
     computeGroupRecipeStatus: (...args) => mockComputeGroupRecipeStatus(...args),
@@ -87,6 +105,7 @@ beforeEach(() => {
   mockAllMembersFlagsValue = {};
   mockAllMembersFlagDocsValue = {};
   mockMaxKandidatenSchwelle = null;
+  mockComputeGroupRecipeStatus = () => 'kandidat';
   mockStatusValiditySettings = {
     statusValidityDaysKandidat: null,
     statusValidityDaysGeparkt: null,
@@ -399,14 +418,17 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
   });
 
-  test('ignores current user swipe docs for priority-2 ordering', async () => {
+  test('priority-2 checks all members: recipe with a doc from any member is not P2', async () => {
     expect(currentUser.id).toBe('user1');
 
+    // user1 has explicit geparkt flags for all recipes; user2 has no flags
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {
       user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
       user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
     };
+    // Only user1 has a doc for r1 – but P2 checks ALL members, so r1 is not P2.
+    // r2 and r3 have no docs from either member → P2.
     mockAllMembersFlagDocsValue = {
       user1: {
         r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
@@ -418,7 +440,10 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
-    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+    // Not P1 (all explicit 'geparkt' → positive and negative projections = 'geparkt')
+    // r1 has a doc from user1 → not P2; r2 and r3 have no docs → P2
+    // Expected order: r2 (P2), r3 (P2), r1 (P3)
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
   });
 
   test('prioritizes recipes with valid kandidat flag or pessimistic archiv potential before recipes without a swipe document', async () => {
@@ -445,10 +470,11 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
-    // r1: user2 has 'archiv' → pessimistic archiv → P1
-    // r2: user2 has 'kandidat' (active) → P1
-    // r3: no flags from anyone → pessimistic archiv (both treated as archiv) → P1
-    // All are P1; original order r1, r2, r3 is maintained
+    // With the explicit-flag guard, P1 only applies when at least one member has voted.
+    // r1: user2='archiv', user1=undefined → has explicit flag. Positive: user1→kandidat, user2=archiv → 50%/50% → 'kandidat' → P1
+    // r2: user2='kandidat', user1=undefined → has explicit flag. Positive: both kandidat → 100% → P1
+    // r3: no flags from either → no explicit flag → NOT P1 → P2 (no docs)
+    // Expected order: r1 (P1), r2 (P1), r3 (P2)
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
@@ -460,38 +486,45 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
   });
 
-  test('orders expired swipe documents by oldest expiresAt first after higher priorities', async () => {
+  test('priority-3 sorts remaining recipes by createdAt descending (newest first)', async () => {
     const now = Date.now();
+    // Recipes have explicit createdAt timestamps so P3 ordering is deterministic.
+    // Both members have 'geparkt' for all recipes → neither P1 (geparkt not archiv/kandidat)
+    // All recipes have docs from both members → not P2.
+    // P3: sort by createdAt descending = newest timestamp first.
     mockActiveFlagsValue = {};
-    // Both members have active geparkt flags → not kandidat, pessimistic flag = geparkt (not archiv)
     mockAllMembersFlagsValue = {
       user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
       user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
     };
-    // allMembersFlagDocs has expired docs across all members; sorting uses the oldest expiresAt
-    const r1ExpMs = now - 3 * 24 * 60 * 60 * 1000;
-    const r2ExpMs = now - 7 * 24 * 60 * 60 * 1000;
-    const r3ExpMs = now - 1 * 24 * 60 * 60 * 1000;
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'geparkt', expiresAt: { toMillis: () => r1ExpMs }, expiresAtMillis: r1ExpMs, isExpired: true },
-        r2: { flag: 'archiv', expiresAt: { toMillis: () => r2ExpMs }, expiresAtMillis: r2ExpMs, isExpired: true },
-        r3: { flag: 'kandidat', expiresAt: { toMillis: () => r3ExpMs }, expiresAtMillis: r3ExpMs, isExpired: true },
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
       },
       user2: {
-        r1: { flag: 'geparkt', expiresAt: { toMillis: () => r1ExpMs }, expiresAtMillis: r1ExpMs, isExpired: true },
-        r2: { flag: 'geparkt', expiresAt: { toMillis: () => r2ExpMs }, expiresAtMillis: r2ExpMs, isExpired: true },
-        r3: { flag: 'geparkt', expiresAt: { toMillis: () => r3ExpMs }, expiresAtMillis: r3ExpMs, isExpired: true },
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
       },
     };
 
+    const r1CreatedAt = now - 3 * 24 * 60 * 60 * 1000; // 3 days ago
+    const r2CreatedAt = now - 7 * 24 * 60 * 60 * 1000; // 7 days ago (oldest)
+    const r3CreatedAt = now - 1 * 24 * 60 * 60 * 1000; // 1 day ago (newest)
+    const recipesWithCreatedAt = [
+      { ...makeRecipe('r1', 'Rezept 1'), createdAt: { toMillis: () => r1CreatedAt } },
+      { ...makeRecipe('r2', 'Rezept 2'), createdAt: { toMillis: () => r2CreatedAt } },
+      { ...makeRecipe('r3', 'Rezept 3'), createdAt: { toMillis: () => r3CreatedAt } },
+    ];
+
     await act(async () => {
-      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+      renderMenuWithListOverrides(recipesWithCreatedAt, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
-    // Not P1 (all geparkt, pessimistic = geparkt not archiv), has docs → not P2
-    // P3: sort by oldest expired expiresAt: r2 (7d ago), r1 (3d ago), r3 (1d ago)
-    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+    // P3: createdAt descending → r3 (1d ago, newest), r1 (3d ago), r2 (7d ago, oldest)
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
@@ -499,7 +532,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
-    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
   });
 
   test('current user is prioritized based on other member swipes', async () => {
@@ -522,19 +555,278 @@ describe('Tagesmenu – swipe stack prioritization', () => {
       renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
     });
 
-    // r1: no flags → pessimistic archiv (both = archiv) → P1
-    // r2: user2 has kandidat → hasActiveKandidat → P1
-    // r3: user2 has archiv, user1 nothing → pessimistic archiv → P1
-    // All P1 → original order r1, r2, r3
-    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
-
-    swipeLeft(document.querySelector('.tagesmenu-card-top'));
-    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    // With the explicit-flag guard, P1 requires at least one explicit flag.
+    // r1: no flags from either user → NOT P1 → P2 (no docs in list)
+    // r2: user2='kandidat', user1 nothing → has explicit flag. Positive: user2=kandidat, user1→kandidat → 100% → P1
+    // r3: user2='archiv', user1 nothing → has explicit flag. Positive: user2=archiv, user1→kandidat → 50%/50% → 'kandidat' → P1
+    // Expected order: r2 (P1), r3 (P1), r1 (P2)
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
 
     swipeLeft(document.querySelector('.tagesmenu-card-top'));
     finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  // ---- 9 required new test scenarios ----
+
+  // A. Stack filter tests
+
+  test('[A1] recipe with no swipeFlags doc appears in the stack', async () => {
+    // currentUser has no doc for r1 → should appear
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {};
+    mockAllMembersFlagDocsValue = {};
+
+    await act(async () => {
+      renderMenu([makeRecipe('r1', 'Rezept 1')]);
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  test('[A2] recipe with flag=null and expiresAt=null appears in the stack', async () => {
+    // getSwipeFlagDocsByRecipeForUser returns a doc with flag=null → still available
+    // We simulate by having mockActiveFlagsValue with flag=null (which our mock converts to a doc)
+    mockActiveFlagsValue = { r1: null };
+    mockAllMembersFlagsValue = {};
+    mockAllMembersFlagDocsValue = {};
+
+    await act(async () => {
+      renderMenu([makeRecipe('r1', 'Rezept 1')]);
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  test('[A3] recipe with an explicit non-null flag does not appear in the stack', async () => {
+    // r1 has flag='archiv' → not in stack. r2 has no doc → in stack
+    mockActiveFlagsValue = { r1: 'archiv' };
+    mockAllMembersFlagsValue = {};
+    mockAllMembersFlagDocsValue = {};
+
+    await act(async () => {
+      renderMenu([makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2')]);
+    });
+
+    // r1 is excluded; r2 is top
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+  });
+
+  // B. Prioritization tests
+
+  test('[B4] priority-1 via positive projection to kandidat', async () => {
+    // user2 voted kandidat for r1; user1 has no vote → positive projection = 'kandidat' → P1
+    // r2 has no docs from anyone → P2
+    // Expected: r1 first (P1), then r2 (P2)
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: {},
+      user2: { r1: 'kandidat' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {},
+      user2: {
+        r1: { flag: 'kandidat', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(
+        [makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2')],
+        { ownerId: 'user1', memberIds: ['user2'] }
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  test('[B5] priority-1 via negative projection to archiv (3 members)', async () => {
+    // 3 members: user1 (no vote), user2 (geparkt/abstain), user3 (archiv)
+    // Positive: user1→kandidat, user2=geparkt (abstain), user3=archiv → 1/3 kandidat, 1/3 archiv → geparkt (NOT P1 via positive)
+    // Negative: user1→archiv, user2=geparkt (abstain), user3=archiv → 2/3 archiv → archiv (P1 via negative!)
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: {},
+      user2: { r1: 'geparkt' },
+      user3: { r1: 'archiv' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {},
+      user2: { r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false } },
+      user3: { r1: { flag: 'archiv', expiresAt: null, expiresAtMillis: null, isExpired: false } },
+    };
+    // r2 has no docs → P2
+    // Expected: r1 (P1 via negative), then r2 (P2)
+
+    await act(async () => {
+      renderMenuWithListOverrides(
+        [makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2')],
+        { ownerId: 'user1', memberIds: ['user2', 'user3'] }
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 1');
+  });
+
+  test('[B6] priority-2 for recipes with no docs in the list', async () => {
+    // r1 has a doc from user2; r2 has no docs from anyone → r2 is P2
+    // Neither is P1 (explicit geparkt for r1, nothing for r2 but only 1 member with explicit vote)
+    // Wait – with 2 members (user1, user2) and r2 having no votes:
+    // Positive for r2: both undefined → both treated as kandidat → 'kandidat' → P1!
+    // So r2 would be P1 too. Let me set up so r1 is also P1 to test P2.
+    // We need: r3 to be P2 and not P1.
+    // For r3 not P1: user1=geparkt (abstain), user2=geparkt (abstain) → positive=geparkt → not P1
+    //                                                                     negative=geparkt → not P1
+    // r3 has no docs or flags from any member → P2
+    // r1 and r2 have docs (geparkt) from both members, geparkt→NOT P1 → P3
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'geparkt', r2: 'geparkt' },
+      user2: { r1: 'geparkt', r2: 'geparkt' },
+    };
+    // r1 and r2 have docs from both; r3 has no docs from either → P2
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(
+        [makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2'), makeRecipe('r3', 'Rezept 3')],
+        { ownerId: 'user1', memberIds: ['user2'] }
+      );
+    });
+
+    // r1 and r2 are P3 (has docs, not P1); r3 has no docs → P2 → top card
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+  });
+
+  test('[B7] priority-3 orders by createdAt descending (newest first)', async () => {
+    const now = Date.now();
+    // Neither P1 (both geparkt → geparkt) nor P2 (both have docs)
+    // P3 sort by createdAt descending: r3 newest, then r1, then r2
+    mockActiveFlagsValue = {};
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+      user2: { r1: 'geparkt', r2: 'geparkt', r3: 'geparkt' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'geparkt', expiresAt: null, expiresAtMillis: null, isExpired: false },
+      },
+    };
+
+    const recipesWithTs = [
+      { ...makeRecipe('r1', 'Rezept 1'), createdAt: { toMillis: () => now - 3 * 86400000 } },
+      { ...makeRecipe('r2', 'Rezept 2'), createdAt: { toMillis: () => now - 7 * 86400000 } },
+      { ...makeRecipe('r3', 'Rezept 3'), createdAt: { toMillis: () => now - 1 * 86400000 } },
+    ];
+
+    await act(async () => {
+      renderMenuWithListOverrides(recipesWithTs, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    // createdAt desc: r3 (1d ago) → r1 (3d ago) → r2 (7d ago)
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 3');
+  });
+
+  // C. Shared-candidate tests (using the Gemeinsame Kandidaten section at results view)
+
+  test('[C8] shared candidates shown only when calculatedFlag=kandidat and future calculatedExpiresAt', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const pastMs = Date.now() - 1 * 24 * 60 * 60 * 1000;
+    mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: pastMs, isExpired: true }, // expired → excluded
+      },
+      user2: {},
+    };
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat' },
+      user2: {},
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(
+        [makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2'), makeRecipe('r3', 'Rezept 3')],
+        { ownerId: 'user1', memberIds: ['user2'] }
+      );
+    });
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    const tileNames = Array.from(gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile-name'))
+      .map((el) => el.textContent);
+    // Only r1 qualifies (future expiresAt and kandidat); r2 is expired; r3 has no kandidat doc
+    expect(tileNames).toContain('Rezept 1');
+    expect(tileNames).not.toContain('Rezept 2');
+    expect(tileNames).not.toContain('Rezept 3');
+  });
+
+  test('[C9] shared candidates capped by maxKandidatenSchwelle', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    mockMaxKandidatenSchwelle = 1; // cap at 1
+    // Use 'geparkt' for groupRecipeStatus so candidateScore stays 0 and the threshold
+    // is not triggered immediately (which would skip the swipe stack entirely).
+    mockComputeGroupRecipeStatus = () => 'geparkt';
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {},
+    };
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user2: {},
+    };
+
+    await act(async () => {
+      renderMenuWithListOverrides(
+        [makeRecipe('r1', 'Rezept 1'), makeRecipe('r2', 'Rezept 2'), makeRecipe('r3', 'Rezept 3')],
+        { ownerId: 'user1', memberIds: ['user2'] }
+      );
+    });
+
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+    swipeLeft(document.querySelector('.tagesmenu-card-top'));
+    finishSwipeAnimation(document.querySelector('.tagesmenu-card-top'));
+
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    const tiles = gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile');
+    // All 3 qualify but cap = 1
+    expect(tiles).toHaveLength(1);
   });
 });
 
@@ -1205,6 +1497,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   beforeEach(() => {
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {};
+    mockAllMembersFlagDocsValue = {};
     mockMaxKandidatenSchwelle = null;
     mockComputeGroupRecipeStatus = () => 'kandidat';
   });
@@ -1212,6 +1505,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   afterEach(() => {
     mockActiveFlagsValue = {};
     mockAllMembersFlagsValue = {};
+    mockAllMembersFlagDocsValue = {};
     mockMaxKandidatenSchwelle = null;
     mockComputeGroupRecipeStatus = () => 'kandidat';
   });
@@ -1231,7 +1525,22 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   }
 
   test('Gemeinsame Kandidaten group is not shown when maxKandidatenSchwelle is null', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     mockMaxKandidatenSchwelle = null;
+    // Even with kandidat docs, the section must not appear when threshold is null
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
+    // Stack: all recipes have no currentUser doc and are in availableRecipes
     mockAllMembersFlagsValue = {
       user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
       user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
@@ -1258,7 +1567,21 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   });
 
   test('Gemeinsame Kandidaten group appears when maxKandidatenSchwelle is set and kandidaten exist', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     mockMaxKandidatenSchwelle = 3;
+    // allMembersFlagDocs: .flag stores calculatedFlag, .expiresAtMillis must be future
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
     mockAllMembersFlagsValue = {
       user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
       user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
@@ -1288,7 +1611,20 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   });
 
   test('Gemeinsame Kandidaten group is limited to maxKandidatenSchwelle items', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
     mockAllMembersFlagsValue = {
       user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
       user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
@@ -1318,15 +1654,27 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     expect(tiles).toHaveLength(2);
   });
 
-  test('Gemeinsame Kandidaten group sorts recipes by voting count descending', async () => {
+  test('Gemeinsame Kandidaten group shows only recipes with calculatedFlag=kandidat and future expiresAt', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    const pastMs = Date.now() - 1 * 24 * 60 * 60 * 1000;
     mockMaxKandidatenSchwelle = 3;
-    // r1 voted by both user1 and user2 (2 votes), r2 only by user1 (1 vote), r3 by nobody (0 votes)
+    // r1: future calculatedExpiresAt → qualifies
+    // r2: past calculatedExpiresAt (expired) → does NOT qualify
+    // r3: flag=archiv → does NOT qualify
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: pastMs, isExpired: true },
+        r3: { flag: 'archiv', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
     mockAllMembersFlagsValue = {
-      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
+      user1: { r1: 'kandidat', r2: 'kandidat', r3: 'archiv' },
       user2: { r1: 'kandidat' },
     };
-    // All recipes get 'kandidat' group status
-    mockComputeGroupRecipeStatus = () => 'kandidat';
 
     await act(async () => {
       render(
@@ -1350,16 +1698,30 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
 
     const tileNames = Array.from(gemeinsameGroup.querySelectorAll('.tagesmenu-results-tile-name'))
       .map((el) => el.textContent);
-    // r1 has 2 votes, r2 has 1 vote, r3 has 0 votes → descending order: r1, r2, r3
-    expect(tileNames[0]).toBe('Rezept 1');
-    expect(tileNames[1]).toBe('Rezept 2');
-    expect(tileNames[2]).toBe('Rezept 3');
+    // Only r1 qualifies: future expiresAt and flag='kandidat'; r2 is expired; r3 is archiv
+    expect(tileNames).toContain('Rezept 1');
+    expect(tileNames).not.toContain('Rezept 2');
+    expect(tileNames).not.toContain('Rezept 3');
   });
 
   test('Gemeinsame Kandidaten group includes all recipes with kandidat group status, including pre-existing ones', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     // r1 has a pre-existing active flag from a previous session → should now be INCLUDED
+    // because r1's calculatedFlag in allMembersFlagDocs is 'kandidat' with future expiresAt
     mockActiveFlagsValue = { r1: 'kandidat' };
     mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
     mockAllMembersFlagsValue = {
       user1: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
       user2: { r1: 'kandidat', r2: 'kandidat', r3: 'kandidat' },
@@ -1377,7 +1739,7 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
       );
     });
 
-    // Only r2 and r3 are in the swipe stack (r1 is pre-flagged); swipe them up
+    // Only r2 and r3 are in the swipe stack (r1 is pre-flagged with kandidat); swipe them up
     swipeCardUp();
     swipeCardUp();
 
@@ -1394,8 +1756,19 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
 
   test('Gemeinsame Kandidaten group is not shown when no recipes qualify', async () => {
     mockMaxKandidatenSchwelle = 3;
-    // All recipes get 'archiv' group status → no kandidaten
-    mockComputeGroupRecipeStatus = () => 'archiv';
+    // All recipes have flag='archiv' in allMembersFlagDocs → no kandidaten
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+        r2: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+        r3: { flag: 'archiv', expiresAtMillis: null, isExpired: false },
+      },
+    };
     mockAllMembersFlagsValue = {
       user1: { r1: 'archiv', r2: 'archiv', r3: 'archiv' },
       user2: { r1: 'archiv', r2: 'archiv', r3: 'archiv' },
