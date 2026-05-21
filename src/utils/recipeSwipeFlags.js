@@ -248,7 +248,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
 
 /**
  * Load all active (non-expired) swipe flags for a given user and list.
- * A flag is active if expiresAt is null (permanent) or expiresAt is in the future.
+ * A flag is active if calculatedExpiresAt is null (permanent) or calculatedExpiresAt is in the future.
  *
  * @param {string} userId  - ID of the current user
  * @param {string} listId  - ID of the interactive list
@@ -268,11 +268,11 @@ export const getActiveSwipeFlags = async (userId, listId) => {
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       const expired =
-        data.expiresAt !== null &&
-        data.expiresAt !== undefined &&
-        data.expiresAt.toMillis() <= now;
+        data.calculatedExpiresAt !== null &&
+        data.calculatedExpiresAt !== undefined &&
+        data.calculatedExpiresAt.toMillis() <= now;
       if (!expired) {
-        activeFlags[data.recipeID] = data.flag;
+        activeFlags[data.recipeID] = data.calculatedFlag;
       }
     });
     return activeFlags;
@@ -354,11 +354,11 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
       // Skip documents for users outside the expected member list
       if (!memberIds.includes(data.userID)) return;
       const expired =
-        data.expiresAt !== null &&
-        data.expiresAt !== undefined &&
-        data.expiresAt.toMillis() <= now;
+        data.calculatedExpiresAt !== null &&
+        data.calculatedExpiresAt !== undefined &&
+        data.calculatedExpiresAt.toMillis() <= now;
       if (!expired) {
-        result[data.userID][data.recipeID] = data.flag;
+        result[data.userID][data.recipeID] = data.calculatedFlag;
       }
     });
 
@@ -395,10 +395,10 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
       const data = docSnap.data();
       if (!memberIds.includes(data.userID)) return;
       if (!data.recipeID) return;
-      const expiresAtMillis = data.expiresAt?.toMillis?.() ?? null;
+      const expiresAtMillis = data.calculatedExpiresAt?.toMillis?.() ?? null;
       result[data.userID][data.recipeID] = {
-        flag: data.flag,
-        expiresAt: data.expiresAt ?? null,
+        flag: data.calculatedFlag,
+        expiresAt: data.calculatedExpiresAt ?? null,
         expiresAtMillis,
         isExpired: expiresAtMillis !== null && expiresAtMillis <= now,
       };
