@@ -438,7 +438,7 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
   for (const uid of memberIds) {
     const flag = allMembersFlags[uid]?.[recipeId];
 
-    if (flag !== undefined) {
+    if (flag !== undefined && flag !== null) {
       if (flag === 'kandidat') kandidatCount++;
       else if (flag === 'archiv') archivCount++;
       // 'geparkt' is ignored (not counted)

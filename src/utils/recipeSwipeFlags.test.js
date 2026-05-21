@@ -482,6 +482,23 @@ describe('computeGroupRecipeStatus', () => {
 
     expect(status).toBe('kandidat');
   });
+
+  it('treats null flags as not yet swiped', () => {
+    const status = computeGroupRecipeStatus(
+      ['u1', 'u2', 'u3'],
+      { u1: { r1: 'kandidat' }, u2: { r1: null }, u3: {} },
+      'r1',
+      {
+        groupThresholdKandidatMinKandidat: 80,
+        groupThresholdKandidatMaxArchiv: 50,
+        groupThresholdArchivMinArchiv: 80,
+        groupThresholdArchivMaxKandidat: 20,
+      },
+      'u1'
+    );
+
+    expect(status).toBe('kandidat');
+  });
 });
 
 describe('computeCalculatedRecipeSwipeFlag', () => {
