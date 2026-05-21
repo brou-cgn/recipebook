@@ -114,6 +114,60 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
 }
 
 /**
+ * Check whether a recipe is still available for the current user's swipe stack.
+ *
+ * A recipe is available iff:
+ *  1. The current user has no recipeSwipeFlags document for this recipe in the current list, OR
+ *  2. The document exists but both `flag` and `expiresAt` are null (open/reset state).
+ *
+ * Any document with an explicit, non-null `flag` means the recipe has already been decided
+ * and must be excluded from the stack.
+ *
+ * @param {Object|undefined} swipeFlagDoc - Current user's swipe-flag doc for this recipe,
+ *   as returned by getSwipeFlagDocsByRecipeForUser. Pass `undefined` when no document exists.
+ * @returns {boolean}
+ */
+export function isRecipeAvailableForStack(swipeFlagDoc) {
+  // No document → still open
+  if (swipeFlagDoc === undefined || swipeFlagDoc === null) return true;
+  // Document exists with both flag and expiresAt null → recipe was reset to open state
+  return swipeFlagDoc.flag === null && swipeFlagDoc.expiresAt === null;
+}
+
+/**
+ * Compute the pessimistic (negative) projected flag for a recipe.
+ *
+ * For this projection, missing/open swipes (where `allMembersFlags[uid]?.[recipeId]` is `undefined`)
+ * are projected as 'archiv'. Explicit 'geparkt' flags are treated as abstentions (same as in the
+ * positive projection via computeCalculatedRecipeSwipeFlag). Explicit 'kandidat' and 'archiv'
+ * flags are counted as-is.
+ *
+ * This is used for Priority-1 detection in the swipe stack: a recipe is P1 if the negative
+ * projection results in 'archiv' (i.e. even in the pessimistic case it would be archived).
+ *
+ * Note: `allMembersFlags` must be the explicit-flags map from getAllMembersSwipeFlags, which only
+ * stores non-null flags. An `undefined` value therefore means "no explicit vote submitted yet".
+ *
+ * @param {string[]} memberIds
+ * @param {Object} allMembersFlags - Map of userId → { recipeId → flag } (explicit non-null flags only)
+ * @param {string} recipeId
+ * @param {Object} [thresholds]
+ * @returns {'kandidat'|'geparkt'|'archiv'|null}
+ */
+export function computeNegativeProjection(memberIds, allMembersFlags, recipeId, thresholds) {
+  if (!Array.isArray(memberIds) || memberIds.length === 0 || !recipeId) return null;
+  // Build a flags map where each member's undefined (missing) vote is projected as 'archiv'
+  const pessimisticFlags = Object.fromEntries(
+    memberIds.map((uid) => {
+      const memberFlags = allMembersFlags[uid] || {};
+      const projected = memberFlags[recipeId] === undefined ? 'archiv' : memberFlags[recipeId];
+      return [uid, { ...memberFlags, [recipeId]: projected }];
+    })
+  );
+  return computeCalculatedRecipeSwipeFlag(memberIds, pessimisticFlags, recipeId, thresholds);
+}
+
+/**
  * Recalculate and persist calculated swipe fields for all swipe docs of one recipe in one list.
  *
  * @param {string} listId

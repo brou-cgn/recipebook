@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { getActiveSwipeFlags, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, computeNegativeProjection, setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
 import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -65,8 +65,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // Maps recipeId → 'kandidat' | 'geparkt' | 'archiv' for the current session
   const [swipeResults, setSwipeResults] = useState({});
 
-  // Active swipe flags from Firestore (non-expired), used to filter the stack
-  const [activeFlags, setActiveFlags] = useState({});
+  // Swipe-flag documents for the current user in the selected list.
+  // Map of recipeId → { flag, calculatedFlag, expiresAt, expiresAtMillis, isExpired }
+  // An entry with flag !== null means the recipe has already been decided and is removed from the stack.
+  const [currentUserSwipeDocs, setCurrentUserSwipeDocs] = useState({});
   // All members' swipe flag docs (including expired) for sorting the swipe stack.
   // Map of userId → { recipeId → { flag, expiresAt, expiresAtMillis, isExpired } }
   const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
@@ -139,10 +141,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     );
   }, [recipes, selectedList]);
 
-  // Recipes still available for swiping (those without an active flag)
+  // Recipes still available for swiping: no doc, or doc with flag=null and expiresAt=null
   const availableRecipes = useMemo(() => {
-    return allListRecipes.filter((r) => !activeFlags[r.id]);
-  }, [allListRecipes, activeFlags]);
+    return allListRecipes.filter((r) => isRecipeAvailableForStack(currentUserSwipeDocs[r.id]));
+  }, [allListRecipes, currentUserSwipeDocs]);
 
   const prevListIdRef = useRef(selectedListId);
   useEffect(() => {
@@ -150,7 +152,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       prevListIdRef.current = selectedListId;
       setCurrentIndex(0);
       setSwipeResults({});
-      setActiveFlags({});
+      setCurrentUserSwipeDocs({});
       setAllMembersFlagDocs({});
       setAllMembersFlags({});
       setAllMembersFlagsLoaded(false);
@@ -211,21 +213,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
-  // Load active swipe flags from Firestore when user or selected list changes
+  // Load current user's swipe-flag docs from Firestore when user or selected list changes.
+  // All docs (including those with flag=null) are loaded so the stack filter can check
+  // the explicit flag and expiresAt fields via isRecipeAvailableForStack.
   useEffect(() => {
     if (!currentUser?.id || !selectedListId) {
-      setActiveFlags({});
+      setCurrentUserSwipeDocs({});
       setFlagsLoaded(true);
       return;
     }
     setFlagsLoaded(false);
-    getActiveSwipeFlags(currentUser.id, selectedListId)
-      .then((flags) => {
-        setActiveFlags(flags);
+    getSwipeFlagDocsByRecipeForUser(currentUser.id, selectedListId)
+      .then((docs) => {
+        setCurrentUserSwipeDocs(docs);
         setFlagsLoaded(true);
       })
       .catch(() => {
-        setActiveFlags({});
+        setCurrentUserSwipeDocs({});
         setFlagsLoaded(true);
       });
   }, [currentUser, selectedListId]);
@@ -454,7 +458,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           // disappears from listRecipes, the next recipe naturally moves to the
           // current position (index 0), avoiding any re-sort side-effects from
           // the allMembersFlags update above that could skip a recipe.
-          setActiveFlags((prev) => ({ ...prev, [swipe.recipe.id]: flag }));
+          setCurrentUserSwipeDocs((prev) => ({
+            ...prev,
+            [swipe.recipe.id]: {
+              flag,
+              expiresAt: null,
+              expiresAtMillis: null,
+              isExpired: false,
+            },
+          }));
         }
       }
       setJustSwiped(true);
@@ -466,6 +478,18 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   }, [cardPhase, currentUser]);
 
   // ---- Derived values -------------------------------------------------
+
+  // Derive activeFlags from currentUserSwipeDocs for use in the results view (combinedFlag).
+  // Contains only recipes with an explicit, non-null flag (same semantics as the old activeFlags state).
+  const activeFlags = useMemo(() => {
+    const result = {};
+    for (const [recipeId, doc] of Object.entries(currentUserSwipeDocs)) {
+      if (doc.flag !== null && doc.flag !== undefined) {
+        result[recipeId] = doc.flag;
+      }
+    }
+    return result;
+  }, [currentUserSwipeDocs]);
 
   // Full list of member IDs (owner + members) for group status computation
   const listMemberIds = useMemo(() => {
@@ -492,18 +516,23 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     return result;
   }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds, currentUser?.id]);
 
-  // Gemeinsame Kandidaten: all recipes with group status 'kandidat', sorted by voting count (desc),
-  // limited to maxKandidatenSchwelle. Empty when threshold is disabled or list has only one member.
+  // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
+  // with a future calculatedExpiresAt. Shown in Kochatelier and Meine Kochideen Karussell.
+  // Note: in allMembersFlagDocs, the `.flag` field stores calculatedFlag and `.expiresAt` stores
+  // calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList). Empty when threshold is disabled
+  // or list has only one member.
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
-    const pool = allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === 'kandidat');
-    const sorted = [...pool].sort((a, b) => {
-      const aVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[a.id] === 'kandidat').length;
-      const bVotes = listMemberIds.filter((uid) => allMembersFlags[uid]?.[b.id] === 'kandidat').length;
-      return bVotes - aVotes;
-    });
-    return sorted.slice(0, maxKandidatenSchwelle);
-  }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId, maxKandidatenSchwelle]);
+    // A recipe is a shared candidate when at least one member's calculatedFlag is 'kandidat'
+    // and that candidate status has not expired.
+    const pool = allListRecipes.filter((r) =>
+      listMemberIds.some((uid) => {
+        const doc = allMembersFlagDocs[uid]?.[r.id];
+        return doc && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
+      })
+    );
+    return pool.slice(0, maxKandidatenSchwelle);
+  }, [allListRecipes, listMemberIds, allMembersFlagDocs, maxKandidatenSchwelle]);
 
   // Recipes permanently archived by group consensus: group status is 'archiv' AND all members
   // have voted. Stored as a Set for O(1) lookup during render.
@@ -519,86 +548,64 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     );
   }, [allListRecipes, listMemberIds, allMembersFlags, groupStatusByRecipeId]);
 
-  const pessimisticCalculatedFlagByRecipeId = useMemo(() => {
-    if (listMemberIds.length === 0) return {};
-    return Object.fromEntries(
-      allListRecipes.map((recipe) => {
-        const pessimisticFlags = Object.fromEntries(
-          listMemberIds.map((uid) => {
-            const memberFlags = { ...(allMembersFlags[uid] || {}) };
-            if (memberFlags[recipe.id] === undefined) {
-              memberFlags[recipe.id] = 'archiv';
-            }
-            return [uid, memberFlags];
-          })
-        );
-        return [
-          recipe.id,
-          computeCalculatedRecipeSwipeFlag(listMemberIds, pessimisticFlags, recipe.id, groupThresholds),
-        ];
-      })
-    );
-  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds]);
-
   const listRecipes = useMemo(() => {
-    const otherMemberIds = listMemberIds.filter((uid) => uid !== currentUser?.id);
-
+    /**
+     * Priority 1: recipes where the submitted flags combined with a projection of missing
+     * (open) swipes already determine the outcome — either:
+     *   a) positive projection → 'kandidat' (optimistic: missing swipes are treated as kandidat)
+     *   b) negative projection → 'archiv' (pessimistic: missing swipes are treated as archiv)
+     *
+     * Both projections are based on explicit `flag` values from allMembersFlags, NOT on
+     * the stale `calculatedFlag` stored in Firestore.
+     */
     const isPriorityOneRecipe = (recipeId) => {
-      // Any member has an active (non-expired) kandidat flag
-      const hasActiveKandidat = otherMemberIds.some(
-        (uid) => allMembersFlags[uid]?.[recipeId] === 'kandidat'
+      // P1 requires at least one explicit vote; recipes with no votes fall into P2
+      // to avoid vacuous P1 classification via projection of all-undefined flags.
+      const hasAnyExplicitFlag = listMemberIds.some(
+        (uid) => allMembersFlags[uid]?.[recipeId] !== undefined
       );
-      // Or the pessimistic calculated flag is archiv
-      const pessimisticArchiv = pessimisticCalculatedFlagByRecipeId[recipeId] === 'archiv';
-      return hasActiveKandidat || pessimisticArchiv;
+      if (!hasAnyExplicitFlag) return false;
+
+      const positiveProjection = computeCalculatedRecipeSwipeFlag(
+        listMemberIds, allMembersFlags, recipeId, groupThresholds
+      );
+      const negativeProjection = computeNegativeProjection(
+        listMemberIds, allMembersFlags, recipeId, groupThresholds
+      );
+      return positiveProjection === 'kandidat' || negativeProjection === 'archiv';
     };
 
-    const hasAnySwipeDoc = (recipeId) => {
-      // Any member has any doc (active or expired) for this recipe
-      return otherMemberIds.some((uid) => allMembersFlagDocs[uid]?.[recipeId] !== undefined);
+    /**
+     * Priority 2: recipes that have no recipeSwipeFlags document from ANY list member.
+     * These are brand-new recipes that nobody has voted on yet.
+     */
+    const hasNoDocsInList = (recipeId) => {
+      return listMemberIds.every((uid) => allMembersFlagDocs[uid]?.[recipeId] === undefined);
     };
 
-    const getOldestExpiredExpiresAtMillis = (recipeId) => {
-      // Oldest (minimum) expiresAt across all members' expired docs for this recipe.
-      // Returns null if no member has an expired doc.
-      let oldest = null;
-      for (const uid of otherMemberIds) {
-        const flagDoc = allMembersFlagDocs[uid]?.[recipeId];
-        if (!flagDoc || !flagDoc.isExpired || flagDoc.expiresAtMillis === null) continue;
-        if (oldest === null || flagDoc.expiresAtMillis < oldest) {
-          oldest = flagDoc.expiresAtMillis;
-        }
-      }
-      return oldest;
-    };
+    /** Extract a recipe's createdAt as a numeric timestamp (ms), or null if absent. */
+    const getCreatedAtMillis = (recipe) =>
+      recipe.createdAt?.toMillis?.() ??
+      (typeof recipe.createdAt === 'number' ? recipe.createdAt : null);
 
     return [...availableRecipes].sort((a, b) => {
-      // Priority 1: active kandidat from any member or pessimistic archiv
+      // Priority 1: outcome already determinable via projection
       const aPriorityOne = isPriorityOneRecipe(a.id);
       const bPriorityOne = isPriorityOneRecipe(b.id);
       if (aPriorityOne !== bPriorityOne) return aPriorityOne ? -1 : 1;
-      // Both are P1: preserve the original list order and skip P2/P3 comparisons.
-      // Without this guard, P2 ("no doc") would incorrectly re-sort recipes that
-      // qualify as P1 via pessimistic archiv but happen to have no swipe docs yet.
-      if (aPriorityOne) return 0;
 
-      // Priority 2: recipes without any swipe doc from any member
-      const aHasNoDoc = !hasAnySwipeDoc(a.id);
-      const bHasNoDoc = !hasAnySwipeDoc(b.id);
-      if (aHasNoDoc !== bHasNoDoc) return aHasNoDoc ? -1 : 1;
+      // Priority 2: recipes with no docs for any member in this list
+      const aHasNoDocs = hasNoDocsInList(a.id);
+      const bHasNoDocs = hasNoDocsInList(b.id);
+      if (aHasNoDocs !== bHasNoDocs) return aHasNoDocs ? -1 : 1;
 
-      // Priority 3: expired docs across all members, oldest expiresAt first
-      const aOldestExpiry = getOldestExpiredExpiresAtMillis(a.id);
-      const bOldestExpiry = getOldestExpiredExpiresAtMillis(b.id);
-      const aHasExpired = aOldestExpiry !== null;
-      const bHasExpired = bOldestExpiry !== null;
-      if (aHasExpired !== bHasExpired) return aHasExpired ? -1 : 1;
-      if (aHasExpired && bHasExpired) {
-        // Defensive fallback: use MAX_SAFE_INTEGER so entries without a valid timestamp
-        // are ordered after valid expired docs deterministically.
-        return (aOldestExpiry ?? Number.MAX_SAFE_INTEGER) - (bOldestExpiry ?? Number.MAX_SAFE_INTEGER);
-      }
-
+      // Priority 3: remaining recipes ordered by createdAt descending (newest first).
+      // "absteigend nach Alter (createdAt)" = higher timestamp first.
+      const aCreatedAt = getCreatedAtMillis(a);
+      const bCreatedAt = getCreatedAtMillis(b);
+      if (aCreatedAt !== null && bCreatedAt !== null) return bCreatedAt - aCreatedAt;
+      if (aCreatedAt !== null) return -1;
+      if (bCreatedAt !== null) return 1;
       return 0;
     });
   }, [
@@ -606,8 +613,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     allMembersFlags,
     allMembersFlagDocs,
     listMemberIds,
-    currentUser?.id,
-    pessimisticCalculatedFlagByRecipeId,
+    groupThresholds,
   ]);
 
   useEffect(() => {
@@ -778,7 +784,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetRecipeId
     ) {
       setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
-      setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'archiv' }));
+      setCurrentUserSwipeDocs((prev) => ({
+        ...prev,
+        [targetRecipeId]: {
+          flag: 'archiv',
+          expiresAt: null,
+          expiresAtMillis: null,
+          isExpired: false,
+        },
+      }));
       setAllMembersFlags((prev) => Object.fromEntries(
         Object.entries(prev).map(([userId, userFlags]) => {
           if (userFlags?.[targetRecipeId] === undefined) {
@@ -795,7 +809,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetRecipeId
     ) {
       setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
-      setActiveFlags((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+      setCurrentUserSwipeDocs((prev) => ({
+        ...prev,
+        [targetRecipeId]: {
+          flag: 'geparkt',
+          expiresAt: null,
+          expiresAtMillis: null,
+          isExpired: false,
+        },
+      }));
       setAllMembersFlags((prev) => Object.fromEntries(
         Object.entries(prev).map(([userId, userFlags]) => {
           if (userFlags?.[targetRecipeId] === undefined) {

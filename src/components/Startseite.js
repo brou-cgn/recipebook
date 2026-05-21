@@ -6,7 +6,7 @@ import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
-import { getAllMembersSwipeFlags, computeGroupRecipeStatus } from '../utils/recipeSwipeFlags';
+import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 
 const TRENDING_DAYS = 7;
@@ -29,7 +29,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
 
   // State for Gemeinsame Kandidaten carousel
-  const [allMembersFlags, setAllMembersFlags] = useState({});
+  const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
   const [groupThresholds, setGroupThresholds] = useState({});
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
   const [kandidatenLoading, setKandidatenLoading] = useState(true);
@@ -127,11 +127,13 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return privateListsForCurrentUser.find(g => g.id === listId) || null;
   }, [privateListsForCurrentUser, currentUser?.defaultEverydayClassicsListId]);
 
-  // Load allMembersFlags whenever the default web import list changes
+  // Load allMembersFlagDocs whenever the default web import list changes.
+  // allMembersFlagDocs maps userId → recipeId → { flag (= calculatedFlag), expiresAt (= calculatedExpiresAt),
+  // expiresAtMillis, isExpired } as returned by getAllMembersSwipeFlagDocsForList.
   useEffect(() => {
     let cancelled = false;
     if (!defaultWebImportList) {
-      setAllMembersFlags({});
+      setAllMembersFlagDocs({});
       setKandidatenLoading(false);
       return;
     }
@@ -141,19 +143,19 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       ? [...new Set([defaultWebImportList.ownerId, ...memberIds])]
       : memberIds;
     if (allMemberIds.length === 0) {
-      setAllMembersFlags({});
+      setAllMembersFlagDocs({});
       setKandidatenLoading(false);
       return;
     }
-    getAllMembersSwipeFlags(defaultWebImportList.id, allMemberIds)
-      .then((flags) => {
+    getAllMembersSwipeFlagDocsForList(defaultWebImportList.id, allMemberIds)
+      .then((flagDocs) => {
         if (cancelled) return;
-        setAllMembersFlags(flags);
+        setAllMembersFlagDocs(flagDocs);
         setKandidatenLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        setAllMembersFlags({});
+        setAllMembersFlagDocs({});
         setKandidatenLoading(false);
       });
     return () => { cancelled = true; };
@@ -185,23 +187,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     );
   }, [recipes, defaultEverydayClassicsList]);
 
-  // Precompute group status for each recipe in the list
-  const groupStatusByRecipeId = useMemo(() => {
-    if (listMemberIds.length <= 1) return {};
-    return Object.fromEntries(
-      allListRecipes.map((r) => {
-        const status = computeGroupRecipeStatus(listMemberIds, allMembersFlags, r.id, groupThresholds, currentUser?.id);
-        return [r.id, status];
-      })
-    );
-  }, [allListRecipes, listMemberIds, allMembersFlags, groupThresholds, currentUser?.id]);
-
-  // Gemeinsame Kandidaten: all recipes with group status 'kandidat', sorted alphabetically
+  // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
+  // with a future calculatedExpiresAt. Sorted alphabetically.
+  // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag and `.expiresAtMillis` stores
+  // the numeric ms representation of calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList).
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
-    const pool = allListRecipes.filter((r) => groupStatusByRecipeId[r.id] === 'kandidat');
-    return [...pool].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
-  }, [allListRecipes, listMemberIds, groupStatusByRecipeId, maxKandidatenSchwelle]);
+    const pool = allListRecipes.filter((r) =>
+      listMemberIds.some((uid) => {
+        const doc = allMembersFlagDocs[uid]?.[r.id];
+        return doc && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
+      })
+    );
+    const sorted = [...pool].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+    return sorted.slice(0, maxKandidatenSchwelle);
+  }, [allListRecipes, listMemberIds, allMembersFlagDocs, maxKandidatenSchwelle]);
 
   const handleKandidatenMehrClick = () => {
     onViewChange?.('tagesmenu');

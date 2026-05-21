@@ -26,8 +26,7 @@ jest.mock('../utils/customLists', () => ({
 }));
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
-  getAllMembersSwipeFlags: jest.fn(() => Promise.resolve({})),
-  computeGroupRecipeStatus: jest.fn(() => null),
+  getAllMembersSwipeFlagDocsForList: jest.fn(() => Promise.resolve({})),
 }));
 
 jest.mock('../utils/imageUtils', () => ({
@@ -51,8 +50,8 @@ beforeEach(() => {
   getAllCookDates.mockResolvedValue([]);
   const { getUserFavorites } = require('../utils/userFavorites');
   getUserFavorites.mockResolvedValue([]);
-  const { getAllMembersSwipeFlags } = require('../utils/recipeSwipeFlags');
-  getAllMembersSwipeFlags.mockResolvedValue({});
+  const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
+  getAllMembersSwipeFlagDocsForList.mockResolvedValue({});
   const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext } = require('../utils/customLists');
   getGroupStatusThresholds.mockResolvedValue({});
   getMaxKandidatenSchwelle.mockResolvedValue(null);
@@ -319,14 +318,23 @@ describe('Startseite', () => {
 
   test('shows candidates from default web import list sorted alphabetically', async () => {
     const { getMaxKandidatenSchwelle, getGroupStatusThresholds } = require('../utils/customLists');
-    const { getAllMembersSwipeFlags, computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
+    const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     getMaxKandidatenSchwelle.mockResolvedValue(5);
     getGroupStatusThresholds.mockResolvedValue({});
-    getAllMembersSwipeFlags.mockResolvedValue({
-      'u1': { 'r1': 'kandidat', 'r2': 'kandidat', 'r3': 'kandidat' },
-      'u2': { 'r1': 'kandidat', 'r2': 'kandidat', 'r3': 'kandidat' },
+    // allMembersFlagDocs: .flag stores calculatedFlag, .expiresAtMillis must be future
+    getAllMembersSwipeFlagDocsForList.mockResolvedValue({
+      'u1': {
+        'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r2': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r3': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      'u2': {
+        'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r2': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r3': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
     });
-    computeGroupRecipeStatus.mockReturnValue('kandidat');
 
     const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1', 'r2', 'r3'] };
     const user = { id: 'u1', defaultWebImportListId: 'g1' };
@@ -354,9 +362,13 @@ describe('Startseite', () => {
 
   test('does not show candidates when maxKandidatenSchwelle is null', async () => {
     const { getMaxKandidatenSchwelle } = require('../utils/customLists');
-    const { computeGroupRecipeStatus } = require('../utils/recipeSwipeFlags');
     getMaxKandidatenSchwelle.mockResolvedValue(null);
-    computeGroupRecipeStatus.mockReturnValue('kandidat');
+    // Even with kandidat docs, candidates must not appear when threshold is null
+    const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    getAllMembersSwipeFlagDocsForList.mockResolvedValue({
+      'u1': { 'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false } },
+    });
 
     const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1'] };
     const user = { id: 'u1', defaultWebImportListId: 'g1' };
