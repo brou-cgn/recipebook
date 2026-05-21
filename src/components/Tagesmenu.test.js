@@ -263,6 +263,31 @@ describe('Tagesmenu – swipe card consistency', () => {
     );
   });
 
+  test('shows and closes temporary swipe debug overlay after transition end', async () => {
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeUp(topCard);
+    finishSwipeAnimation(topCard);
+
+    expect(document.body).toHaveTextContent('DEBUG (tap to close)');
+    expect(document.body).toHaveTextContent('flag: kandidat');
+    expect(document.body).toHaveTextContent('recipeId: r1');
+    expect(document.body).toHaveTextContent('memberIds (2):');
+    expect(document.body).toHaveTextContent('- user1');
+    expect(document.body).toHaveTextContent('- user2');
+    expect(document.body).toHaveTextContent('thresholds:');
+
+    const debugOverlay = Array.from(document.querySelectorAll('div')).find(
+      (el) => el.textContent?.trim().startsWith('DEBUG (tap to close)')
+    );
+    expect(debugOverlay).toBeTruthy();
+    fireEvent.click(debugOverlay);
+    expect(document.body).not.toHaveTextContent('DEBUG (tap to close)');
+  });
+
   test('background card transitions are suppressed immediately after a swipe (justSwiped)', async () => {
     jest.useFakeTimers();
     try {

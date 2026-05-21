@@ -267,6 +267,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // immediately after a swipe completes, preventing them from animating
   // back to their smaller "stacked" positions and causing a visual glitch.
   const [justSwiped, setJustSwiped] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null);
   useEffect(() => {
     if (!justSwiped) return;
     const raf = requestAnimationFrame(() => setJustSwiped(false));
@@ -440,6 +441,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
             memberIds: listMemberIdsRef.current,
             thresholds: groupThresholdsRef.current,
           });
+          setDebugInfo({ memberIds: listMemberIdsRef.current, flag, recipeId: swipe.recipe.id, thresholds: groupThresholdsRef.current });
           // Keep allMembersFlags in sync with the current user's new swipe
           setAllMembersFlags((prev) => ({
             ...prev,
@@ -1401,6 +1403,33 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         selectedListId={selectedListId}
         onSelectList={(id) => setSelectedListId(id)}
       />
+
+      {debugInfo && (
+        <div
+          onClick={() => setDebugInfo(null)}
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'rgba(0,0,0,0.85)',
+            color: '#0f0',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            padding: '12px',
+            zIndex: 9999,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+          }}
+        >
+          {`DEBUG (tap to close)
+flag: ${debugInfo.flag}
+recipeId: ${debugInfo.recipeId}
+memberIds (${Array.isArray(debugInfo.memberIds) ? debugInfo.memberIds.length : 0}):
+${Array.isArray(debugInfo.memberIds) ? debugInfo.memberIds.map((id) => `- ${id}`).join('\n') : ''}
+thresholds: ${JSON.stringify(debugInfo.thresholds)}`}
+        </div>
+      )}
 
     </div>
   );
