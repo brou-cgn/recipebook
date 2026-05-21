@@ -280,6 +280,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // handleTransitionEnd can record the flag after the animation completes.
   const pendingSwipeRef = useRef(null);
 
+  // Frozen snapshot of listRecipes captured while cardPhase === 'idle'.
+  // During dragging/flying phases visibleRecipes is sliced from this snapshot
+  // so that background cards cannot reshuffle while a swipe animation runs.
+  const stableListRecipesRef = useRef([]);
+
   // Refs that mirror the current top recipe and selected list so pointer-event
   // handlers (which have empty dependency arrays) can still read the latest values.
   const topRecipeRef = useRef(null);
@@ -699,13 +704,24 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     allSwiped
   });
 
+  // Keep stableListRecipesRef up-to-date when idle so that during dragging/flying
+  // visibleRecipes is derived from a frozen snapshot (preventing background-card reshuffles).
+  useEffect(() => {
+    if (cardPhase === 'idle') {
+      stableListRecipesRef.current = listRecipes;
+    }
+  }, [listRecipes, cardPhase]);
+
   // When the threshold has been crossed mid-session, show only the single card at
   // currentIndex (no depth-effect cards behind it), so the deck appears empty and
   // the user knows this is the last swipeable card.
+  // Use the frozen snapshot during active swipe phases to prevent background reshuffles.
+  const renderedListRecipes =
+    cardPhase === 'idle' ? listRecipes : stableListRecipesRef.current;
   const visibleRecipes =
     thresholdMet && hasSwiped
-      ? listRecipes.slice(currentIndex, currentIndex + 1)
-      : listRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
+      ? renderedListRecipes.slice(currentIndex, currentIndex + 1)
+      : renderedListRecipes.slice(currentIndex, currentIndex + STACK_VISIBLE);
 
   // How far along the swipe are we (0–1) – used to animate background cards
   const dragProgress = Math.min(
@@ -1179,7 +1195,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
               const translateY = depth * 10 * (1 - dragProgress);
               cardStyle = {
                 transform: `scale(${scale}) translateY(${translateY}px)`,
-                transition: cardPhase === 'dragging' || justSwiped ? 'none' : 'transform 0.3s ease',
+                transition: cardPhase === 'dragging' || cardPhase === 'flying' || justSwiped ? 'none' : 'transform 0.3s ease',
                 zIndex: 10 - depth,
               };
             }
