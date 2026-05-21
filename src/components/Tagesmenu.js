@@ -821,7 +821,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           calculatedExpiresAtMillis = Date.now() + geparktDays * 24 * 60 * 60 * 1000;
           calculatedExpiresAt = new Date(calculatedExpiresAtMillis);
         }
-      } catch (_) {}
+      } catch (error) {
+        console.error('Failed to load geparkt validity settings for local menu update:', error);
+      }
       setCurrentUserSwipeDocs((prev) => ({
         ...prev,
         [targetRecipeId]: {
