@@ -20,6 +20,7 @@ jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
   return {
     setRecipeSwipeFlag: jest.fn(),
+    bulkUpdateSwipeFlagsByListAndRecipe: jest.fn(() => Promise.resolve(true)),
     // getSwipeFlagDocsByRecipeForUser replaces getActiveSwipeFlags.
     // mockActiveFlagsValue is a { recipeId: flag } map (legacy format).
     // We convert it to the full doc format: flag=null means "open" (in stack),
@@ -2254,6 +2255,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
   test('Option "Zweite Chance, bitte" setzt lokal calculatedFlag auf geparkt inklusive calculatedExpiresAt', async () => {
     const recipeSwipeFlags = require('../utils/recipeSwipeFlags');
+    const { bulkUpdateSwipeFlagsByListAndRecipe } = recipeSwipeFlags;
     const originalIsRecipeAvailableForStack = recipeSwipeFlags.isRecipeAvailableForStack;
     const isRecipeAvailableForStackSpy = jest
       .spyOn(recipeSwipeFlags, 'isRecipeAvailableForStack')
@@ -2278,6 +2280,8 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
         fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
       });
 
+      expect(bulkUpdateSwipeFlagsByListAndRecipe).toHaveBeenCalledWith('list1', 'r-special', 'geparkt');
+
       const expectedExpiresAtMillis = now + 14 * 24 * 60 * 60 * 1000;
       const calculatedGeparktDoc = isRecipeAvailableForStackSpy.mock.calls
         .map(([doc]) => doc)
@@ -2298,6 +2302,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
   test('setzt bei "Ich bin enttäuscht" das aktuelle Rezept lokal auf archiv', async () => {
     const recipeSwipeFlags = require('../utils/recipeSwipeFlags');
+    const { bulkUpdateSwipeFlagsByListAndRecipe } = recipeSwipeFlags;
     const originalIsRecipeAvailableForStack = recipeSwipeFlags.isRecipeAvailableForStack;
     const isRecipeAvailableForStackSpy = jest
       .spyOn(recipeSwipeFlags, 'isRecipeAvailableForStack')
@@ -2311,6 +2316,8 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
       const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
       await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
+
+      expect(bulkUpdateSwipeFlagsByListAndRecipe).toHaveBeenCalledWith('list1', 'r-special', 'archiv');
 
       const calculatedArchivDoc = isRecipeAvailableForStackSpy.mock.calls
         .map(([doc]) => doc)

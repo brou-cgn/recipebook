@@ -32,6 +32,16 @@ const computeExpiresAtFromDays = (days) => {
   return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
 };
 
+const computeExpiresAtForFlag = (flag, validitySettings = {}) => {
+  if (flag === 'archiv') {
+    return computeExpiresAtFromDays(validitySettings.statusValidityDaysArchiv);
+  }
+  if (flag === 'geparkt') {
+    return computeExpiresAtFromDays(validitySettings.statusValidityDaysGeparkt);
+  }
+  return computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
+};
+
 const cleanupExpiredCalculatedFlagsForList = async (listId) => {
   if (!listId) return;
 
@@ -213,20 +223,54 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
     if (!calculatedFlag) return;
 
     const validitySettings = await getStatusValiditySettings();
-    let calculatedExpiresAt;
-    if (calculatedFlag === 'archiv') {
-      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysArchiv);
-    } else if (calculatedFlag === 'geparkt') {
-      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysGeparkt);
-    } else {
-      calculatedExpiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
-    }
+    const calculatedExpiresAt = computeExpiresAtForFlag(calculatedFlag, validitySettings);
 
     await Promise.all(
       docs.map((docSnap) => updateDoc(docSnap.ref, { calculatedFlag, calculatedExpiresAt }))
     );
   } catch (error) {
     console.error('Error updating calculated swipe flags for recipe:', error);
+  }
+};
+
+/**
+ * Persist one explicit swipe decision for all swipe docs of a list/recipe combination.
+ * Updates `flag`/`expiresAt` and keeps `calculatedFlag`/`calculatedExpiresAt` in sync.
+ *
+ * @param {string} listId
+ * @param {string} recipeId
+ * @param {'kandidat'|'geparkt'|'archiv'} flag
+ * @returns {Promise<boolean>}
+ */
+export const bulkUpdateSwipeFlagsByListAndRecipe = async (listId, recipeId, flag) => {
+  if (!listId || !recipeId || !flag) return false;
+
+  try {
+    await cleanupExpiredCalculatedFlagsForList(listId);
+    const validitySettings = await getStatusValiditySettings();
+    const sharedExpiresAt = computeExpiresAtForFlag(flag, validitySettings);
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listID', '==', listId),
+      where('recipeID', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const updateOperations = [];
+
+    snapshot.forEach((docSnap) => {
+      updateOperations.push(updateDoc(docSnap.ref, {
+        flag,
+        expiresAt: sharedExpiresAt,
+        calculatedFlag: flag,
+        calculatedExpiresAt: sharedExpiresAt,
+      }));
+    });
+
+    await Promise.all(updateOperations);
+    return true;
+  } catch (error) {
+    console.error('Error bulk-updating recipe swipe flags for list and recipe:', error);
+    return false;
   }
 };
 
@@ -262,14 +306,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
       thresholds,
     } = metadata;
 
-    let expiresAt;
-    if (flag === 'archiv') {
-      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysArchiv);
-    } else if (flag === 'geparkt') {
-      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysGeparkt);
-    } else {
-      expiresAt = computeExpiresAtFromDays(validitySettings.statusValidityDaysKandidat);
-    }
+    const expiresAt = computeExpiresAtForFlag(flag, validitySettings);
 
     const flagDocRef = doc(
       db,

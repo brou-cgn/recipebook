@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
-import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, computeNegativeProjection, setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
+import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, computeNegativeProjection, setRecipeSwipeFlag, bulkUpdateSwipeFlagsByListAndRecipe } from '../utils/recipeSwipeFlags';
 import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle, getStatusValiditySettings } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -804,6 +804,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           return [userId, { ...userFlags, [targetRecipeId]: 'archiv' }];
         })
       ));
+      await bulkUpdateSwipeFlagsByListAndRecipe(targetListId, targetRecipeId, 'archiv');
     }
 
     if (
@@ -841,6 +842,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           return [userId, { ...userFlags, [targetRecipeId]: 'geparkt' }];
         })
       ));
+      await bulkUpdateSwipeFlagsByListAndRecipe(targetListId, targetRecipeId, 'geparkt');
     }
 
     if (
