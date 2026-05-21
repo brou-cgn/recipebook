@@ -1761,7 +1761,9 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
       user1: {
         r1: { flag: 'kandidat', explicitFlag: null, expiresAtMillis: futureMs, isExpired: false },
       },
-      user2: {},
+      user2: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
     };
     mockAllMembersFlagsValue = {
       user1: { r1: null },
