@@ -344,7 +344,6 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
       where('listID', '==', listId)
     );
     const snapshot = await getDocs(q);
-    const now = Date.now();
 
     // Initialise every known member with an empty flags map
     const result = Object.fromEntries(memberIds.map((id) => [id, {}]));
@@ -353,12 +352,10 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
       const data = docSnap.data();
       // Skip documents for users outside the expected member list
       if (!memberIds.includes(data.userID)) return;
-      const expired =
-        data.calculatedExpiresAt !== null &&
-        data.calculatedExpiresAt !== undefined &&
-        data.calculatedExpiresAt.toMillis() <= now;
-      if (!expired) {
-        result[data.userID][data.recipeID] = data.calculatedFlag;
+      // Only store an explicit, non-null flag. flag=null means the flag was
+      // reset and the recipe should be treated as not yet swiped.
+      if (data.flag !== null && data.flag !== undefined) {
+        result[data.userID][data.recipeID] = data.flag;
       }
     });
 
@@ -432,7 +429,10 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
   let kandidatCount = 0;
   let archivCount = 0;
 
-  const currentUserHasSwiped = currentUserId && allMembersFlags[currentUserId]?.[recipeId] !== undefined;
+  const currentUserHasSwiped =
+    currentUserId &&
+    allMembersFlags[currentUserId]?.[recipeId] !== undefined &&
+    allMembersFlags[currentUserId]?.[recipeId] !== null;
 
   for (const uid of memberIds) {
     const flag = allMembersFlags[uid]?.[recipeId];

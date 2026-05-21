@@ -423,12 +423,11 @@ describe('getSwipeFlagDocsByRecipeForUser', () => {
 
 describe('getAllMembersSwipeFlags', () => {
   it('returns active flags only for provided member ids', async () => {
-    const now = Date.now();
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', calculatedFlag: 'kandidat', calculatedExpiresAt: null }) });
-        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', calculatedFlag: 'archiv', calculatedExpiresAt: { toMillis: () => now + 1000 } }) });
-        cb({ data: () => ({ userID: 'u3', recipeID: 'r1', calculatedFlag: 'geparkt', calculatedExpiresAt: null }) });
+        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', flag: 'kandidat' }) });
+        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', flag: 'archiv' }) });
+        cb({ data: () => ({ userID: 'u3', recipeID: 'r1', flag: 'geparkt' }) });
       },
     });
 
@@ -437,6 +436,23 @@ describe('getAllMembersSwipeFlags', () => {
     expect(result).toEqual({
       u1: { r1: 'kandidat' },
       u2: { r1: 'archiv' },
+    });
+  });
+
+  it('excludes docs where flag=null (reset flag)', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        // flag=null means the flag was reset – treat as not yet swiped
+        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', flag: null }) });
+        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', flag: 'kandidat' }) });
+      },
+    });
+
+    const result = await getAllMembersSwipeFlags('list-1', ['u1', 'u2']);
+
+    expect(result).toEqual({
+      u1: {},
+      u2: { r1: 'kandidat' },
     });
   });
 });
@@ -501,6 +517,27 @@ describe('computeGroupRecipeStatus', () => {
       'u1'
     );
 
+    expect(status).toBe('kandidat');
+  });
+
+  it('treats current user with flag=null as not having swiped', () => {
+    // currentUser (u1) has flag=null (reset) – must not count as swiped
+    const status = computeGroupRecipeStatus(
+      ['u1', 'u2'],
+      { u1: { r1: null }, u2: { r1: 'kandidat' } },
+      'r1',
+      {
+        groupThresholdKandidatMinKandidat: 50,
+        groupThresholdKandidatMaxArchiv: 50,
+        groupThresholdArchivMinArchiv: 80,
+        groupThresholdArchivMaxKandidat: 20,
+      },
+      'u1'
+    );
+
+    // u1 flag=null → not swiped → treated as archiv (current user default)
+    // u2 flag='kandidat' → but currentUserHasSwiped=false so other-member rule does not apply
+    // kandidat: 1 (u2), archiv: 1 (u1 default) → 50% each → kandidat threshold met
     expect(status).toBe('kandidat');
   });
 });
