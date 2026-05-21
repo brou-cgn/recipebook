@@ -322,17 +322,17 @@ describe('Startseite', () => {
     const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     getMaxKandidatenSchwelle.mockResolvedValue(5);
     getGroupStatusThresholds.mockResolvedValue({});
-    // allMembersFlagDocs: .flag stores calculatedFlag, .expiresAtMillis must be future
+    // allMembersFlagDocs: .flag stores calculatedFlag, .explicitFlag stores explicit swipe flag
     getAllMembersSwipeFlagDocsForList.mockResolvedValue({
       'u1': {
-        'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        'r2': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        'r3': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r1': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r2': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r3': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       'u2': {
-        'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        'r2': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        'r3': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r1': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r2': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        'r3': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     });
 
@@ -367,7 +367,7 @@ describe('Startseite', () => {
     const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
     const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     getAllMembersSwipeFlagDocsForList.mockResolvedValue({
-      'u1': { 'r1': { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false } },
+      'u1': { 'r1': { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false } },
     });
 
     const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1'] };
@@ -379,6 +379,31 @@ describe('Startseite', () => {
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
 
     // The candidates carousel section should show the empty text, not a card
+    const sections = container.querySelectorAll('.startseite-trending-section');
+    const kandidatenSection = Array.from(sections).find(
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Kochideen'
+    );
+    expect(kandidatenSection).toBeTruthy();
+    expect(kandidatenSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(0);
+  });
+
+  test('excludes reset swipes with explicitFlag=null from candidates', async () => {
+    const { getMaxKandidatenSchwelle } = require('../utils/customLists');
+    const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    getMaxKandidatenSchwelle.mockResolvedValue(5);
+    getAllMembersSwipeFlagDocsForList.mockResolvedValue({
+      u1: {
+        r1: { flag: 'kandidat', explicitFlag: null, expiresAtMillis: futureMs, isExpired: false },
+      },
+    });
+
+    const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1'] };
+    const user = { id: 'u1', defaultWebImportListId: 'g1' };
+    const recipes = [{ id: 'r1', title: 'Rezept A', groupId: 'g1' }];
+    const { container } = render(<Startseite currentUser={user} recipes={recipes} groups={[group]} />);
+
+    expect(await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.')).toBeInTheDocument();
     const sections = container.querySelectorAll('.startseite-trending-section');
     const kandidatenSection = Array.from(sections).find(
       (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Kochideen'

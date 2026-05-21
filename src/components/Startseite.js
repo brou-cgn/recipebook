@@ -189,14 +189,14 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
   // with a future calculatedExpiresAt. Sorted alphabetically.
-  // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag and `.expiresAtMillis` stores
-  // the numeric ms representation of calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList).
+  // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag, `.explicitFlag` stores the
+  // explicit swipe flag, and `.expiresAtMillis` stores calculatedExpiresAt in ms.
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
     const pool = allListRecipes.filter((r) =>
       listMemberIds.some((uid) => {
         const doc = allMembersFlagDocs[uid]?.[r.id];
-        return doc && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
+        return doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
       })
     );
     const sorted = [...pool].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));

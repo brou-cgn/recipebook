@@ -518,9 +518,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
 
   // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
   // with a future calculatedExpiresAt. Shown in Kochatelier and Meine Kochideen Karussell.
-  // Note: in allMembersFlagDocs, the `.flag` field stores calculatedFlag and `.expiresAt` stores
-  // calculatedExpiresAt (see getAllMembersSwipeFlagDocsForList). Empty when threshold is disabled
-  // or list has only one member.
+  // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag, `.explicitFlag` stores the
+  // explicit swipe flag, and `.expiresAt` stores calculatedExpiresAt (see
+  // getAllMembersSwipeFlagDocsForList). Empty when threshold is disabled or list has only one
+  // member.
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
     // A recipe is a shared candidate when at least one member's calculatedFlag is 'kandidat'
@@ -528,7 +529,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     const pool = allListRecipes.filter((r) =>
       listMemberIds.some((uid) => {
         const doc = allMembersFlagDocs[uid]?.[r.id];
-        return doc && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
+        return doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
       })
     );
     return pool.slice(0, maxKandidatenSchwelle);

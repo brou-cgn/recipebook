@@ -488,9 +488,37 @@ describe('getAllMembersSwipeFlagDocsForList', () => {
 
     expect(result.u1.r1).toEqual({
       flag: 'geparkt',
+      explicitFlag: null,
       expiresAt: expect.any(Object),
       expiresAtMillis: expired,
       isExpired: true,
+    });
+  });
+
+  it('includes explicitFlag from raw swipe flag data', async () => {
+    const future = Date.now() + 1000;
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({
+          data: () => ({
+            userID: 'u1',
+            recipeID: 'r2',
+            flag: 'kandidat',
+            calculatedFlag: 'kandidat',
+            calculatedExpiresAt: { toMillis: () => future },
+          }),
+        });
+      },
+    });
+
+    const result = await getAllMembersSwipeFlagDocsForList('list-1', ['u1']);
+
+    expect(result.u1.r2).toEqual({
+      flag: 'kandidat',
+      explicitFlag: 'kandidat',
+      expiresAt: expect.any(Object),
+      expiresAtMillis: future,
+      isExpired: false,
     });
   });
 });

@@ -755,8 +755,8 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     mockMaxKandidatenSchwelle = 3;
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: pastMs, isExpired: true }, // expired → excluded
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: pastMs, isExpired: true }, // expired → excluded
       },
       user2: {},
     };
@@ -797,9 +797,9 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     mockComputeGroupRecipeStatus = () => 'geparkt';
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {},
     };
@@ -1530,14 +1530,14 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     // Even with kandidat docs, the section must not appear when threshold is null
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     };
     // Stack: all recipes have no currentUser doc and are in availableRecipes
@@ -1569,17 +1569,17 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
   test('Gemeinsame Kandidaten group appears when maxKandidatenSchwelle is set and kandidaten exist', async () => {
     const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
     mockMaxKandidatenSchwelle = 3;
-    // allMembersFlagDocs: .flag stores calculatedFlag, .expiresAtMillis must be future
+    // allMembersFlagDocs: .flag stores calculatedFlag, .explicitFlag stores explicit swipe flag
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     };
     mockAllMembersFlagsValue = {
@@ -1615,14 +1615,14 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     mockMaxKandidatenSchwelle = 2;
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     };
     mockAllMembersFlagsValue = {
@@ -1663,12 +1663,12 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     // r3: flag=archiv → does NOT qualify
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: pastMs, isExpired: true },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: pastMs, isExpired: true },
         r3: { flag: 'archiv', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     };
     mockAllMembersFlagsValue = {
@@ -1712,14 +1712,14 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     mockMaxKandidatenSchwelle = 3;
     mockAllMembersFlagDocsValue = {
       user1: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
       user2: {
-        r1: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r2: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
-        r3: { flag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r3: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
       },
     };
     mockAllMembersFlagsValue = {
@@ -1752,6 +1752,39 @@ describe('Tagesmenu – Gemeinsame Kandidaten group', () => {
     expect(tileNames).toContain('Rezept 1');
     expect(tileNames).toContain('Rezept 2');
     expect(tileNames).toContain('Rezept 3');
+  });
+
+  test('Gemeinsame Kandidaten group excludes recipes with explicitFlag=null', async () => {
+    const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', explicitFlag: null, expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {},
+    };
+    mockAllMembersFlagsValue = {
+      user1: { r1: null },
+      user2: {},
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[multiMemberList]}
+          recipes={[makeRecipe('r1', 'Rezept 1')]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    swipeCardUp();
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).toBeNull();
   });
 
   test('Gemeinsame Kandidaten group is not shown when no recipes qualify', async () => {

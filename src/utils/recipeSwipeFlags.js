@@ -431,7 +431,7 @@ export const getAllMembersSwipeFlags = async (listId, memberIds) => {
  *
  * @param {string} listId      - ID of the interactive list
  * @param {string[]} memberIds - Array of user IDs (all list members including owner)
- * @returns {Promise<Object>} Map of userId → { recipeId → { flag, expiresAt, expiresAtMillis, isExpired } }
+ * @returns {Promise<Object>} Map of userId → { recipeId → { flag, explicitFlag, expiresAt, expiresAtMillis, isExpired } }
  */
 export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
   if (!listId || !Array.isArray(memberIds) || memberIds.length === 0) return {};
@@ -452,6 +452,7 @@ export const getAllMembersSwipeFlagDocsForList = async (listId, memberIds) => {
       const expiresAtMillis = data.calculatedExpiresAt?.toMillis?.() ?? null;
       result[data.userID][data.recipeID] = {
         flag: data.calculatedFlag,
+        explicitFlag: data.flag ?? null,
         expiresAt: data.calculatedExpiresAt ?? null,
         expiresAtMillis,
         isExpired: expiresAtMillis !== null && expiresAtMillis <= now,
