@@ -225,6 +225,40 @@ describe('Tagesmenu – swipe card consistency', () => {
       'archiv',
       expect.objectContaining({
         recipeTitle: 'Rezept 1',
+        memberIds: [],
+        thresholds: {
+          groupThresholdKandidatMinKandidat: 50,
+          groupThresholdKandidatMaxArchiv: 50,
+          groupThresholdArchivMinArchiv: 50,
+          groupThresholdArchivMaxKandidat: 50,
+        },
+      })
+    );
+  });
+
+  test('swipe metadata includes all list member ids for calculated flag updates', async () => {
+    const { setRecipeSwipeFlag } = require('../utils/recipeSwipeFlags');
+    await act(async () => {
+      renderMenuWithListOverrides(recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    swipeRight(topCard);
+    finishSwipeAnimation(topCard);
+
+    expect(setRecipeSwipeFlag).toHaveBeenCalledWith(
+      'user1',
+      'list1',
+      'r1',
+      'geparkt',
+      expect.objectContaining({
+        memberIds: ['user1', 'user2'],
+        thresholds: {
+          groupThresholdKandidatMinKandidat: 50,
+          groupThresholdKandidatMaxArchiv: 50,
+          groupThresholdArchivMinArchiv: 50,
+          groupThresholdArchivMaxKandidat: 50,
+        },
       })
     );
   });
@@ -312,7 +346,16 @@ describe('Tagesmenu – swipe card consistency', () => {
       'list1',
       'r1',
       'geparkt',
-      expect.objectContaining({ recipeTitle: 'Rezept 1' })
+      expect.objectContaining({
+        recipeTitle: 'Rezept 1',
+        memberIds: [],
+        thresholds: {
+          groupThresholdKandidatMinKandidat: 50,
+          groupThresholdKandidatMaxArchiv: 50,
+          groupThresholdArchivMinArchiv: 50,
+          groupThresholdArchivMaxKandidat: 50,
+        },
+      })
     );
   });
 

@@ -289,9 +289,14 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // handlers (which have empty dependency arrays) can still read the latest values.
   const topRecipeRef = useRef(null);
   const selectedListRef = useRef(null);
+  const listMemberIdsRef = useRef([]);
+  const groupThresholdsRef = useRef(groupThresholds);
   useEffect(() => {
     selectedListRef.current = selectedList;
   }, [selectedList]);
+  useEffect(() => {
+    groupThresholdsRef.current = groupThresholds;
+  }, [groupThresholds]);
 
   // Refs that mirror frequently-changing state so handleTransitionEnd (useCallback)
   // can always read the latest values without being re-created on every render.
@@ -432,6 +437,8 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           setRecipeSwipeFlag(currentUser.id, swipe.list.id, swipe.recipe.id, flag, {
             userName,
             recipeTitle: swipe.recipe.title || '',
+            memberIds: listMemberIdsRef.current,
+            thresholds: groupThresholdsRef.current,
           });
           // Keep allMembersFlags in sync with the current user's new swipe
           setAllMembersFlags((prev) => ({
@@ -468,6 +475,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       ? [...new Set([selectedList.ownerId, ...memberIds])]
       : memberIds;
   }, [selectedList]);
+  useEffect(() => {
+    listMemberIdsRef.current = listMemberIds;
+  }, [listMemberIds]);
 
   // Precompute group status for each recipe in a single pass to avoid redundant calls in the render
   const groupStatusByRecipeId = useMemo(() => {
