@@ -6,7 +6,7 @@
  */
 
 import { db } from '../firebase';
-import { getDocs, collection, query, where, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getStatusValiditySettings } from '../utils/customLists';
 
 const DEFAULT_GROUP_THRESHOLDS = {
@@ -41,7 +41,7 @@ const cleanupExpiredCalculatedFlagsForList = async (listId) => {
   );
   const snapshot = await getDocs(q);
   const now = Date.now();
-  const deleteOperations = [];
+  const updateOperations = [];
 
   snapshot.forEach((docSnap) => {
     const data = docSnap.data() || {};
@@ -54,11 +54,11 @@ const cleanupExpiredCalculatedFlagsForList = async (listId) => {
       calculatedExpiresAtMillis <= now;
 
     if (isExpiredCalculated) {
-      deleteOperations.push(deleteDoc(docSnap.ref));
+      updateOperations.push(updateDoc(docSnap.ref, { expiresAt: null, flag: null }));
     }
   });
 
-  await Promise.all(deleteOperations);
+  await Promise.all(updateOperations);
 };
 
 /**
@@ -179,8 +179,9 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
 /**
  * Store/update a swipe flag document for a user/list/recipe combination.
  *
- * Before storing, remove all expired calculated flags in the same list where
- * calculatedExpiresAt is set (not null) and already in the past.
+ * Before storing, reset all expired calculated flags in the same list where
+ * calculatedExpiresAt is set (not null) and already in the past by setting
+ * their expiresAt and flag fields to null.
  *
  * @param {string} userId
  * @param {string} listId
