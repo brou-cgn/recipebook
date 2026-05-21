@@ -2293,13 +2293,12 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
         fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
       });
 
-      // calculatedExpiresAt sollte fakeNow + 14 Tage sein (in Millisekunden)
-      // calculatedExpiresAtMillis sollte denselben Wert haben
-      const expectedExpiresAtMillis = fakeNow + 14 * 24 * 60 * 60 * 1000;
-      // Rezept bleibt unter „Für später" sichtbar
+      // calculatedExpiresAt wird intern auf fakeNow + 14 Tage gesetzt (= fakeNow + 14 * 24 * 60 * 60 * 1000),
+      // calculatedExpiresAtMillis auf denselben Wert.
+      // Die UI zeigt das Rezept weiterhin unter „Für später".
       expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Für später');
-      // Und der berechnete Wert entspricht jetzt + 14 Tage
-      expect(expectedExpiresAtMillis).toBe(fakeNow + 14 * 24 * 60 * 60 * 1000);
+      // Sicherstellen, dass Date.now() tatsächlich in der Berechnung verwendet wurde
+      expect(dateNowSpy).toHaveBeenCalled();
     } finally {
       dateNowSpy.mockRestore();
     }
