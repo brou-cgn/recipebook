@@ -6,7 +6,7 @@
  */
 
 import { db } from '../firebase';
-import { getDocs, collection, query, where, doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { getStatusValiditySettings } from '../utils/customLists';
 
 const DEFAULT_GROUP_THRESHOLDS = {
@@ -30,6 +30,35 @@ const resolveMemberIds = (memberIds, fallbackMemberIds = []) => (
 const computeExpiresAtFromDays = (days) => {
   if (!days) return null;
   return Timestamp.fromDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+};
+
+const cleanupExpiredCalculatedFlagsForList = async (listId) => {
+  if (!listId) return;
+
+  const q = query(
+    collection(db, 'recipeSwipeFlags'),
+    where('listID', '==', listId)
+  );
+  const snapshot = await getDocs(q);
+  const now = Date.now();
+  const deleteOperations = [];
+
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data() || {};
+    const calculatedExpiresAt = data.calculatedExpiresAt;
+    const calculatedExpiresAtMillis = calculatedExpiresAt?.toMillis?.();
+    const isExpiredCalculated =
+      calculatedExpiresAt !== null &&
+      calculatedExpiresAt !== undefined &&
+      typeof calculatedExpiresAtMillis === 'number' &&
+      calculatedExpiresAtMillis <= now;
+
+    if (isExpiredCalculated) {
+      deleteOperations.push(deleteDoc(docSnap.ref));
+    }
+  });
+
+  await Promise.all(deleteOperations);
 };
 
 /**
@@ -150,6 +179,9 @@ export const updateCalculatedSwipeFlagsForRecipe = async (listId, recipeId, memb
 /**
  * Store/update a swipe flag document for a user/list/recipe combination.
  *
+ * Before storing, remove all expired calculated flags in the same list where
+ * calculatedExpiresAt is set (not null) and already in the past.
+ *
  * @param {string} userId
  * @param {string} listId
  * @param {string} recipeId
@@ -165,6 +197,7 @@ export const setRecipeSwipeFlag = async (userId, listId, recipeId, flag, metadat
   if (!userId || !listId || !recipeId || !flag) return false;
 
   try {
+    await cleanupExpiredCalculatedFlagsForList(listId);
     const validitySettings = await getStatusValiditySettings();
 
     const {
