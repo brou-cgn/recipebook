@@ -384,9 +384,9 @@ describe('getActiveSwipeFlags', () => {
     const now = Date.now();
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ recipeID: 'a', flag: 'kandidat', expiresAt: null }) });
-        cb({ data: () => ({ recipeID: 'b', flag: 'archiv', expiresAt: { toMillis: () => now - 1000 } }) });
-        cb({ data: () => ({ recipeID: 'c', flag: 'geparkt', expiresAt: { toMillis: () => now + 1000 } }) });
+        cb({ data: () => ({ recipeID: 'a', calculatedFlag: 'kandidat', calculatedExpiresAt: null }) });
+        cb({ data: () => ({ recipeID: 'b', calculatedFlag: 'archiv', calculatedExpiresAt: { toMillis: () => now - 1000 } }) });
+        cb({ data: () => ({ recipeID: 'c', calculatedFlag: 'geparkt', calculatedExpiresAt: { toMillis: () => now + 1000 } }) });
       },
     });
 
@@ -427,9 +427,9 @@ describe('getAllMembersSwipeFlags', () => {
     const now = Date.now();
     mockGetDocs.mockResolvedValueOnce({
       forEach: (cb) => {
-        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', flag: 'kandidat', expiresAt: null }) });
-        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', flag: 'archiv', expiresAt: { toMillis: () => now + 1000 } }) });
-        cb({ data: () => ({ userID: 'u3', recipeID: 'r1', flag: 'geparkt', expiresAt: null }) });
+        cb({ data: () => ({ userID: 'u1', recipeID: 'r1', calculatedFlag: 'kandidat', calculatedExpiresAt: null }) });
+        cb({ data: () => ({ userID: 'u2', recipeID: 'r1', calculatedFlag: 'archiv', calculatedExpiresAt: { toMillis: () => now + 1000 } }) });
+        cb({ data: () => ({ userID: 'u3', recipeID: 'r1', calculatedFlag: 'geparkt', calculatedExpiresAt: null }) });
       },
     });
 
@@ -452,8 +452,8 @@ describe('getAllMembersSwipeFlagDocsForList', () => {
           data: () => ({
             userID: 'u1',
             recipeID: 'r1',
-            flag: 'geparkt',
-            expiresAt: { toMillis: () => expired },
+            calculatedFlag: 'geparkt',
+            calculatedExpiresAt: { toMillis: () => expired },
           }),
         });
       },
