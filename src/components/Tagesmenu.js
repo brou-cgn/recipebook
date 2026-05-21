@@ -66,7 +66,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   const [swipeResults, setSwipeResults] = useState({});
 
   // Swipe-flag documents for the current user in the selected list.
-  // Map of recipeId → { flag, calculatedFlag, expiresAt, expiresAtMillis, isExpired }
+  // Map of recipeId → { flag, calculatedFlag, calculatedExpiresAt, calculatedExpiresAtMillis, expiresAt, expiresAtMillis, isExpired }
   // An entry with flag !== null means the recipe has already been decided and is removed from the stack.
   const [currentUserSwipeDocs, setCurrentUserSwipeDocs] = useState({});
   // All members' swipe flag docs (including expired) for sorting the swipe stack.
@@ -790,10 +790,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       setCurrentUserSwipeDocs((prev) => ({
         ...prev,
         [targetRecipeId]: {
-          flag: 'archiv',
-          expiresAt: null,
-          expiresAtMillis: null,
-          isExpired: false,
+          ...(prev[targetRecipeId] || {}),
+          calculatedFlag: 'archiv',
+          calculatedExpiresAt: null,
+          calculatedExpiresAtMillis: null,
         },
       }));
       setAllMembersFlags((prev) => Object.fromEntries(

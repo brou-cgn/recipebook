@@ -2273,14 +2273,35 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   });
 
   test('setzt bei "Ich bin enttäuscht" das aktuelle Rezept lokal auf archiv', async () => {
-    await act(async () => { renderMenu(); });
-    swipeAllCardsToResults();
+    const recipeSwipeFlags = require('../utils/recipeSwipeFlags');
+    const originalIsRecipeAvailableForStack = recipeSwipeFlags.isRecipeAvailableForStack;
+    const isRecipeAvailableForStackSpy = jest
+      .spyOn(recipeSwipeFlags, 'isRecipeAvailableForStack')
+      .mockImplementation((...args) => originalIsRecipeAvailableForStack(...args));
 
-    const firstTile = document.querySelectorAll('.tagesmenu-results-tile')[0];
-    const select = firstTile.querySelector('.tagesmenu-kachel-context-select');
-    await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
+    try {
+      await act(async () => { renderMenu([makeRecipe('r-special', 'Spezialrezept')]); });
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeRight(topCard);
+      finishSwipeAnimation(topCard);
 
-    expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Archiviert');
+      const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+      await act(async () => { fireEvent.change(select, { target: { value: 'Ich bin enttäuscht' } }); });
+
+      const calculatedArchivDoc = isRecipeAvailableForStackSpy.mock.calls
+        .map(([doc]) => doc)
+        .find((doc) => doc?.calculatedFlag === 'archiv');
+      expect(calculatedArchivDoc).toEqual(expect.objectContaining({
+        flag: 'geparkt',
+        calculatedFlag: 'archiv',
+        calculatedExpiresAt: null,
+        calculatedExpiresAtMillis: null,
+      }));
+
+      expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Archiviert');
+    } finally {
+      isRecipeAvailableForStackSpy.mockRestore();
+    }
   });
 
   test('Option "Koche ich mal wieder" weist Rezept der Zielliste zu', async () => {
