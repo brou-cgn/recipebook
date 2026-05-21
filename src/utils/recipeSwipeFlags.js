@@ -324,7 +324,7 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
 };
 
 /**
- * Load all active (non-expired) swipe flags for all specified members of a list.
+ * Load all explicit swipe flags for all specified members of a list.
  * Used for group status determination across all list members.
  *
  * Uses a single query filtered by listID so that all members' flags are fetched
@@ -334,7 +334,10 @@ export const getSwipeFlagDocsByRecipeForUser = async (userId, listId) => {
  *
  * @param {string} listId      - ID of the interactive list
  * @param {string[]} memberIds - Array of user IDs (all list members including owner)
- * @returns {Promise<Object>} Map of userId → { recipeId → flag } for all active flags
+ * Only docs with a non-null/non-undefined `flag` are included. A `flag` of
+ * null/undefined is treated as not yet swiped.
+ *
+ * @returns {Promise<Object>} Map of userId → { recipeId → flag } for explicit flags
  */
 export const getAllMembersSwipeFlags = async (listId, memberIds) => {
   if (!listId || !Array.isArray(memberIds) || memberIds.length === 0) return {};
@@ -429,10 +432,11 @@ export function computeGroupRecipeStatus(memberIds, allMembersFlags, recipeId, t
   let kandidatCount = 0;
   let archivCount = 0;
 
+  const currentUserFlag = allMembersFlags[currentUserId]?.[recipeId];
   const currentUserHasSwiped =
     currentUserId &&
-    allMembersFlags[currentUserId]?.[recipeId] !== undefined &&
-    allMembersFlags[currentUserId]?.[recipeId] !== null;
+    currentUserFlag !== undefined &&
+    currentUserFlag !== null;
 
   for (const uid of memberIds) {
     const flag = allMembersFlags[uid]?.[recipeId];
