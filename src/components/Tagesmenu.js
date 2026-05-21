@@ -716,8 +716,11 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // currentIndex (no depth-effect cards behind it), so the deck appears empty and
   // the user knows this is the last swipeable card.
   // Use the frozen snapshot during active swipe phases to prevent background reshuffles.
+  // Fall back to the live list if the snapshot is not yet populated (initial render).
   const renderedListRecipes =
-    cardPhase === 'idle' ? listRecipes : stableListRecipesRef.current;
+    cardPhase === 'idle' || stableListRecipesRef.current.length === 0
+      ? listRecipes
+      : stableListRecipesRef.current;
   const visibleRecipes =
     thresholdMet && hasSwiped
       ? renderedListRecipes.slice(currentIndex, currentIndex + 1)
