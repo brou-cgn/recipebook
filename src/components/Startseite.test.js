@@ -396,6 +396,9 @@ describe('Startseite', () => {
       u1: {
         r1: { flag: 'kandidat', explicitFlag: null, expiresAtMillis: futureMs, isExpired: false },
       },
+      u2: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
     });
 
     const group = { id: 'g1', type: 'private', ownerId: 'u1', memberIds: ['u2'], recipeIds: ['r1'] };

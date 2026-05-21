@@ -526,14 +526,16 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
     // A recipe is a shared candidate when at least one member's calculatedFlag is 'kandidat'
     // and that candidate status has not expired.
-    const pool = allListRecipes.filter((r) =>
-      listMemberIds.some((uid) => {
+    const pool = allListRecipes.filter((r) => {
+      const currentUserDoc = allMembersFlagDocs[currentUser?.id]?.[r.id];
+      if (!currentUserDoc || currentUserDoc.explicitFlag === null) return false;
+      return listMemberIds.some((uid) => {
         const doc = allMembersFlagDocs[uid]?.[r.id];
         return doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
-      })
-    );
+      });
+    });
     return pool.slice(0, maxKandidatenSchwelle);
-  }, [allListRecipes, listMemberIds, allMembersFlagDocs, maxKandidatenSchwelle]);
+  }, [allListRecipes, listMemberIds, allMembersFlagDocs, currentUser?.id, maxKandidatenSchwelle]);
 
   // Recipes permanently archived by group consensus: group status is 'archiv' AND all members
   // have voted. Stored as a Set for O(1) lookup during render.

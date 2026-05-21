@@ -193,15 +193,17 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   // explicit swipe flag, and `.expiresAtMillis` stores calculatedExpiresAt in ms.
   const gemeinsameKandidaten = useMemo(() => {
     if (maxKandidatenSchwelle === null || listMemberIds.length <= 1) return [];
-    const pool = allListRecipes.filter((r) =>
-      listMemberIds.some((uid) => {
+    const pool = allListRecipes.filter((r) => {
+      const currentUserDoc = allMembersFlagDocs[currentUser?.id]?.[r.id];
+      if (!currentUserDoc || currentUserDoc.explicitFlag === null) return false;
+      return listMemberIds.some((uid) => {
         const doc = allMembersFlagDocs[uid]?.[r.id];
         return doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null;
-      })
-    );
+      });
+    });
     const sorted = [...pool].sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
     return sorted.slice(0, maxKandidatenSchwelle);
-  }, [allListRecipes, listMemberIds, allMembersFlagDocs, maxKandidatenSchwelle]);
+  }, [allListRecipes, listMemberIds, allMembersFlagDocs, currentUser?.id, maxKandidatenSchwelle]);
 
   const handleKandidatenMehrClick = () => {
     onViewChange?.('tagesmenu');
