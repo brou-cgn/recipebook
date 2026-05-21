@@ -88,8 +88,8 @@ export function computeCalculatedRecipeSwipeFlag(memberIds, allMembersFlags, rec
       kandidatCount++;
     } else if (flag === 'archiv') {
       archivCount++;
-    } else if (flag === undefined) {
-      // Open swipes are optimistically projected as kandidat.
+    } else if (flag === undefined || flag === null) {
+      // Open swipes (undefined) and reset flags (null) are optimistically projected as kandidat.
       kandidatCount++;
     }
   }

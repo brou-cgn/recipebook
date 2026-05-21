@@ -504,4 +504,23 @@ describe('computeCalculatedRecipeSwipeFlag', () => {
 
     expect(status).toBe('geparkt');
   });
+
+  it('treats null flags like open votes in optimistic kandidat projection', () => {
+    const status = computeCalculatedRecipeSwipeFlag(
+      ['u1', 'u2', 'u3'],
+      {
+        u1: { r1: null },
+        u2: { r1: 'geparkt' },
+      },
+      'r1',
+      {
+        groupThresholdKandidatMinKandidat: 50,
+        groupThresholdKandidatMaxArchiv: 50,
+        groupThresholdArchivMinArchiv: 50,
+        groupThresholdArchivMaxKandidat: 50,
+      }
+    );
+
+    expect(status).toBe('kandidat');
+  });
 });
