@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import './Tagesmenu.css';
 import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembersSwipeFlags, getAllMembersSwipeFlagDocsForList, computeGroupRecipeStatus, computeCalculatedRecipeSwipeFlag, computeNegativeProjection, setRecipeSwipeFlag } from '../utils/recipeSwipeFlags';
-import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle } from '../utils/customLists';
+import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle, getStatusValiditySettings } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
 import { addFavorite } from '../utils/userFavorites';
@@ -812,13 +812,25 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetRecipeId
     ) {
       setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
+      let calculatedExpiresAt = null;
+      let calculatedExpiresAtMillis = null;
+      try {
+        const validitySettings = await getStatusValiditySettings();
+        const geparktDays = validitySettings?.statusValidityDaysGeparkt;
+        if (typeof geparktDays === 'number' && Number.isFinite(geparktDays)) {
+          calculatedExpiresAtMillis = Date.now() + geparktDays * 24 * 60 * 60 * 1000;
+          calculatedExpiresAt = new Date(calculatedExpiresAtMillis);
+        }
+      } catch (error) {
+        console.error('Failed to load geparkt validity settings for local menu update:', error);
+      }
       setCurrentUserSwipeDocs((prev) => ({
         ...prev,
         [targetRecipeId]: {
-          flag: 'geparkt',
-          expiresAt: null,
-          expiresAtMillis: null,
-          isExpired: false,
+          ...(prev[targetRecipeId] || {}),
+          calculatedFlag: 'geparkt',
+          calculatedExpiresAt,
+          calculatedExpiresAtMillis,
         },
       }));
       setAllMembersFlags((prev) => Object.fromEntries(

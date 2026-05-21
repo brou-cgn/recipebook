@@ -2252,24 +2252,48 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(icon.textContent).not.toContain('⚪');
   });
 
-  test('Option "Zweite Chance, bitte" setzt das aktuelle Rezept lokal auf geparkt', async () => {
+  test('Option "Zweite Chance, bitte" setzt lokal calculatedFlag auf geparkt inklusive calculatedExpiresAt', async () => {
+    const recipeSwipeFlags = require('../utils/recipeSwipeFlags');
+    const originalIsRecipeAvailableForStack = recipeSwipeFlags.isRecipeAvailableForStack;
+    const isRecipeAvailableForStackSpy = jest
+      .spyOn(recipeSwipeFlags, 'isRecipeAvailableForStack')
+      .mockImplementation((...args) => originalIsRecipeAvailableForStack(...args));
+    const now = new Date('2026-01-01T12:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+
     mockStatusValiditySettings = {
       statusValidityDaysKandidat: null,
       statusValidityDaysGeparkt: 14,
       statusValidityDaysArchiv: null,
     };
 
-    await act(async () => { renderMenu([makeRecipe('r-special', 'Spezialrezept')]); });
-    const topCard = document.querySelector('.tagesmenu-card-top');
-    swipeLeft(topCard);
-    finishSwipeAnimation(topCard);
+    try {
+      await act(async () => { renderMenu([makeRecipe('r-special', 'Spezialrezept')]); });
+      const topCard = document.querySelector('.tagesmenu-card-top');
+      swipeLeft(topCard);
+      finishSwipeAnimation(topCard);
 
-    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
-    await act(async () => {
-      fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
-    });
+      const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+      await act(async () => {
+        fireEvent.change(select, { target: { value: 'Zweite Chance, bitte' } });
+      });
 
-    expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Für später');
+      const expectedExpiresAtMillis = now + 14 * 24 * 60 * 60 * 1000;
+      const calculatedGeparktDoc = isRecipeAvailableForStackSpy.mock.calls
+        .map(([doc]) => doc)
+        .find((doc) => doc?.calculatedFlag === 'geparkt');
+      expect(calculatedGeparktDoc).toEqual(expect.objectContaining({
+        flag: 'archiv',
+        calculatedFlag: 'geparkt',
+        calculatedExpiresAtMillis: expectedExpiresAtMillis,
+      }));
+      expect(calculatedGeparktDoc.calculatedExpiresAt?.getTime()).toBe(expectedExpiresAtMillis);
+
+      expect(document.querySelector('.tagesmenu-results-group')).toHaveTextContent('Für später');
+    } finally {
+      isRecipeAvailableForStackSpy.mockRestore();
+      dateNowSpy.mockRestore();
+    }
   });
 
   test('setzt bei "Ich bin enttäuscht" das aktuelle Rezept lokal auf archiv', async () => {
