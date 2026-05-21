@@ -2273,7 +2273,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   });
 
   test('Option "Zweite Chance, bitte" berechnet calculatedExpiresAt aus aktueller Zeit und Gültigkeitsdauer', async () => {
-    const fakeNow = 2_000_000_000_000;
+    const fakeNow = 2_000_000_000_000; // fixed timestamp (≈ 18. Mai 2033) for deterministic tests
     const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(fakeNow);
 
     mockStatusValiditySettings = {

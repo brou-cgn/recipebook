@@ -31,6 +31,7 @@ const SWIPE_VELOCITY_THRESHOLD = 0.3; // px/ms – fast flick triggers swipe eve
 const MIN_FAST_SWIPE_DISTANCE = 20;   // px – minimum displacement required for a velocity swipe
 const DIRECTION_THRESHOLD = 5;        // px of movement before we decide drag direction
 const STACK_VISIBLE = 3;              // how many cards are rendered in the stack
+const MS_PER_DAY = 24 * 60 * 60 * 1000; // milliseconds in one day
 const KACHEL_MENU_PROMPT_LABEL = 'Erzähl, wie war es?';
 const DISAPPOINTED_MENU_ITEM = 'Ich bin enttäuscht';
 const PARK_MENU_ITEM = 'Zweite Chance, bitte';
@@ -822,7 +823,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       targetRecipeId
     ) {
       const geparktDays = statusValiditySettings.statusValidityDaysGeparkt;
-      const calculatedExpiresAtMillis = geparktDays ? Date.now() + geparktDays * 24 * 60 * 60 * 1000 : null;
+      const calculatedExpiresAtMillis = geparktDays ? Date.now() + geparktDays * MS_PER_DAY : null;
       setSwipeResults((prev) => ({ ...prev, [targetRecipeId]: 'geparkt' }));
       setCurrentUserSwipeDocs((prev) => ({
         ...prev,
