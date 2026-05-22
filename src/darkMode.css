@@ -1030,6 +1030,10 @@
   background: #1e1e1e;
 }
 
+[data-theme="dark"] .group-detail-section.group-recipes-section {
+  background: transparent;
+}
+
 [data-theme="dark"] .group-edit-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;

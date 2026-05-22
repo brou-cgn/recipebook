@@ -44,6 +44,15 @@ describe('GroupDetail dark mode styles', () => {
 });
 
 describe('GroupDetail light mode styles', () => {
+  test('group-recipes-section removes the panel background and padding for recipe overview tiles', () => {
+    const cssPath = path.join(__dirname, 'GroupDetail.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '.group-recipes-section');
+
+    expect(rule).toContain('background: transparent;');
+    expect(rule).toContain('padding: 0;');
+  });
+
   test('group-detail-section has no box-shadow in light mode', () => {
     const cssPath = path.join(__dirname, 'GroupDetail.css');
     const css = fs.readFileSync(cssPath, 'utf8');
@@ -66,5 +75,13 @@ describe('GroupDetail light mode styles', () => {
     const rule = getRuleBody(css, '.group-member-row');
 
     expect(rule).toContain('min-height');
+  });
+
+  test('group-recipes-section stays transparent in dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-detail-section.group-recipes-section');
+
+    expect(rule).toContain('background: transparent;');
   });
 });

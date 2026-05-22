@@ -7,6 +7,7 @@ import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
+import RecipeCard from './RecipeCard';
 
 const DEFAULT_PORTIONS = 4;
 
@@ -317,29 +318,14 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           {groupRecipes.length === 0 ? (
             <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
           ) : (
-            <div className="group-recipe-grid">
+            <div className="recipe-grid group-recipe-grid">
               {groupRecipes.map((recipe) => (
-                <div
+                <RecipeCard
                   key={recipe.id}
-                  className="group-recipe-card"
+                  recipe={recipe}
                   onClick={() => onSelectRecipe && onSelectRecipe(recipe)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && onSelectRecipe && onSelectRecipe(recipe)}
-                  aria-label={recipe.title}
-                >
-                  {recipe.image && (
-                    <div className="group-recipe-card-image">
-                      <img src={recipe.image} alt={recipe.title} />
-                    </div>
-                  )}
-                  <div className="group-recipe-card-content">
-                    <h4>{recipe.title}</h4>
-                    {recipe.description && (
-                      <p className="group-recipe-card-description">{recipe.description}</p>
-                    )}
-                  </div>
-                </div>
+                  currentUser={currentUser}
+                />
               ))}
             </div>
           )}

@@ -2,6 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import GroupDetail from './GroupDetail';
 
+jest.mock('./RecipeRating', () => () => <div data-testid="mock-rating" />);
+jest.mock('./RecipeImageCarousel', () => () => <div data-testid="mock-carousel" />);
+
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑', addGroupMember: '👤+' }),
@@ -370,6 +373,19 @@ describe('GroupDetail – shopping list flow', () => {
   });
 });
 
+describe('GroupDetail – recipe tile layout', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders recipe overview cards instead of the legacy private-list tile wrapper', () => {
+    const { container } = render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+
+    expect(container.querySelector('.recipe-card')).toBeInTheDocument();
+    expect(container.querySelector('.group-recipe-card')).not.toBeInTheDocument();
+  });
+});
+
 describe('GroupDetail – edit list properties feature', () => {
   const mockPrivateGroupWithKind = {
     ...mockPrivateGroup,
@@ -618,4 +634,3 @@ describe('GroupDetail – longpress on minus button in portion selector', () => 
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
-
