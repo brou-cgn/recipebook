@@ -33,6 +33,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [activeTab, setActiveTab] = useState('rezepte');
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+  const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || '⚙');
   const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -66,6 +67,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   useEffect(() => {
     setBackIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+    setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || '⚙');
     setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   }, [allButtonIcons, isDarkMode]);
 
@@ -285,6 +287,20 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
                 <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
               ) : (
                 shoppingListIcon
+              )}
+            </button>
+          )}
+          {!isPublic && (
+            <button
+              className="shopping-list-trigger-button"
+              onClick={() => setActiveTab('einstellungen')}
+              title="Einstellungen anzeigen"
+              aria-label="Einstellungen öffnen"
+            >
+              {isBase64Image(listSettingsIcon) ? (
+                <img src={listSettingsIcon} alt="Einstellungen" className="shopping-list-icon-img" />
+              ) : (
+                listSettingsIcon
               )}
             </button>
           )}

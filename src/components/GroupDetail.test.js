@@ -582,6 +582,45 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
   });
 });
 
+describe('GroupDetail – settings button', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders the settings button for a private group', () => {
+    render(<GroupDetail {...defaultProps} />);
+    expect(screen.getByLabelText('Einstellungen öffnen')).toBeInTheDocument();
+  });
+
+  it('does NOT render the settings button for a public group', () => {
+    render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
+    expect(screen.queryByLabelText('Einstellungen öffnen')).not.toBeInTheDocument();
+  });
+
+  it('clicking the settings button switches to the Einstellungen tab', () => {
+    render(<GroupDetail {...defaultProps} />);
+    // Default tab is Rezepte
+    expect(screen.getByRole('tab', { name: /Rezepte/i })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
+
+    expect(screen.getByRole('tab', { name: /Einstellungen/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Listeneinstellungen')).toBeInTheDocument();
+  });
+
+  it('shows the edit and delete FABs after clicking the settings button (for owner)', () => {
+    const { container } = render(<GroupDetail {...defaultProps} />);
+    // FABs not visible on Rezepte tab
+    expect(container.querySelector('.group-edit-fab-button')).not.toBeInTheDocument();
+    expect(container.querySelector('.delete-fab-button')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
+
+    expect(container.querySelector('.group-edit-fab-button')).toBeInTheDocument();
+    expect(container.querySelector('.delete-fab-button')).toBeInTheDocument();
+  });
+});
+
 describe('GroupDetail – longpress on minus button in portion selector', () => {
   beforeEach(() => {
     jest.useFakeTimers();
