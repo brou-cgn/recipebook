@@ -382,6 +382,40 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
     expect(container.querySelector('.group-edit-fab-button')).toBeInTheDocument();
     expect(container.querySelector('.delete-fab-button')).toBeInTheDocument();
   });
+
+  it('hides the add-recipe FAB when the portion selector is open', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} onAddRecipe={jest.fn()} />);
+
+    expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+
+    expect(screen.getByText('Portionen für Einkaufsliste')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Privates Rezept hinzufügen')).not.toBeInTheDocument();
+  });
+
+  it('hides the add-recipe FAB when the shopping list modal is open', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} onAddRecipe={jest.fn()} />);
+
+    expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    fireEvent.click(screen.getByText('Einkaufsliste erstellen'));
+
+    expect(screen.getByLabelText('Einkaufsliste')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Privates Rezept hinzufügen')).not.toBeInTheDocument();
+  });
+
+  it('shows the add-recipe FAB again after the portion selector is closed', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} onAddRecipe={jest.fn()} />);
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.queryByLabelText('Privates Rezept hinzufügen')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
+
+    expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument();
+  });
 });
 
 describe('GroupDetail – longpress on minus button in portion selector', () => {

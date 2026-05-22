@@ -236,7 +236,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           </span>
         </div>
         <div className="group-header-actions">
-          {onAddRecipe && (isOwner || isMember) && (
+          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (
             <button
               className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
               onClick={() => onAddRecipe(group.id)}
