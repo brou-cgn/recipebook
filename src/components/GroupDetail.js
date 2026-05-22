@@ -241,13 +241,6 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
 
   return (
     <div className="group-detail-container">
-      <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
-        {isBase64Image(backIcon) ? (
-          <img src={backIcon} alt="Zurück" className="group-back-icon-img" />
-        ) : (
-          <span>{backIcon}</span>
-        )}
-      </button>
       <div className="group-detail-header">
         <div className="group-detail-title">
           <h2>{group.name}</h2>
@@ -304,6 +297,13 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
               )}
             </button>
           )}
+          <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
+            {isBase64Image(backIcon) ? (
+              <img src={backIcon} alt="Zurück" className="group-back-icon-img" />
+            ) : (
+              <span>{backIcon}</span>
+            )}
+          </button>
         </div>
       </div>
 

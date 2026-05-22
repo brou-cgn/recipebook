@@ -11,13 +11,9 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
-  padding-right: 2.5rem;
 }
 
 .group-back-icon-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
   width: 48px;
   height: 48px;
   padding: 0;
@@ -38,19 +34,7 @@
     border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.15s ease;
-  z-index: 1;
 }
-
-.group-back-icon-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  opacity: 0.9;
-}
-
-/*.group-back-icon-btn:hover {
-  opacity: 0.7;
-  background: rgba(64, 44, 28, 0.08);
-}*/
 
 .group-back-icon-img {
   width: 1.4rem;
@@ -166,7 +150,8 @@
   height: 1.5rem;
 }
 
-.group-header-actions .list-settings-trigger-button {
+.group-header-actions .list-settings-trigger-button,
+.group-header-actions .group-back-icon-btn {
   width: 48px !important;
   height: 48px !important;
   padding: 0;
@@ -188,7 +173,8 @@
     transform 0.15s ease;
 }
 
-.group-header-actions .list-settings-trigger-button:active {
+.group-header-actions .list-settings-trigger-button:active,
+.group-header-actions .group-back-icon-btn:active {
   transform: scale(1.1);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   opacity: 0.2;
