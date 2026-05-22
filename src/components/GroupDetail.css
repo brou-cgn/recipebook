@@ -142,7 +142,8 @@
   flex-wrap: wrap;
 }
 
-.group-header-actions .shopping-list-trigger-button {
+.group-header-actions .shopping-list-trigger-button,
+.group-header-actions .list-settings-trigger-button {
   background: transparent;
   border: none;
   color: #555;

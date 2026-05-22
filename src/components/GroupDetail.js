@@ -292,7 +292,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           )}
           {!isPublic && (
             <button
-              className="shopping-list-trigger-button"
+              className="list-settings-trigger-button"
               onClick={() => setActiveTab('einstellungen')}
               title="Einstellungen anzeigen"
               aria-label="Einstellungen öffnen"
