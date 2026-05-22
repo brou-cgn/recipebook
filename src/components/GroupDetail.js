@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLongPress } from '../utils/useLongPress';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -44,9 +45,12 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
-  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
-  const portionMinusLongPressTimerRef = useRef(null);
-  const portionMinusLongPressTriggeredRef = useRef(false);
+  const {
+    activeId: portionMinusLongPressActiveId,
+    triggeredRef: portionMinusLongPressTriggeredRef,
+    start: handlePortionMinusPressStart,
+    end: handlePortionMinusPressEnd,
+  } = useLongPress();
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -195,23 +199,6 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
 
   const handleShoppingListClick = () => {
     setShowPortionSelector(true);
-  };
-
-  const handlePortionMinusPressStart = (id, onLongPress) => {
-    setPortionMinusLongPressActiveId(id);
-    portionMinusLongPressTimerRef.current = setTimeout(() => {
-      portionMinusLongPressTriggeredRef.current = true;
-      onLongPress();
-      setPortionMinusLongPressActiveId(null);
-    }, 500);
-  };
-
-  const handlePortionMinusPressEnd = () => {
-    if (portionMinusLongPressTimerRef.current) {
-      clearTimeout(portionMinusLongPressTimerRef.current);
-      portionMinusLongPressTimerRef.current = null;
-    }
-    setPortionMinusLongPressActiveId(null);
   };
 
   const getGroupShoppingListIngredients = () => {

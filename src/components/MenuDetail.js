@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLongPress } from '../utils/useLongPress';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
@@ -41,10 +42,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [portionCounts, setPortionCounts] = useState(initialMenu.portionCounts || {});
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [conversionTable, setConversionTable] = useState([]);
-  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
   const missingSavedRef = useRef(false);
-  const portionMinusLongPressTimerRef = useRef(null);
-  const portionMinusLongPressTriggeredRef = useRef(false);
+  const {
+    activeId: portionMinusLongPressActiveId,
+    triggeredRef: portionMinusLongPressTriggeredRef,
+    start: handlePortionMinusPressStart,
+    end: handlePortionMinusPressEnd,
+  } = useLongPress();
 
   // Load close button icon from settings
   useEffect(() => {
@@ -335,23 +339,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const requirements = calculateLinkedRecipeRequirements();
     setLinkedPortionCounts(requirements);
     setShowPortionSelector(true);
-  };
-
-  const handlePortionMinusPressStart = (id, onLongPress) => {
-    setPortionMinusLongPressActiveId(id);
-    portionMinusLongPressTimerRef.current = setTimeout(() => {
-      portionMinusLongPressTriggeredRef.current = true;
-      onLongPress();
-      setPortionMinusLongPressActiveId(null);
-    }, 500);
-  };
-
-  const handlePortionMinusPressEnd = () => {
-    if (portionMinusLongPressTimerRef.current) {
-      clearTimeout(portionMinusLongPressTimerRef.current);
-      portionMinusLongPressTimerRef.current = null;
-    }
-    setPortionMinusLongPressActiveId(null);
   };
 
   const getMenuShoppingListIngredients = () => {

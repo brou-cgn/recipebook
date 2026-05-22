@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useLongPress } from '../utils/useLongPress';
 import './RecipeDetail.css';
 import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
@@ -113,9 +114,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const missingSavedRef = useRef(false);
   const editLongPressTimerRef = useRef(null);
   const editLongPressTriggeredRef = useRef(false);
-  const portionMinusLongPressTimerRef = useRef(null);
-  const portionMinusLongPressTriggeredRef = useRef(false);
-  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
+  const {
+    activeId: portionMinusLongPressActiveId,
+    triggeredRef: portionMinusLongPressTriggeredRef,
+    start: handlePortionMinusPressStart,
+    end: handlePortionMinusPressEnd,
+  } = useLongPress();
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
   const [alarmRunning, setAlarmRunning] = useState(false);
@@ -483,24 +487,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       return;
     }
     onEdit && onEdit(recipe);
-  };
-
-  // Portion selector minus long press handlers
-  const handlePortionMinusPressStart = (id, onLongPress) => {
-    setPortionMinusLongPressActiveId(id);
-    portionMinusLongPressTimerRef.current = setTimeout(() => {
-      portionMinusLongPressTriggeredRef.current = true;
-      onLongPress();
-      setPortionMinusLongPressActiveId(null);
-    }, 500);
-  };
-
-  const handlePortionMinusPressEnd = () => {
-    if (portionMinusLongPressTimerRef.current) {
-      clearTimeout(portionMinusLongPressTimerRef.current);
-      portionMinusLongPressTimerRef.current = null;
-    }
-    setPortionMinusLongPressActiveId(null);
   };
 
   // Get author name
