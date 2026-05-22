@@ -241,11 +241,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
 
   return (
     <div className="group-detail-container">
-      <button
-        className={`group-back-icon-btn${!isPublic ? ' group-private-list-action-button' : ''}`}
-        onClick={onBack}
-        aria-label="Zurück"
-      >
+      <button className="group-back-icon-btn" onClick={onBack} aria-label="Zurück">
         {isBase64Image(backIcon) ? (
           <img src={backIcon} alt="Zurück" className="group-back-icon-img" />
         ) : (
@@ -296,7 +292,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           )}
           {!isPublic && (
             <button
-              className="list-settings-trigger-button group-private-list-action-button"
+              className="list-settings-trigger-button"
               onClick={() => setActiveTab('einstellungen')}
               title="Einstellungen anzeigen"
               aria-label="Einstellungen öffnen"

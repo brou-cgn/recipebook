@@ -589,20 +589,12 @@ describe('GroupDetail – settings button', () => {
 
   it('renders the settings button for a private group', () => {
     render(<GroupDetail {...defaultProps} />);
-    expect(screen.getByLabelText('Einstellungen öffnen')).toHaveClass('group-private-list-action-button');
+    expect(screen.getByLabelText('Einstellungen öffnen')).toBeInTheDocument();
   });
 
   it('does NOT render the settings button for a public group', () => {
     render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
     expect(screen.queryByLabelText('Einstellungen öffnen')).not.toBeInTheDocument();
-  });
-
-  it('applies the private action button style to the back button only in private lists', () => {
-    const { rerender } = render(<GroupDetail {...defaultProps} />);
-    expect(screen.getByLabelText('Zurück')).toHaveClass('group-private-list-action-button');
-
-    rerender(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
-    expect(screen.getByLabelText('Zurück')).not.toHaveClass('group-private-list-action-button');
   });
 
   it('clicking the settings button switches to the Einstellungen tab', () => {

@@ -154,27 +154,6 @@
   height: 1.5rem;
 }
 
-.group-private-list-action-button {
-  background: #402C1C;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1;
-  transition: background 0.2s;
-}
-
-.group-private-list-action-button:hover {
-  background: #5a3d27;
-}
-
-.group-header-actions .list-settings-trigger-button.group-private-list-action-button {
-  width: auto;
-  height: auto;
-}
-
 /*.group-header-actions .shopping-list-trigger-button:hover {
   background: transparent;
   border: none;
