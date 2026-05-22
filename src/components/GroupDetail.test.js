@@ -235,6 +235,16 @@ describe('GroupDetail – shopping list flow', () => {
     expect(screen.getByLabelText('Einkaufsliste')).toBeInTheDocument();
     expect(screen.getByText('Keine Zutaten vorhanden.')).toBeInTheDocument();
   });
+
+  it('scales ingredients when portions are reduced but remain above zero', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    fireEvent.click(screen.getByLabelText('Portionen verringern'));
+    fireEvent.click(screen.getByText('Einkaufsliste erstellen'));
+
+    expect(screen.getByText('1 Kartoffeln')).toBeInTheDocument();
+  });
 });
 
 describe('GroupDetail – edit list properties feature', () => {

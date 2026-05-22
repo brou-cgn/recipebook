@@ -62,6 +62,17 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
+  useEffect(() => {
+    if (!showPortionSelector) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowPortionSelector(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showPortionSelector]);
+
   if (!group) return null;
 
   const isOwner = group.ownerId === currentUser?.id;
