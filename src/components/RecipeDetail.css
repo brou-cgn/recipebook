@@ -1150,6 +1150,12 @@
     padding: 1rem;
   }
 
+  /* Extra bottom padding on the steps section so the last step is not
+     hidden behind the fixed FAB buttons (56px height + 20px offset = 76px). */
+  .recipe-section--steps {
+    padding-bottom: 5rem;
+  }
+
   .cooking-mode-indicator {
     padding: 0.625rem 0.75rem;
   }
