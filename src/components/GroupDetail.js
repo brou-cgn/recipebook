@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import { isWaterIngredient } from '../utils/ingredientUtils';
+import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
@@ -32,6 +32,8 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [addPressed, setAddPressed] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [showPortionSelector, setShowPortionSelector] = useState(false);
+  const [portionCounts, setPortionCounts] = useState({});
   const [showAddMember, setShowAddMember] = useState(false);
   const [addMemberIds, setAddMemberIds] = useState([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -175,14 +177,22 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
     }
   };
 
+  const handleShoppingListClick = () => {
+    setShowPortionSelector(true);
+  };
+
   const getGroupShoppingListIngredients = () => {
     const ingredients = [];
     for (const recipe of groupRecipes) {
+      const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+      if (targetPortions === 0) continue;
+      const recipePortions = recipe.portionen || 4;
+      const multiplier = targetPortions / recipePortions;
       for (const ing of (recipe.ingredients || [])) {
         const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
         if (item.type !== 'heading') {
           const text = typeof ing === 'string' ? ing : ing.text;
-          if (!isWaterIngredient(text)) ingredients.push(text);
+          if (!isWaterIngredient(text)) ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
         }
       }
     }
@@ -229,7 +239,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           {groupRecipes.length > 0 && (
             <button
               className="shopping-list-trigger-button"
-              onClick={() => setShowShoppingListModal(true)}
+              onClick={handleShoppingListClick}
               title="Einkaufsliste anzeigen"
               aria-label="Einkaufsliste öffnen"
             >
@@ -436,6 +446,73 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           onSave={handleEditSave}
           onCancel={() => setShowEditDialog(false)}
         />
+      )}
+      {showPortionSelector && (
+        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+          <div
+            className="portion-selector-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Portionen auswählen"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="portion-selector-header">
+              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <button
+                className="portion-selector-close"
+                onClick={() => setShowPortionSelector(false)}
+                aria-label="Portionsauswahl schließen"
+              >
+                ×
+              </button>
+            </div>
+            <div className="portion-selector-body">
+              {groupRecipes.map((recipe) => {
+                const current = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+                return (
+                  <div key={recipe.id} className="portion-selector-item">
+                    <span className="portion-selector-recipe-name">{recipe.title}</span>
+                    <div className="portion-selector-controls">
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setPortionCounts((prev) => ({
+                          ...prev,
+                          [recipe.id]: Math.max(0, current - 1)
+                        }))}
+                        aria-label="Portionen verringern"
+                        disabled={current === 0}
+                      >
+                        −
+                      </button>
+                      <span className="portion-selector-count">{current}</span>
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setPortionCounts((prev) => ({
+                          ...prev,
+                          [recipe.id]: current + 1
+                        }))}
+                        aria-label="Portionen erhöhen"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="portion-selector-footer">
+              <button
+                className="portion-selector-generate-btn"
+                onClick={() => {
+                  setShowPortionSelector(false);
+                  setShowShoppingListModal(true);
+                }}
+              >
+                Einkaufsliste erstellen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showShoppingListModal && (
         <ShoppingListModal

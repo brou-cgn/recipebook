@@ -55,6 +55,15 @@ const defaultProps = {
   onDeleteGroup: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockRecipes = [
+  {
+    id: 'r1',
+    title: 'Kartoffelsuppe',
+    portionen: 2,
+    ingredients: ['2 Kartoffeln'],
+  },
+];
+
 describe('GroupDetail – add member feature', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -198,6 +207,33 @@ describe('GroupDetail – add member feature', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/Fehler beim Hinzufügen/i);
     });
+  });
+});
+
+describe('GroupDetail – shopping list flow', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('opens the portion selector before showing the shopping list', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+
+    expect(screen.getByText('Portionen für Einkaufsliste')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Einkaufsliste')).not.toBeInTheDocument();
+  });
+
+  it('applies adjusted portions before generating the shopping list', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    fireEvent.click(screen.getByLabelText('Portionen verringern'));
+    fireEvent.click(screen.getByLabelText('Portionen verringern'));
+    fireEvent.click(screen.getByText('Einkaufsliste erstellen'));
+
+    expect(screen.getByLabelText('Einkaufsliste')).toBeInTheDocument();
+    expect(screen.getByText('Keine Zutaten vorhanden.')).toBeInTheDocument();
   });
 });
 
