@@ -451,38 +451,6 @@
 }
 
 /* Tab bar */
-.group-detail-tab-bar {
-  display: flex;
-  gap: 0;
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #e0d8d0;
-}
-
-.group-detail-tab {
-  flex: 1;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  padding: 0.65rem 1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #888;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-  text-align: center;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.group-detail-tab.active {
-  color: #402C1C;
-  border-bottom-color: #402C1C;
-}
-
-.group-detail-tab:hover:not(.active) {
-  color: #555;
-}
-
 /* List info section in Einstellungen tab */
 .group-info-section {
   margin-bottom: 1rem;

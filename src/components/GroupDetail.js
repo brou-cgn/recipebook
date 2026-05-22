@@ -286,7 +286,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           {!isPublic && (
             <button
               className="list-settings-trigger-button"
-              onClick={() => setActiveTab('einstellungen')}
+              onClick={() => setActiveTab(activeTab === 'einstellungen' ? 'rezepte' : 'einstellungen')}
               title="Einstellungen anzeigen"
               aria-label="Einstellungen öffnen"
             >
@@ -306,27 +306,6 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           </button>
         </div>
       </div>
-
-      {!isPublic && (
-        <div className="group-detail-tab-bar" role="tablist">
-          <button
-            className={`group-detail-tab${activeTab === 'rezepte' ? ' active' : ''}`}
-            onClick={() => setActiveTab('rezepte')}
-            role="tab"
-            aria-selected={activeTab === 'rezepte'}
-          >
-            Rezepte
-          </button>
-          <button
-            className={`group-detail-tab${activeTab === 'einstellungen' ? ' active' : ''}`}
-            onClick={() => setActiveTab('einstellungen')}
-            role="tab"
-            aria-selected={activeTab === 'einstellungen'}
-          >
-            Einstellungen
-          </button>
-        </div>
-      )}
 
       {(isPublic || activeTab === 'rezepte') && (
         <div className="group-detail-section group-recipes-section">

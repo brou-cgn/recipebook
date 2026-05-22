@@ -67,48 +67,47 @@ const mockRecipes = [
   },
 ];
 
-/** Helper: switch to the Einstellungen tab */
+/** Helper: open the Einstellungen view via the settings button */
 const goToEinstellungen = () => {
-  fireEvent.click(screen.getByRole('tab', { name: /Einstellungen/i }));
+  fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
 };
 
-describe('GroupDetail – tab bar', () => {
+describe('GroupDetail – no tab bar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders Rezepte and Einstellungen tabs for a private group', () => {
-    render(<GroupDetail {...defaultProps} />);
-    expect(screen.getByRole('tab', { name: /Rezepte/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Einstellungen/i })).toBeInTheDocument();
+  it('does NOT render a tab bar for a private group', () => {
+    const { container } = render(<GroupDetail {...defaultProps} />);
+    expect(container.querySelector('.group-detail-tab-bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Rezepte/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Einstellungen/i })).not.toBeInTheDocument();
   });
 
-  it('does NOT render tabs for a public group', () => {
+  it('does NOT render a tab bar for a public group', () => {
     render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
     expect(screen.queryByRole('tab', { name: /Rezepte/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Einstellungen/i })).not.toBeInTheDocument();
   });
 
-  it('shows the recipe section by default (Rezepte tab active)', () => {
+  it('shows the recipe section by default', () => {
     render(<GroupDetail {...defaultProps} />);
-    expect(screen.getByRole('tab', { name: /Rezepte/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
   });
 
-  it('shows settings content after switching to Einstellungen tab', () => {
+  it('shows settings content after clicking the settings button', () => {
     render(<GroupDetail {...defaultProps} />);
     goToEinstellungen();
-    expect(screen.getByRole('tab', { name: /Einstellungen/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Listeneinstellungen')).toBeInTheDocument();
   });
 
-  it('shows "Typ: Privat" in Einstellungen tab', () => {
+  it('shows "Typ: Privat" after opening settings', () => {
     render(<GroupDetail {...defaultProps} />);
     goToEinstellungen();
     expect(screen.getByText('Privat')).toBeInTheDocument();
   });
 
-  it('shows listKind label in Einstellungen tab when set', () => {
+  it('shows listKind label after opening settings when set', () => {
     const groupWithKind = { ...mockPrivateGroup, listKind: 'classic' };
     render(<GroupDetail {...defaultProps} group={groupWithKind} />);
     goToEinstellungen();
@@ -486,9 +485,9 @@ describe('GroupDetail – edit list properties feature', () => {
     expect(deleteFabButton).toHaveAttribute('aria-label', 'Liste löschen');
   });
 
-  it('does NOT render edit/delete FABs in the Rezepte tab', () => {
+  it('does NOT render edit/delete FABs when settings view is closed (default recipes view)', () => {
     const { container } = render(<GroupDetail {...defaultProps} />);
-    // Default tab is Rezepte
+    // Default view is recipes
     expect(container.querySelector('.group-edit-fab-button')).not.toBeInTheDocument();
     expect(container.querySelector('.delete-fab-button')).not.toBeInTheDocument();
   });
@@ -575,7 +574,7 @@ describe('GroupDetail – FAB visibility when modals are open', () => {
     expect(screen.getByLabelText('Privates Rezept hinzufügen')).toBeInTheDocument();
   });
 
-  it('does NOT show the add-recipe FAB in the Einstellungen tab', () => {
+  it('does NOT show the add-recipe FAB when settings view is open', () => {
     render(<GroupDetail {...defaultProps} recipes={mockRecipes} onAddRecipe={jest.fn()} />);
     goToEinstellungen();
     expect(screen.queryByLabelText('Privates Rezept hinzufügen')).not.toBeInTheDocument();
@@ -597,15 +596,26 @@ describe('GroupDetail – settings button', () => {
     expect(screen.queryByLabelText('Einstellungen öffnen')).not.toBeInTheDocument();
   });
 
-  it('clicking the settings button switches to the Einstellungen tab', () => {
+  it('clicking the settings button shows the settings view', () => {
     render(<GroupDetail {...defaultProps} />);
-    // Default tab is Rezepte
-    expect(screen.getByRole('tab', { name: /Rezepte/i })).toHaveAttribute('aria-selected', 'true');
+    // Recipes section visible by default
+    expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
+    expect(screen.queryByText('Listeneinstellungen')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
 
-    expect(screen.getByRole('tab', { name: /Einstellungen/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Listeneinstellungen')).toBeInTheDocument();
+  });
+
+  it('clicking the settings button again (toggle) hides the settings view', () => {
+    render(<GroupDetail {...defaultProps} />);
+
+    fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
+    expect(screen.getByText('Listeneinstellungen')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
+    expect(screen.queryByText('Listeneinstellungen')).not.toBeInTheDocument();
+    expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
   });
 
   it('shows the edit and delete FABs after clicking the settings button (for owner)', () => {
