@@ -4,7 +4,7 @@ import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
-import { sendGroupInvitation } from '../utils/groupFirestore';
+import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
 
@@ -29,8 +29,10 @@ const DEFAULT_PORTIONS = 4;
  */
 function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe, privateLists = [], onEditGroupProperties }) {
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('rezepte');
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+  const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [addPressed, setAddPressed] = useState(false);
@@ -63,6 +65,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   useEffect(() => {
     setBackIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
+    setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
@@ -123,6 +126,20 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       await onEditGroupProperties(group.id, editData);
     }
     setShowEditDialog(false);
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!window.confirm(`Liste "${group.name}" wirklich verlassen?`)) return;
+    const updatedIds = (group.memberIds || []).filter((id) => id !== currentUser?.id);
+    const updatedRoles = { ...(group.memberRoles || {}) };
+    delete updatedRoles[currentUser?.id];
+    setSaving(true);
+    try {
+      await onUpdateGroup(group.id, { memberIds: updatedIds, memberRoles: updatedRoles });
+      onBack();
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Users that are not yet members of this group
@@ -231,12 +248,12 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
       <div className="group-detail-header">
         <div className="group-detail-title">
           <h2>{group.name}</h2>
-          <span className={`group-type-badge ${isPublic ? 'public' : 'private'}`}>
-            {isPublic ? 'Öffentlich' : 'Privat'}
-          </span>
+          {isPublic && (
+            <span className="group-type-badge public">Öffentlich</span>
+          )}
         </div>
         <div className="group-header-actions">
-          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (
+          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (isPublic || activeTab === 'rezepte') && (
             <button
               className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
               onClick={() => onAddRecipe(group.id)}
@@ -273,150 +290,240 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         </div>
       </div>
 
-      <div className="group-detail-section">
-        <div className="group-section-header">
-          <h3>Mitglieder ({(group.memberIds || []).length})</h3>
-          {(isOwner || isMember) && !isPublic && (
-            <button
-              className="group-add-member-btn"
-              onClick={() => { setShowAddMember((v) => !v); setAddMemberError(''); setAddMemberSuccess(''); setAddMemberIds([]); setInviteEmail(''); }}
-              aria-label="Mitglied hinzufügen"
-            >
-              + Mitglied hinzufügen
-            </button>
-          )}
-        </div>
-        {addMemberSuccess && (
-          <p className="group-add-member-success" role="status">{addMemberSuccess}</p>
-        )}
-        {showAddMember && !isPublic && (
-          <div className="group-add-member-panel">
-            {nonMembers.length > 0 && (
-              <div className="group-dialog-field">
-                <label>Bestehende Nutzer</label>
-                <div className="group-add-member-list">
-                  {nonMembers.map((user) => (
-                    <label key={user.id} className="group-member-item">
-                      <input
-                        type="checkbox"
-                        checked={addMemberIds.includes(user.id)}
-                        onChange={() => toggleAddMemberId(user.id)}
-                      />
-                      <span className="group-member-name">
-                        {user.vorname} {user.nachname}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="group-dialog-field">
-              <label htmlFor="invite-email">Einladung per E-Mail</label>
-              <input
-                id="invite-email"
-                type="email"
-                className="group-invite-email-input"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="name@example.com"
-              />
-            </div>
-            {addMemberError && (
-              <p className="group-dialog-error" role="alert">{addMemberError}</p>
-            )}
-            <div className="group-add-member-actions">
-              <button
-                type="button"
-                className="group-btn-secondary"
-                onClick={() => { setShowAddMember(false); setAddMemberError(''); setAddMemberIds([]); setInviteEmail(''); }}
-                disabled={saving}
-              >
-                Abbrechen
-              </button>
-              <button
-                type="button"
-                className="group-btn-primary"
-                onClick={handleAddMembers}
-                disabled={saving}
-              >
-                {saving ? 'Speichern...' : 'Hinzufügen'}
-              </button>
-            </div>
-          </div>
-        )}
-        {(group.memberIds || []).length === 0 ? (
-          <p className="group-empty-hint">Keine Mitglieder.</p>
-        ) : (
-          <ul className="group-member-list">
-            {(group.memberIds || []).map((userId) => (
-              <li key={userId} className="group-member-row">
-                <span className="group-member-name">
-                  {getMemberName(userId)}
-                  {userId === group.ownerId && (
-                    <span className="group-owner-badge"> (Besitzer)</span>
-                  )}
-                </span>
-                {isOwner && !isPublic && userId !== group.ownerId && (
-                  <button
-                    className="group-remove-btn"
-                    onClick={() => handleRemoveMember(userId)}
-                    disabled={saving}
-                    aria-label={`${getMemberName(userId)} entfernen`}
-                  >
-                    Entfernen
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="group-detail-section group-recipes-section">
-        <h3>Rezepte ({groupRecipes.length})</h3>
-        {groupRecipes.length === 0 ? (
-          <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
-        ) : (
-          <div className="group-recipe-grid">
-            {groupRecipes.map((recipe) => (
-              <div
-                key={recipe.id}
-                className="group-recipe-card"
-                onClick={() => onSelectRecipe && onSelectRecipe(recipe)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && onSelectRecipe && onSelectRecipe(recipe)}
-                aria-label={recipe.title}
-              >
-                {recipe.image && (
-                  <div className="group-recipe-card-image">
-                    <img src={recipe.image} alt={recipe.title} />
-                  </div>
-                )}
-                <div className="group-recipe-card-content">
-                  <h4>{recipe.title}</h4>
-                  {recipe.description && (
-                    <p className="group-recipe-card-description">{recipe.description}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {isOwner && !isPublic && (
-        <div className="group-recipes-footer">
+      {!isPublic && (
+        <div className="group-detail-tab-bar" role="tablist">
           <button
-            className="group-edit-btn"
-            onClick={() => setShowEditDialog(true)}
-            disabled={saving}
-            aria-label="Liste bearbeiten"
+            className={`group-detail-tab${activeTab === 'rezepte' ? ' active' : ''}`}
+            onClick={() => setActiveTab('rezepte')}
+            role="tab"
+            aria-selected={activeTab === 'rezepte'}
           >
-              Liste bearbeiten
-            </button>
+            Rezepte
+          </button>
+          <button
+            className={`group-detail-tab${activeTab === 'einstellungen' ? ' active' : ''}`}
+            onClick={() => setActiveTab('einstellungen')}
+            role="tab"
+            aria-selected={activeTab === 'einstellungen'}
+          >
+            Einstellungen
+          </button>
         </div>
       )}
-      {isOwner && !isPublic && !showPortionSelector && !showShoppingListModal && (
+
+      {(isPublic || activeTab === 'rezepte') && (
+        <div className="group-detail-section group-recipes-section">
+          <h3>Rezepte ({groupRecipes.length})</h3>
+          {groupRecipes.length === 0 ? (
+            <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
+          ) : (
+            <div className="group-recipe-grid">
+              {groupRecipes.map((recipe) => (
+                <div
+                  key={recipe.id}
+                  className="group-recipe-card"
+                  onClick={() => onSelectRecipe && onSelectRecipe(recipe)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && onSelectRecipe && onSelectRecipe(recipe)}
+                  aria-label={recipe.title}
+                >
+                  {recipe.image && (
+                    <div className="group-recipe-card-image">
+                      <img src={recipe.image} alt={recipe.title} />
+                    </div>
+                  )}
+                  <div className="group-recipe-card-content">
+                    <h4>{recipe.title}</h4>
+                    {recipe.description && (
+                      <p className="group-recipe-card-description">{recipe.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isPublic && activeTab === 'einstellungen' && (
+        <>
+          <div className="group-detail-section group-info-section">
+            <h3>Listeneinstellungen</h3>
+            <dl className="group-info-list">
+              <div className="group-info-row">
+                <dt>Typ</dt>
+                <dd>Privat</dd>
+              </div>
+              {group.listKind && (
+                <div className="group-info-row">
+                  <dt>Art</dt>
+                  <dd>{LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}</dd>
+                </div>
+              )}
+              {group.targetListId && (
+                <div className="group-info-row">
+                  <dt>Ziel-Liste</dt>
+                  <dd>{privateLists.find((l) => l.id === group.targetListId)?.name ?? group.targetListId}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          <div className="group-detail-section">
+            <div className="group-section-header">
+              <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+              {isOwner && (
+                <button
+                  className="group-add-member-icon-btn"
+                  onClick={() => { setShowAddMember((v) => !v); setAddMemberError(''); setAddMemberSuccess(''); setAddMemberIds([]); setInviteEmail(''); }}
+                  aria-label="Mitglied hinzufügen"
+                  title="Mitglied hinzufügen"
+                >
+                  {isBase64Image(addMemberIcon) ? (
+                    <img src={addMemberIcon} alt="Mitglied hinzufügen" className="button-icon-image" draggable="false" />
+                  ) : (
+                    <span>{addMemberIcon}</span>
+                  )}
+                </button>
+              )}
+            </div>
+            {addMemberSuccess && (
+              <p className="group-add-member-success" role="status">{addMemberSuccess}</p>
+            )}
+            {showAddMember && (
+              <div className="group-add-member-panel">
+                {nonMembers.length > 0 && (
+                  <div className="group-dialog-field">
+                    <label>Bestehende Nutzer</label>
+                    <div className="group-add-member-list">
+                      {nonMembers.map((user) => (
+                        <label key={user.id} className="group-member-item">
+                          <input
+                            type="checkbox"
+                            checked={addMemberIds.includes(user.id)}
+                            onChange={() => toggleAddMemberId(user.id)}
+                          />
+                          <span className="group-member-name">
+                            {user.vorname} {user.nachname}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="group-dialog-field">
+                  <label htmlFor="invite-email">Einladung per E-Mail</label>
+                  <input
+                    id="invite-email"
+                    type="email"
+                    className="group-invite-email-input"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="name@example.com"
+                  />
+                </div>
+                {addMemberError && (
+                  <p className="group-dialog-error" role="alert">{addMemberError}</p>
+                )}
+                <div className="group-add-member-actions">
+                  <button
+                    type="button"
+                    className="group-btn-secondary"
+                    onClick={() => { setShowAddMember(false); setAddMemberError(''); setAddMemberIds([]); setInviteEmail(''); }}
+                    disabled={saving}
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="button"
+                    className="group-btn-primary"
+                    onClick={handleAddMembers}
+                    disabled={saving}
+                  >
+                    {saving ? 'Speichern...' : 'Hinzufügen'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {(group.memberIds || []).length === 0 ? (
+              <p className="group-empty-hint">Keine Mitglieder.</p>
+            ) : (
+              <ul className="group-member-list">
+                {(group.memberIds || []).map((userId) => (
+                  <li key={userId} className="group-member-row">
+                    <span className="group-member-name">
+                      {getMemberName(userId)}
+                      {userId === group.ownerId && (
+                        <span className="group-owner-badge"> (Besitzer)</span>
+                      )}
+                    </span>
+                    {isOwner && userId !== group.ownerId && (
+                      <button
+                        className="group-remove-btn"
+                        onClick={() => handleRemoveMember(userId)}
+                        disabled={saving}
+                        aria-label={`${getMemberName(userId)} entfernen`}
+                      >
+                        Entfernen
+                      </button>
+                    )}
+                    {!isOwner && userId === currentUser?.id && (
+                      <button
+                        className="group-leave-btn"
+                        onClick={handleLeaveGroup}
+                        disabled={saving}
+                        aria-label="Liste verlassen"
+                      >
+                        Austreten
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {isOwner && (
+            <div className="group-recipes-footer">
+              <button
+                className="group-edit-btn"
+                onClick={() => setShowEditDialog(true)}
+                disabled={saving}
+                aria-label="Liste bearbeiten"
+              >
+                Liste bearbeiten
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {isPublic && (
+        <div className="group-detail-section">
+          <div className="group-section-header">
+            <h3>Mitglieder ({(group.memberIds || []).length})</h3>
+          </div>
+          {(group.memberIds || []).length === 0 ? (
+            <p className="group-empty-hint">Keine Mitglieder.</p>
+          ) : (
+            <ul className="group-member-list">
+              {(group.memberIds || []).map((userId) => (
+                <li key={userId} className="group-member-row">
+                  <span className="group-member-name">
+                    {getMemberName(userId)}
+                    {userId === group.ownerId && (
+                      <span className="group-owner-badge"> (Besitzer)</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {isOwner && !isPublic && activeTab === 'einstellungen' && !showPortionSelector && !showShoppingListModal && (
         <>
           <button
             className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}

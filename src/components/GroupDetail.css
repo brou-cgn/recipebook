@@ -445,3 +445,121 @@
   transform: scale(0.93);
   transition: background 0.15s, transform 0.15s;
 }
+
+/* Tab bar */
+.group-detail-tab-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e0d8d0;
+}
+
+.group-detail-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.group-detail-tab.active {
+  color: #402C1C;
+  border-bottom-color: #402C1C;
+}
+
+.group-detail-tab:hover:not(.active) {
+  color: #555;
+}
+
+/* List info section in Einstellungen tab */
+.group-info-section {
+  margin-bottom: 1rem;
+}
+
+.group-info-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.group-info-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.group-info-row dt {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #888;
+  min-width: 5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.group-info-row dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Add member icon button (owner only, right-aligned in section header) */
+.group-add-member-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 0.4rem;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  color: #555;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.group-add-member-icon-btn:hover {
+  opacity: 0.7;
+}
+
+.group-add-member-icon-btn .button-icon-image {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+
+/* Leave (Austreten) button for non-owner members */
+.group-leave-btn {
+  background: none;
+  border: 1px solid #888;
+  color: #555;
+  padding: 0.3rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.group-leave-btn:hover:not(:disabled) {
+  background: #555;
+  color: white;
+  border-color: #555;
+}
+
+.group-leave-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

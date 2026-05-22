@@ -182,6 +182,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'editRecipe', label: 'Rezept bearbeiten' },
   { key: 'addMenu', label: 'Menü hinzufügen' },
   { key: 'addPrivateRecipe', label: 'Privates Rezept hinzufügen' },
+  { key: 'addGroupMember', label: 'Mitglied hinzufügen' },
   { key: 'saveRecipe', label: 'Rezept speichern' },
   { key: 'cancelRecipe', label: 'Rezept verwerfen' },
   { key: 'swipeRight', label: 'Swipe rechts (Ja)' },
