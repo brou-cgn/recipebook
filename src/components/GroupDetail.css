@@ -13,29 +13,6 @@
   flex-wrap: wrap;
 }
 
-.group-back-icon-btn {
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  color: #555;
-  font-size: 1.4rem;
-  cursor: pointer;
-  line-height: 1;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
-}
-
 .group-back-icon-img {
   width: 1.4rem;
   height: 1.4rem;
@@ -162,6 +139,7 @@
   background: #fff !important;
   border: 1px solid #f0f0f0 !important;
   border-radius: 12px;
+  color: #555;
   line-height: 1;
   font-size: 1.4rem;
   cursor: pointer;
@@ -175,9 +153,9 @@
 
 .group-header-actions .list-settings-trigger-button:active,
 .group-header-actions .group-back-icon-btn:active {
-  transform: scale(1.1);
+  transform: scale(0.95);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  opacity: 0.2;
+  opacity: 0.9;
 }
 
 /*.group-header-actions .shopping-list-trigger-button:hover {
