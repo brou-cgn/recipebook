@@ -58,24 +58,21 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
   return (
     <div className="group-list-container">
       <div className="group-list-header">
-        <div className="group-list-header-side" aria-hidden="true" />
         <h2>Meine Mise en Place</h2>
-        <div className="group-list-header-side">
-          {onBack && (
-            <button
-              className="group-list-close-btn"
-              onClick={onBack}
-              aria-label="Schließen"
-              title="Schließen"
-            >
-              {isBase64Image(closeIcon) ? (
-                <img src={closeIcon} alt="Schließen" className="group-list-close-icon-img" />
-              ) : (
-                <span>{closeIcon}</span>
-              )}
-            </button>
-          )}
-        </div>
+        {onBack && (
+          <button
+            className="group-list-close-btn"
+            onClick={onBack}
+            aria-label="Private Liste schließen"
+            title="Private Liste schließen"
+          >
+            {isBase64Image(closeIcon) ? (
+              <img src={closeIcon} alt="Private Liste schließen" className="group-list-close-icon-img" />
+            ) : (
+              <span>{closeIcon}</span>
+            )}
+          </button>
+        )}
       </div>
       <div className="group-list-actions">
         <button className="add-group-button" onClick={() => setIsDialogOpen(true)}>
