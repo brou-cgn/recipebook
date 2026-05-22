@@ -77,6 +77,38 @@
   background: rgba(245, 158, 42, 0.15);
 }
 
+.startseite-rezeptsammlungen-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.startseite-rezeptsammlungen-btn {
+  background-color: #DF7A00;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+  max-width: 360px;
+}
+
+.startseite-rezeptsammlungen-btn:hover {
+  background-color: #b86300;
+}
+
+[data-theme="dark"] .startseite-rezeptsammlungen-btn {
+  background-color: #b86300;
+}
+
+[data-theme="dark"] .startseite-rezeptsammlungen-btn:hover {
+  background-color: #9a5200;
+}
+
 .startseite-alltagsklassiker-picker-overlay {
   position: fixed;
   inset: 0;

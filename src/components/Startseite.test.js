@@ -761,4 +761,29 @@ describe('Startseite', () => {
     fireEvent.click(addButtons[0]);
     expect(onAddRecipe).toHaveBeenCalledWith('g-classics');
   });
+
+  // ─── Meine Rezeptsammlungen button ────────────────────────────────────────
+
+  test('shows "Meine Rezeptsammlungen" button', () => {
+    render(<Startseite currentUser={{ id: 'u1' }} />);
+    expect(screen.getByRole('button', { name: /Meine Rezeptsammlungen/i })).toBeInTheDocument();
+  });
+
+  test('"Meine Rezeptsammlungen" button calls onViewChange with "groups"', () => {
+    const onViewChange = jest.fn();
+    render(<Startseite currentUser={{ id: 'u1' }} onViewChange={onViewChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Meine Rezeptsammlungen/i }));
+    expect(onViewChange).toHaveBeenCalledWith('groups');
+  });
+
+  test('"Meine Rezeptsammlungen" button appears between Alltagsklassiker and Im Trend carousels', () => {
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} />);
+    const alltagsSection = Array.from(container.querySelectorAll('.startseite-trending-section'))
+      .find((s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Alltagsklassiker');
+    const trendSection = Array.from(container.querySelectorAll('.startseite-trending-section'))
+      .find((s) => s.querySelector('.startseite-section-title')?.textContent === 'Im Trend');
+    const btn = screen.getByRole('button', { name: /Meine Rezeptsammlungen/i });
+    expect(alltagsSection.compareDocumentPosition(btn)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(btn.compareDocumentPosition(trendSection)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });
