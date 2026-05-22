@@ -7,6 +7,8 @@ import { sendGroupInvitation } from '../utils/groupFirestore';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
 
+const DEFAULT_PORTIONS = 4;
+
 /**
  * Displays details of a single group including members and associated recipes.
  * Owners and members can add new members; only owners can remove members or delete the group.
@@ -63,7 +65,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   }, []);
 
   useEffect(() => {
-    if (!showPortionSelector) return undefined;
+    if (!showPortionSelector) return;
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
         setShowPortionSelector(false);
@@ -195,9 +197,9 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const getGroupShoppingListIngredients = () => {
     const ingredients = [];
     for (const recipe of groupRecipes) {
-      const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+      const targetPortions = portionCounts[recipe.id] ?? (recipe.portionen || DEFAULT_PORTIONS);
       if (targetPortions === 0) continue;
-      const recipePortions = recipe.portionen || 4;
+      const recipePortions = recipe.portionen || DEFAULT_PORTIONS;
       const multiplier = targetPortions / recipePortions;
       for (const ing of (recipe.ingredients || [])) {
         const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
@@ -479,7 +481,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
             </div>
             <div className="portion-selector-body">
               {groupRecipes.map((recipe) => {
-                const current = portionCounts[recipe.id] ?? (recipe.portionen || 4);
+                const current = portionCounts[recipe.id] ?? (recipe.portionen || DEFAULT_PORTIONS);
                 return (
                   <div key={recipe.id} className="portion-selector-item">
                     <span className="portion-selector-recipe-name">{recipe.title}</span>
