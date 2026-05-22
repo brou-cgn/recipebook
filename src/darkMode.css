@@ -1019,7 +1019,7 @@
 
 [data-theme="dark"] .group-list-close-btn {
   background: transparent !important;
-  border-color: #555 !important;
+  border-color: transparent !important;
   color: #e8e8e8;
 }
 
@@ -1028,6 +1028,12 @@
 }
 
 /* ---- Group Detail ---- */
+[data-theme="dark"] .group-header-actions .group-back-icon-btn {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .group-detail-container {
   background: #121212;
 }
