@@ -1017,6 +1017,16 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .group-list-close-btn {
+  background: transparent !important;
+  border-color: #555 !important;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .group-list-close-btn:hover {
+  background: #333 !important;
+}
+
 /* ---- Group Detail ---- */
 [data-theme="dark"] .group-detail-container {
   background: #121212;
@@ -2029,6 +2039,10 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .group-info-row dd {
+  color: #e8e8e8;
+}
+
 /* ---- MenuForm additional ---- */
 [data-theme="dark"] .new-section-input {
   background: #1e1e1e;
@@ -2325,7 +2339,8 @@
 
 /* ---- RecipeDetail additional ---- */
 [data-theme="dark"] .back-button {
-  background: #2a2a2a;
+  background: transparent;
+  color: #e8e8e8;
 }
 
 [data-theme="dark"] .back-button:hover {
@@ -2351,7 +2366,8 @@
   border-color: #555;
 }
 
-[data-theme="dark"] .shopping-list-trigger-button {
+[data-theme="dark"] .shopping-list-trigger-button,
+[data-theme="dark"] .list-settings-trigger-button {
   background: #2a2a2a !important;
   border-color: #555 !important;
 }
