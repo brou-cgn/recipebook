@@ -19,14 +19,17 @@ describe('GroupList CSS layout', () => {
     expect(headingRule).toContain('flex: 1;');
   });
 
-  test('keeps the close button vertically centered in the header row', () => {
+  test('keeps the close button centered with transparent light mode chrome', () => {
     const cssPath = path.join(__dirname, 'GroupList.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const closeButtonRule = getRuleBody(css, '.group-list-close-btn');
+    const closeButtonHoverRule = getRuleBody(css, '.group-list-close-btn:hover');
 
-    expect(closeButtonRule).toContain('display: flex;');
+    expect(closeButtonRule).toContain('display: inline-flex;');
     expect(closeButtonRule).toContain('align-items: center;');
     expect(closeButtonRule).toContain('justify-content: center;');
-    expect(closeButtonRule).toContain('min-height: 2rem;');
+    expect(closeButtonRule).toContain('background: transparent;');
+    expect(closeButtonRule).toContain('border: none;');
+    expect(closeButtonHoverRule).toContain('background: #f0f0f0;');
   });
 });
