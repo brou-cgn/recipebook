@@ -622,13 +622,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             <div className="portion-selector-body">
               {recipeSections.flatMap(s => s.recipes).map(recipe => {
                 const current = portionCounts[recipe.id] ?? (recipe.portionen || 4);
-                const mainId = `main-${recipe.id}`;
+                const portionMinusId = `main-${recipe.id}`;
                 return (
                   <div key={recipe.id} className="portion-selector-item">
                     <span className="portion-selector-recipe-name">{recipe.title}</span>
                     <div className="portion-selector-controls">
                       <button
-                        className={`portion-selector-btn${portionMinusLongPressActiveId === mainId ? ' longpress-active' : ''}`}
+                        className={`portion-selector-btn${portionMinusLongPressActiveId === portionMinusId ? ' longpress-active' : ''}`}
                         onClick={() => {
                           if (portionMinusLongPressTriggeredRef.current) {
                             portionMinusLongPressTriggeredRef.current = false;
@@ -639,10 +639,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                             [recipe.id]: Math.max(0, current - 1)
                           }));
                         }}
-                        onMouseDown={() => handlePortionMinusPressStart(mainId, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
+                        onMouseDown={() => handlePortionMinusPressStart(portionMinusId, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
                         onMouseUp={handlePortionMinusPressEnd}
                         onMouseLeave={handlePortionMinusPressEnd}
-                        onTouchStart={() => handlePortionMinusPressStart(mainId, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
+                        onTouchStart={() => handlePortionMinusPressStart(portionMinusId, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
                         onTouchEnd={handlePortionMinusPressEnd}
                         onTouchCancel={handlePortionMinusPressEnd}
                         aria-label="Portionen verringern"
@@ -670,13 +670,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                   <div className="portion-selector-section-label">Verlinkte Rezepte</div>
                   {allLinkedRecipes.map(linkedRecipe => {
                     const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
-                    const linkedId = `linked-${linkedRecipe.id}`;
+                    const linkedPortionMinusId = `linked-${linkedRecipe.id}`;
                     return (
                       <div key={linkedRecipe.id} className="portion-selector-item">
                         <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
                         <div className="portion-selector-controls">
                           <button
-                            className={`portion-selector-btn${portionMinusLongPressActiveId === linkedId ? ' longpress-active' : ''}`}
+                            className={`portion-selector-btn${portionMinusLongPressActiveId === linkedPortionMinusId ? ' longpress-active' : ''}`}
                             onClick={() => {
                               if (portionMinusLongPressTriggeredRef.current) {
                                 portionMinusLongPressTriggeredRef.current = false;
@@ -687,10 +687,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                                 [linkedRecipe.id]: Math.max(0, current - 1)
                               }));
                             }}
-                            onMouseDown={() => handlePortionMinusPressStart(linkedId, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                            onMouseDown={() => handlePortionMinusPressStart(linkedPortionMinusId, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
                             onMouseUp={handlePortionMinusPressEnd}
                             onMouseLeave={handlePortionMinusPressEnd}
-                            onTouchStart={() => handlePortionMinusPressStart(linkedId, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                            onTouchStart={() => handlePortionMinusPressStart(linkedPortionMinusId, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
                             onTouchEnd={handlePortionMinusPressEnd}
                             onTouchCancel={handlePortionMinusPressEnd}
                             aria-label="Portionen verringern"
