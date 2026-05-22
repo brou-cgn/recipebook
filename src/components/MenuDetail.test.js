@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import MenuDetail from './MenuDetail';
 
 jest.mock('./RecipeCard', () => function MockRecipeCard({ recipe, onClick, isFavorite }) {
@@ -554,5 +554,98 @@ describe('MenuDetail - Edit Button visibility during shopping list planning', ()
 
     fireEvent.click(screen.getByLabelText('Portionsauswahl schließen'));
     expect(screen.getByTitle('Menü bearbeiten')).toBeInTheDocument();
+  });
+});
+
+describe('MenuDetail - Longpress on minus button in portion selector', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const longPressMenu = {
+    id: 'menu-lp',
+    name: 'Longpress Menü',
+    recipeIds: ['recipe-lp'],
+  };
+
+  const longPressRecipe = {
+    id: 'recipe-lp',
+    title: 'Longpress Rezept',
+    portionen: 4,
+    ingredients: ['100 g Butter'],
+  };
+
+  const renderMenu = () =>
+    render(
+      <MenuDetail
+        menu={longPressMenu}
+        recipes={[longPressRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={{ id: 'user-1' }}
+        allUsers={[]}
+      />
+    );
+
+  test('short press (< 500 ms) decrements count by 1', () => {
+    renderMenu();
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  test('long press (>= 500 ms) resets count to 0', () => {
+    renderMenu();
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  test('long press does not further decrement on subsequent click', () => {
+    renderMenu();
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(decrementBtn);
+    // click fires after mouseup on real devices; should be blocked
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  test('touch long press resets count to 0', () => {
+    renderMenu();
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.touchStart(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.touchEnd(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 });

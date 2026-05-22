@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import GroupDetail from './GroupDetail';
 
 // Mock customLists utility so it resolves quickly in tests
@@ -336,5 +336,58 @@ describe('GroupDetail – edit list properties feature', () => {
     expect(deleteFabButton).toBeInTheDocument();
     expect(deleteFabButton).toHaveTextContent('🗑');
     expect(deleteFabButton).toHaveAttribute('aria-label', 'Liste löschen');
+  });
+});
+
+describe('GroupDetail – longpress on minus button in portion selector', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('short press (< 500 ms) decrements count by 1', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    // default portionen is 2
+    expect(screen.getByText('2')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('long press (>= 500 ms) resets count to 0', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('2')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('touch long press resets count to 0', () => {
+    render(<GroupDetail {...defaultProps} recipes={mockRecipes} />);
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('2')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.touchStart(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.touchEnd(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 });

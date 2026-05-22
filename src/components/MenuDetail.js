@@ -41,7 +41,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [portionCounts, setPortionCounts] = useState(initialMenu.portionCounts || {});
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [conversionTable, setConversionTable] = useState([]);
+  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
   const missingSavedRef = useRef(false);
+  const portionMinusLongPressTimerRef = useRef(null);
+  const portionMinusLongPressTriggeredRef = useRef(false);
 
   // Load close button icon from settings
   useEffect(() => {
@@ -334,6 +337,23 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setShowPortionSelector(true);
   };
 
+  const handlePortionMinusPressStart = (id, onLongPress) => {
+    setPortionMinusLongPressActiveId(id);
+    portionMinusLongPressTimerRef.current = setTimeout(() => {
+      portionMinusLongPressTriggeredRef.current = true;
+      onLongPress();
+      setPortionMinusLongPressActiveId(null);
+    }, 500);
+  };
+
+  const handlePortionMinusPressEnd = () => {
+    if (portionMinusLongPressTimerRef.current) {
+      clearTimeout(portionMinusLongPressTimerRef.current);
+      portionMinusLongPressTimerRef.current = null;
+    }
+    setPortionMinusLongPressActiveId(null);
+  };
+
   const getMenuShoppingListIngredients = () => {
     const ingredients = [];
 
@@ -620,11 +640,23 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                     <span className="portion-selector-recipe-name">{recipe.title}</span>
                     <div className="portion-selector-controls">
                       <button
-                        className="portion-selector-btn"
-                        onClick={() => setPortionCounts(prev => ({
-                          ...prev,
-                          [recipe.id]: Math.max(0, current - 1)
-                        }))}
+                        className={`portion-selector-btn${portionMinusLongPressActiveId === `main-${recipe.id}` ? ' longpress-active' : ''}`}
+                        onClick={() => {
+                          if (portionMinusLongPressTriggeredRef.current) {
+                            portionMinusLongPressTriggeredRef.current = false;
+                            return;
+                          }
+                          setPortionCounts(prev => ({
+                            ...prev,
+                            [recipe.id]: Math.max(0, current - 1)
+                          }));
+                        }}
+                        onMouseDown={() => handlePortionMinusPressStart(`main-${recipe.id}`, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
+                        onMouseUp={handlePortionMinusPressEnd}
+                        onMouseLeave={handlePortionMinusPressEnd}
+                        onTouchStart={() => handlePortionMinusPressStart(`main-${recipe.id}`, () => setPortionCounts(prev => ({ ...prev, [recipe.id]: 0 })))}
+                        onTouchEnd={handlePortionMinusPressEnd}
+                        onTouchCancel={handlePortionMinusPressEnd}
                         aria-label="Portionen verringern"
                         disabled={current === 0}
                       >
@@ -655,11 +687,23 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                         <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
                         <div className="portion-selector-controls">
                           <button
-                            className="portion-selector-btn"
-                            onClick={() => setLinkedPortionCounts(prev => ({
-                              ...prev,
-                              [linkedRecipe.id]: Math.max(0, current - 1)
-                            }))}
+                            className={`portion-selector-btn${portionMinusLongPressActiveId === `linked-${linkedRecipe.id}` ? ' longpress-active' : ''}`}
+                            onClick={() => {
+                              if (portionMinusLongPressTriggeredRef.current) {
+                                portionMinusLongPressTriggeredRef.current = false;
+                                return;
+                              }
+                              setLinkedPortionCounts(prev => ({
+                                ...prev,
+                                [linkedRecipe.id]: Math.max(0, current - 1)
+                              }));
+                            }}
+                            onMouseDown={() => handlePortionMinusPressStart(`linked-${linkedRecipe.id}`, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                            onMouseUp={handlePortionMinusPressEnd}
+                            onMouseLeave={handlePortionMinusPressEnd}
+                            onTouchStart={() => handlePortionMinusPressStart(`linked-${linkedRecipe.id}`, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                            onTouchEnd={handlePortionMinusPressEnd}
+                            onTouchCancel={handlePortionMinusPressEnd}
                             aria-label="Portionen verringern"
                             disabled={current === 0}
                           >

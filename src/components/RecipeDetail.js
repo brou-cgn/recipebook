@@ -113,6 +113,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const missingSavedRef = useRef(false);
   const editLongPressTimerRef = useRef(null);
   const editLongPressTriggeredRef = useRef(false);
+  const portionMinusLongPressTimerRef = useRef(null);
+  const portionMinusLongPressTriggeredRef = useRef(false);
+  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
   const [activeTimers, setActiveTimers] = useState({});
   const timerIntervalsRef = useRef({});
   const [alarmRunning, setAlarmRunning] = useState(false);
@@ -480,6 +483,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       return;
     }
     onEdit && onEdit(recipe);
+  };
+
+  // Portion selector minus long press handlers
+  const handlePortionMinusPressStart = (id, onLongPress) => {
+    setPortionMinusLongPressActiveId(id);
+    portionMinusLongPressTimerRef.current = setTimeout(() => {
+      portionMinusLongPressTriggeredRef.current = true;
+      onLongPress();
+      setPortionMinusLongPressActiveId(null);
+    }, 500);
+  };
+
+  const handlePortionMinusPressEnd = () => {
+    if (portionMinusLongPressTimerRef.current) {
+      clearTimeout(portionMinusLongPressTimerRef.current);
+      portionMinusLongPressTimerRef.current = null;
+    }
+    setPortionMinusLongPressActiveId(null);
   };
 
   // Get author name
@@ -2413,11 +2434,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
                     <div className="portion-selector-controls">
                       <button
-                        className="portion-selector-btn"
-                        onClick={() => setLinkedPortionCounts(prev => ({
-                          ...prev,
-                          [linkedRecipe.id]: Math.max(0, current - 1)
-                        }))}
+                        className={`portion-selector-btn${portionMinusLongPressActiveId === linkedRecipe.id ? ' longpress-active' : ''}`}
+                        onClick={() => {
+                          if (portionMinusLongPressTriggeredRef.current) {
+                            portionMinusLongPressTriggeredRef.current = false;
+                            return;
+                          }
+                          setLinkedPortionCounts(prev => ({
+                            ...prev,
+                            [linkedRecipe.id]: Math.max(0, current - 1)
+                          }));
+                        }}
+                        onMouseDown={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                        onMouseUp={handlePortionMinusPressEnd}
+                        onMouseLeave={handlePortionMinusPressEnd}
+                        onTouchStart={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                        onTouchEnd={handlePortionMinusPressEnd}
+                        onTouchCancel={handlePortionMinusPressEnd}
                         aria-label="Portionen verringern"
                         disabled={current === 0}
                       >

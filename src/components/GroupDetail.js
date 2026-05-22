@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './GroupDetail.css';
 import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
@@ -44,6 +44,9 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
+  const [portionMinusLongPressActiveId, setPortionMinusLongPressActiveId] = useState(null);
+  const portionMinusLongPressTimerRef = useRef(null);
+  const portionMinusLongPressTriggeredRef = useRef(false);
 
   useEffect(() => {
     const loadIcons = async () => {
@@ -192,6 +195,23 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
 
   const handleShoppingListClick = () => {
     setShowPortionSelector(true);
+  };
+
+  const handlePortionMinusPressStart = (id, onLongPress) => {
+    setPortionMinusLongPressActiveId(id);
+    portionMinusLongPressTimerRef.current = setTimeout(() => {
+      portionMinusLongPressTriggeredRef.current = true;
+      onLongPress();
+      setPortionMinusLongPressActiveId(null);
+    }, 500);
+  };
+
+  const handlePortionMinusPressEnd = () => {
+    if (portionMinusLongPressTimerRef.current) {
+      clearTimeout(portionMinusLongPressTimerRef.current);
+      portionMinusLongPressTimerRef.current = null;
+    }
+    setPortionMinusLongPressActiveId(null);
   };
 
   const getGroupShoppingListIngredients = () => {
@@ -487,11 +507,23 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
                     <span className="portion-selector-recipe-name">{recipe.title}</span>
                     <div className="portion-selector-controls">
                       <button
-                        className="portion-selector-btn"
-                        onClick={() => setPortionCounts((prev) => ({
-                          ...prev,
-                          [recipe.id]: Math.max(0, current - 1)
-                        }))}
+                        className={`portion-selector-btn${portionMinusLongPressActiveId === recipe.id ? ' longpress-active' : ''}`}
+                        onClick={() => {
+                          if (portionMinusLongPressTriggeredRef.current) {
+                            portionMinusLongPressTriggeredRef.current = false;
+                            return;
+                          }
+                          setPortionCounts((prev) => ({
+                            ...prev,
+                            [recipe.id]: Math.max(0, current - 1)
+                          }));
+                        }}
+                        onMouseDown={() => handlePortionMinusPressStart(recipe.id, () => setPortionCounts((prev) => ({ ...prev, [recipe.id]: 0 })))}
+                        onMouseUp={handlePortionMinusPressEnd}
+                        onMouseLeave={handlePortionMinusPressEnd}
+                        onTouchStart={() => handlePortionMinusPressStart(recipe.id, () => setPortionCounts((prev) => ({ ...prev, [recipe.id]: 0 })))}
+                        onTouchEnd={handlePortionMinusPressEnd}
+                        onTouchCancel={handlePortionMinusPressEnd}
                         aria-label="Portionen verringern"
                         disabled={current === 0}
                       >

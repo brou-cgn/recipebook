@@ -1852,3 +1852,86 @@ describe('RecipeDetail - Step Numbering with Headings', () => {
     expect(regularItems[1].getAttribute('value')).toBe('2');
   });
 });
+
+describe('RecipeDetail - Longpress on minus button in portion selector', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const linkedRecipe = {
+    id: 'recipe-linked-lp',
+    title: 'Pizzateig LP',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['500g Mehl'],
+    steps: ['Mischen'],
+  };
+
+  const recipeWithLink = {
+    id: 'recipe-main-lp',
+    title: 'Pizza LP',
+    authorId: 'user-1',
+    portionen: 4,
+    ingredients: ['#recipe:recipe-linked-lp:Pizzateig LP'],
+    steps: ['Step 1'],
+  };
+
+  const currentUser = { id: 'user-1' };
+
+  const renderAndOpenPortionSelector = () => {
+    render(
+      <RecipeDetail
+        recipe={recipeWithLink}
+        allRecipes={[linkedRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+    fireEvent.click(screen.getByLabelText('Einkaufsliste öffnen'));
+    expect(screen.getByText('Portionen für Einkaufsliste')).toBeInTheDocument();
+  };
+
+  test('short press (< 500 ms) decrements count by 1', () => {
+    renderAndOpenPortionSelector();
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  test('long press (>= 500 ms) resets count to 0', () => {
+    renderAndOpenPortionSelector();
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.mouseDown(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.mouseUp(decrementBtn);
+    fireEvent.click(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  test('touch long press resets count to 0', () => {
+    renderAndOpenPortionSelector();
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    const decrementBtn = screen.getByLabelText('Portionen verringern');
+    fireEvent.touchStart(decrementBtn);
+    act(() => { jest.advanceTimersByTime(600); });
+    fireEvent.touchEnd(decrementBtn);
+
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+});
