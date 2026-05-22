@@ -514,6 +514,15 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           </button>
         ) : null}
       />
+      <div className="startseite-rezeptsammlungen-wrapper">
+        <button
+          type="button"
+          className="startseite-rezeptsammlungen-btn"
+          onClick={() => onViewChange?.('groups')}
+        >
+          Meine Rezeptsammlungen
+        </button>
+      </div>
       <StartseitenKarussell
         title="Im Trend"
         items={topRecipes}
