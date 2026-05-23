@@ -10,11 +10,14 @@ import GroupEditDialog from './GroupEditDialog';
 import RecipeCard from './RecipeCard';
 
 const DEFAULT_PORTIONS = 4;
+const TAB_RECIPES = 'rezepte';
+const TAB_SETTINGS = 'einstellungen';
+const DEFAULT_LIST_SETTINGS_ICON = '⚙';
 const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
   getEffectiveIcon(icons, 'listSettingsActive', isDarkMode)
   || DEFAULT_BUTTON_ICONS.listSettingsActive
   || DEFAULT_BUTTON_ICONS.listSettings
-  || '⚙'
+  || DEFAULT_LIST_SETTINGS_ICON
 );
 
 /**
@@ -36,10 +39,10 @@ const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
  */
 function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDeleteGroup, onAddRecipe, recipes, onSelectRecipe, privateLists = [], onEditGroupProperties }) {
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('rezepte');
+  const [activeTab, setActiveTab] = useState(TAB_RECIPES);
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
-  const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || '⚙');
+  const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
   const [listSettingsActiveIcon, setListSettingsActiveIcon] = useState(resolveListSettingsActiveIcon(DEFAULT_BUTTON_ICONS, getDarkModePreference()));
   const [addMemberIcon, setAddMemberIcon] = useState(DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -74,7 +77,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   useEffect(() => {
     setBackIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
     setShoppingListIcon(getEffectiveIcon(allButtonIcons, 'shoppingList', isDarkMode) || DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
-    setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || '⚙');
+    setListSettingsIcon(getEffectiveIcon(allButtonIcons, 'listSettings', isDarkMode) || DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
     setListSettingsActiveIcon(resolveListSettingsActiveIcon(allButtonIcons, isDarkMode));
     setAddMemberIcon(getEffectiveIcon(allButtonIcons, 'addGroupMember', isDarkMode) || DEFAULT_BUTTON_ICONS.addGroupMember || '👤+');
   }, [allButtonIcons, isDarkMode]);
@@ -107,7 +110,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
   const editGroupIcon = getEffectiveIcon(allButtonIcons, 'editRecipe', isDarkMode);
   const deleteGroupIcon = getEffectiveIcon(allButtonIcons, 'deleteRecipe', isDarkMode);
-  const activeListSettingsIcon = activeTab === 'einstellungen' ? listSettingsActiveIcon : listSettingsIcon;
+  const activeListSettingsIcon = activeTab === TAB_SETTINGS ? listSettingsActiveIcon : listSettingsIcon;
 
   const getMemberName = (userId) => {
     const user = (allUsers || []).find((u) => u.id === userId);
@@ -258,7 +261,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           )}
         </div>
         <div className="group-header-actions">
-          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (isPublic || activeTab === 'rezepte') && (
+          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (isPublic || activeTab === TAB_RECIPES) && (
             <button
               className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
               onClick={() => onAddRecipe(group.id)}
@@ -295,7 +298,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
           {!isPublic && (
             <button
               className="list-settings-trigger-button"
-              onClick={() => setActiveTab(activeTab === 'einstellungen' ? 'rezepte' : 'einstellungen')}
+              onClick={() => setActiveTab(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
               title="Einstellungen anzeigen"
               aria-label="Einstellungen öffnen"
             >
@@ -316,7 +319,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         </div>
       </div>
 
-      {(isPublic || activeTab === 'rezepte') && (
+      {(isPublic || activeTab === TAB_RECIPES) && (
         <div className="group-detail-section group-recipes-section">
           <h3>Rezepte ({groupRecipes.length})</h3>
           {groupRecipes.length === 0 ? (
@@ -336,7 +339,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         </div>
       )}
 
-      {!isPublic && activeTab === 'einstellungen' && (
+      {!isPublic && activeTab === TAB_SETTINGS && (
         <>
           <div className="group-detail-section group-info-section">
             <h3>Listeneinstellungen</h3>
@@ -513,7 +516,7 @@ function GroupDetail({ group, allUsers, currentUser, onBack, onUpdateGroup, onDe
         </div>
       )}
 
-      {isOwner && !isPublic && activeTab === 'einstellungen' && !showPortionSelector && !showShoppingListModal && (
+      {isOwner && !isPublic && activeTab === TAB_SETTINGS && !showPortionSelector && !showShoppingListModal && (
         <>
           <button
             className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
