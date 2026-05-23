@@ -52,6 +52,8 @@
   flex-shrink: 0;
   background: transparent;
   border: none;
+  -webkit-appearance: none;
+  appearance: none;
   border-radius: 12px;
   cursor: pointer;
   line-height: 1;
