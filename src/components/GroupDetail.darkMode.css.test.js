@@ -54,6 +54,8 @@ describe('GroupDetail light mode styles', () => {
     expect(settingsRule).toContain('border: 1px solid #f0f0f0 !important;');
     expect(backRule).toContain('background: transparent !important;');
     expect(backRule).toContain('border: none !important;');
+    expect(backRule).toContain('-webkit-tap-highlight-color: transparent;');
+    expect(backRule).toContain('touch-action: manipulation;');
     expect(settingsRule).toContain('display: inline-flex;');
     expect(backRule).toContain('display: inline-flex;');
   });

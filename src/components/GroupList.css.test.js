@@ -30,6 +30,8 @@ describe('GroupList CSS layout', () => {
     expect(closeButtonRule).toContain('justify-content: center;');
     expect(closeButtonRule).toContain('background: transparent;');
     expect(closeButtonRule).toContain('border: none;');
+    expect(closeButtonRule).toContain('-webkit-tap-highlight-color: transparent;');
+    expect(closeButtonRule).toContain('touch-action: manipulation;');
     expect(closeButtonHoverRule).toContain('background: #f0f0f0;');
   });
 });

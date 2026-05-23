@@ -57,6 +57,8 @@
   line-height: 1;
   font-size: 1.4rem;
   color: #555;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
