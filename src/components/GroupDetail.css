@@ -197,7 +197,8 @@
   border: none;
 }*/
 
-.shopping-list-icon-img {
+.shopping-list-icon-img,
+.list-settings-icon-img {
   width: 1.5rem;
   height: 1.5rem;
   object-fit: contain;

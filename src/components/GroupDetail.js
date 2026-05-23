@@ -516,7 +516,7 @@ function GroupDetail({
               aria-label="Einstellungen öffnen"
             >
               {isBase64Image(activeListSettingsIcon) ? (
-                <img src={activeListSettingsIcon} alt="Einstellungen" className="shopping-list-icon-img" />
+                <img src={activeListSettingsIcon} alt="Einstellungen" className="list-settings-icon-img" />
               ) : (
                 activeListSettingsIcon
               )}
