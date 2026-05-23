@@ -125,7 +125,7 @@ function GroupDetail({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showPortionSelector]);
 
-  const groupRecipes = useMemo(() => recipes || [], [recipes]);
+  const groupRecipes = recipes || [];
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -138,7 +138,7 @@ function GroupDetail({
   // are passed to this component.
   const filteredGroupRecipes = useMemo(() => {
     if (!group) return [];
-    let filtered = groupRecipes;
+    let filtered = recipes || [];
 
     if (showFavoritesOnly) {
       filtered = filtered.filter(recipe => favoriteIds.includes(recipe.id));
@@ -152,7 +152,7 @@ function GroupDetail({
     }
 
     return filtered;
-  }, [group, groupRecipes, showFavoritesOnly, favoriteIds, searchTerm]);
+  }, [group, recipes, showFavoritesOnly, favoriteIds, searchTerm]);
 
   if (!group) return null;
 

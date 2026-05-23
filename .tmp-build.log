@@ -1,0 +1,48 @@
+
+> recipebook@1.163.0 build
+> react-scripts build
+
+(node:4858) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+
+Treating warnings as errors because process.env.CI = true.
+Most CI servers set it automatically.
+
+Failed to compile.
+
+[eslint] 
+src/components/AppCallsPage.js
+  Line 84:10:  'newCuisineDuplicateError' is assigned a value but never used  no-unused-vars
+  Line 88:10:  'cuisineLoading' is assigned a value but never used            no-unused-vars
+  Line 181:9:  'handleAddCuisineProposal' is assigned a value but never used  no-unused-vars
+
+src/components/CookDateModal.js
+  Line 60:9:  'formatSelectedDate' is assigned a value but never used  no-unused-vars
+
+src/components/MobileSearchOverlay.js
+  Line 116:6:  React Hook useEffect has a missing dependency: 'searchTermProp'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/RecipeDetail.js
+  Line 973:9:    'categoryDisplay' is assigned a value but never used  no-unused-vars
+  Line 1186:12:  'pauseTimer' is defined but never used                no-unused-vars
+  Line 1203:12:  'resumeTimer' is defined but never used               no-unused-vars
+
+src/components/RecipeForm.js
+  Line 1000:9:  'handleRemoveImage' is assigned a value but never used  no-unused-vars
+
+src/components/RecipeList.js
+  Line 97:9:  'setShowFavoritesOnly' is assigned a value but never used  no-unused-vars
+
+src/components/Settings.js
+  Line 3:799:   'getDarkModePreference' is defined but never used                                                                                                                                                                                                                                                  no-unused-vars
+  Line 407:47:  The ref value 'buttonIconSaveTimeoutsRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'buttonIconSaveTimeoutsRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+src/components/SortCarousel.js
+  Line 222:15:  'startX' is assigned a value but never used                                                                                         no-unused-vars
+  Line 234:5:   React Hook useCallback has an unnecessary dependency: 'expandWithFrozenViewport'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/Startseite.js
+  Line 33:10:  'groupThresholds' is assigned a value but never used  no-unused-vars
+
+
