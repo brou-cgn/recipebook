@@ -1034,6 +1034,12 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .group-header-actions .list-settings-trigger-button {
+  background: #2a2a2a !important;
+  border-color: #555 !important;
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .group-detail-container {
   background: #121212;
 }

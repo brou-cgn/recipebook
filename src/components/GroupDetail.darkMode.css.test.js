@@ -41,6 +41,16 @@ describe('GroupDetail dark mode styles', () => {
     expect(rule).not.toContain('border-color');
     expect(rule).not.toContain('border:');
   });
+
+  test('styles private list settings button with dark background in header actions', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '[data-theme="dark"] .group-header-actions .list-settings-trigger-button');
+
+    expect(rule).toContain('background: #2a2a2a !important;');
+    expect(rule).toContain('border-color: #555 !important;');
+    expect(rule).toContain('color: #e8e8e8;');
+  });
 });
 
 describe('GroupDetail light mode styles', () => {
