@@ -58,6 +58,8 @@
   font-size: 1.4rem;
   color: #555;
   -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
   touch-action: manipulation;
   transition:
     color 0.2s ease,
