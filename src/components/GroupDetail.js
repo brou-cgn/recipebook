@@ -116,14 +116,25 @@ function GroupDetail({
   useEffect(() => {
     const loadFavorites = async () => {
       if (currentUser?.id) {
-        const favorites = await getUserFavorites(currentUser.id);
-        setFavoriteIds(favorites);
+        try {
+          const favorites = await getUserFavorites(currentUser.id);
+          setFavoriteIds(favorites);
+        } catch {
+          setFavoriteIds([]);
+        }
       } else {
         setFavoriteIds([]);
       }
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  useEffect(() => () => {
+    if (filterLongPressTimer.current) {
+      clearTimeout(filterLongPressTimer.current);
+      filterLongPressTimer.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!showPortionSelector) return;
@@ -143,8 +154,11 @@ function GroupDetail({
   const isMember = (group.memberIds || []).includes(currentUser?.id);
 
   const groupRecipes = recipes || [];
+  const hasSelectedGroup = typeof activeFilters?.selectedGroup === 'string'
+    ? activeFilters.selectedGroup.trim().length > 0
+    : !!activeFilters?.selectedGroup;
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || (activeFilters && (
-    activeFilters.selectedGroup ||
+    hasSelectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0 ||
     activeFilters.selectedPrivateLists?.length > 0
