@@ -203,6 +203,12 @@
   object-fit: contain;
 }
 
+.list-settings-icon-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
 .group-detail-section {
   background: white;
   border-radius: 12px;

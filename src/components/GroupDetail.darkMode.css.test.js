@@ -59,6 +59,7 @@ describe('GroupDetail light mode styles', () => {
     const css = fs.readFileSync(cssPath, 'utf8');
     const settingsRule = getRuleBody(css, '.group-header-actions .list-settings-trigger-button');
     const shoppingRule = getRuleBody(css, '.group-header-actions .shopping-list-trigger-button');
+    const settingsIconRule = getRuleBody(css, '.list-settings-icon-img');
     const backRule = getRuleBody(css, '.group-header-actions .group-back-icon-btn');
 
     expect(settingsRule).toContain('background: #fff !important;');
@@ -73,6 +74,8 @@ describe('GroupDetail light mode styles', () => {
     expect(settingsRule).toContain('touch-action: manipulation;');
     expect(shoppingRule).toContain('-webkit-tap-highlight-color: transparent;');
     expect(shoppingRule).toContain('touch-action: manipulation;');
+    expect(settingsIconRule).toContain('width: 1.5rem;');
+    expect(settingsIconRule).toContain('height: 1.5rem;');
   });
 
   test('uses unified active feedback on settings and shopping list header action buttons', () => {
