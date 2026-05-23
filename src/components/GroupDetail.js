@@ -147,12 +147,6 @@ function GroupDetail({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [showPortionSelector]);
 
-  if (!group) return null;
-
-  const isOwner = group.ownerId === currentUser?.id;
-  const isPublic = group.type === 'public';
-  const isMember = (group.memberIds || []).includes(currentUser?.id);
-
   const groupRecipes = recipes || [];
   const hasSelectedGroup = typeof activeFilters?.selectedGroup === 'string'
     ? activeFilters.selectedGroup.trim().length > 0
@@ -168,7 +162,8 @@ function GroupDetail({
   // filters (draft/cuisine/author/private-list) are applied in App before `recipes`
   // are passed to this component.
   const filteredGroupRecipes = useMemo(() => {
-    let filtered = groupRecipes;
+    if (!group) return [];
+    let filtered = recipes || [];
 
     if (showFavoritesOnly) {
       filtered = filtered.filter(recipe => favoriteIds.includes(recipe.id));
@@ -182,7 +177,13 @@ function GroupDetail({
     }
 
     return filtered;
-  }, [groupRecipes, showFavoritesOnly, favoriteIds, searchTerm]);
+  }, [group, recipes, showFavoritesOnly, favoriteIds, searchTerm]);
+
+  if (!group) return null;
+
+  const isOwner = group.ownerId === currentUser?.id;
+  const isPublic = group.type === 'public';
+  const isMember = (group.memberIds || []).includes(currentUser?.id);
 
   const addRecipeLabel = isPublic ? 'Rezept hinzufügen' : 'Privates Rezept hinzufügen';
   const addRecipeIcon = getEffectiveIcon(allButtonIcons, isPublic ? 'addRecipe' : 'addPrivateRecipe', isDarkMode);
