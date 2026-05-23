@@ -17,6 +17,12 @@ jest.mock('../utils/customLists', () => ({
     filterButton: '⚙',
     filterButtonActive: '🔽'
   }),
+  getSortSettings: () => Promise.resolve({
+    trendingDays: 30,
+    trendingMinViews: 1,
+    newRecipeDays: 30,
+    ratingMinVotes: 1,
+  }),
   DEFAULT_BUTTON_ICONS: {
     privateListBack: '←',
     listSettings: '⚙',
@@ -29,6 +35,7 @@ jest.mock('../utils/customLists', () => ({
   },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
+  DEFAULT_TRENDING_DAYS: 30,
 }));
 
 // Mock groupFirestore so LIST_KIND_OPTIONS is available without Firebase
@@ -48,6 +55,21 @@ jest.mock('../utils/imageUtils', () => ({
 jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: jest.fn().mockResolvedValue([]),
 }));
+
+jest.mock('../utils/recipeCallsFirestore', () => ({
+  getRecentRecipeCalls: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock('./SortCarousel', () => function MockSortCarousel({ onSortChange, activeSort }) {
+  return (
+    <div data-testid="sort-carousel" data-active-sort={activeSort}>
+      <button type="button" onClick={() => onSortChange('alphabetical')}>Alphabetisch</button>
+      <button type="button" onClick={() => onSortChange('rating')}>Nach Bewertung</button>
+      <button type="button" onClick={() => onSortChange('newest')}>Neue Rezepte</button>
+      <button type="button" onClick={() => onSortChange('trending')}>Im Trend</button>
+    </div>
+  );
+});
 
 const mockOwner = { id: 'owner1', vorname: 'Anna', nachname: 'Müller' };
 const mockMember = { id: 'member1', vorname: 'Ben', nachname: 'Schmidt' };
@@ -691,6 +713,16 @@ describe('GroupDetail – private list filter button', () => {
     expect(screen.getByRole('button', { name: 'Weitere Filter' })).toHaveClass('has-active-filters');
   });
 
+  it('does not mark filter button as active for stale private-list pills in private list view', () => {
+    render(
+      <GroupDetail
+        {...defaultProps}
+        activeFilters={{ selectedPrivateLists: ['other-list'] }}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Weitere Filter' })).not.toHaveClass('has-active-filters');
+  });
+
   it('filters recipes by search term', async () => {
     render(
       <GroupDetail
@@ -705,6 +737,63 @@ describe('GroupDetail – private list filter button', () => {
     expect(screen.getByText('Kartoffelsuppe')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText('Pasta')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('GroupDetail – private list sorting', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      sessionStorage.clear();
+    });
+
+    it('shows the sort carousel for private lists when the user has sort permission', () => {
+      render(
+        <GroupDetail
+          {...defaultProps}
+          currentUser={{ ...mockOwner, sortCarousel: true }}
+          recipes={mockRecipes}
+        />
+      );
+
+      expect(screen.getByTestId('sort-carousel')).toBeInTheDocument();
+    });
+
+    it('sorts private-list recipes alphabetically by default', async () => {
+      render(
+        <GroupDetail
+          {...defaultProps}
+          currentUser={{ ...mockOwner, sortCarousel: true }}
+          recipes={[
+            { id: 'r2', title: 'Zitronenkuchen', portionen: 2, ingredients: [] },
+            { id: 'r1', title: 'Apfelkuchen', portionen: 2, ingredients: [] },
+          ]}
+        />
+      );
+
+      await waitFor(() => {
+        const titles = Array.from(document.querySelectorAll('.recipe-card h3')).map((node) => node.textContent);
+        expect(titles).toEqual(['Apfelkuchen', 'Zitronenkuchen']);
+      });
+    });
+
+    it('re-sorts private-list recipes when rating sort is selected', async () => {
+      render(
+        <GroupDetail
+          {...defaultProps}
+          currentUser={{ ...mockOwner, sortCarousel: true }}
+          recipes={[
+            { id: 'r1', title: 'Apfelkuchen', portionen: 2, ingredients: [], ratingAvg: 3.8, ratingCount: 10 },
+            { id: 'r2', title: 'Zitronenkuchen', portionen: 2, ingredients: [], ratingAvg: 4.9, ratingCount: 10 },
+          ]}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Nach Bewertung' }));
+
+      await waitFor(() => {
+        const titles = Array.from(document.querySelectorAll('.recipe-card h3')).map((node) => node.textContent);
+        expect(titles).toEqual(['Zitronenkuchen', 'Apfelkuchen']);
+      });
     });
   });
 });

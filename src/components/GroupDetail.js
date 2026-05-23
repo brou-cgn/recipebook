@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLongPress } from '../utils/useLongPress';
 import './GroupDetail.css';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 import { getUserFavorites } from '../utils/userFavorites';
+import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { sortRecipeGroups } from './RecipeList';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
 import RecipeCard from './RecipeCard';
+import SortCarousel from './SortCarousel';
 
 const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
 const TAB_SETTINGS = 'einstellungen';
 const DEFAULT_LIST_SETTINGS_ICON = '⚙';
+const PRIVATE_LIST_SORT_STORAGE_KEY = 'recipebook_private_list_active_sort';
 const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
   getEffectiveIcon(icons, 'listSettingsActive', isDarkMode)
   || DEFAULT_BUTTON_ICONS.listSettingsActive
@@ -80,6 +84,11 @@ function GroupDetail({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
+  const [activeSort, setActiveSort] = useState(
+    () => sessionStorage.getItem(PRIVATE_LIST_SORT_STORAGE_KEY) || 'alphabetical'
+  );
+  const [sortSettings, setSortSettings] = useState(null);
+  const [viewCounts, setViewCounts] = useState(null);
   const [filterPressed, setFilterPressed] = useState(false);
   const filterLongPressTimer = useRef(null);
   const filterLongPressed = useRef(false);
@@ -129,6 +138,48 @@ function GroupDetail({
     loadFavorites();
   }, [currentUser?.id]);
 
+  useEffect(() => {
+    sessionStorage.setItem(PRIVATE_LIST_SORT_STORAGE_KEY, activeSort);
+  }, [activeSort]);
+
+  useEffect(() => {
+    const loadSortSettings = async () => {
+      try {
+        const settings = await getSortSettings();
+        setSortSettings(settings);
+      } catch (error) {
+        console.error('Error loading sort settings:', error);
+      }
+    };
+    loadSortSettings();
+  }, []);
+
+  useEffect(() => {
+    if (activeSort !== 'trending') return;
+    let cancelled = false;
+    const days = sortSettings?.trendingDays ?? DEFAULT_TRENDING_DAYS;
+    const loadViewCounts = async () => {
+      try {
+        const calls = await getRecentRecipeCalls(days);
+        if (cancelled) return;
+        const counts = new Map();
+        calls.forEach((call) => {
+          if (call.recipeId) {
+            counts.set(call.recipeId, (counts.get(call.recipeId) || 0) + 1);
+          }
+        });
+        setViewCounts(counts);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading view counts:', error);
+          setViewCounts(new Map());
+        }
+      }
+    };
+    loadViewCounts();
+    return () => { cancelled = true; };
+  }, [activeSort, sortSettings]);
+
   useEffect(() => () => {
     if (filterLongPressTimer.current) {
       clearTimeout(filterLongPressTimer.current);
@@ -154,8 +205,7 @@ function GroupDetail({
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || (activeFilters && (
     hasSelectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
-    activeFilters.selectedAuthors?.length > 0 ||
-    activeFilters.selectedPrivateLists?.length > 0
+    activeFilters.selectedAuthors?.length > 0
   )));
 
   // searchTerm/showFavoritesOnly are filtered locally here; the remaining overlay
@@ -178,6 +228,12 @@ function GroupDetail({
 
     return filtered;
   }, [group, recipes, showFavoritesOnly, favoriteIds, searchTerm]);
+
+  const sortedGroupRecipes = useMemo(() => {
+    const recipeGroups = filteredGroupRecipes.map((recipe) => ({ primaryRecipe: recipe }));
+    return sortRecipeGroups(recipeGroups, activeSort, sortSettings, viewCounts)
+      .map((recipeGroup) => recipeGroup.primaryRecipe);
+  }, [filteredGroupRecipes, activeSort, sortSettings, viewCounts]);
 
   if (!group) return null;
 
@@ -405,6 +461,9 @@ function GroupDetail({
               )}
             </button>
           )}
+          {!isPublic && activeTab === TAB_RECIPES && currentUser?.sortCarousel && (
+            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
+          )}
           {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (isPublic || activeTab === TAB_RECIPES) && (
             <button
               className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
@@ -466,11 +525,11 @@ function GroupDetail({
       {(isPublic || activeTab === TAB_RECIPES) && (
         <div className="group-detail-section group-recipes-section">
           {isPublic && <h3>Rezepte ({groupRecipes.length})</h3>}
-          {filteredGroupRecipes.length === 0 ? (
+          {sortedGroupRecipes.length === 0 ? (
             <p className="group-empty-hint">Noch keine Rezepte in dieser Liste.</p>
           ) : (
             <div className="recipe-grid group-recipe-grid">
-              {filteredGroupRecipes.map((recipe) => (
+              {sortedGroupRecipes.map((recipe) => (
                 <RecipeCard
                   key={recipe.id}
                   recipe={recipe}

@@ -445,6 +445,20 @@ describe('MobileSearchOverlay – private list carousel', () => {
     expect(screen.queryByText('Lieblingsrezepte')).not.toBeInTheDocument();
   });
 
+  test('does not show or apply private list pills when private list filters are disabled', () => {
+    renderOverlay({
+      currentUser: loggedInUser,
+      privateLists: mockPrivateLists,
+      onPrivateListFilterChange: jest.fn(),
+      selectedPrivateLists: ['pl1'],
+      showPrivateListFilters: false,
+    });
+
+    expect(screen.queryByText('Lieblingsrezepte')).not.toBeInTheDocument();
+    expect(screen.getByText('Sushi')).toBeInTheDocument();
+    expect(screen.getByText('Pad Thai')).toBeInTheDocument();
+  });
+
   test('filters private list pills by search term', async () => {
     renderOverlay({
       currentUser: loggedInUser,

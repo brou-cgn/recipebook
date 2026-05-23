@@ -312,8 +312,8 @@ function App() {
     return undefined;
   }, [groups, recipeFilters.selectedGroup, recipeFilters.selectedPrivateLists]);
 
-  // Recipes belonging to the currently selected group
-  const selectedGroupRecipes = useMemo(() => {
+  // Recipes belonging to the currently selected group before cuisine/author/list filters
+  const selectedGroupBaseRecipes = useMemo(() => {
     if (!selectedGroup) return [];
     if (selectedGroup.type === 'public') {
       // Public group shows recipes explicitly assigned to it, recipes with no group,
@@ -325,12 +325,23 @@ function App() {
     const groupFilteredRecipes = recipes.filter((r) => r.groupId === selectedGroup.id || groupRecipeIds.includes(r.id));
 
     return groupFilteredRecipes.filter((recipe) =>
-      matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
+      matchesDraftFilter(recipe, recipeFilters.showDrafts)
+    );
+  }, [recipes, selectedGroup, recipeFilters.showDrafts]);
+
+  // Recipes belonging to the currently selected group
+  const selectedGroupRecipes = useMemo(() => {
+    if (!selectedGroup) return [];
+
+    return selectedGroupBaseRecipes.filter((recipe) =>
       matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
       matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
-      matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
+      (
+        selectedGroup.type === 'private' ||
+        matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
+      )
     );
-  }, [recipes, selectedGroup, recipeFilters, cuisineGroups, groups]);
+  }, [selectedGroupBaseRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups]);
 
   // Detect share URL: #share/:shareId or /share/:shareId (pathname)
   const getShareIdFromHash = () => {
@@ -1361,13 +1372,6 @@ function App() {
     setRecipeFilters(prev => ({ ...prev, selectedPrivateLists: newSelectedPrivateLists }));
   };
 
-  const availableAuthorsForSearch = useMemo(
-    () => allUsers
-      .filter(u => recipes.some(r => r.authorId === u.id))
-      .map(u => ({ id: u.id, name: u.vorname })),
-    [allUsers, recipes]
-  );
-
   const privateListsForSearch = useMemo(
     () => groups.filter(
       (g) =>
@@ -1377,6 +1381,41 @@ function App() {
     ),
     [groups, currentUser]
   );
+
+  const isPrivateListSearchContext = currentView === 'groups' && selectedGroup?.type === 'private';
+  const overlayRecipes = isPrivateListSearchContext ? selectedGroupBaseRecipes : recipes;
+  const overlayAvailableAuthors = useMemo(
+    () => allUsers
+      .filter((u) => overlayRecipes.some((r) => r.authorId === u.id))
+      .map((u) => ({ id: u.id, name: u.vorname })),
+    [allUsers, overlayRecipes]
+  );
+  const overlayCuisineTypes = useMemo(() => {
+    if (!isPrivateListSearchContext) return cuisineTypes;
+
+    const availableTypes = new Set();
+    overlayRecipes.forEach((recipe) => {
+      const kulinarik = Array.isArray(recipe.kulinarik)
+        ? recipe.kulinarik
+        : recipe.kulinarik
+          ? [recipe.kulinarik]
+          : [];
+      kulinarik.forEach((type) => availableTypes.add(type));
+    });
+
+    return cuisineTypes.filter((type) => availableTypes.has(type));
+  }, [isPrivateListSearchContext, cuisineTypes, overlayRecipes]);
+  const overlayCuisineGroups = useMemo(() => {
+    if (!isPrivateListSearchContext) return cuisineGroups;
+
+    const availableTypes = new Set(overlayCuisineTypes);
+    return (cuisineGroups || [])
+      .map((group) => {
+        const children = (group.children || []).filter((child) => availableTypes.has(child));
+        return { ...group, children };
+      })
+      .filter((group) => availableTypes.has(group.name) || group.children.length > 0);
+  }, [isPrivateListSearchContext, cuisineGroups, overlayCuisineTypes]);
 
   // Interactive lists are private groups with listKind === 'interactive' that the
   // current user owns or is a member of.
@@ -1710,7 +1749,7 @@ function App() {
       <MobileSearchOverlay
         isOpen={isMobileSearchOpen}
         onClose={() => setIsMobileSearchOpen(false)}
-        recipes={recipes}
+        recipes={overlayRecipes}
         currentUser={currentUser}
         onSelectRecipe={(recipe) => {
           setIsMobileSearchOpen(false);
@@ -1721,16 +1760,17 @@ function App() {
         searchTerm={searchTerm}
         showFavoritesOnly={showFavoritesOnly}
         onFavoritesToggle={setShowFavoritesOnly}
-        cuisineTypes={cuisineTypes}
-        cuisineGroups={cuisineGroups}
+        cuisineTypes={overlayCuisineTypes}
+        cuisineGroups={overlayCuisineGroups}
         onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
         selectedCuisines={recipeFilters.selectedCuisines}
-        availableAuthors={availableAuthorsForSearch}
+        availableAuthors={overlayAvailableAuthors}
         onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
         selectedAuthors={recipeFilters.selectedAuthors}
-        privateLists={privateListsForSearch}
-        onPrivateListFilterChange={handlePrivateListFilterChangeFromSearch}
-        selectedPrivateLists={recipeFilters.selectedPrivateLists}
+        privateLists={isPrivateListSearchContext ? [] : privateListsForSearch}
+        onPrivateListFilterChange={isPrivateListSearchContext ? undefined : handlePrivateListFilterChangeFromSearch}
+        selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
+        showPrivateListFilters={!isPrivateListSearchContext}
       />
     </div>
   );

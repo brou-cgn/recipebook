@@ -18,7 +18,7 @@ export function isNewRecipe(recipe, sortSettings) {
   return ms >= cutoff;
 }
 
-function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
+export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
   const toMs = (ts) => {
     if (!ts) return 0;
     if (typeof ts.toDate === 'function') return ts.toDate().getTime();

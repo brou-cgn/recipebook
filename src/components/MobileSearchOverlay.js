@@ -64,7 +64,7 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
   return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -107,13 +107,13 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       setShowFavoritesOnly(showFavoritesOnlyProp ?? false);
       setSelectedCuisines(selectedCuisinesPropRef.current ?? []);
       setSelectedAuthors(selectedAuthorsPropRef.current ?? []);
-      setSelectedPrivateLists(selectedPrivateListsPropRef.current ?? []);
+      setSelectedPrivateLists(showPrivateListFilters ? (selectedPrivateListsPropRef.current ?? []) : []);
       const timer = setTimeout(() => {
         inputRef.current?.focus();
       }, FOCUS_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, showFavoritesOnlyProp]);
+  }, [isOpen, showFavoritesOnlyProp, showPrivateListFilters]);
 
   // Debounce search term
   useEffect(() => {
@@ -175,7 +175,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     if (selectedAuthors.length > 0) {
       list = list.filter((r) => selectedAuthors.includes(r.authorId));
     }
-    if (selectedPrivateLists.length > 0) {
+    if (showPrivateListFilters && selectedPrivateLists.length > 0) {
       list = list.filter((r) =>
         selectedPrivateLists.some((listId) => {
           if (r.groupId === listId) return true;
@@ -185,7 +185,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       );
     }
     return list;
-  }, [recipes, showFavoritesOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists]);
+  }, [recipes, showFavoritesOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters]);
 
   const filteredRecipes = fuzzyFilter(
     baseRecipes,
@@ -467,7 +467,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
 
         {/* Private Listen-Karussell – single-row horizontal carousel below the author filter */}
         {/* Only visible for logged-in users; active (selected) lists shown first */}
-        {currentUser && orderedPrivateListPills.length > 0 && (
+        {showPrivateListFilters && currentUser && orderedPrivateListPills.length > 0 && (
           <div className="mobile-search-private-list-grid">
             {orderedPrivateListPills.map((list) => (
               <button
