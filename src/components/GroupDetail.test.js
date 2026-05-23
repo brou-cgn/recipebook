@@ -7,8 +7,8 @@ jest.mock('./RecipeImageCarousel', () => () => <div data-testid="mock-carousel" 
 
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑', addGroupMember: '👤+' }),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑', addGroupMember: '👤+' },
+  getButtonIcons: () => Promise.resolve({ privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑', addGroupMember: '👤+', filterButton: '⚙', filterButtonActive: '🔽' }),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '←', editRecipe: '✎', deleteRecipe: '🗑', addGroupMember: '👤+', filterButton: '⚙', filterButtonActive: '🔽' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -25,6 +25,10 @@ jest.mock('../utils/groupFirestore', () => ({
 // Mock imageUtils
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock('../utils/userFavorites', () => ({
+  getUserFavorites: jest.fn().mockResolvedValue([]),
 }));
 
 const mockOwner = { id: 'owner1', vorname: 'Anna', nachname: 'Müller' };
@@ -90,8 +94,13 @@ describe('GroupDetail – no tab bar', () => {
     expect(screen.queryByRole('tab', { name: /Einstellungen/i })).not.toBeInTheDocument();
   });
 
-  it('shows the recipe section by default', () => {
+  it('hides the "Rezepte (#)" heading for private groups', () => {
     render(<GroupDetail {...defaultProps} />);
+    expect(screen.queryByText(/Rezepte \(/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the recipes heading for public groups', () => {
+    render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
     expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
   });
 
@@ -598,8 +607,8 @@ describe('GroupDetail – settings button', () => {
 
   it('clicking the settings button shows the settings view', () => {
     render(<GroupDetail {...defaultProps} />);
-    // Recipes section visible by default
-    expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
+    // Recipes section visible by default (without redundant heading)
+    expect(screen.queryByText(/Rezepte \(/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Listeneinstellungen')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
@@ -615,7 +624,7 @@ describe('GroupDetail – settings button', () => {
 
     fireEvent.click(screen.getByLabelText('Einstellungen öffnen'));
     expect(screen.queryByText('Listeneinstellungen')).not.toBeInTheDocument();
-    expect(screen.getByText(/Rezepte \(/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Rezepte \(/i)).not.toBeInTheDocument();
   });
 
   it('shows the edit and delete FABs after clicking the settings button (for owner)', () => {
@@ -628,6 +637,44 @@ describe('GroupDetail – settings button', () => {
 
     expect(container.querySelector('.group-edit-fab-button')).toBeInTheDocument();
     expect(container.querySelector('.delete-fab-button')).toBeInTheDocument();
+  });
+
+  describe('GroupDetail – private list filter button', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('shows filter button for private groups', () => {
+      render(<GroupDetail {...defaultProps} />);
+      expect(screen.getByRole('button', { name: 'Weitere Filter' })).toBeInTheDocument();
+    });
+
+    it('does not show filter button for public groups', () => {
+      render(<GroupDetail {...defaultProps} group={mockPublicGroup} />);
+      expect(screen.queryByRole('button', { name: 'Weitere Filter' })).not.toBeInTheDocument();
+    });
+
+    it('marks filter button as active when filters are active', () => {
+      render(<GroupDetail {...defaultProps} searchTerm="Suppe" />);
+      expect(screen.getByRole('button', { name: 'Weitere Filter' })).toHaveClass('has-active-filters');
+    });
+
+    it('filters recipes by search term', async () => {
+      render(
+        <GroupDetail
+          {...defaultProps}
+          recipes={[
+            { id: 'r1', title: 'Kartoffelsuppe', portionen: 2, ingredients: [] },
+            { id: 'r2', title: 'Pasta', portionen: 2, ingredients: [] },
+          ]}
+          searchTerm="kartoffel"
+        />
+      );
+      expect(screen.getByText('Kartoffelsuppe')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByText('Pasta')).not.toBeInTheDocument();
+      });
+    });
   });
 });
 

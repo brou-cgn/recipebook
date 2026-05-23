@@ -320,9 +320,17 @@ function App() {
       // or recipes that have been published to the public list
       return recipes.filter((r) => r.groupId === selectedGroup.id || !r.groupId || r.publishedToPublic);
     }
+
     const groupRecipeIds = Array.isArray(selectedGroup.recipeIds) ? selectedGroup.recipeIds : [];
-    return recipes.filter((r) => r.groupId === selectedGroup.id || groupRecipeIds.includes(r.id));
-  }, [recipes, selectedGroup]);
+    const groupFilteredRecipes = recipes.filter((r) => r.groupId === selectedGroup.id || groupRecipeIds.includes(r.id));
+
+    return groupFilteredRecipes.filter((recipe) =>
+      matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
+      matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
+      matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
+      matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
+    );
+  }, [recipes, selectedGroup, recipeFilters, cuisineGroups, groups]);
 
   // Detect share URL: #share/:shareId or /share/:shareId (pathname)
   const getShareIdFromHash = () => {
@@ -1619,6 +1627,11 @@ function App() {
             onSelectRecipe={handleSelectRecipe}
             privateLists={privateListsForUser}
             onEditGroupProperties={handleEditGroupProperties}
+            searchTerm={searchTerm}
+            onOpenSearch={handleOpenSearch}
+            onClearAllFilters={handleClearAllFilters}
+            activeFilters={recipeFilters}
+            showFavoritesOnly={showFavoritesOnly}
           />
         ) : (
           <GroupList
