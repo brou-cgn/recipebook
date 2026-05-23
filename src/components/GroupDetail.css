@@ -180,8 +180,8 @@
 }
 
 .group-header-actions .group-back-icon-btn:active {
-  transform: scale(0.95);
-  opacity: 0.9;
+  transform: scale(1.1);
+  opacity: 0.2;
 }
 
 /*.group-header-actions .shopping-list-trigger-button:hover {
