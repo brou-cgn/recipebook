@@ -17,7 +17,7 @@ const DEFAULT_PORTIONS = 4;
 const TAB_RECIPES = 'rezepte';
 const TAB_SETTINGS = 'einstellungen';
 const DEFAULT_LIST_SETTINGS_ICON = '⚙';
-const PRIVATE_LIST_SORT_STORAGE_KEY = 'recipebook_private_list_active_sort';
+const PRIVATE_LIST_SORT_STORAGE_KEY_PREFIX = 'recipebook_private_list';
 const resolveListSettingsActiveIcon = (icons, isDarkMode) => (
   getEffectiveIcon(icons, 'listSettingsActive', isDarkMode)
   || DEFAULT_BUTTON_ICONS.listSettingsActive
@@ -84,9 +84,10 @@ function GroupDetail({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteFabPressed, setDeleteFabPressed] = useState(false);
-  const [activeSort, setActiveSort] = useState(
-    () => sessionStorage.getItem(PRIVATE_LIST_SORT_STORAGE_KEY) || 'alphabetical'
-  );
+  const privateListSortStorageKey = group?.id
+    ? `${PRIVATE_LIST_SORT_STORAGE_KEY_PREFIX}_${group.id}_active_sort`
+    : `${PRIVATE_LIST_SORT_STORAGE_KEY_PREFIX}_active_sort`;
+  const [activeSort, setActiveSort] = useState('alphabetical');
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
   const [filterPressed, setFilterPressed] = useState(false);
@@ -139,8 +140,12 @@ function GroupDetail({
   }, [currentUser?.id]);
 
   useEffect(() => {
-    sessionStorage.setItem(PRIVATE_LIST_SORT_STORAGE_KEY, activeSort);
-  }, [activeSort]);
+    setActiveSort(sessionStorage.getItem(privateListSortStorageKey) || 'alphabetical');
+  }, [privateListSortStorageKey]);
+
+  useEffect(() => {
+    sessionStorage.setItem(privateListSortStorageKey, activeSort);
+  }, [activeSort, privateListSortStorageKey]);
 
   useEffect(() => {
     const loadSortSettings = async () => {

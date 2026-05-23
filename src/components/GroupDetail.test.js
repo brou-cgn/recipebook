@@ -5,6 +5,13 @@ import GroupDetail from './GroupDetail';
 jest.mock('./RecipeRating', () => () => <div data-testid="mock-rating" />);
 jest.mock('./RecipeImageCarousel', () => () => <div data-testid="mock-carousel" />);
 
+const mockSortSettings = {
+  trendingDays: 30,
+  trendingMinViews: 1,
+  newRecipeDays: 30,
+  ratingMinVotes: 1,
+};
+
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({
@@ -17,12 +24,7 @@ jest.mock('../utils/customLists', () => ({
     filterButton: '⚙',
     filterButtonActive: '🔽'
   }),
-  getSortSettings: () => Promise.resolve({
-    trendingDays: 30,
-    trendingMinViews: 1,
-    newRecipeDays: 30,
-    ratingMinVotes: 1,
-  }),
+  getSortSettings: () => Promise.resolve(mockSortSettings),
   DEFAULT_BUTTON_ICONS: {
     privateListBack: '←',
     listSettings: '⚙',
@@ -793,6 +795,35 @@ describe('GroupDetail – private list filter button', () => {
       await waitFor(() => {
         const titles = Array.from(document.querySelectorAll('.recipe-card h3')).map((node) => node.textContent);
         expect(titles).toEqual(['Zitronenkuchen', 'Apfelkuchen']);
+      });
+    });
+
+    it('stores the selected sort separately for each private list', async () => {
+      const { rerender } = render(
+        <GroupDetail
+          {...defaultProps}
+          currentUser={{ ...mockOwner, sortCarousel: true }}
+          recipes={mockRecipes}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Nach Bewertung' }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('sort-carousel')).toHaveAttribute('data-active-sort', 'rating');
+      });
+
+      rerender(
+        <GroupDetail
+          {...defaultProps}
+          group={{ ...mockPrivateGroup, id: 'grp2', name: 'Freunde' }}
+          currentUser={{ ...mockOwner, sortCarousel: true }}
+          recipes={mockRecipes}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('sort-carousel')).toHaveAttribute('data-active-sort', 'alphabetical');
       });
     });
   });
