@@ -435,7 +435,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                     <td>{user.recipe_count ?? 0}</td>
                     <td>
                       <button
-                        className={`action-btn ${user.versteckt ? 'hidden-btn active' : 'hidden-btn'}`}
+                        className={`action-btn versteckt-btn${user.versteckt ? ' active' : ''}`}
                         onClick={() => handleToggleHidden(user)}
                         title={user.versteckt ? 'Benutzer einblenden' : 'Benutzer verstecken'}
                       >
