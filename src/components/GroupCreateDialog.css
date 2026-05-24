@@ -110,7 +110,7 @@
   border-color: #402C1C;
 }
 
-.group-member-list {
+.group-dialog .group-member-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
