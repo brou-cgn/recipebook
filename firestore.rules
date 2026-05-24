@@ -25,6 +25,10 @@ service cloud.firestore {
       return isAuthenticated() && userRole() in ['edit', 'moderator', 'admin'];
     }
 
+    function isModeratorOrAdmin() {
+      return isAuthenticated() && userRole() in ['moderator', 'admin'];
+    }
+
     function isAdmin() {
       return isAuthenticated() && userRole() == 'admin';
     }
@@ -128,6 +132,7 @@ service cloud.firestore {
       // edit/moderator users may update only the list fields in settings/app
       // (cuisineTypes, cuisineGroups, mealCategories, units, portionUnits,
       //  conversionTable, customUnits) – all other fields remain admin-only.
+      // Moderators may additionally update Kochatelier name/description fields.
       allow update: if isAdmin()
                  || (
                       isEditOrAdmin()
@@ -135,6 +140,13 @@ service cloud.firestore {
                       && request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['cuisineTypes', 'cuisineGroups', 'mealCategories',
                                      'units', 'portionUnits', 'conversionTable', 'customUnits'])
+                    )
+                 || (
+                     isModeratorOrAdmin()
+                     && settingId == 'app'
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['inspirationListName', 'inspirationListDescription',
+                                    'inspirationTargetListName', 'inspirationTargetListDescription'])
                     );
     }
 

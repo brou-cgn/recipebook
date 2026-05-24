@@ -86,6 +86,7 @@ The following helper functions are defined in `firestore.rules`:
 | Create / Delete | `admin` only |
 | Update (any field) | `admin` only |
 | Update (list fields: cuisineTypes, cuisineGroups, mealCategories, units, portionUnits, conversionTable, customUnits in `settings/app`) | `admin`, `edit`, `moderator` |
+| Update (Kochatelier fields: inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription in `settings/app`) | `admin`, `moderator` |
 
 ### Custom Lists (`/customLists/{listId}`)
 

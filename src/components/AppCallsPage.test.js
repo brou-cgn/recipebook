@@ -60,6 +60,16 @@ const adminUser = {
   appCalls: true,
 };
 
+const moderatorUser = {
+  id: 'moderator-1',
+  vorname: 'Moderator',
+  nachname: 'User',
+  email: 'moderator@example.com',
+  isAdmin: false,
+  role: 'moderator',
+  appCalls: true,
+};
+
 describe('AppCallsPage – Kulinariktypen release with rename', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -638,5 +648,63 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
 
       await waitFor(() => expect(saveInspirationListSettings).toHaveBeenLastCalledWith(expectedPayload));
     }
+  });
+
+  test('moderator can save kochateliereinstellungen values', async () => {
+    const { saveInspirationListSettings } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={moderatorUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kochateliereinstellungen'));
+
+    fireEvent.change(screen.getByDisplayValue('Inspirationen'), { target: { value: 'Moderierte Inspirationen' } });
+    fireEvent.change(screen.getByDisplayValue('Interaktive Beschreibung'), { target: { value: 'Beschreibung durch Moderator' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kochateliereinstellungen speichern' }));
+
+    await waitFor(() => expect(saveInspirationListSettings).toHaveBeenCalledWith({
+      inspirationListName: 'Moderierte Inspirationen',
+      inspirationListDescription: 'Beschreibung durch Moderator',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: 'Klassische Beschreibung',
+    }));
+  });
+
+  test('non admin/moderator cannot edit kochateliereinstellungen', async () => {
+    const { saveInspirationListSettings } = require('../utils/customLists');
+    const editUser = {
+      id: 'edit-1',
+      vorname: 'Edit',
+      nachname: 'User',
+      email: 'edit@example.com',
+      isAdmin: false,
+      role: 'edit',
+      appCalls: true,
+    };
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={editUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kochateliereinstellungen'));
+
+    const saveButton = screen.getByRole('button', { name: 'Kochateliereinstellungen speichern' });
+    expect(saveButton).toBeDisabled();
+    expect(screen.getByDisplayValue('Inspirationen')).toBeDisabled();
+    expect(screen.getByDisplayValue('Interaktive Beschreibung')).toBeDisabled();
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(saveInspirationListSettings).not.toHaveBeenCalled());
   });
 });

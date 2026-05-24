@@ -112,6 +112,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [kochatelierSettingsFeedback, setKochatelierSettingsFeedback] = useState('');
   const inspirationDescriptionRef = useRef(null);
   const targetDescriptionRef = useRef(null);
+  const canManageKochatelierSettings = currentUser?.role === 'admin' || currentUser?.role === 'moderator' || currentUser?.isAdmin === true;
 
   const resizeTextarea = useCallback((textarea) => {
     if (!textarea) return;
@@ -439,6 +440,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   };
 
   const handleSaveKochatelierSettings = async () => {
+    if (!canManageKochatelierSettings) {
+      setKochatelierSettingsFeedback('Nur Administratoren und Moderatoren können diese Einstellungen speichern.');
+      return;
+    }
     setSavingKochatelierSettings(true);
     setKochatelierSettingsFeedback('');
     try {
@@ -984,6 +989,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
             <p className="app-calls-info-text">
               Konfigurieren Sie Name und Beschreibung für Inspirationsliste und Zielliste. Beschreibungen sind mehrzeilig und wachsen automatisch mit dem Inhalt.
             </p>
+            {!canManageKochatelierSettings && (
+              <p className="app-calls-info-text">
+                Nur Administratoren und Moderatoren können diese Einstellungen bearbeiten.
+              </p>
+            )}
             <div className="kochatelier-settings-grid">
               <div className="kochatelier-settings-group">
                 <h3>Inspirationsliste (interaktiv)</h3>
@@ -995,6 +1005,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     value={inspirationListName}
                     onChange={(e) => setInspirationListName(e.target.value)}
                     onBlur={handleSaveKochatelierSettings}
+                    disabled={!canManageKochatelierSettings}
                   />
                 </div>
                 <div className="kochatelier-settings-field">
@@ -1007,6 +1018,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     onChange={(e) => setInspirationListDescription(e.target.value)}
                     onInput={(e) => resizeTextarea(e.target)}
                     onBlur={handleSaveKochatelierSettings}
+                    disabled={!canManageKochatelierSettings}
                   />
                 </div>
               </div>
@@ -1020,6 +1032,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     value={inspirationTargetListName}
                     onChange={(e) => setInspirationTargetListName(e.target.value)}
                     onBlur={handleSaveKochatelierSettings}
+                    disabled={!canManageKochatelierSettings}
                   />
                 </div>
                 <div className="kochatelier-settings-field">
@@ -1032,6 +1045,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     onChange={(e) => setInspirationTargetListDescription(e.target.value)}
                     onInput={(e) => resizeTextarea(e.target)}
                     onBlur={handleSaveKochatelierSettings}
+                    disabled={!canManageKochatelierSettings}
                   />
                 </div>
               </div>
@@ -1040,7 +1054,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
               <button
                 className="app-calls-share-btn"
                 onClick={handleSaveKochatelierSettings}
-                disabled={savingKochatelierSettings}
+                disabled={savingKochatelierSettings || !canManageKochatelierSettings}
               >
                 {savingKochatelierSettings ? 'Wird gespeichert…' : 'Kochateliereinstellungen speichern'}
               </button>
