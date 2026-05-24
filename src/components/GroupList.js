@@ -119,9 +119,8 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                 >
                   <div className="group-card-content">
                     <h3>{group.name}</h3>
-                    <span className="group-type-indicator private">Privat</span>
                     {group.listKind && (
-                      <span className="group-list-kind-indicator">
+                      <span className={`group-list-kind-indicator group-list-kind-indicator--${group.listKind}`}>
                         {LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}
                       </span>
                     )}

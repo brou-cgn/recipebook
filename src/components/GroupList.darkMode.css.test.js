@@ -36,17 +36,20 @@ describe('GroupList dark mode styles', () => {
     expect(rule).toContain('border-color: #555;');
   });
 
-  test('defines readable dark mode styles for private and list-kind pills', () => {
+  test('defines readable dark mode styles for classic and interactive list-kind pills', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
 
     const privatePillRule = getRuleBody(css, '[data-theme="dark"] .group-type-indicator.private');
-    const listKindPillRule = getRuleBody(css, '[data-theme="dark"] .group-list-kind-indicator');
+    const classicPillRule = getRuleBody(css, '[data-theme="dark"] .group-list-kind-indicator--classic');
+    const interactivePillRule = getRuleBody(css, '[data-theme="dark"] .group-list-kind-indicator--interactive');
 
     expect(privatePillRule).toContain('background: #2a1a2f;');
     expect(privatePillRule).toContain('color: #ce93d8;');
-    expect(listKindPillRule).toContain('background: #1f2540;');
-    expect(listKindPillRule).toContain('color: #b3c0ff;');
+    expect(classicPillRule).toContain('background: #2a1e14;');
+    expect(classicPillRule).toContain('color: #c9956a;');
+    expect(interactivePillRule).toContain('background: #2a1800;');
+    expect(interactivePillRule).toContain('color: #DF7A00;');
   });
 
   test('styles list kind and target list selects in group dialogs for dark mode', () => {
