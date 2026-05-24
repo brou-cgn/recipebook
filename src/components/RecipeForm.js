@@ -1464,7 +1464,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
               value={authorId}
               onChange={(e) => setAuthorId(e.target.value)}
             >
-              {allUsers.map((user) => (
+              {allUsers.filter((user) => !user.versteckt).map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.vorname} {user.nachname} ({user.email})
                 </option>

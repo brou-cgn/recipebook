@@ -305,9 +305,9 @@ function GroupDetail({
     }
   };
 
-  // Users that are not yet members of this group
+  // Users that are not yet members of this group (excluding hidden users)
   const nonMembers = (allUsers || []).filter(
-    (u) => !(group.memberIds || []).includes(u.id) && u.id !== currentUser?.id
+    (u) => !(group.memberIds || []).includes(u.id) && u.id !== currentUser?.id && !u.versteckt
   );
 
   const toggleAddMemberId = (userId) => {

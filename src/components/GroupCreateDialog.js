@@ -23,8 +23,8 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
   const [targetListId, setTargetListId] = useState('');
   const [newTargetListName, setNewTargetListName] = useState('');
 
-  // Other users the owner can add as members
-  const otherUsers = (allUsers || []).filter((u) => u.id !== currentUser?.id);
+  // Other users the owner can add as members (excluding hidden users)
+  const otherUsers = (allUsers || []).filter((u) => u.id !== currentUser?.id && !u.versteckt);
 
   const toggleMember = (userId) => {
     setSelectedMemberIds((prev) =>

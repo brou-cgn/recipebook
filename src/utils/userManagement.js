@@ -956,6 +956,46 @@ export const changePassword = async (userId, newPassword, currentPassword) => {
 };
 
 /**
+ * Update user's versteckt (hidden) setting
+ * @param {string} userId - ID of user to update
+ * @param {boolean} versteckt - New versteckt value
+ * @returns {Promise<Object>} Promise resolving to { success: boolean, message: string }
+ */
+export const updateUserHidden = async (userId, versteckt) => {
+  try {
+    const users = await getUsers();
+
+    // Find the user
+    const user = users.find(u => u.id === userId);
+    if (!user) {
+      return {
+        success: false,
+        message: 'Benutzer nicht gefunden.'
+      };
+    }
+
+    // Update user in Firestore
+    await updateDoc(doc(db, 'users', userId), { versteckt });
+
+    // Update cache if it's the current user
+    if (currentUserCache && currentUserCache.id === userId) {
+      currentUserCache = { ...currentUserCache, versteckt };
+    }
+
+    return {
+      success: true,
+      message: versteckt ? 'Benutzer wird in Auswahllisten versteckt.' : 'Benutzer wird in Auswahllisten angezeigt.'
+    };
+  } catch (error) {
+    console.error('Error updating versteckt:', error);
+    return {
+      success: false,
+      message: 'Fehler beim Aktualisieren der Sichtbarkeitseinstellung.'
+    };
+  }
+};
+
+/**
  * Update user's fotoscan setting
  * @param {string} userId - ID of user to update
  * @param {boolean} fotoscan - New fotoscan value

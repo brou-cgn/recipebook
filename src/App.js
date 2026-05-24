@@ -1394,7 +1394,7 @@ function App() {
   const overlayRecipes = isPrivateListSearchContext ? selectedGroupUnfilteredRecipes : recipes;
   const overlayAvailableAuthors = useMemo(
     () => allUsers
-      .filter((u) => overlayRecipes.some((r) => r.authorId === u.id))
+      .filter((u) => !u.versteckt && overlayRecipes.some((r) => r.authorId === u.id))
       .map((u) => ({ id: u.id, name: u.vorname })),
     [allUsers, overlayRecipes]
   );

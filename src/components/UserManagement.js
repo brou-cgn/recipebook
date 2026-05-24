@@ -9,6 +9,7 @@ import {
   validatePassword,
   deleteUser,
   getUserAiOcrScanCount,
+  updateUserHidden,
   ROLES,
   getRoleDisplayName,
   getRolePermissions,
@@ -126,6 +127,18 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
   const handleCancelDelete = () => {
     setDeleteConfirmUser(null);
+  };
+
+  const handleToggleHidden = async (user) => {
+    const newValue = !user.versteckt;
+    const result = await updateUserHidden(user.id, newValue);
+    if (result.success) {
+      await loadUsers();
+      setMessage({ text: result.message, type: 'success' });
+    } else {
+      setMessage({ text: result.message, type: 'error' });
+    }
+    setTimeout(() => setMessage({ text: '', type: '' }), 3000);
   };
 
   const handleEditUser = (user) => {
@@ -402,6 +415,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Berechtigung</th>
                   <th title="KI-OCR Scans heute (reset 0 Uhr MEZ)">KI-OCR heute</th>
                   <th>Rezepte</th>
+                  <th title="Versteckt in Auswahllisten">Versteckt</th>
                   <th>Aktionen</th>
                 </tr>
               </thead>
@@ -419,6 +433,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                     </td>
                     <td>{aiOcrScanCounts[user.id] ?? 0}</td>
                     <td>{user.recipe_count ?? 0}</td>
+                    <td>
+                      <button
+                        className={`action-btn ${user.versteckt ? 'hidden-btn active' : 'hidden-btn'}`}
+                        onClick={() => handleToggleHidden(user)}
+                        title={user.versteckt ? 'Benutzer einblenden' : 'Benutzer verstecken'}
+                      >
+                        {user.versteckt ? 'Ja' : 'Nein'}
+                      </button>
+                    </td>
                     <td>
                       <div className="action-buttons">
                         <button 
