@@ -125,6 +125,9 @@ function GroupList({ groups, allUsers, currentUser, onSelectGroup, onCreateGroup
                         {LIST_KIND_OPTIONS.find((o) => o.value === group.listKind)?.label ?? group.listKind}
                       </span>
                     )}
+                    {typeof group.description === 'string' && group.description.trim() && (
+                      <p className="group-card-description">{group.description.trim()}</p>
+                    )}
                     <div className="group-card-meta">
                       <span>{(group.memberIds || []).length} Mitglied(er)</span>
                       {ownerName && (

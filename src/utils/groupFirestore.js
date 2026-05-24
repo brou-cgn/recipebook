@@ -6,6 +6,7 @@
  *   - type: "public" | "private"
  *   - ownerId: string
  *   - name: string
+ *   - description: string
  *   - memberIds: string[]
  *   - memberRoles: { [userId]: string }  // placeholder for future role management
  *   - listKind: "interactive" | "classic" | null (null for groups created before this attribute was introduced)
@@ -125,7 +126,7 @@ export const getGroups = async (userId) => {
 
 /**
  * Add a new private group to Firestore
- * @param {Object} groupData - Group data (name, memberIds, memberRoles, listKind)
+ * @param {Object} groupData - Group data (name, description?, memberIds, memberRoles, listKind)
  * @param {string} ownerId - ID of the user creating the group
  * @returns {Promise<Object>} Promise resolving to the created group with ID
  */
@@ -134,6 +135,7 @@ export const addGroup = async (groupData, ownerId) => {
     const data = removeUndefinedFields({
       type: 'private',
       name: groupData.name,
+      description: typeof groupData.description === 'string' ? groupData.description.trim() : '',
       ownerId,
       memberIds: Array.isArray(groupData.memberIds) ? [...new Set([ownerId, ...groupData.memberIds])] : [ownerId],
       memberRoles: groupData.memberRoles || {},

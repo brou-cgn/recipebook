@@ -1224,6 +1224,9 @@ function App() {
       }
 
       const updates = { name: editData.name, listKind: editData.listKind };
+      if (Object.prototype.hasOwnProperty.call(editData, 'description')) {
+        updates.description = editData.description;
+      }
       if (editData.listKind === 'interactive' && targetListId) {
         updates.targetListId = targetListId;
       } else {

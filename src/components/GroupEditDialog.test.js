@@ -19,6 +19,11 @@ const mockClassicGroup = {
   memberIds: ['user1'],
 };
 
+const mockClassicGroupWithDescription = {
+  ...mockClassicGroup,
+  description: 'Wichtige Hinweise zur Liste',
+};
+
 const mockInteractiveGroup = {
   id: 'grp2',
   name: 'Interaktiv',
@@ -55,12 +60,18 @@ describe('GroupEditDialog', () => {
     it('renders list name and kind fields', () => {
       renderDialog();
       expect(screen.getByLabelText('Listenname *')).toBeInTheDocument();
+      expect(screen.getByLabelText('Beschreibung (optional)')).toBeInTheDocument();
       expect(screen.getByLabelText('Art *')).toBeInTheDocument();
     });
 
     it('pre-populates the name field with the group name', () => {
       renderDialog();
       expect(screen.getByLabelText('Listenname *')).toHaveValue('Familie');
+    });
+
+    it('pre-populates the description field with the group description', () => {
+      renderDialog({ group: mockClassicGroupWithDescription });
+      expect(screen.getByLabelText('Beschreibung (optional)')).toHaveValue('Wichtige Hinweise zur Liste');
     });
 
     it('pre-populates the list kind with the group listKind', () => {
@@ -121,6 +132,22 @@ describe('GroupEditDialog', () => {
     it('does not show target list section for classic list kind', () => {
       renderDialog({ group: mockClassicGroup });
       expect(screen.queryByText(/Ziel-Liste/)).not.toBeInTheDocument();
+    });
+
+    it('sends an updated description when changed', async () => {
+      const onSave = jest.fn().mockResolvedValue();
+      renderDialog({ onSave, group: mockClassicGroupWithDescription });
+
+      fireEvent.change(screen.getByLabelText('Beschreibung (optional)'), { target: { value: 'Neue Notiz' } });
+      fireEvent.click(screen.getByText('Speichern'));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith({
+          name: 'Familie',
+          description: 'Neue Notiz',
+          listKind: 'classic',
+        });
+      });
     });
   });
 

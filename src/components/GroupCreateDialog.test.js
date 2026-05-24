@@ -44,6 +44,7 @@ describe('GroupCreateDialog', () => {
     it('renders list name and kind fields', () => {
       renderDialog();
       expect(screen.getByLabelText('Listenname *')).toBeInTheDocument();
+      expect(screen.getByLabelText('Beschreibung (optional)')).toBeInTheDocument();
       expect(screen.getByLabelText('Art *')).toBeInTheDocument();
     });
 
@@ -112,6 +113,26 @@ describe('GroupCreateDialog', () => {
       renderDialog();
       fireEvent.change(screen.getByLabelText('Art *'), { target: { value: 'classic' } });
       expect(screen.queryByText(/Ziel-Liste/)).not.toBeInTheDocument();
+    });
+
+    it('includes description when provided', async () => {
+      const onSave = jest.fn().mockResolvedValue();
+      renderDialog({ onSave });
+
+      fireEvent.change(screen.getByLabelText('Listenname *'), { target: { value: 'Testliste' } });
+      fireEvent.change(screen.getByLabelText('Beschreibung (optional)'), { target: { value: 'Notiz zur Liste' } });
+      fireEvent.change(screen.getByLabelText('Art *'), { target: { value: 'classic' } });
+      fireEvent.click(screen.getByText('Liste erstellen'));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith({
+          name: 'Testliste',
+          description: 'Notiz zur Liste',
+          memberIds: ['user1'],
+          memberRoles: {},
+          listKind: 'classic',
+        });
+      });
     });
   });
 

@@ -7,12 +7,13 @@ import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
  * @param {Object} props
  * @param {Array}  props.allUsers - All users available for member selection
  * @param {Object} props.currentUser - The current authenticated user
- * @param {Function} props.onSave - Called with { name, memberIds, memberRoles, listKind, targetListId?, newTargetListName? } when saving
+ * @param {Function} props.onSave - Called with { name, description?, memberIds, memberRoles, listKind, targetListId?, newTargetListName? } when saving
  * @param {Function} props.onCancel - Called when dialog is dismissed
  * @param {Array}  props.privateLists - Existing private lists available as target lists (used when listKind is 'interactive')
  */
 function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLists = [] }) {
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [listKind, setListKind] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -83,7 +84,11 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
     try {
       // Owner is always a member; selectedMemberIds already excludes the owner
       const memberIds = [currentUser.id, ...selectedMemberIds];
+      const normalizedDescription = description.trim();
       const saveData = { name: name.trim(), memberIds, memberRoles: {}, listKind };
+      if (normalizedDescription) {
+        saveData.description = normalizedDescription;
+      }
       if (listKind === 'interactive') {
         if (targetListMode === 'select') {
           saveData.targetListId = targetListId;
@@ -120,6 +125,18 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
               placeholder="z. B. Familie, Freunde, Team..."
               maxLength={80}
               autoFocus
+            />
+          </div>
+
+          <div className="group-dialog-field">
+            <label htmlFor="group-description">Beschreibung (optional)</label>
+            <textarea
+              id="group-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Notizen, Hinweise oder zusätzliche Infos zur Liste..."
+              maxLength={300}
+              rows={3}
             />
           </div>
 

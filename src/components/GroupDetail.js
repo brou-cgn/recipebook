@@ -556,6 +556,9 @@ function GroupDetail({
         <>
           <div className="group-detail-section group-info-section">
             <h3>Listeneinstellungen</h3>
+            {typeof group.description === 'string' && group.description.trim() && (
+              <p className="group-info-description">{group.description.trim()}</p>
+            )}
             <dl className="group-info-list">
               <div className="group-info-row">
                 <dt>Typ</dt>

@@ -3,15 +3,16 @@ import './GroupCreateDialog.css';
 import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 
 /**
- * Dialog for editing an existing private group's properties (name, listKind, targetListId).
+ * Dialog for editing an existing private group's properties (name, description, listKind, targetListId).
  * @param {Object} props
  * @param {Object} props.group - The group to edit
- * @param {Function} props.onSave - Called with { name, listKind, targetListId?, newTargetListName? } when saving
+ * @param {Function} props.onSave - Called with { name, description?, listKind, targetListId?, newTargetListName? } when saving
  * @param {Function} props.onCancel - Called when dialog is dismissed
  * @param {Array}  props.privateLists - Existing private lists available as target lists (excludes current group)
  */
 function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
   const [name, setName] = useState(group?.name || '');
+  const [description, setDescription] = useState(group?.description || '');
   const [listKind, setListKind] = useState(group?.listKind || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -60,7 +61,12 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
     }
     setSaving(true);
     try {
+      const normalizedDescription = description.trim();
+      const hadExistingDescription = typeof group?.description === 'string' && group.description.trim() !== '';
       const saveData = { name: name.trim(), listKind };
+      if (normalizedDescription || hadExistingDescription) {
+        saveData.description = normalizedDescription;
+      }
       if (listKind === 'interactive') {
         if (targetListMode === 'select') {
           saveData.targetListId = targetListId;
@@ -96,6 +102,18 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
               placeholder="z. B. Familie, Freunde, Team..."
               maxLength={80}
               autoFocus
+            />
+          </div>
+
+          <div className="group-dialog-field">
+            <label htmlFor="edit-group-description">Beschreibung (optional)</label>
+            <textarea
+              id="edit-group-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Notizen, Hinweise oder zusätzliche Infos zur Liste..."
+              maxLength={300}
+              rows={3}
             />
           </div>
 

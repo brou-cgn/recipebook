@@ -82,6 +82,7 @@ const mockPrivateGroup = {
   id: 'grp1',
   type: 'private',
   name: 'Familie',
+  description: 'Notizen für die Familienliste',
   ownerId: 'owner1',
   memberIds: ['owner1', 'member1'],
   memberRoles: {},
@@ -163,6 +164,12 @@ describe('GroupDetail – no tab bar', () => {
     render(<GroupDetail {...defaultProps} group={groupWithKind} />);
     goToEinstellungen();
     expect(screen.getByText('Klassische Sammlung')).toBeInTheDocument();
+  });
+
+  it('shows list description in settings when available', () => {
+    render(<GroupDetail {...defaultProps} />);
+    goToEinstellungen();
+    expect(screen.getByText('Notizen für die Familienliste')).toBeInTheDocument();
   });
 
   it('does NOT show the private type badge in the header', () => {
@@ -502,6 +509,22 @@ describe('GroupDetail – edit list properties feature', () => {
       expect(onEditGroupProperties).toHaveBeenCalledWith('grp1', expect.objectContaining({
         name: 'Neue Familie',
         listKind: 'classic',
+      }));
+    });
+  });
+
+  it('calls onEditGroupProperties with updated description when changed', async () => {
+    const onEditGroupProperties = jest.fn().mockResolvedValue(undefined);
+    render(<GroupDetail {...defaultProps} group={mockPrivateGroupWithKind} onEditGroupProperties={onEditGroupProperties} />);
+    goToEinstellungen();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Liste bearbeiten/i })[0]);
+    fireEvent.change(screen.getByLabelText('Beschreibung (optional)'), { target: { value: 'Neue Beschreibung' } });
+    fireEvent.click(screen.getByText('Speichern'));
+
+    await waitFor(() => {
+      expect(onEditGroupProperties).toHaveBeenCalledWith('grp1', expect.objectContaining({
+        description: 'Neue Beschreibung',
       }));
     });
   });

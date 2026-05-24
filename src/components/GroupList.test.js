@@ -32,6 +32,7 @@ const mockPrivateGroup = {
   id: 'grp1',
   type: 'private',
   name: 'Familie',
+  description: 'Familienrezepte und Wochenplanung',
   ownerId: 'user1',
   memberIds: ['user1', 'user2']
 };
@@ -74,6 +75,7 @@ describe('GroupList', () => {
       />
     );
     expect(screen.getByText('Familie')).toBeInTheDocument();
+    expect(screen.getByText('Familienrezepte und Wochenplanung')).toBeInTheDocument();
     expect(screen.getByText('2 Mitglied(er)')).toBeInTheDocument();
   });
 

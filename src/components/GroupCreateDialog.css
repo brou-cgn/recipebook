@@ -74,7 +74,22 @@
   transition: border-color 0.2s;
 }
 
+.group-dialog-field textarea {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
 .group-dialog-field input[type='text']:focus {
+  outline: none;
+  border-color: #402C1C;
+}
+
+.group-dialog-field textarea:focus {
   outline: none;
   border-color: #402C1C;
 }
