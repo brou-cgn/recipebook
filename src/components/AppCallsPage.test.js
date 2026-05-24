@@ -708,3 +708,119 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
     await waitFor(() => expect(saveInspirationListSettings).not.toHaveBeenCalled());
   });
 });
+
+describe('AppCallsPage – Benjamin Rousselli filter', () => {
+  const benjaminCall = {
+    id: 'call-benjamin',
+    userVorname: 'Benjamin',
+    userNachname: 'Rousselli',
+    userEmail: 'benjamin@example.com',
+    isGuest: false,
+    timestamp: null,
+  };
+  const otherCall = {
+    id: 'call-other',
+    userVorname: 'Max',
+    userNachname: 'Mustermann',
+    userEmail: 'max@example.com',
+    isGuest: false,
+    timestamp: null,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+    getInspirationListSettings.mockResolvedValue({
+      inspirationListName: 'Inspirationen',
+      inspirationListDescription: '',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: '',
+    });
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([benjaminCall, otherCall]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+  });
+
+  test('filter checkbox is present on App-Aufrufe tab', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    expect(await screen.findByLabelText('Benjamin Rousselli ausblenden')).toBeInTheDocument();
+  });
+
+  test('filter is checked by default and hides Benjamin Rousselli entries', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    const checkbox = await screen.findByLabelText('Benjamin Rousselli ausblenden');
+    expect(checkbox).toBeChecked();
+    expect(screen.queryByText('Rousselli')).not.toBeInTheDocument();
+    expect(screen.getByText('Mustermann')).toBeInTheDocument();
+  });
+
+  test('unchecking the filter shows Benjamin Rousselli entries', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    const checkbox = await screen.findByLabelText('Benjamin Rousselli ausblenden');
+    fireEvent.click(checkbox);
+
+    expect(screen.getByText('Rousselli')).toBeInTheDocument();
+    expect(screen.getByText('Mustermann')).toBeInTheDocument();
+  });
+
+  test('stats show filtered count when filter is active', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    await screen.findByLabelText('Benjamin Rousselli ausblenden');
+    expect(screen.getByText(/von 2 Einträgen \(gefiltert\)/)).toBeInTheDocument();
+  });
+
+  test('stats show total count when filter is inactive', async () => {
+    const { container } = render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    const checkbox = await screen.findByLabelText('Benjamin Rousselli ausblenden');
+    fireEvent.click(checkbox);
+
+    const stats = container.querySelector('.app-calls-stats');
+    expect(stats.textContent).toMatch(/2/);
+    expect(stats.textContent).not.toMatch(/gefiltert/);
+  });
+});

@@ -86,6 +86,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
+  const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
   const tabsRef = useRef(null);
 
   // Kulinariktypen state
@@ -170,6 +171,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const recipesWithoutLink = useMemo(
     () => recipes.filter(r => r.publishedToPublic && !r.shareId && !sharedRecipeIds.has(r.id)),
     [recipes, sharedRecipeIds]
+  );
+
+  const filteredAppCalls = useMemo(
+    () => filterBenjaminRousselli
+      ? appCalls.filter(c => !(c.userVorname === 'Benjamin' && c.userNachname === 'Rousselli'))
+      : appCalls,
+    [appCalls, filterBenjaminRousselli]
   );
 
   const formatCalcDuration = useCallback((calcPendingAt) => {
@@ -558,6 +566,17 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
               <div className="app-calls-empty">Noch keine Appaufrufe vorhanden.</div>
             ) : (
               <>
+                <div className="app-calls-filter-row">
+                  <label className="app-calls-filter-label">
+                    <input
+                      type="checkbox"
+                      checked={filterBenjaminRousselli}
+                      onChange={(e) => setFilterBenjaminRousselli(e.target.checked)}
+                      className="app-calls-filter-checkbox"
+                    />
+                    Benjamin Rousselli ausblenden
+                  </label>
+                </div>
                 <div className="app-calls-table-container">
                   <table className="app-calls-table">
                     <thead>
@@ -571,7 +590,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {appCalls.map((call) => (
+                      {filteredAppCalls.map((call) => (
                         <React.Fragment key={call.id}>
                           <tr>
                             <td>
@@ -610,7 +629,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                   </table>
                 </div>
                 <div className="app-calls-stats">
-                  Gesamt: <strong>{appCalls.length}</strong> Einträge
+                  Gesamt: <strong>{filteredAppCalls.length}</strong>{filterBenjaminRousselli && filteredAppCalls.length !== appCalls.length ? <> von {appCalls.length} Einträgen (gefiltert)</> : <> Einträge</>}
                 </div>
               </>
             )}
