@@ -994,6 +994,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     type="text"
                     value={inspirationListName}
                     onChange={(e) => setInspirationListName(e.target.value)}
+                    onBlur={handleSaveKochatelierSettings}
                   />
                 </div>
                 <div className="kochatelier-settings-field">
@@ -1005,6 +1006,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     value={inspirationListDescription}
                     onChange={(e) => setInspirationListDescription(e.target.value)}
                     onInput={(e) => resizeTextarea(e.target)}
+                    onBlur={handleSaveKochatelierSettings}
                   />
                 </div>
               </div>
@@ -1017,6 +1019,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     type="text"
                     value={inspirationTargetListName}
                     onChange={(e) => setInspirationTargetListName(e.target.value)}
+                    onBlur={handleSaveKochatelierSettings}
                   />
                 </div>
                 <div className="kochatelier-settings-field">
@@ -1028,6 +1031,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     value={inspirationTargetListDescription}
                     onChange={(e) => setInspirationTargetListDescription(e.target.value)}
                     onInput={(e) => resizeTextarea(e.target)}
+                    onBlur={handleSaveKochatelierSettings}
                   />
                 </div>
               </div>

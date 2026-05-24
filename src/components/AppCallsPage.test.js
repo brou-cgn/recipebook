@@ -573,4 +573,70 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
       inspirationTargetListDescription: 'Mehrzeilige Zielbeschreibung',
     }));
   });
+
+  test('persists kochateliereinstellungen on blur for all fields', async () => {
+    const { saveInspirationListSettings } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Kochateliereinstellungen'));
+
+    const updates = [
+      {
+        previousValue: 'Inspirationen',
+        nextValue: 'Neue Inspirationen Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Interaktive Beschreibung',
+          inspirationTargetListName: 'Für jeden Tag',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Interaktive Beschreibung',
+        nextValue: 'Neue Interaktivbeschreibung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Für jeden Tag',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Für jeden Tag',
+        nextValue: 'Wochenplanung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Wochenplanung Auto',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Klassische Beschreibung',
+        nextValue: 'Neue Zielbeschreibung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Wochenplanung Auto',
+          inspirationTargetListDescription: 'Neue Zielbeschreibung Auto',
+        },
+      },
+    ];
+
+    for (const { previousValue, nextValue, expectedPayload } of updates) {
+      const field = screen.getByDisplayValue(previousValue);
+      fireEvent.change(field, { target: { value: nextValue } });
+      fireEvent.blur(field);
+
+      await waitFor(() => expect(saveInspirationListSettings).toHaveBeenLastCalledWith(expectedPayload));
+    }
+  });
 });
