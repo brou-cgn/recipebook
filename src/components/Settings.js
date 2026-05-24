@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModePreference, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
@@ -329,6 +329,12 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite
   const [startseitenKandidatenLeertext, setStartseitenKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
 
+  // Configurable names and descriptions for the lists created by "Inspirationssammlung anlegen"
+  const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
+  const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
+  const [inspirationTargetListName, setInspirationTargetListName] = useState(DEFAULT_INSPIRATION_TARGET_LIST_NAME);
+  const [inspirationTargetListDescription, setInspirationTargetListDescription] = useState(DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION);
+
   // Print format settings
   const [printFormats, setPrintFormats] = useState(DEFAULT_PRINT_FORMATS);
   const [savingPrintFormats, setSavingPrintFormats] = useState(false);
@@ -363,6 +369,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const groupThresholds = await getGroupStatusThresholds();
       const maxSchwelle = await getMaxKandidatenSchwelle();
       const kandidatenLeertext = await getStartseitenKandidatenLeertext();
+      const inspirationSettings = await getInspirationListSettings();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -391,6 +398,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setGroupThresholdArchivMaxKandidat(groupThresholds.groupThresholdArchivMaxKandidat);
       setMaxKandidatenSchwelle(maxSchwelle != null ? String(maxSchwelle) : '');
       setStartseitenKandidatenLeertext(kandidatenLeertext);
+      setInspirationListName(inspirationSettings.inspirationListName);
+      setInspirationListDescription(inspirationSettings.inspirationListDescription);
+      setInspirationTargetListName(inspirationSettings.inspirationTargetListName);
+      setInspirationTargetListDescription(inspirationSettings.inspirationTargetListDescription);
       const formats = await getPrintFormats();
       setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
@@ -652,6 +663,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       });
       await saveMaxKandidatenSchwelle(maxKandidatenSchwelle !== '' ? parseFloat(maxKandidatenSchwelle) : null);
       await saveStartseitenKandidatenLeertext(startseitenKandidatenLeertext);
+      await saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription });
 
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
@@ -2465,6 +2477,37 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       value={startseitenKandidatenLeertext}
                       onChange={(e) => setStartseitenKandidatenLeertext(e.target.value)}
                     />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Inspirationssammlung anlegen – Listen-Namen</h3>
+              <p className="section-description">
+                Konfigurieren Sie die Namen und Beschreibungen der Listen, die beim Klick auf „Inspirationssammlung anlegen" automatisch erstellt werden.
+              </p>
+              <div className="sort-settings-grid">
+                <div className="sort-settings-group">
+                  <h4>Inspirationsliste (interaktiv)</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="inspirationListName">Name:</label>
+                    <input id="inspirationListName" type="text" value={inspirationListName} onChange={(e) => setInspirationListName(e.target.value)} />
+                  </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="inspirationListDescription">Beschreibung:</label>
+                    <input id="inspirationListDescription" type="text" value={inspirationListDescription} onChange={(e) => setInspirationListDescription(e.target.value)} />
+                  </div>
+                </div>
+                <div className="sort-settings-group">
+                  <h4>Zielliste (klassisch)</h4>
+                  <div className="sort-settings-field">
+                    <label htmlFor="inspirationTargetListName">Name:</label>
+                    <input id="inspirationTargetListName" type="text" value={inspirationTargetListName} onChange={(e) => setInspirationTargetListName(e.target.value)} />
+                  </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="inspirationTargetListDescription">Beschreibung:</label>
+                    <input id="inspirationTargetListDescription" type="text" value={inspirationTargetListDescription} onChange={(e) => setInspirationTargetListDescription(e.target.value)} />
                   </div>
                 </div>
               </div>
