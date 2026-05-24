@@ -47,7 +47,7 @@ import {
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
 import { applyFaviconSettings } from './utils/faviconUtils';
-import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection } from './utils/customLists';
+import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
@@ -1086,10 +1086,18 @@ function App() {
   const handleCreateInspirationList = async () => {
     if (!currentUser) return;
     try {
-      // 1. Create classic target list "Für jeden Tag"
+      // Load configurable names from settings
+      const inspirationSettings = await getInspirationListSettings();
+      const targetListName = inspirationSettings.inspirationTargetListName || DEFAULT_INSPIRATION_TARGET_LIST_NAME;
+      const targetListDescription = inspirationSettings.inspirationTargetListDescription || DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION;
+      const inspirationListName = inspirationSettings.inspirationListName || DEFAULT_INSPIRATION_LIST_NAME;
+      const inspirationListDescription = inspirationSettings.inspirationListDescription || DEFAULT_INSPIRATION_LIST_DESCRIPTION;
+
+      // 1. Create classic target list
       const targetList = await addGroupToFirestore(
         {
-          name: 'Für jeden Tag',
+          name: targetListName,
+          ...(targetListDescription ? { description: targetListDescription } : {}),
           memberIds: [currentUser.id],
           memberRoles: {},
           listKind: 'classic',
@@ -1097,10 +1105,11 @@ function App() {
         currentUser.id
       );
 
-      // 2. Create interactive list "Inspirationen" linked to target list
+      // 2. Create interactive list linked to target list
       const inspirationList = await addGroupToFirestore(
         {
-          name: 'Inspirationen',
+          name: inspirationListName,
+          ...(inspirationListDescription ? { description: inspirationListDescription } : {}),
           memberIds: [currentUser.id],
           memberRoles: {},
           listKind: 'interactive',

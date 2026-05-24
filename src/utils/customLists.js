@@ -333,6 +333,12 @@ export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
 // Default empty-state text for the Meine Kochideen carousel on the Startseite
 export const DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT = 'Keine gemeinsamen Kandidaten vorhanden.';
 
+// Default names and descriptions for the lists created by "Inspirationssammlung anlegen"
+export const DEFAULT_INSPIRATION_LIST_NAME = 'Inspirationen';
+export const DEFAULT_INSPIRATION_LIST_DESCRIPTION = '';
+export const DEFAULT_INSPIRATION_TARGET_LIST_NAME = 'Für jeden Tag';
+export const DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION = '';
+
 // Tile size options for grid views
 export const TILE_SIZE_SMALL = '180px';
 export const TILE_SIZE_MEDIUM = '250px';
@@ -863,6 +869,10 @@ export async function getSettings() {
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
         maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
         startseitenKandidatenLeertext: settings.startseitenKandidatenLeertext ?? DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+        inspirationListName: settings.inspirationListName ?? DEFAULT_INSPIRATION_LIST_NAME,
+        inspirationListDescription: settings.inspirationListDescription ?? DEFAULT_INSPIRATION_LIST_DESCRIPTION,
+        inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
+        inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
         printFormats: settings.printFormats || DEFAULT_PRINT_FORMATS,
         // Image data from settings/images
         faviconImage: imagesData.faviconImage || null,
@@ -905,6 +915,10 @@ export async function getSettings() {
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
       startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+      inspirationListName: DEFAULT_INSPIRATION_LIST_NAME,
+      inspirationListDescription: DEFAULT_INSPIRATION_LIST_DESCRIPTION,
+      inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
+      inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
     
@@ -964,6 +978,10 @@ export async function getSettings() {
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
       startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+      inspirationListName: DEFAULT_INSPIRATION_LIST_NAME,
+      inspirationListDescription: DEFAULT_INSPIRATION_LIST_DESCRIPTION,
+      inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
+      inspirationTargetListDescription: DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
       printFormats: DEFAULT_PRINT_FORMATS,
     };
   }
@@ -1827,6 +1845,52 @@ export async function saveStartseitenKandidatenLeertext(text) {
     }
   } catch (error) {
     console.error('Error saving startseitenKandidatenLeertext:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the configurable names and descriptions for the lists created by "Inspirationssammlung anlegen".
+ * @returns {Promise<Object>} Promise resolving to an object with inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription
+ */
+export async function getInspirationListSettings() {
+  const settings = await getSettings();
+  return {
+    inspirationListName: settings.inspirationListName ?? DEFAULT_INSPIRATION_LIST_NAME,
+    inspirationListDescription: settings.inspirationListDescription ?? DEFAULT_INSPIRATION_LIST_DESCRIPTION,
+    inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
+    inspirationTargetListDescription: settings.inspirationTargetListDescription ?? DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION,
+  };
+}
+
+/**
+ * Save the configurable names and descriptions for the lists created by "Inspirationssammlung anlegen".
+ * @param {Object} params
+ * @param {string} params.inspirationListName
+ * @param {string} params.inspirationListDescription
+ * @param {string} params.inspirationTargetListName
+ * @param {string} params.inspirationTargetListDescription
+ * @returns {Promise<void>}
+ */
+export async function saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription }) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, {
+      inspirationListName,
+      inspirationListDescription,
+      inspirationTargetListName,
+      inspirationTargetListDescription,
+    });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.inspirationListName = inspirationListName;
+      settingsCache.inspirationListDescription = inspirationListDescription;
+      settingsCache.inspirationTargetListName = inspirationTargetListName;
+      settingsCache.inspirationTargetListDescription = inspirationTargetListDescription;
+    }
+  } catch (error) {
+    console.error('Error saving inspiration list settings:', error);
     throw error;
   }
 }
