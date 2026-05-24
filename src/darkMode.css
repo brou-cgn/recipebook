@@ -1049,7 +1049,7 @@
 }
 
 [data-theme="dark"] .group-detail-section {
-  background: #1e1e1e;
+  background: transparent;
   border-color: transparent;
 }
 

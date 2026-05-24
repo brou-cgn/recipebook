@@ -205,7 +205,7 @@
 }
 
 .group-detail-section {
-  background: white;
+  background: transparent;
   border: 1px solid transparent;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
