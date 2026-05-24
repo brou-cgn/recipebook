@@ -555,6 +555,7 @@ describe('GroupDetail – edit list properties feature', () => {
     goToEinstellungen();
     const deleteFabButton = container.querySelector('.delete-fab-button');
     expect(deleteFabButton).toBeInTheDocument();
+    expect(deleteFabButton).toHaveClass('at-publish-position');
     expect(deleteFabButton).toHaveTextContent('🗑');
     expect(deleteFabButton).toHaveAttribute('aria-label', 'Liste löschen');
   });
