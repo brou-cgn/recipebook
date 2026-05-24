@@ -77,6 +77,9 @@ import {
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
 
+const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
+const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
+
 // IndexedDB helpers to read/clear shared data written by the service worker
 function readSharedDataFromDB() {
   return new Promise((resolve) => {
@@ -277,10 +280,16 @@ function App() {
   // Store pending webimport URL read synchronously on mount, before Firebase loads the user
   const [pendingWebimportUrl, setPendingWebimportUrl] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const webimportUrl = urlParams.get('webimport');
-    const webimportAuthor = urlParams.get('webimportAuthor') || '';
+    let webimportUrl = urlParams.get('webimport');
+    let webimportAuthor = urlParams.get('webimportAuthor') || '';
     if (webimportUrl) {
       initialWebimportAuthorRef.current = webimportAuthor;
+      try {
+        sessionStorage.setItem(PENDING_WEBIMPORT_URL_STORAGE_KEY, webimportUrl);
+        sessionStorage.setItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY, webimportAuthor);
+      } catch {
+        // Ignore storage errors (e.g. restricted environments)
+      }
       // Clean the URL immediately so it doesn't persist in browser history
       urlParams.delete('webimport');
       urlParams.delete('webimportAuthor');
@@ -290,6 +299,17 @@ function App() {
         '',
         window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash
       );
+      return webimportUrl;
+    }
+    try {
+      webimportUrl = sessionStorage.getItem(PENDING_WEBIMPORT_URL_STORAGE_KEY);
+      webimportAuthor = sessionStorage.getItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY) || '';
+    } catch {
+      webimportUrl = null;
+      webimportAuthor = '';
+    }
+    if (webimportUrl) {
+      initialWebimportAuthorRef.current = webimportAuthor;
       return webimportUrl;
     }
     return null;
@@ -536,6 +556,12 @@ function App() {
       initialWebimportAuthorRef.current = '';
     }
     // Always open the form (webimport URL is shown in modal if permission exists)
+    try {
+      sessionStorage.removeItem(PENDING_WEBIMPORT_URL_STORAGE_KEY);
+      sessionStorage.removeItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors (e.g. restricted environments)
+    }
     setPendingWebimportUrl(null); // consume it so it doesn't trigger again
     setEditingRecipe(null);
     setSelectedRecipe(null);
