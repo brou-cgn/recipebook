@@ -574,7 +574,7 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
     }));
   });
 
-  test('persists kochateliereinstellungen on blur', async () => {
+  test('persists kochateliereinstellungen on blur for all fields', async () => {
     const { saveInspirationListSettings } = require('../utils/customLists');
 
     render(
@@ -588,15 +588,55 @@ describe('AppCallsPage – Kochateliereinstellungen tab', () => {
 
     fireEvent.click(await screen.findByText('Kochateliereinstellungen'));
 
-    const nameField = screen.getByDisplayValue('Inspirationen');
-    fireEvent.change(nameField, { target: { value: 'Neue Inspirationen Auto' } });
-    fireEvent.blur(nameField);
+    const updates = [
+      {
+        previousValue: 'Inspirationen',
+        nextValue: 'Neue Inspirationen Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Interaktive Beschreibung',
+          inspirationTargetListName: 'Für jeden Tag',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Interaktive Beschreibung',
+        nextValue: 'Neue Interaktivbeschreibung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Für jeden Tag',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Für jeden Tag',
+        nextValue: 'Wochenplanung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Wochenplanung Auto',
+          inspirationTargetListDescription: 'Klassische Beschreibung',
+        },
+      },
+      {
+        previousValue: 'Klassische Beschreibung',
+        nextValue: 'Neue Zielbeschreibung Auto',
+        expectedPayload: {
+          inspirationListName: 'Neue Inspirationen Auto',
+          inspirationListDescription: 'Neue Interaktivbeschreibung Auto',
+          inspirationTargetListName: 'Wochenplanung Auto',
+          inspirationTargetListDescription: 'Neue Zielbeschreibung Auto',
+        },
+      },
+    ];
 
-    await waitFor(() => expect(saveInspirationListSettings).toHaveBeenCalledWith({
-      inspirationListName: 'Neue Inspirationen Auto',
-      inspirationListDescription: 'Interaktive Beschreibung',
-      inspirationTargetListName: 'Für jeden Tag',
-      inspirationTargetListDescription: 'Klassische Beschreibung',
-    }));
+    for (const { previousValue, nextValue, expectedPayload } of updates) {
+      const field = screen.getByDisplayValue(previousValue);
+      fireEvent.change(field, { target: { value: nextValue } });
+      fireEvent.blur(field);
+
+      await waitFor(() => expect(saveInspirationListSettings).toHaveBeenLastCalledWith(expectedPayload));
+    }
   });
 });
