@@ -286,7 +286,11 @@ function App() {
       initialWebimportAuthorRef.current = webimportAuthor;
       try {
         sessionStorage.setItem(PENDING_WEBIMPORT_URL_STORAGE_KEY, webimportUrl);
-        sessionStorage.setItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY, webimportAuthor);
+        if (webimportAuthor) {
+          sessionStorage.setItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY, webimportAuthor);
+        } else {
+          sessionStorage.removeItem(PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY);
+        }
       } catch {
         // Ignore storage errors (e.g. restricted environments)
       }
