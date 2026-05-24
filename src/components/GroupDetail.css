@@ -243,6 +243,7 @@
   border-radius: 8px;
   background: #fafafa;
   min-height: 2.75rem;
+  border: 1px solid #ddd;
 }
 
 .group-member-name {

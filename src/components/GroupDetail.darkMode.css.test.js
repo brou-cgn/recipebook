@@ -32,13 +32,13 @@ describe('GroupDetail dark mode styles', () => {
     expect(rule).toContain('border-color: transparent;');
   });
 
-  test('group-member-row has no border-color in dark mode', () => {
+  test('group-member-row has dark mode border-color for boxed row styling', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const rule = getRuleBody(css, '[data-theme="dark"] .group-member-row');
 
-    expect(rule).not.toContain('border-color');
-    expect(rule).not.toContain('border:');
+    expect(rule).toContain('background: #1e1e1e;');
+    expect(rule).toContain('border-color: #555;');
   });
 
   test('styles private list settings button with dark background in header actions', () => {
@@ -107,12 +107,12 @@ describe('GroupDetail light mode styles', () => {
     expect(rule).not.toContain('box-shadow');
   });
 
-  test('group-member-row has no border in light mode', () => {
+  test('group-member-row has the same box border as invite email input in light mode', () => {
     const cssPath = path.join(__dirname, 'GroupDetail.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const rule = getRuleBody(css, '.group-member-row');
 
-    expect(rule).not.toContain('border: 1px solid');
+    expect(rule).toContain('border: 1px solid #ddd;');
   });
 
   test('group-member-row has min-height set for equal row heights', () => {

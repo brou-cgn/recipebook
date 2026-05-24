@@ -36,4 +36,19 @@ describe('GroupList CSS layout', () => {
     expect(closeButtonRule).toContain('touch-action: manipulation;');
     expect(closeButtonHoverRule).toContain('background: #f0f0f0;');
   });
+
+  test('shows full card descriptions without line clamp and keeps card height content-driven', () => {
+    const cssPath = path.join(__dirname, 'GroupList.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const descriptionRule = getRuleBody(css, '.group-card-description');
+    const cardRule = getRuleBody(css, '.group-card');
+
+    expect(descriptionRule).toContain('margin: 0 0 0.5rem;');
+    expect(descriptionRule).toContain('font-size: 0.85rem;');
+    expect(descriptionRule).toContain('color: #666;');
+    expect(descriptionRule).toContain('line-height: 1.35;');
+    expect(descriptionRule).not.toContain('-webkit-line-clamp');
+    expect(descriptionRule).not.toContain('overflow: hidden;');
+    expect(cardRule).not.toContain('height:');
+  });
 });
