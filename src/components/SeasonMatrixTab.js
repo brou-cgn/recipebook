@@ -26,7 +26,11 @@ const createInitialFormData = () => ({
 });
 
 const normalizeMonthArray = (months = []) => {
-  const unique = [...new Set((months || []).map(Number).filter((month) => month >= 1 && month <= 12))];
+  const unique = [...new Set(
+    (months || [])
+      .map((month) => Number(month))
+      .filter((month) => Number.isInteger(month) && month >= 1 && month <= 12)
+  )];
   return unique.sort((a, b) => a - b);
 };
 
@@ -115,13 +119,14 @@ function SeasonMatrixTab({ currentUser }) {
   };
 
   const handleEdit = (entry) => {
+    const numericScore = Number(entry.seasonScore);
     setFormData({
       id: entry.id || '',
       name: entry.name || '',
       category: entry.category || '',
       mainSeasonMonths: normalizeMonthArray(entry.mainSeasonMonths),
       secondarySeasonMonths: normalizeMonthArray(entry.secondarySeasonMonths),
-      seasonScore: Number.isFinite(Number(entry.seasonScore)) ? Number(entry.seasonScore) : 0,
+      seasonScore: Number.isFinite(numericScore) ? numericScore : 0,
       labelMode: entry.labelMode || 'jetzt_saison',
       isActive: entry.isActive !== false,
       region: entry.region || 'GLOBAL',
