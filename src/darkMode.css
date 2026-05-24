@@ -1050,6 +1050,7 @@
 
 [data-theme="dark"] .group-detail-section {
   background: #1e1e1e;
+  border-color: transparent;
 }
 
 [data-theme="dark"] .group-detail-section.group-recipes-section {
