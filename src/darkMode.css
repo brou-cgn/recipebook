@@ -2067,9 +2067,16 @@
   color: #ce93d8;
 }
 
-[data-theme="dark"] .group-list-kind-indicator {
-  background: #1f2540;
-  color: #b3c0ff;
+[data-theme="dark"] .group-list-kind-indicator--classic {
+  background: #2a1e14;
+  color: #c9956a;
+  border-color: #4a3020;
+}
+
+[data-theme="dark"] .group-list-kind-indicator--interactive {
+  background: #2a1800;
+  color: #DF7A00;
+  border-color: #5a3200;
 }
 
 [data-theme="dark"] .group-empty-hint {
