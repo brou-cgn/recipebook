@@ -144,6 +144,7 @@ This application is automatically deployed to GitHub Pages when changes are push
 
 ### ❓ FAQ:
 - **[FAQ.md](FAQ.md)** - 🇩🇪 Häufig gestellte Fragen zur App-Nutzung (Rezepte, Menüs, Küchenseite, Profil, Listen, Kochmodus)
+- **[SAISONMATRIX_KONZEPT.md](SAISONMATRIX_KONZEPT.md)** - 🇩🇪 Fachliches & technisches Konzept für die saisonale Rezeptbewertung
 
 ### 📚 Zugriffsanleitungen:
 - **[ZUGRIFF_SCHNELLHILFE.md](ZUGRIFF_SCHNELLHILFE.md)** - 🚨 **Schnellhilfe**: Top 5 Probleme & Sofortlösungen (START HIER!)
