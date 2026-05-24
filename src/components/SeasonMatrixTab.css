@@ -1,0 +1,216 @@
+.season-matrix-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.season-matrix-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.season-matrix-filters input,
+.season-matrix-filters select,
+.season-matrix-grid input,
+.season-matrix-grid select,
+.season-matrix-full-width input,
+.season-matrix-full-width textarea {
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.season-matrix-filters input {
+  flex: 1;
+  min-width: 230px;
+}
+
+.season-matrix-filters select {
+  min-width: 150px;
+}
+
+.season-matrix-new-button {
+  flex: 0;
+  padding: 0.65rem 1rem;
+}
+
+.season-matrix-table-container {
+  overflow-x: auto;
+}
+
+.season-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.season-matrix-table th,
+.season-matrix-table td {
+  border-bottom: 1px solid #eee;
+  padding: 0.6rem 0.55rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.season-matrix-table th {
+  background: #f8f9fa;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #555;
+}
+
+.season-matrix-empty {
+  text-align: center;
+  color: #777;
+  padding: 1.2rem;
+}
+
+.season-status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.season-status-badge.active {
+  background: #e4f5e8;
+  color: #1d6a30;
+}
+
+.season-status-badge.inactive {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.season-matrix-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.season-matrix-edit-btn,
+.season-matrix-delete-btn {
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.season-matrix-delete-btn {
+  border-color: #ffc7c7;
+  color: #b12626;
+}
+
+.season-matrix-form {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f9f9f9;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.season-matrix-form h4 {
+  margin: 0;
+  color: #402c1c;
+}
+
+.season-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.season-matrix-grid label,
+.season-matrix-full-width {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.season-matrix-month-block p {
+  margin: 0 0 0.4rem;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.season-month-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+}
+
+.season-month-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.season-matrix-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.season-matrix-full-width textarea {
+  resize: vertical;
+}
+
+.season-matrix-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+[data-theme="dark"] .season-matrix-table th {
+  background: #2a2a2a;
+  color: #c7c7c7;
+}
+
+[data-theme="dark"] .season-matrix-table td {
+  border-bottom-color: #3a3a3a;
+}
+
+[data-theme="dark"] .season-matrix-form {
+  background: #242424;
+  border-color: #3b3b3b;
+}
+
+[data-theme="dark"] .season-matrix-grid label,
+[data-theme="dark"] .season-matrix-full-width,
+[data-theme="dark"] .season-matrix-month-block p,
+[data-theme="dark"] .season-month-checkbox,
+[data-theme="dark"] .season-matrix-checkbox,
+[data-theme="dark"] .season-matrix-empty {
+  color: #d0d0d0;
+}
+
+[data-theme="dark"] .season-matrix-filters input,
+[data-theme="dark"] .season-matrix-filters select,
+[data-theme="dark"] .season-matrix-grid input,
+[data-theme="dark"] .season-matrix-grid select,
+[data-theme="dark"] .season-matrix-full-width input,
+[data-theme="dark"] .season-matrix-full-width textarea,
+[data-theme="dark"] .season-matrix-edit-btn,
+[data-theme="dark"] .season-matrix-delete-btn {
+  background: #1d1d1d;
+  border-color: #444;
+  color: #e8e8e8;
+}

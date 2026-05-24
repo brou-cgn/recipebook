@@ -11,6 +11,7 @@ import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils'
 import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
+import SeasonMatrixTab from './SeasonMatrixTab';
 import {
   DndContext,
   closestCenter,
@@ -1421,6 +1422,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onClick={() => setActiveTab('faq')}
             >
               Kochschule
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab-button ${activeTab === 'saisonmatrix' ? 'active' : ''}`}
+              onClick={() => setActiveTab('saisonmatrix')}
+            >
+              Saisonmatrix
             </button>
           )}
         </div>
@@ -3152,6 +3161,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               )}
             </div>
           </>
+        ) : activeTab === 'saisonmatrix' ? (
+          <SeasonMatrixTab currentUser={currentUser} />
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}
