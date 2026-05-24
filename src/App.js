@@ -1233,6 +1233,8 @@ function App() {
         updates.targetListId = null;
       }
       await updateGroupInFirestore(groupId, updates);
+      setSelectedGroup(prev => (prev?.id === groupId ? { ...prev, ...updates } : prev));
+      setGroups(prev => prev.map(g => (g.id === groupId ? { ...g, ...updates } : g)));
     } catch (error) {
       console.error('Error editing group properties:', error);
       alert('Fehler beim Bearbeiten der Liste. Bitte versuchen Sie es erneut.');

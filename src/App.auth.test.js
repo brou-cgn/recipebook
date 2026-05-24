@@ -93,7 +93,18 @@ jest.mock('./components/MenuSharePage', () => function MockMenuSharePage() {
 jest.mock('./components/GroupList', () => function MockGroupList(props) {
   return (
     <div data-testid="group-list-view">
-      <button type="button" onClick={() => props.onSelectGroup?.({ id: 'private-1', type: 'private' })}>open-group</button>
+      <button
+        type="button"
+        onClick={() => props.onSelectGroup?.({
+          id: 'private-1',
+          type: 'private',
+          name: 'Private Liste alt',
+          description: 'Alte Beschreibung',
+          listKind: 'classic',
+        })}
+      >
+        open-group
+      </button>
       <button type="button" onClick={() => props.onBack?.()}>close-groups</button>
     </div>
   );
@@ -103,6 +114,18 @@ jest.mock('./components/GroupDetail', () => function MockGroupDetail(props) {
   return (
     <div data-testid="group-detail-view">
       <button type="button" onClick={() => props.onBack?.()}>back-to-groups</button>
+      <div data-testid="group-detail-name">{props.group?.name || ''}</div>
+      <div data-testid="group-detail-description">{props.group?.description || ''}</div>
+      <button
+        type="button"
+        onClick={() => props.onEditGroupProperties?.('private-1', {
+          name: 'Private Liste neu',
+          description: 'Neue Beschreibung sofort sichtbar',
+          listKind: 'classic',
+        })}
+      >
+        edit-group-properties
+      </button>
     </div>
   );
 });
@@ -384,5 +407,35 @@ describe('App authentication view handling', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'close-groups' }));
     expect(screen.getByTestId('startseite-view')).toBeInTheDocument();
+  });
+
+  test('updates selected private list data immediately after editing group properties', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-7',
+        vorname: 'Edit',
+        nachname: 'List',
+        email: 'edit-list@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'startseite-go-groups' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-group' }));
+
+    expect(screen.getByTestId('group-detail-description')).toHaveTextContent('Alte Beschreibung');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'edit-group-properties' }));
+    });
+
+    expect(screen.getByTestId('group-detail-name')).toHaveTextContent('Private Liste neu');
+    expect(screen.getByTestId('group-detail-description')).toHaveTextContent('Neue Beschreibung sofort sichtbar');
   });
 });
