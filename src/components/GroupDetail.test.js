@@ -547,6 +547,7 @@ describe('GroupDetail – edit list properties feature', () => {
     goToEinstellungen();
     const editFabButton = container.querySelector('.group-edit-fab-button');
     expect(editFabButton).toBeInTheDocument();
+    expect(editFabButton).not.toHaveClass('group-detail-delete-fab-button');
     expect(editFabButton).toHaveTextContent('✎');
   });
 
@@ -555,6 +556,7 @@ describe('GroupDetail – edit list properties feature', () => {
     goToEinstellungen();
     const deleteFabButton = container.querySelector('.delete-fab-button');
     expect(deleteFabButton).toBeInTheDocument();
+    expect(deleteFabButton).toHaveClass('group-detail-delete-fab-button');
     expect(deleteFabButton).toHaveTextContent('🗑');
     expect(deleteFabButton).toHaveAttribute('aria-label', 'Liste löschen');
   });

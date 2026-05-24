@@ -436,7 +436,8 @@
   .group-edit-fab-button {
     position: fixed;
     bottom: 20px;
-    left: 20px;
+    left: auto;
+    right: 20px;
     z-index: 1101;
     width: 56px;
     height: 56px;
@@ -478,6 +479,11 @@
     width: 1.4rem;
     height: 1.4rem;
     object-fit: contain;
+  }
+
+  .group-detail-delete-fab-button {
+    left: 20px !important;
+    right: auto;
   }
 }
 

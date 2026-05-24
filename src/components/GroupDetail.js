@@ -735,7 +735,7 @@ function GroupDetail({
       {isOwner && !isPublic && activeTab === TAB_SETTINGS && !showPortionSelector && !showShoppingListModal && (
         <>
           <button
-            className={`delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
+            className={`delete-fab-button group-detail-delete-fab-button${deleteFabPressed ? ' pressed' : ''}`}
             onClick={handleDelete}
             onTouchStart={() => setDeleteFabPressed(true)}
             onTouchEnd={() => setDeleteFabPressed(false)}
