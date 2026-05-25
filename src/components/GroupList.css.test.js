@@ -24,6 +24,8 @@ describe('GroupList CSS layout', () => {
     const css = fs.readFileSync(cssPath, 'utf8');
     const closeButtonRule = getRuleBody(css, '.group-list-close-btn');
     const closeButtonHoverRule = getRuleBody(css, '.group-list-close-btn:hover');
+    const closeButtonFocusRule = getRuleBody(css, '.group-list-close-btn:focus');
+    const closeButtonFocusVisibleRule = getRuleBody(css, '.group-list-close-btn:focus-visible');
 
     expect(closeButtonRule).toContain('display: inline-flex;');
     expect(closeButtonRule).toContain('align-items: center;');
@@ -35,6 +37,11 @@ describe('GroupList CSS layout', () => {
     expect(closeButtonRule).toContain('-webkit-tap-highlight-color: transparent;');
     expect(closeButtonRule).toContain('touch-action: manipulation;');
     expect(closeButtonHoverRule).toContain('background: #f0f0f0;');
+    expect(closeButtonFocusRule).toContain('outline: none;');
+    expect(closeButtonFocusRule).toContain('background: transparent;');
+    expect(closeButtonFocusVisibleRule).toContain('outline: 2px solid #5A2A4A;');
+    expect(closeButtonFocusVisibleRule).toContain('outline-offset: 2px;');
+    expect(closeButtonFocusVisibleRule).toContain('background: transparent;');
   });
 
   test('shows full card descriptions without line clamp and keeps card height content-driven', () => {
