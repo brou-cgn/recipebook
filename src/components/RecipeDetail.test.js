@@ -18,6 +18,7 @@ jest.mock('../utils/userManagement', () => ({
   canCreateNewVersion: () => true,
   canDeleteRecipe: () => true,
   canDeleteRecipes: () => true,
+  canViewRecipeIndex: jest.fn(() => false),
   isCurrentUserAdmin: jest.fn(() => false),
   getUsers: () => [
     { id: 'user-1', vorname: 'Test', nachname: 'User' },
@@ -1655,6 +1656,93 @@ describe('RecipeDetail - Metadata Order', () => {
     const emptyStars = difficultyStars.querySelectorAll('.star.empty');
     expect(filledStars.length).toBe(2);
     expect(emptyStars.length).toBe(3);
+  });
+});
+
+describe('RecipeDetail - Index Field Visibility', () => {
+  const { canViewRecipeIndex } = require('../utils/userManagement');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('shows index field when permission function allows visibility', () => {
+    canViewRecipeIndex.mockReturnValue(true);
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      index: 42,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={{ id: 'user-1', role: 'admin' }}
+      />
+    );
+
+    expect(screen.getByText('Index:')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  test('hides index field when permission function denies visibility', () => {
+    canViewRecipeIndex.mockReturnValue(false);
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+      index: 42,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={{ id: 'user-2', role: 'edit' }}
+      />
+    );
+
+    expect(screen.queryByText('Index:')).not.toBeInTheDocument();
+  });
+
+  test('shows placeholder for index field when value is not yet calculated', () => {
+    canViewRecipeIndex.mockReturnValue(true);
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={{ id: 'user-1', role: 'admin' }}
+      />
+    );
+
+    expect(screen.getByText('Index:')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });
 

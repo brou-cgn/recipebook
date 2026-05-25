@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLongPress } from '../utils/useLongPress';
 import './RecipeDetail.css';
-import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, isCurrentUserAdmin } from '../utils/userManagement';
+import { canDirectlyEditRecipe, canCreateNewVersion, canDeleteRecipe, canDeleteRecipes, canViewRecipeIndex, isCurrentUserAdmin } from '../utils/userManagement';
 import { isRecipeVersion, getVersionNumber, getRecipeVersions, getParentRecipe, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
 import { isBase64Image } from '../utils/imageUtils';
@@ -442,6 +442,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
   const deleteAtPublishPosition = isRecipePublic && userCanDelete;
   const userCanResetThumbnail = canDeleteRecipes(currentUser);
+  const hasRecipeIndexViewPermission = canViewRecipeIndex(currentUser);
   const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
 
   // Get current version index
@@ -2205,6 +2206,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       </span>
                     ))}
                   </span>
+                </div>
+              )}
+
+              {hasRecipeIndexViewPermission && (
+                <div className="metadata-item">
+                  <span className="metadata-label">Index:</span>
+                  <span className="metadata-value">{recipe.index ?? '—'}</span>
                 </div>
               )}
               

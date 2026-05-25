@@ -598,6 +598,17 @@ export const canManageSeasonMatrix = (user) => {
 };
 
 /**
+ * Check if user may view the recipe index field in recipe detail.
+ * Currently limited to moderators and administrators.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canViewRecipeIndex = (user) => {
+  if (!user) return false;
+  return hasPermission(user, ROLES.MODERATOR);
+};
+
+/**
  * Check if user can edit a specific recipe
  * Admins can edit any recipe.
  * Users with EDIT permission can only edit their own recipes.
