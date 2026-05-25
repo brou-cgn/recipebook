@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './SeasonMatrixTab.css';
 import {
   subscribeToSeasonMatrix,
@@ -6,6 +6,7 @@ import {
   updateSeasonMatrixEntry,
   deleteSeasonMatrixEntry
 } from '../utils/seasonMatrix';
+import { createSeasonMatrixTemplateCsv, parseSeasonMatrixImport } from '../utils/seasonMatrixImportExport';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 const REGION_OPTIONS = ['GLOBAL', 'DE', 'AT', 'CH'];
@@ -72,6 +73,9 @@ function SeasonMatrixTab({ currentUser }) {
   const [editingId, setEditingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToSeasonMatrix((seasonEntries) => {
@@ -214,12 +218,136 @@ function SeasonMatrixTab({ currentUser }) {
     }
   };
 
+  const handleTemplateDownload = () => {
+    const blob = new Blob([createSeasonMatrixTemplateCsv()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'saisonmatrix-import-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setImportResult({ type: 'success', text: 'Importvorlage wurde heruntergeladen.' });
+    console.info('Saisonmatrix Template exportiert');
+  };
+
+  const readImportFile = async (file) => {
+    if (typeof TextDecoder === 'undefined') {
+      if (file.text) {
+        return file.text();
+      }
+      throw new Error('Datei kann in dieser Browserumgebung nicht gelesen werden.');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
+    } catch {
+      try {
+        return new TextDecoder('windows-1252').decode(arrayBuffer);
+      } catch {
+        return new TextDecoder('iso-8859-1').decode(arrayBuffer);
+      }
+    }
+  };
+
+  const handleImport = async (event) => {
+    const [file] = event.target.files || [];
+    if (!file) return;
+
+    setImportResult(null);
+    setErrorMessage('');
+    setIsImporting(true);
+
+    try {
+      const fileContent = await readImportFile(file);
+      const { entries: parsedEntries, errors: parseErrors } = parseSeasonMatrixImport(fileContent, {
+        fileName: file.name,
+        regionOptions: REGION_OPTIONS,
+        labelModeOptions: LABEL_MODE_OPTIONS
+      });
+      const updatedBy = resolveUpdatedBy(currentUser);
+
+      let importedCount = 0;
+      let updatedCount = 0;
+      const importErrors = [...parseErrors];
+
+      for (const entry of parsedEntries) {
+        try {
+          const exists = entries.some((existingEntry) => existingEntry.id === entry.id);
+          if (exists) {
+            await updateSeasonMatrixEntry(entry.id, entry, updatedBy);
+            updatedCount += 1;
+          } else {
+            await addSeasonMatrixEntry(entry, updatedBy);
+            importedCount += 1;
+          }
+        } catch (error) {
+          importErrors.push(`Eintrag ${entry.id}: ${error.message}`);
+        }
+      }
+
+      if (importedCount + updatedCount === 0) {
+        throw new Error(`Alle Einträge fehlgeschlagen:\n${importErrors.join('\n')}`);
+      }
+
+      const status = [`${importedCount} neu`, `${updatedCount} aktualisiert`];
+      const message = `Import abgeschlossen (${status.join(', ')}).`;
+      if (importErrors.length > 0) {
+        setImportResult({ type: 'warning', text: `${message}\nHinweise:\n${importErrors.join('\n')}` });
+      } else {
+        setImportResult({ type: 'success', text: message });
+      }
+
+      console.info('Saisonmatrix importiert', { importedCount, updatedCount, warningCount: importErrors.length });
+    } catch (error) {
+      setImportResult({ type: 'error', text: `Import fehlgeschlagen: ${error.message}` });
+    } finally {
+      setIsImporting(false);
+      if (importInputRef.current) {
+        importInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="settings-section season-matrix-tab">
       <h3>Saisonmatrix</h3>
       <p className="section-description">
         Verwalte hier saisonale Zutaten-Einträge inklusive Score, Region und Label-Modus.
       </p>
+
+      <div className="season-matrix-import-export">
+        <div className="season-matrix-import-export-header">
+          <h4>Import &amp; Export</h4>
+          <p>
+            Lade die Vorlage herunter und befülle Felder wie <code>mainSeasonMonths</code> bzw. <code>synonyms</code> mit
+            <strong> | </strong> getrennten Werten (z. B. <code>1|2|3</code>).
+          </p>
+        </div>
+        <div className="season-matrix-import-export-actions">
+          <button type="button" className="save-button" onClick={handleTemplateDownload}>
+            Template herunterladen
+          </button>
+          <label htmlFor="season-matrix-import-input" className={`save-button ${isImporting ? 'disabled' : ''}`}>
+            {isImporting ? 'Import läuft...' : 'Datei importieren'}
+          </label>
+          <input
+            id="season-matrix-import-input"
+            ref={importInputRef}
+            type="file"
+            accept="text/csv,application/json"
+            onChange={handleImport}
+            disabled={isImporting}
+          />
+        </div>
+        {importResult && (
+          <div className={`season-matrix-import-result ${importResult.type}`}>
+            {importResult.text}
+          </div>
+        )}
+      </div>
 
       <div className="season-matrix-filters">
         <input
