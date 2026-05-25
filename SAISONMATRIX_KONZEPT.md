@@ -91,6 +91,12 @@ Funktionen:
 - Detail-Editor für optionale Felder
 - Import/Export (CSV/JSON) für Massenpflege
 
+### Umgesetzte Berechtigungen
+- Die Saisonmatrix ist im Adminbereich als eigener Tab in den Einstellungen verfügbar.
+- Sichtbarkeit und Bearbeitung im Frontend sind auf **Moderatoren** und **Administratoren** beschränkt.
+- Firestore erlaubt für `seasonMatrix` Leserechte für authentifizierte App-Nutzer, aber **CRUD nur für Moderatoren/Administratoren**.
+- Die UI blendet für andere Rollen die Saisonmatrix aus und zeigt beim direkten Aufruf keinen Bearbeitungszugang an.
+
 ### Änderungsverfolgung
 - MVP: `updatedAt`, `updatedBy`
 - Später: echte Versionierung/Audit-Log pro Änderung

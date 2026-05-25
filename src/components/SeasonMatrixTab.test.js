@@ -10,6 +10,7 @@ import {
   createSeasonMatrixTemplateCsv,
   parseSeasonMatrixImport
 } from '../utils/seasonMatrixImportExport';
+import { canManageSeasonMatrix } from '../utils/userManagement';
 
 jest.mock('../utils/seasonMatrix', () => ({
   subscribeToSeasonMatrix: jest.fn(),
@@ -23,9 +24,14 @@ jest.mock('../utils/seasonMatrixImportExport', () => ({
   parseSeasonMatrixImport: jest.fn()
 }));
 
+jest.mock('../utils/userManagement', () => ({
+  canManageSeasonMatrix: jest.fn()
+}));
+
 describe('SeasonMatrixTab import/export', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    canManageSeasonMatrix.mockReturnValue(true);
     subscribeToSeasonMatrix.mockImplementation((callback) => {
       callback([{ id: 'kartoffel', name: 'Kartoffel' }]);
       return jest.fn();
@@ -33,6 +39,16 @@ describe('SeasonMatrixTab import/export', () => {
 
     addSeasonMatrixEntry.mockResolvedValue(undefined);
     updateSeasonMatrixEntry.mockResolvedValue(undefined);
+  });
+
+  it('blocks access for users without saisonmatrix permission', () => {
+    canManageSeasonMatrix.mockReturnValue(false);
+
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster', role: 'read' }} />);
+
+    expect(screen.getByText(/Nur Moderatoren und Administratoren können die Saisonmatrix bearbeiten/i)).toBeInTheDocument();
+    expect(subscribeToSeasonMatrix).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Template herunterladen' })).not.toBeInTheDocument();
   });
 
   it('downloads template CSV on button click', () => {
@@ -50,7 +66,7 @@ describe('SeasonMatrixTab import/export', () => {
     });
     const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster' }} />);
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster', role: 'admin' }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Template herunterladen' }));
 
@@ -93,7 +109,7 @@ describe('SeasonMatrixTab import/export', () => {
       errors: ['Zeile 3 ignoriert']
     });
 
-    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster' }} />);
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster', role: 'admin' }} />);
 
     const input = screen.getByLabelText('Datei importieren');
     const csvContent = 'id;name\nkartoffel;Kartoffel';

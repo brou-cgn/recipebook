@@ -86,6 +86,7 @@ import {
   deleteUser,
   canEditRecipes,
   canDeleteRecipes,
+  canManageSeasonMatrix,
   canEditRecipe,
   canDeleteRecipe,
   canDirectlyEditRecipe,
@@ -532,6 +533,14 @@ describe("User Management Utilities", () => {
     test("should return false for edit users", () => { expect(canDeleteRecipes({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
     test("should return false for read users", () => { expect(canDeleteRecipes({ role: ROLES.READ, isAdmin: false })).toBe(false); });
     test("should return false for null user", () => { expect(canDeleteRecipes(null)).toBe(false); });
+  });
+
+  describe("canManageSeasonMatrix", () => {
+    test("should return true for admin users", () => { expect(canManageSeasonMatrix({ role: ROLES.ADMIN, isAdmin: true })).toBe(true); });
+    test("should return true for moderator users", () => { expect(canManageSeasonMatrix({ role: ROLES.MODERATOR, isAdmin: false })).toBe(true); });
+    test("should return false for edit users", () => { expect(canManageSeasonMatrix({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
+    test("should return false for read users", () => { expect(canManageSeasonMatrix({ role: ROLES.READ, isAdmin: false })).toBe(false); });
+    test("should return false for null user", () => { expect(canManageSeasonMatrix(null)).toBe(false); });
   });
 
   describe("getRoleDisplayName", () => {
