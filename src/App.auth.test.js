@@ -4,6 +4,7 @@ import App from './App';
 
 let mockAuthStateCallback;
 const mockRecipeListRender = jest.fn();
+const mockRecipeFormProps = jest.fn();
 
 jest.mock('./components/RecipeList', () => function MockRecipeList() {
   mockRecipeListRender();
@@ -23,8 +24,17 @@ jest.mock('./components/RecipeDetail', () => function MockRecipeDetail() {
   return null;
 });
 
-jest.mock('./components/RecipeForm', () => function MockRecipeForm() {
-  return null;
+jest.mock('./components/RecipeForm', () => function MockRecipeForm(props) {
+  mockRecipeFormProps(props);
+  return (
+    <div
+      data-testid="recipe-form-view"
+      data-initial-url={props.initialWebImportUrl || ''}
+      data-initial-author={props.initialWebImportAuthorId || ''}
+    >
+      Recipe Form
+    </div>
+  );
 });
 
 jest.mock('./components/Header', () => {
@@ -243,8 +253,10 @@ describe('App authentication view handling', () => {
     mockAuthStateCallback = null;
     mockGetRolePermissions.mockResolvedValue({});
     mockRecipeListRender.mockClear();
+    mockRecipeFormProps.mockClear();
     localStorage.clear();
     sessionStorage.clear();
+    window.history.pushState({}, '', '/');
   });
 
   test('resets to login view after authentication from the register screen', async () => {
@@ -437,5 +449,68 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('group-detail-name')).toHaveTextContent('Private Liste neu');
     expect(screen.getByTestId('group-detail-description')).toHaveTextContent('Neue Beschreibung sofort sichtbar');
+  });
+
+  test('persists webimport deeplink through login and resumes import after authentication', async () => {
+    const deeplinkUrl = 'https://www.chefkoch.de/rezepte/123';
+    window.history.pushState(
+      {},
+      '',
+      `/?webimport=${encodeURIComponent(deeplinkUrl)}&webimportAuthor=user-42`
+    );
+
+    render(<App />);
+
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+    expect(screen.getByText('Bitte melde dich an, um das Rezept zu importieren.')).toBeInTheDocument();
+    expect(sessionStorage.getItem('pendingWebimportUrl')).toBe(deeplinkUrl);
+    expect(window.location.search).toBe('');
+
+    mockGetRolePermissions.mockResolvedValue({ user: { webimport: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-8',
+        vorname: 'Import',
+        nachname: 'User',
+        email: 'import@example.com',
+        role: 'user',
+      });
+    });
+
+    const recipeForm = await screen.findByTestId('recipe-form-view');
+    expect(recipeForm).toHaveAttribute('data-initial-url', deeplinkUrl);
+    expect(recipeForm).toHaveAttribute('data-initial-author', 'user-42');
+    expect(sessionStorage.getItem('pendingWebimportUrl')).toBeNull();
+    expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
+  });
+
+  test('restores pending webimport deeplink from sessionStorage when URL params are no longer present', async () => {
+    const deeplinkUrl = 'https://example.com/rezept';
+    sessionStorage.setItem('pendingWebimportUrl', deeplinkUrl);
+    sessionStorage.setItem('pendingWebimportAuthor', 'user-99');
+
+    render(<App />);
+
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+    expect(screen.getByText('Bitte melde dich an, um das Rezept zu importieren.')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { webimport: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-9',
+        vorname: 'Session',
+        nachname: 'Restore',
+        email: 'session@example.com',
+        role: 'user',
+      });
+    });
+
+    const recipeForm = await screen.findByTestId('recipe-form-view');
+    expect(recipeForm).toHaveAttribute('data-initial-url', deeplinkUrl);
+    expect(recipeForm).toHaveAttribute('data-initial-author', 'user-99');
+    expect(sessionStorage.getItem('pendingWebimportUrl')).toBeNull();
+    expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
   });
 });
