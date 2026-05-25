@@ -73,6 +73,12 @@ service cloud.firestore {
       allow create, update, delete: if isEditOrAdmin();
     }
 
+    // Season matrix collection
+    match /seasonMatrix/{entryId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isModeratorOrAdmin();
+    }
+
     // FAQs collection
     match /faqs/{faqId} {
       allow read: if isAnyUser();

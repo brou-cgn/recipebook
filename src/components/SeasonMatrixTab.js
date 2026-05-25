@@ -7,6 +7,7 @@ import {
   deleteSeasonMatrixEntry
 } from '../utils/seasonMatrix';
 import { createSeasonMatrixTemplateCsv, parseSeasonMatrixImport } from '../utils/seasonMatrixImportExport';
+import { canManageSeasonMatrix } from '../utils/userManagement';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 const REGION_OPTIONS = ['GLOBAL', 'DE', 'AT', 'CH'];
@@ -63,6 +64,7 @@ const resolveUpdatedBy = (currentUser) => {
 };
 
 function SeasonMatrixTab({ currentUser }) {
+  const hasSeasonMatrixAccess = canManageSeasonMatrix(currentUser);
   const [entries, setEntries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [regionFilter, setRegionFilter] = useState('ALLE');
@@ -76,11 +78,12 @@ function SeasonMatrixTab({ currentUser }) {
   const importInputRef = useRef(null);
 
   useEffect(() => {
+    if (!hasSeasonMatrixAccess) return undefined;
     const unsubscribe = subscribeToSeasonMatrix((seasonEntries) => {
       setEntries(seasonEntries);
     });
     return () => unsubscribe();
-  }, []);
+  }, [hasSeasonMatrixAccess]);
 
   const filteredEntries = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
@@ -101,6 +104,17 @@ function SeasonMatrixTab({ currentUser }) {
       return searchValues.some((value) => value.includes(needle));
     });
   }, [entries, searchTerm, regionFilter, statusFilter]);
+
+  if (!hasSeasonMatrixAccess) {
+    return (
+      <div className="settings-section season-matrix-tab">
+        <h3>Saisonmatrix</h3>
+        <div className="message error">
+          Nur Moderatoren und Administratoren können die Saisonmatrix bearbeiten.
+        </div>
+      </div>
+    );
+  }
 
   const setMonthSelection = (field, month, checked) => {
     setFormData((prev) => {

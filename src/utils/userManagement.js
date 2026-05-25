@@ -587,6 +587,17 @@ export const canDeleteRecipes = (user) => {
 };
 
 /**
+ * Check if user may manage the Saisonmatrix in the admin area.
+ * Moderators and administrators may create, read, update and delete entries.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canManageSeasonMatrix = (user) => {
+  if (!user) return false;
+  return hasPermission(user, ROLES.MODERATOR);
+};
+
+/**
  * Check if user can edit a specific recipe
  * Admins can edit any recipe.
  * Users with EDIT permission can only edit their own recipes.

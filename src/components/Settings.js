@@ -4,7 +4,7 @@ import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, sav
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
-import { isCurrentUserAdmin, ROLES, getRolePermissions } from '../utils/userManagement';
+import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
@@ -349,6 +349,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // Whether the current user can rename cuisine types and meal categories
   const canEditLists = isAdmin || rolePermissions?.[currentUser?.role]?.editLists === true;
+  const canAccessSeasonMatrix = canManageSeasonMatrix(currentUser);
 
   const resizeInspirationTextarea = useCallback((textarea) => {
     if (!textarea) return;
@@ -1424,7 +1425,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               Kochschule
             </button>
           )}
-          {isAdmin && (
+          {canAccessSeasonMatrix && (
             <button
               className={`tab-button ${activeTab === 'saisonmatrix' ? 'active' : ''}`}
               onClick={() => setActiveTab('saisonmatrix')}
