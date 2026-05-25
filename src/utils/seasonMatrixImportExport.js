@@ -1,4 +1,7 @@
 const REQUIRED_HEADERS = ['id', 'name', 'mainSeasonMonths', 'seasonScore', 'labelMode', 'region'];
+// 0 ist gültig, damit Zutaten außerhalb der Saison explizit auf "kein Saisonbezug" gesetzt werden können.
+const MIN_SEASON_SCORE = 0;
+const MAX_SEASON_SCORE = 100;
 
 const normalizeDelimitedList = (value, splitter = /[|,]/) => {
   if (!value) return [];
@@ -41,7 +44,7 @@ const parseDelimitedLine = (line, delimiter) => {
   for (let i = 0; i < line.length; i += 1) {
     const char = line[i];
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
         currentValue += '"';
         i += 1;
       } else {
@@ -87,8 +90,8 @@ const normalizeEntry = (rawEntry, rowNumber, options) => {
   if (!entry.id) throw new Error(`Zeile ${rowNumber}: Feld "id" fehlt.`);
   if (!entry.name) throw new Error(`Zeile ${rowNumber}: Feld "name" fehlt.`);
   if (entry.mainSeasonMonths.length === 0) throw new Error(`Zeile ${rowNumber}: Mindestens ein Hauptsaison-Monat ist erforderlich.`);
-  if (!Number.isFinite(entry.seasonScore) || entry.seasonScore < 0 || entry.seasonScore > 100) {
-    throw new Error(`Zeile ${rowNumber}: seasonScore muss zwischen 0 und 100 liegen.`);
+  if (!Number.isFinite(entry.seasonScore) || entry.seasonScore < MIN_SEASON_SCORE || entry.seasonScore > MAX_SEASON_SCORE) {
+    throw new Error(`Zeile ${rowNumber}: seasonScore muss zwischen ${MIN_SEASON_SCORE} und ${MAX_SEASON_SCORE} liegen.`);
   }
   if (!options.labelModeOptions.includes(entry.labelMode)) {
     throw new Error(`Zeile ${rowNumber}: labelMode "${entry.labelMode}" ist ungültig.`);

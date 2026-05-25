@@ -104,6 +104,10 @@ describe('SeasonMatrixTab import/export', () => {
       configurable: true,
       value: jest.fn(async () => Uint8Array.from(csvContent.split('').map((char) => char.charCodeAt(0))).buffer)
     });
+    Object.defineProperty(file, 'text', {
+      configurable: true,
+      value: jest.fn(async () => csvContent)
+    });
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {

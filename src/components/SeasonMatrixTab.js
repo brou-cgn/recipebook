@@ -233,13 +233,14 @@ function SeasonMatrixTab({ currentUser }) {
   };
 
   const readImportFile = async (file) => {
-    const arrayBuffer = await file.arrayBuffer();
     if (typeof TextDecoder === 'undefined') {
-      if (typeof file.text === 'function') {
+      if (file.text) {
         return file.text();
       }
-      return Array.from(new Uint8Array(arrayBuffer), (byte) => String.fromCharCode(byte)).join('');
+      throw new Error('Datei kann in dieser Browserumgebung nicht gelesen werden.');
     }
+
+    const arrayBuffer = await file.arrayBuffer();
     try {
       return new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
     } catch {
@@ -288,7 +289,7 @@ function SeasonMatrixTab({ currentUser }) {
       }
 
       if (importedCount + updatedCount === 0) {
-        throw new Error(importErrors.join('\n'));
+        throw new Error(`Alle Einträge fehlgeschlagen:\n${importErrors.join('\n')}`);
       }
 
       const status = [`${importedCount} neu`, `${updatedCount} aktualisiert`];
@@ -336,7 +337,7 @@ function SeasonMatrixTab({ currentUser }) {
             id="season-matrix-import-input"
             ref={importInputRef}
             type="file"
-            accept=".csv,.json,text/csv,application/json"
+            accept="text/csv,application/json"
             onChange={handleImport}
             disabled={isImporting}
           />
