@@ -549,6 +549,8 @@ describe("User Management Utilities", () => {
     test("should return true for moderator users", () => { expect(canViewRecipeIndex({ role: ROLES.MODERATOR, isAdmin: false })).toBe(true); });
     test("should return false for edit users", () => { expect(canViewRecipeIndex({ role: ROLES.EDIT, isAdmin: false })).toBe(false); });
     test("should return false for read users", () => { expect(canViewRecipeIndex({ role: ROLES.READ, isAdmin: false })).toBe(false); });
+    test("should honor explicit recipeIndex flag when present", () => { expect(canViewRecipeIndex({ role: ROLES.MODERATOR, recipeIndex: false })).toBe(false); });
+    test("should allow explicit recipeIndex permission for lower roles", () => { expect(canViewRecipeIndex({ role: ROLES.READ, recipeIndex: true })).toBe(true); });
     test("should return false for null user", () => { expect(canViewRecipeIndex(null)).toBe(false); });
   });
 
@@ -965,6 +967,15 @@ describe("User Management Utilities", () => {
     test("should have editLists disabled for non-admin roles", () => {
       [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
         expect(ROLE_PERMISSIONS_DEFAULT[role].editLists).toBe(false);
+      });
+    });
+    test("should have recipeIndex enabled for admin and moderator", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].recipeIndex).toBe(true);
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.MODERATOR].recipeIndex).toBe(true);
+    });
+    test("should have recipeIndex disabled for edit/comment/read roles", () => {
+      [ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].recipeIndex).toBe(false);
       });
     });
     test("should include all assignable roles", () => {

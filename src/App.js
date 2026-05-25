@@ -33,6 +33,7 @@ import {
   canEditMenu,
   canDeleteMenu,
   getRolePermissions,
+  ROLE_PERMISSIONS_DEFAULT,
   saveFcmToken,
   updateUserProfile
 } from './utils/userManagement';
@@ -217,6 +218,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     tagesmenuTestmode: rolePerms.tagesmenuTestmode ?? false,
     themeToggle: rolePerms.themeToggle ?? false,
     printRecipe: rolePerms.printRecipe ?? true,
+    recipeIndex: rolePerms.recipeIndex ?? ROLE_PERMISSIONS_DEFAULT[user.role]?.recipeIndex ?? false,
     startseite: rolePerms.startseite ?? false,
   };
 }

@@ -175,6 +175,7 @@ jest.mock('./utils/userManagement', () => ({
   canEditMenu: jest.fn(() => false),
   canDeleteMenu: jest.fn(() => false),
   getRolePermissions: jest.fn(() => Promise.resolve({})),
+  ROLE_PERMISSIONS_DEFAULT: {},
   saveFcmToken: () => Promise.resolve(),
 }));
 
