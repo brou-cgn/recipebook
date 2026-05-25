@@ -442,7 +442,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const userCanPublish = !isRecipePublic && userCanDirectlyEdit;
   const deleteAtPublishPosition = isRecipePublic && userCanDelete;
   const userCanResetThumbnail = canDeleteRecipes(currentUser);
-  const userCanViewRecipeIndex = canViewRecipeIndex(currentUser);
+  const hasRecipeIndexViewPermission = canViewRecipeIndex(currentUser);
   const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
 
   // Get current version index
@@ -2209,7 +2209,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
 
-              {userCanViewRecipeIndex && (
+              {hasRecipeIndexViewPermission && (
                 <div className="metadata-item">
                   <span className="metadata-label">Index:</span>
                   <span className="metadata-value">{recipe.index ?? '—'}</span>
