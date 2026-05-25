@@ -25,7 +25,6 @@ Rezepte werden **nicht** manuell als „saisonal“ getaggt, sondern erhalten ih
 | `mainSeasonMonths` | number[] (1-12) | ✅ | Hauptsaison-Monate |
 | `secondarySeasonMonths` | number[] | optional | Nebensaison-Monate |
 | `seasonScore` | number (0-100) | ✅ | Saisonale Stärke je Zutat |
-| `labelMode` | string | ✅ | Basislabel (z. B. `jetzt_saison`, `bald_saison`, `ausserhalb`) |
 | `isActive` | boolean | ✅ | Aktiv/Inaktiv |
 | `region` | string | ✅ (einfach) | Regionale Ausprägung (MVP: z. B. `DE`, `AT`, `CH` oder `GLOBAL`) |
 | `synonyms` | string[] | optional | Synonyme/Schreibweisen |
@@ -84,7 +83,7 @@ Zusatztext im UI:
 
 ### Tabellenansicht (MVP)
 Spalten:
-- ID, Name, Kategorie, Hauptsaison, Score, Label, Aktiv, Region, letzte Änderung
+- ID, Name, Kategorie, Hauptsaison, Score, Aktiv, Region, letzte Änderung
 
 Funktionen:
 - Suche/Filter nach Name, Kategorie, aktiver Saison, Region, Status
@@ -103,7 +102,6 @@ Funktionen:
 ### MVP (jetzt)
 - ID, Name, Hauptsaison, Score, Aktiv/Inaktiv
 - Einfache Region
-- Label
 - Admin-Grundansicht mit Bearbeitung
 - Basis-API/Funktion zur Rezept-Score-Berechnung
 
@@ -117,7 +115,7 @@ Funktionen:
 
 ## 7) Risiken & Leitplanken
 
-- Qualität der Saison-Labels hängt direkt von Matrix-Pflege ab.
+- Qualität der Saison-Bewertung hängt direkt von Matrix-Pflege ab.
 - Importware/Ganzjahresverfügbarkeit kann den Saisonbegriff verwässern.
 - Zu strenge Saisonfokussierung kann relevante Rezepte „verstecken“.
 - Gefahr von Pseudo-Präzision: Score bleibt ein Entscheidungshelfer, kein Naturgesetz.

@@ -80,7 +80,6 @@ describe('seasonMatrix utilities', () => {
         name: 'Kartoffel',
         mainSeasonMonths: [4, 5],
         seasonScore: 90,
-        labelMode: 'jetzt_saison',
         isActive: true,
         region: 'DE'
       },

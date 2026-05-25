@@ -10,7 +10,6 @@ import { createSeasonMatrixTemplateCsv, parseSeasonMatrixImport } from '../utils
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
 const REGION_OPTIONS = ['GLOBAL', 'DE', 'AT', 'CH'];
-const LABEL_MODE_OPTIONS = ['jetzt_saison', 'bald_saison', 'ausserhalb'];
 
 const createInitialFormData = () => ({
   id: '',
@@ -19,7 +18,6 @@ const createInitialFormData = () => ({
   mainSeasonMonths: [],
   secondarySeasonMonths: [],
   seasonScore: 0,
-  labelMode: 'jetzt_saison',
   isActive: true,
   region: 'GLOBAL',
   synonyms: '',
@@ -131,7 +129,6 @@ function SeasonMatrixTab({ currentUser }) {
       mainSeasonMonths: normalizeMonthArray(entry.mainSeasonMonths),
       secondarySeasonMonths: normalizeMonthArray(entry.secondarySeasonMonths),
       seasonScore: Number.isFinite(numericScore) ? numericScore : 0,
-      labelMode: entry.labelMode || 'jetzt_saison',
       isActive: entry.isActive !== false,
       region: entry.region || 'GLOBAL',
       synonyms: Array.isArray(entry.synonyms) ? entry.synonyms.join(', ') : '',
@@ -147,7 +144,6 @@ function SeasonMatrixTab({ currentUser }) {
     if (formData.mainSeasonMonths.length === 0) return 'Bitte mindestens einen Hauptsaison-Monat wählen.';
     if (!Number.isFinite(Number(formData.seasonScore))) return 'Bitte einen gültigen Score eingeben.';
     if (Number(formData.seasonScore) < 0 || Number(formData.seasonScore) > 100) return 'Der Score muss zwischen 0 und 100 liegen.';
-    if (!formData.labelMode) return 'Bitte einen Label-Modus auswählen.';
     if (!formData.region) return 'Bitte eine Region auswählen.';
     return '';
   };
@@ -175,7 +171,6 @@ function SeasonMatrixTab({ currentUser }) {
       mainSeasonMonths: normalizeMonthArray(formData.mainSeasonMonths),
       secondarySeasonMonths: normalizeMonthArray(formData.secondarySeasonMonths),
       seasonScore: Number(formData.seasonScore),
-      labelMode: formData.labelMode,
       isActive: formData.isActive,
       region: formData.region,
       synonyms: formData.synonyms
@@ -264,8 +259,7 @@ function SeasonMatrixTab({ currentUser }) {
       const fileContent = await readImportFile(file);
       const { entries: parsedEntries, errors: parseErrors } = parseSeasonMatrixImport(fileContent, {
         fileName: file.name,
-        regionOptions: REGION_OPTIONS,
-        labelModeOptions: LABEL_MODE_OPTIONS
+        regionOptions: REGION_OPTIONS
       });
       const updatedBy = resolveUpdatedBy(currentUser);
 
@@ -315,7 +309,7 @@ function SeasonMatrixTab({ currentUser }) {
     <div className="settings-section season-matrix-tab">
       <h3>Saisonmatrix</h3>
       <p className="section-description">
-        Verwalte hier saisonale Zutaten-Einträge inklusive Score, Region und Label-Modus.
+        Verwalte hier saisonale Zutaten-Einträge inklusive Score und Region.
       </p>
 
       <div className="season-matrix-import-export">
@@ -381,7 +375,6 @@ function SeasonMatrixTab({ currentUser }) {
               <th>Region</th>
               <th>Hauptsaison</th>
               <th>Score</th>
-              <th>Label</th>
               <th>Aktiv</th>
               <th>Letzte Änderung</th>
               <th>Aktionen</th>
@@ -390,7 +383,7 @@ function SeasonMatrixTab({ currentUser }) {
           <tbody>
             {filteredEntries.length === 0 ? (
               <tr>
-                <td colSpan={9} className="season-matrix-empty">Keine Einträge gefunden.</td>
+                <td colSpan={8} className="season-matrix-empty">Keine Einträge gefunden.</td>
               </tr>
             ) : (
               filteredEntries.map((entry) => (
@@ -400,7 +393,6 @@ function SeasonMatrixTab({ currentUser }) {
                   <td>{entry.region || '—'}</td>
                   <td>{formatMonthRange(entry.mainSeasonMonths)}</td>
                   <td>{entry.seasonScore ?? '—'}</td>
-                  <td>{entry.labelMode || '—'}</td>
                   <td>
                     <span className={`season-status-badge ${entry.isActive ? 'active' : 'inactive'}`}>
                       {entry.isActive ? 'Aktiv' : 'Inaktiv'}
@@ -464,17 +456,6 @@ function SeasonMatrixTab({ currentUser }) {
               value={formData.seasonScore}
               onChange={(event) => setFormData((prev) => ({ ...prev, seasonScore: event.target.value }))}
             />
-          </label>
-          <label>
-            Label-Modus *
-            <select
-              value={formData.labelMode}
-              onChange={(event) => setFormData((prev) => ({ ...prev, labelMode: event.target.value }))}
-            >
-              {LABEL_MODE_OPTIONS.map((mode) => (
-                <option key={mode} value={mode}>{mode}</option>
-              ))}
-            </select>
           </label>
           <label>
             Region *

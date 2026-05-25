@@ -1,4 +1,4 @@
-const REQUIRED_HEADERS = ['id', 'name', 'mainSeasonMonths', 'seasonScore', 'labelMode', 'region'];
+const REQUIRED_HEADERS = ['id', 'name', 'mainSeasonMonths', 'seasonScore', 'region'];
 // 0 ist gültig, damit Zutaten außerhalb der Saison explizit auf "kein Saisonbezug" gesetzt werden können.
 const MIN_SEASON_SCORE = 0;
 const MAX_SEASON_SCORE = 100;
@@ -80,7 +80,6 @@ const normalizeEntry = (rawEntry, rowNumber, options) => {
     mainSeasonMonths: normalizeMonthArray(rawEntry.mainSeasonMonths, rowNumber, 'Hauptsaison-Monate'),
     secondarySeasonMonths: normalizeMonthArray(rawEntry.secondarySeasonMonths, rowNumber, 'Nebensaison-Monate'),
     seasonScore: Number(rawEntry.seasonScore),
-    labelMode: String(rawEntry.labelMode || '').trim(),
     isActive: normalizeBoolean(rawEntry.isActive),
     region: String(rawEntry.region || '').trim(),
     synonyms: normalizeDelimitedList(rawEntry.synonyms),
@@ -92,9 +91,6 @@ const normalizeEntry = (rawEntry, rowNumber, options) => {
   if (entry.mainSeasonMonths.length === 0) throw new Error(`Zeile ${rowNumber}: Mindestens ein Hauptsaison-Monat ist erforderlich.`);
   if (!Number.isFinite(entry.seasonScore) || entry.seasonScore < MIN_SEASON_SCORE || entry.seasonScore > MAX_SEASON_SCORE) {
     throw new Error(`Zeile ${rowNumber}: seasonScore muss zwischen ${MIN_SEASON_SCORE} und ${MAX_SEASON_SCORE} liegen.`);
-  }
-  if (!options.labelModeOptions.includes(entry.labelMode)) {
-    throw new Error(`Zeile ${rowNumber}: labelMode "${entry.labelMode}" ist ungültig.`);
   }
   if (!options.regionOptions.includes(entry.region)) {
     throw new Error(`Zeile ${rowNumber}: region "${entry.region}" ist ungültig.`);
@@ -187,21 +183,20 @@ const parseJsonImport = (content, options) => {
 };
 
 export const createSeasonMatrixTemplateCsv = () => [
-  'id;name;category;mainSeasonMonths;secondarySeasonMonths;seasonScore;labelMode;isActive;region;synonyms;description',
-  'kartoffel;Kartoffel;Gemuese;1|2|3|9|10|11;4|5|6|7|8|12;86;jetzt_saison;true;DE;Erdapfel|Potato;Mild und vielseitig einsetzbar'
+  'id;name;category;mainSeasonMonths;secondarySeasonMonths;seasonScore;isActive;region;synonyms;description',
+  'kartoffel;Kartoffel;Gemuese;1|2|3|9|10|11;4|5|6|7|8|12;86;true;DE;Erdapfel|Potato;Mild und vielseitig einsetzbar'
 ].join('\n');
 
 export const parseSeasonMatrixImport = (content, {
   fileName = '',
-  regionOptions = ['GLOBAL', 'DE', 'AT', 'CH'],
-  labelModeOptions = ['jetzt_saison', 'bald_saison', 'ausserhalb']
+  regionOptions = ['GLOBAL', 'DE', 'AT', 'CH']
 } = {}) => {
   const normalizedContent = String(content || '').trim();
   if (!normalizedContent) {
     throw new Error('Die Importdatei ist leer.');
   }
 
-  const options = { regionOptions, labelModeOptions };
+  const options = { regionOptions };
   const lowerFileName = String(fileName || '').toLowerCase();
   const isJson = lowerFileName.endsWith('.json') || normalizedContent.startsWith('{') || normalizedContent.startsWith('[');
 
