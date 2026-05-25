@@ -11,6 +11,83 @@
   align-items: center;
 }
 
+.season-matrix-import-export {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.9rem;
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.season-matrix-import-export-header h4 {
+  margin: 0 0 0.3rem;
+  color: #402c1c;
+}
+
+.season-matrix-import-export-header p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #555;
+}
+
+.season-matrix-import-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.season-matrix-import-export-actions label.save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.season-matrix-import-export-actions label.save-button.disabled {
+  opacity: 0.7;
+  cursor: wait;
+  pointer-events: none;
+}
+
+#season-matrix-import-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.season-matrix-import-result {
+  white-space: pre-line;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
+  border: 1px solid transparent;
+}
+
+.season-matrix-import-result.success {
+  color: #1d6a30;
+  background: #e4f5e8;
+  border-color: #c9e7d1;
+}
+
+.season-matrix-import-result.warning {
+  color: #856404;
+  background: #fff3cd;
+  border-color: #ffe69c;
+}
+
+.season-matrix-import-result.error {
+  color: #842029;
+  background: #f8d7da;
+  border-color: #f1aeb5;
+}
+
 .season-matrix-filters input,
 .season-matrix-filters select,
 .season-matrix-grid input,
@@ -193,13 +270,37 @@
   border-color: #3b3b3b;
 }
 
+[data-theme="dark"] .season-matrix-import-export {
+  background: #242424;
+  border-color: #3b3b3b;
+}
+
 [data-theme="dark"] .season-matrix-grid label,
 [data-theme="dark"] .season-matrix-full-width,
+[data-theme="dark"] .season-matrix-import-export-header p,
 [data-theme="dark"] .season-matrix-month-block p,
 [data-theme="dark"] .season-month-checkbox,
 [data-theme="dark"] .season-matrix-checkbox,
 [data-theme="dark"] .season-matrix-empty {
   color: #d0d0d0;
+}
+
+[data-theme="dark"] .season-matrix-import-result.success {
+  color: #95d7a5;
+  background: #143021;
+  border-color: #1f5a38;
+}
+
+[data-theme="dark"] .season-matrix-import-result.warning {
+  color: #f6d27b;
+  background: #3f300f;
+  border-color: #7a5d1d;
+}
+
+[data-theme="dark"] .season-matrix-import-result.error {
+  color: #f0b3b8;
+  background: #3c1518;
+  border-color: #6f2b31;
 }
 
 [data-theme="dark"] .season-matrix-filters input,
