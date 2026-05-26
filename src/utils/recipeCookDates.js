@@ -10,7 +10,7 @@
  */
 
 import { db } from '../firebase';
-import { collection, addDoc, query, where, getDocs, Timestamp, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, onSnapshot, Timestamp, doc, deleteDoc } from 'firebase/firestore';
 
 /**
  * Set the cook date for a recipe for a user.
@@ -81,4 +81,42 @@ export const deleteCookDate = async (cookDateId) => {
     console.error('Error deleting cook date:', error);
     return false;
   }
+};
+
+/**
+ * Subscribe to real-time cook date updates for a specific recipe.
+ * Uses Firestore onSnapshot for live updates.
+ * @param {string} recipeId - Recipe ID
+ * @param {Function} callback - Called with the current array of cook date objects whenever data changes
+ * @returns {Function} Unsubscribe function to stop listening
+ */
+export const subscribeCookDates = (recipeId, callback) => {
+  if (!recipeId) {
+    callback([]);
+    return () => {};
+  }
+  const q = query(collection(db, 'cookDates'), where('recipeId', '==', recipeId));
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const dates = snapshot.docs
+        .map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            userId: data.userId,
+            recipeId: data.recipeId,
+            date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+          };
+        })
+        .sort((a, b) => b.date - a.date);
+      callback(dates);
+    },
+    (error) => {
+      console.error('Error subscribing to cook dates:', error);
+      callback([]);
+    }
+  );
+  return unsubscribe;
 };

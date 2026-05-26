@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './CookDateModal.css';
-import { setCookDate, getAllCookDates, deleteCookDate } from '../utils/recipeCookDates';
+import { setCookDate, deleteCookDate, subscribeCookDates } from '../utils/recipeCookDates';
 import { isBase64Image } from '../utils/imageUtils';
 
 /**
@@ -40,7 +40,8 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
 
   useEffect(() => {
     if (!recipeId) return;
-    getAllCookDates(recipeId).then(setCookDates);
+    const unsubscribe = subscribeCookDates(recipeId, setCookDates);
+    return () => unsubscribe();
   }, [recipeId]);
 
   const getUserName = (userId) => {
@@ -69,8 +70,7 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
     try {
       const date = new Date(selectedDate);
       await setCookDate(currentUser.id, recipeId, date);
-      const updated = await getAllCookDates(recipeId);
-      setCookDates(updated);
+      // No manual reload needed – onSnapshot updates automatically
       setSaved(true);
       if (onSaved) onSaved(date);
       resetTimerRef.current = setTimeout(() => {

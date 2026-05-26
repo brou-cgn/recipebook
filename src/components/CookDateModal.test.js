@@ -8,8 +8,11 @@ jest.mock('../utils/imageUtils', () => ({
 
 jest.mock('../utils/recipeCookDates', () => ({
   setCookDate: () => Promise.resolve(true),
-  getAllCookDates: () => Promise.resolve([]),
   deleteCookDate: () => Promise.resolve(),
+  subscribeCookDates: (_recipeId, callback) => {
+    callback([]);
+    return () => {};
+  },
 }));
 
 describe('CookDateModal – date prefill behaviour', () => {

@@ -221,8 +221,12 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   );
 
   useEffect(() => {
-    if (!currentUser || !filteredRecipes.length) {
+    if (!currentUser) {
       setCookDates([]);
+      return;
+    }
+    if (!filteredRecipes.length) {
+      // Recipes not yet loaded or user has none – don't clear immediately
       return;
     }
     Promise.all(filteredRecipes.map(r => getAllCookDates(r.id)))
