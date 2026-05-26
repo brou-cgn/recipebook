@@ -315,9 +315,18 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return () => { cancelled = true; };
   }, [allAlltagsklassikerRecipes, currentUser?.id]);
 
-  const alltagsklassikerRecipes = useMemo(() => (
-    [...allAlltagsklassikerRecipes]
+  const alltagsklassikerRecipes = useMemo(() => {
+    const recipeIndexById = new Map(
+      (Array.isArray(defaultEverydayClassicsList?.recipeIds) ? defaultEverydayClassicsList.recipeIds : [])
+        .map((recipeId, index) => [recipeId, index])
+    );
+
+    return [...allAlltagsklassikerRecipes]
       .sort((a, b) => {
+        const indexA = recipeIndexById.has(a.id) ? recipeIndexById.get(a.id) : -1;
+        const indexB = recipeIndexById.has(b.id) ? recipeIndexById.get(b.id) : -1;
+        if (indexA !== indexB) return indexB - indexA;
+
         const isFavoriteA = favoriteRecipeIds.includes(a.id);
         const isFavoriteB = favoriteRecipeIds.includes(b.id);
         if (isFavoriteA !== isFavoriteB) return isFavoriteA ? -1 : 1;
@@ -329,8 +338,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
         return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
       })
-      .slice(0, ALLTAGSKLASSIKER_TOP)
-  ), [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId, favoriteRecipeIds]);
+      .slice(0, ALLTAGSKLASSIKER_TOP);
+  }, [allAlltagsklassikerRecipes, defaultEverydayClassicsList, lastOwnCookDateByRecipeId, favoriteRecipeIds]);
 
   const handleAssignAlltagsklassikerList = async (listId) => {
     if (!onAssignEverydayClassicsList || isAssigningAlltagsklassiker) return;
