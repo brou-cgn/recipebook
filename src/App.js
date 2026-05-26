@@ -253,6 +253,7 @@ function App() {
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState(null);
   const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [publicGroupId, setPublicGroupId] = useState(null);
@@ -676,10 +677,15 @@ function App() {
 
   // Set up real-time listener for groups from Firestore
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setGroupsLoading(true);
+      return;
+    }
 
+    setGroupsLoading(true);
     const unsubscribe = subscribeToGroups(currentUser.id, (groupsFromFirestore) => {
       setGroups(groupsFromFirestore);
+      setGroupsLoading(false);
     });
 
     return () => unsubscribe();
@@ -1795,7 +1801,7 @@ function App() {
           allUsers={allUsers}
         />
       ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
       ) : (
         // Recipe views
         <>
