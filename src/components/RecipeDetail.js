@@ -506,8 +506,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return `Kochabstand: Zuletzt vor ${daysSince} Tagen gekocht (Bonus ${bonusText}).`;
   }, [sortIndexBreakdown, lastOwnCookDateMs]);
 
+  const formatIndexValue = (value) => parseFloat(Number(value || 0).toFixed(2));
   const formatSignedIndexValue = (value) => {
-    const rounded = Math.round(value * 100) / 100;
+    const rounded = formatIndexValue(value);
     return `${rounded >= 0 ? '+' : ''}${rounded}`;
   };
 
@@ -2452,7 +2453,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <li><span>Favoritenbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.favoritenBonus)}</strong></li>
               <li><span>Kochabstandsbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.kochabstandsBonus)}</strong></li>
               <li><span>Saisonbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.saisonBonus)}</strong></li>
-              <li className="index-dialog-total"><span>Gesamtindex (gerundet)</span><strong>{Math.round(sortIndexBreakdown.totalIndex)}</strong></li>
+              <li className="index-dialog-total"><span>Gesamtindex (gerundet)</span><strong>{Math.round(formatIndexValue(sortIndexBreakdown.totalIndex))}</strong></li>
             </ul>
             <p className="index-dialog-note">{cookDistanceExplanation}</p>
             <p className="index-dialog-note">Saisonbonus basiert auf den aktuell zugeordneten Zutaten aus der Saisonmatrix.</p>
