@@ -316,16 +316,18 @@ describe('MobileSearchOverlay – seasonal filter pill', () => {
     expect(seasonalPill).toHaveClass('active');
   });
 
-  test('filters recipes by active season matrix entries with score >= 60', async () => {
+  test('filters recipes by active Hauptsaison ingredients only', async () => {
+    const currentMonth = new Date().getMonth() + 1;
     renderOverlay({
       recipes: [
         { id: '1', title: 'Spargelsuppe', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
         { id: '2', title: 'Karottensuppe', ingredients: [{ type: 'ingredient', text: '300g Karotte' }] },
+        { id: '3', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '300g Tomate' }] },
       ],
       seasonMatrixEntries: [
-        { id: 'spargel', name: 'Spargel', seasonScore: 65, isActive: true },
-        { id: 'karotte', name: 'Karotte', seasonScore: 95, isActive: false },
-        { id: 'karotte', name: 'Karotte', seasonScore: 55, isActive: true },
+        { id: 'spargel', name: 'Spargel', mainSeasonMonths: [currentMonth], secondarySeasonMonths: [], isActive: true },
+        { id: 'karotte', name: 'Karotte', mainSeasonMonths: [], secondarySeasonMonths: [currentMonth], isActive: true },
+        { id: 'tomate', name: 'Tomate', mainSeasonMonths: [currentMonth], secondarySeasonMonths: [], isActive: false },
       ],
       cuisineTypes: [],
       cuisineGroups: [],
@@ -336,6 +338,7 @@ describe('MobileSearchOverlay – seasonal filter pill', () => {
     await waitFor(() => {
       expect(screen.getByText('Spargelsuppe')).toBeInTheDocument();
       expect(screen.queryByText('Karottensuppe')).not.toBeInTheDocument();
+      expect(screen.queryByText('Tomatensuppe')).not.toBeInTheDocument();
     });
   });
 });

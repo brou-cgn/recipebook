@@ -5,6 +5,7 @@ import {
   getIngredientSeasonStatus,
   matchIngredientToEntry,
   hasSeasonalIngredient,
+  hasHauptsaisonIngredient,
   calculateSaisonBonus,
   SAISON_STATUS,
   SAISON_STATUS_BONUS,
@@ -243,6 +244,35 @@ describe('calculateSaisonBonus', () => {
     test('supports recipes using legacy string ingredients format', () => {
       const recipe = { ingredients: ['Asparagus mit Kartoffeln'] };
       expect(hasSeasonalIngredient(recipe, [seasonalEntry])).toBe(true);
+    });
+  });
+
+  describe('hasHauptsaisonIngredient', () => {
+    const spargelEntry = {
+      id: 'spargel',
+      name: 'Spargel',
+      synonyms: ['Asparagus'],
+      mainSeasonMonths: [4, 5, 6],
+      secondarySeasonMonths: [3, 7],
+      seasonScore: 75,
+      isActive: true,
+    };
+
+    test('returns true when a matching active ingredient is in Hauptsaison', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
+      expect(hasHauptsaisonIngredient(recipe, [spargelEntry], 5)).toBe(true);
+    });
+
+    test('returns false when matches are only in Nebensaison/Bald/Außerhalb', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
+      expect(hasHauptsaisonIngredient(recipe, [spargelEntry], 7)).toBe(false); // Nebensaison
+      expect(hasHauptsaisonIngredient(recipe, [{ ...spargelEntry, secondarySeasonMonths: [] }], 3)).toBe(false); // Bald
+      expect(hasHauptsaisonIngredient(recipe, [spargelEntry], 11)).toBe(false); // Außerhalb
+    });
+
+    test('ignores inactive entries even if they would be in Hauptsaison', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: 'Asparagus' }] };
+      expect(hasHauptsaisonIngredient(recipe, [{ ...spargelEntry, isActive: false }], 5)).toBe(false);
     });
   });
 

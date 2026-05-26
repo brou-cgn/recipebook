@@ -210,6 +210,36 @@ export function hasSeasonalIngredient(recipe, seasonMatrixEntries, minimumSeason
 }
 
 /**
+ * Checks whether a recipe contains at least one ingredient that matches an
+ * active season matrix entry currently in Hauptsaison.
+ *
+ * @param {Object} recipe - Recipe object with ingredients/zutaten
+ * @param {Array} seasonMatrixEntries - Season matrix entries
+ * @param {number} [currentMonth] - Current month (1–12), defaults to system month
+ * @returns {boolean}
+ */
+export function hasHauptsaisonIngredient(
+  recipe,
+  seasonMatrixEntries,
+  currentMonth = new Date().getMonth() + 1
+) {
+  if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
+
+  const ingredientTexts = getRecipeIngredientTexts(recipe);
+  if (ingredientTexts.length === 0) return false;
+
+  const activeEntries = seasonMatrixEntries.filter((entry) => entry?.isActive !== false);
+  if (activeEntries.length === 0) return false;
+
+  return ingredientTexts.some((ingredientText) =>
+    activeEntries.some((entry) =>
+      matchIngredientToEntry(ingredientText, entry) &&
+      getIngredientSeasonStatus(entry, currentMonth) === SAISON_STATUS.HAUPTSAISON
+    )
+  );
+}
+
+/**
  * Calculates the SaisonBonus for a recipe.
  *
  * Formula: SaisonBonus = SaisonStatusBonus * (SaisonScore / 100)

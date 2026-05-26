@@ -3,7 +3,7 @@ import './MobileSearchOverlay.css';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
-import { hasSeasonalIngredient } from '../utils/recipeSortIndex';
+import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -169,7 +169,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       list = list.filter((r) => favoriteIds.includes(r.id));
     }
     if (showSeasonalOnly) {
-      list = list.filter((r) => hasSeasonalIngredient(r, seasonMatrixEntries, 60));
+      list = list.filter((r) => hasHauptsaisonIngredient(r, seasonMatrixEntries));
     }
     if (selectedCuisines.length > 0) {
       const expanded = expandCuisineSelection(selectedCuisines, cuisineGroups || []);

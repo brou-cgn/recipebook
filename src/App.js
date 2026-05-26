@@ -53,7 +53,7 @@ import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
 import { subscribeToSeasonMatrix } from './utils/seasonMatrix';
-import { hasSeasonalIngredient } from './utils/recipeSortIndex';
+import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -205,7 +205,7 @@ function matchesPrivateListsFilter(recipe, selectedPrivateLists, groups) {
 
 function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) {
   if (!showSeasonalOnly) return true;
-  return hasSeasonalIngredient(recipe, seasonMatrixEntries, 60);
+  return hasHauptsaisonIngredient(recipe, seasonMatrixEntries);
 }
 
 const emptyPrivateListFilterHandler = () => {};
