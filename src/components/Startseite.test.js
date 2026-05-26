@@ -590,7 +590,7 @@ describe('Startseite', () => {
     });
   });
 
-  test('sorts alltagsklassiker with favorites first and then by last own cook date ascending', async () => {
+  test('sorts alltagsklassiker by descending list index', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
     const { getUserFavorites } = require('../utils/userFavorites');
     const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
@@ -609,6 +609,54 @@ describe('Startseite', () => {
       <Startseite
         currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
         groups={[{ id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: alltagsRecipes.map(r => r.id) }]}
+        recipes={alltagsRecipes}
+      />
+    );
+
+    const sections = container.querySelectorAll('.startseite-trending-section');
+    const alltagsSection = Array.from(sections).find(
+      (s) => s.querySelector('.startseite-section-title')?.textContent === 'Meine Alltagsklassiker'
+    );
+    expect(alltagsSection).toBeTruthy();
+    await waitFor(() => {
+      expect(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(10);
+    });
+    const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
+    expect(cards).toHaveLength(10);
+    const titles = Array.from(cards).map((card) => card.textContent);
+    expect(titles).toEqual([
+      'Rezept 11',
+      'Rezept 10',
+      'Rezept 09',
+      'Rezept 08',
+      'Rezept 07',
+      'Rezept 06',
+      'Rezept 05',
+      'Rezept 04',
+      'Rezept 03',
+      'Rezept 02',
+    ]);
+  });
+
+  test('falls back to favorites and cook date sorting when list indexes are missing', async () => {
+    const { getAllCookDates } = require('../utils/recipeCookDates');
+    const { getUserFavorites } = require('../utils/userFavorites');
+    const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
+      id: `r${idx + 1}`,
+      title: `Rezept ${String(idx + 1).padStart(2, '0')}`,
+      groupId: 'g-classics',
+    }));
+    getUserFavorites.mockResolvedValue(['r3', 'r1', 'r7']);
+    getAllCookDates.mockImplementation((recipeId) => {
+      const number = Number(recipeId.replace('r', ''));
+      if (recipeId === 'r11') return Promise.resolve([]);
+      return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
+    });
+
+    const { container } = render(
+      <Startseite
+        currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
+        groups={[{ id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] }]}
         recipes={alltagsRecipes}
       />
     );
