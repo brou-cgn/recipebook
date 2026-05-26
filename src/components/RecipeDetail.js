@@ -179,13 +179,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setConversionTable(lists.conversionTable || []);
       setCategoryImageSet(new Set((catImages || []).map(ci => ci.image).filter(Boolean)));
       setCategoryImageSetLoaded(true);
-      const bubbleIcon = await getTimelineBubbleIcon();
-      const cookEventBubbleIcon = await getTimelineCookEventBubbleIcon();
-      const cookEventDefaultImg = await getTimelineCookEventDefaultImage();
+      const [bubbleIcon, cookEventBubbleIcon, cookEventDefaultImg, formats] = await Promise.all([
+        getTimelineBubbleIcon(),
+        getTimelineCookEventBubbleIcon(),
+        getTimelineCookEventDefaultImage(),
+        getPrintFormats(),
+      ]);
       setTimelineBubbleIcon(bubbleIcon);
       setTimelineCookEventBubbleIcon(cookEventBubbleIcon);
       setTimelineCookEventDefaultImage(cookEventDefaultImg);
-      const formats = await getPrintFormats();
       setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
     loadSettings().catch(() => setButtonIconsLoaded(true));

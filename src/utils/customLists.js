@@ -713,6 +713,44 @@ export function getEffectiveIcon(icons, key, isDarkMode) {
 let settingsCache = null;
 
 const BUTTON_ICONS_COLLECTION = 'buttonIcons';
+const BUTTON_ICONS_CACHE_KEY = 'buttonIconsCache';
+const BUTTON_ICONS_CACHE_TIMESTAMP_KEY = 'buttonIconsCacheTimestamp';
+const BUTTON_ICONS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function getButtonIconsFromLocalStorageCache({ requireFresh = true } = {}) {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+
+    const cachedIconsRaw = localStorage.getItem(BUTTON_ICONS_CACHE_KEY);
+    const cachedTimestampRaw = localStorage.getItem(BUTTON_ICONS_CACHE_TIMESTAMP_KEY);
+    if (!cachedIconsRaw || !cachedTimestampRaw) return null;
+
+    const cachedTimestamp = Number(cachedTimestampRaw);
+    if (!Number.isFinite(cachedTimestamp)) {
+      return null;
+    }
+    if (requireFresh && (Date.now() - cachedTimestamp) > BUTTON_ICONS_CACHE_TTL_MS) {
+      return null;
+    }
+
+    const cachedIcons = JSON.parse(cachedIconsRaw);
+    if (!cachedIcons || typeof cachedIcons !== 'object') return null;
+
+    return { ...DEFAULT_BUTTON_ICONS, ...cachedIcons };
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveButtonIconsToLocalStorageCache(icons) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(BUTTON_ICONS_CACHE_KEY, JSON.stringify(icons));
+    localStorage.setItem(BUTTON_ICONS_CACHE_TIMESTAMP_KEY, String(Date.now()));
+  } catch (error) {
+    // Ignore storage failures (e.g. unavailable storage in private mode)
+  }
+}
 
 // Image field names that live in settings/images (not settings/app)
 const IMAGE_FIELD_NAMES = [
@@ -1260,6 +1298,20 @@ export function clearSettingsCache() {
 }
 
 /**
+ * Clear only the localStorage cache for button icons.
+ * Useful for tests or forced reloads while keeping other settings intact.
+ */
+export function clearButtonIconsLocalStorageCache() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem(BUTTON_ICONS_CACHE_KEY);
+    localStorage.removeItem(BUTTON_ICONS_CACHE_TIMESTAMP_KEY);
+  } catch (error) {
+    // Ignore storage failures (e.g. unavailable storage in private mode)
+  }
+}
+
+/**
  * Adds missing conversion entries to the conversionTable in settings.
  * Entries that already exist (same unit + ingredient, case-insensitive) are skipped.
  *
@@ -1333,12 +1385,19 @@ export async function getButtonIcons() {
   if (settingsCache) {
     return settingsCache.buttonIcons || { ...DEFAULT_BUTTON_ICONS };
   }
+
+  const cachedIcons = getButtonIconsFromLocalStorageCache();
+  if (cachedIcons) {
+    return cachedIcons;
+  }
+
   try {
     const snapshot = await getDocs(collection(db, BUTTON_ICONS_COLLECTION));
     const icons = { ...DEFAULT_BUTTON_ICONS };
     snapshot.forEach((docSnap) => {
       icons[docSnap.id] = docSnap.data().value;
     });
+    saveButtonIconsToLocalStorageCache(icons);
     return icons;
   } catch (error) {
     console.error('Error loading button icons:', error);
@@ -1370,6 +1429,7 @@ export async function saveButtonIcons(buttonIcons) {
       batch.set(iconRef, { value, updatedAt: serverTimestamp() });
     }
     await batch.commit();
+    saveButtonIconsToLocalStorageCache(completeIcons);
   } catch (error) {
     // Revert optimistic cache update on failure to avoid inconsistent state
     if (settingsCache) {
@@ -1399,6 +1459,13 @@ export async function saveButtonIcon(iconKey, iconValue) {
   try {
     const iconRef = doc(db, BUTTON_ICONS_COLLECTION, iconKey);
     await setDoc(iconRef, { value: iconValue, updatedAt: serverTimestamp() });
+
+    const cachedIcons = settingsCache?.buttonIcons
+      ? { ...DEFAULT_BUTTON_ICONS, ...settingsCache.buttonIcons }
+      : getButtonIconsFromLocalStorageCache({ requireFresh: false });
+
+    const iconsToCache = { ...DEFAULT_BUTTON_ICONS, ...(cachedIcons || {}), [iconKey]: iconValue };
+    saveButtonIconsToLocalStorageCache(iconsToCache);
   } catch (error) {
     // Revert optimistic cache update on failure
     if (settingsCache?.buttonIcons) {

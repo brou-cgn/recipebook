@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 
 // Mock the utility modules
@@ -54,6 +54,7 @@ jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
+  getPrintFormats: () => Promise.resolve([]),
   DEFAULT_BUTTON_ICONS: { cookingMode: '👨‍🍳', closeButton: '✕' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
@@ -104,6 +105,49 @@ describe('RecipeDetail - Portion Controller', () => {
     vorname: 'Test',
     nachname: 'User',
   };
+
+  test('loads timeline icon calls and print formats in parallel', async () => {
+    const customLists = require('../utils/customLists');
+    let resolveBubbleIcon;
+    let bubbleIconResolved = false;
+    const bubbleIconPromise = new Promise((resolve) => {
+      resolveBubbleIcon = resolve;
+    });
+
+    const getTimelineBubbleIconSpy = jest.spyOn(customLists, 'getTimelineBubbleIcon').mockReturnValue(bubbleIconPromise);
+    const getTimelineCookEventBubbleIconSpy = jest.spyOn(customLists, 'getTimelineCookEventBubbleIcon').mockResolvedValue(null);
+    const getTimelineCookEventDefaultImageSpy = jest.spyOn(customLists, 'getTimelineCookEventDefaultImage').mockResolvedValue(null);
+    const getPrintFormatsSpy = jest.spyOn(customLists, 'getPrintFormats').mockResolvedValue([]);
+
+    try {
+      render(
+        <RecipeDetail
+          recipe={mockRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      await waitFor(() => {
+        expect(getTimelineBubbleIconSpy).toHaveBeenCalledTimes(1);
+        expect(getTimelineCookEventBubbleIconSpy).toHaveBeenCalledTimes(1);
+        expect(getTimelineCookEventDefaultImageSpy).toHaveBeenCalledTimes(1);
+        expect(getPrintFormatsSpy).toHaveBeenCalledTimes(1);
+      });
+      resolveBubbleIcon(null);
+      bubbleIconResolved = true;
+    } finally {
+      if (!bubbleIconResolved) {
+        resolveBubbleIcon(null);
+      }
+      getTimelineBubbleIconSpy.mockRestore();
+      getTimelineCookEventBubbleIconSpy.mockRestore();
+      getTimelineCookEventDefaultImageSpy.mockRestore();
+      getPrintFormatsSpy.mockRestore();
+    }
+  });
 
   test('displays initial portion count correctly', () => {
     render(
