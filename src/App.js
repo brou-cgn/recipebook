@@ -52,6 +52,8 @@ import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expan
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
+import { subscribeToSeasonMatrix } from './utils/seasonMatrix';
+import { hasSeasonalIngredient } from './utils/recipeSortIndex';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -91,6 +93,7 @@ function readSharedDataFromDB() {
         db.close();
         return resolve({ images: [], title: '', text: '', url: '' });
       }
+
       const tx = db.transaction(['settings'], 'readonly');
       const store = tx.objectStore('settings');
       // Try new unified key first
@@ -200,6 +203,11 @@ function matchesPrivateListsFilter(recipe, selectedPrivateLists, groups) {
   });
 }
 
+function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) {
+  if (!showSeasonalOnly) return true;
+  return hasSeasonalIngredient(recipe, seasonMatrixEntries, 60);
+}
+
 const emptyPrivateListFilterHandler = () => {};
 
 function applyRolePermissionsToUser(user, permissionsMap = {}) {
@@ -261,8 +269,10 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showSeasonalOnly, setShowSeasonalOnly] = useState(false);
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
+  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
@@ -365,12 +375,13 @@ function App() {
     return selectedGroupUnfilteredRecipes.filter((recipe) =>
       matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
       matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
+      matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) &&
       (
         selectedGroup.type === 'private' ||
         matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
       )
     );
-  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups]);
+  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups, showSeasonalOnly, seasonMatrixEntries]);
 
   // Detect share URL: #share/:shareId or /share/:shareId (pathname)
   const getShareIdFromHash = () => {
@@ -455,6 +466,17 @@ function App() {
       };
       loadUsers();
     }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setSeasonMatrixEntries([]);
+      return undefined;
+    }
+    const unsubscribe = subscribeToSeasonMatrix((entries) => {
+      setSeasonMatrixEntries(entries);
+    });
+    return () => unsubscribe();
   }, [currentUser]);
 
   // Load role permissions and apply effective fotoscan/webimport to currentUser
@@ -1407,6 +1429,7 @@ function App() {
       selectedGroup: ''
     });
     setShowFavoritesOnly(false);
+    setShowSeasonalOnly(false);
     handleClearSearch();
   };
 
@@ -1725,6 +1748,7 @@ function App() {
             onClearAllFilters={handleClearAllFilters}
             activeFilters={recipeFilters}
             showFavoritesOnly={showFavoritesOnly}
+            showSeasonalOnly={showSeasonalOnly}
           />
         ) : (
           <GroupList
@@ -1759,7 +1783,8 @@ function App() {
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
               matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
-              matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
+              matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups) &&
+              matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}
@@ -1775,6 +1800,7 @@ function App() {
             onClearCuisineFilter={handleClearCuisineFilter}
             onClearAllFilters={handleClearAllFilters}
             showFavoritesOnly={showFavoritesOnly}
+            showSeasonalOnly={showSeasonalOnly}
             onShowFavoritesOnlyChange={setShowFavoritesOnly}
             privateLists={privateListsForUser}
             onAddToPrivateList={handleAddRecipeToPrivateList}
@@ -1813,7 +1839,10 @@ function App() {
         onClearSearch={handleClearSearch}
         searchTerm={searchTerm}
         showFavoritesOnly={showFavoritesOnly}
+        showSeasonalOnly={showSeasonalOnly}
         onFavoritesToggle={setShowFavoritesOnly}
+        onSeasonalToggle={setShowSeasonalOnly}
+        seasonMatrixEntries={seasonMatrixEntries}
         cuisineTypes={overlayCuisineTypes}
         cuisineGroups={overlayCuisineGroups}
         onCuisineFilterChange={handleCuisineFilterChangeFromSearch}

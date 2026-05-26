@@ -295,6 +295,51 @@ describe('MobileSearchOverlay – cuisine pills stay active when favorites toggl
   });
 });
 
+describe('MobileSearchOverlay – seasonal filter pill', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('shows the "Saisonal" pill next to favorites', () => {
+    renderOverlay();
+    expect(screen.getByText('★ Favoriten')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Saisonal' })).toBeInTheDocument();
+  });
+
+  test('toggles seasonal state and calls onSeasonalToggle callback', () => {
+    const onSeasonalToggle = jest.fn();
+    renderOverlay({ onSeasonalToggle });
+
+    const seasonalPill = screen.getByRole('button', { name: 'Saisonal' });
+    fireEvent.click(seasonalPill);
+    expect(onSeasonalToggle).toHaveBeenCalledWith(true);
+    expect(seasonalPill).toHaveClass('active');
+  });
+
+  test('filters recipes by active season matrix entries with score >= 60', async () => {
+    renderOverlay({
+      recipes: [
+        { id: '1', title: 'Spargelsuppe', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: '2', title: 'Karottensuppe', ingredients: [{ type: 'ingredient', text: '300g Karotte' }] },
+      ],
+      seasonMatrixEntries: [
+        { id: 'spargel', name: 'Spargel', seasonScore: 65, isActive: true },
+        { id: 'karotte', name: 'Karotte', seasonScore: 95, isActive: false },
+        { id: 'karotte', name: 'Karotte', seasonScore: 55, isActive: true },
+      ],
+      cuisineTypes: [],
+      cuisineGroups: [],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Saisonal' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Spargelsuppe')).toBeInTheDocument();
+      expect(screen.queryByText('Karottensuppe')).not.toBeInTheDocument();
+    });
+  });
+});
+
 describe('MobileSearchOverlay – author pills filtered by search term', () => {
   const mockAuthors = [
     { id: 'u1', name: 'Alice' },

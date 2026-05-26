@@ -4,6 +4,7 @@ import {
   getKochabstandsBonus,
   getIngredientSeasonStatus,
   matchIngredientToEntry,
+  hasSeasonalIngredient,
   calculateSaisonBonus,
   SAISON_STATUS,
   SAISON_STATUS_BONUS,
@@ -213,6 +214,36 @@ describe('calculateSaisonBonus', () => {
   test('returns 0 when no seasonMatrixEntries provided', () => {
     const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
     expect(calculateSaisonBonus(recipe, [], CURRENT_MONTH)).toBe(0);
+  });
+
+  describe('hasSeasonalIngredient', () => {
+    const seasonalEntry = {
+      id: 'spargel',
+      name: 'Spargel',
+      synonyms: ['Asparagus'],
+      seasonScore: 75,
+      isActive: true,
+    };
+
+    test('returns true when a recipe ingredient matches an active entry with score >= 60', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
+      expect(hasSeasonalIngredient(recipe, [seasonalEntry])).toBe(true);
+    });
+
+    test('returns false when only low-score entries match', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
+      expect(hasSeasonalIngredient(recipe, [{ ...seasonalEntry, seasonScore: 59 }])).toBe(false);
+    });
+
+    test('returns false when matching entry is inactive', () => {
+      const recipe = { ingredients: [{ type: 'ingredient', text: '500g Spargel' }] };
+      expect(hasSeasonalIngredient(recipe, [{ ...seasonalEntry, isActive: false }])).toBe(false);
+    });
+
+    test('supports recipes using legacy string ingredients format', () => {
+      const recipe = { ingredients: ['Asparagus mit Kartoffeln'] };
+      expect(hasSeasonalIngredient(recipe, [seasonalEntry])).toBe(true);
+    });
   });
 
   test('returns 0 when recipe has no ingredients', () => {

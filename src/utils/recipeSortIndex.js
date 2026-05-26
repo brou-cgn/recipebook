@@ -184,6 +184,32 @@ export function matchIngredientToEntry(ingredientText, entry) {
 }
 
 /**
+ * Checks whether a recipe contains at least one ingredient that matches an
+ * active season matrix entry with a minimum season score.
+ *
+ * @param {Object} recipe - Recipe object with ingredients/zutaten
+ * @param {Array} seasonMatrixEntries - Season matrix entries
+ * @param {number} [minimumSeasonScore=60] - Minimum seasonScore threshold
+ * @returns {boolean}
+ */
+export function hasSeasonalIngredient(recipe, seasonMatrixEntries, minimumSeasonScore = 60) {
+  if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
+
+  const ingredientTexts = getRecipeIngredientTexts(recipe);
+  if (ingredientTexts.length === 0) return false;
+
+  const minimum = Number.isFinite(Number(minimumSeasonScore)) ? Number(minimumSeasonScore) : 60;
+  const eligibleEntries = seasonMatrixEntries.filter((entry) => (
+    entry?.isActive !== false && Number(entry?.seasonScore) >= minimum
+  ));
+  if (eligibleEntries.length === 0) return false;
+
+  return ingredientTexts.some((ingredientText) =>
+    eligibleEntries.some((entry) => matchIngredientToEntry(ingredientText, entry))
+  );
+}
+
+/**
  * Calculates the SaisonBonus for a recipe.
  *
  * Formula: SaisonBonus = SaisonStatusBonus * (SaisonScore / 100)

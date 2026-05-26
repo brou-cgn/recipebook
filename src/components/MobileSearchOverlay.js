@@ -3,6 +3,7 @@ import './MobileSearchOverlay.css';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
+import { hasSeasonalIngredient } from '../utils/recipeSortIndex';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -64,10 +65,11 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
   return computeAllSortedCuisineTypes(recipes, cuisineTypes).slice(0, MAX_CUISINE_TYPE_PILLS);
 }
 
-function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, onFavoritesToggle, cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
+function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, onFavoritesToggle, onSeasonalToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showSeasonalOnly, setShowSeasonalOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [selectedCuisines, setSelectedCuisines] = useState([]);
   const [selectedAuthors, setSelectedAuthors] = useState([]);
@@ -105,6 +107,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       setSearchTerm(initial);
       setDebouncedTerm(initial);
       setShowFavoritesOnly(showFavoritesOnlyProp ?? false);
+      setShowSeasonalOnly(showSeasonalOnlyProp ?? false);
       setSelectedCuisines(selectedCuisinesPropRef.current ?? []);
       setSelectedAuthors(selectedAuthorsPropRef.current ?? []);
       setSelectedPrivateLists(showPrivateListFilters ? (selectedPrivateListsPropRef.current ?? []) : []);
@@ -113,7 +116,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       }, FOCUS_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, showFavoritesOnlyProp, showPrivateListFilters]);
+  }, [isOpen, showFavoritesOnlyProp, showSeasonalOnlyProp, showPrivateListFilters]);
 
   // Debounce search term
   useEffect(() => {
@@ -165,6 +168,9 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
     if (showFavoritesOnly) {
       list = list.filter((r) => favoriteIds.includes(r.id));
     }
+    if (showSeasonalOnly) {
+      list = list.filter((r) => hasSeasonalIngredient(r, seasonMatrixEntries, 60));
+    }
     if (selectedCuisines.length > 0) {
       const expanded = expandCuisineSelection(selectedCuisines, cuisineGroups || []);
       list = list.filter((r) => {
@@ -185,7 +191,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       );
     }
     return list;
-  }, [recipes, showFavoritesOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters]);
+  }, [recipes, showFavoritesOnly, showSeasonalOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters, seasonMatrixEntries]);
 
   const filteredRecipes = fuzzyFilter(
     baseRecipes,
@@ -426,6 +432,18 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
             title={showFavoritesOnly ? 'Alle Rezepte anzeigen' : 'Nur Favoriten anzeigen'}
           >
             ★ Favoriten
+          </button>
+          <button
+            className={`mobile-search-filter-pill${showSeasonalOnly ? ' active' : ''}`}
+            onClick={() => {
+              const newValue = !showSeasonalOnly;
+              setShowSeasonalOnly(newValue);
+              onSeasonalToggle?.(newValue);
+            }}
+            aria-pressed={showSeasonalOnly}
+            title={showSeasonalOnly ? 'Alle Rezepte anzeigen' : 'Nur saisonale Rezepte anzeigen'}
+          >
+            Saisonal
           </button>
         </div>
 
