@@ -170,6 +170,4 @@
 
 [data-theme="dark"] .startseite-skeleton-card {
   background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
-  background-size: 200% 100%;
-  animation: startseite-shimmer 1.5s infinite;
 }

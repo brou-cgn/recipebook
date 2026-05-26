@@ -352,7 +352,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       return getAllCookDates(recipe.id).then((data) => {
         setCachedCookDates(recipe.id, data);
         return data;
-      });
+      }).catch(() => []);
     }))
       .then((cookDateLists) => {
         if (cancelled) return;
