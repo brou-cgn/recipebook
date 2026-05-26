@@ -677,12 +677,9 @@ function App() {
 
   // Set up real-time listener for groups from Firestore
   useEffect(() => {
-    if (!currentUser) {
-      setGroupsLoading(true);
-      return;
-    }
-
     setGroupsLoading(true);
+    if (!currentUser) return;
+
     const unsubscribe = subscribeToGroups(currentUser.id, (groupsFromFirestore) => {
       setGroups(groupsFromFirestore);
       setGroupsLoading(false);
