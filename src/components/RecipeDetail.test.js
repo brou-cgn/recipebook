@@ -109,6 +109,7 @@ describe('RecipeDetail - Portion Controller', () => {
   test('loads timeline icon calls and print formats in parallel', async () => {
     const customLists = require('../utils/customLists');
     let resolveBubbleIcon;
+    let bubbleIconResolved = false;
     const bubbleIconPromise = new Promise((resolve) => {
       resolveBubbleIcon = resolve;
     });
@@ -135,8 +136,12 @@ describe('RecipeDetail - Portion Controller', () => {
         expect(getTimelineCookEventDefaultImageSpy).toHaveBeenCalledTimes(1);
         expect(getPrintFormatsSpy).toHaveBeenCalledTimes(1);
       });
-    } finally {
       resolveBubbleIcon(null);
+      bubbleIconResolved = true;
+    } finally {
+      if (!bubbleIconResolved) {
+        resolveBubbleIcon(null);
+      }
       getTimelineBubbleIconSpy.mockRestore();
       getTimelineCookEventBubbleIconSpy.mockRestore();
       getTimelineCookEventDefaultImageSpy.mockRestore();

@@ -381,7 +381,6 @@ describe('getSettings – settings/images document split', () => {
         data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
       });
     });
-
     // Simulate cookingMode icon in the buttonIcons collection
     getDocs.mockResolvedValue({
       forEach: (cb) => cb({ id: 'cookingMode', data: () => ({ value: '🍳' }) }),

@@ -717,7 +717,7 @@ const BUTTON_ICONS_CACHE_KEY = 'buttonIconsCache';
 const BUTTON_ICONS_CACHE_TIMESTAMP_KEY = 'buttonIconsCacheTimestamp';
 const BUTTON_ICONS_CACHE_TTL_MS = 60 * 60 * 1000;
 
-function getButtonIconsFromLocalStorageCache() {
+function getButtonIconsFromLocalStorageCache({ requireFresh = true } = {}) {
   try {
     if (typeof localStorage === 'undefined') return null;
 
@@ -726,7 +726,10 @@ function getButtonIconsFromLocalStorageCache() {
     if (!cachedIconsRaw || !cachedTimestampRaw) return null;
 
     const cachedTimestamp = Number(cachedTimestampRaw);
-    if (!Number.isFinite(cachedTimestamp) || (Date.now() - cachedTimestamp) > BUTTON_ICONS_CACHE_TTL_MS) {
+    if (!Number.isFinite(cachedTimestamp)) {
+      return null;
+    }
+    if (requireFresh && (Date.now() - cachedTimestamp) > BUTTON_ICONS_CACHE_TTL_MS) {
       return null;
     }
 
@@ -1457,9 +1460,12 @@ export async function saveButtonIcon(iconKey, iconValue) {
     const iconRef = doc(db, BUTTON_ICONS_COLLECTION, iconKey);
     await setDoc(iconRef, { value: iconValue, updatedAt: serverTimestamp() });
 
-    const cachedIcons = getButtonIconsFromLocalStorageCache();
-    const updatedCachedIcons = { ...DEFAULT_BUTTON_ICONS, ...(cachedIcons || {}), [iconKey]: iconValue };
-    saveButtonIconsToLocalStorageCache(updatedCachedIcons);
+    const cachedIcons = settingsCache?.buttonIcons
+      ? { ...DEFAULT_BUTTON_ICONS, ...settingsCache.buttonIcons }
+      : getButtonIconsFromLocalStorageCache({ requireFresh: false });
+
+    const iconsToCache = { ...DEFAULT_BUTTON_ICONS, ...(cachedIcons || {}), [iconKey]: iconValue };
+    saveButtonIconsToLocalStorageCache(iconsToCache);
   } catch (error) {
     // Revert optimistic cache update on failure
     if (settingsCache?.buttonIcons) {
