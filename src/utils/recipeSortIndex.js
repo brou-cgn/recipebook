@@ -47,6 +47,73 @@ const STATUS_PRIORITY = [
   SAISON_STATUS.AUSSERHALB,
 ];
 
+function getRecipeIngredientTexts(recipe = {}) {
+  const rawIngredients = recipe.ingredients || recipe.zutaten || [];
+  return rawIngredients
+    .filter((item) => typeof item === 'string' || (item && item.type === 'ingredient'))
+    .map((item) => (typeof item === 'string' ? item : item.text || ''))
+    .filter(Boolean);
+}
+
+function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth) {
+  if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) {
+    return { saisonBonus: 0, saisonBonusIngredient: null };
+  }
+
+  const ingredientTexts = getRecipeIngredientTexts(recipe);
+  if (ingredientTexts.length === 0) {
+    return { saisonBonus: 0, saisonBonusIngredient: null };
+  }
+
+  const activeEntries = seasonMatrixEntries.filter((e) => e.isActive !== false);
+  if (activeEntries.length === 0) {
+    return { saisonBonus: 0, saisonBonusIngredient: null };
+  }
+
+  const matchedEntries = [];
+  for (const ingredientText of ingredientTexts) {
+    for (const entry of activeEntries) {
+      if (matchIngredientToEntry(ingredientText, entry)) {
+        matchedEntries.push({ entry, ingredientText });
+        break;
+      }
+    }
+  }
+
+  if (matchedEntries.length === 0) {
+    return { saisonBonus: 0, saisonBonusIngredient: null };
+  }
+
+  let totalSeasonScore = 0;
+  let bestStatusIndex = STATUS_PRIORITY.indexOf(SAISON_STATUS.AUSSERHALB);
+  let bestMatchedIngredient = null;
+
+  for (const matched of matchedEntries) {
+    const status = getIngredientSeasonStatus(matched.entry, currentMonth);
+    const statusIndex = STATUS_PRIORITY.indexOf(status);
+
+    if (statusIndex < bestStatusIndex) {
+      bestStatusIndex = statusIndex;
+      bestMatchedIngredient = matched;
+    }
+
+    totalSeasonScore += matched.entry.seasonScore || 0;
+  }
+
+  const saisonScore = totalSeasonScore / matchedEntries.length;
+  const bestStatus = STATUS_PRIORITY[bestStatusIndex];
+  const saisonStatusBonus = SAISON_STATUS_BONUS[bestStatus];
+
+  return {
+    saisonBonus: saisonStatusBonus * (saisonScore / 100),
+    saisonBonusIngredient:
+      bestMatchedIngredient?.entry?.name ||
+      bestMatchedIngredient?.entry?.id ||
+      bestMatchedIngredient?.ingredientText ||
+      null,
+  };
+}
+
 /**
  * Returns the KochabstandsBonus based on the last cook date timestamp.
  *
@@ -132,52 +199,7 @@ export function matchIngredientToEntry(ingredientText, entry) {
  * @returns {number} The SaisonBonus
  */
 export function calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth) {
-  if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return 0;
-
-  const rawIngredients = recipe.ingredients || recipe.zutaten || [];
-  const ingredientTexts = rawIngredients
-    .filter((item) => typeof item === 'string' || (item && item.type === 'ingredient'))
-    .map((item) => (typeof item === 'string' ? item : item.text || ''))
-    .filter(Boolean);
-
-  if (ingredientTexts.length === 0) return 0;
-
-  const activeEntries = seasonMatrixEntries.filter((e) => e.isActive !== false);
-  if (activeEntries.length === 0) return 0;
-
-  // For each ingredient text, find the first matching active entry.
-  // Each ingredient contributes at most one match to avoid double-counting.
-  const matchedEntries = [];
-  for (const ingredientText of ingredientTexts) {
-    for (const entry of activeEntries) {
-      if (matchIngredientToEntry(ingredientText, entry)) {
-        matchedEntries.push(entry);
-        break;
-      }
-    }
-  }
-
-  if (matchedEntries.length === 0) return 0;
-
-  let totalSeasonScore = 0;
-  let bestStatusIndex = STATUS_PRIORITY.indexOf(SAISON_STATUS.AUSSERHALB);
-
-  for (const entry of matchedEntries) {
-    const status = getIngredientSeasonStatus(entry, currentMonth);
-    const statusIndex = STATUS_PRIORITY.indexOf(status);
-
-    if (statusIndex < bestStatusIndex) {
-      bestStatusIndex = statusIndex;
-    }
-
-    totalSeasonScore += entry.seasonScore || 0;
-  }
-
-  const saisonScore = totalSeasonScore / matchedEntries.length;
-  const bestStatus = STATUS_PRIORITY[bestStatusIndex];
-  const saisonStatusBonus = SAISON_STATUS_BONUS[bestStatus];
-
-  return saisonStatusBonus * (saisonScore / 100);
+  return calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth).saisonBonus;
 }
 
 /**
@@ -228,6 +250,7 @@ export function calculateRecipeSortIndex({
  *   favoritenBonus: number,
  *   kochabstandsBonus: number,
  *   saisonBonus: number,
+ *   saisonBonusIngredient: (string|null),
  *   totalIndex: number
  * }}
  */
@@ -241,13 +264,14 @@ export function calculateRecipeSortIndexBreakdown({
 } = {}) {
   const favoritenBonus = isFavorite ? FAVORITEN_BONUS : 0;
   const kochabstandsBonus = getKochabstandsBonus(lastCookDateMs, nowMs);
-  const saisonBonus = calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth);
+  const saisonBonusDetails = calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth);
 
   return {
     baseValue: BASE_VALUE,
     favoritenBonus,
     kochabstandsBonus,
-    saisonBonus,
-    totalIndex: BASE_VALUE + favoritenBonus + kochabstandsBonus + saisonBonus,
+    saisonBonus: saisonBonusDetails.saisonBonus,
+    saisonBonusIngredient: saisonBonusDetails.saisonBonusIngredient,
+    totalIndex: BASE_VALUE + favoritenBonus + kochabstandsBonus + saisonBonusDetails.saisonBonus,
   };
 }

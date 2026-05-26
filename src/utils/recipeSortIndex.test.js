@@ -387,7 +387,45 @@ describe('calculateRecipeSortIndexBreakdown', () => {
       favoritenBonus: 25,
       kochabstandsBonus: 10,
       saisonBonus: 0,
+      saisonBonusIngredient: null,
       totalIndex: 85,
     });
+  });
+
+  test('includes season bonus ingredient used for status calculation', () => {
+    const spargelEntry = {
+      id: 'spargel',
+      name: 'Spargel',
+      mainSeasonMonths: [4, 5, 6],
+      secondarySeasonMonths: [],
+      seasonScore: 90,
+      isActive: true,
+    };
+    const kartoffelEntry = {
+      id: 'kartoffel',
+      name: 'Kartoffel',
+      mainSeasonMonths: [9],
+      secondarySeasonMonths: [],
+      seasonScore: 70,
+      isActive: true,
+    };
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '500g Spargel' },
+        { type: 'ingredient', text: '200g Kartoffel' },
+      ],
+    };
+
+    const result = calculateRecipeSortIndexBreakdown({
+      isFavorite: false,
+      lastCookDateMs: null,
+      seasonMatrixEntries: [spargelEntry, kartoffelEntry],
+      recipe,
+      currentMonth: 5,
+      nowMs: NOW,
+    });
+
+    expect(result.saisonBonus).toBeCloseTo(24, 5);
+    expect(result.saisonBonusIngredient).toBe('Spargel');
   });
 });

@@ -2453,6 +2453,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <li><span>Favoritenbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.favoritenBonus)}</strong></li>
               <li><span>Kochabstandsbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.kochabstandsBonus)}</strong></li>
               <li><span>Saisonbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.saisonBonus)}</strong></li>
+              <li><span>Saisonbonus-Zutat</span><strong>{sortIndexBreakdown.saisonBonusIngredient || 'Keine passende Zutat'}</strong></li>
               <li className="index-dialog-total"><span>Gesamtindex (gerundet)</span><strong>{Math.round(formatIndexValue(sortIndexBreakdown.totalIndex))}</strong></li>
             </ul>
             <p className="index-dialog-note">{cookDistanceExplanation}</p>

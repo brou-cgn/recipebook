@@ -1784,6 +1784,8 @@ describe('RecipeDetail - Index Field Visibility', () => {
     expect(screen.getByText('Favoritenbonus')).toBeInTheDocument();
     expect(screen.getByText('Kochabstandsbonus')).toBeInTheDocument();
     expect(screen.getByText('Saisonbonus')).toBeInTheDocument();
+    expect(screen.getByText('Saisonbonus-Zutat')).toBeInTheDocument();
+    expect(screen.getByText('Keine passende Zutat')).toBeInTheDocument();
     expect(screen.getByText('Gesamtindex (gerundet)')).toBeInTheDocument();
     expect(screen.getByText(/Kochabstand:/)).toBeInTheDocument();
   });
