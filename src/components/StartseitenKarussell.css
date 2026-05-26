@@ -142,32 +142,3 @@
 [data-theme="dark"] .startseite-empty {
   color: #666;
 }
-
-/* =========================================================
-   Skeleton Loading
-   ========================================================= */
-
-@keyframes startseite-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.startseite-skeleton {
-  display: flex;
-  gap: 1rem;
-  height: 100%;
-}
-
-.startseite-skeleton-card {
-  flex: 0 0 calc((100% - 1rem) / 2);
-  width: calc((100% - 1rem) / 2);
-  height: 100%;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
-  background-size: 200% 100%;
-  animation: startseite-shimmer 1.5s infinite;
-}
-
-[data-theme="dark"] .startseite-skeleton-card {
-  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
-}

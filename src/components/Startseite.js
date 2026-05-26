@@ -18,33 +18,6 @@ const NEUE_REZEPTE_TOP = 10;
 const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
-const COOK_DATES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-function getCachedCookDates(recipeId) {
-  try {
-    const raw = sessionStorage.getItem(`cookDates_${recipeId}`);
-    if (!raw) return null;
-    const { data, expiresAt } = JSON.parse(raw);
-    if (Date.now() > expiresAt) {
-      sessionStorage.removeItem(`cookDates_${recipeId}`);
-      return null;
-    }
-    return data;
-  } catch (e) {
-    return null;
-  }
-}
-
-function setCachedCookDates(recipeId, data) {
-  try {
-    sessionStorage.setItem(
-      `cookDates_${recipeId}`,
-      JSON.stringify({ data, expiresAt: Date.now() + COOK_DATES_CACHE_TTL_MS })
-    );
-  } catch (e) {
-    // sessionStorage might be unavailable
-  }
-}
 
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
   const [topRecipes, setTopRecipes] = useState([]);
@@ -63,7 +36,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
   const [groupThresholds, setGroupThresholds] = useState({});
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
-  const [kandidatenLoading, setKandidatenLoading] = useState(false);
+  const [kandidatenLoading, setKandidatenLoading] = useState(true);
   const [kandidatenLeertext, setKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
 
   useEffect(() => {
@@ -346,14 +319,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
       return;
     }
-    Promise.all(allAlltagsklassikerRecipes.map((recipe) => {
-      const cached = getCachedCookDates(recipe.id);
-      if (cached !== null) return Promise.resolve(cached);
-      return getAllCookDates(recipe.id).then((data) => {
-        setCachedCookDates(recipe.id, data);
-        return data;
-      }).catch(() => []);
-    }))
+    Promise.all(allAlltagsklassikerRecipes.map((recipe) => getAllCookDates(recipe.id)))
       .then((cookDateLists) => {
         if (cancelled) return;
         const nextMap = {};
