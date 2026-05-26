@@ -19,7 +19,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -390,9 +390,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   };
 
   // Condition: show setup button when no default list or the list is not interactive
-  const showInspirationSetupButton = !defaultWebImportList || defaultWebImportList.listKind !== 'interactive';
+  const showInspirationSetupButton = !groupsLoading && (!defaultWebImportList || defaultWebImportList.listKind !== 'interactive');
   const showInspirationButtonInKochideen = showInspirationSetupButton && onCreateInspirationList;
-  const showAlltagsklassikerSetupButton = !defaultEverydayClassicsList;
+  const showAlltagsklassikerSetupButton = !groupsLoading && !defaultEverydayClassicsList;
 
   return (
     <div className="startseite-container">

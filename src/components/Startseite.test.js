@@ -656,6 +656,34 @@ describe('Startseite', () => {
     expect(await screen.findByRole('button', { name: /Alltagsklassiker zuordnen/i })).toBeInTheDocument();
   });
 
+  // ─── groupsLoading prop ────────────────────────────────────────────────────
+
+  test('hides "Inspirationssammlung anlegen" button while groupsLoading is true', async () => {
+    const onCreateInspirationList = jest.fn();
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        groupsLoading={true}
+        onCreateInspirationList={onCreateInspirationList}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryByRole('button', { name: /Inspirationssammlung anlegen/i })).not.toBeInTheDocument();
+  });
+
+  test('hides "Alltagsklassiker zuordnen" button while groupsLoading is true', async () => {
+    render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        groups={[]}
+        groupsLoading={true}
+      />
+    );
+    await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
+    expect(screen.queryByRole('button', { name: /Alltagsklassiker zuordnen/i })).not.toBeInTheDocument();
+  });
+
   test('opens picker and assigns alltagsklassiker list', async () => {
     const onAssignEverydayClassicsList = jest.fn(() => Promise.resolve(true));
     const privateGroup = { id: 'g1', name: 'Liste A', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: [] };
