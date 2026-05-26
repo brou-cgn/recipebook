@@ -462,6 +462,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
   });
 
   test('sorts recipes within the same priority by calculateRecipeSortIndex descending', async () => {
+    const currentMonth = new Date().getMonth() + 1;
     mockAllMembersFlagsValue = {
       user1: {},
       user2: {},
@@ -473,7 +474,7 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     mockSeasonMatrixEntries = [
       {
         name: 'Spargel',
-        mainSeasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        mainSeasonMonths: [currentMonth],
         secondarySeasonMonths: [],
         seasonScore: 100,
         isActive: true,

@@ -268,7 +268,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
           const ownCookDates = (cookDateLists[index] || []).filter((cd) => cd.userId === currentUser.id);
           const lastOwn = ownCookDates.reduce((latest, current) => {
             const currentDate = current?.date instanceof Date ? current.date : new Date(current?.date);
-            if (Number.isNaN(currentDate?.getTime?.())) return latest;
+            if (Number.isNaN(currentDate.getTime())) return latest;
             return !latest || currentDate > latest ? currentDate : latest;
           }, null);
           if (lastOwn) nextMap.set(recipe.id, lastOwn.getTime());
@@ -675,7 +675,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       if (aCreatedAt !== null && bCreatedAt !== null) return bCreatedAt - aCreatedAt;
       if (aCreatedAt !== null) return -1;
       if (bCreatedAt !== null) return 1;
-      return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+      return 0;
     });
   }, [
     availableRecipes,
