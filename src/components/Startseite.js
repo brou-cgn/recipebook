@@ -13,12 +13,13 @@ import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
+const SAISONALE_REZEPTE_TOP = 10;
 const NEUE_REZEPTE_TOP = 10;
 const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onAddRecipe }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -246,6 +247,12 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       .slice(0, NEUE_REZEPTE_TOP);
   }, [recipes]);
 
+  const saisonaleRezepte = useMemo(() => (
+    recipes
+      .filter((recipe) => recipe?.Saisonal === true)
+      .slice(0, SAISONALE_REZEPTE_TOP)
+  ), [recipes]);
+
   const handleNeueRezepteMehrClick = () => {
     try {
       sessionStorage.setItem(SORT_STORAGE_KEY, 'newest');
@@ -253,6 +260,14 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       // sessionStorage might be unavailable in some environments
     }
     onViewChange?.('neueRezepte');
+  };
+
+  const handleSaisonaleRezepteMehrClick = () => {
+    if (onOpenSeasonalRecipes) {
+      onOpenSeasonalRecipes();
+      return;
+    }
+    onViewChange?.('seasonalRecipes');
   };
 
   const handleCreateInspirationClick = async () => {
@@ -563,6 +578,21 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         )}
         emptyText="Keine Trendrezepte vorhanden."
         onMehr={handleMehrClick}
+      />
+      <StartseitenKarussell
+        title="Saisonale Rezepte"
+        items={saisonaleRezepte}
+        loading={false}
+        renderItem={(recipe) => (
+          <TrendingCard
+            recipe={recipe}
+            onSelectRecipe={onSelectRecipe}
+            difficultyIcon={getEffectiveIcon(buttonIcons, 'trendingDifficultyIcon', isDarkMode)}
+            timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
+          />
+        )}
+        emptyText="Keine saisonalen Rezepte vorhanden."
+        onMehr={handleSaisonaleRezepteMehrClick}
       />
       <StartseitenKarussell
         title="Neue Rezepte"
