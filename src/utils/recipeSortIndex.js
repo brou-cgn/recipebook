@@ -203,9 +203,51 @@ export function calculateRecipeSortIndex({
   currentMonth = new Date().getMonth() + 1,
   nowMs = Date.now(),
 } = {}) {
+  return calculateRecipeSortIndexBreakdown({
+    isFavorite,
+    lastCookDateMs,
+    seasonMatrixEntries,
+    recipe,
+    currentMonth,
+    nowMs,
+  }).totalIndex;
+}
+
+/**
+ * Calculates a transparent component breakdown for the recipe sort index.
+ *
+ * @param {Object} params
+ * @param {boolean} [params.isFavorite=false]
+ * @param {number|null|undefined} [params.lastCookDateMs]
+ * @param {Array} [params.seasonMatrixEntries=[]]
+ * @param {Object} [params.recipe={}]
+ * @param {number} [params.currentMonth]
+ * @param {number} [params.nowMs]
+ * @returns {{
+ *   baseValue: number,
+ *   favoritenBonus: number,
+ *   kochabstandsBonus: number,
+ *   saisonBonus: number,
+ *   totalIndex: number
+ * }}
+ */
+export function calculateRecipeSortIndexBreakdown({
+  isFavorite = false,
+  lastCookDateMs = undefined,
+  seasonMatrixEntries = [],
+  recipe = {},
+  currentMonth = new Date().getMonth() + 1,
+  nowMs = Date.now(),
+} = {}) {
   const favoritenBonus = isFavorite ? FAVORITEN_BONUS : 0;
   const kochabstandsBonus = getKochabstandsBonus(lastCookDateMs, nowMs);
   const saisonBonus = calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth);
 
-  return BASE_VALUE + favoritenBonus + kochabstandsBonus + saisonBonus;
+  return {
+    baseValue: BASE_VALUE,
+    favoritenBonus,
+    kochabstandsBonus,
+    saisonBonus,
+    totalIndex: BASE_VALUE + favoritenBonus + kochabstandsBonus + saisonBonus,
+  };
 }

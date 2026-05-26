@@ -2476,6 +2476,35 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .metadata-index-button {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .index-dialog {
+  background: #1f1f1f;
+  color: #f0f0f0;
+}
+
+[data-theme="dark"] .index-dialog-close {
+  color: #ddd;
+}
+
+[data-theme="dark"] .index-dialog-list {
+  border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .index-dialog-list li {
+  border-bottom-color: #3a3a3a;
+}
+
+[data-theme="dark"] .index-dialog-list .index-dialog-total {
+  background: #2b2b2b;
+}
+
+[data-theme="dark"] .index-dialog-note {
+  color: #ccc;
+}
+
 [data-theme="dark"] .cuisine-badge {
   background: #2A2623;
   color: #E6DED6;
