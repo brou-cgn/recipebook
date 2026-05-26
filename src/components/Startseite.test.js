@@ -638,7 +638,7 @@ describe('Startseite', () => {
     ]);
   });
 
-  test('sorts alltagsklassiker by descending recipe order when recipeIds are missing', async () => {
+  test('sorts alltagsklassiker by descending input recipe order when recipeIds are missing', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
     const { getUserFavorites } = require('../utils/userFavorites');
     const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
