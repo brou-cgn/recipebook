@@ -206,16 +206,29 @@ describe('Startseite', () => {
     expect(sectionTitles.indexOf('Saisonale Rezepte')).toBe(sectionTitles.indexOf('Im Trend') + 1);
   });
 
-  test('shows up to 10 recipes with Saisonal=true in seasonal carousel', async () => {
+  test('shows up to 10 recipes with Hauptsaison ingredients in seasonal carousel', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
+    const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
+    const currentMonth = new Date().getMonth() + 1;
+    subscribeToSeasonMatrix.mockImplementation((callback) => {
+      callback([{
+        id: 'spargel',
+        name: 'Spargel',
+        mainSeasonMonths: [currentMonth],
+        secondarySeasonMonths: [],
+        seasonScore: 100,
+        isActive: true,
+      }]);
+      return jest.fn();
+    });
     const recipes = [
       ...Array.from({ length: 11 }, (_, i) => ({
         id: `seasonal-${i}`,
         title: `Saisonal ${i}`,
-        Saisonal: true,
+        ingredients: [{ type: 'ingredient', text: '500g Spargel' }],
       })),
-      { id: 'regular', title: 'Nicht saisonal', Saisonal: false },
+      { id: 'regular', title: 'Nicht saisonal', ingredients: [{ type: 'ingredient', text: '500g Nudeln' }] },
     ];
 
     const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);

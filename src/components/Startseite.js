@@ -9,7 +9,7 @@ import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePref
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
-import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
+import { calculateRecipeSortIndex, hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -132,17 +132,12 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   }, [privateListsForCurrentUser, currentUser?.defaultEverydayClassicsListId]);
 
   useEffect(() => {
-    if (!defaultEverydayClassicsList) {
-      setSeasonMatrixEntries([]);
-      return undefined;
-    }
-
     const unsubscribe = subscribeToSeasonMatrix((entries) => {
       setSeasonMatrixEntries(Array.isArray(entries) ? entries : []);
     });
 
     return () => unsubscribe();
-  }, [defaultEverydayClassicsList]);
+  }, []);
 
   // Load allMembersFlagDocs whenever the default web import list changes.
   // allMembersFlagDocs maps userId → recipeId → { flag (= calculatedFlag), expiresAt (= calculatedExpiresAt),
@@ -249,9 +244,9 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   const saisonaleRezepte = useMemo(() => (
     recipes
-      .filter((recipe) => recipe?.Saisonal === true)
+      .filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries))
       .slice(0, SAISONALE_REZEPTE_TOP)
-  ), [recipes]);
+  ), [recipes, seasonMatrixEntries]);
 
   const handleNeueRezepteMehrClick = () => {
     try {

@@ -208,10 +208,6 @@ function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) {
   return hasHauptsaisonIngredient(recipe, seasonMatrixEntries);
 }
 
-function isSeasonalRecipe(recipe) {
-  return recipe?.Saisonal === true;
-}
-
 const emptyPrivateListFilterHandler = () => {};
 
 function applyRolePermissionsToUser(user, permissionsMap = {}) {
@@ -1480,8 +1476,8 @@ function App() {
   const isPrivateListSearchContext = currentView === 'groups' && selectedGroup?.type === 'private';
   const isSeasonalRecipesView = currentView === 'seasonalRecipes';
   const seasonalTaggedRecipes = useMemo(
-    () => recipes.filter((recipe) => isSeasonalRecipe(recipe)),
-    [recipes]
+    () => recipes.filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries)),
+    [recipes, seasonMatrixEntries]
   );
   const overlayRecipes = isPrivateListSearchContext
     ? selectedGroupUnfilteredRecipes
