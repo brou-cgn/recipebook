@@ -34,7 +34,11 @@ function StartseitenKarussell({
       </div>
       <div className="startseite-carousel-wrap">
         {loading ? (
-          <div className="startseite-loading">Laden…</div>
+          <div className="startseite-skeleton" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="startseite-skeleton-card" />
+            ))}
+          </div>
         ) : items.length === 0 ? (
           emptyContent || <div className="startseite-empty">{emptyText}</div>
         ) : (

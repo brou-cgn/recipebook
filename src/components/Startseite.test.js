@@ -94,8 +94,9 @@ describe('Startseite', () => {
   test('shows loading state initially', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockReturnValue(new Promise(() => {}));
-    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
-    expect(screen.getByText('Laden…')).toBeInTheDocument();
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    expect(container.querySelector('.startseite-skeleton')).toBeInTheDocument();
+    expect(container.querySelectorAll('.startseite-skeleton-card').length).toBeGreaterThan(0);
   });
 
   test('shows empty state when no trending recipes', async () => {
