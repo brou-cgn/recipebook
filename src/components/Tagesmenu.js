@@ -4,7 +4,10 @@ import { getSwipeFlagDocsByRecipeForUser, isRecipeAvailableForStack, getAllMembe
 import { getGroupStatusThresholds, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getMaxKandidatenSchwelle, getStatusValiditySettings } from '../utils/customLists';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
-import { addFavorite } from '../utils/userFavorites';
+import { addFavorite, getUserFavorites } from '../utils/userFavorites';
+import { getAllCookDates } from '../utils/recipeCookDates';
+import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
+import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { isBase64Image } from '../utils/imageUtils';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
@@ -131,6 +134,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
   // When true, show the dedicated "Meine Auswahl" view (own groups: Kandidat, Für später, Archiviert)
   const [showMeineAuswahl, setShowMeineAuswahl] = useState(false);
   const [contextMenuRecipeId, setContextMenuRecipeId] = useState(null);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [cookDatesMap, setCookDatesMap] = useState(new Map());
+  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
 
   // All recipes belonging to the selected list, regardless of active flags
   const allListRecipes = useMemo(() => {
@@ -233,6 +239,54 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         setFlagsLoaded(true);
       });
   }, [currentUser, selectedListId]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setFavoriteIds([]);
+      return;
+    }
+    Promise.resolve(getUserFavorites(currentUser.id))
+      .then((ids) => {
+        setFavoriteIds(Array.isArray(ids) ? ids : []);
+      })
+      .catch(() => {
+        setFavoriteIds([]);
+      });
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser?.id || allListRecipes.length === 0) {
+      setCookDatesMap(new Map());
+      return;
+    }
+    let cancelled = false;
+    Promise.all(allListRecipes.map((recipe) => getAllCookDates(recipe.id)))
+      .then((cookDateLists) => {
+        if (cancelled) return;
+        const nextMap = new Map();
+        allListRecipes.forEach((recipe, index) => {
+          const ownCookDates = (cookDateLists[index] || []).filter((cd) => cd.userId === currentUser.id);
+          const lastOwn = ownCookDates.reduce((latest, current) => {
+            const currentDate = current?.date instanceof Date ? current.date : new Date(current?.date);
+            if (Number.isNaN(currentDate?.getTime?.())) return latest;
+            return !latest || currentDate > latest ? currentDate : latest;
+          }, null);
+          if (lastOwn) nextMap.set(recipe.id, lastOwn.getTime());
+        });
+        setCookDatesMap(nextMap);
+      })
+      .catch(() => {
+        if (!cancelled) setCookDatesMap(new Map());
+      });
+    return () => { cancelled = true; };
+  }, [allListRecipes, currentUser?.id]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToSeasonMatrix((entries) => {
+      setSeasonMatrixEntries(Array.isArray(entries) ? entries : []);
+    });
+    return () => unsubscribe?.();
+  }, []);
 
   // Load all members' swipe flags for group status determination.
   // Reloads whenever the selected list or its members change.
@@ -590,6 +644,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     const getCreatedAtMillis = (recipe) =>
       recipe.createdAt?.toMillis?.() ??
       (typeof recipe.createdAt === 'number' ? recipe.createdAt : null);
+    const currentMonth = new Date().getMonth() + 1;
+    const favoriteIdSet = new Set(favoriteIds);
+    const getSortIndex = (recipe) => calculateRecipeSortIndex({
+      isFavorite: favoriteIdSet.has(recipe?.id),
+      lastCookDateMs: cookDatesMap.get(recipe?.id) ?? null,
+      seasonMatrixEntries,
+      recipe: recipe || {},
+      currentMonth,
+    });
 
     return [...availableRecipes].sort((a, b) => {
       // Priority 1: outcome already determinable via projection
@@ -602,6 +665,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       const bHasNoDocs = hasNoDocsInList(b.id);
       if (aHasNoDocs !== bHasNoDocs) return aHasNoDocs ? -1 : 1;
 
+      const indexDiff = getSortIndex(b) - getSortIndex(a);
+      if (indexDiff !== 0) return indexDiff;
+
       // Priority 3: remaining recipes ordered by createdAt descending (newest first).
       // "absteigend nach Alter (createdAt)" = higher timestamp first.
       const aCreatedAt = getCreatedAtMillis(a);
@@ -609,7 +675,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       if (aCreatedAt !== null && bCreatedAt !== null) return bCreatedAt - aCreatedAt;
       if (aCreatedAt !== null) return -1;
       if (bCreatedAt !== null) return 1;
-      return 0;
+      return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
     });
   }, [
     availableRecipes,
@@ -617,6 +683,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     allMembersFlagDocs,
     listMemberIds,
     groupThresholds,
+    favoriteIds,
+    cookDatesMap,
+    seasonMatrixEntries,
   ]);
 
   useEffect(() => {

@@ -15,6 +15,7 @@ let mockStatusValiditySettings = {
   statusValidityDaysGeparkt: null,
   statusValidityDaysArchiv: null,
 };
+let mockSeasonMatrixEntries = [];
 
 jest.mock('../utils/recipeSwipeFlags', () => {
   const actual = jest.requireActual('../utils/recipeSwipeFlags');
@@ -89,6 +90,18 @@ jest.mock('../utils/groupFirestore', () => ({
 
 jest.mock('../utils/userFavorites', () => ({
   addFavorite: jest.fn(() => Promise.resolve(true)),
+  getUserFavorites: jest.fn(() => Promise.resolve([])),
+}));
+
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: jest.fn(() => Promise.resolve([])),
+}));
+
+jest.mock('../utils/seasonMatrix', () => ({
+  subscribeToSeasonMatrix: (callback) => {
+    callback(mockSeasonMatrixEntries);
+    return () => {};
+  },
 }));
 
 beforeAll(() => {
@@ -112,6 +125,7 @@ beforeEach(() => {
     statusValidityDaysGeparkt: null,
     statusValidityDaysArchiv: null,
   };
+  mockSeasonMatrixEntries = [];
 });
 
 const makeRecipe = (id, title) => ({ id, title, groupId: 'list1' });
@@ -444,6 +458,42 @@ describe('Tagesmenu – swipe stack prioritization', () => {
     // Not P1 (all explicit 'geparkt' → positive and negative projections = 'geparkt')
     // r1 has a doc from user1 → not P2; r2 and r3 have no docs → P2
     // Expected order: r2 (P2), r3 (P2), r1 (P3)
+    expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
+  });
+
+  test('sorts recipes within the same priority by calculateRecipeSortIndex descending', async () => {
+    mockAllMembersFlagsValue = {
+      user1: {},
+      user2: {},
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {},
+      user2: {},
+    };
+    mockSeasonMatrixEntries = [
+      {
+        name: 'Spargel',
+        mainSeasonMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        secondarySeasonMonths: [],
+        seasonScore: 100,
+        isActive: true,
+      },
+    ];
+    const p2Recipes = [
+      {
+        ...makeRecipe('r1', 'Rezept 1'),
+        ingredients: [{ type: 'ingredient', text: '200g Tomaten' }],
+      },
+      {
+        ...makeRecipe('r2', 'Rezept 2'),
+        ingredients: [{ type: 'ingredient', text: '500g Spargel' }],
+      },
+    ];
+
+    await act(async () => {
+      renderMenuWithListOverrides(p2Recipes, { ownerId: 'user1', memberIds: ['user2'] });
+    });
+
     expect(document.querySelector('.tagesmenu-card-top')).toHaveTextContent('Rezept 2');
   });
 
