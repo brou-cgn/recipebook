@@ -813,6 +813,30 @@ describe('RecipeList - Filter Button Icon', () => {
     expect(filterButton).toHaveClass('has-active-filters');
     expect(filterButton).toHaveTextContent('🔽');
   });
+
+  test('shows filterButtonActive when showSeasonalOnly is true', async () => {
+    jest.spyOn(require('../utils/customLists'), 'getButtonIcons').mockResolvedValue({
+      filterButton: '⚙',
+      filterButtonActive: '🔽'
+    });
+    jest.spyOn(require('../utils/recipeRatings'), 'getUserRating').mockResolvedValue(null);
+    jest.spyOn(require('../utils/recipeRatings'), 'subscribeToRatingSummary').mockImplementation(() => () => {});
+
+    render(
+      <RecipeList
+        recipes={mockRecipes}
+        onSelectRecipe={() => {}}
+        onAddRecipe={() => {}}
+        onClearAllFilters={() => {}}
+        activeFilters={{}}
+        showSeasonalOnly={true}
+      />
+    );
+
+    const filterButton = await screen.findByTitle('Weitere Filter');
+    expect(filterButton).toHaveClass('has-active-filters');
+    expect(filterButton).toHaveTextContent('🔽');
+  });
 });
 
 describe('RecipeList - Kulinarik Display', () => {

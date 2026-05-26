@@ -62,7 +62,8 @@ function GroupDetail({
   onOpenSearch,
   onClearAllFilters,
   activeFilters,
-  showFavoritesOnly = false
+  showFavoritesOnly = false,
+  showSeasonalOnly = false
 }) {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
@@ -247,7 +248,7 @@ function GroupDetail({
   const hasSelectedGroup = typeof activeFilters?.selectedGroup === 'string'
     ? activeFilters.selectedGroup.trim().length > 0
     : !!activeFilters?.selectedGroup;
-  const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || (activeFilters && (
+  const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || showSeasonalOnly || (activeFilters && (
     hasSelectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0

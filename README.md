@@ -12,6 +12,7 @@ A Progressive Web App (PWA) for managing your favorite recipes. Built with React
 - 🍽️ **Recipe Management**: Add, edit, and delete recipes
 - 🖼️ **Image Support**: Add images to your recipes
 - 📝 **Ingredients & Steps**: Organize recipes with detailed ingredient lists and preparation steps
+- 🌱 **Saisonal-Filter**: Optional filter pill for recipes with active Saisonmatrix ingredients (Score ≥ 60)
 - 🔥 **Firebase Integration**: Cloud-based storage with Firestore and Authentication
 - 💾 **Data Persistence**: All recipes are stored in Firebase Firestore with offline support
 - 👥 **User Management**: Role-based access control with administrators and different permission levels

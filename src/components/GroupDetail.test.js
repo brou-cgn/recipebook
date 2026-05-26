@@ -749,6 +749,11 @@ describe('GroupDetail – private list filter button', () => {
     expect(screen.getByRole('button', { name: 'Weitere Filter' })).not.toHaveClass('has-active-filters');
   });
 
+  it('marks filter button as active when seasonal filter is active', () => {
+    render(<GroupDetail {...defaultProps} showSeasonalOnly={true} />);
+    expect(screen.getByRole('button', { name: 'Weitere Filter' })).toHaveClass('has-active-filters');
+  });
+
   it('filters recipes by search term', async () => {
     render(
       <GroupDetail
