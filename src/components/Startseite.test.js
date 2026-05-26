@@ -638,7 +638,7 @@ describe('Startseite', () => {
     ]);
   });
 
-  test('falls back to favorites and cook date sorting when list indexes are missing', async () => {
+  test('sorts alltagsklassiker by descending input recipe order when recipeIds are missing', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
     const { getUserFavorites } = require('../utils/userFavorites');
     const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
@@ -673,16 +673,16 @@ describe('Startseite', () => {
     expect(cards).toHaveLength(10);
     const titles = Array.from(cards).map((card) => card.textContent);
     expect(titles).toEqual([
-      'Rezept 01',
-      'Rezept 03',
-      'Rezept 07',
       'Rezept 11',
-      'Rezept 02',
-      'Rezept 04',
-      'Rezept 05',
-      'Rezept 06',
-      'Rezept 08',
+      'Rezept 10',
       'Rezept 09',
+      'Rezept 08',
+      'Rezept 07',
+      'Rezept 06',
+      'Rezept 05',
+      'Rezept 04',
+      'Rezept 03',
+      'Rezept 02',
     ]);
   });
 
