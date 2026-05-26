@@ -199,6 +199,15 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     );
   }, [recipes, defaultEverydayClassicsList]);
 
+  const recipesWithCookDateLookup = useMemo(() => {
+    const recipeById = new Map();
+    [...recipes, ...allAlltagsklassikerRecipes].forEach((recipe) => {
+      if (!recipe?.id || recipeById.has(recipe.id)) return;
+      recipeById.set(recipe.id, recipe);
+    });
+    return Array.from(recipeById.values());
+  }, [recipes, allAlltagsklassikerRecipes]);
+
   // Gemeinsame Kandidaten: recipes where at least one member's calculatedFlag is 'kandidat'
   // with a future calculatedExpiresAt. Sorted alphabetically.
   // Note: in allMembersFlagDocs, `.flag` stores calculatedFlag, `.explicitFlag` stores the
@@ -231,16 +240,33 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   };
 
   const neueRezepte = useMemo(() => {
-    const toMs = (ts) => {
-      if (!ts) return 0;
-      if (typeof ts.toDate === 'function') return ts.toDate().getTime();
-      return new Date(ts).getTime();
-    };
-    const effectiveMs = (recipe) => toMs(recipe.publishedAt || recipe.createdAt);
+    const currentMonth = new Date().getMonth() + 1;
     return [...recipes]
-      .sort((a, b) => effectiveMs(b) - effectiveMs(a))
+      .sort((a, b) => {
+        const scoreA = calculateRecipeSortIndex({
+          isFavorite: favoriteRecipeIds.includes(a.id),
+          lastCookDateMs: lastOwnCookDateByRecipeId[a.id] ?? null,
+          seasonMatrixEntries,
+          recipe: a,
+          currentMonth,
+        });
+        const scoreB = calculateRecipeSortIndex({
+          isFavorite: favoriteRecipeIds.includes(b.id),
+          lastCookDateMs: lastOwnCookDateByRecipeId[b.id] ?? null,
+          seasonMatrixEntries,
+          recipe: b,
+          currentMonth,
+        });
+        const scoreDiff = scoreB - scoreA;
+        if (scoreDiff !== 0) return scoreDiff;
+
+        const titleDiff = (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+        if (titleDiff !== 0) return titleDiff;
+
+        return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
+      })
       .slice(0, NEUE_REZEPTE_TOP);
-  }, [recipes]);
+  }, [recipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries]);
 
   const saisonaleRezepte = useMemo(() => (
     recipes
@@ -315,15 +341,15 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   useEffect(() => {
     let cancelled = false;
-    if (!currentUser?.id || allAlltagsklassikerRecipes.length === 0) {
+    if (!currentUser?.id || recipesWithCookDateLookup.length === 0) {
       setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
       return;
     }
-    Promise.all(allAlltagsklassikerRecipes.map((recipe) => getAllCookDates(recipe.id)))
+    Promise.all(recipesWithCookDateLookup.map((recipe) => getAllCookDates(recipe.id)))
       .then((cookDateLists) => {
         if (cancelled) return;
         const nextMap = {};
-        allAlltagsklassikerRecipes.forEach((recipe, index) => {
+        recipesWithCookDateLookup.forEach((recipe, index) => {
           const ownCookDates = (cookDateLists[index] || []).filter((cd) => cd.userId === currentUser.id);
           const lastOwn = ownCookDates.reduce((latest, current) => {
             const currentDate = current?.date instanceof Date ? current.date : new Date(current?.date);
@@ -339,7 +365,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         setLastOwnCookDateByRecipeId((prev) => (Object.keys(prev).length > 0 ? {} : prev));
       });
     return () => { cancelled = true; };
-  }, [allAlltagsklassikerRecipes, currentUser?.id]);
+  }, [recipesWithCookDateLookup, currentUser?.id]);
 
   const alltagsklassikerRecipes = useMemo(() => {
     const currentMonth = new Date().getMonth() + 1;
@@ -363,7 +389,10 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         const scoreDiff = scoreB - scoreA;
         if (scoreDiff !== 0) return scoreDiff;
 
-        return (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+        const titleDiff = (a.title || '').localeCompare((b.title || ''), undefined, { sensitivity: 'base' });
+        if (titleDiff !== 0) return titleDiff;
+
+        return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
       })
       .slice(0, ALLTAGSKLASSIKER_TOP);
   }, [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries]);
