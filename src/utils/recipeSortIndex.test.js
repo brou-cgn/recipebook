@@ -1,5 +1,6 @@
 import {
   calculateRecipeSortIndex,
+  calculateRecipeSortIndexBreakdown,
   getKochabstandsBonus,
   getIngredientSeasonStatus,
   matchIngredientToEntry,
@@ -367,5 +368,26 @@ describe('calculateRecipeSortIndex', () => {
     expect(SAISON_STATUS_BONUS.NEBENSAISON).toBe(15);
     expect(SAISON_STATUS_BONUS.BALD).toBe(8);
     expect(SAISON_STATUS_BONUS.AUSSERHALB).toBe(0);
+  });
+});
+
+describe('calculateRecipeSortIndexBreakdown', () => {
+  test('returns transparent breakdown with total index', () => {
+    const result = calculateRecipeSortIndexBreakdown({
+      isFavorite: true,
+      lastCookDateMs: null,
+      seasonMatrixEntries: [],
+      recipe: {},
+      currentMonth: CURRENT_MONTH,
+      nowMs: NOW,
+    });
+
+    expect(result).toEqual({
+      baseValue: 50,
+      favoritenBonus: 25,
+      kochabstandsBonus: 10,
+      saisonBonus: 0,
+      totalIndex: 85,
+    });
   });
 });

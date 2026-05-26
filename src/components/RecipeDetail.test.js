@@ -1754,6 +1754,39 @@ describe('RecipeDetail - Index Field Visibility', () => {
     // Computed index: base 50 + never cooked +10 + no favorites + no season = 60
     expect(screen.getByText('60')).toBeInTheDocument();
   });
+
+  test('opens index dialog with transparent index breakdown when index is clicked', () => {
+    canViewRecipeIndex.mockReturnValue(true);
+
+    const mockRecipe = {
+      id: 'recipe-1',
+      title: 'Test Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      ingredients: ['Ingredient 1'],
+      steps: ['Step 1'],
+    };
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={{ id: 'user-1', role: 'admin' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Indexwert-Details anzeigen' }));
+
+    expect(screen.getByRole('dialog', { name: 'Indexwert-Berechnung' })).toBeInTheDocument();
+    expect(screen.getByText('Basiswert')).toBeInTheDocument();
+    expect(screen.getByText('Favoritenbonus')).toBeInTheDocument();
+    expect(screen.getByText('Kochabstandsbonus')).toBeInTheDocument();
+    expect(screen.getByText('Saisonbonus')).toBeInTheDocument();
+    expect(screen.getByText('Gesamtindex (gerundet)')).toBeInTheDocument();
+    expect(screen.getByText(/Kochabstand:/)).toBeInTheDocument();
+  });
 });
 
 describe('RecipeDetail - Dark mode icon persistence', () => {

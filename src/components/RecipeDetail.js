@@ -20,7 +20,7 @@ import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
-import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
+import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 
 
 // Mobile breakpoint constant
@@ -88,6 +88,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showIndexDialog, setShowIndexDialog] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
@@ -480,10 +481,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasRecipeIndexViewPermission = canViewRecipeIndex(currentUser);
   const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
 
-  // Calculate the sort index for display in the recipe detail (pure calculation, no Firestore reads)
-  const computedSortIndex = useMemo(() => {
+  // Calculate the sort index breakdown for display in the recipe detail (pure calculation, no Firestore reads)
+  const sortIndexBreakdown = useMemo(() => {
     if (!hasRecipeIndexViewPermission) return null;
-    return calculateRecipeSortIndex({
+    return calculateRecipeSortIndexBreakdown({
       isFavorite: favoriteIds.includes(recipe?.id),
       lastCookDateMs: lastOwnCookDateMs,
       seasonMatrixEntries,
@@ -491,6 +492,25 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       currentMonth: new Date().getMonth() + 1,
     });
   }, [hasRecipeIndexViewPermission, favoriteIds, recipe, lastOwnCookDateMs, seasonMatrixEntries]);
+  const computedSortIndex = sortIndexBreakdown?.totalIndex ?? null;
+
+  const cookDistanceExplanation = useMemo(() => {
+    if (!sortIndexBreakdown) return '';
+    if (lastOwnCookDateMs === null || lastOwnCookDateMs === undefined) {
+      return 'Kochabstand: Noch nie gekocht (Bonus +10).';
+    }
+    const daysSince = Math.max(0, Math.floor((Date.now() - lastOwnCookDateMs) / (1000 * 60 * 60 * 24)));
+    const bonusText = sortIndexBreakdown.kochabstandsBonus >= 0
+      ? `+${sortIndexBreakdown.kochabstandsBonus}`
+      : `${sortIndexBreakdown.kochabstandsBonus}`;
+    return `Kochabstand: Zuletzt vor ${daysSince} Tagen gekocht (Bonus ${bonusText}).`;
+  }, [sortIndexBreakdown, lastOwnCookDateMs]);
+
+  const formatIndexValue = (value) => parseFloat(Number(value || 0).toFixed(2));
+  const formatSignedIndexValue = (value) => {
+    const rounded = formatIndexValue(value);
+    return `${rounded >= 0 ? '+' : ''}${rounded}`;
+  };
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -2259,7 +2279,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               {hasRecipeIndexViewPermission && (
                 <div className="metadata-item">
                   <span className="metadata-label">Index:</span>
-                  <span className="metadata-value">{computedSortIndex !== null ? Math.round(computedSortIndex) : '—'}</span>
+                  <button
+                    type="button"
+                    className="metadata-value metadata-index-button"
+                    onClick={() => setShowIndexDialog(true)}
+                    aria-label="Indexwert-Details anzeigen"
+                    disabled={computedSortIndex === null}
+                  >
+                    {computedSortIndex !== null ? Math.round(computedSortIndex) : '—'}
+                  </button>
                 </div>
               )}
               
@@ -2399,6 +2427,39 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           </>
         )}
       </div>
+
+      {showIndexDialog && sortIndexBreakdown && (
+        <div className="index-dialog-overlay" onClick={() => setShowIndexDialog(false)}>
+          <div
+            className="index-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Indexwert-Berechnung"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="index-dialog-header">
+              <h2 className="index-dialog-title">Indexwert-Berechnung</h2>
+              <button
+                type="button"
+                className="index-dialog-close"
+                onClick={() => setShowIndexDialog(false)}
+                aria-label="Index-Dialog schließen"
+              >
+                ×
+              </button>
+            </div>
+            <ul className="index-dialog-list">
+              <li><span>Basiswert</span><strong>{formatSignedIndexValue(sortIndexBreakdown.baseValue)}</strong></li>
+              <li><span>Favoritenbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.favoritenBonus)}</strong></li>
+              <li><span>Kochabstandsbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.kochabstandsBonus)}</strong></li>
+              <li><span>Saisonbonus</span><strong>{formatSignedIndexValue(sortIndexBreakdown.saisonBonus)}</strong></li>
+              <li className="index-dialog-total"><span>Gesamtindex (gerundet)</span><strong>{Math.round(formatIndexValue(sortIndexBreakdown.totalIndex))}</strong></li>
+            </ul>
+            <p className="index-dialog-note">{cookDistanceExplanation}</p>
+            <p className="index-dialog-note">Saisonbonus basiert auf den aktuell zugeordneten Zutaten aus der Saisonmatrix.</p>
+          </div>
+        </div>
+      )}
 
       {showNutritionModal && (
         <NutritionModal
