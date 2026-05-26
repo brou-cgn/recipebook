@@ -81,11 +81,15 @@ describe('StartseitenKarussell', () => {
 
   test('calls onMehr when "mehr" button is clicked', () => {
     const onMehr = jest.fn();
+    const scrollToSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
     render(
       <StartseitenKarussell title="Test" items={[]} renderItem={renderItem} onMehr={onMehr} />
     );
     fireEvent.click(screen.getByRole('button', { name: /mehr/i }));
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 0);
     expect(onMehr).toHaveBeenCalledTimes(1);
+    expect(scrollToSpy.mock.invocationCallOrder[0]).toBeLessThan(onMehr.mock.invocationCallOrder[0]);
+    scrollToSpy.mockRestore();
   });
 
   test('does not show empty text or carousel when loading', () => {

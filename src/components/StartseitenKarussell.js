@@ -26,6 +26,13 @@ function StartseitenKarussell({
   mehrText = 'mehr',
   titleAction = null,
 }) {
+  const handleMehrClick = (event) => {
+    window.scrollTo(0, 0);
+    if (typeof onMehr === 'function') {
+      onMehr(event);
+    }
+  };
+
   return (
     <div className="startseite-trending-section">
       <div className="startseite-section-header">
@@ -49,7 +56,7 @@ function StartseitenKarussell({
       </div>
       {onMehr && (
         <div className="startseite-mehr-container">
-          <button className="startseite-mehr-btn" onClick={onMehr}>
+          <button className="startseite-mehr-btn" onClick={handleMehrClick}>
             {mehrText}
           </button>
         </div>
