@@ -21,6 +21,11 @@ import {
   getSettings,
   getCustomLists,
   clearSettingsCache,
+  clearButtonIconsLocalStorageCache,
+  getButtonIcons,
+  saveButtonIcons,
+  saveButtonIcon,
+  DEFAULT_BUTTON_ICONS,
   DEFAULT_AI_RECIPE_PROMPT,
   DEFAULT_CUISINE_TYPES,
   DEFAULT_MEAL_CATEGORIES,
@@ -56,6 +61,7 @@ beforeEach(() => {
   // Default: getDocs returns an empty snapshot (no icons in collection)
   getDocs.mockResolvedValue({ forEach: jest.fn() });
   clearSettingsCache();
+  clearButtonIconsLocalStorageCache();
 });
 
 describe('getSettings – AI prompt migration', () => {
@@ -375,6 +381,7 @@ describe('getSettings – settings/images document split', () => {
         data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
       });
     });
+
     // Simulate cookingMode icon in the buttonIcons collection
     getDocs.mockResolvedValue({
       forEach: (cb) => cb({ id: 'cookingMode', data: () => ({ value: '🍳' }) }),
@@ -514,5 +521,61 @@ describe('getSettings – settings/images document split', () => {
     // updateDoc not called (no AI prompt migration and no image migration)
     expect(updateDoc).not.toHaveBeenCalled();
     expect(settings.faviconImage).toBeNull();
+  });
+});
+
+describe('button icons localStorage cache', () => {
+  test('returns fresh localStorage cache without Firestore request', async () => {
+    const cachedIcons = { cookingMode: '🥘' };
+    localStorage.setItem('buttonIconsCache', JSON.stringify(cachedIcons));
+    localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now()));
+
+    const icons = await getButtonIcons();
+
+    expect(icons).toEqual(expect.objectContaining({ cookingMode: '🥘' }));
+    expect(getDocs).not.toHaveBeenCalled();
+  });
+
+  test('uses Firestore and refreshes localStorage cache when local cache is stale', async () => {
+    localStorage.setItem('buttonIconsCache', JSON.stringify({ cookingMode: 'old' }));
+    localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now() - (60 * 60 * 1000) - 1));
+    getDocs.mockResolvedValue({
+      forEach: (cb) => cb({ id: 'cookingMode', data: () => ({ value: '🍳' }) }),
+    });
+
+    const icons = await getButtonIcons();
+
+    expect(getDocs).toHaveBeenCalledTimes(1);
+    expect(icons).toEqual(expect.objectContaining({ cookingMode: '🍳' }));
+    expect(JSON.parse(localStorage.getItem('buttonIconsCache'))).toEqual(expect.objectContaining({ cookingMode: '🍳' }));
+    expect(Number(localStorage.getItem('buttonIconsCacheTimestamp'))).toBeGreaterThan(Date.now() - 2000);
+  });
+
+  test('updates localStorage cache when saving all icons', async () => {
+    await saveButtonIcons({ cookingMode: '🔥' });
+
+    const cachedIcons = JSON.parse(localStorage.getItem('buttonIconsCache'));
+    expect(cachedIcons).toEqual(expect.objectContaining({ cookingMode: '🔥', closeButton: DEFAULT_BUTTON_ICONS.closeButton }));
+    expect(Number(localStorage.getItem('buttonIconsCacheTimestamp'))).toBeGreaterThan(Date.now() - 2000);
+  });
+
+  test('updates localStorage cache when saving a single icon', async () => {
+    localStorage.setItem('buttonIconsCache', JSON.stringify({ closeButton: 'X' }));
+    localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now()));
+
+    await saveButtonIcon('cookingMode', '🧑‍🍳');
+
+    const cachedIcons = JSON.parse(localStorage.getItem('buttonIconsCache'));
+    expect(cachedIcons).toEqual(expect.objectContaining({ closeButton: 'X', cookingMode: '🧑‍🍳' }));
+  });
+
+  test('clearButtonIconsLocalStorageCache removes localStorage keys', () => {
+    localStorage.setItem('buttonIconsCache', JSON.stringify({ cookingMode: '🍳' }));
+    localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now()));
+
+    clearButtonIconsLocalStorageCache();
+
+    expect(localStorage.getItem('buttonIconsCache')).toBeNull();
+    expect(localStorage.getItem('buttonIconsCacheTimestamp')).toBeNull();
   });
 });
