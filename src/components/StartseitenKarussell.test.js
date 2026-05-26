@@ -24,10 +24,11 @@ describe('StartseitenKarussell', () => {
   });
 
   test('shows loading state', () => {
-    render(
+    const { container } = render(
       <StartseitenKarussell title="Test" items={[]} loading={true} renderItem={renderItem} />
     );
-    expect(screen.getByText('Laden…')).toBeInTheDocument();
+    expect(container.querySelector('.startseite-skeleton')).toBeInTheDocument();
+    expect(container.querySelectorAll('.startseite-skeleton-card')).toHaveLength(3);
   });
 
   test('shows empty text when items is empty and not loading', () => {
