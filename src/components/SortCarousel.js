@@ -12,6 +12,7 @@ export const SORT_OPTIONS = [
   { id: 'trending', label: 'Im Trend' },
   { id: 'newest', label: 'Neue Rezepte' },
   { id: 'rating', label: 'Nach Bewertung' },
+  { id: 'index', label: 'Nach Index' },
 ];
 
 const LONG_PRESS_DELAY = 300;
