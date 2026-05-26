@@ -33,6 +33,13 @@ jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
 }));
 
+jest.mock('../utils/seasonMatrix', () => ({
+  subscribeToSeasonMatrix: jest.fn((callback) => {
+    callback([]);
+    return jest.fn();
+  }),
+}));
+
 jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
   <div data-testid="trending-card" onClick={() => onSelectRecipe?.(recipe)}>{recipe.title}</div>
 ));
@@ -56,6 +63,11 @@ beforeEach(() => {
   getGroupStatusThresholds.mockResolvedValue({});
   getMaxKandidatenSchwelle.mockResolvedValue(null);
   getStartseitenKandidatenLeertext.mockResolvedValue('Keine gemeinsamen Kandidaten vorhanden.');
+  const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
+  subscribeToSeasonMatrix.mockImplementation((callback) => {
+    callback([]);
+    return jest.fn();
+  });
 });
 
 describe('Startseite', () => {
@@ -590,25 +602,43 @@ describe('Startseite', () => {
     });
   });
 
-  test('sorts alltagsklassiker by descending list index', async () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('sorts alltagsklassiker by calculateRecipeSortIndex score', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
     const { getUserFavorites } = require('../utils/userFavorites');
-    const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
-      id: `r${idx + 1}`,
-      title: `Rezept ${String(idx + 1).padStart(2, '0')}`,
-      groupId: 'g-classics',
-    }));
-    getUserFavorites.mockResolvedValue(['r3', 'r1', 'r7']);
+    const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
+    const alltagsRecipes = [
+      { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+      { id: 'r2', title: 'Liebling', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
+      { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+    ];
+    subscribeToSeasonMatrix.mockImplementation((callback) => {
+      callback([{
+        id: 'spargel',
+        name: 'Spargel',
+        mainSeasonMonths: [4, 5, 6],
+        secondarySeasonMonths: [],
+        seasonScore: 100,
+        isActive: true,
+      }]);
+      return jest.fn();
+    });
+    getUserFavorites.mockResolvedValue(['r2']);
     getAllCookDates.mockImplementation((recipeId) => {
-      const number = Number(recipeId.replace('r', ''));
-      if (recipeId === 'r11') return Promise.resolve([]);
-      return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
+      if (recipeId === 'r1') {
+        return Promise.resolve([{ id: 'cd-r1', userId: 'u1', recipeId, date: new Date('2026-05-12T12:00:00.000Z') }]);
+      }
+      return Promise.resolve([]);
     });
 
     const { container } = render(
       <Startseite
         currentUser={{ id: 'u1', defaultEverydayClassicsListId: 'g-classics' }}
-        groups={[{ id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: alltagsRecipes.map(r => r.id) }]}
+        groups={[{ id: 'g-classics', type: 'private', ownerId: 'u1', memberIds: ['u1'], recipeIds: ['r3', 'r2', 'r1'] }]}
         recipes={alltagsRecipes}
       />
     );
@@ -619,38 +649,44 @@ describe('Startseite', () => {
     );
     expect(alltagsSection).toBeTruthy();
     await waitFor(() => {
-      expect(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(10);
+      const titles = Array.from(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+      expect(titles).toEqual([
+        'Saisonhit',
+        'Liebling',
+        'Frisch gekocht',
+      ]);
     });
     const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
-    expect(cards).toHaveLength(10);
-    const titles = Array.from(cards).map((card) => card.textContent);
-    expect(titles).toEqual([
-      'Rezept 11',
-      'Rezept 10',
-      'Rezept 09',
-      'Rezept 08',
-      'Rezept 07',
-      'Rezept 06',
-      'Rezept 05',
-      'Rezept 04',
-      'Rezept 03',
-      'Rezept 02',
-    ]);
+    expect(cards).toHaveLength(3);
   });
 
-  test('sorts alltagsklassiker by descending input recipe order when recipeIds are missing', async () => {
+  test('sorts alltagsklassiker by calculateRecipeSortIndex when recipeIds are missing', async () => {
     const { getAllCookDates } = require('../utils/recipeCookDates');
     const { getUserFavorites } = require('../utils/userFavorites');
-    const alltagsRecipes = Array.from({ length: 11 }, (_, idx) => ({
-      id: `r${idx + 1}`,
-      title: `Rezept ${String(idx + 1).padStart(2, '0')}`,
-      groupId: 'g-classics',
-    }));
-    getUserFavorites.mockResolvedValue(['r3', 'r1', 'r7']);
+    const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
+    const alltagsRecipes = [
+      { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+      { id: 'r2', title: 'Liebling', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
+      { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+    ];
+    subscribeToSeasonMatrix.mockImplementation((callback) => {
+      callback([{
+        id: 'spargel',
+        name: 'Spargel',
+        mainSeasonMonths: [4, 5, 6],
+        secondarySeasonMonths: [],
+        seasonScore: 100,
+        isActive: true,
+      }]);
+      return jest.fn();
+    });
+    getUserFavorites.mockResolvedValue(['r2']);
     getAllCookDates.mockImplementation((recipeId) => {
-      const number = Number(recipeId.replace('r', ''));
-      if (recipeId === 'r11') return Promise.resolve([]);
-      return Promise.resolve([{ id: `cd-${recipeId}`, userId: 'u1', recipeId, date: new Date(`2026-01-${String(number).padStart(2, '0')}T00:00:00.000Z`) }]);
+      if (recipeId === 'r1') {
+        return Promise.resolve([{ id: 'cd-r1', userId: 'u1', recipeId, date: new Date('2026-05-12T12:00:00.000Z') }]);
+      }
+      return Promise.resolve([]);
     });
 
     const { container } = render(
@@ -667,23 +703,15 @@ describe('Startseite', () => {
     );
     expect(alltagsSection).toBeTruthy();
     await waitFor(() => {
-      expect(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).toHaveLength(10);
+      const titles = Array.from(alltagsSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+      expect(titles).toEqual([
+        'Saisonhit',
+        'Liebling',
+        'Frisch gekocht',
+      ]);
     });
     const cards = alltagsSection.querySelectorAll('[data-testid="trending-card"]');
-    expect(cards).toHaveLength(10);
-    const titles = Array.from(cards).map((card) => card.textContent);
-    expect(titles).toEqual([
-      'Rezept 11',
-      'Rezept 10',
-      'Rezept 09',
-      'Rezept 08',
-      'Rezept 07',
-      'Rezept 06',
-      'Rezept 05',
-      'Rezept 04',
-      'Rezept 03',
-      'Rezept 02',
-    ]);
+    expect(cards).toHaveLength(3);
   });
 
   test('"mehr" button of "Meine Alltagsklassiker" opens filtered recipe overview', async () => {
