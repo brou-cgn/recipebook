@@ -7,6 +7,9 @@ import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon,
 import { isBase64Image } from '../utils/imageUtils';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getAllCookDates } from '../utils/recipeCookDates';
+import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
+import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import RecipeCard from './RecipeCard';
 
 export function isNewRecipe(recipe, sortSettings) {
@@ -18,7 +21,7 @@ export function isNewRecipe(recipe, sortSettings) {
   return ms >= cutoff;
 }
 
-export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
+export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, indexSortOptions = {}) {
   const toMs = (ts) => {
     if (!ts) return 0;
     if (typeof ts.toDate === 'function') return ts.toDate().getTime();
@@ -76,6 +79,22 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts) {
       return toMs(a.primaryRecipe?.createdAt) - toMs(b.primaryRecipe?.createdAt);
     });
     return filtered;
+  } else if (sortType === 'index') {
+    const { favoriteIds = [], cookDatesMap = new Map(), seasonMatrixEntries = [] } = indexSortOptions;
+    const currentMonth = new Date().getMonth() + 1;
+    const getIndex = (recipe) => calculateRecipeSortIndex({
+      isFavorite: favoriteIds.includes(recipe?.id),
+      lastCookDateMs: cookDatesMap.get(recipe?.id) ?? null,
+      seasonMatrixEntries,
+      recipe: recipe || {},
+      currentMonth,
+    });
+    sorted.sort((a, b) => {
+      const diff = getIndex(b.primaryRecipe) - getIndex(a.primaryRecipe);
+      if (diff !== 0) return diff;
+      return (a.primaryRecipe?.title || '').localeCompare((b.primaryRecipe?.title || ''), undefined, { sensitivity: 'base' });
+    });
+    return sorted;
   }
   return sorted;
 }
@@ -119,6 +138,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
+  const [cookDatesMap, setCookDatesMap] = useState(new Map());
+  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   
   // Load button icons on mount (first to minimize icon-switch delay)
   useEffect(() => {
@@ -222,6 +243,37 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  // Subscribe to season matrix when index sort is active
+  useEffect(() => {
+    if (activeSort !== 'index') return;
+    const unsubscribe = subscribeToSeasonMatrix((entries) => {
+      setSeasonMatrixEntries(entries);
+    });
+    return () => unsubscribe();
+  }, [activeSort]);
+
+  // Load cook dates for all displayed recipes when index sort is active
+  useEffect(() => {
+    if (activeSort !== 'index' || !currentUser?.id || recipes.length === 0) return;
+    let cancelled = false;
+    Promise.all(recipes.map((recipe) => getAllCookDates(recipe.id)))
+      .then((cookDateLists) => {
+        if (cancelled) return;
+        const nextMap = new Map();
+        recipes.forEach((recipe, idx) => {
+          const ownDates = (cookDateLists[idx] || []).filter((cd) => cd.userId === currentUser.id);
+          const latest = ownDates.reduce((best, cd) => {
+            const ms = cd.date instanceof Date ? cd.date.getTime() : new Date(cd.date).getTime();
+            return (best === null || ms > best) ? ms : best;
+          }, null);
+          if (latest !== null) nextMap.set(recipe.id, latest);
+        });
+        setCookDatesMap(nextMap);
+      })
+      .catch(() => { if (!cancelled) setCookDatesMap(new Map()); });
+    return () => { cancelled = true; };
+  }, [activeSort, currentUser?.id, recipes]);
   
   const handleFilterTouchStart = () => {
     setFilterPressed(true);
@@ -301,8 +353,8 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     }
 
     // Sort groups based on active sort option
-    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts);
-  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts]);
+    return sortRecipeGroups(filteredGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries });
+  }, [allRecipeGroups, showFavoritesOnly, favoriteIds, searchTerm, activeSort, sortSettings, viewCounts, cookDatesMap, seasonMatrixEntries]);
 
   const handleRecipeClick = (group) => {
     // Select the recipe that is at the top according to current sorting order

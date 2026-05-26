@@ -18,6 +18,9 @@ import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, DEFAULT_
 import { playAlarmPattern } from '../utils/alarmAudioUtils';
 import RecipeRating from './RecipeRating';
 import CookDateModal from './CookDateModal';
+import { getAllCookDates } from '../utils/recipeCookDates';
+import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
+import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 
 
 // Mobile breakpoint constant
@@ -31,6 +34,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
+  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   const [cookingMode, setCookingMode] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
   const [isTablet, setIsTablet] = useState(
@@ -282,6 +287,36 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     loadFavorites();
   }, [currentUser?.id]);
 
+  // Load last own cook date for the current recipe (needed for sort index calculation)
+  useEffect(() => {
+    const recipeId = selectedRecipe?.id;
+    if (!recipeId || !currentUser?.id) {
+      setLastOwnCookDateMs(null);
+      return;
+    }
+    let cancelled = false;
+    getAllCookDates(recipeId)
+      .then((cookDates) => {
+        if (cancelled) return;
+        const ownDates = cookDates.filter((cd) => cd.userId === currentUser.id);
+        const latest = ownDates.reduce((best, cd) => {
+          const ms = cd.date instanceof Date ? cd.date.getTime() : new Date(cd.date).getTime();
+          return (best === null || ms > best) ? ms : best;
+        }, null);
+        setLastOwnCookDateMs(latest);
+      })
+      .catch(() => { if (!cancelled) setLastOwnCookDateMs(null); });
+    return () => { cancelled = true; };
+  }, [selectedRecipe?.id, currentUser?.id]);
+
+  // Subscribe to season matrix for sort index calculation
+  useEffect(() => {
+    const unsubscribe = subscribeToSeasonMatrix((entries) => {
+      setSeasonMatrixEntries(entries);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Update selected recipe when initial recipe changes
   useEffect(() => {
     setSelectedRecipe(initialRecipe);
@@ -444,6 +479,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const userCanResetThumbnail = canDeleteRecipes(currentUser);
   const hasRecipeIndexViewPermission = canViewRecipeIndex(currentUser);
   const thumbnailResetAtSecondPosition = deleteAtPublishPosition && userCanResetThumbnail;
+
+  // Calculate the sort index for display in the recipe detail (pure calculation, no Firestore reads)
+  const computedSortIndex = useMemo(() => {
+    if (!hasRecipeIndexViewPermission) return null;
+    return calculateRecipeSortIndex({
+      isFavorite: favoriteIds.includes(recipe?.id),
+      lastCookDateMs: lastOwnCookDateMs,
+      seasonMatrixEntries,
+      recipe: recipe || {},
+      currentMonth: new Date().getMonth() + 1,
+    });
+  }, [hasRecipeIndexViewPermission, favoriteIds, recipe, lastOwnCookDateMs, seasonMatrixEntries]);
 
   // Get current version index
   const currentVersionIndex = allVersions.findIndex(v => v.id === recipe.id);
@@ -2212,7 +2259,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               {hasRecipeIndexViewPermission && (
                 <div className="metadata-item">
                   <span className="metadata-label">Index:</span>
-                  <span className="metadata-value">{recipe.index ?? '—'}</span>
+                  <span className="metadata-value">{computedSortIndex !== null ? Math.round(computedSortIndex) : '—'}</span>
                 </div>
               )}
               

@@ -7,6 +7,8 @@ import { isWaterIngredient, scaleIngredient } from '../utils/ingredientUtils';
 import { sendGroupInvitation, LIST_KIND_OPTIONS } from '../utils/groupFirestore';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getAllCookDates } from '../utils/recipeCookDates';
+import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { sortRecipeGroups } from './RecipeList';
 import ShoppingListModal from './ShoppingListModal';
 import GroupEditDialog from './GroupEditDialog';
@@ -90,6 +92,8 @@ function GroupDetail({
   const [activeSort, setActiveSort] = useState('alphabetical');
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
+  const [cookDatesMap, setCookDatesMap] = useState(new Map());
+  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   const [filterPressed, setFilterPressed] = useState(false);
   const filterLongPressTimer = useRef(null);
   const filterLongPressed = useRef(false);
@@ -190,6 +194,37 @@ function GroupDetail({
     return () => { cancelled = true; };
   }, [activeSort, sortSettings]);
 
+  // Subscribe to season matrix when index sort is active
+  useEffect(() => {
+    if (activeSort !== 'index') return;
+    const unsubscribe = subscribeToSeasonMatrix((entries) => {
+      setSeasonMatrixEntries(entries);
+    });
+    return () => unsubscribe();
+  }, [activeSort]);
+
+  // Load cook dates for all displayed recipes when index sort is active
+  useEffect(() => {
+    if (activeSort !== 'index' || !currentUser?.id || !recipes || recipes.length === 0) return;
+    let cancelled = false;
+    Promise.all(recipes.map((recipe) => getAllCookDates(recipe.id)))
+      .then((cookDateLists) => {
+        if (cancelled) return;
+        const nextMap = new Map();
+        recipes.forEach((recipe, idx) => {
+          const ownDates = (cookDateLists[idx] || []).filter((cd) => cd.userId === currentUser.id);
+          const latest = ownDates.reduce((best, cd) => {
+            const ms = cd.date instanceof Date ? cd.date.getTime() : new Date(cd.date).getTime();
+            return (best === null || ms > best) ? ms : best;
+          }, null);
+          if (latest !== null) nextMap.set(recipe.id, latest);
+        });
+        setCookDatesMap(nextMap);
+      })
+      .catch(() => { if (!cancelled) setCookDatesMap(new Map()); });
+    return () => { cancelled = true; };
+  }, [activeSort, currentUser?.id, recipes]);
+
   useEffect(() => () => {
     if (filterLongPressTimer.current) {
       clearTimeout(filterLongPressTimer.current);
@@ -241,9 +276,9 @@ function GroupDetail({
 
   const sortedGroupRecipes = useMemo(() => {
     const recipeGroups = filteredGroupRecipes.map((recipe) => ({ primaryRecipe: recipe }));
-    return sortRecipeGroups(recipeGroups, activeSort, sortSettings, viewCounts)
+    return sortRecipeGroups(recipeGroups, activeSort, sortSettings, viewCounts, { favoriteIds, cookDatesMap, seasonMatrixEntries })
       .map((recipeGroup) => recipeGroup.primaryRecipe);
-  }, [filteredGroupRecipes, activeSort, sortSettings, viewCounts]);
+  }, [filteredGroupRecipes, activeSort, sortSettings, viewCounts, favoriteIds, cookDatesMap, seasonMatrixEntries]);
 
   if (!group) return null;
 

@@ -73,6 +73,14 @@ jest.mock('../utils/categoryImages', () => ({
   getCategoryImages: jest.fn(() => Promise.resolve([])),
 }));
 
+jest.mock('../utils/recipeCookDates', () => ({
+  getAllCookDates: () => Promise.resolve([]),
+}));
+
+jest.mock('../utils/seasonMatrix', () => ({
+  subscribeToSeasonMatrix: (cb) => { cb([]); return () => {}; },
+}));
+
 describe('RecipeDetail - Portion Controller', () => {
   const mockRecipe = {
     id: 'recipe-1',
@@ -1690,7 +1698,8 @@ describe('RecipeDetail - Index Field Visibility', () => {
     );
 
     expect(screen.getByText('Index:')).toBeInTheDocument();
-    expect(screen.getByText('42')).toBeInTheDocument();
+    // Computed index: base 50 + never cooked +10 + no favorites + no season = 60
+    expect(screen.getByText('60')).toBeInTheDocument();
   });
 
   test('hides index field when permission function denies visibility', () => {
@@ -1719,7 +1728,7 @@ describe('RecipeDetail - Index Field Visibility', () => {
     expect(screen.queryByText('Index:')).not.toBeInTheDocument();
   });
 
-  test('shows placeholder for index field when value is not yet calculated', () => {
+  test('shows computed index even when recipe.index is not set in Firestore', () => {
     canViewRecipeIndex.mockReturnValue(true);
 
     const mockRecipe = {
@@ -1742,7 +1751,8 @@ describe('RecipeDetail - Index Field Visibility', () => {
     );
 
     expect(screen.getByText('Index:')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    // Computed index: base 50 + never cooked +10 + no favorites + no season = 60
+    expect(screen.getByText('60')).toBeInTheDocument();
   });
 });
 
