@@ -129,14 +129,14 @@ describe('Startseite', () => {
     expect(items.length).toBe(20);
   });
 
-  test('renders "mehr" buttons for all four carousels', async () => {
+  test('renders "mehr" buttons for all five carousels', async () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
     await screen.findByText('Keine gemeinsamen Kandidaten vorhanden.');
     const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    expect(mehrButtons.length).toBe(4);
+    expect(mehrButtons.length).toBe(5);
   });
 
   test('shows "Meine Alltagsklassiker" directly below "Meine Kochideen"', async () => {
@@ -152,10 +152,12 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     const onViewChange = jest.fn();
-    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
-    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[2]);
+    const trendSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Im Trend'
+    );
+    fireEvent.click(trendSection.querySelector('.startseite-mehr-btn'));
     expect(onViewChange).toHaveBeenCalledWith('trendingRecipes');
   });
 
@@ -163,10 +165,12 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     const onViewChange = jest.fn();
-    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
-    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[2]);
+    const trendSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Im Trend'
+    );
+    fireEvent.click(trendSection.querySelector('.startseite-mehr-btn'));
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('trending');
   });
 
@@ -193,6 +197,58 @@ describe('Startseite', () => {
   test('shows "Neue Rezepte" section title', () => {
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
     expect(screen.getByText('Neue Rezepte')).toBeInTheDocument();
+  });
+
+  test('shows "Saisonale Rezepte" directly below "Im Trend"', async () => {
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+    const sectionTitles = Array.from(container.querySelectorAll('.startseite-section-title')).map((title) => title.textContent);
+    expect(sectionTitles.indexOf('Saisonale Rezepte')).toBe(sectionTitles.indexOf('Im Trend') + 1);
+  });
+
+  test('shows up to 10 recipes with Saisonal=true in seasonal carousel', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const recipes = [
+      ...Array.from({ length: 11 }, (_, i) => ({
+        id: `seasonal-${i}`,
+        title: `Saisonal ${i}`,
+        Saisonal: true,
+      })),
+      { id: 'regular', title: 'Nicht saisonal', Saisonal: false },
+    ];
+
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={recipes} />);
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+
+    const seasonalSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Saisonale Rezepte'
+    );
+    const seasonalCards = Array.from(seasonalSection.querySelectorAll('[data-testid="trending-card"]')).map((card) => card.textContent);
+
+    expect(seasonalCards).toHaveLength(10);
+    expect(seasonalCards).toEqual(Array.from({ length: 10 }, (_, i) => `Saisonal ${i}`));
+  });
+
+  test('"mehr" button of "Saisonale Rezepte" opens the seasonal recipe overview', async () => {
+    const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecentRecipeCalls.mockResolvedValue([]);
+    const onOpenSeasonalRecipes = jest.fn();
+    const { container } = render(
+      <Startseite
+        currentUser={{ id: 'u1' }}
+        recipes={mockRecipes}
+        onOpenSeasonalRecipes={onOpenSeasonalRecipes}
+      />
+    );
+    await screen.findByText('Keine Trendrezepte vorhanden.');
+
+    const seasonalSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Saisonale Rezepte'
+    );
+    fireEvent.click(seasonalSection.querySelector('.startseite-mehr-btn'));
+
+    expect(onOpenSeasonalRecipes).toHaveBeenCalledTimes(1);
   });
 
   test('shows empty state for Neue Rezepte when no recipes provided', async () => {
@@ -275,10 +331,12 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     const onViewChange = jest.fn();
-    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
-    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[3]);
+    const neueRezepteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Neue Rezepte'
+    );
+    fireEvent.click(neueRezepteSection.querySelector('.startseite-mehr-btn'));
     expect(onViewChange).toHaveBeenCalledWith('neueRezepte');
   });
 
@@ -286,10 +344,12 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockResolvedValue([]);
     const onViewChange = jest.fn();
-    render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
+    const { container } = render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} onViewChange={onViewChange} />);
     await screen.findByText('Keine Trendrezepte vorhanden.');
-    const mehrButtons = screen.getAllByRole('button', { name: /mehr/i });
-    fireEvent.click(mehrButtons[3]);
+    const neueRezepteSection = Array.from(container.querySelectorAll('.startseite-trending-section')).find(
+      (section) => section.querySelector('.startseite-section-title')?.textContent === 'Neue Rezepte'
+    );
+    fireEvent.click(neueRezepteSection.querySelector('.startseite-mehr-btn'));
     expect(sessionStorage.getItem('recipebook_active_sort')).toBe('newest');
   });
 

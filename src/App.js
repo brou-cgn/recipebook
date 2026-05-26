@@ -208,6 +208,10 @@ function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) {
   return hasHauptsaisonIngredient(recipe, seasonMatrixEntries);
 }
 
+function isSeasonalRecipe(recipe) {
+  return recipe?.Saisonal === true;
+}
+
 const emptyPrivateListFilterHandler = () => {};
 
 function applyRolePermissionsToUser(user, permissionsMap = {}) {
@@ -969,6 +973,20 @@ function App() {
     });
   };
 
+  const handleOpenSeasonalRecipes = () => {
+    handleViewChange('seasonalRecipes');
+    setRecipeFilters({
+      showDrafts: 'all',
+      selectedCuisines: [],
+      selectedAuthors: [],
+      selectedPrivateLists: [],
+      selectedGroup: ''
+    });
+    setShowFavoritesOnly(false);
+    setShowSeasonalOnly(false);
+    handleClearSearch();
+  };
+
   const handleCategoryFilterChange = (category) => {
     setCategoryFilter(category);
   };
@@ -1460,7 +1478,16 @@ function App() {
   );
 
   const isPrivateListSearchContext = currentView === 'groups' && selectedGroup?.type === 'private';
-  const overlayRecipes = isPrivateListSearchContext ? selectedGroupUnfilteredRecipes : recipes;
+  const isSeasonalRecipesView = currentView === 'seasonalRecipes';
+  const seasonalTaggedRecipes = useMemo(
+    () => recipes.filter((recipe) => isSeasonalRecipe(recipe)),
+    [recipes]
+  );
+  const overlayRecipes = isPrivateListSearchContext
+    ? selectedGroupUnfilteredRecipes
+    : isSeasonalRecipesView
+      ? seasonalTaggedRecipes
+      : recipes;
   const overlayAvailableAuthors = useMemo(
     () => allUsers
       .filter((u) => !u.versteckt && overlayRecipes.some((r) => r.authorId === u.id))
@@ -1772,12 +1799,12 @@ function App() {
           allUsers={allUsers}
         />
       ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onAddRecipe={handleAddRecipe} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
       ) : (
         // Recipe views
         <>
           <RecipeList
-            recipes={recipes.filter(recipe => 
+            recipes={(isSeasonalRecipesView ? seasonalTaggedRecipes : recipes).filter(recipe => 
               matchesCategoryFilter(recipe, categoryFilter) && 
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
@@ -1794,7 +1821,7 @@ function App() {
             searchTerm={searchTerm}
             onOpenSearch={handleOpenSearch}
             onClearSearch={handleClearSearch}
-            activePrivateListName={activePrivateListName}
+            activePrivateListName={isSeasonalRecipesView ? 'Saisonale Rezepte' : activePrivateListName}
             activePrivateListId={recipeFilters.selectedGroup || (recipeFilters.selectedPrivateLists.length === 1 ? recipeFilters.selectedPrivateLists[0] : null)}
             activeFilters={recipeFilters}
             onClearCuisineFilter={handleClearCuisineFilter}

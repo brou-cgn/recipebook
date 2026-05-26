@@ -6,8 +6,8 @@ let mockAuthStateCallback;
 const mockRecipeListRender = jest.fn();
 const mockRecipeFormProps = jest.fn();
 
-jest.mock('./components/RecipeList', () => function MockRecipeList() {
-  mockRecipeListRender();
+jest.mock('./components/RecipeList', () => function MockRecipeList(props) {
+  mockRecipeListRender(props);
   return <div data-testid="recipe-list-view">Recipe List</div>;
 });
 
@@ -16,6 +16,7 @@ jest.mock('./components/Startseite', () => function MockStartseite(props) {
     <div data-testid="startseite-view">
       Startseite
       <button type="button" onClick={() => props.onViewChange?.('groups')}>startseite-go-groups</button>
+      <button type="button" onClick={() => props.onOpenSeasonalRecipes?.()}>startseite-go-seasonal</button>
     </div>
   );
 });
@@ -333,6 +334,32 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
     expect(screen.queryByTestId('startseite-view')).not.toBeInTheDocument();
+  });
+
+  test('seasonal startseite navigation opens the seasonal recipe overview', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-3a',
+        vorname: 'Saisonal',
+        nachname: 'Start',
+        email: 'seasonal@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'startseite-go-seasonal' }));
+
+    expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('startseite-view')).not.toBeInTheDocument();
+    expect(mockRecipeListRender.mock.lastCall[0].activePrivateListName).toBe('Saisonale Rezepte');
   });
 
   test('closing groups returns to startseite when groups were opened from startseite', async () => {
