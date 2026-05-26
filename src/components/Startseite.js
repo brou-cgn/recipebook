@@ -316,9 +316,14 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   }, [allAlltagsklassikerRecipes, currentUser?.id]);
 
   const alltagsklassikerRecipes = useMemo(() => {
+    const configuredRecipeIds = Array.isArray(defaultEverydayClassicsList?.recipeIds)
+      ? defaultEverydayClassicsList.recipeIds
+      : [];
+    const recipeIdsForOrdering = configuredRecipeIds.length > 0
+      ? configuredRecipeIds
+      : allAlltagsklassikerRecipes.map((recipe) => recipe.id);
     const recipeIndexById = new Map(
-      (Array.isArray(defaultEverydayClassicsList?.recipeIds) ? defaultEverydayClassicsList.recipeIds : [])
-        .map((recipeId, index) => [recipeId, index])
+      recipeIdsForOrdering.map((recipeId, index) => [recipeId, index])
     );
 
     return [...allAlltagsklassikerRecipes]
