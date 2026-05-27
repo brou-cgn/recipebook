@@ -1,6 +1,6 @@
 {
   "name": "recipebook",
-  "version": "1.170.13",
+  "version": "1.171.0",
   "private": true,
   "homepage": "/",
   "dependencies": {
