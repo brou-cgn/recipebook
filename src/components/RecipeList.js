@@ -7,8 +7,6 @@ import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon,
 import { isBase64Image } from '../utils/imageUtils';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
-import { getAllCookDates } from '../utils/recipeCookDates';
-import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import RecipeCard from './RecipeCard';
 
@@ -82,15 +80,20 @@ export function sortRecipeGroups(groups, sortType, sortSettings, viewCounts, ind
   } else if (sortType === 'index') {
     const { favoriteIds = [], cookDatesMap = new Map(), seasonMatrixEntries = [] } = indexSortOptions;
     const currentMonth = new Date().getMonth() + 1;
-    const getIndex = (recipe) => calculateRecipeSortIndex({
-      isFavorite: favoriteIds.includes(recipe?.id),
-      lastCookDateMs: cookDatesMap.get(recipe?.id) ?? null,
-      seasonMatrixEntries,
-      recipe: recipe || {},
-      currentMonth,
-    });
+    // Pre-calculate each recipe's score once to avoid repeated work in the comparator
+    const scoreCache = new Map();
+    for (const group of sorted) {
+      const recipe = group.primaryRecipe;
+      scoreCache.set(recipe?.id, calculateRecipeSortIndex({
+        isFavorite: favoriteIds.includes(recipe?.id),
+        lastCookDateMs: cookDatesMap.get(recipe?.id) ?? null,
+        seasonMatrixEntries,
+        recipe: recipe || {},
+        currentMonth,
+      }));
+    }
     sorted.sort((a, b) => {
-      const diff = getIndex(b.primaryRecipe) - getIndex(a.primaryRecipe);
+      const diff = (scoreCache.get(b.primaryRecipe?.id) ?? 0) - (scoreCache.get(a.primaryRecipe?.id) ?? 0);
       if (diff !== 0) return diff;
       return (a.primaryRecipe?.title || '').localeCompare((b.primaryRecipe?.title || ''), undefined, { sensitivity: 'base' });
     });
@@ -103,7 +106,7 @@ const SORT_STORAGE_KEY = 'recipebook_active_sort';
 const LONG_PRESS_DELAY_MS = 500;
 const LONG_PRESS_CLICK_SUPPRESSION_MS = 500;
 
-function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic }) {
+function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, currentUser, onCategoryFilterChange, searchTerm, onOpenSearch, onClearSearch, activePrivateListName, activePrivateListId, activeFilters, onClearCuisineFilter, onClearAllFilters, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly = false, onShowFavoritesOnlyChange, privateLists, onAddToPrivateList, onRemoveFromPrivateList, publicGroupId, onMoveRecipeToPublic, cookDatesMap = new Map(), seasonMatrixEntries = [] }) {
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnlyProp || showSeasonalOnly || (activeFilters && (
     activeFilters.selectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
@@ -140,8 +143,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [sortSettings, setSortSettings] = useState(null);
   const [viewCounts, setViewCounts] = useState(null);
-  const [cookDatesMap, setCookDatesMap] = useState(new Map());
-  const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   
   // Load button icons on mount (first to minimize icon-switch delay)
   useEffect(() => {
@@ -246,37 +247,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
     loadFavorites();
   }, [currentUser?.id]);
 
-  // Subscribe to season matrix when index sort is active
-  useEffect(() => {
-    if (activeSort !== 'index') return;
-    const unsubscribe = subscribeToSeasonMatrix((entries) => {
-      setSeasonMatrixEntries(entries);
-    });
-    return () => unsubscribe();
-  }, [activeSort]);
-
-  // Load cook dates for all displayed recipes when index sort is active
-  useEffect(() => {
-    if (activeSort !== 'index' || !currentUser?.id || recipes.length === 0) return;
-    let cancelled = false;
-    Promise.all(recipes.map((recipe) => getAllCookDates(recipe.id)))
-      .then((cookDateLists) => {
-        if (cancelled) return;
-        const nextMap = new Map();
-        recipes.forEach((recipe, idx) => {
-          const ownDates = (cookDateLists[idx] || []).filter((cd) => cd.userId === currentUser.id);
-          const latest = ownDates.reduce((best, cd) => {
-            const ms = cd.date instanceof Date ? cd.date.getTime() : new Date(cd.date).getTime();
-            return (best === null || ms > best) ? ms : best;
-          }, null);
-          if (latest !== null) nextMap.set(recipe.id, latest);
-        });
-        setCookDatesMap(nextMap);
-      })
-      .catch(() => { if (!cancelled) setCookDatesMap(new Map()); });
-    return () => { cancelled = true; };
-  }, [activeSort, currentUser?.id, recipes]);
-  
   const handleFilterTouchStart = () => {
     setFilterPressed(true);
     filterLongPressed.current = false;

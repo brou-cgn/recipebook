@@ -52,8 +52,9 @@ import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expan
 import { logRecipeCall } from './utils/recipeCallsFirestore';
 import { deleteRecipeThumbnail } from './utils/storageUtils';
 import { deleteField, serverTimestamp } from 'firebase/firestore';
-import { subscribeToSeasonMatrix } from './utils/seasonMatrix';
+import { getSeasonMatrixOnce } from './utils/seasonMatrix';
 import { hasHauptsaisonIngredient } from './utils/recipeSortIndex';
+import { getAllCookDatesForUser } from './utils/recipeCookDates';
 import {
   subscribeToRecipes,
   addRecipe as addRecipeToFirestore,
@@ -274,6 +275,7 @@ function App() {
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
+  const [cookDatesMap, setCookDatesMap] = useState(new Map());
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
@@ -474,11 +476,25 @@ function App() {
       setSeasonMatrixEntries([]);
       return undefined;
     }
-    const unsubscribe = subscribeToSeasonMatrix((entries) => {
-      setSeasonMatrixEntries(entries);
+    let cancelled = false;
+    getSeasonMatrixOnce().then((entries) => {
+      if (!cancelled) setSeasonMatrixEntries(entries);
     });
-    return () => unsubscribe();
-  }, [currentUser]);
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
+
+  // Load all cook dates for the current user once on login
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setCookDatesMap(new Map());
+      return;
+    }
+    let cancelled = false;
+    getAllCookDatesForUser(currentUser.id).then((map) => {
+      if (!cancelled) setCookDatesMap(map);
+    });
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
 
   // Load role permissions and apply effective fotoscan/webimport to currentUser
   useEffect(() => {
@@ -1833,6 +1849,8 @@ function App() {
             onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
             publicGroupId={publicGroupId}
             onMoveRecipeToPublic={handleMoveRecipeToPublic}
+            cookDatesMap={cookDatesMap}
+            seasonMatrixEntries={seasonMatrixEntries}
           />
         </>
       )}

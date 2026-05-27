@@ -68,6 +68,38 @@ export const getAllCookDates = async (recipeId) => {
 };
 
 /**
+ * Get all cook dates for a specific user across all their recipes.
+ * Loads all entries in a single Firestore query.
+ * @param {string} userId - User ID
+ * @returns {Promise<Map<string, number>>} Map of recipeId → latest cook date in milliseconds
+ */
+export const getAllCookDatesForUser = async (userId) => {
+  if (!userId) return new Map();
+  try {
+    const q = query(
+      collection(db, 'cookDates'),
+      where('userId', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    const latestByRecipe = new Map();
+    snapshot.docs.forEach((docSnap) => {
+      const data = docSnap.data();
+      const { recipeId } = data;
+      if (!recipeId) return;
+      const ms = data.date?.toDate ? data.date.toDate().getTime() : new Date(data.date).getTime();
+      if (Number.isNaN(ms)) return;
+      if (!latestByRecipe.has(recipeId) || ms > latestByRecipe.get(recipeId)) {
+        latestByRecipe.set(recipeId, ms);
+      }
+    });
+    return latestByRecipe;
+  } catch (error) {
+    console.error('Error getting cook dates for user:', error);
+    return new Map();
+  }
+};
+
+/**
  * Delete a cook date entry by its document ID.
  * @param {string} cookDateId - The Firestore document ID of the cook date to delete
  * @returns {Promise<boolean>} true if deleted successfully

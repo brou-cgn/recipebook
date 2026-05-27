@@ -10,6 +10,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  getDocs,
   onSnapshot,
   serverTimestamp,
   query,
@@ -38,6 +39,24 @@ export const subscribeToSeasonMatrix = (callback) => {
     console.error('Error subscribing to season matrix:', error);
     callback([]);
   });
+};
+
+/**
+ * Load all season matrix entries once (no real-time subscription).
+ * @returns {Promise<Array>} Array of season matrix entry objects
+ */
+export const getSeasonMatrixOnce = async () => {
+  try {
+    const seasonMatrixRef = query(collection(db, 'seasonMatrix'), orderBy('name', 'asc'));
+    const snapshot = await getDocs(seasonMatrixRef);
+    return snapshot.docs.map((entryDoc) => ({
+      id: entryDoc.id,
+      ...entryDoc.data()
+    }));
+  } catch (error) {
+    console.error('Error loading season matrix:', error);
+    return [];
+  }
 };
 
 /**
