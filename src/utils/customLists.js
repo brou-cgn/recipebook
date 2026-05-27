@@ -328,7 +328,7 @@ export const DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT = 50;
 
 // Maximum candidate score threshold for ending the swipe stack early (null = disabled)
 // S = Σ 1/(1+nᵢ) where nᵢ = number of open votings for recipe i
-export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = null;
+export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = 5;
 
 // Default empty-state text for the Meine Kochideen carousel on the Startseite
 export const DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT = 'Keine gemeinsamen Kandidaten vorhanden.';
@@ -717,6 +717,61 @@ const BUTTON_ICONS_CACHE_KEY = 'buttonIconsCache';
 const BUTTON_ICONS_CACHE_TIMESTAMP_KEY = 'buttonIconsCacheTimestamp';
 const BUTTON_ICONS_CACHE_TTL_MS = 60 * 60 * 1000;
 
+const APP_SETTINGS_CACHE_KEY = 'appSettingsCache';
+const APP_SETTINGS_CACHE_TIMESTAMP_KEY = 'appSettingsCacheTimestamp';
+const APP_SETTINGS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+// Fields that must not be stored in localStorage (binary images or managed separately)
+const SETTINGS_LOCALSTORAGE_EXCLUDED_FIELDS = [
+  'faviconImage',
+  'appLogoImage',
+  'appLogoImageUrl',
+  'timelineBubbleIcon',
+  'timelineMenuBubbleIcon',
+  'timelineCookEventBubbleIcon',
+  'timelineRecipeDefaultImage',
+  'timelineMenuDefaultImage',
+  'timelineCookEventDefaultImage',
+  'buttonIcons',
+];
+
+function getSettingsFromLocalStorageCache() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+
+    const cachedRaw = localStorage.getItem(APP_SETTINGS_CACHE_KEY);
+    const cachedTimestampRaw = localStorage.getItem(APP_SETTINGS_CACHE_TIMESTAMP_KEY);
+    if (!cachedRaw || !cachedTimestampRaw) return null;
+
+    const cachedTimestamp = Number(cachedTimestampRaw);
+    if (!Number.isFinite(cachedTimestamp)) return null;
+    if ((Date.now() - cachedTimestamp) > APP_SETTINGS_CACHE_TTL_MS) return null;
+
+    const cached = JSON.parse(cachedRaw);
+    if (!cached || typeof cached !== 'object') return null;
+
+    return cached;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveSettingsToLocalStorageCache(settings) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const toStore = {};
+    for (const [key, value] of Object.entries(settings)) {
+      if (!SETTINGS_LOCALSTORAGE_EXCLUDED_FIELDS.includes(key)) {
+        toStore[key] = value;
+      }
+    }
+    localStorage.setItem(APP_SETTINGS_CACHE_KEY, JSON.stringify(toStore));
+    localStorage.setItem(APP_SETTINGS_CACHE_TIMESTAMP_KEY, String(Date.now()));
+  } catch (error) {
+    // Ignore storage failures (e.g. unavailable storage in private mode)
+  }
+}
+
 function getButtonIconsFromLocalStorageCache({ requireFresh = true } = {}) {
   try {
     if (typeof localStorage === 'undefined') return null;
@@ -794,6 +849,13 @@ async function migrateButtonIconsToCollection(icons) {
 export async function getSettings() {
   // Return cached settings if available
   if (settingsCache) {
+    return settingsCache;
+  }
+
+  // Check localStorage cache before hitting Firestore
+  const lsCache = getSettingsFromLocalStorageCache();
+  if (lsCache) {
+    settingsCache = lsCache;
     return settingsCache;
   }
   
@@ -925,6 +987,7 @@ export async function getSettings() {
         timelineCookEventDefaultImage: imagesData.timelineCookEventDefaultImage || null,
       };
       
+      saveSettingsToLocalStorageCache(settingsCache);
       return settingsCache;
     }
     
@@ -977,6 +1040,7 @@ export async function getSettings() {
       timelineCookEventDefaultImage: null,
     };
     
+    saveSettingsToLocalStorageCache(settingsCache);
     return settingsCache;
   } catch (error) {
     console.error('Error getting settings:', error);
@@ -1295,6 +1359,14 @@ export async function saveFaviconText(text) {
  */
 export function clearSettingsCache() {
   settingsCache = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(APP_SETTINGS_CACHE_KEY);
+      localStorage.removeItem(APP_SETTINGS_CACHE_TIMESTAMP_KEY);
+    }
+  } catch (error) {
+    // Ignore storage failures
+  }
 }
 
 /**

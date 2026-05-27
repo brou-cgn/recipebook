@@ -5,7 +5,7 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
@@ -35,7 +35,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
   const [groupThresholds, setGroupThresholds] = useState({});
-  const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(null);
+  const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(DEFAULT_MAX_KANDIDATEN_SCHWELLE);
   const [kandidatenLoading, setKandidatenLoading] = useState(true);
   const [kandidatenLeertext, setKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
 
@@ -88,28 +88,6 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
-  // Load settings and swipe flags for Gemeinsame Kandidaten carousel
-  useEffect(() => {
-    let cancelled = false;
-    const loadKandidatenSettings = async () => {
-      try {
-        const [thresholds, schwelle, leertext] = await Promise.all([
-          getGroupStatusThresholds(),
-          getMaxKandidatenSchwelle(),
-          getStartseitenKandidatenLeertext(),
-        ]);
-        if (cancelled) return;
-        setGroupThresholds(thresholds);
-        setMaxKandidatenSchwelle(schwelle);
-        setKandidatenLeertext(leertext);
-      } catch (error) {
-        // Keep defaults on error
-      }
-    };
-    loadKandidatenSettings();
-    return () => { cancelled = true; };
-  }, []);
-
   // Derive the default web import list from groups and currentUser
   const defaultWebImportList = useMemo(() => {
     const listId = currentUser?.defaultWebImportListId;
@@ -139,39 +117,36 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     return () => unsubscribe();
   }, []);
 
-  // Load allMembersFlagDocs whenever the default web import list changes.
-  // allMembersFlagDocs maps userId → recipeId → { flag (= calculatedFlag), expiresAt (= calculatedExpiresAt),
-  // expiresAtMillis, isExpired } as returned by getAllMembersSwipeFlagDocsForList.
+  // Load settings and swipe flags for Gemeinsame Kandidaten carousel in parallel.
+  // Settings are fetched unconditionally; swipe flags require defaultWebImportList.
+  // Starting both at the same time reduces total wait to max(settingsTime, swipeFlagsTime).
   useEffect(() => {
     let cancelled = false;
-    if (!defaultWebImportList) {
-      setAllMembersFlagDocs({});
-      setKandidatenLoading(false);
-      return;
-    }
     setKandidatenLoading(true);
-    const memberIds = Array.isArray(defaultWebImportList.memberIds) ? defaultWebImportList.memberIds : [];
-    const allMemberIds = defaultWebImportList.ownerId
+    const memberIds = defaultWebImportList ? (Array.isArray(defaultWebImportList.memberIds) ? defaultWebImportList.memberIds : []) : [];
+    const allMemberIds = defaultWebImportList?.ownerId
       ? [...new Set([defaultWebImportList.ownerId, ...memberIds])]
       : memberIds;
-    if (allMemberIds.length === 0) {
-      setAllMembersFlagDocs({});
+    const swipeFlagsPromise = defaultWebImportList && allMemberIds.length > 0
+      ? getAllMembersSwipeFlagDocsForList(defaultWebImportList.id, allMemberIds)
+      : Promise.resolve({});
+    Promise.all([
+      Promise.all([getGroupStatusThresholds(), getMaxKandidatenSchwelle(), getStartseitenKandidatenLeertext()]),
+      swipeFlagsPromise,
+    ]).then(([[thresholds, schwelle, leertext], flagDocs]) => {
+      if (cancelled) return;
+      setGroupThresholds(thresholds);
+      setMaxKandidatenSchwelle(schwelle);
+      setKandidatenLeertext(leertext);
+      setAllMembersFlagDocs(flagDocs);
       setKandidatenLoading(false);
-      return;
-    }
-    getAllMembersSwipeFlagDocsForList(defaultWebImportList.id, allMemberIds)
-      .then((flagDocs) => {
-        if (cancelled) return;
-        setAllMembersFlagDocs(flagDocs);
-        setKandidatenLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setAllMembersFlagDocs({});
-        setKandidatenLoading(false);
-      });
+    }).catch(() => {
+      if (cancelled) return;
+      setKandidatenLoading(false);
+    });
     return () => { cancelled = true; };
   }, [defaultWebImportList]);
+
 
   // Compute list member IDs for the default web import list
   const listMemberIds = useMemo(() => {
