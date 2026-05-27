@@ -36,6 +36,15 @@ function mockItemWidth(container, width) {
 }
 
 describe('SortCarousel', () => {
+  // Freeze Date.now so all non-velocity tests see elapsed=0 → velocity=0 → old paths.
+  let nowSpy;
+  beforeEach(() => {
+    nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1000);
+  });
+  afterEach(() => {
+    nowSpy.mockRestore();
+  });
+
   test('renders the active option label', () => {
     render(<SortCarousel activeSort="alphabetical" onSortChange={() => {}} />);
     expect(screen.getByText('Alphabetisch')).toBeInTheDocument();
@@ -209,5 +218,38 @@ describe('SortCarousel', () => {
     render(<SortCarousel activeSort="newest" onSortChange={() => {}} />);
     const inactiveItem = screen.getByRole('option', { name: 'Alphabetisch' });
     expect(inactiveItem).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('fast swipe left uses velocity-based steps', () => {
+    const handleChange = jest.fn();
+    const { container } = render(
+      <SortCarousel activeSort="alphabetical" onSortChange={handleChange} />
+    );
+    // Override frozen clock: 1st call (touchStart) → 1000, rest (touchEnd) → 1200
+    let nowCallCount = 0;
+    nowSpy.mockImplementation(() => nowCallCount++ === 0 ? 1000 : 1200);
+
+    // Swipe left: dragStartX = 300-11=289, endX=100 → delta=-189 px, elapsed=200 ms
+    // velocity = 189/200 = 0.945 px/ms → steps = min(round(0.945*3), 4) = 3
+    // selectIndex(0 + 3) → 'rating'
+    simulateTouchSwipe(container.firstChild, 300, 100);
+
+    expect(handleChange).toHaveBeenCalledWith('rating');
+  });
+
+  test('fast swipe right uses velocity-based steps', () => {
+    const handleChange = jest.fn();
+    const { container } = render(
+      <SortCarousel activeSort="rating" onSortChange={handleChange} />
+    );
+    let nowCallCount = 0;
+    nowSpy.mockImplementation(() => nowCallCount++ === 0 ? 1000 : 1200);
+
+    // Swipe right: dragStartX = 100+11=111, endX=300 → delta=189 px, elapsed=200 ms
+    // velocity = 189/200 = 0.945 px/ms → steps = 3
+    // selectIndex(3 - 3) → 'alphabetical'
+    simulateTouchSwipe(container.firstChild, 100, 300);
+
+    expect(handleChange).toHaveBeenCalledWith('alphabetical');
   });
 });

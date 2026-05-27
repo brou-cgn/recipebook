@@ -24,6 +24,12 @@ function clampLoop(index, length) {
   return ((index % length) + length) % length;
 }
 
+function velocityToSteps(velocity) {
+  if (velocity >= 0.8) return Math.min(Math.round(velocity * 3), 4);
+  if (velocity >= 0.3) return 2;
+  return 1;
+}
+
 function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChange }) {
   const carouselRef = useRef(null);
   const trackRef = useRef(null);
@@ -43,6 +49,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     startX: null,
     startY: null,
     dragStartX: null,
+    startTime: null,
     longPressTimer: null,
     isExpanded: false,
     isDragging: false,
@@ -73,6 +80,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
     gestureRef.current.startX = null;
     gestureRef.current.startY = null;
     gestureRef.current.dragStartX = null;
+    gestureRef.current.startTime = null;
     gestureRef.current.isDragging = false;
   }, [clearLongPressTimer]);
 
@@ -218,10 +226,9 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
 
       gestureRef.current.startX = touch.clientX;
       gestureRef.current.startY = touch.clientY;
+      gestureRef.current.startTime = Date.now();
 
       if (!gestureRef.current.isExpanded) {
-        const startX = touch.clientX;
-      
           gestureRef.current.longPressTimer = setTimeout(() => {
             gestureRef.current.longPressTimer = null;
             gestureRef.current.isExpanded = true;
@@ -285,6 +292,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
       const effectiveStartX =
         gestureRef.current.dragStartX ?? gestureRef.current.startX;
       const delta = touch.clientX - effectiveStartX;
+      const gestureStartTime = gestureRef.current.startTime;
 
       resetGesture();
       gestureRef.current.isExpanded = false;
@@ -292,6 +300,15 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange, onExpandChang
 
       if (!wasExpanded) {
         setDragOffset(0);
+        return;
+      }
+
+      const elapsed = Date.now() - (gestureStartTime ?? Date.now());
+      const velocity = elapsed > 0 ? Math.abs(delta) / elapsed : 0;
+
+      if (Math.abs(delta) > SWIPE_THRESHOLD && velocity >= 0.3) {
+        const steps = velocityToSteps(velocity);
+        selectIndex(delta < 0 ? safeIndex + steps : safeIndex - steps);
         return;
       }
 
