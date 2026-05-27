@@ -192,7 +192,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     for (const uid of listMemberIds) {
       const userDocs = allMembersFlagDocs[uid] || {};
       for (const [recipeId, doc] of Object.entries(userDocs)) {
-        if (doc && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null) {
+        if (doc && doc.explicitFlag !== null && doc.flag === 'kandidat' && !doc.isExpired && doc.expiresAtMillis !== null) {
           ids.add(recipeId);
         }
       }
