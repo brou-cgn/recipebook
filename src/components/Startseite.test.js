@@ -18,6 +18,7 @@ jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
   DEFAULT_BUTTON_ICONS: {},
   DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT: 'Keine gemeinsamen Kandidaten vorhanden.',
+  DEFAULT_MAX_KANDIDATEN_SCHWELLE: 5,
   getButtonIcons: jest.fn(() => Promise.resolve({})),
   getEffectiveIcon: jest.fn((icons, key) => ''),
   getGroupStatusThresholds: jest.fn(() => Promise.resolve({})),
@@ -95,7 +96,7 @@ describe('Startseite', () => {
     const { getRecentRecipeCalls } = require('../utils/recipeCallsFirestore');
     getRecentRecipeCalls.mockReturnValue(new Promise(() => {}));
     render(<Startseite currentUser={{ id: 'u1' }} recipes={mockRecipes} />);
-    expect(screen.getByText('Laden…')).toBeInTheDocument();
+    expect(screen.getAllByText('Laden…').length).toBeGreaterThan(0);
   });
 
   test('shows empty state when no trending recipes', async () => {
