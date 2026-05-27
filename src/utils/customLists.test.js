@@ -577,4 +577,26 @@ describe('button icons localStorage cache', () => {
     expect(localStorage.getItem('buttonIconsCache')).toBeNull();
     expect(localStorage.getItem('buttonIconsCacheTimestamp')).toBeNull();
   });
+
+  test('falls through to button icons localStorage cache when settingsCache exists but has no buttonIcons', async () => {
+    // Simulate a page-reload scenario: settings are restored from localStorage cache
+    // (which excludes buttonIcons per SETTINGS_LOCALSTORAGE_EXCLUDED_FIELDS), so
+    // settingsCache is populated but settingsCache.buttonIcons is undefined.
+    localStorage.setItem('appSettingsCache', JSON.stringify({ maxKandidatenSchwelle: 5 }));
+    localStorage.setItem('appSettingsCacheTimestamp', String(Date.now()));
+    // Populate settingsCache from the localStorage settings cache (no buttonIcons inside)
+    await getSettings();
+
+    // Now set a fresh button icons localStorage cache
+    const cachedIcons = { cookingMode: '🧑‍🍳' };
+    localStorage.setItem('buttonIconsCache', JSON.stringify(cachedIcons));
+    localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now()));
+
+    const icons = await getButtonIcons();
+
+    // Must return the button icons localStorage cache, not DEFAULT_BUTTON_ICONS
+    expect(icons).toEqual(expect.objectContaining({ cookingMode: '🧑‍🍳' }));
+    // Must not hit Firestore
+    expect(getDocs).not.toHaveBeenCalled();
+  });
 });

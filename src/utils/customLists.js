@@ -1454,8 +1454,8 @@ export async function addMissingConversionEntries(missingEntries, currentTable =
  * @returns {Promise<Object>} Promise resolving to button icons object
  */
 export async function getButtonIcons() {
-  if (settingsCache) {
-    return settingsCache.buttonIcons || { ...DEFAULT_BUTTON_ICONS };
+  if (settingsCache?.buttonIcons) {
+    return settingsCache.buttonIcons;
   }
 
   const cachedIcons = getButtonIconsFromLocalStorageCache();
