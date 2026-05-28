@@ -59,6 +59,7 @@ const REGISTRATION_RATE_LIMIT = 5;
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
+const MAX_REEL_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB for optional Instagram video transcription
 const MAX_HTML_SIZE = 500000; // 500 KB in characters
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -671,6 +672,7 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
   if (!prompt.includes('{{CUISINE_TYPES}}')) {
     console.warn('WARNING: {{CUISINE_TYPES}} placeholder was not found in prompt!');
   }
+
   if (!prompt.includes('{{MEAL_CATEGORIES}}')) {
     console.warn('WARNING: {{MEAL_CATEGORIES}} placeholder was not found in prompt!');
   }
@@ -801,6 +803,73 @@ async function callGeminiTextAPI(rawHtml, lang, apiKey, cuisineTypes, mealCatego
 }
 
 /**
+ * Transcribe spoken text from a video buffer using Gemini.
+ * Fail-safe: returns null on errors.
+ *
+ * @param {Buffer} videoBuffer - Video data as buffer
+ * @param {string} language - Language code ('de' or 'en')
+ * @param {string} apiKey - Gemini API key
+ * @returns {Promise<string|null>} Transcribed text or null
+ */
+async function transcribeVideoWithGemini(videoBuffer, language, apiKey) {
+  try {
+    if (!videoBuffer || !Buffer.isBuffer(videoBuffer) || videoBuffer.length === 0) {
+      return null;
+    }
+
+    const base64Video = videoBuffer.toString('base64');
+    const prompt = language === 'de' ?
+      'Transkribiere den gesprochenen Text dieses Videos vollständig. ' +
+      'Extrahiere dabei besonders alle Rezeptinformationen wie Zutaten, ' +
+      'Mengenangaben und Zubereitungsschritte. ' +
+      'Gib nur den transkribierten Text zurück, keine Kommentare.' :
+      'Transcribe all spoken text from this video completely. Focus on extracting ' +
+      'recipe information like ingredients, amounts, and preparation steps. ' +
+      'Return only the transcribed text.';
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {text: prompt},
+            {
+              inline_data: {
+                mime_type: 'video/mp4',
+                data: base64Video,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 4096,
+      },
+    };
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      console.warn(
+          `Gemini video transcription failed with status ${response.status}: ${response.statusText}`,
+      );
+      return null;
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch (error) {
+    console.warn('Gemini video transcription warning:', error.message || error);
+    return null;
+  }
+}
+
+/**
  * Cloud Function: Process raw HTML with Gemini AI to extract recipe data.
  * Used when the Apple Shortcut passes raw HTML from Instagram reels or
  * other social-media pages via a recipeImportPage deeplink.
@@ -923,8 +992,8 @@ exports.scrapeInstagramReel = onCall(
     {
       secrets: [geminiApiKey],
       maxInstances: 5,
-      memory: '2GiB',
-      timeoutSeconds: 120,
+      memory: '4GiB',
+      timeoutSeconds: 180,
     },
     async (request) => {
       const {url, language = 'de', cuisineTypes, mealCategories} = request.data;
@@ -998,6 +1067,22 @@ exports.scrapeInstagramReel = onCall(
         });
 
         const page = await browser.newPage();
+        let videoUrl = null;
+        page.on('response', (response) => {
+          try {
+            const responseUrl = response.url();
+            if (
+              !videoUrl &&
+              responseUrl.includes('.mp4') &&
+              response.request().resourceType() === 'media'
+            ) {
+              videoUrl = responseUrl;
+            }
+          } catch (error) {
+            console.warn('Instagram video response listener warning:', error.message || error);
+          }
+        });
+
         await page.setViewport({width: 1280, height: 800});
 
         // Use a mobile user-agent as Instagram serves more content to mobile browsers
@@ -1063,6 +1148,55 @@ exports.scrapeInstagramReel = onCall(
         await browser.close();
         browser = null;
 
+        let transcribedAudio = null;
+        if (videoUrl) {
+          try {
+            const videoResponse = await fetch(videoUrl, {
+              signal: AbortSignal.timeout(15000),
+            });
+
+            if (!videoResponse.ok) {
+              console.warn(
+                  `Instagram video download failed with status ${videoResponse.status}: ` +
+                  `${videoResponse.statusText}`,
+              );
+            } else {
+              const contentLengthHeader = videoResponse.headers.get('content-length');
+              const parsedContentLength = contentLengthHeader ?
+                parseInt(contentLengthHeader, 10) :
+                NaN;
+              const contentLength = Number.isFinite(parsedContentLength) ?
+                parsedContentLength :
+                null;
+
+              if (contentLength && contentLength > MAX_REEL_VIDEO_SIZE) {
+                console.warn(
+                    `Instagram video too large by header: ${contentLength} bytes ` +
+                    `(max ${MAX_REEL_VIDEO_SIZE})`,
+                );
+              } else {
+                const videoArrayBuffer = await videoResponse.arrayBuffer();
+                const videoBuffer = Buffer.from(videoArrayBuffer);
+
+                if (videoBuffer.length > MAX_REEL_VIDEO_SIZE) {
+                  console.warn(
+                      `Instagram video too large after download: ${videoBuffer.length} bytes ` +
+                      `(max ${MAX_REEL_VIDEO_SIZE})`,
+                  );
+                } else {
+                  transcribedAudio = await transcribeVideoWithGemini(
+                      videoBuffer, language, apiKey,
+                  );
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Instagram video download/transcription warning:', error.message || error);
+          }
+        } else {
+          console.warn('No Instagram Reel video URL captured; continuing without transcription.');
+        }
+
         // Minimum character lengths for heuristic content quality checks
         const MIN_BODY_TEXT_LENGTH = 100;
         const MIN_COMBINED_TEXT_LENGTH = 30;
@@ -1075,6 +1209,12 @@ exports.scrapeInstagramReel = onCall(
         }
         if (extractedData.bodyText && extractedData.bodyText.length > MIN_BODY_TEXT_LENGTH) {
           parts.push(`Seiteninhalt:\n${extractedData.bodyText}`);
+        }
+        if (transcribedAudio) {
+          const transcriptionLabel = language === 'de' ?
+            'Gesprochener Inhalt (Audiotranskription)' :
+            'Spoken Content (Audio Transcription)';
+          parts.push(`${transcriptionLabel}:\n${transcribedAudio}`);
         }
         const combinedText = parts.join('\n\n');
 
