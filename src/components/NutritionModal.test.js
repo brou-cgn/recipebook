@@ -9,6 +9,26 @@ describe('getRecipeCalcResult', () => {
     expect(getRecipeCalcResult({ naehrwerte: { calcNotIncluded: [{ ingredient: 'x' }] } })).toBeNull();
   });
 
+  it('returns persisted calc payload including reformulations and accepted ingredients', () => {
+    const recipe = {
+      naehrwerte: {
+        calcFoundCount: 2,
+        calcTotalCount: 3,
+        calcNotIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
+        calcReformulations: { Milch: { text: 'Vollmilch' } },
+        calcAcceptedIngredients: ['Salz'],
+      },
+    };
+
+    expect(getRecipeCalcResult(recipe)).toEqual({
+      foundCount: 2,
+      totalCount: 3,
+      notIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
+      calcReformulations: { Milch: { text: 'Vollmilch' } },
+      acceptedIngredients: ['Salz'],
+    });
+  });
+
   describe('buildNutritionCompositionRows', () => {
     it('builds composition rows with calculated, not included and accepted statuses', () => {
       const recipe = {
@@ -32,26 +52,6 @@ describe('getRecipeCalcResult', () => {
         expect.objectContaining({ ingredient: '1 Teil #recipe:abc:Linsen', status: 'Berechnet', source: expect.stringContaining('Rezeptlink') }),
         expect.objectContaining({ ingredient: 'Salz', status: 'Akzeptiert', source: 'Zutat' }),
       ]);
-    });
-  });
-
-  it('returns persisted calc payload including reformulations and accepted ingredients', () => {
-    const recipe = {
-      naehrwerte: {
-        calcFoundCount: 2,
-        calcTotalCount: 3,
-        calcNotIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
-        calcReformulations: { Milch: { text: 'Vollmilch' } },
-        calcAcceptedIngredients: ['Salz'],
-      },
-    };
-
-    expect(getRecipeCalcResult(recipe)).toEqual({
-      foundCount: 2,
-      totalCount: 3,
-      notIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
-      calcReformulations: { Milch: { text: 'Vollmilch' } },
-      acceptedIngredients: ['Salz'],
     });
   });
 });
