@@ -1482,28 +1482,59 @@ function parseIngredientForNutrition(ingredientStr) {
 }
 
 /**
- * Fetch a URL with automatic retry and exponential backoff.
- *
- * @param {string} url - The URL to fetch.
- * @param {object} options - Fetch options (headers, etc.).
- * @param {number} maxAttempts - Maximum number of attempts (default 3).
- * @returns {Promise<Response>} The successful fetch response.
+ * Sleeps for a given duration.
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Returns whether an ingredient line should be skipped server-side.
+ * @param {string} ingredientStr
+ * @returns {boolean}
+ */
+const isSkippableIngredientLine = (ingredientStr) => {
+  if (typeof ingredientStr !== 'string') return true;
+  const trimmed = ingredientStr.trim();
+  if (trimmed === '') return true;
+  return /^\s*#{1,3}(?!recipe:)\s*/i.test(trimmed);
+};
+
+/**
+ * Fetches a URL and retries only on network/timeout errors.
+ * @param {string} url
+ * @param {object} options
+ * @param {number} maxAttempts
+ * @returns {Promise<Response>}
  */
 async function fetchWithRetry(url, options, maxAttempts = 3) {
   let lastErr;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 10000);
+
     try {
-      const response = await fetch(url, options);
-      // Only retry on server-side 5xx errors, not client errors
-      if (response.status >= 500 && attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
-        continue;
-      }
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
       return response;
     } catch (err) {
-      lastErr = err;
+      clearTimeout(timeout);
+      const isTimeout = timedOut || err.name === 'AbortError';
+      const isNetworkError = err.name === 'TypeError' ||
+        ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT'].includes(err.code);
+      if (!isTimeout && !isNetworkError) {
+        throw err;
+      }
+      lastErr = isTimeout ? new Error('Timeout beim Abruf von OpenFoodFacts') : err;
       if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+        await sleep(500 * Math.pow(2, attempt - 1));
       }
     }
   }
@@ -1529,7 +1560,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
 exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
       maxInstances: 5,
-      timeoutSeconds: 120,
+      timeoutSeconds: 300,
     },
     async (request) => {
       // Authentication check
@@ -1569,33 +1600,53 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       const DEFAULT_SALT_PER_PORTION_G = 2;
       const details = [];
       let foundCount = 0;
-
-      for (const ingredient of ingredients) {
+      const BATCH_SIZE = 5;
+      const ingredientEntries = ingredients.map((ingredient) => {
         // Skip heading items (e.g. { type: 'heading', text: '...' })
         if (ingredient && typeof ingredient === 'object' && ingredient.type === 'heading') {
-          continue;
+          return null;
         }
         const ingredientStr = (ingredient && typeof ingredient === 'object') ? ingredient.text : ingredient;
+        if (isSkippableIngredientLine(ingredientStr)) {
+          return null;
+        }
+        return {ingredientStr};
+      }).filter(Boolean);
+
+      const processIngredient = async ({ingredientStr}) => {
+        const ingredientTotals = {
+          kalorien: 0,
+          protein: 0,
+          fett: 0,
+          kohlenhydrate: 0,
+          zucker: 0,
+          ballaststoffe: 0,
+          salz: 0,
+        };
 
         // Special case: salt without quantity → default 2 g per portion
-        if (typeof ingredientStr === 'string' && /^salz$/i.test(ingredientStr.trim())) {
+        if (/^salz$/i.test(ingredientStr.trim())) {
           const saltAmountG = DEFAULT_SALT_PER_PORTION_G * portionen;
-          totals.salz += saltAmountG;
-          details.push({
-            ingredient: ingredientStr,
-            name: 'Salz',
+          ingredientTotals.salz += saltAmountG;
+          return {
             found: true,
-            product: `Salz (Standard: ${DEFAULT_SALT_PER_PORTION_G} g pro Portion)`,
-            amountG: saltAmountG,
-          });
-          foundCount++;
-          continue;
+            detail: {
+              ingredient: ingredientStr,
+              name: 'Salz',
+              product: `Salz (Standard: ${DEFAULT_SALT_PER_PORTION_G} g pro Portion)`,
+              amountG: saltAmountG,
+            },
+            totals: ingredientTotals,
+          };
         }
 
         const parsed = parseIngredientForNutrition(ingredientStr);
         if (!parsed) {
-          details.push({ingredient: ingredientStr, found: false, error: 'Konnte nicht geparst werden'});
-          continue;
+          return {
+            found: false,
+            detail: {ingredient: ingredientStr, error: 'Konnte nicht geparst werden'},
+            totals: ingredientTotals,
+          };
         }
 
         const {amountG, name} = parsed;
@@ -1614,15 +1665,28 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           });
 
           if (!response.ok) {
-            details.push({ingredient: ingredientStr, name, found: false, error: `HTTP ${response.status}`});
-            continue;
+            if (response.status === 404) {
+              return {
+                found: false,
+                detail: {ingredient: ingredientStr, name, error: 'Nicht gefunden'},
+                totals: ingredientTotals,
+              };
+            }
+            return {
+              found: false,
+              detail: {ingredient: ingredientStr, name, error: `HTTP ${response.status}`},
+              totals: ingredientTotals,
+            };
           }
 
           const data = await response.json();
 
           if (!data.products || data.products.length === 0) {
-            details.push({ingredient: ingredientStr, name, found: false, error: 'Nicht gefunden'});
-            continue;
+            return {
+              found: false,
+              detail: {ingredient: ingredientStr, name, error: 'Nicht gefunden'},
+              totals: ingredientTotals,
+            };
           }
 
           // Prefer the first product with usable energy data; fall back to the first result.
@@ -1632,35 +1696,62 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           );
           if (!productWithData) {
             console.warn(`No energy data found for "${name}" in OpenFoodFacts results`);
-            details.push({ingredient: ingredientStr, name, found: false, error: 'Keine Nährwertdaten verfügbar'});
-            continue;
+            return {
+              found: false,
+              detail: {ingredient: ingredientStr, name, error: 'Keine Nährwertdaten verfügbar'},
+              totals: ingredientTotals,
+            };
           }
           const product = productWithData;
 
           const n = product.nutriments || {};
           const scale = amountG / 100;
 
-          totals.kalorien += (n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0) * scale;
-          totals.protein += (n['proteins_100g'] ?? n.proteins ?? 0) * scale;
-          totals.fett += (n['fat_100g'] ?? n.fat ?? 0) * scale;
-          totals.kohlenhydrate += (n['carbohydrates_100g'] ?? n.carbohydrates ?? 0) * scale;
-          totals.zucker += (n['sugars_100g'] ?? n.sugars ?? 0) * scale;
-          totals.ballaststoffe += (n['fiber_100g'] ?? n.fiber ?? 0) * scale;
-          totals.salz += (n['salt_100g'] ?? n.salt ?? 0) * scale;
+          ingredientTotals.kalorien += (n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0) * scale;
+          ingredientTotals.protein += (n['proteins_100g'] ?? n.proteins ?? 0) * scale;
+          ingredientTotals.fett += (n['fat_100g'] ?? n.fat ?? 0) * scale;
+          ingredientTotals.kohlenhydrate += (n['carbohydrates_100g'] ?? n.carbohydrates ?? 0) * scale;
+          ingredientTotals.zucker += (n['sugars_100g'] ?? n.sugars ?? 0) * scale;
+          ingredientTotals.ballaststoffe += (n['fiber_100g'] ?? n.fiber ?? 0) * scale;
+          ingredientTotals.salz += (n['salt_100g'] ?? n.salt ?? 0) * scale;
 
-          details.push({
-            ingredient: ingredientStr,
-            name,
+          return {
             found: true,
-            product: product.product_name || name,
-            amountG,
-          });
-          foundCount++;
+            detail: {
+              ingredient: ingredientStr,
+              name,
+              product: product.product_name || name,
+              amountG,
+            },
+            totals: ingredientTotals,
+          };
         } catch (err) {
           const isNetworkError = err.name === 'TypeError' || err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED';
+          const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
           const errorType = isNetworkError ? 'Netzwerkfehler' : 'API-Fehler';
           console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
-          details.push({ingredient: ingredientStr, name, found: false, error: err.message});
+          return {
+            found: false,
+            detail: {ingredient: ingredientStr, name, error: isTimeout ? 'Timeout bei OpenFoodFacts' : err.message},
+            totals: ingredientTotals,
+          };
+        }
+      };
+
+      for (let i = 0; i < ingredientEntries.length; i += BATCH_SIZE) {
+        const batch = ingredientEntries.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(processIngredient));
+        for (const result of batchResults) {
+          Object.keys(totals).forEach((key) => {
+            totals[key] += result.totals[key] || 0;
+          });
+          details.push({
+            ...result.detail,
+            found: result.found,
+          });
+          if (result.found) {
+            foundCount++;
+          }
         }
       }
 
@@ -1675,10 +1766,10 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
 
       console.log(
           `Nutrition calculated for user ${request.auth.uid}: ` +
-          `${foundCount}/${ingredients.length} ingredients found`
+          `${foundCount}/${ingredientEntries.length} ingredients found`
       );
 
-      return {naehrwerte, details, foundCount, totalCount: ingredients.length};
+      return {naehrwerte, details, foundCount, totalCount: ingredientEntries.length};
     }
 );
 

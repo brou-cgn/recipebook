@@ -37,6 +37,21 @@ function clearStoredCalcResult(recipeId) {
   try { localStorage.removeItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId); } catch { /* ignore */ }
 }
 
+export function getRecipeCalcResult(recipe) {
+  const fc = recipe?.naehrwerte?.calcFoundCount;
+  const tc = recipe?.naehrwerte?.calcTotalCount;
+  if (fc == null || tc == null) {
+    return null;
+  }
+  return {
+    foundCount: fc,
+    totalCount: tc,
+    notIncluded: recipe?.naehrwerte?.calcNotIncluded || [],
+    ...(recipe?.naehrwerte?.calcReformulations && { calcReformulations: recipe.naehrwerte.calcReformulations }),
+    ...(recipe?.naehrwerte?.calcAcceptedIngredients && { acceptedIngredients: recipe.naehrwerte.calcAcceptedIngredients }),
+  };
+}
+
 function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
@@ -48,13 +63,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
   const [saving, setSaving] = useState(false);
   const [autoCalcLoading, setAutoCalcLoading] = useState(false);
   const [autoCalcResult, setAutoCalcResult] = useState(() => {
+    const fromRecipe = getRecipeCalcResult(recipe);
+    if (fromRecipe) return fromRecipe;
     const stored = loadStoredCalcResult(recipe?.id);
     if (stored) return stored;
-    const fc = recipe?.naehrwerte?.calcFoundCount;
-    const tc = recipe?.naehrwerte?.calcTotalCount;
-    if (fc != null && tc != null) {
-      return { foundCount: fc, totalCount: tc, notIncluded: recipe?.naehrwerte?.calcNotIncluded || [] };
-    }
     return null;
   });
   const [calcProgress, setCalcProgress] = useState(null);
@@ -62,8 +74,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
   const [editingText, setEditingText] = useState('');
   const [reformulations, setReformulations] = useState(() => {
     const stored = loadStoredCalcResult(recipe?.id);
-    const notIncluded = stored?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
-    const persistedReformulations = stored?.calcReformulations || recipe?.naehrwerte?.calcReformulations || {};
+    const notIncluded = recipe?.naehrwerte?.calcNotIncluded || stored?.notIncluded || [];
+    const persistedReformulations = {
+      ...(stored?.calcReformulations || {}),
+      ...(recipe?.naehrwerte?.calcReformulations || {}),
+    };
     const map = { ...persistedReformulations };
     for (const item of notIncluded) {
       if (item.reformulation) {
@@ -74,7 +89,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
   });
   const [acceptedIngredients, setAcceptedIngredients] = useState(() => {
     const stored = loadStoredCalcResult(recipe?.id);
-    const list = stored?.acceptedIngredients || recipe?.naehrwerte?.calcAcceptedIngredients || [];
+    const list = recipe?.naehrwerte?.calcAcceptedIngredients || stored?.acceptedIngredients || [];
     return new Set(list);
   });
   const closeButtonRef = useRef(null);
@@ -128,7 +143,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       salz: parsePositiveNumber(salz),
     };
     // Preserve calc metadata so the error log remains visible after manual save
-    const { calcFoundCount, calcTotalCount, calcNotIncluded, calcReformulations, calcAcceptedIngredients } = recipe?.naehrwerte || {};
+    const { calcError } = recipe?.naehrwerte || {};
+    const calcFoundCount = autoCalcResult?.foundCount ?? recipe?.naehrwerte?.calcFoundCount;
+    const calcTotalCount = autoCalcResult?.totalCount ?? recipe?.naehrwerte?.calcTotalCount;
+    const calcNotIncluded = autoCalcResult?.notIncluded ?? recipe?.naehrwerte?.calcNotIncluded;
+    const calcReformulations = autoCalcResult?.calcReformulations ?? recipe?.naehrwerte?.calcReformulations;
+    const calcAcceptedIngredients = acceptedIngredients.size > 0
+      ? [...acceptedIngredients]
+      : recipe?.naehrwerte?.calcAcceptedIngredients;
     const naehrwerte = {
       ...naehrwerteToTotals(perPortion, portionen),
       ...(calcFoundCount !== undefined && { calcFoundCount }),
@@ -136,6 +158,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       ...(calcNotIncluded !== undefined && { calcNotIncluded }),
       ...(calcReformulations !== undefined && { calcReformulations }),
       ...(calcAcceptedIngredients !== undefined && { calcAcceptedIngredients }),
+      ...(calcError !== undefined && { calcError }),
     };
 
     setSaving(true);
@@ -173,7 +196,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       setAutoCalcResult(updatedResult);
       saveStoredCalcResult(recipe?.id, updatedResult);
       try {
-        await onSave({ ...(recipe?.naehrwerte || {}), calcNotIncluded: updatedNotIncluded });
+        await onSave({
+          ...(recipe?.naehrwerte || {}),
+          calcNotIncluded: updatedNotIncluded,
+          calcReformulations: updatedResult.calcReformulations || recipe?.naehrwerte?.calcReformulations || null,
+        });
       } catch (err) {
         console.error('Could not save reformulation to Firebase:', err);
       }
@@ -204,6 +231,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
           calcNotIncluded: updatedNotIncluded.length > 0 ? updatedNotIncluded : null,
         }),
         ...(updatedFoundCount !== undefined && { calcFoundCount: updatedFoundCount }),
+        calcReformulations: autoCalcResult?.calcReformulations || recipe?.naehrwerte?.calcReformulations || null,
         calcAcceptedIngredients: acceptedArray,
       });
     } catch (err) {
@@ -364,12 +392,17 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
 
     const totalCount = ingredients.length + recipeLinkItems.length;
     const acceptedArray = acceptedIngredients.size > 0 ? [...acceptedIngredients] : undefined;
+    const mergedReformulations = {
+      ...(recipe?.naehrwerte?.calcReformulations || {}),
+      ...(autoCalcResult?.calcReformulations || {}),
+      ...successfulReformulations,
+    };
     const result = {
       foundCount,
       totalCount,
       notIncluded,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
-      ...(Object.keys(successfulReformulations).length > 0 && { calcReformulations: successfulReformulations }),
+      ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
     };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
@@ -382,7 +415,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: foundCount,
       calcTotalCount: totalCount,
-      calcReformulations: Object.keys(successfulReformulations).length > 0 ? successfulReformulations : null,
+      calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
       calcAcceptedIngredients: acceptedArray || null,
     };
     try {
