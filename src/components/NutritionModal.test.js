@@ -194,7 +194,12 @@ describe('getRecipeCalcResult', () => {
 });
 
 describe('NutritionModal auto-calc composition table', () => {
-  it('captures and persists per-ingredient naehrwerte and renders them in composition rows', async () => {
+  const COLUMN_INGREDIENT = 0;
+  const COLUMN_CALORIES = 2;
+  const COLUMN_PROTEIN = 3;
+  const COLUMN_STATUS = 6;
+
+  it('captures and persists per-ingredient nutrition values and renders them in composition rows', async () => {
     const recipe = {
       id: 'recipe-1',
       portionen: 1,
@@ -243,14 +248,54 @@ describe('NutritionModal auto-calc composition table', () => {
     const rows = within(table).getAllByRole('row');
 
     const reisCells = within(rows[1]).getAllByRole('cell');
-    expect(reisCells[0]).toHaveTextContent('200 g Reis');
-    expect(reisCells[2]).toHaveTextContent('260');
-    expect(reisCells[3]).toHaveTextContent('5.4');
-    expect(reisCells[6]).toHaveTextContent('Berechnet');
+    expect(reisCells[COLUMN_INGREDIENT]).toHaveTextContent('200 g Reis');
+    expect(reisCells[COLUMN_CALORIES]).toHaveTextContent('260');
+    expect(reisCells[COLUMN_PROTEIN]).toHaveTextContent('5.4');
+    expect(reisCells[COLUMN_STATUS]).toHaveTextContent('Berechnet');
 
     const salzCells = within(rows[2]).getAllByRole('cell');
-    expect(salzCells[0]).toHaveTextContent('Salz');
-    expect(salzCells[2]).toHaveTextContent('0');
-    expect(salzCells[6]).toHaveTextContent('Berechnet');
+    expect(salzCells[COLUMN_INGREDIENT]).toHaveTextContent('Salz');
+    expect(salzCells[COLUMN_CALORIES]).toHaveTextContent('0');
+    expect(salzCells[COLUMN_STATUS]).toHaveTextContent('Berechnet');
+  });
+
+  it('renders persisted per-ingredient values after reopening and keeps recipe-link rows traceable', () => {
+    const recipe = {
+      id: 'recipe-2',
+      portionen: 1,
+      ingredients: ['1 Teil #recipe:abc:Linsen', 'Pfeffer'],
+      naehrwerte: {
+        calcFoundCount: 1,
+        calcTotalCount: 2,
+        calcNotIncluded: [{ ingredient: 'Pfeffer', error: 'Nicht gefunden' }],
+        calcIngredientDetails: [
+          { ingredient: '1 Teil #recipe:abc:Linsen', naehrwerte: { kalorien: 120, protein: 9, fett: 0.8, kohlenhydrate: 18, zucker: 1, ballaststoffe: 4, salz: 0.05 } },
+        ],
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn().mockResolvedValue(undefined)}
+        allRecipes={[]}
+        currentUser={{ uid: 'u1' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    const rows = within(screen.getByRole('table')).getAllByRole('row');
+    const linkCells = within(rows[1]).getAllByRole('cell');
+    expect(linkCells[COLUMN_INGREDIENT]).toHaveTextContent('1 Teil #recipe:abc:Linsen');
+    expect(linkCells[1]).toHaveTextContent('Rezeptlink: Linsen');
+    expect(linkCells[COLUMN_CALORIES]).toHaveTextContent('120');
+    expect(linkCells[COLUMN_STATUS]).toHaveTextContent('Berechnet');
+
+    const missingCells = within(rows[2]).getAllByRole('cell');
+    expect(missingCells[COLUMN_INGREDIENT]).toHaveTextContent('Pfeffer');
+    expect(missingCells[COLUMN_CALORIES]).toHaveTextContent('—');
+    expect(missingCells[COLUMN_STATUS]).toHaveTextContent('Nicht enthalten');
   });
 });
