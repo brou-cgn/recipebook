@@ -688,6 +688,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const final = {
       ...totals,
       calcPending: false,
+      calcCompletedAt: Date.now(),
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: ingredients.length - notIncluded.length,

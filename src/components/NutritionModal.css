@@ -67,6 +67,47 @@
   color: #666;
 }
 
+.nutrition-composition-section {
+  margin: 0 0 1rem 0;
+}
+
+.nutrition-composition-toggle {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nutrition-composition-table-wrap {
+  margin-top: 10px;
+  overflow-x: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.nutrition-composition-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+.nutrition-composition-table th,
+.nutrition-composition-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f1f1;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.nutrition-composition-table th {
+  font-weight: 600;
+  background: #fafafa;
+}
+
 .nutrition-field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

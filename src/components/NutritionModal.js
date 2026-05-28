@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
@@ -52,6 +52,37 @@ export function getRecipeCalcResult(recipe) {
   };
 }
 
+export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = []) {
+  const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
+  const ingredientTexts = rawIngredients
+    .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
+    .map(item => typeof item === 'string' ? item : item.text)
+    .filter(Boolean);
+  const notIncluded = calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
+  const acceptedIngredients = acceptedIngredientsInput instanceof Set
+    ? acceptedIngredientsInput
+    : new Set(acceptedIngredientsInput || []);
+  const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
+
+  return ingredientTexts.map((ingredient) => {
+    const link = decodeRecipeLink(ingredient);
+    const notIncludedItem = notIncludedByIngredient.get(ingredient);
+    const reformulation = reformulationMap?.[ingredient]?.text || notIncludedItem?.reformulation || null;
+    let status = 'Berechnet';
+    if (acceptedIngredients.has(ingredient)) {
+      status = 'Akzeptiert';
+    } else if (notIncludedItem) {
+      status = 'Nicht enthalten';
+    }
+    return {
+      ingredient,
+      source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
+      status,
+      detail: notIncludedItem?.error || (reformulation ? `Umformulierung: ${reformulation}` : '—'),
+    };
+  });
+}
+
 function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
@@ -94,6 +125,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
   });
   const closeButtonRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const [showCompositionTable, setShowCompositionTable] = useState(false);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
   useEffect(() => {
@@ -153,6 +185,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       : recipe?.naehrwerte?.calcAcceptedIngredients;
     const naehrwerte = {
       ...naehrwerteToTotals(perPortion, portionen),
+      calcPending: false,
+      calcCompletedAt: Date.now(),
       ...(calcFoundCount !== undefined && { calcFoundCount }),
       ...(calcTotalCount !== undefined && { calcTotalCount }),
       ...(calcNotIncluded !== undefined && { calcNotIncluded }),
@@ -411,6 +445,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     const finalNaehrwerte = {
       ...totals,
       calcPending: false,
+      calcCompletedAt: Date.now(),
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: foundCount,
@@ -573,6 +608,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     const finalNaehrwerte = {
       ...combinedTotals,
       calcPending: false,
+      calcCompletedAt: Date.now(),
       calcError: null,
       calcNotIncluded: stillNotIncluded.length > 0 ? stillNotIncluded : null,
       calcFoundCount: prevFoundCount + newFoundCount,
@@ -590,6 +626,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
   const hasValues =
     kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
     zucker !== '' || ballaststoffe !== '' || salz !== '';
+  const compositionRows = useMemo(() => buildNutritionCompositionRows(
+    recipe,
+    autoCalcResult,
+    reformulations,
+    acceptedIngredients
+  ), [recipe, autoCalcResult, reformulations, acceptedIngredients]);
 
   return (
     <div className="nutrition-modal-overlay" onClick={onClose}>
@@ -617,6 +659,41 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
             Nährwerte pro Portion ({recipe.portionen || 1}{' '}
             {(recipe.portionen || 1) === 1 ? 'Portion' : 'Portionen'})
           </p>
+          {compositionRows.length > 0 && (
+            <div className="nutrition-composition-section">
+              <button
+                type="button"
+                className="nutrition-composition-toggle"
+                onClick={() => setShowCompositionTable(prev => !prev)}
+              >
+                {showCompositionTable ? 'Zusammensetzung ausblenden' : 'Zusammensetzung anzeigen'}
+              </button>
+              {showCompositionTable && (
+                <div className="nutrition-composition-table-wrap">
+                  <table className="nutrition-composition-table">
+                    <thead>
+                      <tr>
+                        <th>Zutat</th>
+                        <th>Quelle</th>
+                        <th>Status</th>
+                        <th>Detail</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compositionRows.map((row, index) => (
+                        <tr key={`${row.ingredient}-${index}`}>
+                          <td>{row.ingredient}</td>
+                          <td>{row.source}</td>
+                          <td>{row.status}</td>
+                          <td>{row.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="nutrition-field-grid">
             <div className="nutrition-field">

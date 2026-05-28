@@ -18,6 +18,7 @@ import {
 } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
+import NutritionModal from './NutritionModal';
 import {
   getCuisineProposals,
   addCuisineProposal,
@@ -83,6 +84,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const [sharedRecipeIds, setSharedRecipeIds] = useState(new Set());
   const [shareLinkErrors, setShareLinkErrors] = useState({});
   const [abortingCalcId, setAbortingCalcId] = useState(null);
+  const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
@@ -180,6 +182,27 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     [appCalls, filterBenjaminRousselli]
   );
 
+  const nutritionListData = useMemo(() => {
+    const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
+    const pending = withNutrition.filter((recipe) => recipe.naehrwerte?.calcPending === true);
+    const completed = withNutrition
+      .filter((recipe) => recipe.naehrwerte?.calcPending !== true)
+      .sort((a, b) => {
+        const aDate = a.naehrwerte?.calcCompletedAt ?? a.naehrwerte?.calcPendingAt ?? 0;
+        const bDate = b.naehrwerte?.calcCompletedAt ?? b.naehrwerte?.calcPendingAt ?? 0;
+        if (bDate !== aDate) return bDate - aDate;
+        const aTitle = (a.title || a.id || '').toString();
+        const bTitle = (b.title || b.id || '').toString();
+        return aTitle.localeCompare(bTitle, 'de-DE');
+      });
+    return { pending, completed };
+  }, [recipes]);
+
+  const selectedNutritionRecipe = useMemo(
+    () => recipes.find((recipe) => recipe.id === selectedNutritionRecipeId) || null,
+    [recipes, selectedNutritionRecipeId]
+  );
+
   const formatCalcDuration = useCallback((calcPendingAt) => {
     if (!calcPendingAt) return null;
     const startTime = new Date(calcPendingAt);
@@ -215,6 +238,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
         naehrwerte: {
           ...(recipe.naehrwerte || {}),
           calcPending: false,
+          calcCompletedAt: Date.now(),
           calcError: 'Berechnung abgebrochen',
         },
       });
@@ -223,6 +247,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
     } finally {
       setAbortingCalcId(null);
     }
+  };
+
+  const handleSaveNutrition = async (recipeId, naehrwerte) => {
+    if (!onUpdateRecipe) return;
+    await onUpdateRecipe(recipeId, { naehrwerte });
   };
 
   const handleAddCuisineProposal = async () => {
@@ -753,50 +782,88 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
         ) : activeTab === 'naehrwert' ? (
           <>
             <p className="app-calls-info-text">
-              Übersicht aller Rezepte, bei denen gerade eine Nährwertberechnung läuft. Sie können einzelne Berechnungen hier gezielt abbrechen.
+              Übersicht aktiver und abgeschlossener Nährwertberechnungen. Laufende Berechnungen können abgebrochen werden, abgeschlossene Berechnungen lassen sich direkt öffnen.
             </p>
-            {(() => {
-              const pending = recipes.filter(r => r.naehrwerte?.calcPending === true);
-              if (pending.length === 0) {
-                return <div className="app-calls-empty">Keine aktiven Berechnungen vorhanden.</div>;
-              }
-              return (
-                <>
-                  <div className="app-calls-table-container">
-                    <table className="app-calls-table">
-                      <thead>
-                        <tr>
-                          <th>Rezept</th>
-                          <th>Gestartet</th>
-                          <th>Aktion</th>
+            {nutritionListData.pending.length === 0 ? (
+              <div className="app-calls-empty">Keine aktiven Berechnungen vorhanden.</div>
+            ) : (
+              <>
+                <div className="app-calls-table-container">
+                  <table className="app-calls-table">
+                    <thead>
+                      <tr>
+                        <th>Rezept</th>
+                        <th>Gestartet</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nutritionListData.pending.map(recipe => (
+                        <tr key={recipe.id}>
+                          <td>{recipe.title || recipe.id}</td>
+                          <td className="app-calls-calc-duration">{formatCalcDuration(recipe.naehrwerte?.calcPendingAt) || '—'}</td>
+                          <td>
+                            <button
+                              className="nutrition-abort-settings-button"
+                              onClick={() => handleAbortCalcForRecipe(recipe)}
+                              disabled={abortingCalcId === recipe.id}
+                              title="Berechnung abbrechen"
+                            >
+                              {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : 'Abbrechen'}
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {pending.map(recipe => (
-                          <tr key={recipe.id}>
-                            <td>{recipe.title || recipe.id}</td>
-                            <td className="app-calls-calc-duration">{formatCalcDuration(recipe.naehrwerte?.calcPendingAt) || '—'}</td>
-                            <td>
-                              <button
-                                className="nutrition-abort-settings-button"
-                                onClick={() => handleAbortCalcForRecipe(recipe)}
-                                disabled={abortingCalcId === recipe.id}
-                                title="Berechnung abbrechen"
-                              >
-                                {abortingCalcId === recipe.id ? 'Wird abgebrochen…' : 'Abbrechen'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="app-calls-stats">
-                    Gesamt: <strong>{pending.length}</strong> {pending.length === 1 ? 'aktive Berechnung' : 'aktive Berechnungen'}
-                  </div>
-                </>
-              );
-            })()}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="app-calls-stats">
+                  Gesamt: <strong>{nutritionListData.pending.length}</strong> {nutritionListData.pending.length === 1 ? 'aktive Berechnung' : 'aktive Berechnungen'}
+                </div>
+              </>
+            )}
+            <h3>Abgeschlossene Berechnungen</h3>
+            {nutritionListData.completed.length === 0 ? (
+              <div className="app-calls-empty">Keine abgeschlossenen Berechnungen vorhanden.</div>
+            ) : (
+              <>
+                <div className="app-calls-table-container">
+                  <table className="app-calls-table">
+                    <thead>
+                      <tr>
+                        <th>Rezept</th>
+                        <th>Abgeschlossen</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nutritionListData.completed.map(recipe => (
+                        <tr key={recipe.id}>
+                          <td>{recipe.title || recipe.id}</td>
+                          <td className="app-calls-calc-duration">
+                            {recipe.naehrwerte?.calcCompletedAt
+                              ? new Date(recipe.naehrwerte.calcCompletedAt).toLocaleString('de-DE')
+                              : (recipe.naehrwerte?.calcPendingAt ? new Date(recipe.naehrwerte.calcPendingAt).toLocaleString('de-DE') : '—')}
+                          </td>
+                          <td>
+                            <button
+                              className="app-calls-share-btn"
+                              onClick={() => setSelectedNutritionRecipeId(recipe.id)}
+                              title="Nährwertedialog öffnen"
+                            >
+                              Öffnen
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="app-calls-stats">
+                  Gesamt: <strong>{nutritionListData.completed.length}</strong> {nutritionListData.completed.length === 1 ? 'abgeschlossene Berechnung' : 'abgeschlossene Berechnungen'}
+                </div>
+              </>
+            )}
           </>
         ) : activeTab === 'kulinariktypen' ? (
           <>
@@ -1084,6 +1151,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
           </div>
         )}
       </div>
+      {selectedNutritionRecipe && (
+        <NutritionModal
+          recipe={selectedNutritionRecipe}
+          allRecipes={recipes}
+          currentUser={currentUser}
+          onClose={() => setSelectedNutritionRecipeId(null)}
+          onSave={(naehrwerte) => handleSaveNutrition(selectedNutritionRecipe.id, naehrwerte)}
+        />
+      )}
     </div>
   );
 }

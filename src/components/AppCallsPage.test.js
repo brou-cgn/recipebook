@@ -2,6 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
 
+jest.mock('./NutritionModal', () => function MockNutritionModal({ recipe, onClose }) {
+  return (
+    <div data-testid="nutrition-modal-mock">
+      <p>Nährwerte Mock {recipe?.title}</p>
+      <button onClick={onClose}>Schließen</button>
+    </div>
+  );
+});
+
 // Mock utility modules
 jest.mock('../utils/appCallsFirestore', () => ({
   getAppCalls: jest.fn(() => Promise.resolve([])),
@@ -509,6 +518,45 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(await screen.findByText('Nährwertberechnungen'));
 
     expect(await screen.findByText('Keine aktiven Berechnungen vorhanden.')).toBeInTheDocument();
+  });
+
+  test('shows completed calculations sorted by newest completion date first', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'r1', title: 'Älteres Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1710000000000 } },
+          { id: 'r2', title: 'Neuestes Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    const openButtons = screen.getAllByRole('button', { name: 'Öffnen' });
+    const firstRow = openButtons[0].closest('tr');
+    expect(firstRow).toHaveTextContent('Neuestes Rezept');
+  });
+
+  test('opens nutrition dialog from completed calculation entry', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'r1', title: 'Gemüsepfanne', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+
+    expect(await screen.findByTestId('nutrition-modal-mock')).toBeInTheDocument();
+    expect(screen.getByText('Nährwerte Mock Gemüsepfanne')).toBeInTheDocument();
   });
 });
 
