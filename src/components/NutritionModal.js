@@ -199,7 +199,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         await onSave({
           ...(recipe?.naehrwerte || {}),
           calcNotIncluded: updatedNotIncluded,
-          calcReformulations: updatedResult.calcReformulations || recipe?.naehrwerte?.calcReformulations || null,
+          calcReformulations: updatedResult.calcReformulations ?? recipe?.naehrwerte?.calcReformulations ?? null,
         });
       } catch (err) {
         console.error('Could not save reformulation to Firebase:', err);
@@ -231,7 +231,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
           calcNotIncluded: updatedNotIncluded.length > 0 ? updatedNotIncluded : null,
         }),
         ...(updatedFoundCount !== undefined && { calcFoundCount: updatedFoundCount }),
-        calcReformulations: autoCalcResult?.calcReformulations || recipe?.naehrwerte?.calcReformulations || null,
+        calcReformulations: autoCalcResult?.calcReformulations ?? recipe?.naehrwerte?.calcReformulations ?? null,
         calcAcceptedIngredients: acceptedArray,
       });
     } catch (err) {

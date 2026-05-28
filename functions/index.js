@@ -1487,6 +1487,15 @@ function parseIngredientForNutrition(ingredientStr) {
  * @returns {Promise<void>}
  */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const OPEN_FOOD_FACTS_FETCH_TIMEOUT_MS = 10000;
+const OPEN_FOOD_FACTS_NETWORK_ERROR_CODES = ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT'];
+
+/**
+ * @param {Error} err
+ * @returns {boolean}
+ */
+const isOpenFoodFactsNetworkError = (err) => err?.name === 'TypeError' ||
+  OPEN_FOOD_FACTS_NETWORK_ERROR_CODES.includes(err?.code);
 
 /**
  * Returns whether an ingredient line should be skipped server-side.
@@ -1515,7 +1524,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
     const timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, 10000);
+    }, OPEN_FOOD_FACTS_FETCH_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
@@ -1527,12 +1536,11 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
     } catch (err) {
       clearTimeout(timeout);
       const isTimeout = timedOut || err.name === 'AbortError';
-      const isNetworkError = err.name === 'TypeError' ||
-        ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT'].includes(err.code);
+      const isNetworkError = isOpenFoodFactsNetworkError(err);
       if (!isTimeout && !isNetworkError) {
         throw err;
       }
-      lastErr = isTimeout ? new Error('Timeout beim Abruf von OpenFoodFacts') : err;
+      lastErr = isTimeout ? new Error('Timeout bei OpenFoodFacts') : err;
       if (attempt < maxAttempts) {
         await sleep(500 * Math.pow(2, attempt - 1));
       }
@@ -1726,9 +1734,9 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             totals: ingredientTotals,
           };
         } catch (err) {
-          const isNetworkError = err.name === 'TypeError' || err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED';
+          const isNetworkError = isOpenFoodFactsNetworkError(err);
           const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
-          const errorType = isNetworkError ? 'Netzwerkfehler' : 'API-Fehler';
+          const errorType = isNetworkError ? 'Netzwerkfehler' : (isTimeout ? 'Timeout' : 'API-Fehler');
           console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
           return {
             found: false,
