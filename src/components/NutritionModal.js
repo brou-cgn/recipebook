@@ -166,6 +166,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     return isNaN(n) || n < 0 ? null : n;
   };
 
+  const formatNutritionValue = (naehrwerte, key, decimals = 1) => {
+    if (naehrwerte == null) return '—';
+    const value = naehrwerte[key] ?? 0;
+    const factor = Math.pow(10, decimals);
+    return String(Math.round(value * factor) / factor);
+  };
+
   const handleSave = async () => {
     const portionen = recipe.portionen || 1;
     // Form fields hold per-portion values; multiply back to store totals
@@ -716,10 +723,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                         <tr key={`${row.ingredient}-${index}`}>
                           <td>{row.ingredient}</td>
                           <td>{row.source}</td>
-                          <td className="nutrition-composition-num">{row.naehrwerte != null ? String(Math.round(row.naehrwerte.kalorien != null ? row.naehrwerte.kalorien : 0)) : '—'}</td>
-                          <td className="nutrition-composition-num">{row.naehrwerte != null ? String(Math.round((row.naehrwerte.protein != null ? row.naehrwerte.protein : 0) * 10) / 10) : '—'}</td>
-                          <td className="nutrition-composition-num">{row.naehrwerte != null ? String(Math.round((row.naehrwerte.fett != null ? row.naehrwerte.fett : 0) * 10) / 10) : '—'}</td>
-                          <td className="nutrition-composition-num">{row.naehrwerte != null ? String(Math.round((row.naehrwerte.kohlenhydrate != null ? row.naehrwerte.kohlenhydrate : 0) * 10) / 10) : '—'}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kalorien', 0)}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'protein')}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'fett')}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kohlenhydrate')}</td>
                           <td>{row.status}</td>
                           <td>{row.detail}</td>
                         </tr>
