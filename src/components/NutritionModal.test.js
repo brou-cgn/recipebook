@@ -1,8 +1,20 @@
-import { getRecipeCalcResult, buildNutritionCompositionRows } from './NutritionModal';
+import React from 'react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { httpsCallable } from 'firebase/functions';
+import NutritionModal, { getRecipeCalcResult, buildNutritionCompositionRows } from './NutritionModal';
+
+jest.mock('firebase/functions', () => ({
+  httpsCallable: jest.fn(),
+}));
 
 jest.mock('../firebase', () => ({
   functions: {},
 }));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  localStorage.clear();
+});
 
 describe('getRecipeCalcResult', () => {
   it('returns null when calc counters are missing', () => {
@@ -178,5 +190,67 @@ describe('getRecipeCalcResult', () => {
         naehrwerte: linkNaehrwerte,
       }));
     });
+  });
+});
+
+describe('NutritionModal auto-calc composition table', () => {
+  it('captures and persists per-ingredient naehrwerte and renders them in composition rows', async () => {
+    const recipe = {
+      id: 'recipe-1',
+      portionen: 1,
+      ingredients: ['200 g Reis', 'Salz'],
+      naehrwerte: {},
+    };
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const mockCallable = jest.fn()
+      .mockResolvedValueOnce({
+        data: {
+          naehrwerte: { kalorien: 260, protein: 5.4, fett: 0.6, kohlenhydrate: 56, zucker: 0.2, ballaststoffe: 0.8, salz: 0.01 },
+          details: [{ found: true }],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          naehrwerte: { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0.2 },
+          details: [{ found: true }],
+        },
+      });
+    httpsCallable.mockReturnValue(mockCallable);
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={onSave}
+        allRecipes={[]}
+        currentUser={{ uid: 'u1' }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Automatisch berechnen/i }));
+
+    await waitFor(() => expect(mockCallable).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+
+    const finalPayload = onSave.mock.calls[1][0];
+    expect(finalPayload.calcIngredientDetails).toEqual([
+      { ingredient: '200 g Reis', naehrwerte: { kalorien: 260, protein: 5.4, fett: 0.6, kohlenhydrate: 56, zucker: 0.2, ballaststoffe: 0.8, salz: 0.01 } },
+      { ingredient: 'Salz', naehrwerte: { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0.2 } },
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    const table = screen.getByRole('table');
+    const rows = within(table).getAllByRole('row');
+
+    const reisCells = within(rows[1]).getAllByRole('cell');
+    expect(reisCells[0]).toHaveTextContent('200 g Reis');
+    expect(reisCells[2]).toHaveTextContent('260');
+    expect(reisCells[3]).toHaveTextContent('5.4');
+    expect(reisCells[6]).toHaveTextContent('Berechnet');
+
+    const salzCells = within(rows[2]).getAllByRole('cell');
+    expect(salzCells[0]).toHaveTextContent('Salz');
+    expect(salzCells[2]).toHaveTextContent('0');
+    expect(salzCells[6]).toHaveTextContent('Berechnet');
   });
 });
