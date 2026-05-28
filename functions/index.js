@@ -1628,6 +1628,7 @@ function parseIngredientForNutrition(ingredientStr) {
  */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const OPEN_FOOD_FACTS_FETCH_TIMEOUT_MS = 10000;
+const OPEN_FOOD_FACTS_RETRY_DELAYS_MS = [30_000, 270_000]; // 30 s, dann 4.5 min (= 5 min gesamt)
 const OPEN_FOOD_FACTS_NETWORK_ERROR_CODES = ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT'];
 
 /**
@@ -1650,10 +1651,10 @@ const isSkippableIngredientLine = (ingredientStr) => {
 };
 
 /**
- * Fetches a URL and retries only on network/timeout errors.
+ * Fetches a URL and retries on OpenFoodFacts timeouts/network errors and HTTP 503.
  * @param {string} url
  * @param {object} options
- * @param {number} maxAttempts
+ * @param {number} maxAttempts - Total attempts (default 3 = 1 try + 2 retries)
  * @returns {Promise<Response>}
  */
 async function fetchWithRetry(url, options, maxAttempts = 3) {
@@ -1672,7 +1673,15 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      return response;
+      const isServiceUnavailable = !response.ok && response.status === 503;
+      if (!isServiceUnavailable) {
+        return response;
+      }
+
+      lastErr = new Error('OpenFoodFacts nicht verfügbar (503)');
+      if (attempt < maxAttempts) {
+        await sleep(OPEN_FOOD_FACTS_RETRY_DELAYS_MS[attempt - 1]);
+      }
     } catch (err) {
       clearTimeout(timeout);
       const isTimeout = timedOut || err.name === 'AbortError';
@@ -1682,7 +1691,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
       }
       lastErr = isTimeout ? new Error('Timeout bei OpenFoodFacts') : err;
       if (attempt < maxAttempts) {
-        await sleep(500 * Math.pow(2, attempt - 1));
+        await sleep(OPEN_FOOD_FACTS_RETRY_DELAYS_MS[attempt - 1]);
       }
     }
   }
@@ -1708,7 +1717,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
 exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
       maxInstances: 5,
-      timeoutSeconds: 300,
+      timeoutSeconds: 360,
     },
     async (request) => {
       // Authentication check
