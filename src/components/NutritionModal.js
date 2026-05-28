@@ -49,6 +49,7 @@ export function getRecipeCalcResult(recipe) {
     notIncluded: recipe?.naehrwerte?.calcNotIncluded || [],
     ...(recipe?.naehrwerte?.calcReformulations && { calcReformulations: recipe.naehrwerte.calcReformulations }),
     ...(recipe?.naehrwerte?.calcAcceptedIngredients && { acceptedIngredients: recipe.naehrwerte.calcAcceptedIngredients }),
+    ...(recipe?.naehrwerte?.calcIngredientDetails && { ingredientDetails: recipe.naehrwerte.calcIngredientDetails }),
   };
 }
 
@@ -63,6 +64,8 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     ? acceptedIngredientsInput
     : new Set(acceptedIngredientsInput || []);
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
+  const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
+  const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d.naehrwerte]));
 
   return ingredientTexts.map((ingredient) => {
     const link = decodeRecipeLink(ingredient);
@@ -79,6 +82,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
       source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
       status,
       detail: notIncludedItem?.error || (reformulation ? `Umformulierung: ${reformulation}` : '—'),
+      naehrwerte: detailsByIngredient.get(ingredient) || null,
     };
   });
 }
@@ -162,6 +166,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     return isNaN(n) || n < 0 ? null : n;
   };
 
+  const formatNutritionValue = (naehrwerte, key, decimals = 1) => {
+    if (naehrwerte == null) return '—';
+    const value = naehrwerte[key] ?? 0;
+    const factor = Math.pow(10, decimals);
+    return String(Math.round(value * factor) / factor);
+  };
+
   const handleSave = async () => {
     const portionen = recipe.portionen || 1;
     // Form fields hold per-portion values; multiply back to store totals
@@ -183,6 +194,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     const calcAcceptedIngredients = acceptedIngredients.size > 0
       ? [...acceptedIngredients]
       : recipe?.naehrwerte?.calcAcceptedIngredients;
+    const calcIngredientDetails = autoCalcResult?.ingredientDetails ?? recipe?.naehrwerte?.calcIngredientDetails;
     const naehrwerte = {
       ...naehrwerteToTotals(perPortion, portionen),
       calcPending: false,
@@ -192,6 +204,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       ...(calcNotIncluded !== undefined && { calcNotIncluded }),
       ...(calcReformulations !== undefined && { calcReformulations }),
       ...(calcAcceptedIngredients !== undefined && { calcAcceptedIngredients }),
+      ...(calcIngredientDetails !== undefined && { calcIngredientDetails }),
       ...(calcError !== undefined && { calcError }),
     };
 
@@ -315,6 +328,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
     const successfulReformulations = {};
+    const ingredientDetails = [];
     let foundCount = 0;
 
     // Process regular ingredients via OpenFoodFacts
@@ -343,6 +357,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
             totals[key] += n[key] || 0;
           });
           foundCount++;
+          ingredientDetails.push({ ingredient, naehrwerte: n });
           if (reformulations[ingredient]) {
             successfulReformulations[ingredient] = reformulations[ingredient];
           }
@@ -390,9 +405,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         }
         const quantity = parsedQuantity || 1;
         const multiplier = quantity / linkedPortionen;
+        const linkNaehrwerte = {};
         Object.keys(totals).forEach(key => {
-          totals[key] += (linkedRecipe.naehrwerte[key] || 0) * multiplier;
+          const val = (linkedRecipe.naehrwerte[key] || 0) * multiplier;
+          linkNaehrwerte[key] = val;
+          totals[key] += val;
         });
+        ingredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte });
         foundCount++;
       } else {
         notIncluded.push({
@@ -437,6 +456,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       notIncluded,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
+      ...(ingredientDetails.length > 0 && { ingredientDetails }),
     };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
@@ -452,6 +472,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       calcTotalCount: totalCount,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
       calcAcceptedIngredients: acceptedArray || null,
+      calcIngredientDetails: ingredientDetails.length > 0 ? ingredientDetails : null,
     };
     try {
       await onSave(finalNaehrwerte);
@@ -496,6 +517,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
     const newTotals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const stillNotIncluded = [];
     const newSuccessfulReformulations = {};
+    const newIngredientDetails = [];
     let newFoundCount = 0;
 
     // Process regular (non-link) not-included ingredients
@@ -514,6 +536,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         if (detail && detail.found) {
           Object.keys(newTotals).forEach(key => { newTotals[key] += n[key] || 0; });
           newFoundCount++;
+          newIngredientDetails.push({ ingredient, naehrwerte: n });
           if (reformulations[ingredient]) {
             newSuccessfulReformulations[ingredient] = reformulations[ingredient];
           }
@@ -553,7 +576,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         }
         const quantity = parsedQuantity || 1;
         const multiplier = quantity / linkedPortionen;
-        Object.keys(newTotals).forEach(key => { newTotals[key] += (linkedRecipe.naehrwerte[key] || 0) * multiplier; });
+        const linkNaehrwerte = {};
+        Object.keys(newTotals).forEach(key => {
+          const val = (linkedRecipe.naehrwerte[key] || 0) * multiplier;
+          linkNaehrwerte[key] = val;
+          newTotals[key] += val;
+        });
+        newIngredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte });
         newFoundCount++;
       } else {
         stillNotIncluded.push({
@@ -594,12 +623,17 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       ...(autoCalcResult?.calcReformulations || {}),
       ...newSuccessfulReformulations,
     };
+    const mergedIngredientDetails = [
+      ...(autoCalcResult?.ingredientDetails || []),
+      ...newIngredientDetails,
+    ];
 
     const updatedResult = {
       foundCount: prevFoundCount + newFoundCount,
       totalCount: prevTotalCount,
       notIncluded: stillNotIncluded,
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
+      ...(mergedIngredientDetails.length > 0 && { ingredientDetails: mergedIngredientDetails }),
     };
     setAutoCalcResult(updatedResult);
     saveStoredCalcResult(recipe?.id, updatedResult);
@@ -614,6 +648,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
       calcFoundCount: prevFoundCount + newFoundCount,
       calcTotalCount: prevTotalCount,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
+      calcIngredientDetails: mergedIngredientDetails.length > 0 ? mergedIngredientDetails : null,
     };
     try {
       await onSave(finalNaehrwerte);
@@ -675,6 +710,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                       <tr>
                         <th>Zutat</th>
                         <th>Quelle</th>
+                        <th className="nutrition-composition-num">kcal</th>
+                        <th className="nutrition-composition-num">Protein</th>
+                        <th className="nutrition-composition-num">Fett</th>
+                        <th className="nutrition-composition-num">KH</th>
                         <th>Status</th>
                         <th>Detail</th>
                       </tr>
@@ -684,6 +723,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
                         <tr key={`${row.ingredient}-${index}`}>
                           <td>{row.ingredient}</td>
                           <td>{row.source}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kalorien', 0)}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'protein')}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'fett')}</td>
+                         <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kohlenhydrate')}</td>
                           <td>{row.status}</td>
                           <td>{row.detail}</td>
                         </tr>
