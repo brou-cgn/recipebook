@@ -1940,7 +1940,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             ingredientTotals[key] += (per100gValues[key] || 0) * scale;
           });
 
-          if (referenceId && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
+          if (referenceId && cachedSnapshot && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
             await admin.firestore()
                 .collection(NUTRITION_REFERENCE_COLLECTION)
                 .doc(referenceId)
