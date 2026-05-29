@@ -80,6 +80,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
+import { NutritionReferenceProvider } from './contexts/NutritionReferenceContext';
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
@@ -1664,25 +1665,26 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <Header 
-        ref={headerRef}
-        onSettingsClick={handleOpenSettings}
-        currentView={currentView}
-        onViewChange={handleViewChange}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={handleCategoryFilterChange}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        visible={headerVisible}
-        onSearchChange={handleSearchChange}
-        interactiveLists={interactiveLists}
-        startseiteEnabled={!!currentUser?.startseite}
-        onChefkochClick={currentUser ? handleChefkochClick : undefined}
-      />
-      {isSettingsOpen ? (
-        <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
-      ) : selectedRecipe ? (
+    <NutritionReferenceProvider enabled={!!currentUser}>
+      <div className="App">
+        <Header 
+          ref={headerRef}
+          onSettingsClick={handleOpenSettings}
+          currentView={currentView}
+          onViewChange={handleViewChange}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={handleCategoryFilterChange}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          visible={headerVisible}
+          onSearchChange={handleSearchChange}
+          interactiveLists={interactiveLists}
+          startseiteEnabled={!!currentUser?.startseite}
+          onChefkochClick={currentUser ? handleChefkochClick : undefined}
+        />
+        {isSettingsOpen ? (
+          <Settings onBack={handleCloseSettings} currentUser={currentUser} allUsers={allUsers} allRecipes={recipes} onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)} />
+        ) : selectedRecipe ? (
         // Recipe detail view - shown regardless of currentView
         <RecipeDetail
           recipe={selectedRecipe}
@@ -1700,7 +1702,7 @@ function App() {
           menuPortionCount={selectedMenu ? (selectedMenu.portionCounts?.[selectedRecipe?.id] ?? null) : null}
           onPortionCountChange={selectedMenu ? handleMenuPortionCountChange : undefined}
         />
-      ) : isFormOpen ? (
+        ) : isFormOpen ? (
         // Recipe form - shown with priority over menu/recipe detail
         <RecipeForm
           recipe={editingRecipe}
@@ -1716,7 +1718,7 @@ function App() {
           initialWebImportUrl={webimportDeeplink}
           initialWebImportAuthorId={webimportAuthorId}
         />
-      ) : selectedMenu ? (
+        ) : selectedMenu ? (
         // Menu detail view - shown regardless of currentView
         <MenuDetail
           menu={selectedMenu}
@@ -1730,7 +1732,7 @@ function App() {
           currentUser={currentUser}
           allUsers={allUsers}
         />
-      ) : isMenuFormOpen ? (
+        ) : isMenuFormOpen ? (
         // Menu form - shown regardless of currentView (e.g. when editing from Kueche/Timeline)
         <MenuForm
           menu={editingMenu}
@@ -1740,7 +1742,7 @@ function App() {
           currentUser={currentUser}
           allUsers={allUsers}
         />
-      ) : currentView === 'appCalls' ? (
+        ) : currentView === 'appCalls' ? (
         <AppCallsPage
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
@@ -1748,13 +1750,13 @@ function App() {
           onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)}
           onSelectRecipe={handleSelectRecipe}
         />
-      ) : currentView === 'meineKuechenstars' ? (
+        ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
           recipes={recipes}
         />
-      ) : currentView === 'tagesmenu' ? (
+        ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
           interactiveLists={interactiveLists}
           recipes={recipes}
@@ -1762,7 +1764,7 @@ function App() {
           onSelectRecipe={handleSelectRecipe}
           currentUser={currentUser}
         />
-      ) : currentView === 'kueche' ? (
+        ) : currentView === 'kueche' ? (
         <Kueche
           recipes={recipes}
           menus={menus}
@@ -1776,7 +1778,7 @@ function App() {
           openPersonalData={kuecheOpenPersonalData}
           onPersonalDataOpened={() => setKuecheOpenPersonalData(false)}
         />
-      ) : currentView === 'groups' ? (
+        ) : currentView === 'groups' ? (
         selectedGroup ? (
           <GroupDetail
             group={selectedGroup}
@@ -1807,7 +1809,7 @@ function App() {
             onBack={() => handleViewChange(groupsOpenedFromStartseite ? 'startseite' : 'kueche')}
           />
         )
-      ) : currentView === 'menus' ? (
+        ) : currentView === 'menus' ? (
         // Menu views
         <MenuList
           menus={menus}
@@ -1818,9 +1820,9 @@ function App() {
           currentUser={currentUser}
           allUsers={allUsers}
         />
-      ) : currentView === 'startseite' ? (
+        ) : currentView === 'startseite' ? (
         <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
-      ) : (
+        ) : (
         // Recipe views
         <>
           <RecipeList
@@ -1858,53 +1860,54 @@ function App() {
             seasonMatrixEntries={seasonMatrixEntries}
           />
         </>
-      )}
-      {requiresPasswordChange && currentUser && (
-        <PasswordChangeModal 
-          user={currentUser}
-          onPasswordChanged={handlePasswordChanged}
+        )}
+        {requiresPasswordChange && currentUser && (
+          <PasswordChangeModal 
+            user={currentUser}
+            onPasswordChanged={handlePasswordChanged}
+          />
+        )}
+        {showUniversalImport && (
+          <UniversalImportModal
+            initialImages={sharedData.images}
+            initialTitle={sharedData.title}
+            initialText={sharedData.text}
+            initialUrl={sharedData.url}
+            onImport={handleUniversalImport}
+            onCancel={handleUniversalImportCancel}
+          />
+        )}
+        <MobileSearchOverlay
+          isOpen={isMobileSearchOpen}
+          onClose={() => setIsMobileSearchOpen(false)}
+          recipes={overlayRecipes}
+          currentUser={currentUser}
+          onSelectRecipe={(recipe) => {
+            setIsMobileSearchOpen(false);
+            handleSelectRecipe(recipe);
+          }}
+          onSearch={handleApplySearch}
+          onClearSearch={handleClearSearch}
+          searchTerm={searchTerm}
+          showFavoritesOnly={showFavoritesOnly}
+          showSeasonalOnly={showSeasonalOnly}
+          onFavoritesToggle={setShowFavoritesOnly}
+          onSeasonalToggle={setShowSeasonalOnly}
+          seasonMatrixEntries={seasonMatrixEntries}
+          cuisineTypes={overlayCuisineTypes}
+          cuisineGroups={overlayCuisineGroups}
+          onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
+          selectedCuisines={recipeFilters.selectedCuisines}
+          availableAuthors={overlayAvailableAuthors}
+          onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
+          selectedAuthors={recipeFilters.selectedAuthors}
+          privateLists={isPrivateListSearchContext ? [] : privateListsForSearch}
+          onPrivateListFilterChange={isPrivateListSearchContext ? emptyPrivateListFilterHandler : handlePrivateListFilterChangeFromSearch}
+          selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
+          showPrivateListFilters={!isPrivateListSearchContext}
         />
-      )}
-      {showUniversalImport && (
-        <UniversalImportModal
-          initialImages={sharedData.images}
-          initialTitle={sharedData.title}
-          initialText={sharedData.text}
-          initialUrl={sharedData.url}
-          onImport={handleUniversalImport}
-          onCancel={handleUniversalImportCancel}
-        />
-      )}
-      <MobileSearchOverlay
-        isOpen={isMobileSearchOpen}
-        onClose={() => setIsMobileSearchOpen(false)}
-        recipes={overlayRecipes}
-        currentUser={currentUser}
-        onSelectRecipe={(recipe) => {
-          setIsMobileSearchOpen(false);
-          handleSelectRecipe(recipe);
-        }}
-        onSearch={handleApplySearch}
-        onClearSearch={handleClearSearch}
-        searchTerm={searchTerm}
-        showFavoritesOnly={showFavoritesOnly}
-        showSeasonalOnly={showSeasonalOnly}
-        onFavoritesToggle={setShowFavoritesOnly}
-        onSeasonalToggle={setShowSeasonalOnly}
-        seasonMatrixEntries={seasonMatrixEntries}
-        cuisineTypes={overlayCuisineTypes}
-        cuisineGroups={overlayCuisineGroups}
-        onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
-        selectedCuisines={recipeFilters.selectedCuisines}
-        availableAuthors={overlayAvailableAuthors}
-        onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
-        selectedAuthors={recipeFilters.selectedAuthors}
-        privateLists={isPrivateListSearchContext ? [] : privateListsForSearch}
-        onPrivateListFilterChange={isPrivateListSearchContext ? emptyPrivateListFilterHandler : handlePrivateListFilterChangeFromSearch}
-        selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
-        showPrivateListFilters={!isPrivateListSearchContext}
-      />
-    </div>
+      </div>
+    </NutritionReferenceProvider>
   );
 }
 
