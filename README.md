@@ -413,6 +413,7 @@ RecipeBook can automatically calculate nutritional values for recipes using the
 2. Click **🔍 Automatisch berechnen (OpenFoodFacts)** to look up each ingredient.
 3. The fields are filled automatically. Review and correct any values manually.
 4. Click **Speichern** to save the nutritional data to the recipe.
+5. Admins and moderators can edit the saved per-100g ingredient reference values in **Einstellungen → Nährwerte**.
 
 ### Notes
 

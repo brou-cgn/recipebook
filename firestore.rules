@@ -79,6 +79,12 @@ service cloud.firestore {
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
+    // Nutrition reference values (stored per 100g from OpenFoodFacts lookups)
+    match /nutritionReferences/{entryId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isModeratorOrAdmin();
+    }
+
     // FAQs collection
     match /faqs/{faqId} {
       allow read: if isAnyUser();

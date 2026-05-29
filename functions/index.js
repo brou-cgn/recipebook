@@ -1630,6 +1630,41 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const OPEN_FOOD_FACTS_FETCH_TIMEOUT_MS = 10000;
 const OPEN_FOOD_FACTS_RETRY_DELAYS_MS = [30_000, 270_000]; // 30 s, dann 4.5 min (= 5 min gesamt)
 const OPEN_FOOD_FACTS_NETWORK_ERROR_CODES = ['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT'];
+const NUTRITION_REFERENCE_COLLECTION = 'nutritionReferences';
+const NUTRITION_REFERENCE_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
+
+/**
+ * Create a deterministic document id for nutrition reference entries.
+ * @param {string} name
+ * @returns {string}
+ */
+function normalizeNutritionReferenceId(name) {
+  return String(name || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ß/g, 'ss')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Parse and sanitize per-100g nutrition fields from arbitrary data.
+ * @param {object} data
+ * @returns {object}
+ */
+function parseNutritionReferenceValues(data = {}) {
+  return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
+    const raw = data[key];
+    if (raw === '' || raw == null) return acc;
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      acc[key] = numeric;
+    }
+    return acc;
+  }, {});
+}
 
 /**
  * @param {Error} err
@@ -1807,8 +1842,35 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         }
 
         const {amountG, name} = parsed;
+        const referenceId = normalizeNutritionReferenceId(name);
 
         try {
+          if (referenceId) {
+            const cachedSnapshot = await admin.firestore()
+                .collection(NUTRITION_REFERENCE_COLLECTION)
+                .doc(referenceId)
+                .get();
+            if (cachedSnapshot.exists) {
+              const cachedValues = parseNutritionReferenceValues(cachedSnapshot.data());
+              if (Object.keys(cachedValues).length > 0) {
+                const scale = amountG / 100;
+                NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+                  ingredientTotals[key] += (cachedValues[key] || 0) * scale;
+                });
+                return {
+                  found: true,
+                  detail: {
+                    ingredient: ingredientStr,
+                    name,
+                    product: cachedSnapshot.data().product || cachedSnapshot.data().name || name,
+                    amountG,
+                  },
+                  totals: ingredientTotals,
+                };
+              }
+            }
+          }
+
           const searchUrl =
             `https://world.openfoodfacts.org/cgi/search.pl` +
             `?search_terms=${encodeURIComponent(name)}` +
@@ -1862,15 +1924,36 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           const product = productWithData;
 
           const n = product.nutriments || {};
+          const per100gValues = parseNutritionReferenceValues({
+            kalorien: n['energy-kcal_100g'] ?? n['energy-kcal'],
+            protein: n['proteins_100g'] ?? n.proteins,
+            fett: n['fat_100g'] ?? n.fat,
+            kohlenhydrate: n['carbohydrates_100g'] ?? n.carbohydrates,
+            zucker: n['sugars_100g'] ?? n.sugars,
+            ballaststoffe: n['fiber_100g'] ?? n.fiber,
+            salz: n['salt_100g'] ?? n.salt,
+          });
           const scale = amountG / 100;
 
-          ingredientTotals.kalorien += (n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0) * scale;
-          ingredientTotals.protein += (n['proteins_100g'] ?? n.proteins ?? 0) * scale;
-          ingredientTotals.fett += (n['fat_100g'] ?? n.fat ?? 0) * scale;
-          ingredientTotals.kohlenhydrate += (n['carbohydrates_100g'] ?? n.carbohydrates ?? 0) * scale;
-          ingredientTotals.zucker += (n['sugars_100g'] ?? n.sugars ?? 0) * scale;
-          ingredientTotals.ballaststoffe += (n['fiber_100g'] ?? n.fiber ?? 0) * scale;
-          ingredientTotals.salz += (n['salt_100g'] ?? n.salt ?? 0) * scale;
+          NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+            ingredientTotals[key] += (per100gValues[key] || 0) * scale;
+          });
+
+          if (referenceId && Object.keys(per100gValues).length > 0) {
+            await admin.firestore()
+                .collection(NUTRITION_REFERENCE_COLLECTION)
+                .doc(referenceId)
+                .set(
+                    {
+                      name,
+                      product: product.product_name || name,
+                      ...per100gValues,
+                      source: 'openfoodfacts',
+                      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    },
+                    {merge: true}
+                );
+          }
 
           return {
             found: true,

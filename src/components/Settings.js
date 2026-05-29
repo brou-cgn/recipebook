@@ -12,6 +12,7 @@ import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconU
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import SeasonMatrixTab from './SeasonMatrixTab';
+import NutritionReferenceTab from './NutritionReferenceTab';
 import {
   DndContext,
   closestCenter,
@@ -1431,6 +1432,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               onClick={() => setActiveTab('saisonmatrix')}
             >
               Saisonmatrix
+            </button>
+          )}
+          {canAccessSeasonMatrix && (
+            <button
+              className={`tab-button ${activeTab === 'naehrwerte' ? 'active' : ''}`}
+              onClick={() => setActiveTab('naehrwerte')}
+            >
+              Nährwerte
             </button>
           )}
         </div>
@@ -3164,6 +3173,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'saisonmatrix' ? (
           <SeasonMatrixTab currentUser={currentUser} />
+        ) : activeTab === 'naehrwerte' ? (
+          <NutritionReferenceTab currentUser={currentUser} />
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}
