@@ -203,9 +203,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     [recipes, selectedNutritionRecipeId]
   );
 
-  const hasNotIncludedNutritionIngredients = useCallback((recipe) => (
+  const hasNotIncludedNutritionIngredients = (recipe) => (
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
-  ), []);
+  );
 
   const formatCalcDuration = useCallback((calcPendingAt) => {
     if (!calcPendingAt) return null;
@@ -870,6 +870,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                               <span
                                 className="app-calls-warning-icon"
                                 title="Enthält nicht einkalkulierte Zutaten"
+                                role="img"
                                 aria-label="Enthält nicht einkalkulierte Zutaten"
                               >
                                 !
