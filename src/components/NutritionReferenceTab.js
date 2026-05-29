@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
+import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ROLES } from '../utils/userManagement';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_FIELDS,
   normalizeNutritionReferenceId,
@@ -18,43 +19,60 @@ const NUTRITION_FIELD_LABELS = {
   salz: 'Salz (g)',
 };
 
+const OPEN_FOOD_FACTS_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
+
+async function loadNutritionReferenceFromOpenFoodFacts(name) {
+  const response = await fetch(
+    `${OPEN_FOOD_FACTS_SEARCH_URL}?search_terms=${encodeURIComponent(name)}&action=process&json=1&page_size=5`
+  );
+
+  if (!response.ok) {
+    throw new Error(`OpenFoodFacts-Fehler (HTTP ${response.status})`);
+  }
+
+  const data = await response.json();
+  const product = (data.products || []).find((entry) => {
+    const nutriments = entry?.nutriments || {};
+    return nutriments['energy-kcal_100g'] != null || nutriments['energy-kcal'] != null;
+  });
+
+  if (!product) {
+    throw new Error('Keine Nährwertdaten bei OpenFoodFacts gefunden.');
+  }
+
+  const nutriments = product.nutriments || {};
+  const values = parseNutritionReferenceValues({
+    kalorien: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'],
+    protein: nutriments['proteins_100g'] ?? nutriments.proteins,
+    fett: nutriments['fat_100g'] ?? nutriments.fat,
+    kohlenhydrate: nutriments['carbohydrates_100g'] ?? nutriments.carbohydrates,
+    zucker: nutriments['sugars_100g'] ?? nutriments.sugars,
+    ballaststoffe: nutriments['fiber_100g'] ?? nutriments.fiber,
+    salz: nutriments['salt_100g'] ?? nutriments.salt,
+  });
+
+  if (Object.keys(values).length === 0) {
+    throw new Error('Keine Nährwertdaten bei OpenFoodFacts gefunden.');
+  }
+
+  return {
+    productName: product.product_name || name,
+    values,
+  };
+}
+
 function NutritionReferenceTab({ currentUser }) {
   const canManage = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.MODERATOR;
+  const { rows: cachedRows, loading, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
   const [newValues, setNewValues] = useState({});
-
-  const loadRows = useCallback(async () => {
-    const snapshot = await getDocs(collection(db, 'nutritionReferences'));
-    const loaded = snapshot.docs
-      .map((entry) => {
-        const data = entry.data() || {};
-        return {
-          id: entry.id,
-          name: data.name || '',
-          ...parseNutritionReferenceValues(data),
-        };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
-    setRows(loaded);
-  }, []);
+  const [refreshingRowId, setRefreshingRowId] = useState(null);
+  const [lookupError, setLookupError] = useState('');
 
   useEffect(() => {
-    if (!canManage) {
-      setLoading(false);
-      return undefined;
-    }
-    const run = async () => {
-      try {
-        await loadRows();
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
-    return undefined;
-  }, [canManage, loadRows]);
+    setRows(cachedRows);
+  }, [cachedRows]);
 
   const updateCell = (id, field, value) => {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -79,7 +97,7 @@ function NutritionReferenceTab({ currentUser }) {
     if (row.id !== id) {
       await deleteDoc(doc(db, 'nutritionReferences', row.id));
     }
-    await loadRows();
+    await reload();
   };
 
   const addRow = async () => {
@@ -87,6 +105,9 @@ function NutritionReferenceTab({ currentUser }) {
     const id = normalizeNutritionReferenceId(name);
     if (!name || !id) {
       alert('Bitte einen gültigen Zutatennamen eingeben.');
+      return;
+    }
+    if (rows.some((row) => normalizeNutritionReferenceId(row.name || row.id) === id)) {
       return;
     }
     await setDoc(
@@ -102,12 +123,44 @@ function NutritionReferenceTab({ currentUser }) {
     );
     setNewName('');
     setNewValues({});
-    await loadRows();
+    await reload();
   };
 
   const removeRow = async (id) => {
     await deleteDoc(doc(db, 'nutritionReferences', id));
-    await loadRows();
+    await reload();
+  };
+
+  const refreshRowFromOpenFoodFacts = async (row) => {
+    const name = String(row.name || '').trim();
+    if (!name) {
+      setLookupError('Bitte einen gültigen Zutatennamen eingeben.');
+      return;
+    }
+
+    setLookupError('');
+    setRefreshingRowId(row.id);
+
+    try {
+      const { productName, values } = await loadNutritionReferenceFromOpenFoodFacts(name);
+      await setDoc(
+        doc(db, 'nutritionReferences', row.id),
+        {
+          name,
+          product: productName,
+          ...values,
+          source: 'openfoodfacts',
+          updatedAt: serverTimestamp(),
+          updatedBy: currentUser?.id || null,
+        },
+        { merge: false }
+      );
+      await reload();
+    } catch (error) {
+      setLookupError(error?.message || 'OpenFoodFacts-Abruf fehlgeschlagen.');
+    } finally {
+      setRefreshingRowId(null);
+    }
   };
 
   if (!canManage) {
@@ -125,6 +178,7 @@ function NutritionReferenceTab({ currentUser }) {
       <p className="section-description">
         Diese Werte werden bei der automatischen Nährwert-Berechnung pro 100 g gespeichert und können hier korrigiert werden.
       </p>
+      {lookupError && <p className="section-description">{lookupError}</p>}
 
       {loading ? (
         <p>Lade Nährwerte...</p>
@@ -167,6 +221,13 @@ function NutritionReferenceTab({ currentUser }) {
                   ))}
                   <td className="conversion-table-actions">
                     <button className="add-btn" onClick={() => saveRow(row)}>Speichern</button>
+                    <button
+                      className="add-btn"
+                      onClick={() => refreshRowFromOpenFoodFacts(row)}
+                      disabled={refreshingRowId === row.id}
+                    >
+                      {refreshingRowId === row.id ? '⏳' : '🔍 OpenFoodFacts'}
+                    </button>
                     <button className="remove-btn" onClick={() => removeRow(row.id)} title="Entfernen">×</button>
                   </td>
                 </tr>

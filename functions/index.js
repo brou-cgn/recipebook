@@ -1843,10 +1843,11 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
 
         const {amountG, name} = parsed;
         const referenceId = normalizeNutritionReferenceId(name);
+        let cachedSnapshot = null;
 
         try {
           if (referenceId) {
-            const cachedSnapshot = await admin.firestore()
+            cachedSnapshot = await admin.firestore()
                 .collection(NUTRITION_REFERENCE_COLLECTION)
                 .doc(referenceId)
                 .get();
@@ -1939,7 +1940,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             ingredientTotals[key] += (per100gValues[key] || 0) * scale;
           });
 
-          if (referenceId && Object.keys(per100gValues).length > 0) {
+          if (referenceId && cachedSnapshot && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
             await admin.firestore()
                 .collection(NUTRITION_REFERENCE_COLLECTION)
                 .doc(referenceId)
@@ -1950,8 +1951,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                       ...per100gValues,
                       source: 'openfoodfacts',
                       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    },
-                    {merge: true}
+                    }
                 );
           }
 

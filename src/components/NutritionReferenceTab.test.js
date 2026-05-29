@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NutritionReferenceTab from './NutritionReferenceTab';
+import { NutritionReferenceProvider } from '../contexts/NutritionReferenceContext';
 
 jest.mock('../firebase', () => ({
   db: {},
@@ -9,17 +10,27 @@ jest.mock('../firebase', () => ({
 const mockGetDocs = jest.fn();
 const mockSetDoc = jest.fn(() => Promise.resolve());
 const mockDeleteDoc = jest.fn(() => Promise.resolve());
+const mockFetch = jest.fn();
+const mockDoc = jest.fn((db, coll, id) => `${coll}/${id}`);
+const mockServerTimestamp = jest.fn(() => 'server-ts');
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => 'collection-ref'),
   getDocs: (...args) => mockGetDocs(...args),
-  doc: jest.fn((db, coll, id) => `${coll}/${id}`),
+  doc: (...args) => mockDoc(...args),
   setDoc: (...args) => mockSetDoc(...args),
   deleteDoc: (...args) => mockDeleteDoc(...args),
-  serverTimestamp: jest.fn(() => 'server-ts'),
+  serverTimestamp: (...args) => mockServerTimestamp(...args),
 }));
 
 describe('NutritionReferenceTab', () => {
+  const renderTab = (user, providerEnabled = true) =>
+    render(
+      <NutritionReferenceProvider enabled={providerEnabled}>
+        <NutritionReferenceTab currentUser={user} />
+      </NutritionReferenceProvider>
+    );
+
   beforeEach(() => {
     mockGetDocs.mockResolvedValue({
       docs: [
@@ -31,15 +42,24 @@ describe('NutritionReferenceTab', () => {
     });
     mockSetDoc.mockClear();
     mockDeleteDoc.mockClear();
+    mockDoc.mockClear();
+    mockServerTimestamp.mockClear();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
+    jest.spyOn(window, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    window.alert.mockRestore();
   });
 
   test('shows info message for unauthorized users', () => {
-    render(<NutritionReferenceTab currentUser={{ role: 'read' }} />);
+    renderTab({ role: 'read' }, false);
     expect(screen.getByText(/Nur Admins und Moderatoren/i)).toBeInTheDocument();
   });
 
   test('loads rows and allows adding a nutrition reference', async () => {
-    render(<NutritionReferenceTab currentUser={{ id: 'u1', role: 'moderator' }} />);
+    renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
 
@@ -49,5 +69,88 @@ describe('NutritionReferenceTab', () => {
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
     });
+  });
+
+  test('does not create duplicates for existing normalized ids', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Neue Zutat...'), { target: { value: '  Tómate ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).not.toHaveBeenCalled();
+    });
+    expect(window.alert).not.toHaveBeenCalled();
+  });
+
+  test('refreshes an existing row from OpenFoodFacts and overwrites the document', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        products: [
+          {
+            product_name: 'Tomatenmark',
+            nutriments: {
+              'energy-kcal_100g': 82,
+              proteins_100g: 4.3,
+              fat_100g: 0.5,
+              carbohydrates_100g: 18.9,
+              sugars_100g: 12.5,
+              fiber_100g: 4.1,
+              salt_100g: 0.2,
+            },
+          },
+        ],
+      }),
+    });
+
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://world.openfoodfacts.org/cgi/search.pl?search_terms=Tomate&action=process&json=1&page_size=5'
+      );
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+      expect(mockSetDoc.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          name: 'Tomate',
+          product: 'Tomatenmark',
+          kalorien: 82,
+          protein: 4.3,
+          fett: 0.5,
+          kohlenhydrate: 18.9,
+          zucker: 12.5,
+          ballaststoffe: 4.1,
+          salz: 0.2,
+          source: 'openfoodfacts',
+          updatedBy: 'u1',
+        })
+      );
+      expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: false });
+    });
+  });
+
+  test('shows an error message when the OpenFoodFacts refresh fails', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        products: [],
+      }),
+    });
+
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
+
+    expect(await screen.findByText('Keine Nährwertdaten bei OpenFoodFacts gefunden.')).toBeInTheDocument();
+    expect(mockSetDoc).not.toHaveBeenCalled();
   });
 });
