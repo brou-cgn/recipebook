@@ -1746,6 +1746,7 @@ function App() {
           currentUser={currentUser}
           recipes={recipes}
           onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)}
+          onSelectRecipe={handleSelectRecipe}
         />
       ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage

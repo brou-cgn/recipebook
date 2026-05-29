@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
 
 jest.mock('./NutritionModal', () => function MockNutritionModal({ recipe, onClose }) {
@@ -557,6 +557,60 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     expect(await screen.findByTestId('nutrition-modal-mock')).toBeInTheDocument();
     expect(screen.getByText('Nährwerte Mock Gemüsepfanne')).toBeInTheDocument();
+  });
+
+  test('shows warning symbol only for recipes with non-included ingredients', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Mit Hinweis',
+            naehrwerte: {
+              calcPending: false,
+              calcCompletedAt: 1720000000000,
+              calcNotIncluded: [{ ingredient: '1 Prise X', error: 'Nicht gefunden' }],
+            },
+          },
+          {
+            id: 'r2',
+            title: 'Ohne Hinweis',
+            naehrwerte: { calcPending: false, calcCompletedAt: 1710000000000, calcNotIncluded: [] },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    const withWarningRow = screen.getByText('Mit Hinweis').closest('tr');
+    const withoutWarningRow = screen.getByText('Ohne Hinweis').closest('tr');
+
+    expect(within(withWarningRow).getByLabelText('Enthält nicht einkalkulierte Zutaten')).toBeInTheDocument();
+    expect(within(withoutWarningRow).queryByLabelText('Enthält nicht einkalkulierte Zutaten')).not.toBeInTheDocument();
+  });
+
+  test('opens recipe detail when recipe name is clicked', async () => {
+    const onSelectRecipe = jest.fn();
+    const recipe = { id: 'r1', title: 'Kichererbsensalat', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } };
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[recipe]}
+        onUpdateRecipe={jest.fn()}
+        onSelectRecipe={onSelectRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Kichererbsensalat' }));
+
+    expect(onSelectRecipe).toHaveBeenCalledWith(recipe);
   });
 });
 

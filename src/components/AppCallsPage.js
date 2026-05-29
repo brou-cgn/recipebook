@@ -72,7 +72,7 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
   );
 }
 
-function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
+function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -201,6 +201,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
   const selectedNutritionRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === selectedNutritionRecipeId) || null,
     [recipes, selectedNutritionRecipeId]
+  );
+
+  const hasNotIncludedNutritionIngredients = (recipe) => (
+    Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
 
   const formatCalcDuration = useCallback((calcPendingAt) => {
@@ -800,7 +804,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     <tbody>
                       {nutritionListData.pending.map(recipe => (
                         <tr key={recipe.id}>
-                          <td>{recipe.title || recipe.id}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="app-calls-recipe-link-btn"
+                              onClick={() => onSelectRecipe?.(recipe)}
+                            >
+                              {recipe.title || recipe.id}
+                            </button>
+                          </td>
                           <td className="app-calls-calc-duration">{formatCalcDuration(recipe.naehrwerte?.calcPendingAt) || '—'}</td>
                           <td>
                             <button
@@ -839,13 +851,31 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe }) {
                     <tbody>
                       {nutritionListData.completed.map(recipe => (
                         <tr key={recipe.id}>
-                          <td>{recipe.title || recipe.id}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="app-calls-recipe-link-btn"
+                              onClick={() => onSelectRecipe?.(recipe)}
+                            >
+                              {recipe.title || recipe.id}
+                            </button>
+                          </td>
                           <td className="app-calls-calc-duration">
                             {recipe.naehrwerte?.calcCompletedAt
                               ? new Date(recipe.naehrwerte.calcCompletedAt).toLocaleString('de-DE')
                               : (recipe.naehrwerte?.calcPendingAt ? new Date(recipe.naehrwerte.calcPendingAt).toLocaleString('de-DE') : '—')}
                           </td>
                           <td>
+                            {hasNotIncludedNutritionIngredients(recipe) && (
+                              <span
+                                className="app-calls-warning-icon"
+                                title="Enthält nicht einkalkulierte Zutaten"
+                                role="img"
+                                aria-label="Enthält nicht einkalkulierte Zutaten"
+                              >
+                                !
+                              </span>
+                            )}
                             <button
                               className="app-calls-share-btn"
                               onClick={() => setSelectedNutritionRecipeId(recipe.id)}

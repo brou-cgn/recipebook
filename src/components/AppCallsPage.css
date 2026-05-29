@@ -176,6 +176,36 @@
   font-size: 12px;
 }
 
+.app-calls-recipe-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.app-calls-recipe-link-btn:hover {
+  color: #d32f2f;
+}
+
+.app-calls-warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #d32f2f;
+  vertical-align: middle;
+}
+
 /* Mobile info button for E-Mail / Art columns */
 .app-calls-col-mobile {
   display: none;
