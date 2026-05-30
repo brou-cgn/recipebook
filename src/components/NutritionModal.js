@@ -348,7 +348,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       const ingredient = ingredients[i];
 
-      // Skip accepted ingredients – but NOT ai-estimated ones (re-check against OpenFoodFacts)
+      // Skip accepted ingredients – but NOT AI-estimated ones (re-check against OpenFoodFacts)
       if (acceptedIngredients.has(ingredient) && !aiEstimatedIngredients.has(ingredient)) {
         setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
         foundCount++;

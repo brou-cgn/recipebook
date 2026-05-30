@@ -1893,7 +1893,10 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             try {
               geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed);
             } catch (estimateError) {
-              console.warn(`Gemini estimation failed for "${ingredientStr}":`, estimateError.message);
+              console.warn(
+                  `Gemini estimation failed for "${ingredientStr}":`,
+                  estimateError?.message || estimateError,
+              );
             }
 
             if (!geminiEstimate) {

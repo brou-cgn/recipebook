@@ -101,7 +101,9 @@ Return ONLY a JSON object (no markdown, no explanation):
 }
 Ingredient: ${canonicalName}
 Original string: ${ingredientStr}
-Use typical/average values for this food. If completely unknown, return null.`;
+Use typical/average values for this food.
+All values must be non-negative numbers.
+If completely unknown, return null.`;
 }
 
 /**
