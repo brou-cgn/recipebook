@@ -244,7 +244,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
       new GoogleGenerativeAI(apiKey).getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0,
@@ -290,7 +290,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     const model = options.model || (options.createModel ?
       options.createModel(apiKey) :
       new GoogleGenerativeAI(apiKey).getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0,

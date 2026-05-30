@@ -126,6 +126,33 @@ test('normalizeIngredientWithGemini returns null without an API key', async () =
   assert.equal(result, null);
 });
 
+test('normalizeIngredientWithGemini uses gemini-2.5-flash by default', async () => {
+  let modelName;
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: class FakeGoogleGenerativeAI {
+      getGenerativeModel(config) {
+        modelName = config.model;
+        return {
+          generateContent: async () => ({
+            response: {
+              text: async () => JSON.stringify({
+                amountInGrams: 1,
+                canonicalNameDE: 'Salz',
+                canonicalNameEN: 'salt',
+              }),
+            },
+          }),
+        };
+      }
+    },
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  await utils.normalizeIngredientWithGemini('1 Prise Salz');
+
+  assert.equal(modelName, 'gemini-2.5-flash');
+});
+
 test('normalizeIngredientWithGemini handles typical German ingredient strings', async () => {
   const responses = new Map([
     ['500 g Mehl', {
@@ -290,6 +317,41 @@ test('estimateNutritionWithGemini returns null when Gemini returns null', async 
   });
 
   assert.equal(result, null);
+});
+
+test('estimateNutritionWithGemini uses gemini-2.5-flash by default', async () => {
+  let modelName;
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: class FakeGoogleGenerativeAI {
+      getGenerativeModel(config) {
+        modelName = config.model;
+        return {
+          generateContent: async () => ({
+            response: {
+              text: async () => JSON.stringify({
+                kalorien: 0,
+                protein: 0,
+                fett: 0,
+                kohlenhydrate: 0,
+                zucker: 0,
+                ballaststoffe: 0,
+                salz: 0,
+              }),
+            },
+          }),
+        };
+      }
+    },
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  await utils.estimateNutritionWithGemini('1 Prise Salz', {
+    amountG: 1,
+    name: 'Salz',
+    searchName: 'salt',
+  });
+
+  assert.equal(modelName, 'gemini-2.5-flash');
 });
 
 test('estimateNutritionWithGemini maps null nutrient fields to zero', async () => {
