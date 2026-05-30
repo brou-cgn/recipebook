@@ -1861,11 +1861,9 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                 searchError = 'Nicht gefunden';
                 continue;
               }
-              return {
-                found: false,
-                detail: {ingredient: ingredientStr, name, error: `HTTP ${response.status}`},
-                totals: ingredientTotals,
-              };
+              searchError = `HTTP ${response.status}`;
+              console.warn(`OpenFoodFacts HTTP ${response.status} for "${searchTerm}", trying next search term`);
+              continue;
             }
 
             const data = await response.json();
@@ -1891,7 +1889,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           if (!product) {
             let geminiEstimate = null;
             try {
-              geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed);
+              geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
             } catch (estimateError) {
               console.warn(
                   `Gemini estimation failed for "${ingredientStr}":`,
@@ -1971,11 +1969,43 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         } catch (err) {
           const isNetworkError = isOpenFoodFactsNetworkError(err);
           const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
+          console.error(`OpenFoodFacts error for "${name}":`, err.message);
+
+          if (parsed) {
+            try {
+              const geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
+              if (geminiEstimate) {
+                const scale = parsed.amountG / 100;
+                NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+                  ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
+                });
+
+                return {
+                  found: true,
+                  aiEstimated: true,
+                  detail: {
+                    ingredient: ingredientStr,
+                    name,
+                    amountG: parsed.amountG,
+                    searchTerm: parsed.searchName || name,
+                    aiEstimated: true,
+                  },
+                  totals: ingredientTotals,
+                };
+              }
+            } catch (estimateError) {
+              console.warn(`Gemini estimation also failed for "${ingredientStr}":`, estimateError?.message);
+            }
+          }
+
           const errorType = isNetworkError ? 'Netzwerkfehler' : (isTimeout ? 'Timeout' : 'API-Fehler');
-          console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
           return {
             found: false,
-            detail: {ingredient: ingredientStr, name, error: isTimeout ? 'Timeout bei OpenFoodFacts' : err.message},
+            detail: {
+              ingredient: ingredientStr,
+              name,
+              error: isTimeout ? 'Timeout bei OpenFoodFacts' : (err.message || errorType),
+            },
             totals: ingredientTotals,
           };
         }
