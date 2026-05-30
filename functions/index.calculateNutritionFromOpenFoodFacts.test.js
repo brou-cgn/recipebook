@@ -274,3 +274,58 @@ test('uses extended timeout for Gemini fallback after empty OpenFoodFacts result
 
   global.fetch = originalFetch;
 });
+
+test('cleans parenthetical text from OpenFoodFacts search terms', async () => {
+  const originalFetch = global.fetch;
+  const fetchCalls = [];
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 15, name: 'Currypulver (nach Geschmack mehr)'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 15, name: 'Currypulver (nach Geschmack mehr)'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  loadWrappedFunction();
+
+  global.fetch = async (url) => {
+    fetchCalls.push(url);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        products: [
+          {
+            product_name: 'Currypulver',
+            nutriments: {
+              'energy-kcal_100g': 325,
+              'proteins_100g': 14,
+              'fat_100g': 14,
+              'carbohydrates_100g': 58,
+              'sugars_100g': 2,
+              'fiber_100g': 33,
+              'salt_100g': 0.1,
+            },
+          },
+        ],
+      }),
+    };
+  };
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['1 EL Currypulver (nach Geschmack mehr)'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.details[0].found, true);
+  assert.equal(response.details[0].searchTerm, 'Currypulver');
+  assert.equal(fetchCalls.some((url) => url.includes('search_terms=Currypulver')), true);
+  assert.equal(
+      fetchCalls.some((url) => url.includes('search_terms=Currypulver%20%28nach%20Geschmack%20mehr%29')),
+      false,
+  );
+
+  global.fetch = originalFetch;
+});

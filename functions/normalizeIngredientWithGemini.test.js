@@ -328,3 +328,60 @@ test('estimateNutritionWithGemini maps null nutrient fields to zero', async () =
     name: 'Apfelessig',
   });
 });
+
+test('estimateNutritionWithGemini retries once after timeout and reuses the same model', async () => {
+  let createModelCalls = 0;
+  let generateContentCalls = 0;
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: class {},
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('1 TL Zwiebelpulver', {
+    amountG: 5,
+    name: 'Zwiebelpulver',
+    searchName: 'onion powder',
+  }, {
+    createModel: () => {
+      createModelCalls++;
+      return {
+        generateContent: async () => {
+          generateContentCalls++;
+          if (generateContentCalls === 1) {
+            throw new Error('Gemini normalization timeout');
+          }
+          return {
+            response: {
+              text: async () => JSON.stringify({
+                kalorien: 341,
+                protein: 10,
+                fett: 1,
+                kohlenhydrate: 79,
+                zucker: 38,
+                ballaststoffe: 15,
+                salz: 0.2,
+              }),
+            },
+          };
+        },
+      };
+    },
+    retryDelayMs: 0,
+  });
+
+  assert.equal(createModelCalls, 1);
+  assert.equal(generateContentCalls, 2);
+  assert.deepEqual(result, {
+    per100g: {
+      kalorien: 341,
+      protein: 10,
+      fett: 1,
+      kohlenhydrate: 79,
+      zucker: 38,
+      ballaststoffe: 15,
+      salz: 0.2,
+    },
+    amountG: 5,
+    name: 'Zwiebelpulver',
+  });
+});

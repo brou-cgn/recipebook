@@ -1844,9 +1844,11 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           let usedSearchTerm = null;
 
           for (const searchTerm of searchTerms) {
+            const cleanSearchTerm = searchTerm.replace(/\s*\([^)]*\)/g, '').trim();
+            const termToSearch = cleanSearchTerm || searchTerm;
             const searchUrl =
               `https://world.openfoodfacts.org/cgi/search.pl` +
-              `?search_terms=${encodeURIComponent(searchTerm)}` +
+              `?search_terms=${encodeURIComponent(termToSearch)}` +
               `&json=1&page_size=3` +
               `&fields=product_name,nutriments`;
 
@@ -1862,7 +1864,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                 continue;
               }
               searchError = `HTTP ${response.status}`;
-              console.warn(`OpenFoodFacts HTTP ${response.status} for "${searchTerm}", trying next search term`);
+              console.warn(`OpenFoodFacts HTTP ${response.status} for "${termToSearch}", trying next search term`);
               continue;
             }
 
@@ -1878,11 +1880,11 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             );
 
             if (product) {
-              usedSearchTerm = searchTerm;
+              usedSearchTerm = termToSearch;
               break;
             }
 
-            console.warn(`No energy data found for "${searchTerm}" in OpenFoodFacts results`);
+            console.warn(`No energy data found for "${termToSearch}" in OpenFoodFacts results`);
             searchError = 'Keine Nährwertdaten verfügbar';
           }
 
