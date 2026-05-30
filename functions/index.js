@@ -1704,7 +1704,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
 exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
       maxInstances: 5,
-      timeoutSeconds: 360,
+      timeoutSeconds: 540,
       secrets: [geminiApiKey],
     },
     async (request) => {
@@ -1787,7 +1787,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
 
         let parsed = null;
         try {
-          parsed = await normalizeIngredientWithGemini(ingredientStr);
+          parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000}); // 5s – Regex-Fallback ist ausreichend
         } catch (geminiError) {
           console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
         }
@@ -1856,7 +1856,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
               headers: {
                 'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
               },
-            });
+            }, 1); // Nur 1 Versuch, kein Retry – bei Timeout sofort zum Gemini-Fallback
 
             if (!response.ok) {
               if (response.status === 404) {
