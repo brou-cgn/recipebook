@@ -7,6 +7,7 @@ import {
   NUTRITION_REFERENCE_FIELDS,
   normalizeNutritionReferenceId,
   parseNutritionReferenceValues,
+  parseNutritionReferenceFallbackWeight,
 } from '../utils/nutritionReferenceUtils';
 
 const NUTRITION_FIELD_LABELS = {
@@ -67,6 +68,7 @@ function NutritionReferenceTab({ currentUser }) {
   const [rows, setRows] = useState([]);
   const [newName, setNewName] = useState('');
   const [newValues, setNewValues] = useState({});
+  const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
   const [refreshingRowId, setRefreshingRowId] = useState(null);
   const [lookupError, setLookupError] = useState('');
 
@@ -93,6 +95,10 @@ function NutritionReferenceTab({ currentUser }) {
       updatedBy: currentUser?.id || null,
       source: 'manual',
     };
+    const fallbackWeight = parseNutritionReferenceFallbackWeight(row);
+    if (fallbackWeight != null) {
+      payload.defaultAmountG = fallbackWeight;
+    }
     await setDoc(doc(db, 'nutritionReferences', id), payload, { merge: true });
     if (row.id !== id) {
       await deleteDoc(doc(db, 'nutritionReferences', row.id));
@@ -110,19 +116,25 @@ function NutritionReferenceTab({ currentUser }) {
     if (rows.some((row) => normalizeNutritionReferenceId(row.name || row.id) === id)) {
       return;
     }
+    const addPayload = {
+      name,
+      ...parseNutritionReferenceValues(newValues),
+      updatedAt: serverTimestamp(),
+      updatedBy: currentUser?.id || null,
+      source: 'manual',
+    };
+    const newFallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: newDefaultAmountG });
+    if (newFallbackWeight != null) {
+      addPayload.defaultAmountG = newFallbackWeight;
+    }
     await setDoc(
       doc(db, 'nutritionReferences', id),
-      {
-        name,
-        ...parseNutritionReferenceValues(newValues),
-        updatedAt: serverTimestamp(),
-        updatedBy: currentUser?.id || null,
-        source: 'manual',
-      },
+      addPayload,
       { merge: true }
     );
     setNewName('');
     setNewValues({});
+    setNewDefaultAmountG('');
     await reload();
   };
 
@@ -188,6 +200,7 @@ function NutritionReferenceTab({ currentUser }) {
             <thead>
               <tr>
                 <th>Zutat</th>
+                <th>Fallbackgew. (g)</th>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
                   <th key={field}>{NUTRITION_FIELD_LABELS[field]}</th>
                 ))}
@@ -204,6 +217,17 @@ function NutritionReferenceTab({ currentUser }) {
                       onChange={(e) => updateCell(row.id, 'name', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`Zutat ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={row.defaultAmountG ?? ''}
+                      onChange={(e) => updateCell(row.id, 'defaultAmountG', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Fallbackgewicht ${row.id}`}
                     />
                   </td>
                   {NUTRITION_REFERENCE_FIELDS.map((field) => (
@@ -240,6 +264,17 @@ function NutritionReferenceTab({ currentUser }) {
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Neue Zutat..."
                     className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={newDefaultAmountG}
+                    onChange={(e) => setNewDefaultAmountG(e.target.value)}
+                    className="conversion-table-input"
+                    placeholder="z.B. 2"
                   />
                 </td>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (

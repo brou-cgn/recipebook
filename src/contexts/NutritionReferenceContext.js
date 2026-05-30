@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { parseNutritionReferenceValues } from '../utils/nutritionReferenceUtils';
+import { parseNutritionReferenceValues, parseNutritionReferenceFallbackWeight } from '../utils/nutritionReferenceUtils';
 
 const NutritionReferenceContext = createContext(null);
 
@@ -9,9 +9,11 @@ function mapNutritionReferenceRows(snapshot) {
   return snapshot.docs
     .map((entry) => {
       const data = entry.data() || {};
+      const fallbackWeight = parseNutritionReferenceFallbackWeight(data);
       return {
         id: entry.id,
         name: data.name || '',
+        ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
         ...parseNutritionReferenceValues(data),
       };
     })

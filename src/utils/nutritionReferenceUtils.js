@@ -32,3 +32,15 @@ export function parseNutritionReferenceValues(input = {}) {
     return acc;
   }, {});
 }
+
+export function parseNutritionReferenceFallbackWeight(input = {}) {
+  const raw = input.defaultAmountG;
+  if (raw === '' || raw == null) {
+    return null;
+  }
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return numeric;
+  }
+  return null;
+}

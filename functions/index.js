@@ -1817,9 +1817,14 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                 .doc(referenceId)
                 .get();
             if (cachedSnapshot.exists) {
-              const cachedValues = parseNutritionReferenceValues(cachedSnapshot.data());
+              const cachedData = cachedSnapshot.data();
+              const fallbackAmountG = cachedData.defaultAmountG;
+              if (typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
+                parsed = {...parsed, amountG: fallbackAmountG};
+              }
+              const cachedValues = parseNutritionReferenceValues(cachedData);
               if (Object.keys(cachedValues).length > 0) {
-                const scale = amountG / 100;
+                const scale = parsed.amountG / 100;
                 NUTRITION_REFERENCE_FIELDS.forEach((key) => {
                   ingredientTotals[key] += (cachedValues[key] || 0) * scale;
                 });
@@ -1829,7 +1834,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                     ingredient: ingredientStr,
                     name,
                     product: cachedSnapshot.data().product || cachedSnapshot.data().name || name,
-                    amountG,
+                    amountG: parsed.amountG,
                     searchTerm: parsed.searchName || name,
                   },
                   totals: ingredientTotals,
@@ -1940,7 +1945,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             ballaststoffe: n['fiber_100g'] ?? n.fiber,
             salz: n['salt_100g'] ?? n.salt,
           });
-          const scale = amountG / 100;
+          const scale = parsed.amountG / 100;
 
           NUTRITION_REFERENCE_FIELDS.forEach((key) => {
             ingredientTotals[key] += (per100gValues[key] || 0) * scale;
@@ -1967,7 +1972,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
               ingredient: ingredientStr,
               name,
               product: product.product_name || name,
-              amountG,
+              amountG: parsed.amountG,
               searchTerm: usedSearchTerm || parsed.searchName || name,
             },
             totals: ingredientTotals,
