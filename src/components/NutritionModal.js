@@ -40,16 +40,19 @@ function clearStoredCalcResult(recipeId) {
 export function getRecipeCalcResult(recipe) {
   const fc = recipe?.naehrwerte?.calcFoundCount;
   const tc = recipe?.naehrwerte?.calcTotalCount;
+  const ingredientDetails = recipe?.naehrwerte?.calcIngredientDetails;
   if (fc == null || tc == null) {
-    return null;
+    if (!Array.isArray(ingredientDetails)) {
+      return null;
+    }
   }
   return {
-    foundCount: fc,
-    totalCount: tc,
+    foundCount: fc ?? 0,
+    totalCount: tc ?? ingredientDetails?.length ?? 0,
     notIncluded: recipe?.naehrwerte?.calcNotIncluded || [],
     ...(recipe?.naehrwerte?.calcReformulations && { calcReformulations: recipe.naehrwerte.calcReformulations }),
     ...(recipe?.naehrwerte?.calcAcceptedIngredients && { acceptedIngredients: recipe.naehrwerte.calcAcceptedIngredients }),
-    ...(recipe?.naehrwerte?.calcIngredientDetails && { ingredientDetails: recipe.naehrwerte.calcIngredientDetails }),
+    ...(ingredientDetails && { ingredientDetails }),
   };
 }
 
@@ -79,12 +82,17 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     } else if (notIncludedItem) {
       status = 'Nicht enthalten';
     }
+    const hasNaehrwerte = Boolean(ingredientDetail?.naehrwerte);
     return {
       ingredient,
       source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
       status,
       detail: notIncludedItem?.error ||
-        (reformulation ? `Umformulierung: ${reformulation}` : (searchTerm ? `Suchbegriff: ${searchTerm}` : '—')),
+        (reformulation
+          ? `Umformulierung: ${reformulation}`
+          : (searchTerm
+            ? `Suchbegriff: ${searchTerm}`
+            : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—'))),
       naehrwerte: ingredientDetail?.naehrwerte || null,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,

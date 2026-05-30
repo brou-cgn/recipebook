@@ -5,8 +5,22 @@ jest.mock('../firebase', () => ({
 }));
 
 describe('getRecipeCalcResult', () => {
-  it('returns null when calc counters are missing', () => {
+  it('returns null when calc counters and ingredient details are missing', () => {
     expect(getRecipeCalcResult({ naehrwerte: { calcNotIncluded: [{ ingredient: 'x' }] } })).toBeNull();
+  });
+
+  it('returns fallback payload when calc counters are missing but ingredient details exist', () => {
+    const details = [
+      { ingredient: 'Linsen', naehrwerte: { kalorien: 220 } },
+      { ingredient: 'Salz', naehrwerte: { kalorien: 0 } },
+    ];
+    expect(getRecipeCalcResult({ naehrwerte: { calcIngredientDetails: details } })).toEqual(
+      expect.objectContaining({
+        foundCount: 0,
+        totalCount: 2,
+        ingredientDetails: details,
+      })
+    );
   });
 
   it('returns persisted calc payload including reformulations and accepted ingredients', () => {
@@ -155,6 +169,22 @@ describe('getRecipeCalcResult', () => {
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: 'Kartoffeln',
         naehrwerte: ingredientNaehrwerte,
+      }));
+    });
+
+    it('shows recalculation hint for calculated rows without naehrwerte', () => {
+      const recipe = {
+        ingredients: ['Kartoffeln'],
+        naehrwerte: {},
+      };
+
+      const rows = buildNutritionCompositionRows(recipe, { notIncluded: [], ingredientDetails: [] }, {}, []);
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: 'Kartoffeln',
+        status: 'Berechnet',
+        detail: 'Neu berechnen',
+        naehrwerte: null,
       }));
     });
 
