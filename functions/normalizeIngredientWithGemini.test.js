@@ -96,6 +96,17 @@ test('normalizeIngredientWithGemini falls back to regex parsing on invalid JSON'
   });
 });
 
+test('parseIngredientForNutrition removes unknown unit token from ingredient name', () => {
+  const utils = createNutritionNormalizationUtils();
+
+  const result = utils.parseIngredientForNutrition('1 Schuss Apfelessig');
+
+  assert.deepEqual(result, {
+    amountG: 100,
+    name: 'Apfelessig',
+  });
+});
+
 test('normalizeIngredientWithGemini returns null without an API key', async () => {
   const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
     amount: 1,
@@ -279,4 +290,41 @@ test('estimateNutritionWithGemini returns null when Gemini returns null', async 
   });
 
   assert.equal(result, null);
+});
+
+test('estimateNutritionWithGemini maps null nutrient fields to zero', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 21,
+    protein: null,
+    fett: 0,
+    kohlenhydrate: 0.9,
+    zucker: null,
+    ballaststoffe: null,
+    salz: 0,
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('1 Schuss Apfelessig', {
+    amountG: 100,
+    name: 'Apfelessig',
+    searchName: 'apple cider vinegar',
+  });
+
+  assert.deepEqual(result, {
+    per100g: {
+      kalorien: 21,
+      protein: 0,
+      fett: 0,
+      kohlenhydrate: 0.9,
+      zucker: 0,
+      ballaststoffe: 0,
+      salz: 0,
+    },
+    amountG: 100,
+    name: 'Apfelessig',
+  });
 });

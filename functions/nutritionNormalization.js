@@ -42,8 +42,7 @@ function parseIngredientForNutrition(ingredientStr) {
       const amountG = isNaN(amount) ? 100 : amount * UNIT_GRAMS[potentialUnit];
       return {amountG: Math.max(amountG, 1), name: rest};
     } else if (potentialUnit) {
-      const name = `${potentialUnit} ${rest}`.trim();
-      return {amountG: 100, name};
+      return {amountG: 100, name: rest};
     } else {
       const amountG = isNaN(amount) ? 60 : amount * 60;
       return {amountG: Math.max(amountG, 10), name: rest};
@@ -190,10 +189,7 @@ function normalizeGeminiNutritionEstimate(data) {
 
   for (const field of fields) {
     const normalized = normalizeNonNegativeNumber(data?.[field]);
-    if (normalized == null) {
-      return null;
-    }
-    per100g[field] = normalized;
+    per100g[field] = normalized ?? 0;
   }
 
   return per100g;
