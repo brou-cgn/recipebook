@@ -17,6 +17,7 @@ const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 const {
   parseIngredientForNutrition,
   normalizeIngredientWithGemini,
+  estimateNutritionWithGemini,
 } = createNutritionNormalizationUtils({GoogleGenerativeAI});
 
 // Initialize Firebase Admin
@@ -1825,6 +1826,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
                     name,
                     product: cachedSnapshot.data().product || cachedSnapshot.data().name || name,
                     amountG,
+                    searchTerm: parsed.searchName || name,
                   },
                   totals: ingredientTotals,
                 };
@@ -1839,6 +1841,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           )];
           let product = null;
           let searchError = 'Nicht gefunden';
+          let usedSearchTerm = null;
 
           for (const searchTerm of searchTerms) {
             const searchUrl =
@@ -1877,6 +1880,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             );
 
             if (product) {
+              usedSearchTerm = searchTerm;
               break;
             }
 
@@ -1885,9 +1889,39 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           }
 
           if (!product) {
+            let geminiEstimate = null;
+            try {
+              geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed);
+            } catch (estimateError) {
+              console.warn(
+                  `Gemini estimation failed for "${ingredientStr}":`,
+                  estimateError?.message || estimateError,
+              );
+            }
+
+            if (!geminiEstimate) {
+              return {
+                found: false,
+                detail: {ingredient: ingredientStr, name, searchTerm: usedSearchTerm, error: searchError},
+                totals: ingredientTotals,
+              };
+            }
+
+            const scale = parsed.amountG / 100;
+            NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+              ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
+            });
+
             return {
-              found: false,
-              detail: {ingredient: ingredientStr, name, error: searchError},
+              found: true,
+              aiEstimated: true,
+              detail: {
+                ingredient: ingredientStr,
+                name,
+                amountG: parsed.amountG,
+                searchTerm: usedSearchTerm || parsed.searchName || name,
+                aiEstimated: true,
+              },
               totals: ingredientTotals,
             };
           }
@@ -1930,6 +1964,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
               name,
               product: product.product_name || name,
               amountG,
+              searchTerm: usedSearchTerm || parsed.searchName || name,
             },
             totals: ingredientTotals,
           };

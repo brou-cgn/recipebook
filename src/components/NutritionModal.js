@@ -65,12 +65,14 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     : new Set(acceptedIngredientsInput || []);
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
   const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
-  const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d.naehrwerte]));
+  const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d]));
 
   return ingredientTexts.map((ingredient) => {
     const link = decodeRecipeLink(ingredient);
     const notIncludedItem = notIncludedByIngredient.get(ingredient);
     const reformulation = reformulationMap?.[ingredient]?.text || notIncludedItem?.reformulation || null;
+    const ingredientDetail = detailsByIngredient.get(ingredient);
+    const searchTerm = ingredientDetail?.searchTerm || null;
     let status = 'Berechnet';
     if (acceptedIngredients.has(ingredient)) {
       status = 'Akzeptiert';
@@ -81,8 +83,11 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
       ingredient,
       source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
       status,
-      detail: notIncludedItem?.error || (reformulation ? `Umformulierung: ${reformulation}` : '—'),
-      naehrwerte: detailsByIngredient.get(ingredient) || null,
+      detail: notIncludedItem?.error ||
+        (reformulation ? `Umformulierung: ${reformulation}` : (searchTerm ? `Suchbegriff: ${searchTerm}` : '—')),
+      naehrwerte: ingredientDetail?.naehrwerte || null,
+      searchTerm,
+      aiEstimated: ingredientDetail?.aiEstimated || false,
     };
   });
 }
@@ -329,6 +334,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     const notIncluded = [];
     const successfulReformulations = {};
     const ingredientDetails = [];
+    const aiEstimatedIngredients = new Set(
+      (autoCalcResult?.ingredientDetails || [])
+        .filter(d => d.aiEstimated)
+        .map(d => d.ingredient)
+    );
     let foundCount = 0;
 
     // Process regular ingredients via OpenFoodFacts
@@ -338,18 +348,17 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       const ingredient = ingredients[i];
 
-      // Skip accepted ingredients – count them as found without an API call
-      if (acceptedIngredients.has(ingredient)) {
+      // Skip accepted ingredients – but NOT AI-estimated ones (re-check against OpenFoodFacts)
+      if (acceptedIngredients.has(ingredient) && !aiEstimatedIngredients.has(ingredient)) {
         setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
         foundCount++;
         continue;
       }
 
-      const effectiveIngredient = reformulations[ingredient]?.text || ingredient;
-      setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: effectiveIngredient });
+      setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
 
       try {
-        const result = await calculateNutrition({ ingredients: [effectiveIngredient], portionen: 1 });
+        const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
         const { naehrwerte: n, details } = result.data;
         const detail = details && details[0];
         if (detail && detail.found) {
@@ -357,7 +366,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             totals[key] += n[key] || 0;
           });
           foundCount++;
-          ingredientDetails.push({ ingredient, naehrwerte: n });
+          ingredientDetails.push({
+            ingredient,
+            naehrwerte: n,
+            searchTerm: detail.searchTerm || null,
+            aiEstimated: detail.aiEstimated || false,
+          });
           if (reformulations[ingredient]) {
             successfulReformulations[ingredient] = reformulations[ingredient];
           }
@@ -411,7 +425,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           linkNaehrwerte[key] = val;
           totals[key] += val;
         });
-        ingredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte });
+        ingredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte, searchTerm: null, aiEstimated: false });
         foundCount++;
       } else {
         notIncluded.push({
@@ -536,7 +550,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         if (detail && detail.found) {
           Object.keys(newTotals).forEach(key => { newTotals[key] += n[key] || 0; });
           newFoundCount++;
-          newIngredientDetails.push({ ingredient, naehrwerte: n });
+          newIngredientDetails.push({
+            ingredient,
+            naehrwerte: n,
+            searchTerm: detail.searchTerm || null,
+            aiEstimated: detail.aiEstimated || false,
+          });
           if (reformulations[ingredient]) {
             newSuccessfulReformulations[ingredient] = reformulations[ingredient];
           }
@@ -582,7 +601,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           linkNaehrwerte[key] = val;
           newTotals[key] += val;
         });
-        newIngredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte });
+        newIngredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte, searchTerm: null, aiEstimated: false });
         newFoundCount++;
       } else {
         stillNotIncluded.push({
@@ -725,9 +744,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                     </thead>
                     <tbody>
                       {compositionRows.map((row, index) => (
-                        <tr key={`${row.ingredient}-${index}`}>
-                          <td>{row.ingredient}</td>
-                          <td>{row.source}</td>
+                        <tr
+                         key={`${row.ingredient}-${index}`}
+                         className={row.aiEstimated ? 'nutrition-composition-row--ai-estimated' : ''}
+                        >
+                         <td>{row.ingredient}</td>
+                         <td>
+                           {row.source}
+                           {row.aiEstimated && <span className="nutrition-ai-estimated-badge"> 🤖 KI-Schätzung</span>}
+                         </td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kalorien', 0)}</td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'protein')}</td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'fett')}</td>
@@ -895,6 +920,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                   {autoCalcResult.foundCount < autoCalcResult.totalCount &&
                     ' Fehlende Werte bitte manuell ergänzen.'}
                 </p>
+                {(() => {
+                  const aiEstimatedCount = (autoCalcResult.ingredientDetails || []).filter(item => item.aiEstimated).length;
+                  if (aiEstimatedCount <= 0) return null;
+                  return (
+                    <p className="nutrition-autocalc-info nutrition-autocalc-info-ai">
+                      ℹ️ Für {aiEstimatedCount} Zutaten wurden Nährwerte durch KI geschätzt. Diese werden bei der nächsten Berechnung erneut bei OpenFoodFacts abgefragt.
+                    </p>
+                  );
+                })()}
                 {autoCalcResult.notIncluded && autoCalcResult.notIncluded.length > 0 && (
                   <div className="nutrition-not-included">
                     <p className="nutrition-not-included-title">Nicht einkalkulierte Zutaten:</p>
