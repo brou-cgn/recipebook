@@ -79,6 +79,32 @@ Rules:
 }
 
 /**
+ * @param {string} ingredientStr
+ * @param {object} parsed
+ * @param {string} parsed.name
+ * @param {string} [parsed.searchName]
+ * @return {string}
+ */
+function buildNutritionEstimationPrompt(ingredientStr, parsed) {
+  const canonicalName =
+    normalizeName(parsed?.searchName) || normalizeName(parsed?.name) || ingredientStr;
+  return `You are a food nutrition expert. Estimate the nutritional values per 100g for the following ingredient.
+Return ONLY a JSON object (no markdown, no explanation):
+{
+  "kalorien": <number - kcal per 100g>,
+  "protein": <number - grams per 100g>,
+  "fett": <number - grams per 100g>,
+  "kohlenhydrate": <number - grams per 100g>,
+  "zucker": <number - grams per 100g>,
+  "ballaststoffe": <number - grams per 100g>,
+  "salz": <number - grams per 100g>
+}
+Ingredient: ${canonicalName}
+Original string: ${ingredientStr}
+Use typical/average values for this food. If completely unknown, return null.`;
+}
+
+/**
  * @param {string} text
  * @return {string}
  */
@@ -119,6 +145,16 @@ function normalizePositiveNumber(value) {
 }
 
 /**
+ * @param {number|string} value
+ * @return {number|null}
+ */
+function normalizeNonNegativeNumber(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return numeric;
+}
+
+/**
  * @param {object} data
  * @return {{amountG: number, name: string, searchName: string}}
  */
@@ -132,6 +168,33 @@ function normalizeGeminiPayload(data) {
   }
 
   return {amountG, name, searchName};
+}
+
+/**
+ * @param {object} data
+ * @return {{
+ *   kalorien: number,
+ *   protein: number,
+ *   fett: number,
+ *   kohlenhydrate: number,
+ *   zucker: number,
+ *   ballaststoffe: number,
+ *   salz: number
+ * }|null}
+ */
+function normalizeGeminiNutritionEstimate(data) {
+  const fields = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
+  const per100g = {};
+
+  for (const field of fields) {
+    const normalized = normalizeNonNegativeNumber(data?.[field]);
+    if (normalized == null) {
+      return null;
+    }
+    per100g[field] = normalized;
+  }
+
+  return per100g;
 }
 
 /**
@@ -199,9 +262,71 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     return normalizeGeminiPayload(JSON.parse(jsonText));
   }
 
+  /**
+   * Uses Gemini to estimate nutritional values per 100g for an ingredient
+   * when OpenFoodFacts returns no result.
+   *
+   * @param {string} ingredientStr - Raw ingredient string
+   * @param {object} parsed
+   * @param {number} parsed.amountG
+   * @param {string} parsed.name
+   * @param {string} [parsed.searchName]
+   * @param {object} [options]
+   * @return {Promise<object|null>}
+   */
+  async function estimateNutritionWithGemini(ingredientStr, parsed, options = {}) {
+    if (!ingredientStr || typeof ingredientStr !== 'string') return null;
+    if (
+      !parsed ||
+      !normalizePositiveNumber(parsed.amountG) ||
+      !normalizeName(parsed.name)
+    ) {
+      return null;
+    }
+
+    const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
+    if (!apiKey || !GoogleGenerativeAI) {
+      return null;
+    }
+
+    const model = options.model || (options.createModel ?
+      options.createModel(apiKey) :
+      new GoogleGenerativeAI(apiKey).getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0,
+        },
+      }));
+
+    try {
+      const result = await withTimeout(
+          model.generateContent(buildNutritionEstimationPrompt(ingredientStr, parsed)),
+          options.timeoutMs ?? 15000,
+      );
+      const text = String(await result.response.text() || '').trim();
+      if (!text || /^null$/i.test(text)) {
+        return null;
+      }
+      const jsonText = extractJsonObject(text);
+      const per100g = normalizeGeminiNutritionEstimate(JSON.parse(jsonText));
+      if (!per100g) {
+        return null;
+      }
+      return {
+        per100g,
+        amountG: parsed.amountG,
+        name: parsed.name,
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
   return {
     parseIngredientForNutrition,
     normalizeIngredientWithGemini,
+    estimateNutritionWithGemini,
   };
 }
 

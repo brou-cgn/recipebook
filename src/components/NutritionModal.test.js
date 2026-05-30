@@ -96,7 +96,7 @@ describe('getRecipeCalcResult', () => {
         recipe,
         {
           notIncluded: [],
-          ingredientDetails: [{ ingredient: 'Linsen', naehrwerte: ingredientNaehrwerte }],
+          ingredientDetails: [{ ingredient: 'Linsen', naehrwerte: ingredientNaehrwerte, searchTerm: 'lentils', aiEstimated: true }],
         },
         {},
         ['Salz']
@@ -106,11 +106,15 @@ describe('getRecipeCalcResult', () => {
         ingredient: 'Linsen',
         status: 'Berechnet',
         naehrwerte: ingredientNaehrwerte,
+        searchTerm: 'lentils',
+        aiEstimated: true,
+        detail: 'Suchbegriff: lentils',
       }));
       expect(rows[1]).toEqual(expect.objectContaining({
         ingredient: 'Salz',
         status: 'Akzeptiert',
         naehrwerte: null,
+        aiEstimated: false,
       }));
     });
 

@@ -184,3 +184,99 @@ test('normalizeIngredientWithGemini handles typical German ingredient strings', 
     });
   }
 });
+
+test('estimateNutritionWithGemini returns full nutrition object on valid Gemini JSON', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 884,
+    protein: 0,
+    fett: 100,
+    kohlenhydrate: 0,
+    zucker: 0,
+    ballaststoffe: 0,
+    salz: 0,
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('2 EL Olivenöl', {
+    amountG: 30,
+    name: 'Olivenöl',
+    searchName: 'olive oil',
+  });
+
+  assert.deepEqual(result, {
+    per100g: {
+      kalorien: 884,
+      protein: 0,
+      fett: 100,
+      kohlenhydrate: 0,
+      zucker: 0,
+      ballaststoffe: 0,
+      salz: 0,
+    },
+    amountG: 30,
+    name: 'Olivenöl',
+  });
+});
+
+test('estimateNutritionWithGemini returns null on invalid Gemini JSON', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'not valid json');
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('500 g Mehl', {
+    amountG: 500,
+    name: 'Mehl',
+    searchName: 'wheat flour',
+  });
+
+  assert.equal(result, null);
+});
+
+test('estimateNutritionWithGemini returns null without an API key', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 364,
+    protein: 10,
+    fett: 1,
+    kohlenhydrate: 76,
+    zucker: 1,
+    ballaststoffe: 3,
+    salz: 0,
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('500 g Mehl', {
+    amountG: 500,
+    name: 'Mehl',
+    searchName: 'wheat flour',
+  });
+
+  assert.equal(result, null);
+});
+
+test('estimateNutritionWithGemini returns null when Gemini returns null', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'null');
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('Unbekannte Zutat', {
+    amountG: 100,
+    name: 'Unbekannte Zutat',
+    searchName: 'unknown ingredient',
+  });
+
+  assert.equal(result, null);
+});
