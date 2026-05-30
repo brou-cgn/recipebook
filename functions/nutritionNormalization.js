@@ -297,13 +297,15 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
         },
       }));
 
-    const maxAttempts = options.retries ?? 1;
+    const maxRetries = options.retries ?? 1;
+    const totalAttempts = maxRetries + 1;
     const retryDelayMs = options.retryDelayMs ?? 3000;
 
-    for (let attempt = 1; attempt <= maxAttempts + 1; attempt++) {
+    for (let attempt = 1; attempt <= totalAttempts; attempt++) {
       try {
         const result = await withTimeout(
             model.generateContent(buildNutritionEstimationPrompt(ingredientStr, parsed)),
+            // Align the fallback's default with the 20s timeout used by current callers.
             options.timeoutMs ?? 20000,
         );
         const text = String(await result.response.text() || '').trim();
@@ -322,7 +324,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
         };
       } catch (error) {
         const isTimeout = /timeout/i.test(String(error?.message || ''));
-        if (isTimeout && attempt <= maxAttempts) {
+        if (isTimeout && attempt < totalAttempts) {
           await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
           continue;
         }
