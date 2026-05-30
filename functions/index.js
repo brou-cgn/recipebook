@@ -14,12 +14,6 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
 
-const {
-  parseIngredientForNutrition,
-  normalizeIngredientWithGemini,
-  estimateNutritionWithGemini,
-} = createNutritionNormalizationUtils({GoogleGenerativeAI});
-
 // Initialize Firebase Admin
 admin.initializeApp();
 
@@ -1708,6 +1702,16 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       secrets: [geminiApiKey],
     },
     async (request) => {
+      // Instantiate utils here so geminiApiKey.value() is available at request time
+      const {
+        parseIngredientForNutrition,
+        normalizeIngredientWithGemini,
+        estimateNutritionWithGemini,
+      } = createNutritionNormalizationUtils({
+        GoogleGenerativeAI,
+        env: {GEMINI_API_KEY: geminiApiKey.value()},
+      });
+
       // Authentication check
       if (!request.auth) {
         throw new HttpsError(
