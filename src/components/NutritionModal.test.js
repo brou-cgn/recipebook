@@ -178,7 +178,12 @@ describe('getRecipeCalcResult', () => {
         naehrwerte: {},
       };
 
-      const rows = buildNutritionCompositionRows(recipe, { notIncluded: [], ingredientDetails: [] }, {}, []);
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        { notIncluded: [], ingredientDetails: [{ ingredient: 'Kartoffeln' }] },
+        {},
+        []
+      );
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: 'Kartoffeln',
