@@ -1969,7 +1969,6 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         } catch (err) {
           const isNetworkError = isOpenFoodFactsNetworkError(err);
           const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
-          console.error(`OpenFoodFacts error for "${name}":`, err.message);
 
           if (parsed) {
             try {
@@ -1999,6 +1998,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           }
 
           const errorType = isNetworkError ? 'Netzwerkfehler' : (isTimeout ? 'Timeout' : 'API-Fehler');
+          console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
           return {
             found: false,
             detail: {
