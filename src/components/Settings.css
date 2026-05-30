@@ -330,6 +330,11 @@
   white-space: nowrap;
 }
 
+.conversion-table th:first-child,
+.conversion-table td:first-child {
+  min-width: 160px;
+}
+
 .conversion-table tbody tr:hover {
   background: #fafafa;
 }
