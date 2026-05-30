@@ -2349,7 +2349,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4))} kcal</span>
                     )}
                     {isNutritionStale && (
-                      <span className="nutrition-stale-indicator" title="Nährwertetabelle wurde aktualisiert">⚠️</span>
+                      <span className="nutrition-stale-indicator" title="Nährwertetabelle wurde aktualisiert" aria-label="Nährwertetabelle wurde aktualisiert">⚠️</span>
                     )}
                     <span className="nutrition-label">
                       {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? null : 'Nährwerte berechnen')}

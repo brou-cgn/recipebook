@@ -4385,9 +4385,13 @@ exports.updateSeasonMatrixStatus = onSchedule(
 exports.onNutritionReferenceChanged = onDocumentWritten(
     {document: 'nutritionReferences/{refId}'},
     async () => {
-      await admin.firestore()
-          .collection('appConfig')
-          .doc('nutritionReferences')
-          .set({lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp()}, {merge: true});
+      try {
+        await admin.firestore()
+            .collection('appConfig')
+            .doc('nutritionReferences')
+            .set({lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp()}, {merge: true});
+      } catch (err) {
+        console.error('onNutritionReferenceChanged: failed to update lastUpdatedAt', err);
+      }
     },
 );
