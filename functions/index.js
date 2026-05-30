@@ -7,10 +7,17 @@ const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
+const {GoogleGenerativeAI} = require('@google/generative-ai');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const {createNutritionNormalizationUtils} = require('./nutritionNormalization');
+
+const {
+  parseIngredientForNutrition,
+  normalizeIngredientWithGemini,
+} = createNutritionNormalizationUtils({GoogleGenerativeAI});
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -1566,62 +1573,6 @@ exports.captureWebsiteScreenshot = onCall(
 );
 
 /**
- * Parse an ingredient string and return the estimated weight in grams and
- * a clean search name for the OpenFoodFacts API.
- *
- * Handles formats like:
- *   "500 g Mehl", "2 EL Olivenöl", "4 Eier", "1 Prise Salz", "200ml Milch"
- *
- * @param {string} ingredientStr - Raw ingredient string
- * @returns {{amountG: number, name: string}|null}
- */
-function parseIngredientForNutrition(ingredientStr) {
-  if (!ingredientStr || typeof ingredientStr !== 'string') return null;
-
-  const str = ingredientStr.trim();
-  if (!str) return null;
-
-  // Conversion factors to grams (approximate)
-  const UNIT_GRAMS = {
-    g: 1, kg: 1000, mg: 0.001,
-    ml: 1, l: 1000, dl: 100, cl: 10,
-    EL: 15, el: 15, Esslöffel: 15, esslöffel: 15,
-    TL: 5, tl: 5, Teelöffel: 5, teelöffel: 5,
-    Prise: 1, prise: 1, Prisen: 1, prisen: 1,
-    Tasse: 240, tasse: 240, Tassen: 240, tassen: 240,
-    Bund: 30, bund: 30,
-  };
-
-  // Match: number (int or decimal) + optional unit + ingredient name
-  // e.g. "500 g Mehl", "200ml Milch", "2 EL Öl", "4 Eier"
-  const match = str.match(
-      /^([\d.,]+)\s*([a-zA-ZäöüÄÖÜß]+)?\.?\s+(.+)/
-  );
-
-  if (match) {
-    const amount = parseFloat(match[1].replace(',', '.'));
-    const potentialUnit = match[2] || '';
-    const rest = match[3].trim();
-
-    if (potentialUnit && Object.hasOwn(UNIT_GRAMS, potentialUnit)) {
-      const amountG = isNaN(amount) ? 100 : amount * UNIT_GRAMS[potentialUnit];
-      return {amountG: Math.max(amountG, 1), name: rest};
-    } else if (potentialUnit) {
-      // Unknown unit – treat everything after the number as the ingredient name
-      const name = `${potentialUnit} ${rest}`.trim();
-      return {amountG: 100, name};
-    } else {
-      // No unit: treat as a count (e.g. "4 Eier") – rough 60 g per piece
-      const amountG = isNaN(amount) ? 60 : amount * 60;
-      return {amountG: Math.max(amountG, 10), name: rest};
-    }
-  }
-
-  // No leading number – assume a small condiment/spice (~5 g)
-  return {amountG: 5, name: str};
-}
-
-/**
  * Sleeps for a given duration.
  * @param {number} ms
  * @returns {Promise<void>}
@@ -1753,6 +1704,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
       maxInstances: 5,
       timeoutSeconds: 360,
+      secrets: [geminiApiKey],
     },
     async (request) => {
       // Authentication check
@@ -1832,7 +1784,15 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
           };
         }
 
-        const parsed = parseIngredientForNutrition(ingredientStr);
+        let parsed = null;
+        try {
+          parsed = await normalizeIngredientWithGemini(ingredientStr);
+        } catch (geminiError) {
+          console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
+        }
+        if (!parsed) {
+          parsed = parseIngredientForNutrition(ingredientStr);
+        }
         if (!parsed) {
           return {
             found: false,
@@ -1872,57 +1832,65 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             }
           }
 
-          const searchUrl =
-            `https://world.openfoodfacts.org/cgi/search.pl` +
-            `?search_terms=${encodeURIComponent(name)}` +
-            `&json=1&page_size=3` +
-            `&fields=product_name,nutriments`;
+          const searchTerms = [...new Set(
+              [parsed.searchName, name]
+                  .filter((term) => typeof term === 'string' && term.trim() !== '')
+                  .map((term) => term.trim())
+          )];
+          let product = null;
+          let searchError = 'Nicht gefunden';
 
-          const response = await fetchWithRetry(searchUrl, {
-            headers: {
-              'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
-            },
-          });
+          for (const searchTerm of searchTerms) {
+            const searchUrl =
+              `https://world.openfoodfacts.org/cgi/search.pl` +
+              `?search_terms=${encodeURIComponent(searchTerm)}` +
+              `&json=1&page_size=3` +
+              `&fields=product_name,nutriments`;
 
-          if (!response.ok) {
-            if (response.status === 404) {
+            const response = await fetchWithRetry(searchUrl, {
+              headers: {
+                'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
+              },
+            });
+
+            if (!response.ok) {
+              if (response.status === 404) {
+                searchError = 'Nicht gefunden';
+                continue;
+              }
               return {
                 found: false,
-                detail: {ingredient: ingredientStr, name, error: 'Nicht gefunden'},
+                detail: {ingredient: ingredientStr, name, error: `HTTP ${response.status}`},
                 totals: ingredientTotals,
               };
             }
+
+            const data = await response.json();
+
+            if (!data.products || data.products.length === 0) {
+              searchError = 'Nicht gefunden';
+              continue;
+            }
+
+            product = data.products.find(
+                (entry) => entry.nutriments && entry.nutriments['energy-kcal_100g'] != null
+            );
+
+            if (product) {
+              break;
+            }
+
+            console.warn(`No energy data found for "${searchTerm}" in OpenFoodFacts results`);
+            searchError = 'Keine Nährwertdaten verfügbar';
+          }
+
+          if (!product) {
             return {
               found: false,
-              detail: {ingredient: ingredientStr, name, error: `HTTP ${response.status}`},
+              detail: {ingredient: ingredientStr, name, error: searchError},
               totals: ingredientTotals,
             };
           }
-
-          const data = await response.json();
-
-          if (!data.products || data.products.length === 0) {
-            return {
-              found: false,
-              detail: {ingredient: ingredientStr, name, error: 'Nicht gefunden'},
-              totals: ingredientTotals,
-            };
-          }
-
-          // Prefer the first product with usable energy data; fall back to the first result.
-          // If neither has nutriments, mark as not found to avoid adding zero values.
-          const productWithData = data.products.find(
-              (p) => p.nutriments && p.nutriments['energy-kcal_100g'] != null
-          );
-          if (!productWithData) {
-            console.warn(`No energy data found for "${name}" in OpenFoodFacts results`);
-            return {
-              found: false,
-              detail: {ingredient: ingredientStr, name, error: 'Keine Nährwertdaten verfügbar'},
-              totals: ingredientTotals,
-            };
-          }
-          const product = productWithData;
 
           const n = product.nutriments || {};
           const per100gValues = parseNutritionReferenceValues({
