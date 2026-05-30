@@ -87,7 +87,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
   });
 }
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -690,6 +690,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser 
         </div>
 
         <div className="nutrition-modal-body">
+          {isStale && (
+            <div className="nutrition-stale-warning">
+              ⚠️ Die Nährwertetabelle wurde seit der letzten Berechnung aktualisiert. Bitte Nährwerte neu berechnen.
+            </div>
+          )}
           <p className="nutrition-modal-hint">
             Nährwerte pro Portion ({recipe.portionen || 1}{' '}
             {(recipe.portionen || 1) === 1 ? 'Portion' : 'Portionen'})

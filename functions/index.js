@@ -4,7 +4,7 @@
  */
 
 const {onCall, onRequest, HttpsError} = require('firebase-functions/v2/https');
-const {onDocumentCreated} = require('firebase-functions/v2/firestore');
+const {onDocumentCreated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
@@ -4379,5 +4379,19 @@ exports.updateSeasonMatrixStatus = onSchedule(
           `updateSeasonMatrixStatus: updated ${snapshot.size} entries` +
           ` for ${today.toISOString().slice(0, 10)}`,
       );
+    },
+);
+
+exports.onNutritionReferenceChanged = onDocumentWritten(
+    {document: 'nutritionReferences/{refId}'},
+    async () => {
+      try {
+        await admin.firestore()
+            .collection('appConfig')
+            .doc('nutritionReferences')
+            .set({lastUpdatedAt: admin.firestore.FieldValue.serverTimestamp()}, {merge: true});
+      } catch (err) {
+        console.error('onNutritionReferenceChanged: failed to update lastUpdatedAt', err);
+      }
     },
 );

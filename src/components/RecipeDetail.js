@@ -21,6 +21,7 @@ import CookDateModal from './CookDateModal';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 
 
 // Mobile breakpoint constant
@@ -33,6 +34,7 @@ const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
+  const { lastUpdatedAt } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
@@ -452,6 +454,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const recipe = selectedRecipe;
   
+  // Determine whether stored nutrition values are outdated relative to the reference table
+  const isNutritionStale = Boolean(
+    recipe.naehrwerte?.kalorien != null &&
+    recipe.naehrwerte?.calcCompletedAt != null &&
+    lastUpdatedAt != null &&
+    recipe.naehrwerte.calcCompletedAt < lastUpdatedAt
+  );
+
   // Derive favorite status from favoriteIds
   const isFavorite = favoriteIds.includes(recipe?.id);
 
@@ -2338,6 +2348,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     {recipe.naehrwerte?.kalorien != null && (
                       <span className="nutrition-kcal-badge">{Math.round(recipe.naehrwerte.kalorien / (recipe.portionen || 4))} kcal</span>
                     )}
+                    {isNutritionStale && (
+                      <span className="nutrition-stale-indicator" title="Nährwertetabelle wurde aktualisiert" aria-label="Nährwertetabelle wurde aktualisiert">⚠️</span>
+                    )}
                     <span className="nutrition-label">
                       {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? null : 'Nährwerte berechnen')}
                     </span>
@@ -2472,6 +2485,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onClose={() => setShowNutritionModal(false)}
           onSave={handleSaveNutrition}
           currentUser={currentUser}
+          isStale={isNutritionStale}
         />
       )}
       {showShoppingListModal && (

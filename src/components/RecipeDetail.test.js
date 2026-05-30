@@ -82,6 +82,10 @@ jest.mock('../utils/seasonMatrix', () => ({
   subscribeToSeasonMatrix: (cb) => { cb([]); return () => {}; },
 }));
 
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => ({ rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null }),
+}));
+
 describe('RecipeDetail - Portion Controller', () => {
   const mockRecipe = {
     id: 'recipe-1',

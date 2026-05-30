@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { parseNutritionReferenceValues } from '../utils/nutritionReferenceUtils';
 
@@ -23,9 +23,21 @@ async function fetchNutritionReferenceRows() {
   return mapNutritionReferenceRows(snapshot);
 }
 
+async function fetchNutritionReferenceLastUpdatedAt() {
+  try {
+    const snap = await getDoc(doc(db, 'appConfig', 'nutritionReferences'));
+    if (snap.exists()) {
+      const ts = snap.data()?.lastUpdatedAt;
+      return ts?.toMillis ? ts.toMillis() : (typeof ts === 'number' ? ts : null);
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export function NutritionReferenceProvider({ children, enabled = true }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(enabled);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
   const reload = useCallback(async () => {
     if (!enabled) {
@@ -36,8 +48,12 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
 
     setLoading(true);
     try {
-      const loaded = await fetchNutritionReferenceRows();
+      const [loaded, updatedAt] = await Promise.all([
+        fetchNutritionReferenceRows(),
+        fetchNutritionReferenceLastUpdatedAt(),
+      ]);
       setRows(loaded);
+      setLastUpdatedAt(updatedAt);
       return loaded;
     } catch (error) {
       console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
@@ -61,9 +77,13 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
 
     const run = async () => {
       try {
-        const loaded = await fetchNutritionReferenceRows();
+        const [loaded, updatedAt] = await Promise.all([
+          fetchNutritionReferenceRows(),
+          fetchNutritionReferenceLastUpdatedAt(),
+        ]);
         if (isMounted) {
           setRows(loaded);
+          setLastUpdatedAt(updatedAt);
         }
       } catch (error) {
         console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
@@ -89,8 +109,9 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
       rows,
       loading,
       reload,
+      lastUpdatedAt,
     }),
-    [rows, loading, reload]
+    [rows, loading, reload, lastUpdatedAt]
   );
 
   return <NutritionReferenceContext.Provider value={value}>{children}</NutritionReferenceContext.Provider>;

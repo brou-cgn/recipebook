@@ -245,6 +245,22 @@
   color: #666;
 }
 
+.nutrition-stale-warning {
+  margin: 0 0 1rem 0;
+  padding: 0.6rem 0.75rem;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #795548;
+  font-weight: 500;
+}
+
+.nutrition-stale-indicator {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
 @media (max-width: 480px) {
   .nutrition-modal-footer {
     flex-direction: column;
