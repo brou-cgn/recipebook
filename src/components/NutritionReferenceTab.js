@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ROLES } from '../utils/userManagement';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -97,8 +97,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const { rows: cachedRows, loading, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
   const [newIngredientID, setNewIngredientID] = useState('');
-  const [newFamily, setNewFamily] = useState('');
+  const [newNutritionFamily, setNewNutritionFamily] = useState('');
+  const [newSeasonalFamily, setNewSeasonalFamily] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [newSource, setNewSource] = useState('');
+  const [newSearchTerm, setNewSearchTerm] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
   const [newValues, setNewValues] = useState({});
   const [newBooleanValues, setNewBooleanValues] = useState({});
@@ -119,9 +122,18 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   const getIngredientID = (row) => String(row.ingredientID || row.id || '').trim();
 
-  const buildPayload = (row, source = 'manual') => {
+  const buildPayload = (
+    row,
+    source = 'manual',
+    { removeLegacyFamily = true, preferRowSource = false } = {}
+  ) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
+    const sourceValue = String(
+      preferRowSource
+        ? (row.source || source || '')
+        : (source || row.source || '')
+    ).trim();
     const payload = {
       ingredientID,
       synonyms,
@@ -131,16 +143,23 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       ...parseNutritionReferenceValues(row),
       updatedAt: serverTimestamp(),
       updatedBy: currentUser?.id || null,
-      source,
+      source: sourceValue,
     };
+    if (removeLegacyFamily) {
+      payload.family = deleteField();
+    }
     const fallbackWeight = parseNutritionReferenceFallbackWeight(row);
     if (fallbackWeight != null) {
       payload.defaultAmountG = fallbackWeight;
     }
-    const family = String(row.family || '').trim();
+    const nutritionFamily = String(row.nutritionFamily || row.family || '').trim();
+    const seasonalFamily = String(row.seasonalFamily || '').trim();
     const category = String(row.category || '').trim();
-    if (family) payload.family = family;
+    const searchTerm = String(row.searchTerm || '').trim();
+    if (nutritionFamily) payload.nutritionFamily = nutritionFamily;
+    if (seasonalFamily) payload.seasonalFamily = seasonalFamily;
     if (category) payload.category = category;
+    if (searchTerm) payload.searchTerm = searchTerm;
     return payload;
   };
 
@@ -164,7 +183,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       return;
     }
 
-    await setDoc(doc(db, 'nutritionReferences', ingredientID), buildPayload(row), { merge: true });
+    await setDoc(
+      doc(db, 'nutritionReferences', ingredientID),
+      buildPayload(row, 'manual', { preferRowSource: true }),
+      { merge: true }
+    );
     if (row.id !== ingredientID) {
       await deleteDoc(doc(db, 'nutritionReferences', row.id));
     }
@@ -192,18 +215,24 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       doc(db, 'nutritionReferences', ingredientID),
       buildPayload({
         ingredientID,
-        family: newFamily,
+        nutritionFamily: newNutritionFamily,
+        seasonalFamily: newSeasonalFamily,
         category: newCategory,
+        source: newSource,
+        searchTerm: newSearchTerm,
         synonyms,
         defaultAmountG: newDefaultAmountG,
         ...newBooleanValues,
         ...newValues,
-      }),
+      }, 'manual', { preferRowSource: true }),
       { merge: true }
     );
     setNewIngredientID('');
-    setNewFamily('');
+    setNewNutritionFamily('');
+    setNewSeasonalFamily('');
     setNewCategory('');
+    setNewSource('');
+    setNewSearchTerm('');
     setNewSynonyms('');
     setNewValues({});
     setNewBooleanValues({});
@@ -226,7 +255,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   const refreshRowFromOpenFoodFacts = async (row) => {
     const synonyms = parseNutritionReferenceSynonyms(row);
-    const searchName = String(synonyms[0] || '').trim();
+    const searchName = String(row.searchTerm || synonyms[0] || '').trim();
     if (!searchName) {
       setLookupError('Bitte mindestens ein Synonym eingeben.');
       return;
@@ -312,8 +341,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const handleExportCsv = () => {
     const csv = createNutritionReferenceCsv(rows.map((row) => ({
       ingredientID: getIngredientID(row),
-      family: row.family || '',
+      nutritionFamily: row.nutritionFamily || '',
+      seasonalFamily: row.seasonalFamily || '',
       category: row.category || '',
+      source: row.source || '',
+      searchTerm: row.searchTerm || '',
       ...parseNutritionReferenceBooleanFields(row),
       synonyms: parseNutritionReferenceSynonyms(row),
       defaultAmountG: row.defaultAmountG ?? '',
@@ -369,7 +401,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const importedIds = new Set(importedRows.map((row) => row.ingredientID));
       await Promise.all(importedRows.map((importedRow) => setDoc(
           doc(db, 'nutritionReferences', importedRow.ingredientID),
-          buildPayload(importedRow, 'csv-import'),
+          buildPayload(importedRow, 'csv-import', { removeLegacyFamily: false, preferRowSource: true }),
           { merge: false }
         )));
 
@@ -441,8 +473,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
             <thead>
               <tr>
                 <th>ingredientID</th>
-                <th>family</th>
+                <th>nutritionFamily</th>
+                <th>seasonalFamily</th>
                 <th>category</th>
+                <th>Quelle</th>
+                <th>Suchbegriff</th>
                 {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
                   <th key={field}>{NUTRITION_BOOLEAN_LABELS[field]}</th>
                 ))}
@@ -469,10 +504,19 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                   <td>
                     <input
                       type="text"
-                      value={row.family || ''}
-                      onChange={(e) => updateCell(row.id, 'family', e.target.value)}
+                      value={row.nutritionFamily || ''}
+                      onChange={(e) => updateCell(row.id, 'nutritionFamily', e.target.value)}
                       className="conversion-table-input"
-                      aria-label={`family ${row.id}`}
+                      aria-label={`nutritionFamily ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={row.seasonalFamily || ''}
+                      onChange={(e) => updateCell(row.id, 'seasonalFamily', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`seasonalFamily ${row.id}`}
                     />
                   </td>
                   <td>
@@ -482,6 +526,24 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       onChange={(e) => updateCell(row.id, 'category', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`category ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={row.source || ''}
+                      onChange={(e) => updateCell(row.id, 'source', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Quelle ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={row.searchTerm || ''}
+                      onChange={(e) => updateCell(row.id, 'searchTerm', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Suchbegriff ${row.id}`}
                     />
                   </td>
                   {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
@@ -554,8 +616,16 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                 <td>
                   <input
                     type="text"
-                    value={newFamily}
-                    onChange={(e) => setNewFamily(e.target.value)}
+                    value={newNutritionFamily}
+                    onChange={(e) => setNewNutritionFamily(e.target.value)}
+                    className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newSeasonalFamily}
+                    onChange={(e) => setNewSeasonalFamily(e.target.value)}
                     className="conversion-table-input"
                   />
                 </td>
@@ -564,6 +634,22 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     type="text"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
+                    className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newSource}
+                    onChange={(e) => setNewSource(e.target.value)}
+                    className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newSearchTerm}
+                    onChange={(e) => setNewSearchTerm(e.target.value)}
                     className="conversion-table-input"
                   />
                 </td>

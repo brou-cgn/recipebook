@@ -13,6 +13,7 @@ const mockDeleteDoc = jest.fn(() => Promise.resolve());
 const mockFetch = jest.fn();
 const mockDoc = jest.fn((db, coll, id) => `${coll}/${id}`);
 const mockServerTimestamp = jest.fn(() => 'server-ts');
+const mockDeleteField = jest.fn(() => 'delete-field');
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => 'collection-ref'),
@@ -21,6 +22,7 @@ jest.mock('firebase/firestore', () => ({
   setDoc: (...args) => mockSetDoc(...args),
   deleteDoc: (...args) => mockDeleteDoc(...args),
   serverTimestamp: (...args) => mockServerTimestamp(...args),
+  deleteField: (...args) => mockDeleteField(...args),
 }));
 
 describe('NutritionReferenceTab', () => {
@@ -36,7 +38,16 @@ describe('NutritionReferenceTab', () => {
       docs: [
         {
           id: 'tomate',
-          data: () => ({ ingredientID: 'dummy-tomate', synonyms: ['Tomate'], kalorien: 18, kohlenhydrate: 3.9 }),
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            nutritionFamily: 'Gemüse',
+            seasonalFamily: 'Fruchtgemüse',
+            source: 'manual',
+            searchTerm: 'Tomate',
+            synonyms: ['Tomate'],
+            kalorien: 18,
+            kohlenhydrate: 3.9,
+          }),
         },
       ],
     });
@@ -44,6 +55,7 @@ describe('NutritionReferenceTab', () => {
     mockDeleteDoc.mockClear();
     mockDoc.mockClear();
     mockServerTimestamp.mockClear();
+    mockDeleteField.mockClear();
     mockFetch.mockReset();
     global.fetch = mockFetch;
     jest.spyOn(window, 'alert').mockImplementation(() => {});
@@ -63,7 +75,11 @@ describe('NutritionReferenceTab', () => {
   test('loads rows and allows adding a nutrition reference', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.getByText('nutritionFamily')).toBeInTheDocument();
+    expect(screen.getByText('seasonalFamily')).toBeInTheDocument();
+    expect(screen.getByText('Quelle')).toBeInTheDocument();
+    expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Haferflocken' } });
@@ -82,7 +98,7 @@ describe('NutritionReferenceTab', () => {
   test('does not create duplicates for existing ingredient ids', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-tomate' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Tomate' } });
@@ -97,8 +113,9 @@ describe('NutritionReferenceTab', () => {
   test('saves boolean fields for an existing row', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
+    fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
     fireEvent.click(screen.getByLabelText('Saisonrelevant tomate'));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
@@ -107,6 +124,7 @@ describe('NutritionReferenceTab', () => {
     });
     expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
       ingredientID: 'dummy-tomate',
+      nutritionFamily: 'Nachtschatten',
       seasonRelevant: true,
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
@@ -135,7 +153,7 @@ describe('NutritionReferenceTab', () => {
 
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
 
@@ -175,7 +193,7 @@ describe('NutritionReferenceTab', () => {
 
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
 
@@ -197,7 +215,7 @@ describe('NutritionReferenceTab', () => {
       ]
     );
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Zutatenliste importieren (Dummy-IDs)' }));
 
     await waitFor(() => {
@@ -214,7 +232,7 @@ describe('NutritionReferenceTab', () => {
   test('deletes all entries with one action', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Alle Einträge löschen' }));
 
     await waitFor(() => {

@@ -20,8 +20,11 @@ function mapNutritionReferenceRows(snapshot) {
       return {
         id: entry.id,
         ingredientID,
-        family: data.family || '',
+        nutritionFamily: data.nutritionFamily || data.family || '',
+        seasonalFamily: data.seasonalFamily || '',
         category: data.category || '',
+        source: data.source || '',
+        searchTerm: data.searchTerm || '',
         ...parseNutritionReferenceBooleanFields(data),
         synonyms,
         name: synonyms[0] || data.name || '',
