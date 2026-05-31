@@ -2,6 +2,8 @@ import {
   normalizeNutritionReferenceId,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
+  parseNutritionReferenceSynonyms,
+  getNormalizedNutritionReferenceSynonyms,
 } from './nutritionReferenceUtils';
 
 describe('nutritionReferenceUtils', () => {
@@ -53,6 +55,22 @@ describe('nutritionReferenceUtils', () => {
 
     test('returns null when called with no argument', () => {
       expect(parseNutritionReferenceFallbackWeight()).toBeNull();
+    });
+  });
+
+  describe('parseNutritionReferenceSynonyms', () => {
+    test('parses and de-duplicates values from comma-separated strings', () => {
+      expect(parseNutritionReferenceSynonyms({ synonyms: 'Tomate, Paradeiser, Tomate' })).toEqual(['Tomate', 'Paradeiser']);
+    });
+
+    test('falls back to name when no synonyms are provided', () => {
+      expect(parseNutritionReferenceSynonyms({ name: 'Kartoffel' })).toEqual(['Kartoffel']);
+    });
+  });
+
+  describe('getNormalizedNutritionReferenceSynonyms', () => {
+    test('normalizes parsed synonyms for lookup ids', () => {
+      expect(getNormalizedNutritionReferenceSynonyms({ synonyms: ['Crème fraîche', 'Weißkohl'] })).toEqual(['creme-fraiche', 'weisskohl']);
     });
   });
 });

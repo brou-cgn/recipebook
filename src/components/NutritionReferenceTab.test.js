@@ -24,10 +24,10 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 describe('NutritionReferenceTab', () => {
-  const renderTab = (user, providerEnabled = true) =>
+  const renderTab = (user, providerEnabled = true, allRecipes = []) =>
     render(
       <NutritionReferenceProvider enabled={providerEnabled}>
-        <NutritionReferenceTab currentUser={user} />
+        <NutritionReferenceTab currentUser={user} allRecipes={allRecipes} />
       </NutritionReferenceProvider>
     );
 
@@ -36,7 +36,7 @@ describe('NutritionReferenceTab', () => {
       docs: [
         {
           id: 'tomate',
-          data: () => ({ name: 'Tomate', kalorien: 18, kohlenhydrate: 3.9 }),
+          data: () => ({ ingredientID: 'dummy-tomate', synonyms: ['Tomate'], kalorien: 18, kohlenhydrate: 3.9 }),
         },
       ],
     });
@@ -47,10 +47,12 @@ describe('NutritionReferenceTab', () => {
     mockFetch.mockReset();
     global.fetch = mockFetch;
     jest.spyOn(window, 'alert').mockImplementation(() => {});
+    jest.spyOn(window, 'confirm').mockImplementation(() => true);
   });
 
   afterEach(() => {
     window.alert.mockRestore();
+    window.confirm.mockRestore();
   });
 
   test('shows info message for unauthorized users', () => {
@@ -63,26 +65,33 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText('Neue Zutat...'), { target: { value: 'Haferflocken' } });
+    fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Haferflocken' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
     });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      ingredientID: 'dummy-haferflocken',
+      synonyms: ['Haferflocken'],
+    }));
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
-  test('does not create duplicates for existing normalized ids', async () => {
+  test('does not create duplicates for existing ingredient ids', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText('Neue Zutat...'), { target: { value: '  Tómate ' } });
+    fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-tomate' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
     await waitFor(() => {
       expect(mockSetDoc).not.toHaveBeenCalled();
     });
-    expect(window.alert).not.toHaveBeenCalled();
+    expect(window.alert).toHaveBeenCalledWith('Diese ingredientID existiert bereits.');
   });
 
   test('refreshes an existing row from OpenFoodFacts and overwrites the document', async () => {
@@ -119,7 +128,9 @@ describe('NutritionReferenceTab', () => {
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
       expect(mockSetDoc.mock.calls[0][1]).toEqual(
         expect.objectContaining({
-          name: 'Tomate',
+          ingredientID: 'dummy-tomate',
+          synonyms: ['Tomate'],
+          normalizedSynonyms: ['tomate'],
           product: 'Tomatenmark',
           kalorien: 82,
           protein: 4.3,
@@ -132,7 +143,7 @@ describe('NutritionReferenceTab', () => {
           updatedBy: 'u1',
         })
       );
-      expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: false });
+      expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
     });
   });
 
@@ -152,5 +163,44 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByText('Keine Nährwertdaten bei OpenFoodFacts gefunden.')).toBeInTheDocument();
     expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  test('imports ingredient names from recipes with dummy ids', async () => {
+    renderTab(
+      { id: 'u1', role: 'moderator' },
+      true,
+      [
+        {
+          ingredients: [
+            { type: 'ingredient', text: '500g Kartoffeln' },
+            { type: 'ingredient', text: '200ml Milch' },
+          ],
+        },
+      ]
+    );
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Zutatenliste importieren (Dummy-IDs)' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      ingredientID: 'dummy-kartoffeln',
+      synonyms: ['Kartoffeln'],
+      source: 'recipe-import',
+    }));
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+  });
+
+  test('deletes all entries with one action', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Alle Einträge löschen' }));
+
+    await waitFor(() => {
+      expect(mockDeleteDoc).toHaveBeenCalled();
+    });
   });
 });

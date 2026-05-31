@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 let createUtilsStub;
 let firestoreDocGetStub;
 let firestoreDocSetStub;
+let firestoreWhereGetStub;
 let wrappedFunction;
 
 function loadWrappedFunction() {
@@ -57,6 +58,11 @@ function loadWrappedFunction() {
           doc: () => ({
             get: firestoreDocGetStub,
             set: firestoreDocSetStub,
+          }),
+          where: () => ({
+            limit: () => ({
+              get: firestoreWhereGetStub,
+            }),
           }),
         }),
       });
@@ -114,6 +120,10 @@ test.beforeEach(() => {
     data: () => ({}),
   });
   firestoreDocSetStub = async () => {};
+  firestoreWhereGetStub = async () => ({
+    empty: true,
+    docs: [],
+  });
   createUtilsStub = () => ({
     parseIngredientForNutrition: () => ({amountG: 100, name: 'Rice', searchName: 'rice'}),
     normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Rice', searchName: 'rice'}),
@@ -326,6 +336,55 @@ test('cleans parenthetical text from OpenFoodFacts search terms', async () => {
       fetchCalls.some((url) => url.includes('search_terms=Currypulver%20%28nach%20Geschmack%20mehr%29')),
       false,
   );
+
+  global.fetch = originalFetch;
+});
+
+test('uses cached nutrition reference matched by normalized synonym', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 100, name: 'Rice'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Rice'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: false,
+    data: () => ({}),
+  });
+  firestoreWhereGetStub = async () => ({
+    empty: false,
+    docs: [
+      {
+        exists: true,
+        data: () => ({
+          name: 'Reis',
+          normalizedSynonyms: ['rice'],
+          kalorien: 130,
+          protein: 2.7,
+        }),
+      },
+    ],
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['100 g Reis'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.totalCount, 1);
+  assert.equal(response.details[0].found, true);
+  assert.equal(response.details[0].product, 'Reis');
+  assert.equal(response.naehrwerte.kalorien, 130);
+  assert.equal(response.naehrwerte.protein, 2.7);
 
   global.fetch = originalFetch;
 });

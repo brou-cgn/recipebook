@@ -1,7 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { parseNutritionReferenceValues, parseNutritionReferenceFallbackWeight } from '../utils/nutritionReferenceUtils';
+import {
+  parseNutritionReferenceValues,
+  parseNutritionReferenceFallbackWeight,
+  parseNutritionReferenceSynonyms,
+} from '../utils/nutritionReferenceUtils';
 
 const NutritionReferenceContext = createContext(null);
 
@@ -10,14 +14,20 @@ function mapNutritionReferenceRows(snapshot) {
     .map((entry) => {
       const data = entry.data() || {};
       const fallbackWeight = parseNutritionReferenceFallbackWeight(data);
+      const ingredientID = String(data.ingredientID || entry.id || '').trim();
+      const synonyms = parseNutritionReferenceSynonyms(data);
       return {
         id: entry.id,
-        name: data.name || '',
+        ingredientID,
+        family: data.family || '',
+        category: data.category || '',
+        synonyms,
+        name: synonyms[0] || data.name || '',
         ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
         ...parseNutritionReferenceValues(data),
       };
     })
-    .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
+    .sort((a, b) => (a.ingredientID || '').localeCompare(b.ingredientID || '', 'de', { sensitivity: 'base' }));
 }
 
 async function fetchNutritionReferenceRows() {

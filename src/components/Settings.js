@@ -3174,7 +3174,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         ) : activeTab === 'saisonmatrix' ? (
           <SeasonMatrixTab currentUser={currentUser} />
         ) : activeTab === 'naehrwerte' ? (
-          <NutritionReferenceTab currentUser={currentUser} />
+          <NutritionReferenceTab currentUser={currentUser} allRecipes={allRecipes} />
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}

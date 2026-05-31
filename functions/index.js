@@ -1812,10 +1812,20 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
 
         try {
           if (referenceId) {
-            cachedSnapshot = await admin.firestore()
-                .collection(NUTRITION_REFERENCE_COLLECTION)
+            const collectionRef = admin.firestore()
+                .collection(NUTRITION_REFERENCE_COLLECTION);
+            cachedSnapshot = await collectionRef
                 .doc(referenceId)
                 .get();
+            if (!cachedSnapshot.exists) {
+              const synonymQuerySnapshot = await collectionRef
+                  .where('normalizedSynonyms', 'array-contains', referenceId)
+                  .limit(1)
+                  .get();
+              if (!synonymQuerySnapshot.empty) {
+                [cachedSnapshot] = synonymQuerySnapshot.docs;
+              }
+            }
             if (cachedSnapshot.exists) {
               const cachedData = cachedSnapshot.data();
               const fallbackAmountG = cachedData.defaultAmountG;

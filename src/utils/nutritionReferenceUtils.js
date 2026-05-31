@@ -44,3 +44,19 @@ export function parseNutritionReferenceFallbackWeight(input = {}) {
   }
   return null;
 }
+
+export function parseNutritionReferenceSynonyms(input = {}) {
+  const raw = Array.isArray(input.synonyms) ? input.synonyms : String(input.synonyms || input.name || '').split(',');
+  const synonyms = raw
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+  return [...new Set(synonyms)];
+}
+
+export function getNormalizedNutritionReferenceSynonyms(input = {}) {
+  const synonyms = parseNutritionReferenceSynonyms(input);
+  const normalized = synonyms
+    .map((entry) => normalizeNutritionReferenceId(entry))
+    .filter(Boolean);
+  return [...new Set(normalized)];
+}
