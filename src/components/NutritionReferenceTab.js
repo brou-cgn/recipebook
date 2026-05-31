@@ -125,15 +125,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const buildPayload = (
     row,
     source = 'manual',
-    { removeLegacyFamily = true, preferRowSource = false } = {}
+    { removeLegacyFamily = true } = {}
   ) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
-    const sourceValue = String(
-      preferRowSource
-        ? (row.source || source || '')
-        : (source || row.source || '')
-    ).trim();
+    const sourceValue = String(source || '').trim();
     const payload = {
       ingredientID,
       synonyms,
@@ -185,7 +181,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
     await setDoc(
       doc(db, 'nutritionReferences', ingredientID),
-      buildPayload(row, 'manual', { preferRowSource: true }),
+      buildPayload(row, row.source || 'manual'),
       { merge: true }
     );
     if (row.id !== ingredientID) {
@@ -224,7 +220,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         defaultAmountG: newDefaultAmountG,
         ...newBooleanValues,
         ...newValues,
-      }, 'manual', { preferRowSource: true }),
+      }, newSource || 'manual'),
       { merge: true }
     );
     setNewIngredientID('');
@@ -401,7 +397,8 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const importedIds = new Set(importedRows.map((row) => row.ingredientID));
       await Promise.all(importedRows.map((importedRow) => setDoc(
           doc(db, 'nutritionReferences', importedRow.ingredientID),
-          buildPayload(importedRow, 'csv-import', { removeLegacyFamily: false, preferRowSource: true }),
+          // merge:false replaces the document, so legacy "family" is dropped implicitly.
+          buildPayload(importedRow, importedRow.source || 'csv-import', { removeLegacyFamily: false }),
           { merge: false }
         )));
 
