@@ -8,6 +8,14 @@ export const NUTRITION_REFERENCE_FIELDS = [
   'salz',
 ];
 
+export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
+  'seasonRelevant',
+  'nutritionRelevant',
+  'isFresh',
+  'isSpice',
+  'isProcessed',
+];
+
 export function normalizeNutritionReferenceId(name) {
   return String(name || '')
     .trim()
@@ -28,6 +36,31 @@ export function parseNutritionReferenceValues(input = {}) {
     const numeric = Number(raw);
     if (Number.isFinite(numeric) && numeric >= 0) {
       acc[key] = numeric;
+    }
+    return acc;
+  }, {});
+}
+
+export function parseNutritionReferenceBooleanFields(input = {}) {
+  return NUTRITION_REFERENCE_BOOLEAN_FIELDS.reduce((acc, key) => {
+    const raw = input[key];
+    if (raw == null || raw === '') {
+      return acc;
+    }
+    if (typeof raw === 'boolean') {
+      acc[key] = raw;
+      return acc;
+    }
+    if (typeof raw === 'number' && (raw === 0 || raw === 1)) {
+      acc[key] = Boolean(raw);
+      return acc;
+    }
+
+    const normalized = String(raw).trim().toLowerCase();
+    if (['true', '1', 'ja', 'yes'].includes(normalized)) {
+      acc[key] = true;
+    } else if (['false', '0', 'nein', 'no'].includes(normalized)) {
+      acc[key] = false;
     }
     return acc;
   }, {});

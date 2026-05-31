@@ -94,6 +94,24 @@ describe('NutritionReferenceTab', () => {
     expect(window.alert).toHaveBeenCalledWith('Diese ingredientID existiert bereits.');
   });
 
+  test('saves boolean fields for an existing row', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('Tomate')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Saisonrelevant tomate'));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      ingredientID: 'dummy-tomate',
+      seasonRelevant: true,
+    }));
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+  });
+
   test('refreshes an existing row from OpenFoodFacts and overwrites the document', async () => {
     mockFetch.mockResolvedValue({
       ok: true,

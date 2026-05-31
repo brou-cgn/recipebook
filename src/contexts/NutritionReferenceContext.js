@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
+  parseNutritionReferenceBooleanFields,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
@@ -21,6 +22,7 @@ function mapNutritionReferenceRows(snapshot) {
         ingredientID,
         family: data.family || '',
         category: data.category || '',
+        ...parseNutritionReferenceBooleanFields(data),
         synonyms,
         name: synonyms[0] || data.name || '',
         ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),

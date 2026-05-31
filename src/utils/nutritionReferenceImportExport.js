@@ -1,5 +1,7 @@
 import {
+  NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   parseNutritionReferenceFallbackWeight,
+  parseNutritionReferenceBooleanFields,
   parseNutritionReferenceSynonyms,
 } from './nutritionReferenceUtils';
 
@@ -8,6 +10,7 @@ const CSV_HEADERS = [
   'ingredientID',
   'family',
   'category',
+  ...NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   'synonyms',
   'defaultAmountG',
   'kalorien',
@@ -77,6 +80,11 @@ export function createNutritionReferenceCsv(rows = []) {
         const synonyms = parseNutritionReferenceSynonyms(row);
         return escapeCsvValue(synonyms.join('|'));
       }
+      if (NUTRITION_REFERENCE_BOOLEAN_FIELDS.includes(field)) {
+        if (row[field] === true) return 'true';
+        if (row[field] === false) return 'false';
+        return '';
+      }
       return escapeCsvValue(row[field] ?? '');
     }).join(';')
   ));
@@ -129,6 +137,7 @@ export function parseNutritionReferenceCsv(content) {
       ingredientID,
       family: String(raw.family || '').trim(),
       category: String(raw.category || '').trim(),
+      ...parseNutritionReferenceBooleanFields(raw),
       synonyms,
       ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
       kalorien: raw.kalorien,

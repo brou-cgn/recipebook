@@ -1,4 +1,5 @@
 import {
+  parseNutritionReferenceBooleanFields,
   normalizeNutritionReferenceId,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
@@ -61,6 +62,32 @@ describe('nutritionReferenceUtils', () => {
   describe('parseNutritionReferenceSynonyms', () => {
     test('parses and de-duplicates values from comma-separated strings', () => {
       expect(parseNutritionReferenceSynonyms({ synonyms: 'Tomate, Paradeiser, Tomate' })).toEqual(['Tomate', 'Paradeiser']);
+    });
+
+    describe('parseNutritionReferenceBooleanFields', () => {
+      test('parses boolean-like values', () => {
+        expect(parseNutritionReferenceBooleanFields({
+          seasonRelevant: 'ja',
+          nutritionRelevant: 'false',
+          isFresh: 1,
+          isSpice: 0,
+          isProcessed: true,
+        })).toEqual({
+          seasonRelevant: true,
+          nutritionRelevant: false,
+          isFresh: true,
+          isSpice: false,
+          isProcessed: true,
+        });
+      });
+
+      test('ignores empty and invalid values', () => {
+        expect(parseNutritionReferenceBooleanFields({
+          seasonRelevant: '',
+          nutritionRelevant: null,
+          isFresh: 'maybe',
+        })).toEqual({});
+      });
     });
 
     test('falls back to name when no synonyms are provided', () => {

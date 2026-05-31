@@ -4,8 +4,10 @@ import { db } from '../firebase';
 import { ROLES } from '../utils/userManagement';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
+  NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
   normalizeNutritionReferenceId,
+  parseNutritionReferenceBooleanFields,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
@@ -24,6 +26,14 @@ const NUTRITION_FIELD_LABELS = {
   zucker: 'Zucker (g)',
   ballaststoffe: 'Ballaststoffe (g)',
   salz: 'Salz (g)',
+};
+
+const NUTRITION_BOOLEAN_LABELS = {
+  seasonRelevant: 'Saisonrelevant',
+  nutritionRelevant: 'Nährwertrelevant',
+  isFresh: 'Frischprodukt',
+  isSpice: 'Gewürz',
+  isProcessed: 'Verarbeitet',
 };
 
 const OPEN_FOOD_FACTS_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
@@ -91,6 +101,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [newCategory, setNewCategory] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
   const [newValues, setNewValues] = useState({});
+  const [newBooleanValues, setNewBooleanValues] = useState({});
   const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
   const [refreshingRowId, setRefreshingRowId] = useState(null);
   const [lookupError, setLookupError] = useState('');
@@ -116,6 +127,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       synonyms,
       normalizedSynonyms: getNormalizedNutritionReferenceSynonyms({ synonyms }),
       name: synonyms[0] || '',
+      ...parseNutritionReferenceBooleanFields(row),
       ...parseNutritionReferenceValues(row),
       updatedAt: serverTimestamp(),
       updatedBy: currentUser?.id || null,
@@ -184,6 +196,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         category: newCategory,
         synonyms,
         defaultAmountG: newDefaultAmountG,
+        ...newBooleanValues,
         ...newValues,
       }),
       { merge: true }
@@ -193,6 +206,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setNewCategory('');
     setNewSynonyms('');
     setNewValues({});
+    setNewBooleanValues({});
     setNewDefaultAmountG('');
     await reload();
     setActionMessage(`Eintrag ${ingredientID} hinzugefügt.`);
@@ -300,6 +314,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       ingredientID: getIngredientID(row),
       family: row.family || '',
       category: row.category || '',
+      ...parseNutritionReferenceBooleanFields(row),
       synonyms: parseNutritionReferenceSynonyms(row),
       defaultAmountG: row.defaultAmountG ?? '',
       ...parseNutritionReferenceValues(row),
@@ -428,6 +443,9 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                 <th>ingredientID</th>
                 <th>family</th>
                 <th>category</th>
+                {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
+                  <th key={field}>{NUTRITION_BOOLEAN_LABELS[field]}</th>
+                ))}
                 <th>Synonyme</th>
                 <th>Fallbackgew. (g)</th>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
@@ -466,6 +484,17 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       aria-label={`category ${row.id}`}
                     />
                   </td>
+                  {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
+                    <td key={field}>
+                      <input
+                        type="checkbox"
+                        checked={row[field] === true}
+                        onChange={(e) => updateCell(row.id, field, e.target.checked)}
+                        className="conversion-table-input"
+                        aria-label={`${NUTRITION_BOOLEAN_LABELS[field]} ${row.id}`}
+                      />
+                    </td>
+                  ))}
                   <td>
                     <input
                       type="text"
@@ -538,6 +567,17 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     className="conversion-table-input"
                   />
                 </td>
+                {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
+                  <td key={field}>
+                    <input
+                      type="checkbox"
+                      checked={newBooleanValues[field] === true}
+                      onChange={(e) => setNewBooleanValues((prev) => ({ ...prev, [field]: e.target.checked }))}
+                      className="conversion-table-input"
+                      aria-label={`${NUTRITION_BOOLEAN_LABELS[field]} neu`}
+                    />
+                  </td>
+                ))}
                 <td>
                   <input
                     type="text"
