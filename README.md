@@ -422,6 +422,8 @@ RecipeBook can automatically calculate nutritional values for recipes using the
 - Values are computed server-side via a Firebase Cloud Function to avoid CORS issues.
 - Data source: **OpenFoodFacts** (https://world.openfoodfacts.org), licensed under
   [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
+- CSV import/export in **Einstellungen → Nährwerte** uses the columns
+  `ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz`.
 
 ## PWA Features
 

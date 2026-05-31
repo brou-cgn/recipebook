@@ -8,8 +8,11 @@ import {
 const REQUIRED_HEADERS = ['ingredientID', 'synonyms'];
 const CSV_HEADERS = [
   'ingredientID',
-  'family',
+  'nutritionFamily',
+  'seasonalFamily',
   'category',
+  'Quelle',
+  'Suchbegriff',
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   'synonyms',
   'defaultAmountG',
@@ -85,6 +88,12 @@ export function createNutritionReferenceCsv(rows = []) {
         if (row[field] === false) return 'false';
         return '';
       }
+      if (field === 'Quelle') {
+        return escapeCsvValue(row.source ?? '');
+      }
+      if (field === 'Suchbegriff') {
+        return escapeCsvValue(row.searchTerm ?? '');
+      }
       return escapeCsvValue(row[field] ?? '');
     }).join(';')
   ));
@@ -132,11 +141,18 @@ export function parseNutritionReferenceCsv(content) {
     }
 
     const fallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: raw.defaultAmountG });
+    const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
+    const seasonalFamily = String(raw.seasonalFamily || '').trim();
+    const source = String(raw.Quelle || raw.source || '').trim();
+    const searchTerm = String(raw.Suchbegriff || raw.searchTerm || '').trim();
 
     return {
       ingredientID,
-      family: String(raw.family || '').trim(),
+      nutritionFamily,
+      seasonalFamily,
       category: String(raw.category || '').trim(),
+      source,
+      searchTerm,
       ...parseNutritionReferenceBooleanFields(raw),
       synonyms,
       ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),

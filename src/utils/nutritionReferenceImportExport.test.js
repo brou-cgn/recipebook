@@ -5,8 +5,11 @@ describe('nutritionReferenceImportExport', () => {
     const csv = createNutritionReferenceCsv([
       {
         ingredientID: 'dummy-tomate',
-        family: 'Gemüse',
+        nutritionFamily: 'Gemüse',
+        seasonalFamily: 'Fruchtgemüse',
         category: 'Nachtschatten',
+        source: 'manual',
+        searchTerm: 'Tomate frisch',
         seasonRelevant: true,
         nutritionRelevant: false,
         synonyms: ['Tomate', 'Paradeiser'],
@@ -15,23 +18,26 @@ describe('nutritionReferenceImportExport', () => {
       },
     ]);
 
-    expect(csv).toContain('ingredientID;family;category;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz');
-    expect(csv).toContain('dummy-tomate;Gemüse;Nachtschatten;true;false;;;;Tomate|Paradeiser;100;18');
+    expect(csv).toContain('ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz');
+    expect(csv).toContain('dummy-tomate;Gemüse;Fruchtgemüse;Nachtschatten;manual;Tomate frisch;true;false;;;;Tomate|Paradeiser;100;18');
   });
 
   test('parses imported CSV rows and validates required fields', () => {
     const rows = parseNutritionReferenceCsv(
       [
-        'ingredientID;family;category;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien',
-        'dummy-kartoffel;Gemüse;Knolle;ja;nein;true;false;0;Kartoffel|Erdapfel;150;86',
+        'ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien',
+        'dummy-kartoffel;Gemüse;Knollen;Knolle;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;150;86',
       ].join('\n')
     );
 
     expect(rows).toEqual([
       expect.objectContaining({
         ingredientID: 'dummy-kartoffel',
-        family: 'Gemüse',
+        nutritionFamily: 'Gemüse',
+        seasonalFamily: 'Knollen',
         category: 'Knolle',
+        source: 'csv-import',
+        searchTerm: 'kartoffel roh',
         seasonRelevant: true,
         nutritionRelevant: false,
         isFresh: true,
@@ -52,5 +58,23 @@ describe('nutritionReferenceImportExport', () => {
         'dummy-a;B',
       ].join('\n')
     )).toThrow('Doppelte ingredientID gefunden');
+  });
+
+  test('accepts legacy family/source/searchTerm headers for compatibility', () => {
+    const rows = parseNutritionReferenceCsv(
+      [
+        'ingredientID;family;category;source;searchTerm;synonyms',
+        'dummy-apfel;Obst;Kernobst;legacy;Apfel rot;Apfel',
+      ].join('\n')
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        ingredientID: 'dummy-apfel',
+        nutritionFamily: 'Obst',
+        source: 'legacy',
+        searchTerm: 'Apfel rot',
+      }),
+    ]);
   });
 });
