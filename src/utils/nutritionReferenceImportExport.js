@@ -146,12 +146,7 @@ export function parseNutritionReferenceCsv(content) {
       throw new Error(`Zeile ${index + 2}: Mindestens ein Synonym ist erforderlich.`);
     }
 
-    const possibleUnits = parseNutritionReferencePossibleUnits({
-      possibleUnits: String(raw.possibleUnits || '')
-        .split('|')
-        .map((u) => u.trim())
-        .filter(Boolean),
-    });
+    const possibleUnits = parseNutritionReferencePossibleUnits({ possibleUnits: raw.possibleUnits || '' });
 
     const fallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: raw.defaultAmountG });
     const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
