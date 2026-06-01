@@ -61,6 +61,24 @@ describe('nutritionReferenceUtils', () => {
   });
 
   describe('parseNutritionReferenceSynonyms', () => {
+    test('parses array with one semicolon-separated entry into multiple values', () => {
+      expect(parseNutritionReferenceSynonyms({
+        synonyms: ['schupfnudeln;nudeln;pasta;spaghetti;nudel_getrocknet'],
+      })).toEqual(['schupfnudeln', 'nudeln', 'pasta', 'spaghetti', 'nudel_getrocknet']);
+    });
+
+    test('parses arrays with mixed plain and delimited entries', () => {
+      expect(parseNutritionReferenceSynonyms({
+        synonyms: ['karotte', 'möhren;mohren', 'karotten'],
+      })).toEqual(['karotte', 'möhren', 'mohren', 'karotten']);
+    });
+
+    test('deduplicates values parsed from delimited array entries', () => {
+      expect(parseNutritionReferenceSynonyms({
+        synonyms: ['tomate;paradeiser', 'tomate', 'paradeiser'],
+      })).toEqual(['tomate', 'paradeiser']);
+    });
+
     test('parses and de-duplicates values from comma-separated strings', () => {
       expect(parseNutritionReferenceSynonyms({ synonyms: 'Tomate, Paradeiser, Tomate' })).toEqual(['Tomate', 'Paradeiser']);
     });
@@ -79,6 +97,15 @@ describe('nutritionReferenceUtils', () => {
         'karotte',
         'möhren',
         'mohren',
+      ]);
+    });
+
+    test('keeps existing string parsing behavior for semicolon-separated values', () => {
+      expect(parseNutritionReferenceSynonyms({ synonyms: 'schupfnudeln;nudeln;pasta;spaghetti' })).toEqual([
+        'schupfnudeln',
+        'nudeln',
+        'pasta',
+        'spaghetti',
       ]);
     });
 

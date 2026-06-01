@@ -42,6 +42,20 @@ describe('ingredientIdMatching', () => {
     expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', displayName: 'karotte', confidencePercent: 100 });
   });
 
+  test('returns 100% confidence for exact synonym match from malformed semicolon array data', () => {
+    const suggestions = getIngredientIdSuggestions('200 g Spaghetti', [
+      {
+        ingredientID: 'nudel_getrocknet',
+        synonyms: parseNutritionReferenceSynonyms({
+          synonyms: ['schupfnudeln;nudeln;pasta;tagliatelle;spaghetti;nudel_getrocknet'],
+        }),
+        possibleUnits: parseNutritionReferencePossibleUnits({ possibleUnits: 'g;kg;el;tl;stück' }),
+      },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'nudel_getrocknet', displayName: 'schupfnudeln', confidencePercent: 100 });
+  });
+
   test('ignores optional markers and parenthetical text for ingredient ID matching', () => {
     expect(getIngredientIdSuggestions('Zucker (optional)', [
       { ingredientID: 'zucker', synonyms: ['Zucker'] },
