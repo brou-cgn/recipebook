@@ -9,8 +9,10 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
-import { getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
-import { functions } from '../firebase';
+import { getIngredientIdSuggestions, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { db, functions } from '../firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
 import ShoppingListModal from './ShoppingListModal';
@@ -28,6 +30,22 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 // Mobile breakpoint constant
 const MOBILE_BREAKPOINT = 480;
 const TABLET_BREAKPOINT = 768;
+
+const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
+  const merged = [];
+  const seen = new Set();
+
+  [...existingValues, ...valuesToAdd].forEach((value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return;
+    const normalized = normalizeNutritionReferenceId(trimmed);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    merged.push(trimmed);
+  });
+
+  return merged;
+};
 
 // Regex to detect German time expressions: "10 Minuten", "2 Stunden", "45 Sek"
 const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|Min\.?|Sekunden?|Sek\.?)`;
@@ -848,6 +866,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const { fieldName, updatedIngredients, unresolved, matchingLog, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
     const nextLog = [...matchingLog];
+    const nutritionReferenceUpdates = new Map();
 
     for (const entry of unresolved) {
       const selectedIngredientID = String(selections?.[entry.index] || '').trim();
@@ -865,12 +884,53 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         : { ...original, ingredientID: selectedIngredientID };
 
       const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
+      if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
+        const currentUpdate = nutritionReferenceUpdates.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
+        const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
+        const synonymCandidate = String(name || '').trim();
+        const unitCandidate = String(unit || '').trim();
+
+        if (synonymCandidate) {
+          currentUpdate.synonyms.add(synonymCandidate);
+        }
+        if (unitCandidate) {
+          currentUpdate.possibleUnits.add(unitCandidate);
+        }
+        nutritionReferenceUpdates.set(selectedIngredientID, currentUpdate);
+      }
       nextLog.push({
         ingredient: entry.ingredient,
         status: 'manual',
         selectedIngredientID,
         confidencePercent: selectedSuggestion?.confidencePercent || null,
       });
+    }
+
+    for (const [ingredientID, additions] of nutritionReferenceUpdates.entries()) {
+      const existingRow = nutritionReferenceRows.find((row) => String(row?.ingredientID || '').trim() === ingredientID);
+      const existingSynonyms = mergeUniqueNormalizedValues(existingRow?.synonyms || []);
+      const existingPossibleUnits = mergeUniqueNormalizedValues(existingRow?.possibleUnits || []);
+      const mergedSynonyms = mergeUniqueNormalizedValues(existingSynonyms, [...additions.synonyms]);
+      const mergedPossibleUnits = mergeUniqueNormalizedValues(existingPossibleUnits, [...additions.possibleUnits]);
+
+      const hasChanges = mergedSynonyms.length !== existingSynonyms.length
+        || mergedPossibleUnits.length !== existingPossibleUnits.length;
+      if (!hasChanges) continue;
+
+      try {
+        await setDoc(
+          doc(db, 'nutritionReferences', ingredientID),
+          {
+            ingredientID,
+            synonyms: mergedSynonyms,
+            possibleUnits: mergedPossibleUnits,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error('Could not persist manual ingredient synonym/unit updates:', err);
+      }
     }
 
     await persistIngredientIDs(fieldName, nextIngredients);

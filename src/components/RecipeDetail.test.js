@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
+import * as ingredientIdMatching from '../utils/ingredientIdMatching';
 
 const mockUpdateRecipe = jest.fn(() => Promise.resolve());
+const mockSetDoc = jest.fn(() => Promise.resolve());
 const mockNutritionCallable = jest.fn(() => Promise.resolve({
   data: {
     naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
@@ -103,6 +105,14 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
   useNutritionReference: () => mockNutritionReferenceState,
 }));
 
+jest.mock('firebase/firestore', () => {
+  const actual = jest.requireActual('firebase/firestore');
+  return {
+    ...actual,
+    setDoc: (...args) => mockSetDoc(...args),
+  };
+});
+
 jest.mock('firebase/functions', () => ({
   getFunctions: jest.fn(() => ({})),
   httpsCallable: (...args) => mockHttpsCallable(...args),
@@ -110,6 +120,7 @@ jest.mock('firebase/functions', () => ({
 
 beforeEach(() => {
   mockUpdateRecipe.mockClear();
+  mockSetDoc.mockClear();
   mockNutritionCallable.mockClear();
   mockHttpsCallable.mockClear();
   mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
@@ -2238,6 +2249,67 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
+  });
+
+  test('stores manual low-confidence ingredient unit and synonym for selected ingredientID', async () => {
+    const suggestionSpy = jest.spyOn(ingredientIdMatching, 'getIngredientIdSuggestions').mockReturnValue([
+      { ingredientID: 'tomate', confidencePercent: 72 },
+    ]);
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', synonyms: ['Tomate'], possibleUnits: ['g'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    try {
+      render(
+        <RecipeDetail
+          recipe={{
+            id: 'recipe-2b',
+            title: 'Testgericht',
+            authorId: 'user-1',
+            portionen: 2,
+            ingredients: [{ type: 'ingredient', text: '2 EL Tomatensauce' }],
+            steps: ['Mischen'],
+            speisekategorie: ['Salat'],
+          }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+      expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('ingredientID für 2 EL Tomatensauce'), { target: { value: 'tomate' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+      await waitFor(() => {
+        expect(mockUpdateRecipe).toHaveBeenCalledWith(
+          'recipe-2b',
+          expect.objectContaining({
+            ingredients: [{ type: 'ingredient', text: '2 EL Tomatensauce', ingredientID: 'tomate' }],
+          })
+        );
+      });
+
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          ingredientID: 'tomate',
+          synonyms: expect.arrayContaining(['Tomate', 'Tomatensauce']),
+          possibleUnits: expect.arrayContaining(['g', 'EL']),
+        }),
+        { merge: true }
+      );
+    } finally {
+      suggestionSpy.mockRestore();
+    }
   });
 
   test('does not open ingredientID dialog while nutrition reference data is still loading', async () => {
