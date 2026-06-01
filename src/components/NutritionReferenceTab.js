@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { deleteDoc, deleteField, doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import { ROLES } from '../utils/userManagement';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
@@ -36,48 +37,6 @@ const NUTRITION_BOOLEAN_LABELS = {
   isSpice: 'Gewürz',
   isProcessed: 'Verarbeitet',
 };
-
-const OPEN_FOOD_FACTS_SEARCH_URL = 'https://world.openfoodfacts.org/cgi/search.pl';
-
-async function loadNutritionReferenceFromOpenFoodFacts(name) {
-  const response = await fetch(
-    `${OPEN_FOOD_FACTS_SEARCH_URL}?search_terms=${encodeURIComponent(name)}&action=process&json=1&page_size=5`
-  );
-
-  if (!response.ok) {
-    throw new Error(`OpenFoodFacts-Fehler (HTTP ${response.status})`);
-  }
-
-  const data = await response.json();
-  const product = (data.products || []).find((entry) => {
-    const nutriments = entry?.nutriments || {};
-    return nutriments['energy-kcal_100g'] != null || nutriments['energy-kcal'] != null;
-  });
-
-  if (!product) {
-    throw new Error('Keine Nährwertdaten bei OpenFoodFacts gefunden.');
-  }
-
-  const nutriments = product.nutriments || {};
-  const values = parseNutritionReferenceValues({
-    kalorien: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'],
-    protein: nutriments['proteins_100g'] ?? nutriments.proteins,
-    fett: nutriments['fat_100g'] ?? nutriments.fat,
-    kohlenhydrate: nutriments['carbohydrates_100g'] ?? nutriments.carbohydrates,
-    zucker: nutriments['sugars_100g'] ?? nutriments.sugars,
-    ballaststoffe: nutriments['fiber_100g'] ?? nutriments.fiber,
-    salz: nutriments['salt_100g'] ?? nutriments.salt,
-  });
-
-  if (Object.keys(values).length === 0) {
-    throw new Error('Keine Nährwertdaten bei OpenFoodFacts gefunden.');
-  }
-
-  return {
-    productName: product.product_name || name,
-    values,
-  };
-}
 
 const getRecipeIngredientTexts = (recipe = {}) => {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
@@ -256,35 +215,40 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   };
 
   const refreshRowFromOpenFoodFacts = async (row) => {
-    const synonyms = parseNutritionReferenceSynonyms(row);
-    const searchName = String(row.searchTerm || synonyms[0] || '').trim();
-    if (!searchName) {
-      setLookupError('Bitte mindestens ein Synonym eingeben.');
-      return;
-    }
-
     setLookupError('');
     setRefreshingRowId(row.id);
 
     try {
-      const { productName, values } = await loadNutritionReferenceFromOpenFoodFacts(searchName);
+      const generateNutrition = httpsCallable(functions, 'generateNutritionFromReference');
+      const result = await generateNutrition({
+        ingredientID: getIngredientID(row),
+        nutritionFamily: row.nutritionFamily || '',
+        category: row.category || '',
+      });
+
+      const { searchTerm, source, values, productName } = result.data;
       const ingredientID = getIngredientID(row);
+      const parsedValues = parseNutritionReferenceValues(values || {});
+
       await setDoc(
         doc(db, 'nutritionReferences', ingredientID),
         {
-          ...buildPayload(row, 'openfoodfacts'),
-          product: productName,
-          ...values,
+          ...buildPayload(row, source),
+          ...(searchTerm ? { searchTerm } : {}),
+          ...(productName ? { product: productName } : {}),
+          ...parsedValues,
         },
         { merge: true }
       );
+
       if (row.id !== ingredientID) {
         await deleteDoc(doc(db, 'nutritionReferences', row.id));
       }
       await reload();
-      setActionMessage(`OpenFoodFacts-Daten für ${ingredientID} aktualisiert.`);
+      const sourceLabel = source === 'openfoodfacts' ? 'OpenFoodFacts' : 'KI-Schätzung';
+      setActionMessage(`${sourceLabel}-Daten für ${ingredientID} aktualisiert. Suchbegriff: „${searchTerm}"`);
     } catch (error) {
-      setLookupError(error?.message || 'OpenFoodFacts-Abruf fehlgeschlagen.');
+      setLookupError(error?.message || 'Abruf fehlgeschlagen.');
     } finally {
       setRefreshingRowId(null);
     }
@@ -611,7 +575,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
                       disabled={refreshingRowId === row.id}
                     >
-                      {refreshingRowId === row.id ? '⏳' : '🔍 OpenFoodFacts'}
+                      {refreshingRowId === row.id ? '⏳' : '🤖 Nährwerte abrufen'}
                     </button>
                     <button className="remove-btn" onClick={() => removeRow(row.id)} title="Entfernen">×</button>
                   </td>
