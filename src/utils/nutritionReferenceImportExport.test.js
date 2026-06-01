@@ -57,6 +57,9 @@ describe('nutritionReferenceImportExport', () => {
         defaultAmountG: 150,
       }),
     ]);
+    expect(rows[0]).not.toHaveProperty('source');
+    expect(rows[0]).not.toHaveProperty('searchTerm');
+    expect(rows[0]).not.toHaveProperty('kalorien');
   });
 
   test('parses imported CSV rows without possibleUnits column (backward compatibility)', () => {
@@ -101,6 +104,8 @@ describe('nutritionReferenceImportExport', () => {
         nutritionFamily: 'Obst',
       }),
     ]);
+    expect(rows[0]).not.toHaveProperty('source');
+    expect(rows[0]).not.toHaveProperty('searchTerm');
   });
 
   test('parses UTF-8 BOM CSV with umlauts', () => {
