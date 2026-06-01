@@ -2,14 +2,29 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
 
-jest.mock('./NutritionModal', () => function MockNutritionModal({ recipe, onClose }) {
+let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+const mockGetIngredientIdSuggestions = jest.fn(() => []);
+const mockNutritionModalProps = jest.fn();
+
+jest.mock('./NutritionModal', () => function MockNutritionModal(props) {
+  const { recipe, onClose, onEnsureIngredientIDs } = props;
+  mockNutritionModalProps(props);
   return (
     <div data-testid="nutrition-modal-mock">
       <p>Nährwerte Mock {recipe?.title}</p>
+      <button onClick={() => onEnsureIngredientIDs?.()}>IDs prüfen</button>
       <button onClick={onClose}>Schließen</button>
     </div>
   );
 });
+
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => mockNutritionReferenceState,
+}));
+
+jest.mock('../utils/ingredientIdMatching', () => ({
+  getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
+}));
 
 // Mock utility modules
 jest.mock('../utils/appCallsFirestore', () => ({
@@ -82,6 +97,10 @@ const moderatorUser = {
 describe('AppCallsPage – Kulinariktypen release with rename', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
     const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({
@@ -299,6 +318,10 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
 describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
     const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({
@@ -436,6 +459,10 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
 describe('AppCallsPage – Nährwertberechnungen tab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
     const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
@@ -541,6 +568,13 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
   });
 
   test('opens nutrition dialog from completed calculation entry', async () => {
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'gemuesepfanne', synonyms: ['Gemüsepfanne'] }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
     render(
       <AppCallsPage
         onBack={jest.fn()}
@@ -557,6 +591,58 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     expect(await screen.findByTestId('nutrition-modal-mock')).toBeInTheDocument();
     expect(screen.getByText('Nährwerte Mock Gemüsepfanne')).toBeInTheDocument();
+    expect(mockNutritionModalProps).toHaveBeenLastCalledWith(expect.objectContaining({
+      onEnsureIngredientIDs: expect.any(Function),
+      nutritionReferenceRows: mockNutritionReferenceState.rows,
+    }));
+  });
+
+  test('shows ingredientID dialog and persists manual selection when modal requests matching', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', confidencePercent: 100 },
+    ]);
+    const onUpdateRecipe = jest.fn(() => Promise.resolve());
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Gemüsepfanne',
+            ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
+      'r1',
+      {
+        ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+      }
+    ));
   });
 
   test('shows warning symbol only for recipes with non-included ingredients', async () => {
@@ -617,6 +703,10 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 describe('AppCallsPage – Kochateliereinstellungen tab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
     const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
@@ -831,6 +921,10 @@ describe('AppCallsPage – Benjamin Rousselli filter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
     const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });

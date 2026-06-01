@@ -18,6 +18,8 @@ import {
 } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
+import { getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
 import {
   getCuisineProposals,
@@ -85,11 +87,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [shareLinkErrors, setShareLinkErrors] = useState({});
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
+  const [ingredientMatchDialog, setIngredientMatchDialog] = useState(null);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
   const tabsRef = useRef(null);
+  const ingredientMatchFromModalRef = useRef(false);
+  const { rows: nutritionReferenceRows } = useNutritionReference();
 
   // Kulinariktypen state
   const [cuisineProposals, setCuisineProposals] = useState([]);
@@ -256,6 +261,143 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const handleSaveNutrition = async (recipeId, naehrwerte) => {
     if (!onUpdateRecipe) return;
     await onUpdateRecipe(recipeId, { naehrwerte });
+  };
+
+  const getNutritionIngredientSource = (recipe) => {
+    if (!recipe) return { fieldName: 'ingredients', rawIngredients: [] };
+    if (Array.isArray(recipe.zutaten)) {
+      return { fieldName: 'zutaten', rawIngredients: recipe.zutaten };
+    }
+    return { fieldName: 'ingredients', rawIngredients: recipe.ingredients || [] };
+  };
+
+  const persistIngredientIDs = async (recipeId, fieldName, updatedIngredients) => {
+    if (!recipeId || !fieldName || !onUpdateRecipe) return;
+    try {
+      await onUpdateRecipe(recipeId, { [fieldName]: updatedIngredients });
+    } catch (err) {
+      console.error('Could not persist ingredientIDs:', err);
+    }
+  };
+
+  const ensureIngredientIDsForNutrition = async (recipe) => {
+    const targetRecipe = recipe || selectedNutritionRecipe;
+    if (!targetRecipe) return null;
+    const { fieldName, rawIngredients } = getNutritionIngredientSource(targetRecipe);
+    const updatedIngredients = [...rawIngredients];
+    const unresolvedIngredients = [];
+    const matchingLog = [];
+    let autoAssigned = 0;
+
+    rawIngredients.forEach((item, index) => {
+      const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
+      if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
+
+      const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
+      if (existingIngredientID) return;
+
+      const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
+      const top = suggestions[0];
+      const hasUniqueTop = Boolean(top) && suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
+
+      if (top && top.confidencePercent === 100 && hasUniqueTop) {
+        const nextItem = typeof item === 'string'
+          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
+          : { ...item, ingredientID: top.ingredientID };
+        updatedIngredients[index] = nextItem;
+        autoAssigned += 1;
+        matchingLog.push({
+          ingredient: ingredientItem.text,
+          status: 'auto',
+          selectedIngredientID: top.ingredientID,
+          confidencePercent: top.confidencePercent,
+        });
+        return;
+      }
+
+      unresolvedIngredients.push({
+        index,
+        ingredient: ingredientItem.text,
+        suggestions,
+      });
+      matchingLog.push({
+        ingredient: ingredientItem.text,
+        status: suggestions.length > 0 ? 'ambiguous' : 'unmatched',
+        suggestions: suggestions.map((entry) => ({ ingredientID: entry.ingredientID, confidencePercent: entry.confidencePercent })),
+      });
+    });
+
+    if (unresolvedIngredients.length > 0) {
+      const selections = unresolvedIngredients.reduce((acc, entry) => {
+        acc[entry.index] = '';
+        return acc;
+      }, {});
+      setIngredientMatchDialog({
+        recipeId: targetRecipe.id,
+        fieldName,
+        updatedIngredients,
+        unresolved: unresolvedIngredients,
+        matchingLog,
+        selections,
+        errorMessage: '',
+      });
+      return null;
+    }
+
+    if (autoAssigned > 0) {
+      await persistIngredientIDs(targetRecipe.id, fieldName, updatedIngredients);
+    }
+
+    return { fieldName, updatedIngredients, matchingLog };
+  };
+
+  const handleEnsureIngredientIDsForModal = async () => {
+    ingredientMatchFromModalRef.current = true;
+    const result = await ensureIngredientIDsForNutrition(selectedNutritionRecipe);
+    if (result !== null) {
+      ingredientMatchFromModalRef.current = false;
+    }
+    return result;
+  };
+
+  const handleIngredientMatchSelectionChange = (index, ingredientID) => {
+    setIngredientMatchDialog((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        errorMessage: '',
+        selections: {
+          ...prev.selections,
+          [index]: ingredientID,
+        },
+      };
+    });
+  };
+
+  const handleIngredientMatchConfirm = async () => {
+    if (!ingredientMatchDialog) return;
+    const { recipeId, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
+    const nextIngredients = [...updatedIngredients];
+
+    for (const entry of unresolved) {
+      const selectedIngredientID = String(selections?.[entry.index] || '').trim();
+      if (!selectedIngredientID) {
+        setIngredientMatchDialog((prev) => prev ? {
+          ...prev,
+          errorMessage: 'Bitte für jede Zutat eine ingredientID auswählen.',
+        } : prev);
+        return;
+      }
+
+      const original = nextIngredients[entry.index];
+      nextIngredients[entry.index] = typeof original === 'string'
+        ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
+        : { ...original, ingredientID: selectedIngredientID };
+    }
+
+    await persistIngredientIDs(recipeId, fieldName, nextIngredients);
+    setIngredientMatchDialog(null);
+    ingredientMatchFromModalRef.current = false;
   };
 
   const handleAddCuisineProposal = async () => {
@@ -1188,7 +1330,65 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           currentUser={currentUser}
           onClose={() => setSelectedNutritionRecipeId(null)}
           onSave={(naehrwerte) => handleSaveNutrition(selectedNutritionRecipe.id, naehrwerte)}
+          onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
+          nutritionReferenceRows={nutritionReferenceRows}
         />
+      )}
+      {ingredientMatchDialog && (
+        <div className="ingredient-match-dialog-overlay" onClick={() => setIngredientMatchDialog(null)}>
+          <div
+            className="ingredient-match-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="ingredientID-Zuordnung"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ingredient-match-dialog-header">
+              <h2 className="ingredient-match-dialog-title">ingredientID prüfen</h2>
+              <button
+                type="button"
+                className="ingredient-match-dialog-close"
+                onClick={() => setIngredientMatchDialog(null)}
+                aria-label="ingredientID-Dialog schließen"
+              >
+                ×
+              </button>
+            </div>
+            <p className="ingredient-match-dialog-note">
+              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden.
+            </p>
+            {ingredientMatchDialog.errorMessage ? (
+              <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
+            ) : null}
+            <ul className="ingredient-match-dialog-list">
+              {ingredientMatchDialog.unresolved.map((entry) => (
+                <li key={entry.index}>
+                  <span>{entry.ingredient}</span>
+                  <select
+                    value={ingredientMatchDialog.selections?.[entry.index] || ''}
+                    onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
+                    aria-label={`ingredientID für ${entry.ingredient}`}
+                  >
+                    <option value="">Bitte auswählen</option>
+                    {entry.suggestions.map((suggestion) => (
+                      <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
+                        {suggestion.ingredientID} ({suggestion.confidencePercent}%)
+                      </option>
+                    ))}
+                  </select>
+                </li>
+              ))}
+            </ul>
+            <div className="ingredient-match-dialog-actions">
+              <button type="button" className="ingredient-match-dialog-cancel" onClick={() => setIngredientMatchDialog(null)}>
+                Abbrechen
+              </button>
+              <button type="button" className="ingredient-match-dialog-confirm" onClick={handleIngredientMatchConfirm}>
+                Übernehmen & berechnen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
