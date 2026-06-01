@@ -382,16 +382,45 @@
 }
 
 .nutrition-reference-section .conversion-table-container {
-  max-height: 70vh;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
   border: 1px solid #ddd;
   border-radius: 8px;
+}
+
+.nutrition-reference-section .conversion-table {
+  --nutrition-header-height: 2.4rem;
+  width: 100%;
+  min-width: max-content;
+}
+
+.nutrition-reference-section .conversion-table thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.nutrition-reference-section .conversion-table-filter-row th {
+  position: sticky;
+  top: var(--nutrition-header-height);
+  z-index: 2;
+  background: #fff;
+}
+
+@media (max-width: 1023px) {
+  .nutrition-reference-section .conversion-table {
+    --nutrition-header-height: 2.8rem;
+  }
 }
 
 @media (min-width: 1024px) {
   .nutrition-reference-section .conversion-table {
     table-layout: fixed;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: max-content;
+    --nutrition-header-height: 2rem;
   }
 
   .nutrition-reference-section .conversion-table th,

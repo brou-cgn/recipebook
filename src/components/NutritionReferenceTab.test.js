@@ -127,6 +127,68 @@ describe('NutritionReferenceTab', () => {
     expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
+  test('supports column filters for table headers', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
+            nutritionFamily: 'Gemüse',
+            seasonalFamily: 'Fruchtgemüse',
+            category: 'Gemüse',
+            status: 'Freizugeben',
+            source: 'manual',
+            searchTerm: 'Tomate',
+            seasonRelevant: true,
+            synonyms: ['Tomate'],
+            possibleUnits: ['g'],
+            defaultAmountG: 100,
+            kalorien: 18,
+          }),
+        },
+        {
+          id: 'milch',
+          data: () => ({
+            ingredientID: 'dummy-milch',
+            displayName: 'Milch',
+            nutritionFamily: 'Milchprodukte',
+            seasonalFamily: 'Ganzjährig',
+            category: 'Getränk',
+            status: 'Freigegeben',
+            source: 'openfoodfacts',
+            searchTerm: 'Milch',
+            seasonRelevant: false,
+            synonyms: ['Milch', 'Kuhmilch'],
+            possibleUnits: ['ml'],
+            defaultAmountG: 250,
+            kalorien: 64,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
+
+    expect(screen.getByLabelText('Filter ingredientID')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Anzeigename')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Saisonrelevant')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Kalorien (kcal)')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Filter ingredientID'), { target: { value: 'milch' } });
+    expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Filter ingredientID'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Filter Saisonrelevant'), { target: { value: 'true' } });
+    expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('dummy-milch')).not.toBeInTheDocument();
+  });
+
   test('does not create duplicates for existing ingredient ids', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
