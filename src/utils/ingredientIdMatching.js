@@ -2,8 +2,8 @@ import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 
 const COMMON_UNITS = new Set([
   'g', 'kg', 'mg',
-  'ml', 'l', 'dl', 'cl',
-  'el', 'tl',
+  'ml', 'l', 'dl', 'cl', 'liter',
+  'el', 'tl', 'essloffel', 'essloeffel', 'teeloffel', 'teeloeffel',
   'tasse', 'tassen',
   'prise', 'prisen',
   'bund', 'zehe', 'zehen',
