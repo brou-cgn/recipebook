@@ -866,7 +866,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const { fieldName, updatedIngredients, unresolved, matchingLog, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
     const nextLog = [...matchingLog];
-    const nutritionReferenceUpdates = new Map();
+    const ingredientLearningData = new Map();
 
     for (const entry of unresolved) {
       const selectedIngredientID = String(selections?.[entry.index] || '').trim();
@@ -885,18 +885,18 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
       const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
       if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
-        const currentUpdate = nutritionReferenceUpdates.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
+        const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
         const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
-        const synonymCandidate = String(name || '').trim();
-        const unitCandidate = String(unit || '').trim();
+        const parsedSynonym = String(name || '').trim();
+        const parsedUnit = String(unit || '').trim();
 
-        if (synonymCandidate) {
-          currentUpdate.synonyms.add(synonymCandidate);
+        if (parsedSynonym) {
+          learningUpdate.synonyms.add(parsedSynonym);
         }
-        if (unitCandidate) {
-          currentUpdate.possibleUnits.add(unitCandidate);
+        if (parsedUnit) {
+          learningUpdate.possibleUnits.add(parsedUnit);
         }
-        nutritionReferenceUpdates.set(selectedIngredientID, currentUpdate);
+        ingredientLearningData.set(selectedIngredientID, learningUpdate);
       }
       nextLog.push({
         ingredient: entry.ingredient,
@@ -906,16 +906,25 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       });
     }
 
-    for (const [ingredientID, additions] of nutritionReferenceUpdates.entries()) {
+    for (const [ingredientID, additions] of ingredientLearningData.entries()) {
       const existingRow = nutritionReferenceRows.find((row) => String(row?.ingredientID || '').trim() === ingredientID);
-      const existingSynonyms = mergeUniqueNormalizedValues(existingRow?.synonyms || []);
-      const existingPossibleUnits = mergeUniqueNormalizedValues(existingRow?.possibleUnits || []);
-      const mergedSynonyms = mergeUniqueNormalizedValues(existingSynonyms, [...additions.synonyms]);
-      const mergedPossibleUnits = mergeUniqueNormalizedValues(existingPossibleUnits, [...additions.possibleUnits]);
+      const existingSynonyms = Array.isArray(existingRow?.synonyms) ? existingRow.synonyms : [];
+      const existingPossibleUnits = Array.isArray(existingRow?.possibleUnits) ? existingRow.possibleUnits : [];
+      const existingSynonymIds = new Set(existingSynonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean));
+      const existingUnitIds = new Set(existingPossibleUnits.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean));
+      const newSynonyms = [...additions.synonyms].filter((value) => {
+        const normalized = normalizeNutritionReferenceId(value);
+        return Boolean(normalized) && !existingSynonymIds.has(normalized);
+      });
+      const newPossibleUnits = [...additions.possibleUnits].filter((value) => {
+        const normalized = normalizeNutritionReferenceId(value);
+        return Boolean(normalized) && !existingUnitIds.has(normalized);
+      });
 
-      const hasChanges = mergedSynonyms.length !== existingSynonyms.length
-        || mergedPossibleUnits.length !== existingPossibleUnits.length;
-      if (!hasChanges) continue;
+      if (newSynonyms.length === 0 && newPossibleUnits.length === 0) continue;
+
+      const mergedSynonyms = mergeUniqueNormalizedValues(existingSynonyms, newSynonyms);
+      const mergedPossibleUnits = mergeUniqueNormalizedValues(existingPossibleUnits, newPossibleUnits);
 
       try {
         await setDoc(
