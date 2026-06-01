@@ -2159,7 +2159,7 @@ const sendBringHtml = (res, title, recipeIngredients) => {
  * 3. Falling back to Gemini nutrition estimation if OpenFoodFacts returns no results
  */
 exports.generateNutritionFromReference = onCall(
-    {maxInstances: 5, timeoutSeconds: 120, secrets: [geminiApiKey]},
+    {maxInstances: 5, timeoutSeconds: 60, secrets: [geminiApiKey]},
     async (request) => {
       if (!request.auth) {
         throw new HttpsError('unauthenticated', 'You must be logged in to generate nutrition data');

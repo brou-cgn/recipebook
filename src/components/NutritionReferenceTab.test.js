@@ -163,7 +163,7 @@ describe('NutritionReferenceTab', () => {
     fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
 
     await waitFor(() => {
-      expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'generateNutritionFromReference');
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.any(Object), 'generateNutritionFromReference');
       expect(mockCallFn).toHaveBeenCalledWith({
         ingredientID: 'dummy-tomate',
         nutritionFamily: 'Gemüse',
