@@ -2149,6 +2149,10 @@ describe('RecipeDetail - Longpress on minus button in portion selector', () => {
 describe('RecipeDetail - ingredientID matching for nutrition calculation', () => {
   const currentUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('auto-assigns unique 100% ingredientID matches before nutrition calculation', async () => {
     mockNutritionReferenceState = {
       rows: [
@@ -2234,5 +2238,79 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
+  });
+
+  test('does not open ingredientID dialog while nutrition reference data is still loading', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    mockNutritionReferenceState = {
+      rows: [],
+      loading: true,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-3',
+          title: 'Testgericht',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Referenzdaten werden noch geladen. Bitte versuche es in einem Moment erneut.');
+    });
+    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
+    expect(mockUpdateRecipe).not.toHaveBeenCalled();
+  });
+
+  test('does not open ingredientID dialog when nutrition reference data failed to load', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockNutritionReferenceState = {
+      rows: [],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-4',
+          title: 'Testgericht',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Nährwert-Referenzdaten konnten nicht geladen werden.');
+      expect(alertSpy).toHaveBeenCalledWith('Nährwert-Referenzdaten konnten nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.');
+    });
+    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
+    expect(mockUpdateRecipe).not.toHaveBeenCalled();
   });
 });

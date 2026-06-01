@@ -35,7 +35,7 @@ const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
-  const { rows: nutritionReferenceRows, lastUpdatedAt } = useNutritionReference();
+  const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, lastUpdatedAt } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
@@ -805,6 +805,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const handleAutoCalculateAndSave = async () => {
+    if (nutritionReferenceLoading) {
+      alert('Referenzdaten werden noch geladen. Bitte versuche es in einem Moment erneut.');
+      return;
+    }
+    if (nutritionReferenceRows.length === 0) {
+      console.error('Nährwert-Referenzdaten konnten nicht geladen werden.');
+      alert('Nährwert-Referenzdaten konnten nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.');
+      return;
+    }
     const matchingResult = await ensureIngredientIDsForNutrition();
     if (!matchingResult) return;
     await runAutoCalculateAndSave(matchingResult.updatedIngredients, matchingResult.matchingLog);
