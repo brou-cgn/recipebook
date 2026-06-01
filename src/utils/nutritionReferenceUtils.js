@@ -81,12 +81,16 @@ export function parseNutritionReferenceFallbackWeight(input = {}) {
 }
 
 export function parseNutritionReferenceSynonyms(input = {}) {
+  const parseEntry = (value) => {
+    const raw = String(value || '');
+    const delimiter = raw.includes('|') ? '|' : raw.includes(';') ? ';' : ',';
+    return raw.split(delimiter).map((entry) => entry.trim()).filter(Boolean);
+  };
+
   if (Array.isArray(input.synonyms)) {
-    return [...new Set(input.synonyms.map((entry) => String(entry || '').trim()).filter(Boolean))];
+    return [...new Set(input.synonyms.flatMap((entry) => parseEntry(entry)))];
   }
-  const raw = String(input.synonyms || input.name || '');
-  const delimiter = raw.includes('|') ? '|' : raw.includes(';') ? ';' : ',';
-  return [...new Set(raw.split(delimiter).map((entry) => entry.trim()).filter(Boolean))];
+  return [...new Set(parseEntry(input.synonyms || input.name || ''))];
 }
 
 export function parseNutritionReferencePossibleUnits(input = {}) {
