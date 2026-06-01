@@ -678,7 +678,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const ensureIngredientIDsForNutrition = async () => {
     const { fieldName, rawIngredients } = getNutritionIngredientSource();
     const updatedIngredients = [...rawIngredients];
-    const unresolved = [];
+    const unresolvedIngredients = [];
     const matchingLog = [];
     let autoAssigned = 0;
 
@@ -708,7 +708,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         return;
       }
 
-      unresolved.push({
+      unresolvedIngredients.push({
         index,
         ingredient: ingredientItem.text,
         suggestions,
@@ -720,18 +720,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       });
     });
 
-    if (unresolved.length > 0) {
-      console.warn('IngredientID matching needs manual confirmation.', unresolved);
-      const selections = unresolved.reduce((acc, entry) => {
-        acc[entry.index] = entry.suggestions[0]?.ingredientID || '';
+    if (unresolvedIngredients.length > 0) {
+      console.warn('IngredientID matching needs manual confirmation.', unresolvedIngredients);
+      const selections = unresolvedIngredients.reduce((acc, entry) => {
+        acc[entry.index] = '';
         return acc;
       }, {});
       setIngredientMatchDialog({
         fieldName,
         updatedIngredients,
-        unresolved,
+        unresolved: unresolvedIngredients,
         matchingLog,
         selections,
+        errorMessage: '',
       });
       return null;
     }
@@ -814,6 +815,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (!prev) return prev;
       return {
         ...prev,
+        errorMessage: '',
         selections: {
           ...prev.selections,
           [index]: ingredientID,
@@ -831,7 +833,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     for (const entry of unresolved) {
       const selectedIngredientID = String(selections?.[entry.index] || '').trim();
       if (!selectedIngredientID) {
-        alert('Bitte für jede Zutat eine ingredientID auswählen.');
+        setIngredientMatchDialog((prev) => prev ? {
+          ...prev,
+          errorMessage: 'Bitte für jede Zutat eine ingredientID auswählen.',
+        } : prev);
         return;
       }
 
@@ -2654,6 +2659,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
             <p className="ingredient-match-dialog-note">
               Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden.
             </p>
+            {ingredientMatchDialog.errorMessage ? (
+              <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
+            ) : null}
             <ul className="ingredient-match-dialog-list">
               {ingredientMatchDialog.unresolved.map((entry) => (
                 <li key={entry.index}>
@@ -2678,7 +2686,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Abbrechen
               </button>
               <button type="button" className="ingredient-match-dialog-confirm" onClick={handleIngredientMatchConfirm}>
-                Übernehmen &amp; berechnen
+                Übernehmen & berechnen
               </button>
             </div>
           </div>

@@ -1043,6 +1043,12 @@
   font-size: 0.9rem;
 }
 
+.ingredient-match-dialog-error {
+  margin: 0 0 0.75rem;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
 .ingredient-match-dialog-list {
   list-style: none;
   margin: 0;

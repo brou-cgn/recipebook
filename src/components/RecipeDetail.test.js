@@ -2223,6 +2223,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /tomate \(100%\)/i })).toBeInTheDocument();
 
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
 
     await waitFor(() => {
