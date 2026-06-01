@@ -9,8 +9,8 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
-import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
-import { NUTRITION_REFERENCE_PENDING_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import { db, functions } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -25,6 +25,7 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { useIngredientIDMatching } from '../hooks/useIngredientIDMatching';
 
 
 // Mobile breakpoint constant
@@ -110,7 +111,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showIndexDialog, setShowIndexDialog] = useState(false);
-  const [ingredientMatchDialog, setIngredientMatchDialog] = useState(null);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
@@ -474,6 +474,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasMultipleVersions = allVersions.length > 1;
 
   const recipe = selectedRecipe;
+  const {
+    ingredientMatchDialog,
+    setIngredientMatchDialog,
+    persistIngredientIDs,
+    ensureIngredientIDsForNutrition,
+    handleEnsureIngredientIDsForModal,
+  } = useIngredientIDMatching({
+    recipe,
+    nutritionReferenceRows,
+    currentUserId: currentUser?.id || null,
+    ingredientMatchFromModalRef,
+    persistIngredientIDs: async ({ fieldName, updatedIngredients }) => {
+      if (!fieldName) return;
+      try {
+        await updateRecipe(recipe.id, { [fieldName]: updatedIngredients });
+        setSelectedRecipe(prev => ({ ...prev, [fieldName]: updatedIngredients }));
+      } catch (err) {
+        console.error('Could not persist ingredientIDs:', err);
+      }
+    },
+  });
   
   // Determine whether stored nutrition values are outdated relative to the reference table
   const isNutritionStale = Boolean(
@@ -675,167 +696,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const handleSaveNutrition = async (naehrwerte) => {
     await updateRecipe(recipe.id, { naehrwerte });
     setSelectedRecipe({ ...recipe, naehrwerte });
-  };
-
-  const getNutritionIngredientSource = () => {
-    if (Array.isArray(recipe.zutaten)) {
-      return { fieldName: 'zutaten', rawIngredients: recipe.zutaten };
-    }
-    return { fieldName: 'ingredients', rawIngredients: recipe.ingredients || [] };
-  };
-
-  const persistIngredientIDs = async (fieldName, updatedIngredients) => {
-    if (!fieldName) return;
-    try {
-      await updateRecipe(recipe.id, { [fieldName]: updatedIngredients });
-      setSelectedRecipe(prev => ({ ...prev, [fieldName]: updatedIngredients }));
-    } catch (err) {
-      console.error('Could not persist ingredientIDs:', err);
-    }
-  };
-
-  const ensureIngredientIDsForNutrition = async () => {
-    const { fieldName, rawIngredients } = getNutritionIngredientSource();
-    const updatedIngredients = [...rawIngredients];
-    const unresolvedIngredients = [];
-    const matchingLog = [];
-    const createdReferenceDrafts = new Map();
-    const referencesToCreate = [];
-    let autoAssigned = 0;
-
-    rawIngredients.forEach((item, index) => {
-      const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
-      if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
-
-      const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
-      if (existingIngredientID) {
-        const idStillValid = nutritionReferenceRows.some(
-          (row) => String(row?.ingredientID || '').trim() === existingIngredientID
-        );
-        if (idStillValid) return;
-      }
-
-      const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
-      const top = suggestions[0];
-      const hasUniqueTop = Boolean(top) && suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
-
-      if (top && top.confidencePercent === 100 && hasUniqueTop) {
-        const nextItem = typeof item === 'string'
-          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
-          : { ...item, ingredientID: top.ingredientID };
-        updatedIngredients[index] = nextItem;
-        autoAssigned += 1;
-        matchingLog.push({
-          ingredient: ingredientItem.text,
-          status: 'auto',
-          selectedIngredientID: top.ingredientID,
-          confidencePercent: top.confidencePercent,
-          ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-        });
-        return;
-      }
-
-      if (suggestions.length === 0) {
-        const draftKey = buildPendingNutritionReferenceDraft(ingredientItem.text, nutritionReferenceRows);
-        const createdDraft = draftKey?.canonicalKey
-          ? createdReferenceDrafts.get(draftKey.canonicalKey)
-          : null;
-        const nextDraft = createdDraft || buildPendingNutritionReferenceDraft(
-          ingredientItem.text,
-          [...nutritionReferenceRows, ...Array.from(createdReferenceDrafts.values())]
-        );
-
-        if (nextDraft) {
-          if (!createdDraft) {
-            createdReferenceDrafts.set(nextDraft.canonicalKey, nextDraft);
-            referencesToCreate.push(nextDraft);
-          }
-
-          const nextItem = typeof item === 'string'
-            ? { type: 'ingredient', text: item, ingredientID: nextDraft.ingredientID }
-            : { ...item, ingredientID: nextDraft.ingredientID };
-          updatedIngredients[index] = nextItem;
-          autoAssigned += 1;
-          matchingLog.push({
-            ingredient: ingredientItem.text,
-            status: 'created',
-            selectedIngredientID: nextDraft.ingredientID,
-            createdReference: true,
-            ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-          });
-          return;
-        }
-      }
-
-      unresolvedIngredients.push({
-        index,
-        ingredient: ingredientItem.text,
-        suggestions,
-      });
-      matchingLog.push({
-        ingredient: ingredientItem.text,
-        status: suggestions.length > 0 ? 'ambiguous' : 'unmatched',
-        suggestions: suggestions.map((entry) => ({ ingredientID: entry.ingredientID, confidencePercent: entry.confidencePercent })),
-        ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-      });
-    });
-
-    if (unresolvedIngredients.length > 0) {
-      console.warn('IngredientID matching needs manual confirmation.', unresolvedIngredients);
-      const selections = unresolvedIngredients.reduce((acc, entry) => {
-        acc[entry.index] = '';
-        return acc;
-      }, {});
-      setIngredientMatchDialog({
-        fieldName,
-        updatedIngredients,
-        unresolved: unresolvedIngredients,
-        matchingLog,
-        selections,
-        errorMessage: '',
-      });
-      return null;
-    }
-
-    if (referencesToCreate.length > 0) {
-      await Promise.all(referencesToCreate.map(async (draft) => {
-        try {
-          await setDoc(
-            doc(db, 'nutritionReferences', draft.ingredientID),
-            {
-              ingredientID: draft.ingredientID,
-              displayName: draft.displayName,
-              synonyms: draft.synonyms,
-              normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
-              name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
-              possibleUnits: draft.possibleUnits,
-              status: NUTRITION_REFERENCE_PENDING_STATUS,
-              source: 'auto-created',
-              updatedAt: serverTimestamp(),
-              updatedBy: currentUser?.id || null,
-            },
-            { merge: true }
-          );
-        } catch (err) {
-          console.error('Could not create pending nutrition reference:', err);
-        }
-      }));
-    }
-
-    if (autoAssigned > 0) {
-      await persistIngredientIDs(fieldName, updatedIngredients);
-    }
-
-    return { fieldName, updatedIngredients, matchingLog };
-  };
-
-  const handleEnsureIngredientIDsForModal = async () => {
-    ingredientMatchFromModalRef.current = true;
-    const result = await ensureIngredientIDsForNutrition();
-    if (result !== null) {
-      ingredientMatchFromModalRef.current = false;
-    }
-    return result;
   };
 
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {

@@ -18,18 +18,15 @@ import {
 } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
-import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
-import { db } from '../firebase';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { NUTRITION_REFERENCE_PENDING_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
   addCuisineProposal,
   updateCuisineProposal,
   releaseCuisineProposal,
 } from '../utils/cuisineProposalsFirestore';
+import { useIngredientIDMatching } from '../hooks/useIngredientIDMatching';
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -90,7 +87,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [shareLinkErrors, setShareLinkErrors] = useState({});
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
-  const [ingredientMatchDialog, setIngredientMatchDialog] = useState(null);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
@@ -210,6 +206,26 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     () => recipes.find((recipe) => recipe.id === selectedNutritionRecipeId) || null,
     [recipes, selectedNutritionRecipeId]
   );
+  const {
+    ingredientMatchDialog,
+    setIngredientMatchDialog,
+    persistIngredientIDs,
+    ensureIngredientIDsForNutrition,
+    handleEnsureIngredientIDsForModal,
+  } = useIngredientIDMatching({
+    recipe: selectedNutritionRecipe,
+    nutritionReferenceRows,
+    currentUserId: currentUser?.id || null,
+    ingredientMatchFromModalRef,
+    persistIngredientIDs: async ({ recipeId, fieldName, updatedIngredients }) => {
+      if (!recipeId || !fieldName || !onUpdateRecipe) return;
+      try {
+        await onUpdateRecipe(recipeId, { [fieldName]: updatedIngredients });
+      } catch (err) {
+        console.error('Could not persist ingredientIDs:', err);
+      }
+    },
+  });
 
   const hasNotIncludedNutritionIngredients = (recipe) => (
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
@@ -266,169 +282,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     await onUpdateRecipe(recipeId, { naehrwerte });
   };
 
-  const getNutritionIngredientSource = (recipe) => {
-    if (!recipe) return { fieldName: 'ingredients', rawIngredients: [] };
-    if (Array.isArray(recipe.zutaten)) {
-      return { fieldName: 'zutaten', rawIngredients: recipe.zutaten };
-    }
-    return { fieldName: 'ingredients', rawIngredients: recipe.ingredients || [] };
-  };
-
-  const persistIngredientIDs = async (recipeId, fieldName, updatedIngredients) => {
-    if (!recipeId || !fieldName || !onUpdateRecipe) return;
-    try {
-      await onUpdateRecipe(recipeId, { [fieldName]: updatedIngredients });
-    } catch (err) {
-      console.error('Could not persist ingredientIDs:', err);
-    }
-  };
-
-  const ensureIngredientIDsForNutrition = async (recipe) => {
-    const targetRecipe = recipe || selectedNutritionRecipe;
-    if (!targetRecipe) return null;
-    const { fieldName, rawIngredients } = getNutritionIngredientSource(targetRecipe);
-    const updatedIngredients = [...rawIngredients];
-    const unresolvedIngredients = [];
-    const matchingLog = [];
-    const createdReferenceDrafts = new Map();
-    const referencesToCreate = [];
-    let autoAssigned = 0;
-
-    rawIngredients.forEach((item, index) => {
-      const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
-      if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
-
-      const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
-      if (existingIngredientID) {
-        const idStillValid = nutritionReferenceRows.some(
-          (row) => String(row?.ingredientID || '').trim() === existingIngredientID
-        );
-        if (idStillValid) return;
-      }
-
-      const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
-      const top = suggestions[0];
-      const hasUniqueTop = Boolean(top) && suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
-
-      if (top && top.confidencePercent === 100 && hasUniqueTop) {
-        const nextItem = typeof item === 'string'
-          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
-          : { ...item, ingredientID: top.ingredientID };
-        updatedIngredients[index] = nextItem;
-        autoAssigned += 1;
-        matchingLog.push({
-          ingredient: ingredientItem.text,
-          status: 'auto',
-          selectedIngredientID: top.ingredientID,
-          confidencePercent: top.confidencePercent,
-          ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-        });
-        return;
-      }
-
-      if (suggestions.length === 0) {
-        const draftKey = buildPendingNutritionReferenceDraft(ingredientItem.text, nutritionReferenceRows);
-        const createdDraft = draftKey?.canonicalKey
-          ? createdReferenceDrafts.get(draftKey.canonicalKey)
-          : null;
-        const nextDraft = createdDraft || buildPendingNutritionReferenceDraft(
-          ingredientItem.text,
-          [...nutritionReferenceRows, ...Array.from(createdReferenceDrafts.values())]
-        );
-
-        if (nextDraft) {
-          if (!createdDraft) {
-            createdReferenceDrafts.set(nextDraft.canonicalKey, nextDraft);
-            referencesToCreate.push(nextDraft);
-          }
-
-          const nextItem = typeof item === 'string'
-            ? { type: 'ingredient', text: item, ingredientID: nextDraft.ingredientID }
-            : { ...item, ingredientID: nextDraft.ingredientID };
-          updatedIngredients[index] = nextItem;
-          autoAssigned += 1;
-          matchingLog.push({
-            ingredient: ingredientItem.text,
-            status: 'created',
-            selectedIngredientID: nextDraft.ingredientID,
-            createdReference: true,
-            ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-          });
-          return;
-        }
-      }
-
-      unresolvedIngredients.push({
-        index,
-        ingredient: ingredientItem.text,
-        suggestions,
-      });
-      matchingLog.push({
-        ingredient: ingredientItem.text,
-        status: suggestions.length > 0 ? 'ambiguous' : 'unmatched',
-        suggestions: suggestions.map((entry) => ({ ingredientID: entry.ingredientID, confidencePercent: entry.confidencePercent })),
-        ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
-      });
-    });
-
-    if (unresolvedIngredients.length > 0) {
-      const selections = unresolvedIngredients.reduce((acc, entry) => {
-        acc[entry.index] = '';
-        return acc;
-      }, {});
-      setIngredientMatchDialog({
-        recipeId: targetRecipe.id,
-        fieldName,
-        updatedIngredients,
-        unresolved: unresolvedIngredients,
-        matchingLog,
-        selections,
-        errorMessage: '',
-      });
-      return null;
-    }
-
-    if (referencesToCreate.length > 0) {
-      await Promise.all(referencesToCreate.map(async (draft) => {
-        try {
-          await setDoc(
-            doc(db, 'nutritionReferences', draft.ingredientID),
-            {
-              ingredientID: draft.ingredientID,
-              displayName: draft.displayName,
-              synonyms: draft.synonyms,
-              normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
-              name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
-              possibleUnits: draft.possibleUnits,
-              status: NUTRITION_REFERENCE_PENDING_STATUS,
-              source: 'auto-created',
-              updatedAt: serverTimestamp(),
-              updatedBy: currentUser?.id || null,
-            },
-            { merge: true }
-          );
-        } catch (err) {
-          console.error('Could not create pending nutrition reference:', err);
-        }
-      }));
-    }
-
-    if (autoAssigned > 0) {
-      await persistIngredientIDs(targetRecipe.id, fieldName, updatedIngredients);
-    }
-
-    return { fieldName, updatedIngredients, matchingLog };
-  };
-
-  const handleEnsureIngredientIDsForModal = async () => {
-    ingredientMatchFromModalRef.current = true;
-    const result = await ensureIngredientIDsForNutrition(selectedNutritionRecipe);
-    if (result !== null) {
-      ingredientMatchFromModalRef.current = false;
-    }
-    return result;
-  };
-
   const handleIngredientMatchSelectionChange = (index, ingredientID) => {
     setIngredientMatchDialog((prev) => {
       if (!prev) return prev;
@@ -464,7 +317,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         : { ...original, ingredientID: selectedIngredientID };
     }
 
-    await persistIngredientIDs(recipeId, fieldName, nextIngredients);
+    await persistIngredientIDs(fieldName, nextIngredients, { id: recipeId });
     setIngredientMatchDialog(null);
     ingredientMatchFromModalRef.current = false;
   };
