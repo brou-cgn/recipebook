@@ -383,12 +383,27 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const content = await readImportFile(file);
       const importedRows = parseNutritionReferenceCsv(content);
       const importedIds = new Set(importedRows.map((row) => row.ingredientID));
-      await Promise.all(importedRows.map((importedRow) => setDoc(
+
+      const existingById = Object.fromEntries(
+        rows.map((row) => [getIngredientID(row), row])
+      );
+
+      await Promise.all(importedRows.map((importedRow) => {
+        const existing = existingById[importedRow.ingredientID];
+        // Protect source (Quelle): keep existing value if already set
+        const source = existing?.source || importedRow.source || 'csv-import';
+        // Protect nutrition fields: keep existing values if already set
+        const existingNutrition = parseNutritionReferenceValues(existing || {});
+        // Protect searchTerm (Suchbegriff): keep existing value if already set
+        const existingSearchTerm = existing?.searchTerm ? { searchTerm: existing.searchTerm } : {};
+        const mergedRow = { ...importedRow, ...existingNutrition, ...existingSearchTerm };
+        return setDoc(
           doc(db, 'nutritionReferences', importedRow.ingredientID),
           // merge:false replaces the document, so legacy "family" is dropped implicitly.
-          buildPayload(importedRow, importedRow.source || 'csv-import', { removeLegacyFamily: false }),
+          buildPayload(mergedRow, source, { removeLegacyFamily: false }),
           { merge: false }
-        )));
+        );
+      }));
 
       await Promise.all(rows
         .filter((row) => {

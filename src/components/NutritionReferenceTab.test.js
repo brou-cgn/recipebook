@@ -303,4 +303,75 @@ describe('NutritionReferenceTab', () => {
       expect(mockDeleteDoc).toHaveBeenCalled();
     });
   });
+
+  const makeCsvFile = (csvContent) => ({
+    text: () => Promise.resolve(csvContent),
+    arrayBuffer: () => {
+      const nodeBuffer = Buffer.from(csvContent, 'utf-8');
+      return Promise.resolve(nodeBuffer.buffer.slice(
+        nodeBuffer.byteOffset,
+        nodeBuffer.byteOffset + nodeBuffer.byteLength
+      ));
+    },
+    name: 'test.csv',
+    type: 'text/csv',
+  });
+
+  test('CSV import preserves existing source and nutrition fields for known rows', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const file = makeCsvFile('ingredientID;synonyms\ndummy-tomate;Tomate');
+    const input = document.querySelector('#nutrition-reference-import-input');
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockSetDoc.mock.calls[0][1];
+    // Existing source 'manual' must be preserved (not replaced with 'csv-import')
+    expect(payload.source).toBe('manual');
+    // Existing nutrition fields must be preserved
+    expect(payload.kalorien).toBe(18);
+    expect(payload.kohlenhydrate).toBe(3.9);
+    // setDoc options must still use merge:false to replace the document
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: false });
+  });
+
+  test('CSV import preserves existing searchTerm for known rows', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const file = makeCsvFile('ingredientID;synonyms\ndummy-tomate;Tomate');
+    const input = document.querySelector('#nutrition-reference-import-input');
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    // Existing searchTerm 'Tomate' must be preserved
+    expect(mockSetDoc.mock.calls[0][1].searchTerm).toBe('Tomate');
+  });
+
+  test('CSV import uses csv-import as source for new rows without an existing entry', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const file = makeCsvFile('ingredientID;synonyms\ndummy-kartoffel;Kartoffel');
+    const input = document.querySelector('#nutrition-reference-import-input');
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockSetDoc.mock.calls[0][1];
+    expect(payload.source).toBe('csv-import');
+    expect(payload).not.toHaveProperty('kalorien');
+  });
 });
