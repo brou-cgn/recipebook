@@ -706,7 +706,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
 
       const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
-      if (existingIngredientID) return;
+      if (existingIngredientID) {
+        const idStillValid = nutritionReferenceRows.some(
+          (row) => String(row?.ingredientID || '').trim() === existingIngredientID
+        );
+        if (idStillValid) return;
+      }
 
       const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
       const top = suggestions[0];
@@ -723,6 +728,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           status: 'auto',
           selectedIngredientID: top.ingredientID,
           confidencePercent: top.confidencePercent,
+          ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
         });
         return;
       }
@@ -736,6 +742,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         ingredient: ingredientItem.text,
         status: suggestions.length > 0 ? 'ambiguous' : 'unmatched',
         suggestions: suggestions.map((entry) => ({ ingredientID: entry.ingredientID, confidencePercent: entry.confidencePercent })),
+        ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
       });
     });
 
