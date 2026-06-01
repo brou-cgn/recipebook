@@ -696,7 +696,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
   const handleSaveNutrition = async (naehrwerte) => {
     await updateRecipe(recipe.id, { naehrwerte });
-    setSelectedRecipe({ ...recipe, naehrwerte });
+    setSelectedRecipe(prev => ({ ...prev, naehrwerte }));
   };
 
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
