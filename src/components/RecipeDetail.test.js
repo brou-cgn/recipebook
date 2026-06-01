@@ -2385,4 +2385,116 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
     expect(mockUpdateRecipe).not.toHaveBeenCalled();
   });
+
+  test('skips ingredient whose existing ingredientID still exists in nutritionReferenceRows', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-5',
+          title: 'Tomatensalat',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    // No new ID assignment should occur – ingredient is skipped
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(mockUpdateRecipe).not.toHaveBeenCalledWith(
+      'recipe-5',
+      expect.objectContaining({ ingredients: expect.arrayContaining([expect.objectContaining({ ingredientID: expect.anything() })]) })
+    );
+  });
+
+  test('re-matches ingredient whose ingredientID no longer exists in nutritionReferenceRows and auto-assigns new ID', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate-neu', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-6',
+          title: 'Tomatensalat',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate-alt' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-6',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate-neu' }],
+        })
+      );
+    });
+  });
+
+  test('shows manual dialog for ingredient whose stale ingredientID yields no unique 100% match', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-7',
+          title: 'Testgericht',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate-alt' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+  });
 });
