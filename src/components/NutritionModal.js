@@ -488,14 +488,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             const existingRow = (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID);
             const existingSource = existingRow?.source || '';
             if (!PREFERRED_NUTRITION_SOURCES.has(existingSource)) {
-              const { quantity: qty, unit } = parseIngredientNameAndUnit(ingredient);
-              const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
-              let amountG = null;
-              if (normalizedUnit === 'g') amountG = qty;
-              else if (normalizedUnit === 'kg') amountG = qty != null ? qty * 1000 : null;
-              else if (existingRow?.defaultAmountG != null) {
-                amountG = (qty != null ? qty : 1) * existingRow.defaultAmountG;
-              }
+              const amountG = computeIngredientAmountG(ingredient, existingRow);
 
               if (amountG != null && amountG > 0) {
                 const per100g = {};
