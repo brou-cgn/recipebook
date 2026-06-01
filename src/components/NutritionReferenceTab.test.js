@@ -344,6 +344,60 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
+  test('disables "Nährwerte abrufen" button and shows tooltip for rows with status manuell', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            nutritionFamily: 'Gemüse',
+            status: 'manuell',
+            source: 'manual',
+            searchTerm: 'Tomate',
+          }),
+        },
+      ],
+    });
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const btn = screen.getByRole('button', { name: '🤖 Nährwerte abrufen' });
+    expect(btn).toBeDisabled();
+    expect(btn.title).toContain('manuell');
+  });
+
+  test('does not call generateNutritionFromReference for rows with status manuell', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            nutritionFamily: 'Gemüse',
+            status: 'manuell',
+            source: 'manual',
+            searchTerm: 'Tomate',
+          }),
+        },
+      ],
+    });
+
+    const mockCallFn = jest.fn();
+    mockHttpsCallable.mockReturnValue(mockCallFn);
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    // Button is disabled – clicking it via fireEvent (which bypasses disabled) should still not trigger API
+    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+
+    // The guard inside the handler must prevent the API call
+    expect(mockCallFn).not.toHaveBeenCalled();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
   test('imports ingredient names from recipes with dummy ids', async () => {
     renderTab(
       { id: 'u1', role: 'moderator' },

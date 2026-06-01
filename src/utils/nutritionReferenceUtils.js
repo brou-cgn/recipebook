@@ -17,6 +17,7 @@ export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
 ];
 
 export const NUTRITION_REFERENCE_PENDING_STATUS = 'Freizugeben';
+export const NUTRITION_REFERENCE_MANUAL_STATUS = 'manuell';
 
 export function normalizeNutritionReferenceId(name) {
   return String(name || '')

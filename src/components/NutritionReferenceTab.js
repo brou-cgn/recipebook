@@ -7,6 +7,7 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
+  NUTRITION_REFERENCE_MANUAL_STATUS,
   NUTRITION_REFERENCE_PENDING_STATUS,
   normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
@@ -253,6 +254,10 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   const refreshRowFromOpenFoodFacts = async (row) => {
     setLookupError('');
+    if (parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS) {
+      setLookupError(`Eintrag „${getIngredientID(row)}" hat Status „${NUTRITION_REFERENCE_MANUAL_STATUS}" und wird nicht automatisch aktualisiert.`);
+      return;
+    }
     setRefreshingRowId(row.id);
     const ingredientID = getIngredientID(row);
 
@@ -731,7 +736,8 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     <button
                       className="add-btn"
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
-                      disabled={refreshingRowId === row.id}
+                      disabled={refreshingRowId === row.id || parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS}
+                      title={parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS ? `Status „${NUTRITION_REFERENCE_MANUAL_STATUS}": keine automatische Aktualisierung` : undefined}
                     >
                       {refreshingRowId === row.id ? '⏳' : '🤖 Nährwerte abrufen'}
                     </button>

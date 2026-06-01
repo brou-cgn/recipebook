@@ -5,7 +5,7 @@ import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
-import { normalizeNutritionReferenceId, NUTRITION_REFERENCE_FIELDS, scaleNutritionValues } from '../utils/nutritionReferenceUtils';
+import { normalizeNutritionReferenceId, NUTRITION_REFERENCE_FIELDS, NUTRITION_REFERENCE_MANUAL_STATUS, parseNutritionReferenceStatus, scaleNutritionValues } from '../utils/nutritionReferenceUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -482,12 +482,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           }
 
           // Write back to nutritionReferences when we have an ingredientID whose
-          // existing source is not preferred (openfoodfacts / manual)
+          // existing source is not preferred (openfoodfacts / manual) and status is not 'manuell'
           const ingredientID = String(ingredientItem.ingredientID || '').trim();
           if (ingredientID) {
             const existingRow = (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID);
             const existingSource = existingRow?.source || '';
-            if (!PREFERRED_NUTRITION_SOURCES.has(existingSource)) {
+            const existingStatus = parseNutritionReferenceStatus(existingRow || {});
+            if (!PREFERRED_NUTRITION_SOURCES.has(existingSource) && existingStatus !== NUTRITION_REFERENCE_MANUAL_STATUS) {
               const amountG = computeIngredientAmountG(ingredient, existingRow);
 
               if (amountG != null && amountG > 0) {

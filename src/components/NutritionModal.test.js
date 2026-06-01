@@ -318,6 +318,15 @@ describe('resolveIngredientNutritionFromReference', () => {
     expect(result.naehrwerte.kalorien).toBeCloseTo(270);
   });
 
+  it('returns scaled nutrition for a row with status manuell and preferred source', () => {
+    // 'manuell' status should NOT block the read path – only automatic writes are blocked
+    const manuelleRow = { ...referenceRow, ingredientID: 'butter', source: 'openfoodfacts', status: 'manuell' };
+    const ingredient = { text: '100 g Butter', ingredientID: 'butter' };
+    const result = resolveIngredientNutritionFromReference(ingredient, [manuelleRow]);
+    expect(result).not.toBeNull();
+    expect(result.naehrwerte.kalorien).toBeCloseTo(20);
+  });
+
   it('returns null when amount in grams cannot be determined', () => {
     // no unit=g, no defaultAmountG
     const row = { ...referenceRow, ingredientID: 'ei2', source: 'manual', defaultAmountG: undefined };
