@@ -997,27 +997,6 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     setImage(urlToDefault);
   };
 
-  const handleRemoveImage = async () => {
-    const imageToRemove = image;
-    
-    // Optimistically clear the UI
-    setImage('');
-    setImages([]);
-    
-    // Try to delete from Storage if it's a Storage URL
-    if (imageToRemove) {
-      try {
-        await deleteRecipeImage(imageToRemove);
-      } catch (error) {
-        // Log the error and restore the image in UI
-        console.error('Failed to delete image:', error);
-        setImage(imageToRemove);
-        setImages([{ url: imageToRemove, isDefault: true }]);
-        alert('Das Bild konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.');
-      }
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     

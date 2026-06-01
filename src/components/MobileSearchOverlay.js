@@ -116,7 +116,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       }, FOCUS_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, showFavoritesOnlyProp, showSeasonalOnlyProp, showPrivateListFilters]);
+  }, [isOpen, showFavoritesOnlyProp, showSeasonalOnlyProp, showPrivateListFilters, searchTermProp]);
 
   // Debounce search term
   useEffect(() => {

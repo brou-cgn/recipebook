@@ -58,12 +58,6 @@ function CookDateModal({ recipeId, currentUser, allUsers = [], recipeAuthorId, r
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const formatSelectedDate = (dateStr) => {
-    if (!dateStr) return '–';
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
   const handleSave = async () => {
     if (!selectedDate || isSubmitting) return;
     setIsSubmitting(true);

@@ -459,15 +459,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     }
   };
 
-  if (!canManage) {
-    return (
-      <div className="settings-section nutrition-reference-section">
-        <h3>Nährwerte je 100 g</h3>
-        <p className="section-description">Nur Admins und Moderatoren können diese Tabelle bearbeiten.</p>
-      </div>
-    );
-  }
-
   const normalizedStatusFilter = statusFilter.trim().toLowerCase();
   const normalizedColumnFilters = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     const rawValue = columnFilters[column.key];
@@ -488,6 +479,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const updateColumnFilter = useCallback((field, value) => {
     setColumnFilters((prev) => ({ ...prev, [field]: value }));
   }, []);
+
+  if (!canManage) {
+    return (
+      <div className="settings-section nutrition-reference-section">
+        <h3>Nährwerte je 100 g</h3>
+        <p className="section-description">Nur Admins und Moderatoren können diese Tabelle bearbeiten.</p>
+      </div>
+    );
+  }
   const visibleRows = rows.filter((row) => {
     const matchesStatusFilter = !normalizedStatusFilter
       || parseNutritionReferenceStatus(row).toLowerCase().includes(normalizedStatusFilter);

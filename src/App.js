@@ -473,7 +473,7 @@ function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser?.id) {
       setSeasonMatrixEntries([]);
       return undefined;
     }

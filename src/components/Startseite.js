@@ -34,7 +34,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
-  const [groupThresholds, setGroupThresholds] = useState({});
+  const [, setGroupThresholds] = useState({});
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(DEFAULT_MAX_KANDIDATEN_SCHWELLE);
   const [kandidatenLoading, setKandidatenLoading] = useState(true);
   const [kandidatenLeertext, setKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);

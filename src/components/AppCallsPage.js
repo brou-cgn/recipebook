@@ -26,7 +26,6 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { NUTRITION_REFERENCE_PENDING_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
-  addCuisineProposal,
   updateCuisineProposal,
   releaseCuisineProposal,
 } from '../utils/cuisineProposalsFirestore';
@@ -103,13 +102,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [cuisineProposals, setCuisineProposals] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [cuisineGroups, setCuisineGroups] = useState([]);
-  const [newCuisineName, setNewCuisineName] = useState('');
-  const [newCuisineGroup, setNewCuisineGroup] = useState('');
-  const [newCuisineDuplicateError, setNewCuisineDuplicateError] = useState(false);
   const [editingProposalId, setEditingProposalId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [editingGroup, setEditingGroup] = useState('');
-  const [cuisineLoading, setCuisineLoading] = useState(false);
   const [releasingId, setReleasingId] = useState(null);
 
   // Cuisine list management state
@@ -467,43 +462,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     await persistIngredientIDs(recipeId, fieldName, nextIngredients);
     setIngredientMatchDialog(null);
     ingredientMatchFromModalRef.current = false;
-  };
-
-  const handleAddCuisineProposal = async () => {
-    const name = newCuisineName.trim();
-    if (!name) return;
-    if (cuisineProposals.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-      setNewCuisineDuplicateError(true);
-      return;
-    }
-    setNewCuisineDuplicateError(false);
-    setCuisineLoading(true);
-    try {
-      const id = await addCuisineProposal({
-        name,
-        groupName: newCuisineGroup || null,
-        createdBy: currentUser?.id || '',
-        source: 'manual',
-      });
-      setCuisineProposals(prev => [
-        {
-          id,
-          name,
-          groupName: newCuisineGroup || null,
-          released: false,
-          createdBy: currentUser?.id || '',
-          createdAt: null,
-          source: 'manual',
-        },
-        ...prev,
-      ]);
-      setNewCuisineName('');
-      setNewCuisineGroup('');
-    } catch (err) {
-      console.error('Error adding cuisine proposal:', err);
-    } finally {
-      setCuisineLoading(false);
-    }
   };
 
   const handleStartEdit = (proposal) => {

@@ -1357,11 +1357,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     ? recipe.kulinarik.join(', ') 
     : recipe.kulinarik;
 
-  // Handle both array and string formats for speisekategorie
-  const categoryDisplay = Array.isArray(recipe.speisekategorie)
-    ? recipe.speisekategorie.join(', ')
-    : recipe.speisekategorie;
-
   const toggleCookingMode = () => {
     setCookingMode(prev => !prev);
     // Reset to first step when entering cooking mode
@@ -1569,55 +1564,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         };
       });
     }, 1000);
-  }
-
-  function pauseTimer(stepKey, timerIndex) {
-    const intervalKey = `${stepKey}_${timerIndex}`;
-    clearInterval(timerIntervalsRef.current[intervalKey]);
-    delete timerIntervalsRef.current[intervalKey];
-    setActiveTimers(prev => {
-      const stepTimers = prev[stepKey];
-      if (!stepTimers) return prev;
-      return {
-        ...prev,
-        [stepKey]: {
-          ...stepTimers,
-          [timerIndex]: { ...stepTimers[timerIndex], running: false },
-        },
-      };
-    });
-  }
-
-  function resumeTimer(stepKey, timerIndex) {
-    setActiveTimers(prev => {
-      const stepTimers = prev[stepKey];
-      if (!stepTimers) return prev;
-      const t = stepTimers[timerIndex];
-      if (!t || t.finished) return prev;
-      const endTime = Date.now() + t.remainingSeconds * 1000;
-      const intervalKey = `${stepKey}_${timerIndex}`;
-      if (timerIntervalsRef.current[intervalKey]) clearInterval(timerIntervalsRef.current[intervalKey]);
-      timerIntervalsRef.current[intervalKey] = setInterval(() => {
-        setActiveTimers(cur => {
-          const st = cur[stepKey];
-          if (!st) return cur;
-          const tt = st[timerIndex];
-          if (!tt || !tt.running) return cur;
-          const next = Math.max(0, Math.round((tt.endTime - Date.now()) / 1000));
-          if (next <= 0) {
-            clearInterval(timerIntervalsRef.current[intervalKey]);
-            delete timerIntervalsRef.current[intervalKey];
-            notifyTimerDone(tt.label);
-            return { ...cur, [stepKey]: { ...st, [timerIndex]: { ...tt, remainingSeconds: 0, running: false, finished: true } } };
-          }
-          return { ...cur, [stepKey]: { ...st, [timerIndex]: { ...tt, remainingSeconds: next } } };
-        });
-      }, 1000);
-      return {
-        ...prev,
-        [stepKey]: { ...stepTimers, [timerIndex]: { ...t, endTime, running: true } },
-      };
-    });
   }
 
   function stopTimer(stepKey, timerIndex) {
