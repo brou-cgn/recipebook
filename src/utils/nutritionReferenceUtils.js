@@ -79,11 +79,12 @@ export function parseNutritionReferenceFallbackWeight(input = {}) {
 }
 
 export function parseNutritionReferenceSynonyms(input = {}) {
-  const raw = Array.isArray(input.synonyms) ? input.synonyms : String(input.synonyms || input.name || '').split(',');
-  const synonyms = raw
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean);
-  return [...new Set(synonyms)];
+  if (Array.isArray(input.synonyms)) {
+    return [...new Set(input.synonyms.map((entry) => String(entry || '').trim()).filter(Boolean))];
+  }
+  const raw = String(input.synonyms || input.name || '');
+  const delimiter = raw.includes('|') ? '|' : raw.includes(';') ? ';' : ',';
+  return [...new Set(raw.split(delimiter).map((entry) => entry.trim()).filter(Boolean))];
 }
 
 export function parseNutritionReferencePossibleUnits(input = {}) {
@@ -92,7 +93,7 @@ export function parseNutritionReferencePossibleUnits(input = {}) {
   }
   const raw = String(input.possibleUnits || '');
   if (!raw.trim()) return [];
-  const delimiter = raw.includes('|') ? '|' : ';';
+  const delimiter = raw.includes('|') ? '|' : raw.includes(';') ? ';' : ',';
   return [...new Set(raw.split(delimiter).map((u) => u.trim()).filter(Boolean))];
 }
 

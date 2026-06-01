@@ -1,4 +1,8 @@
 import { getIngredientIdSuggestions, parseIngredientNameAndUnit } from './ingredientIdMatching';
+import {
+  parseNutritionReferencePossibleUnits,
+  parseNutritionReferenceSynonyms,
+} from './nutritionReferenceUtils';
 
 describe('ingredientIdMatching', () => {
   test('parses ingredient name and unit for matching', () => {
@@ -13,6 +17,18 @@ describe('ingredientIdMatching', () => {
     ]);
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'tomate', confidencePercent: 100 });
+  });
+
+  test('returns 100% confidence for exact synonym match parsed from semicolon-separated reference data', () => {
+    const suggestions = getIngredientIdSuggestions('2 Karotten', [
+      {
+        ingredientID: 'karotte',
+        synonyms: parseNutritionReferenceSynonyms({ synonyms: 'karotte;möhren;mohren;karotten' }),
+        possibleUnits: parseNutritionReferencePossibleUnits({ possibleUnits: 'g;kg;stück;bund' }),
+      },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', confidencePercent: 100 });
   });
 
   test('applies unit match as tie breaker for close candidates', () => {

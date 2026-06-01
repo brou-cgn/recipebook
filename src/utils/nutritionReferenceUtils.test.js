@@ -4,6 +4,7 @@ import {
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
+  parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
 } from './nutritionReferenceUtils';
 
@@ -64,6 +65,23 @@ describe('nutritionReferenceUtils', () => {
       expect(parseNutritionReferenceSynonyms({ synonyms: 'Tomate, Paradeiser, Tomate' })).toEqual(['Tomate', 'Paradeiser']);
     });
 
+    test('parses semicolon-separated strings', () => {
+      expect(parseNutritionReferenceSynonyms({ synonyms: 'karotte;möhren;mohren;karotten' })).toEqual([
+        'karotte',
+        'möhren',
+        'mohren',
+        'karotten',
+      ]);
+    });
+
+    test('parses pipe-separated strings', () => {
+      expect(parseNutritionReferenceSynonyms({ synonyms: 'karotte|möhren|mohren' })).toEqual([
+        'karotte',
+        'möhren',
+        'mohren',
+      ]);
+    });
+
     describe('parseNutritionReferenceBooleanFields', () => {
       test('parses boolean-like values', () => {
         expect(parseNutritionReferenceBooleanFields({
@@ -92,6 +110,20 @@ describe('nutritionReferenceUtils', () => {
 
     test('falls back to name when no synonyms are provided', () => {
       expect(parseNutritionReferenceSynonyms({ name: 'Kartoffel' })).toEqual(['Kartoffel']);
+    });
+  });
+
+  describe('parseNutritionReferencePossibleUnits', () => {
+    test('parses comma-separated strings', () => {
+      expect(parseNutritionReferencePossibleUnits({ possibleUnits: 'g,kg,stück' })).toEqual(['g', 'kg', 'stück']);
+    });
+
+    test('parses semicolon-separated strings', () => {
+      expect(parseNutritionReferencePossibleUnits({ possibleUnits: 'g;kg;stück' })).toEqual(['g', 'kg', 'stück']);
+    });
+
+    test('parses pipe-separated strings', () => {
+      expect(parseNutritionReferencePossibleUnits({ possibleUnits: 'g|kg|stück' })).toEqual(['g', 'kg', 'stück']);
     });
   });
 
