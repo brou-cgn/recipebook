@@ -1833,6 +1833,55 @@ describe('RecipeForm - Ingredient Formatting', () => {
     ));
   });
 
+  test('preserves ingredientID when saving ingredients without headings', async () => {
+    const regularUser = {
+      id: 'user-1',
+      vorname: 'Regular',
+      nachname: 'User',
+      email: 'user@example.com',
+      isAdmin: false,
+      role: 'edit',
+    };
+
+    const existingRecipe = {
+      id: 'recipe-1',
+      title: 'Existing Recipe',
+      authorId: 'user-1',
+      portionen: 4,
+      kulinarik: [],
+      schwierigkeit: 3,
+      kochdauer: 30,
+      speisekategorie: ['Main Course'],
+      ingredients: [
+        { type: 'ingredient', text: '100ml Wasser', ingredientID: 'ing-1' },
+        { type: 'ingredient', text: '500g Zucker', ingredientID: 'ing-2' },
+      ],
+      steps: ['Step 1'],
+      image: '',
+    };
+
+    render(
+      <RecipeForm
+        recipe={existingRecipe}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'recipe-1',
+        ingredients: [
+          { type: 'ingredient', text: '100 ml Wasser', ingredientID: 'ing-1' },
+          { type: 'ingredient', text: '500 g Zucker', ingredientID: 'ing-2' },
+        ],
+      })
+    ));
+  });
+
   test('preserves already formatted ingredients', async () => {
     const regularUser = {
       id: 'user-1',
