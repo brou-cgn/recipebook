@@ -154,7 +154,6 @@ describe('NutritionReferenceTab', () => {
           ballaststoffe: 4.1,
           salz: 0.2,
         },
-        productName: 'Tomatenmark',
       },
     });
     mockHttpsCallable.mockReturnValue(mockCallFn);
@@ -173,29 +172,80 @@ describe('NutritionReferenceTab', () => {
         category: '',
       });
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
-      expect(mockSetDoc.mock.calls[0][1]).toEqual(
-        expect.objectContaining({
-          ingredientID: 'dummy-tomate',
-          synonyms: ['Tomate'],
-          normalizedSynonyms: ['tomate'],
-          product: 'Tomatenmark',
-          searchTerm: 'tomato',
-          kalorien: 82,
-          protein: 4.3,
-          fett: 0.5,
-          kohlenhydrate: 18.9,
-          zucker: 12.5,
-          ballaststoffe: 4.1,
-          salz: 0.2,
-          source: 'openfoodfacts',
-          updatedBy: 'u1',
-        })
-      );
+      expect(mockSetDoc.mock.calls[0][1]).toEqual({
+        searchTerm: 'tomato',
+        kalorien: 82,
+        protein: 4.3,
+        fett: 0.5,
+        kohlenhydrate: 18.9,
+        zucker: 12.5,
+        ballaststoffe: 4.1,
+        salz: 0.2,
+        source: 'openfoodfacts',
+      });
       expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
     });
   });
 
-  test('shows an error message when generateNutritionFromReference fails', async () => {
+  test('clears previous AI_Gemini_Error before refresh and writes Gemini nutrition fields only', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            nutritionFamily: 'Gemüse',
+            source: 'manual',
+            searchTerm: 'Tomate',
+            synonyms: ['Tomate'],
+            AI_Gemini_Error: 'Vorheriger Fehler',
+          }),
+        },
+      ],
+    });
+    const mockCallFn = jest.fn().mockResolvedValue({
+      data: {
+        searchTerm: 'tomato puree',
+        source: 'ai-generiert',
+        values: {
+          kalorien: 80,
+          protein: 4,
+          fett: 0.4,
+          kohlenhydrate: 18,
+          zucker: 12,
+          ballaststoffe: 4,
+          salz: 0.1,
+        },
+      },
+    });
+    mockHttpsCallable.mockReturnValue(mockCallFn);
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalledTimes(2);
+    });
+    expect(mockDeleteField).toHaveBeenCalled();
+    expect(mockSetDoc.mock.calls[0][1].AI_Gemini_Error).toBeUndefined();
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+    expect(mockSetDoc.mock.calls[1][1]).toEqual({
+      searchTerm: 'tomato puree',
+      kalorien: 80,
+      protein: 4,
+      fett: 0.4,
+      kohlenhydrate: 18,
+      zucker: 12,
+      ballaststoffe: 4,
+      salz: 0.1,
+      source: 'ai-generiert',
+    });
+    expect(mockSetDoc.mock.calls[1][2]).toEqual({ merge: true });
+  });
+
+  test('shows an error message when generateNutritionFromReference fails and stores AI_Gemini_Error', async () => {
     const mockCallFn = jest.fn().mockRejectedValue(new Error('Abruf fehlgeschlagen.'));
     mockHttpsCallable.mockReturnValue(mockCallFn);
 
@@ -206,7 +256,8 @@ describe('NutritionReferenceTab', () => {
     fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
 
     expect(await screen.findByText('Abruf fehlgeschlagen.')).toBeInTheDocument();
-    expect(mockSetDoc).not.toHaveBeenCalled();
+    expect(mockSetDoc.mock.calls[0][1]).toEqual({ AI_Gemini_Error: 'Abruf fehlgeschlagen.' });
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
   test('imports ingredient names from recipes with dummy ids', async () => {

@@ -26,6 +26,7 @@ function mapNutritionReferenceRows(snapshot) {
         category: data.category || '',
         source: data.source || '',
         searchTerm: data.searchTerm || '',
+        AI_Gemini_Error: data.AI_Gemini_Error || '',
         ...parseNutritionReferenceBooleanFields(data),
         synonyms,
         possibleUnits: parseNutritionReferencePossibleUnits(data),

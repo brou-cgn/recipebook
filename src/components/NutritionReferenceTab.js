@@ -217,25 +217,32 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const refreshRowFromOpenFoodFacts = async (row) => {
     setLookupError('');
     setRefreshingRowId(row.id);
+    const ingredientID = getIngredientID(row);
 
     try {
+      if (row.AI_Gemini_Error) {
+        await setDoc(
+          doc(db, 'nutritionReferences', ingredientID),
+          { AI_Gemini_Error: deleteField() },
+          { merge: true }
+        );
+      }
+
       const generateNutrition = httpsCallable(functions, 'generateNutritionFromReference');
       const result = await generateNutrition({
-        ingredientID: getIngredientID(row),
+        ingredientID,
         nutritionFamily: row.nutritionFamily || '',
         category: row.category || '',
       });
 
-      const { searchTerm, source, values, productName } = result.data;
-      const ingredientID = getIngredientID(row);
+      const { searchTerm, source, values } = result.data;
       const parsedValues = parseNutritionReferenceValues(values || {});
 
       await setDoc(
         doc(db, 'nutritionReferences', ingredientID),
         {
-          ...buildPayload(row, source),
+          source: String(source || '').trim(),
           ...(searchTerm ? { searchTerm } : {}),
-          ...(productName ? { product: productName } : {}),
           ...parsedValues,
         },
         { merge: true }
@@ -248,6 +255,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const sourceLabel = source === 'openfoodfacts' ? 'OpenFoodFacts' : 'KI-Schätzung';
       setActionMessage(`${sourceLabel}-Daten für ${ingredientID} aktualisiert. Suchbegriff: „${searchTerm}"`);
     } catch (error) {
+      await setDoc(
+        doc(db, 'nutritionReferences', ingredientID),
+        { AI_Gemini_Error: error?.message || 'Abruf fehlgeschlagen.' },
+        { merge: true }
+      );
       setLookupError(error?.message || 'Abruf fehlgeschlagen.');
     } finally {
       setRefreshingRowId(null);
