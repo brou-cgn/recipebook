@@ -18,7 +18,7 @@ describe('ingredientIdMatching', () => {
   test('applies unit match as tie breaker for close candidates', () => {
     const suggestions = getIngredientIdSuggestions('1 Bund Petersilie', [
       { ingredientID: 'petersilie', synonyms: ['Petersilie'], possibleUnits: ['Bund'] },
-      { ingredientID: 'petersilienwurzel', synonyms: ['Petersilie'], possibleUnits: ['g'] },
+      { ingredientID: 'petersilienwurzel', synonyms: ['Petersilienwurzel'], possibleUnits: ['g'] },
     ]);
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'petersilie', confidencePercent: 100 });

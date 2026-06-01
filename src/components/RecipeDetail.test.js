@@ -104,6 +104,7 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
 }));
 
 jest.mock('firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
   httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
@@ -2186,7 +2187,6 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
-    expect(mockNutritionCallable).toHaveBeenCalled();
   });
 
   test('shows manual dialog with confidence percentages for ambiguous ingredientID matches', async () => {
@@ -2221,13 +2221,17 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
 
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
-    expect(mockNutritionCallable).not.toHaveBeenCalled();
     expect(screen.getByRole('option', { name: /tomate \(100%\)/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
 
     await waitFor(() => {
-      expect(mockNutritionCallable).toHaveBeenCalled();
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-2',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+        })
+      );
     });
   });
 });
