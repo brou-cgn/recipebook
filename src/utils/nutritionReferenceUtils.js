@@ -16,6 +16,8 @@ export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
   'isProcessed',
 ];
 
+export const NUTRITION_REFERENCE_PENDING_STATUS = 'Freizugeben';
+
 export function normalizeNutritionReferenceId(name) {
   return String(name || '')
     .trim()
@@ -95,6 +97,10 @@ export function parseNutritionReferencePossibleUnits(input = {}) {
   if (!raw.trim()) return [];
   const delimiter = raw.includes('|') ? '|' : raw.includes(';') ? ';' : ',';
   return [...new Set(raw.split(delimiter).map((u) => u.trim()).filter(Boolean))];
+}
+
+export function parseNutritionReferenceStatus(input = {}) {
+  return String(input.status || input.Status || '').trim();
 }
 
 export function scaleNutritionValues(per100g, amountG) {

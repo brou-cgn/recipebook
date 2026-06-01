@@ -7,8 +7,10 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
+  NUTRITION_REFERENCE_PENDING_STATUS,
   normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
+  parseNutritionReferenceStatus,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
@@ -61,6 +63,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [newNutritionFamily, setNewNutritionFamily] = useState('');
   const [newSeasonalFamily, setNewSeasonalFamily] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [newStatus, setNewStatus] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newSearchTerm, setNewSearchTerm] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
@@ -72,6 +75,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [lookupError, setLookupError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
   const importInputRef = useRef(null);
 
   useEffect(() => {
@@ -93,6 +97,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     const synonyms = parseNutritionReferenceSynonyms(row);
     const possibleUnits = parseNutritionReferencePossibleUnits(row);
     const sourceValue = String(source || '').trim();
+    const status = parseNutritionReferenceStatus(row);
     const payload = {
       ingredientID,
       displayName: String(row.displayName || '').trim(),
@@ -120,6 +125,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     if (nutritionFamily) payload.nutritionFamily = nutritionFamily;
     if (seasonalFamily) payload.seasonalFamily = seasonalFamily;
     if (category) payload.category = category;
+    if (status) payload.status = status;
     if (searchTerm) payload.searchTerm = searchTerm;
     return payload;
   };
@@ -180,6 +186,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         nutritionFamily: newNutritionFamily,
         seasonalFamily: newSeasonalFamily,
         category: newCategory,
+        status: newStatus,
         source: newSource,
         searchTerm: newSearchTerm,
         synonyms,
@@ -195,6 +202,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setNewNutritionFamily('');
     setNewSeasonalFamily('');
     setNewCategory('');
+    setNewStatus('');
     setNewSource('');
     setNewSearchTerm('');
     setNewSynonyms('');
@@ -307,6 +315,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         buildPayload({
           ingredientID: candidate,
           synonyms: [name],
+          status: NUTRITION_REFERENCE_PENDING_STATUS,
         }, 'recipe-import'),
         { merge: true }
       ));
@@ -327,6 +336,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       nutritionFamily: row.nutritionFamily || '',
       seasonalFamily: row.seasonalFamily || '',
       category: row.category || '',
+      status: parseNutritionReferenceStatus(row),
       source: row.source || '',
       searchTerm: row.searchTerm || '',
       ...parseNutritionReferenceBooleanFields(row),
@@ -433,6 +443,12 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     );
   }
 
+  const normalizedStatusFilter = statusFilter.trim().toLowerCase();
+  const visibleRows = rows.filter((row) => {
+    if (!normalizedStatusFilter) return true;
+    return parseNutritionReferenceStatus(row).toLowerCase().includes(normalizedStatusFilter);
+  });
+
   return (
     <div className="settings-section nutrition-reference-section">
       <h3>Nährwerte je 100 g</h3>
@@ -441,6 +457,18 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       </p>
       {actionMessage && <p className="section-description">{actionMessage}</p>}
       {lookupError && <p className="section-description">{lookupError}</p>}
+
+      <label className="section-description" htmlFor="nutrition-reference-status-filter">
+        Status filtern
+      </label>
+      <input
+        id="nutrition-reference-status-filter"
+        type="text"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        placeholder="z. B. Freizugeben"
+        className="conversion-table-input"
+      />
 
       <div className="season-matrix-import-export-actions">
         <button type="button" className="save-button" onClick={importRecipeIngredients}>
@@ -477,6 +505,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                 <th>nutritionFamily</th>
                 <th>seasonalFamily</th>
                 <th>category</th>
+                <th>Status</th>
                 <th>Quelle</th>
                 <th>Suchbegriff</th>
                 {NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => (
@@ -492,7 +521,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {visibleRows.map((row) => (
                 <tr key={row.id}>
                   <td>
                     <input
@@ -537,6 +566,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       onChange={(e) => updateCell(row.id, 'category', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`category ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={parseNutritionReferenceStatus(row)}
+                      onChange={(e) => updateCell(row.id, 'status', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Status ${row.id}`}
                     />
                   </td>
                   <td>
@@ -664,6 +702,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="conversion-table-input"
+                    placeholder={NUTRITION_REFERENCE_PENDING_STATUS}
                   />
                 </td>
                 <td>

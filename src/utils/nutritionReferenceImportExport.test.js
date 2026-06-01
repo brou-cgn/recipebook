@@ -8,6 +8,7 @@ describe('nutritionReferenceImportExport', () => {
         nutritionFamily: 'Gemüse',
         seasonalFamily: 'Fruchtgemüse',
         category: 'Nachtschatten',
+        status: 'Freizugeben',
         seasonRelevant: true,
         nutritionRelevant: false,
         synonyms: ['Tomate', 'Paradeiser'],
@@ -17,8 +18,8 @@ describe('nutritionReferenceImportExport', () => {
     ]);
 
     expect(csv.charCodeAt(0)).toBe(0xFEFF);
-    expect(csv).toContain('ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG');
-    expect(csv).toContain('dummy-tomate;;Gemüse;Fruchtgemüse;Nachtschatten;true;false;;;;Tomate|Paradeiser;"g;kg;ml";100');
+    expect(csv).toContain('ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;Status;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG');
+    expect(csv).toContain('dummy-tomate;;Gemüse;Fruchtgemüse;Nachtschatten;Freizugeben;true;false;;;;Tomate|Paradeiser;"g;kg;ml";100');
   });
 
   test('exports rows with empty possibleUnits', () => {
@@ -29,15 +30,15 @@ describe('nutritionReferenceImportExport', () => {
       },
     ]);
 
-    expect(csv).toContain('dummy-tomate;;;;;;;;;;Tomate;;');
+    expect(csv).toContain('dummy-tomate;;;;;;;;;;;Tomate;;');
     expect(csv).not.toContain('g;kg;ml');
   });
 
   test('parses imported CSV rows and validates required fields', () => {
     const rows = parseNutritionReferenceCsv(
       [
-        'ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG;kalorien',
-        'dummy-kartoffel;Kartoffel;Gemüse;Knollen;Knolle;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;"g;kg";150;86',
+        'ingredientID;Anzeigename;nutritionFamily;seasonalFamily;category;Status;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG;kalorien',
+        'dummy-kartoffel;Kartoffel;Gemüse;Knollen;Knolle;Freizugeben;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;"g;kg";150;86',
       ].join('\n')
     );
 
@@ -48,6 +49,7 @@ describe('nutritionReferenceImportExport', () => {
         nutritionFamily: 'Gemüse',
         seasonalFamily: 'Knollen',
         category: 'Knolle',
+        status: 'Freizugeben',
         seasonRelevant: true,
         nutritionRelevant: false,
         isFresh: true,

@@ -58,6 +58,10 @@ function sanitizeIngredientNameForIdMatching(name) {
     .trim();
 }
 
+export function normalizeIngredientNameForIdMatching(name) {
+  return sanitizeIngredientNameForIdMatching(name);
+}
+
 export function parseIngredientNameAndUnit(ingredientText) {
   const raw = String(ingredientText || '').trim();
   if (!raw) return { quantity: null, name: '', unit: null };
@@ -91,7 +95,7 @@ export function parseIngredientNameAndUnit(ingredientText) {
 
 export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRows = []) {
   const { name, unit } = parseIngredientNameAndUnit(ingredientText);
-  const normalizedIngredientName = normalizeNutritionReferenceId(sanitizeIngredientNameForIdMatching(name));
+  const normalizedIngredientName = normalizeNutritionReferenceId(normalizeIngredientNameForIdMatching(name));
   const normalizedIngredientUnit = normalizeNutritionReferenceId(unit || '');
   if (!normalizedIngredientName) return [];
 
@@ -153,4 +157,32 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
   }
 
   return deduplicated;
+}
+
+export function buildPendingNutritionReferenceDraft(ingredientText, nutritionReferenceRows = []) {
+  const { name, unit } = parseIngredientNameAndUnit(ingredientText);
+  const displayName = String(normalizeIngredientNameForIdMatching(name) || String(name || '').trim()).trim();
+  const canonicalKey = normalizeNutritionReferenceId(displayName);
+  if (!canonicalKey) return null;
+
+  const usedIds = new Set(
+    nutritionReferenceRows
+      .map((row) => String(row?.ingredientID || row?.id || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  let ingredientID = canonicalKey;
+  let suffix = 2;
+  while (usedIds.has(ingredientID.toLowerCase())) {
+    ingredientID = `${canonicalKey}-${suffix}`;
+    suffix += 1;
+  }
+
+  return {
+    canonicalKey,
+    ingredientID,
+    displayName,
+    synonyms: [displayName],
+    possibleUnits: unit ? [String(unit).trim()].filter(Boolean) : [],
+  };
 }

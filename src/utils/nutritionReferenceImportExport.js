@@ -4,6 +4,7 @@ import {
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceSynonyms,
   parseNutritionReferencePossibleUnits,
+  parseNutritionReferenceStatus,
 } from './nutritionReferenceUtils';
 
 const REQUIRED_HEADERS = ['ingredientID', 'synonyms'];
@@ -13,6 +14,7 @@ const CSV_HEADERS = [
   'nutritionFamily',
   'seasonalFamily',
   'category',
+  'Status',
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   'synonyms',
   'possibleUnits',
@@ -89,6 +91,9 @@ export function createNutritionReferenceCsv(rows = []) {
       if (field === 'Anzeigename') {
         return escapeCsvValue(row.displayName || '');
       }
+      if (field === 'Status') {
+        return escapeCsvValue(parseNutritionReferenceStatus(row));
+      }
       return escapeCsvValue(row[field] ?? '');
     }).join(';')
   ));
@@ -141,12 +146,14 @@ export function parseNutritionReferenceCsv(content) {
     const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
     const seasonalFamily = String(raw.seasonalFamily || '').trim();
     const displayName = String(raw.Anzeigename || raw.displayName || '').trim();
+    const status = parseNutritionReferenceStatus(raw);
     return {
       ingredientID,
       ...(displayName ? { displayName } : {}),
       nutritionFamily,
       seasonalFamily,
       category: String(raw.category || '').trim(),
+      ...(status ? { status } : {}),
       ...parseNutritionReferenceBooleanFields(raw),
       synonyms,
       possibleUnits,

@@ -49,6 +49,7 @@ describe('NutritionReferenceTab', () => {
             displayName: 'Tomate',
             nutritionFamily: 'Gemüse',
             seasonalFamily: 'Fruchtgemüse',
+            status: 'Freizugeben',
             source: 'manual',
             searchTerm: 'Tomate',
             synonyms: ['Tomate'],
@@ -91,11 +92,14 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByText('nutritionFamily')).toBeInTheDocument();
     expect(screen.getByText('Anzeigename')).toBeInTheDocument();
     expect(screen.getByText('seasonalFamily')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Quelle')).toBeInTheDocument();
     expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
+    expect(screen.getByLabelText('Status tomate')).toHaveValue('Freizugeben');
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });
+    fireEvent.change(screen.getByPlaceholderText('Freizugeben'), { target: { value: 'Freizugeben' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Haferflocken' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
@@ -105,9 +109,22 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
       ingredientID: 'dummy-haferflocken',
       displayName: 'Haferflocken',
+      status: 'Freizugeben',
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+  });
+
+  test('filters rows by status', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freizugeben' } });
+
+    expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freigegeben' } });
+    expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
   test('does not create duplicates for existing ingredient ids', async () => {
