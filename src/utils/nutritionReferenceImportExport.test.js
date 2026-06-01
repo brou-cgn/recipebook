@@ -19,6 +19,7 @@ describe('nutritionReferenceImportExport', () => {
       },
     ]);
 
+    expect(csv.charCodeAt(0)).toBe(0xFEFF);
     expect(csv).toContain('ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz');
     expect(csv).toContain('dummy-tomate;Gemüse;Fruchtgemüse;Nachtschatten;manual;Tomate frisch;true;false;;;;Tomate|Paradeiser;g|kg|ml;100;18');
   });
@@ -106,6 +107,24 @@ describe('nutritionReferenceImportExport', () => {
         nutritionFamily: 'Obst',
         source: 'legacy',
         searchTerm: 'Apfel rot',
+      }),
+    ]);
+  });
+
+  test('parses UTF-8 BOM CSV with umlauts', () => {
+    const rows = parseNutritionReferenceCsv(
+      [
+        '\uFEFFingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;synonyms',
+        'dummy-aepfel;Obst;Kernobst;Frucht;csv-import;Äpfel in Öl süß;Äpfel|Öl|süß',
+      ].join('\n')
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        ingredientID: 'dummy-aepfel',
+        nutritionFamily: 'Obst',
+        searchTerm: 'Äpfel in Öl süß',
+        synonyms: ['Äpfel', 'Öl', 'süß'],
       }),
     ]);
   });

@@ -104,7 +104,7 @@ export function createNutritionReferenceCsv(rows = []) {
     }).join(';')
   ));
 
-  return [header, ...body].join('\n');
+  return `\uFEFF${[header, ...body].join('\n')}`;
 }
 
 export function parseNutritionReferenceCsv(content) {
