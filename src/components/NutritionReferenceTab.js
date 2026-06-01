@@ -394,7 +394,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   if (!canManage) {
     return (
-      <div className="settings-section">
+      <div className="settings-section nutrition-reference-section">
         <h3>Nährwerte je 100 g</h3>
         <p className="section-description">Nur Admins und Moderatoren können diese Tabelle bearbeiten.</p>
       </div>
@@ -402,7 +402,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   }
 
   return (
-    <div className="settings-section">
+    <div className="settings-section nutrition-reference-section">
       <h3>Nährwerte je 100 g</h3>
       <p className="section-description">
         Diese Werte werden bei der automatischen Nährwert-Berechnung pro 100 g gespeichert und können hier korrigiert werden.

@@ -82,6 +82,9 @@ describe('NutritionReferenceTab', () => {
   test('loads rows and allows adding a nutrition reference', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
+    const section = screen.getByText('Nährwert-Referenztabelle').closest('.settings-section');
+    expect(section).toHaveClass('nutrition-reference-section');
+
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     expect(screen.getByText('nutritionFamily')).toBeInTheDocument();
     expect(screen.getByText('seasonalFamily')).toBeInTheDocument();
