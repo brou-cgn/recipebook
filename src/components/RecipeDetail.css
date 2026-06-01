@@ -1004,7 +1004,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 1450;
+  z-index: 2100;
 }
 
 .ingredient-match-dialog {
