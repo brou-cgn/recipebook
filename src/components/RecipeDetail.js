@@ -9,6 +9,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
+import { getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
 import { functions } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import NutritionModal from './NutritionModal';
@@ -34,7 +35,7 @@ const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
-  const { lastUpdatedAt } = useNutritionReference();
+  const { rows: nutritionReferenceRows, lastUpdatedAt } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
@@ -91,6 +92,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showIndexDialog, setShowIndexDialog] = useState(false);
+  const [ingredientMatchDialog, setIngredientMatchDialog] = useState(null);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
@@ -656,14 +658,97 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setSelectedRecipe({ ...recipe, naehrwerte });
   };
 
-  const handleAutoCalculateAndSave = async () => {
-    const rawIngredients = recipe.zutaten || recipe.ingredients || [];
-    const ingredients = rawIngredients
+  const getNutritionIngredientSource = () => {
+    if (Array.isArray(recipe.zutaten)) {
+      return { fieldName: 'zutaten', rawIngredients: recipe.zutaten };
+    }
+    return { fieldName: 'ingredients', rawIngredients: recipe.ingredients || [] };
+  };
+
+  const persistIngredientIDs = async (fieldName, updatedIngredients) => {
+    if (!fieldName) return;
+    try {
+      await updateRecipe(recipe.id, { [fieldName]: updatedIngredients });
+      setSelectedRecipe(prev => ({ ...prev, [fieldName]: updatedIngredients }));
+    } catch (err) {
+      console.error('Could not persist ingredientIDs:', err);
+    }
+  };
+
+  const ensureIngredientIDsForNutrition = async () => {
+    const { fieldName, rawIngredients } = getNutritionIngredientSource();
+    const updatedIngredients = [...rawIngredients];
+    const unresolved = [];
+    const matchingLog = [];
+    let autoAssigned = 0;
+
+    rawIngredients.forEach((item, index) => {
+      const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
+      if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
+
+      const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
+      if (existingIngredientID) return;
+
+      const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
+      const top = suggestions[0];
+      const hasUniqueTop = Boolean(top) && suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
+
+      if (top && top.confidencePercent === 100 && hasUniqueTop) {
+        const nextItem = typeof item === 'string'
+          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
+          : { ...item, ingredientID: top.ingredientID };
+        updatedIngredients[index] = nextItem;
+        autoAssigned += 1;
+        matchingLog.push({
+          ingredient: ingredientItem.text,
+          status: 'auto',
+          selectedIngredientID: top.ingredientID,
+          confidencePercent: top.confidencePercent,
+        });
+        return;
+      }
+
+      unresolved.push({
+        index,
+        ingredient: ingredientItem.text,
+        suggestions,
+      });
+      matchingLog.push({
+        ingredient: ingredientItem.text,
+        status: suggestions.length > 0 ? 'ambiguous' : 'unmatched',
+        suggestions: suggestions.map((entry) => ({ ingredientID: entry.ingredientID, confidencePercent: entry.confidencePercent })),
+      });
+    });
+
+    if (unresolved.length > 0) {
+      console.warn('IngredientID matching needs manual confirmation.', unresolved);
+      const selections = unresolved.reduce((acc, entry) => {
+        acc[entry.index] = entry.suggestions[0]?.ingredientID || '';
+        return acc;
+      }, {});
+      setIngredientMatchDialog({
+        fieldName,
+        updatedIngredients,
+        unresolved,
+        matchingLog,
+        selections,
+      });
+      return null;
+    }
+
+    if (autoAssigned > 0) {
+      await persistIngredientIDs(fieldName, updatedIngredients);
+    }
+
+    return { updatedIngredients, matchingLog };
+  };
+
+  const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
+    const ingredients = ingredientsInput
       .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
       .map(item => typeof item === 'string' ? item : item.text);
     if (ingredients.length === 0) return;
 
-    // Persist a pending state so the loading indicator survives navigation
     const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcPendingAt: Date.now(), calcError: null };
     try {
       await updateRecipe(recipe.id, { naehrwerte: pending });
@@ -695,6 +780,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
     }
 
+    if (ingredientIDMatchingLog.length > 0) {
+      console.info('IngredientID matching results for nutrition calculation', ingredientIDMatchingLog);
+    }
+
     const final = {
       ...totals,
       calcPending: false,
@@ -703,6 +792,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: ingredients.length - notIncluded.length,
       calcTotalCount: ingredients.length,
+      ingredientIDMatchingLog: ingredientIDMatchingLog.length > 0 ? ingredientIDMatchingLog : null,
+      ingredientIDMatchingLoggedAt: ingredientIDMatchingLog.length > 0 ? Date.now() : null,
     };
     try {
       await updateRecipe(recipe.id, { naehrwerte: final });
@@ -710,6 +801,57 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     } catch (err) {
       console.error('Could not persist nutrition data:', err);
     }
+  };
+
+  const handleAutoCalculateAndSave = async () => {
+    const matchingResult = await ensureIngredientIDsForNutrition();
+    if (!matchingResult) return;
+    await runAutoCalculateAndSave(matchingResult.updatedIngredients, matchingResult.matchingLog);
+  };
+
+  const handleIngredientMatchSelectionChange = (index, ingredientID) => {
+    setIngredientMatchDialog((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        selections: {
+          ...prev.selections,
+          [index]: ingredientID,
+        },
+      };
+    });
+  };
+
+  const handleIngredientMatchConfirm = async () => {
+    if (!ingredientMatchDialog) return;
+    const { fieldName, updatedIngredients, unresolved, matchingLog, selections } = ingredientMatchDialog;
+    const nextIngredients = [...updatedIngredients];
+    const nextLog = [...matchingLog];
+
+    for (const entry of unresolved) {
+      const selectedIngredientID = String(selections?.[entry.index] || '').trim();
+      if (!selectedIngredientID) {
+        alert('Bitte für jede Zutat eine ingredientID auswählen.');
+        return;
+      }
+
+      const original = nextIngredients[entry.index];
+      nextIngredients[entry.index] = typeof original === 'string'
+        ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
+        : { ...original, ingredientID: selectedIngredientID };
+
+      const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
+      nextLog.push({
+        ingredient: entry.ingredient,
+        status: 'manual',
+        selectedIngredientID,
+        confidencePercent: selectedSuggestion?.confidencePercent || null,
+      });
+    }
+
+    await persistIngredientIDs(fieldName, nextIngredients);
+    setIngredientMatchDialog(null);
+    await runAutoCalculateAndSave(nextIngredients, nextLog);
   };
 
   const handleNutritionButtonClick = () => {
@@ -2487,6 +2629,60 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           currentUser={currentUser}
           isStale={isNutritionStale}
         />
+      )}
+
+      {ingredientMatchDialog && (
+        <div className="ingredient-match-dialog-overlay" onClick={() => setIngredientMatchDialog(null)}>
+          <div
+            className="ingredient-match-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="ingredientID-Zuordnung"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ingredient-match-dialog-header">
+              <h2 className="ingredient-match-dialog-title">ingredientID prüfen</h2>
+              <button
+                type="button"
+                className="ingredient-match-dialog-close"
+                onClick={() => setIngredientMatchDialog(null)}
+                aria-label="ingredientID-Dialog schließen"
+              >
+                ×
+              </button>
+            </div>
+            <p className="ingredient-match-dialog-note">
+              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden.
+            </p>
+            <ul className="ingredient-match-dialog-list">
+              {ingredientMatchDialog.unresolved.map((entry) => (
+                <li key={entry.index}>
+                  <span>{entry.ingredient}</span>
+                  <select
+                    value={ingredientMatchDialog.selections?.[entry.index] || ''}
+                    onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
+                    aria-label={`ingredientID für ${entry.ingredient}`}
+                  >
+                    <option value="">Bitte auswählen</option>
+                    {entry.suggestions.map((suggestion) => (
+                      <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
+                        {suggestion.ingredientID} ({suggestion.confidencePercent}%)
+                      </option>
+                    ))}
+                  </select>
+                </li>
+              ))}
+            </ul>
+            <div className="ingredient-match-dialog-actions">
+              <button type="button" className="ingredient-match-dialog-cancel" onClick={() => setIngredientMatchDialog(null)}>
+                Abbrechen
+              </button>
+              <button type="button" className="ingredient-match-dialog-confirm" onClick={handleIngredientMatchConfirm}>
+                Übernehmen &amp; berechnen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {showShoppingListModal && (
         <ShoppingListModal

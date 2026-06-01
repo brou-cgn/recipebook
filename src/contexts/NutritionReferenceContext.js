@@ -3,6 +3,7 @@ import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
   parseNutritionReferenceBooleanFields,
+  parseNutritionReferencePossibleUnits,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
@@ -27,6 +28,7 @@ function mapNutritionReferenceRows(snapshot) {
         searchTerm: data.searchTerm || '',
         ...parseNutritionReferenceBooleanFields(data),
         synonyms,
+        possibleUnits: parseNutritionReferencePossibleUnits(data),
         name: synonyms[0] || data.name || '',
         ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
         ...parseNutritionReferenceValues(data),
