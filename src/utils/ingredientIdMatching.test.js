@@ -31,6 +31,28 @@ describe('ingredientIdMatching', () => {
     expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', confidencePercent: 100 });
   });
 
+  test('ignores optional markers and parenthetical text for ingredient ID matching', () => {
+    expect(getIngredientIdSuggestions('Zucker (optional)', [
+      { ingredientID: 'zucker', synonyms: ['Zucker'] },
+    ])[0]).toMatchObject({ ingredientID: 'zucker', confidencePercent: 100 });
+
+    expect(getIngredientIdSuggestions('Salz (ggf.)', [
+      { ingredientID: 'salz', synonyms: ['Salz'] },
+    ])[0]).toMatchObject({ ingredientID: 'salz', confidencePercent: 100 });
+
+    expect(getIngredientIdSuggestions('ggf. Zucker', [
+      { ingredientID: 'zucker', synonyms: ['Zucker'] },
+    ])[0]).toMatchObject({ ingredientID: 'zucker', confidencePercent: 100 });
+
+    expect(getIngredientIdSuggestions('Pfeffer (schwarz – optional)', [
+      { ingredientID: 'pfeffer', synonyms: ['Pfeffer'] },
+    ])[0]).toMatchObject({ ingredientID: 'pfeffer', confidencePercent: 100 });
+
+    expect(getIngredientIdSuggestions('gegebenenfalls Zucker', [
+      { ingredientID: 'zucker', synonyms: ['Zucker'] },
+    ])[0]).toMatchObject({ ingredientID: 'zucker', confidencePercent: 100 });
+  });
+
   test('applies unit match as tie breaker for close candidates', () => {
     const suggestions = getIngredientIdSuggestions('1 Bund Petersilie', [
       { ingredientID: 'petersilie', synonyms: ['Petersilie'], possibleUnits: ['Bund'] },

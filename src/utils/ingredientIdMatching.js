@@ -10,6 +10,12 @@ const COMMON_UNITS = new Set([
   'stück', 'stueck', 'stk', 'st',
 ]);
 
+const IGNORED_INGREDIENT_MARKERS = new Set([
+  'optional',
+  'ggf',
+  'gegebenenfalls',
+]);
+
 function levenshteinDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
@@ -38,6 +44,18 @@ function similarityFromNormalized(a, b) {
   if (a === b) return 1;
   const distance = levenshteinDistance(a, b);
   return Math.max(0, 1 - (distance / Math.max(a.length, b.length)));
+}
+
+function sanitizeIngredientNameForIdMatching(name) {
+  return String(name || '')
+    .replace(/\([^()]*\)/g, ' ')
+    .split(/\s+/)
+    .filter((token) => {
+      const normalized = normalizeNutritionReferenceId(token);
+      return normalized && !IGNORED_INGREDIENT_MARKERS.has(normalized);
+    })
+    .join(' ')
+    .trim();
 }
 
 export function parseIngredientNameAndUnit(ingredientText) {
@@ -73,7 +91,7 @@ export function parseIngredientNameAndUnit(ingredientText) {
 
 export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRows = []) {
   const { name, unit } = parseIngredientNameAndUnit(ingredientText);
-  const normalizedIngredientName = normalizeNutritionReferenceId(name);
+  const normalizedIngredientName = normalizeNutritionReferenceId(sanitizeIngredientNameForIdMatching(name));
   const normalizedIngredientUnit = normalizeNutritionReferenceId(unit || '');
   if (!normalizedIngredientName) return [];
 
