@@ -8,6 +8,9 @@ describe('ingredientIdMatching', () => {
   test('parses ingredient name and unit for matching', () => {
     expect(parseIngredientNameAndUnit('200 g Tomaten')).toEqual({ quantity: 200, name: 'Tomaten', unit: 'g' });
     expect(parseIngredientNameAndUnit('2 Eier')).toEqual({ quantity: 2, name: 'Eier', unit: null });
+    expect(parseIngredientNameAndUnit('1 Liter Kokosmilch')).toEqual({ quantity: 1, name: 'Kokosmilch', unit: 'Liter' });
+    expect(parseIngredientNameAndUnit('1 Esslöffel Fish Sauce')).toEqual({ quantity: 1, name: 'Fish Sauce', unit: 'Esslöffel' });
+    expect(parseIngredientNameAndUnit('1 Teelöffel Salz')).toEqual({ quantity: 1, name: 'Salz', unit: 'Teelöffel' });
   });
 
   test('returns 100% confidence for exact synonym match', () => {
@@ -17,6 +20,14 @@ describe('ingredientIdMatching', () => {
     ]);
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'tomate', displayName: 'Tomaten', confidencePercent: 100 });
+  });
+
+  test('returns 100% confidence for exact synonym match with long-form unit', () => {
+    const suggestions = getIngredientIdSuggestions('1 Liter Kokosmilch', [
+      { ingredientID: 'kokosmilch', synonyms: ['Kokosmilch'] },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'kokosmilch', confidencePercent: 100 });
   });
 
   test('returns 100% confidence for exact synonym match parsed from semicolon-separated reference data', () => {
