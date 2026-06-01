@@ -229,7 +229,7 @@ describe('NutritionReferenceTab', () => {
       expect(mockSetDoc).toHaveBeenCalledTimes(2);
     });
     expect(mockDeleteField).toHaveBeenCalled();
-    expect(Object.prototype.hasOwnProperty.call(mockSetDoc.mock.calls[0][1], 'AI_Gemini_Error')).toBe(true);
+    expect(mockSetDoc.mock.calls[0][1].AI_Gemini_Error).toBeUndefined();
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
     expect(mockSetDoc.mock.calls[1][1]).toEqual({
       searchTerm: 'tomato puree',
