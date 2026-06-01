@@ -2,6 +2,16 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 
+const mockUpdateRecipe = jest.fn(() => Promise.resolve());
+const mockNutritionCallable = jest.fn(() => Promise.resolve({
+  data: {
+    naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
+    details: [{ found: true }],
+  },
+}));
+const mockHttpsCallable = jest.fn(() => mockNutritionCallable);
+let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+
 // Mock the utility modules
 jest.mock('../utils/imageUtils', () => ({
   isBase64Image: jest.fn(() => false),
@@ -23,6 +33,13 @@ jest.mock('../utils/userManagement', () => ({
   getUsers: () => [
     { id: 'user-1', vorname: 'Test', nachname: 'User' },
   ],
+}));
+
+jest.mock('../utils/recipeFirestore', () => ({
+  updateRecipe: (...args) => mockUpdateRecipe(...args),
+  enableRecipeSharing: jest.fn(),
+  disableRecipeSharing: jest.fn(),
+  resetRecipeThumbnail: jest.fn(),
 }));
 
 jest.mock('../utils/recipeVersioning', () => ({
@@ -83,8 +100,20 @@ jest.mock('../utils/seasonMatrix', () => ({
 }));
 
 jest.mock('../contexts/NutritionReferenceContext', () => ({
-  useNutritionReference: () => ({ rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null }),
+  useNutritionReference: () => mockNutritionReferenceState,
 }));
+
+jest.mock('firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
+  httpsCallable: (...args) => mockHttpsCallable(...args),
+}));
+
+beforeEach(() => {
+  mockUpdateRecipe.mockClear();
+  mockNutritionCallable.mockClear();
+  mockHttpsCallable.mockClear();
+  mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+});
 
 describe('RecipeDetail - Portion Controller', () => {
   const mockRecipe = {
@@ -2114,5 +2143,96 @@ describe('RecipeDetail - Longpress on minus button in portion selector', () => {
     fireEvent.touchEnd(decrementBtn);
 
     expect(screen.getByText('0')).toBeInTheDocument();
+  });
+});
+
+describe('RecipeDetail - ingredientID matching for nutrition calculation', () => {
+  const currentUser = { id: 'user-1', vorname: 'Test', nachname: 'User' };
+
+  test('auto-assigns unique 100% ingredientID matches before nutrition calculation', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-1',
+          title: 'Tomatensalat',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-1',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' }],
+        })
+      );
+    });
+  });
+
+  test('shows manual dialog with confidence percentages for ambiguous ingredientID matches', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-2',
+          title: 'Testgericht',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /tomate \(100%\)/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-2',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+        })
+      );
+    });
   });
 });

@@ -996,6 +996,110 @@
   font-size: 0.9rem;
 }
 
+.ingredient-match-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1450;
+}
+
+.ingredient-match-dialog {
+  width: min(620px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  padding: 1rem;
+}
+
+.ingredient-match-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ingredient-match-dialog-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.ingredient-match-dialog-close {
+  border: none;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0.15rem 0.3rem;
+}
+
+.ingredient-match-dialog-note {
+  margin: 0.75rem 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.ingredient-match-dialog-error {
+  margin: 0 0 0.75rem;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
+.ingredient-match-dialog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  max-height: 48vh;
+  overflow: auto;
+}
+
+.ingredient-match-dialog-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.ingredient-match-dialog-list li:last-child {
+  border-bottom: none;
+}
+
+.ingredient-match-dialog-list select {
+  width: 100%;
+  min-height: 2.2rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+}
+
+.ingredient-match-dialog-actions {
+  margin-top: 0.8rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.ingredient-match-dialog-cancel,
+.ingredient-match-dialog-confirm {
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+.ingredient-match-dialog-confirm {
+  background: #402C1C;
+  color: #fff;
+  border-color: #402C1C;
+}
+
 .cuisine-badge {
   background: #F5F2EF;
   color: #3E2B1C;
