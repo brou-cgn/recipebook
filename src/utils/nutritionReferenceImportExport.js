@@ -12,19 +12,10 @@ const CSV_HEADERS = [
   'nutritionFamily',
   'seasonalFamily',
   'category',
-  'Quelle',
-  'Suchbegriff',
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   'synonyms',
   'possibleUnits',
   'defaultAmountG',
-  'kalorien',
-  'protein',
-  'fett',
-  'kohlenhydrate',
-  'zucker',
-  'ballaststoffe',
-  'salz',
 ];
 
 const parseDelimitedLine = (line, delimiter) => {
@@ -87,18 +78,12 @@ export function createNutritionReferenceCsv(rows = []) {
       }
       if (field === 'possibleUnits') {
         const units = parseNutritionReferencePossibleUnits(row);
-        return escapeCsvValue(units.join('|'));
+        return escapeCsvValue(units.join(';'));
       }
       if (NUTRITION_REFERENCE_BOOLEAN_FIELDS.includes(field)) {
         if (row[field] === true) return 'true';
         if (row[field] === false) return 'false';
         return '';
-      }
-      if (field === 'Quelle') {
-        return escapeCsvValue(row.source ?? '');
-      }
-      if (field === 'Suchbegriff') {
-        return escapeCsvValue(row.searchTerm ?? '');
       }
       return escapeCsvValue(row[field] ?? '');
     }).join(';')
@@ -151,27 +136,15 @@ export function parseNutritionReferenceCsv(content) {
     const fallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: raw.defaultAmountG });
     const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
     const seasonalFamily = String(raw.seasonalFamily || '').trim();
-    const source = String(raw.Quelle || raw.source || '').trim();
-    const searchTerm = String(raw.Suchbegriff || raw.searchTerm || '').trim();
-
     return {
       ingredientID,
       nutritionFamily,
       seasonalFamily,
       category: String(raw.category || '').trim(),
-      source,
-      searchTerm,
       ...parseNutritionReferenceBooleanFields(raw),
       synonyms,
       possibleUnits,
       ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
-      kalorien: raw.kalorien,
-      protein: raw.protein,
-      fett: raw.fett,
-      kohlenhydrate: raw.kohlenhydrate,
-      zucker: raw.zucker,
-      ballaststoffe: raw.ballaststoffe,
-      salz: raw.salz,
     };
   });
 
