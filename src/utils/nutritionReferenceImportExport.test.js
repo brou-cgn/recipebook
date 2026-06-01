@@ -13,20 +13,33 @@ describe('nutritionReferenceImportExport', () => {
         seasonRelevant: true,
         nutritionRelevant: false,
         synonyms: ['Tomate', 'Paradeiser'],
+        possibleUnits: ['g', 'kg', 'ml'],
         defaultAmountG: 100,
         kalorien: 18,
       },
     ]);
 
-    expect(csv).toContain('ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz');
-    expect(csv).toContain('dummy-tomate;Gemüse;Fruchtgemüse;Nachtschatten;manual;Tomate frisch;true;false;;;;Tomate|Paradeiser;100;18');
+    expect(csv).toContain('ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG;kalorien;protein;fett;kohlenhydrate;zucker;ballaststoffe;salz');
+    expect(csv).toContain('dummy-tomate;Gemüse;Fruchtgemüse;Nachtschatten;manual;Tomate frisch;true;false;;;;Tomate|Paradeiser;g|kg|ml;100;18');
+  });
+
+  test('exports rows with empty possibleUnits', () => {
+    const csv = createNutritionReferenceCsv([
+      {
+        ingredientID: 'dummy-tomate',
+        synonyms: ['Tomate'],
+      },
+    ]);
+
+    expect(csv).toContain('dummy-tomate;;;;;;;;;;;Tomate;');
+    expect(csv).not.toContain('g|kg|ml');
   });
 
   test('parses imported CSV rows and validates required fields', () => {
     const rows = parseNutritionReferenceCsv(
       [
-        'ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien',
-        'dummy-kartoffel;Gemüse;Knollen;Knolle;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;150;86',
+        'ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;possibleUnits;defaultAmountG;kalorien',
+        'dummy-kartoffel;Gemüse;Knollen;Knolle;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;g|kg;150;86',
       ].join('\n')
     );
 
@@ -44,8 +57,27 @@ describe('nutritionReferenceImportExport', () => {
         isSpice: false,
         isProcessed: false,
         synonyms: ['Kartoffel', 'Erdapfel'],
+        possibleUnits: ['g', 'kg'],
         defaultAmountG: 150,
         kalorien: '86',
+      }),
+    ]);
+  });
+
+  test('parses imported CSV rows without possibleUnits column (backward compatibility)', () => {
+    const rows = parseNutritionReferenceCsv(
+      [
+        'ingredientID;nutritionFamily;seasonalFamily;category;Quelle;Suchbegriff;seasonRelevant;nutritionRelevant;isFresh;isSpice;isProcessed;synonyms;defaultAmountG;kalorien',
+        'dummy-kartoffel;Gemüse;Knollen;Knolle;csv-import;kartoffel roh;ja;nein;true;false;0;Kartoffel|Erdapfel;150;86',
+      ].join('\n')
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        ingredientID: 'dummy-kartoffel',
+        synonyms: ['Kartoffel', 'Erdapfel'],
+        possibleUnits: [],
+        defaultAmountG: 150,
       }),
     ]);
   });

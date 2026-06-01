@@ -11,6 +11,7 @@ import {
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
+  parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
 } from '../utils/nutritionReferenceUtils';
 import {
@@ -103,6 +104,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [newSource, setNewSource] = useState('');
   const [newSearchTerm, setNewSearchTerm] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
+  const [newPossibleUnits, setNewPossibleUnits] = useState('');
   const [newValues, setNewValues] = useState({});
   const [newBooleanValues, setNewBooleanValues] = useState({});
   const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
@@ -129,12 +131,14 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   ) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
+    const possibleUnits = parseNutritionReferencePossibleUnits(row);
     const sourceValue = String(source || '').trim();
     const payload = {
       ingredientID,
       synonyms,
       normalizedSynonyms: getNormalizedNutritionReferenceSynonyms({ synonyms }),
       name: synonyms[0] || '',
+      possibleUnits,
       ...parseNutritionReferenceBooleanFields(row),
       ...parseNutritionReferenceValues(row),
       updatedAt: serverTimestamp(),
@@ -217,6 +221,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         source: newSource,
         searchTerm: newSearchTerm,
         synonyms,
+        possibleUnits: newPossibleUnits,
         defaultAmountG: newDefaultAmountG,
         ...newBooleanValues,
         ...newValues,
@@ -230,6 +235,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setNewSource('');
     setNewSearchTerm('');
     setNewSynonyms('');
+    setNewPossibleUnits('');
     setNewValues({});
     setNewBooleanValues({});
     setNewDefaultAmountG('');
@@ -344,6 +350,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       searchTerm: row.searchTerm || '',
       ...parseNutritionReferenceBooleanFields(row),
       synonyms: parseNutritionReferenceSynonyms(row),
+      possibleUnits: parseNutritionReferencePossibleUnits(row),
       defaultAmountG: row.defaultAmountG ?? '',
       ...parseNutritionReferenceValues(row),
     })));
@@ -479,6 +486,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                   <th key={field}>{NUTRITION_BOOLEAN_LABELS[field]}</th>
                 ))}
                 <th>Synonyme</th>
+                <th>Mögliche Einheiten</th>
                 <th>Fallbackgew. (g)</th>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
                   <th key={field}>{NUTRITION_FIELD_LABELS[field]}</th>
@@ -561,6 +569,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       onChange={(e) => updateCell(row.id, 'synonyms', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`Synonyme ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={parseNutritionReferencePossibleUnits(row).join(';')}
+                      onChange={(e) => updateCell(row.id, 'possibleUnits', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Mögliche Einheiten ${row.id}`}
                     />
                   </td>
                   <td>
@@ -667,6 +684,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     value={newSynonyms}
                     onChange={(e) => setNewSynonyms(e.target.value)}
                     placeholder="z. B. Tomate, Paradeiser"
+                    className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newPossibleUnits}
+                    onChange={(e) => setNewPossibleUnits(e.target.value)}
+                    placeholder="z. B. g;kg;ml"
                     className="conversion-table-input"
                   />
                 </td>

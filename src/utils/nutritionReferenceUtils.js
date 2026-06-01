@@ -86,6 +86,16 @@ export function parseNutritionReferenceSynonyms(input = {}) {
   return [...new Set(synonyms)];
 }
 
+export function parseNutritionReferencePossibleUnits(input = {}) {
+  if (Array.isArray(input.possibleUnits)) {
+    return [...new Set(input.possibleUnits.map((u) => String(u || '').trim()).filter(Boolean))];
+  }
+  const raw = String(input.possibleUnits || '');
+  if (!raw.trim()) return [];
+  const delimiter = raw.includes('|') ? '|' : ';';
+  return [...new Set(raw.split(delimiter).map((u) => u.trim()).filter(Boolean))];
+}
+
 export function getNormalizedNutritionReferenceSynonyms(input = {}) {
   const synonyms = parseNutritionReferenceSynonyms(input);
   const normalized = synonyms

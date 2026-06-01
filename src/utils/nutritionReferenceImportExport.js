@@ -3,6 +3,7 @@ import {
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceSynonyms,
+  parseNutritionReferencePossibleUnits,
 } from './nutritionReferenceUtils';
 
 const REQUIRED_HEADERS = ['ingredientID', 'synonyms'];
@@ -15,6 +16,7 @@ const CSV_HEADERS = [
   'Suchbegriff',
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   'synonyms',
+  'possibleUnits',
   'defaultAmountG',
   'kalorien',
   'protein',
@@ -83,6 +85,10 @@ export function createNutritionReferenceCsv(rows = []) {
         const synonyms = parseNutritionReferenceSynonyms(row);
         return escapeCsvValue(synonyms.join('|'));
       }
+      if (field === 'possibleUnits') {
+        const units = parseNutritionReferencePossibleUnits(row);
+        return escapeCsvValue(units.join('|'));
+      }
       if (NUTRITION_REFERENCE_BOOLEAN_FIELDS.includes(field)) {
         if (row[field] === true) return 'true';
         if (row[field] === false) return 'false';
@@ -140,6 +146,13 @@ export function parseNutritionReferenceCsv(content) {
       throw new Error(`Zeile ${index + 2}: Mindestens ein Synonym ist erforderlich.`);
     }
 
+    const possibleUnits = parseNutritionReferencePossibleUnits({
+      possibleUnits: String(raw.possibleUnits || '')
+        .split('|')
+        .map((u) => u.trim())
+        .filter(Boolean),
+    });
+
     const fallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: raw.defaultAmountG });
     const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
     const seasonalFamily = String(raw.seasonalFamily || '').trim();
@@ -155,6 +168,7 @@ export function parseNutritionReferenceCsv(content) {
       searchTerm,
       ...parseNutritionReferenceBooleanFields(raw),
       synonyms,
+      possibleUnits,
       ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
       kalorien: raw.kalorien,
       protein: raw.protein,
