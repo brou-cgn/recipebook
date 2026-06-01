@@ -9,6 +9,7 @@ import {
 const REQUIRED_HEADERS = ['ingredientID', 'synonyms'];
 const CSV_HEADERS = [
   'ingredientID',
+  'Anzeigename',
   'nutritionFamily',
   'seasonalFamily',
   'category',
@@ -85,6 +86,9 @@ export function createNutritionReferenceCsv(rows = []) {
         if (row[field] === false) return 'false';
         return '';
       }
+      if (field === 'Anzeigename') {
+        return escapeCsvValue(row.displayName || '');
+      }
       return escapeCsvValue(row[field] ?? '');
     }).join(';')
   ));
@@ -136,8 +140,10 @@ export function parseNutritionReferenceCsv(content) {
     const fallbackWeight = parseNutritionReferenceFallbackWeight({ defaultAmountG: raw.defaultAmountG });
     const nutritionFamily = String(raw.nutritionFamily || raw.family || '').trim();
     const seasonalFamily = String(raw.seasonalFamily || '').trim();
+    const displayName = String(raw.Anzeigename || raw.displayName || '').trim();
     return {
       ingredientID,
+      ...(displayName ? { displayName } : {}),
       nutritionFamily,
       seasonalFamily,
       category: String(raw.category || '').trim(),

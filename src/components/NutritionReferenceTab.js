@@ -57,6 +57,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const { rows: cachedRows, loading, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
   const [newIngredientID, setNewIngredientID] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
   const [newNutritionFamily, setNewNutritionFamily] = useState('');
   const [newSeasonalFamily, setNewSeasonalFamily] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -94,6 +95,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     const sourceValue = String(source || '').trim();
     const payload = {
       ingredientID,
+      displayName: String(row.displayName || '').trim(),
       synonyms,
       normalizedSynonyms: getNormalizedNutritionReferenceSynonyms({ synonyms }),
       name: synonyms[0] || '',
@@ -174,6 +176,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       doc(db, 'nutritionReferences', ingredientID),
       buildPayload({
         ingredientID,
+        displayName: newDisplayName,
         nutritionFamily: newNutritionFamily,
         seasonalFamily: newSeasonalFamily,
         category: newCategory,
@@ -188,6 +191,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       { merge: true }
     );
     setNewIngredientID('');
+    setNewDisplayName('');
     setNewNutritionFamily('');
     setNewSeasonalFamily('');
     setNewCategory('');
@@ -319,6 +323,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const handleExportCsv = () => {
     const csv = createNutritionReferenceCsv(rows.map((row) => ({
       ingredientID: getIngredientID(row),
+      displayName: String(row.displayName || '').trim(),
       nutritionFamily: row.nutritionFamily || '',
       seasonalFamily: row.seasonalFamily || '',
       category: row.category || '',
@@ -453,6 +458,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
             <thead>
               <tr>
                 <th>ingredientID</th>
+                <th>Anzeigename</th>
                 <th>nutritionFamily</th>
                 <th>seasonalFamily</th>
                 <th>category</th>
@@ -480,6 +486,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       onChange={(e) => updateCell(row.id, 'ingredientID', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`ingredientID ${row.id}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={row.displayName || ''}
+                      onChange={(e) => updateCell(row.id, 'displayName', e.target.value)}
+                      className="conversion-table-input"
+                      aria-label={`Anzeigename ${row.id}`}
                     />
                   </td>
                   <td>
@@ -600,6 +615,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     value={newIngredientID}
                     onChange={(e) => setNewIngredientID(e.target.value)}
                     placeholder="dummy-zutat"
+                    className="conversion-table-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                    placeholder="z. B. Tomate"
                     className="conversion-table-input"
                   />
                 </td>

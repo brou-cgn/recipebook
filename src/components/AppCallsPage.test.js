@@ -600,16 +600,16 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
   test('shows ingredientID dialog and persists manual selection when modal requests matching', async () => {
     mockNutritionReferenceState = {
       rows: [
-        { ingredientID: 'tomate', synonyms: ['Tomate'] },
-        { ingredientID: 'tomatenmark', synonyms: ['Tomate'] },
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
       ],
       loading: false,
       reload: jest.fn(),
       lastUpdatedAt: null,
     };
     mockGetIngredientIdSuggestions.mockReturnValue([
-      { ingredientID: 'tomate', confidencePercent: 100 },
-      { ingredientID: 'tomatenmark', confidencePercent: 100 },
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
     ]);
     const onUpdateRecipe = jest.fn(() => Promise.resolve());
 

@@ -46,6 +46,7 @@ describe('NutritionReferenceTab', () => {
           id: 'tomate',
           data: () => ({
             ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
             nutritionFamily: 'Gemüse',
             seasonalFamily: 'Fruchtgemüse',
             source: 'manual',
@@ -82,16 +83,19 @@ describe('NutritionReferenceTab', () => {
   test('loads rows and allows adding a nutrition reference', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    const section = screen.getByText('Nährwert-Referenztabelle').closest('.settings-section');
+    const section = screen.getByText('Nährwerte je 100 g').closest('.settings-section');
     expect(section).toHaveClass('nutrition-reference-section');
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.getByLabelText('Anzeigename tomate')).toHaveValue('Tomate');
     expect(screen.getByText('nutritionFamily')).toBeInTheDocument();
+    expect(screen.getByText('Anzeigename')).toBeInTheDocument();
     expect(screen.getByText('seasonalFamily')).toBeInTheDocument();
     expect(screen.getByText('Quelle')).toBeInTheDocument();
     expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Haferflocken' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
@@ -100,6 +104,7 @@ describe('NutritionReferenceTab', () => {
     });
     expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
       ingredientID: 'dummy-haferflocken',
+      displayName: 'Haferflocken',
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });

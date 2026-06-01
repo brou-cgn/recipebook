@@ -16,7 +16,7 @@ describe('ingredientIdMatching', () => {
       { ingredientID: 'kartoffel', synonyms: ['Kartoffeln'] },
     ]);
 
-    expect(suggestions[0]).toMatchObject({ ingredientID: 'tomate', confidencePercent: 100 });
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'tomate', displayName: 'Tomaten', confidencePercent: 100 });
   });
 
   test('returns 100% confidence for exact synonym match parsed from semicolon-separated reference data', () => {
@@ -28,7 +28,7 @@ describe('ingredientIdMatching', () => {
       },
     ]);
 
-    expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', confidencePercent: 100 });
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', displayName: 'karotte', confidencePercent: 100 });
   });
 
   test('applies unit match as tie breaker for close candidates', () => {

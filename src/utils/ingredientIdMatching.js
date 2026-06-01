@@ -81,6 +81,13 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
     .map((row) => {
       const ingredientID = String(row?.ingredientID || row?.id || '').trim();
       if (!ingredientID) return null;
+      const displayName = String(
+        row?.displayName
+        || row?.Anzeigename
+        || row?.name
+        || (Array.isArray(row?.synonyms) ? row.synonyms[0] : '')
+        || ingredientID
+      ).trim() || ingredientID;
 
       const normalizedTokens = [
         normalizeNutritionReferenceId(ingredientID),
@@ -109,6 +116,7 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
 
       return {
         ingredientID,
+        displayName,
         confidencePercent: Math.round(score * 100),
         score,
       };

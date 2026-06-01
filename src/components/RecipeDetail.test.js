@@ -2207,8 +2207,8 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
   test('shows manual dialog with confidence percentages for ambiguous ingredientID matches', async () => {
     mockNutritionReferenceState = {
       rows: [
-        { ingredientID: 'tomate', synonyms: ['Tomate'] },
-        { ingredientID: 'tomatenmark', synonyms: ['Tomate'] },
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
       ],
       loading: false,
       reload: jest.fn(),
@@ -2236,7 +2236,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
 
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /tomate \(100%\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Tomate \(100%\)/i })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
@@ -2253,7 +2253,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
 
   test('stores manual low-confidence ingredient unit and synonym for selected ingredientID', async () => {
     const suggestionSpy = jest.spyOn(ingredientIdMatching, 'getIngredientIdSuggestions').mockReturnValue([
-      { ingredientID: 'tomate', confidencePercent: 72 },
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 72 },
     ]);
     mockNutritionReferenceState = {
       rows: [

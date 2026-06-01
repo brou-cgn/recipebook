@@ -1372,7 +1372,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     <option value="">Bitte auswählen</option>
                     {entry.suggestions.map((suggestion) => (
                       <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
-                        {suggestion.ingredientID} ({suggestion.confidencePercent}%)
+                        {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
                       </option>
                     ))}
                   </select>

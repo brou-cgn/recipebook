@@ -18,9 +18,11 @@ function mapNutritionReferenceRows(snapshot) {
       const fallbackWeight = parseNutritionReferenceFallbackWeight(data);
       const ingredientID = String(data.ingredientID || entry.id || '').trim();
       const synonyms = parseNutritionReferenceSynonyms(data);
+      const displayName = String(data.displayName || data.Anzeigename || data.name || '').trim();
       return {
         id: entry.id,
         ingredientID,
+        displayName,
         nutritionFamily: data.nutritionFamily || data.family || '',
         seasonalFamily: data.seasonalFamily || '',
         category: data.category || '',
@@ -30,7 +32,7 @@ function mapNutritionReferenceRows(snapshot) {
         ...parseNutritionReferenceBooleanFields(data),
         synonyms,
         possibleUnits: parseNutritionReferencePossibleUnits(data),
-        name: synonyms[0] || data.name || '',
+        name: displayName || synonyms[0] || data.name || '',
         ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
         ...parseNutritionReferenceValues(data),
       };
