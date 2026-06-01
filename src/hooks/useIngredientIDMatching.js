@@ -18,19 +18,15 @@ export function useIngredientIDMatching({
   currentUserId = null,
   persistIngredientIDs: persistIngredientIDsCallback,
   ingredientMatchFromModalRef = null,
-  getNutritionIngredientSource: getNutritionIngredientSourceCallback = defaultGetNutritionIngredientSource,
 } = {}) {
   const [ingredientMatchDialog, setIngredientMatchDialog] = useState(null);
 
-  const getNutritionIngredientSource = (targetRecipe = recipe) => (
-    getNutritionIngredientSourceCallback(targetRecipe)
-  );
+  const getNutritionIngredientSource = (targetRecipe = recipe) => defaultGetNutritionIngredientSource(targetRecipe);
 
   const persistIngredientIDs = async (fieldName, updatedIngredients, targetRecipe = recipe) => {
     if (!fieldName || typeof persistIngredientIDsCallback !== 'function') return;
     await persistIngredientIDsCallback({
       recipe: targetRecipe,
-      recipeId: targetRecipe?.id || null,
       fieldName,
       updatedIngredients,
     });
@@ -130,6 +126,7 @@ export function useIngredientIDMatching({
         return acc;
       }, {});
       setIngredientMatchDialog({
+        recipe: targetRecipe,
         recipeId: targetRecipe.id,
         fieldName,
         updatedIngredients,

@@ -217,7 +217,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     nutritionReferenceRows,
     currentUserId: currentUser?.id || null,
     ingredientMatchFromModalRef,
-    persistIngredientIDs: async ({ recipeId, fieldName, updatedIngredients }) => {
+    persistIngredientIDs: async ({ recipe: targetRecipe, fieldName, updatedIngredients }) => {
+      const recipeId = targetRecipe?.id;
       if (!recipeId || !fieldName || !onUpdateRecipe) return;
       try {
         await onUpdateRecipe(recipeId, { [fieldName]: updatedIngredients });
@@ -298,7 +299,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   const handleIngredientMatchConfirm = async () => {
     if (!ingredientMatchDialog) return;
-    const { recipeId, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
+    const { recipe: dialogRecipe, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
 
     for (const entry of unresolved) {
@@ -317,7 +318,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         : { ...original, ingredientID: selectedIngredientID };
     }
 
-    await persistIngredientIDs(fieldName, nextIngredients, { id: recipeId });
+    await persistIngredientIDs(fieldName, nextIngredients, dialogRecipe);
     setIngredientMatchDialog(null);
     ingredientMatchFromModalRef.current = false;
   };

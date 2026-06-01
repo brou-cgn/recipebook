@@ -485,10 +485,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     nutritionReferenceRows,
     currentUserId: currentUser?.id || null,
     ingredientMatchFromModalRef,
-    persistIngredientIDs: async ({ fieldName, updatedIngredients }) => {
+    persistIngredientIDs: async ({ recipe: targetRecipe, fieldName, updatedIngredients }) => {
       if (!fieldName) return;
+      const recipeId = targetRecipe?.id || recipe.id;
       try {
-        await updateRecipe(recipe.id, { [fieldName]: updatedIngredients });
+        await updateRecipe(recipeId, { [fieldName]: updatedIngredients });
         setSelectedRecipe(prev => ({ ...prev, [fieldName]: updatedIngredients }));
       } catch (err) {
         console.error('Could not persist ingredientIDs:', err);
