@@ -2274,7 +2274,6 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     });
     expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
     expect(mockUpdateRecipe).not.toHaveBeenCalled();
-
   });
 
   test('does not open ingredientID dialog when nutrition reference data failed to load', async () => {
@@ -2313,6 +2312,5 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     });
     expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
     expect(mockUpdateRecipe).not.toHaveBeenCalled();
-
   });
 });
