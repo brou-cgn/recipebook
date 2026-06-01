@@ -5,6 +5,17 @@ import AppCallsPage from './AppCallsPage';
 let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 const mockGetIngredientIdSuggestions = jest.fn(() => []);
 const mockNutritionModalProps = jest.fn();
+const mockSetDoc = jest.fn(() => Promise.resolve());
+
+jest.mock('../firebase', () => ({
+  db: {},
+}));
+
+jest.mock('firebase/firestore', () => ({
+  doc: jest.fn((db, coll, id) => `${coll}/${id}`),
+  serverTimestamp: jest.fn(() => 'server-ts'),
+  setDoc: (...args) => mockSetDoc(...args),
+}));
 
 jest.mock('./NutritionModal', () => function MockNutritionModal(props) {
   const { recipe, onClose, onEnsureIngredientIDs } = props;
@@ -22,9 +33,13 @@ jest.mock('../contexts/NutritionReferenceContext', () => ({
   useNutritionReference: () => mockNutritionReferenceState,
 }));
 
-jest.mock('../utils/ingredientIdMatching', () => ({
-  getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
-}));
+jest.mock('../utils/ingredientIdMatching', () => {
+  const actual = jest.requireActual('../utils/ingredientIdMatching');
+  return {
+    ...actual,
+    getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
+  };
+});
 
 // Mock utility modules
 jest.mock('../utils/appCallsFirestore', () => ({
@@ -97,6 +112,7 @@ const moderatorUser = {
 describe('AppCallsPage – Kulinariktypen release with rename', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetDoc.mockClear();
     mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
     mockGetIngredientIdSuggestions.mockReset();
     mockGetIngredientIdSuggestions.mockReturnValue([]);
@@ -643,6 +659,55 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
         ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
       }
     ));
+  });
+
+  test('creates a new pending ingredientID with status Freizugeben when no match exists', async () => {
+    mockNutritionReferenceState = {
+      rows: [],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    const onUpdateRecipe = jest.fn(() => Promise.resolve());
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r-new',
+            title: 'Gemüsepfanne',
+            ingredients: [{ type: 'ingredient', text: '1 Prise Sumach' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+
+    await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
+      'r-new',
+      {
+        ingredients: [{ type: 'ingredient', text: '1 Prise Sumach', ingredientID: 'sumach' }],
+      }
+    ));
+    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
+    expect(mockSetDoc).toHaveBeenCalled();
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      ingredientID: 'sumach',
+      displayName: 'Sumach',
+      synonyms: ['Sumach'],
+      possibleUnits: ['Prise'],
+      status: 'Freizugeben',
+      source: 'auto-created',
+    }));
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
   test('shows warning symbol only for recipes with non-included ingredients', async () => {

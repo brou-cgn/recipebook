@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import {
   parseNutritionReferenceBooleanFields,
   parseNutritionReferencePossibleUnits,
+  parseNutritionReferenceStatus,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
   parseNutritionReferenceSynonyms,
@@ -26,6 +27,7 @@ function mapNutritionReferenceRows(snapshot) {
         nutritionFamily: data.nutritionFamily || data.family || '',
         seasonalFamily: data.seasonalFamily || '',
         category: data.category || '',
+        status: parseNutritionReferenceStatus(data),
         source: data.source || '',
         searchTerm: data.searchTerm || '',
         AI_Gemini_Error: data.AI_Gemini_Error || '',

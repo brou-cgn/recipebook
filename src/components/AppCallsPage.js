@@ -18,9 +18,12 @@ import {
 } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
-import { getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
+import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
+import { db } from '../firebase';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { NUTRITION_REFERENCE_PENDING_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
   addCuisineProposal,
@@ -287,6 +290,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const updatedIngredients = [...rawIngredients];
     const unresolvedIngredients = [];
     const matchingLog = [];
+    const createdReferenceDrafts = new Map();
+    const referencesToCreate = [];
     let autoAssigned = 0;
 
     rawIngredients.forEach((item, index) => {
@@ -321,6 +326,38 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return;
       }
 
+      if (suggestions.length === 0) {
+        const draftKey = buildPendingNutritionReferenceDraft(ingredientItem.text, nutritionReferenceRows);
+        const createdDraft = draftKey?.canonicalKey
+          ? createdReferenceDrafts.get(draftKey.canonicalKey)
+          : null;
+        const nextDraft = createdDraft || buildPendingNutritionReferenceDraft(
+          ingredientItem.text,
+          [...nutritionReferenceRows, ...Array.from(createdReferenceDrafts.values())]
+        );
+
+        if (nextDraft) {
+          if (!createdDraft) {
+            createdReferenceDrafts.set(nextDraft.canonicalKey, nextDraft);
+            referencesToCreate.push(nextDraft);
+          }
+
+          const nextItem = typeof item === 'string'
+            ? { type: 'ingredient', text: item, ingredientID: nextDraft.ingredientID }
+            : { ...item, ingredientID: nextDraft.ingredientID };
+          updatedIngredients[index] = nextItem;
+          autoAssigned += 1;
+          matchingLog.push({
+            ingredient: ingredientItem.text,
+            status: 'created',
+            selectedIngredientID: nextDraft.ingredientID,
+            createdReference: true,
+            ...(existingIngredientID ? { previousIngredientID: existingIngredientID } : {}),
+          });
+          return;
+        }
+      }
+
       unresolvedIngredients.push({
         index,
         ingredient: ingredientItem.text,
@@ -349,6 +386,31 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         errorMessage: '',
       });
       return null;
+    }
+
+    if (referencesToCreate.length > 0) {
+      await Promise.all(referencesToCreate.map(async (draft) => {
+        try {
+          await setDoc(
+            doc(db, 'nutritionReferences', draft.ingredientID),
+            {
+              ingredientID: draft.ingredientID,
+              displayName: draft.displayName,
+              synonyms: draft.synonyms,
+              normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
+              name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
+              possibleUnits: draft.possibleUnits,
+              status: NUTRITION_REFERENCE_PENDING_STATUS,
+              source: 'auto-created',
+              updatedAt: serverTimestamp(),
+              updatedBy: currentUser?.id || null,
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.error('Could not create pending nutrition reference:', err);
+        }
+      }));
     }
 
     if (autoAssigned > 0) {

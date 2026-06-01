@@ -2471,6 +2471,57 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     });
   });
 
+  test('creates a new pending ingredientID with status Freizugeben when no match exists', async () => {
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', synonyms: ['Tomate'] }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-6b',
+          title: 'Gewürzmix',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Prise Sumach' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Gewürze'],
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-6b',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '1 Prise Sumach', ingredientID: 'sumach' }],
+        })
+      );
+    });
+    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        ingredientID: 'sumach',
+        displayName: 'Sumach',
+        synonyms: ['Sumach'],
+        possibleUnits: ['Prise'],
+        status: 'Freizugeben',
+        source: 'auto-created',
+      }),
+      { merge: true }
+    );
+  });
+
   test('shows manual dialog for ingredient whose stale ingredientID yields no unique 100% match', async () => {
     mockNutritionReferenceState = {
       rows: [
