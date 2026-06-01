@@ -406,7 +406,7 @@
   position: sticky;
   top: var(--nutrition-header-height);
   z-index: 2;
-  background: #fff;
+  background: inherit;
 }
 
 @media (max-width: 1023px) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deleteDoc, deleteField, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
@@ -62,6 +62,7 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
     label: NUTRITION_FIELD_LABELS[field],
   })),
 ];
+const NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS = new Set(NUTRITION_REFERENCE_BOOLEAN_FIELDS);
 
 const getRecipeIngredientTexts = (recipe = {}) => {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
@@ -468,26 +469,25 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   }
 
   const normalizedStatusFilter = statusFilter.trim().toLowerCase();
-  const normalizedColumnFilters = NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
+  const normalizedColumnFilters = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     const rawValue = columnFilters[column.key];
     if (rawValue == null) return acc;
     const trimmed = String(rawValue).trim();
     if (!trimmed || trimmed === 'all') return acc;
     acc[column.key] = column.type === 'boolean' ? trimmed : trimmed.toLowerCase();
     return acc;
-  }, {});
-  const booleanFields = new Set(NUTRITION_REFERENCE_BOOLEAN_FIELDS);
-  const getRowFilterValue = (row, field) => {
+  }, {}), [columnFilters]);
+  const getRowFilterValue = useCallback((row, field) => {
     if (field === 'ingredientID') return getIngredientID(row);
     if (field === 'status') return parseNutritionReferenceStatus(row);
     if (field === 'synonyms') return parseNutritionReferenceSynonyms(row).join(', ');
     if (field === 'possibleUnits') return parseNutritionReferencePossibleUnits(row).join(';');
-    if (booleanFields.has(field)) return row[field] === true ? 'true' : 'false';
+    if (NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS.has(field)) return row[field] === true ? 'true' : 'false';
     return row[field] ?? '';
-  };
-  const updateColumnFilter = (field, value) => {
+  }, []);
+  const updateColumnFilter = useCallback((field, value) => {
     setColumnFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
   const visibleRows = rows.filter((row) => {
     const matchesStatusFilter = !normalizedStatusFilter
       || parseNutritionReferenceStatus(row).toLowerCase().includes(normalizedStatusFilter);
