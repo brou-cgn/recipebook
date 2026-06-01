@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { functions } from '../firebase';
+import { functions, db } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
+import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { normalizeNutritionReferenceId, NUTRITION_REFERENCE_FIELDS, scaleNutritionValues } from '../utils/nutritionReferenceUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -100,7 +103,59 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
   });
 }
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false }) {
+/**
+ * Compute the amount in grams for a given ingredient text and reference row.
+ * Returns null if it cannot be determined.
+ */
+export function computeIngredientAmountG(ingredientText, referenceRow) {
+  const { quantity, unit } = parseIngredientNameAndUnit(ingredientText);
+  const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
+
+  if (normalizedUnit === 'g') {
+    return quantity != null ? quantity : null;
+  }
+  if (normalizedUnit === 'kg') {
+    return quantity != null ? quantity * 1000 : null;
+  }
+
+  // For other units or no unit, scale by defaultAmountG from the reference row
+  const defaultAmountG = referenceRow?.defaultAmountG;
+  if (defaultAmountG != null) {
+    const multiplier = quantity != null ? quantity : 1;
+    return multiplier * defaultAmountG;
+  }
+
+  return null;
+}
+
+const PREFERRED_NUTRITION_SOURCES = new Set(['openfoodfacts', 'manual']);
+
+/**
+ * Resolve nutrition values for an ingredient from the nutritionReferences cache.
+ *
+ * Returns `{ naehrwerte, fromReference: true, source, amountG }` when the
+ * ingredient has an ingredientID that maps to a reference row with a preferred
+ * source ('openfoodfacts' or 'manual') AND the amount in grams can be computed.
+ * Returns `null` otherwise (caller should fall back to OpenFoodFacts).
+ */
+export function resolveIngredientNutritionFromReference(ingredientObj, nutritionReferenceRows) {
+  const ingredientID = String(ingredientObj?.ingredientID || '').trim();
+  if (!ingredientID) return null;
+
+  const row = (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID);
+  if (!row) return null;
+
+  const source = row.source || '';
+  if (!PREFERRED_NUTRITION_SOURCES.has(source)) return null;
+
+  const amountG = computeIngredientAmountG(ingredientObj.text || '', row);
+  if (amountG == null) return null;
+
+  const naehrwerte = scaleNutritionValues(row, amountG);
+  return { naehrwerte, fromReference: true, source, amountG };
+}
+
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [] }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -300,20 +355,41 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   };
 
   const handleAutoCalculate = async () => {
-    const rawIngredients = recipe.zutaten || recipe.ingredients || [];
-    const allIngredientTexts = rawIngredients
-      .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
-      .map(item => typeof item === 'string' ? item : item.text);
+    // Step 1: Ensure ingredient IDs are set before calculating
+    let currentRecipe = recipe;
+    if (onEnsureIngredientIDs) {
+      const matchResult = await onEnsureIngredientIDs();
+      if (matchResult === null) {
+        // Dialog was opened for manual selection – stop and let user interact
+        return;
+      }
+      if (matchResult) {
+        // updatedIngredients have been persisted; use them for this calculation
+        currentRecipe = {
+          ...recipe,
+          [matchResult.fieldName]: matchResult.updatedIngredients,
+        };
+      }
+    }
+
+    const rawIngredients = currentRecipe.zutaten || currentRecipe.ingredients || [];
+    const allIngredientItems = rawIngredients
+      .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'));
+
+    // Keep as objects with text + optional ingredientID
+    const normalizedItems = allIngredientItems.map(item =>
+      typeof item === 'string' ? { text: item } : { ...item, text: item.text || '' }
+    );
 
     // Separate recipe-link ingredients from regular ingredients
-    const ingredients = [];
+    const ingredients = []; // { text, ingredientID? }
     const recipeLinkItems = [];
-    for (const text of allIngredientTexts) {
-      const link = decodeRecipeLink(text);
+    for (const item of normalizedItems) {
+      const link = decodeRecipeLink(item.text);
       if (link) {
-        recipeLinkItems.push({ ingredient: text, link });
+        recipeLinkItems.push({ ingredient: item.text, link });
       } else {
-        ingredients.push(text);
+        ingredients.push(item);
       }
     }
 
@@ -328,7 +404,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
     clearStoredCalcResult(recipe?.id);
-    setCalcProgress({ done: 0, total: ingredients.length + recipeLinkItems.length, current: ingredients[0] || (recipeLinkItems[0]?.link.recipeName) || '' });
+    setCalcProgress({ done: 0, total: ingredients.length + recipeLinkItems.length, current: ingredients[0]?.text || (recipeLinkItems[0]?.link.recipeName) || '' });
 
     // Persist calcPending so the loading indicator survives navigation away from this modal
     try {
@@ -349,12 +425,13 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     );
     let foundCount = 0;
 
-    // Process regular ingredients via OpenFoodFacts
+    // Process regular ingredients
     for (let i = 0; i < ingredients.length; i++) {
       if (abortController.signal.aborted) {
         break;
       }
-      const ingredient = ingredients[i];
+      const ingredientItem = ingredients[i];
+      const ingredient = ingredientItem.text;
 
       // Skip accepted ingredients – but NOT AI-estimated ones (re-check against OpenFoodFacts)
       if (acceptedIngredients.has(ingredient) && !aiEstimatedIngredients.has(ingredient)) {
@@ -365,6 +442,26 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
       setCalcProgress({ done: i, total: ingredients.length + recipeLinkItems.length, current: ingredient });
 
+      // Check nutrition reference cache first if ingredient has an ingredientID
+      const fromRef = resolveIngredientNutritionFromReference(ingredientItem, nutritionReferenceRows);
+      if (fromRef) {
+        const { naehrwerte: n, fromReference, source } = fromRef;
+        Object.keys(totals).forEach(key => {
+          totals[key] += n[key] || 0;
+        });
+        foundCount++;
+        ingredientDetails.push({
+          ingredient,
+          naehrwerte: n,
+          searchTerm: null,
+          aiEstimated: false,
+          fromReference,
+          source,
+        });
+        continue;
+      }
+
+      // Fall back to OpenFoodFacts
       try {
         const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
         const { naehrwerte: n, details } = result.data;
@@ -382,6 +479,36 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           });
           if (reformulations[ingredient]) {
             successfulReformulations[ingredient] = reformulations[ingredient];
+          }
+
+          // Write back to nutritionReferences when we have an ingredientID whose
+          // existing source is not preferred (openfoodfacts / manual)
+          const ingredientID = String(ingredientItem.ingredientID || '').trim();
+          if (ingredientID) {
+            const existingRow = (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID);
+            const existingSource = existingRow?.source || '';
+            if (!PREFERRED_NUTRITION_SOURCES.has(existingSource)) {
+              const { quantity: qty, unit } = parseIngredientNameAndUnit(ingredient);
+              const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
+              let amountG = null;
+              if (normalizedUnit === 'g') amountG = qty;
+              else if (normalizedUnit === 'kg') amountG = qty != null ? qty * 1000 : null;
+              else if (existingRow?.defaultAmountG != null) {
+                amountG = (qty != null ? qty : 1) * existingRow.defaultAmountG;
+              }
+
+              if (amountG != null && amountG > 0) {
+                const per100g = {};
+                NUTRITION_REFERENCE_FIELDS.forEach(field => {
+                  if (n[field] != null) per100g[field] = (n[field] / amountG) * 100;
+                });
+                setDoc(
+                  doc(db, 'nutritionReferences', ingredientID),
+                  { ...per100g, source: 'openfoodfacts', updatedAt: serverTimestamp() },
+                  { merge: true }
+                ).catch(err => console.error('Could not write back nutritionReferences:', err));
+              }
+            }
           }
         } else {
           const reform = reformulations[ingredient];

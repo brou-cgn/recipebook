@@ -137,6 +137,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const alarmIntervalRef = useRef(null);
   const alarmCtxRef = useRef(null);
   const notifyTimerDoneRef = useRef(null);
+  const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
 
   useEffect(() => {
@@ -744,6 +745,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return { updatedIngredients, matchingLog };
   };
 
+  const handleEnsureIngredientIDsForModal = async () => {
+    ingredientMatchFromModalRef.current = true;
+    const result = await ensureIngredientIDsForNutrition();
+    if (result !== null) {
+      ingredientMatchFromModalRef.current = false;
+    }
+    return result;
+  };
+
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
     const ingredients = ingredientsInput
       .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
@@ -865,7 +875,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     await persistIngredientIDs(fieldName, nextIngredients);
     setIngredientMatchDialog(null);
-    await runAutoCalculateAndSave(nextIngredients, nextLog);
+
+    if (ingredientMatchFromModalRef.current) {
+      // Triggered from NutritionModal – the modal will handle the rest after re-invoking
+      ingredientMatchFromModalRef.current = false;
+    } else {
+      await runAutoCalculateAndSave(nextIngredients, nextLog);
+    }
   };
 
   const handleNutritionButtonClick = () => {
@@ -2642,6 +2658,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onSave={handleSaveNutrition}
           currentUser={currentUser}
           isStale={isNutritionStale}
+          onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
+          nutritionReferenceRows={nutritionReferenceRows}
         />
       )}
 

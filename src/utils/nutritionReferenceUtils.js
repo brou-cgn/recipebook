@@ -96,6 +96,16 @@ export function parseNutritionReferencePossibleUnits(input = {}) {
   return [...new Set(raw.split(delimiter).map((u) => u.trim()).filter(Boolean))];
 }
 
+export function scaleNutritionValues(per100g, amountG) {
+  const result = {};
+  for (const field of NUTRITION_REFERENCE_FIELDS) {
+    if (per100g[field] != null) {
+      result[field] = (per100g[field] / 100) * amountG;
+    }
+  }
+  return result;
+}
+
 export function getNormalizedNutritionReferenceSynonyms(input = {}) {
   const synonyms = parseNutritionReferenceSynonyms(input);
   const normalized = synonyms

@@ -1,7 +1,14 @@
-import { getRecipeCalcResult, buildNutritionCompositionRows } from './NutritionModal';
+import { getRecipeCalcResult, buildNutritionCompositionRows, resolveIngredientNutritionFromReference, computeIngredientAmountG } from './NutritionModal';
 
 jest.mock('../firebase', () => ({
   functions: {},
+  db: {},
+}));
+
+jest.mock('firebase/firestore', () => ({
+  setDoc: jest.fn(),
+  doc: jest.fn(),
+  serverTimestamp: jest.fn(),
 }));
 
 describe('getRecipeCalcResult', () => {
@@ -217,5 +224,104 @@ describe('getRecipeCalcResult', () => {
         naehrwerte: linkNaehrwerte,
       }));
     });
+  });
+});
+
+describe('computeIngredientAmountG', () => {
+  const rowWith = (defaultAmountG) => ({ ingredientID: 'X', defaultAmountG });
+
+  it('returns quantity in grams for unit g', () => {
+    expect(computeIngredientAmountG('250 g Tomaten', rowWith(null))).toBe(250);
+  });
+
+  it('converts kg to grams', () => {
+    expect(computeIngredientAmountG('1,5 kg Kartoffeln', rowWith(null))).toBeCloseTo(1500);
+  });
+
+  it('uses defaultAmountG multiplied by quantity for other units', () => {
+    expect(computeIngredientAmountG('2 EL Öl', rowWith(15))).toBe(30);
+  });
+
+  it('uses defaultAmountG with multiplier 1 when no quantity given', () => {
+    expect(computeIngredientAmountG('Salz', rowWith(5))).toBe(5);
+  });
+
+  it('returns null when unit is not g/kg and no defaultAmountG in row', () => {
+    expect(computeIngredientAmountG('3 Stück Eier', rowWith(null))).toBeNull();
+  });
+
+  it('returns null when no quantity and no defaultAmountG', () => {
+    expect(computeIngredientAmountG('Salz', null)).toBeNull();
+  });
+});
+
+describe('resolveIngredientNutritionFromReference', () => {
+  const referenceRow = {
+    ingredientID: 'tomate',
+    source: 'openfoodfacts',
+    defaultAmountG: null,
+    kalorien: 20,
+    protein: 1,
+    fett: 0.2,
+    kohlenhydrate: 4,
+    zucker: 2,
+    ballaststoffe: 1,
+    salz: 0.01,
+  };
+
+  const manualRow = { ...referenceRow, ingredientID: 'mehl', source: 'manual' };
+  const aiRow = { ...referenceRow, ingredientID: 'ei', source: 'ai-generiert', defaultAmountG: 50 };
+
+  const rows = [referenceRow, manualRow, aiRow];
+
+  it('returns scaled nutrition when source is openfoodfacts', () => {
+    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
+    const result = resolveIngredientNutritionFromReference(ingredient, rows);
+    expect(result).not.toBeNull();
+    expect(result.fromReference).toBe(true);
+    expect(result.source).toBe('openfoodfacts');
+    // 500g at 20 kcal/100g = 100 kcal
+    expect(result.naehrwerte.kalorien).toBeCloseTo(100);
+    expect(result.naehrwerte.protein).toBeCloseTo(5);
+  });
+
+  it('returns scaled nutrition when source is manual', () => {
+    const ingredient = { text: '200 g Mehl', ingredientID: 'mehl' };
+    const result = resolveIngredientNutritionFromReference(ingredient, rows);
+    expect(result).not.toBeNull();
+    expect(result.source).toBe('manual');
+    expect(result.naehrwerte.kalorien).toBeCloseTo(40);
+  });
+
+  it('returns null when source is ai-generiert', () => {
+    const ingredient = { text: '2 Stück Eier', ingredientID: 'ei' };
+    // ai-generiert source → should NOT use reference
+    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
+  });
+
+  it('returns null when ingredient has no ingredientID', () => {
+    const ingredient = { text: '250 g Tomaten' };
+    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
+  });
+
+  it('returns null when no matching row exists in reference', () => {
+    const ingredient = { text: '100 g Unbekannt', ingredientID: 'unknown-ingredient' };
+    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
+  });
+
+  it('uses defaultAmountG when unit is not g/kg', () => {
+    const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 15, kalorien: 900 };
+    const ingredient = { text: '2 EL Öl', ingredientID: 'oel' };
+    const result = resolveIngredientNutritionFromReference(ingredient, [row]);
+    expect(result).not.toBeNull();
+    // 2 EL × 15g = 30g → 900/100*30 = 270 kcal
+    expect(result.naehrwerte.kalorien).toBeCloseTo(270);
+  });
+
+  it('returns null when amount in grams cannot be determined', () => {
+    // no unit=g, no defaultAmountG
+    const row = { ...referenceRow, ingredientID: 'ei2', source: 'manual', defaultAmountG: undefined };
+    const ingredient = { text: '3 Stück Eier', ingredientID: 'ei2' };
+    expect(resolveIngredientNutritionFromReference(ingredient, [row])).toBeNull();
   });
 });

@@ -42,21 +42,33 @@ function similarityFromNormalized(a, b) {
 
 export function parseIngredientNameAndUnit(ingredientText) {
   const raw = String(ingredientText || '').trim();
-  if (!raw) return { name: '', unit: null };
+  if (!raw) return { quantity: null, name: '', unit: null };
 
   const numericPrefixMatch = raw.match(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s*(\S+)?\s*(.*)$/);
   if (!numericPrefixMatch) {
-    return { name: raw, unit: null };
+    return { quantity: null, name: raw, unit: null };
+  }
+
+  const rawQuantityStr = numericPrefixMatch[1];
+  let parsedQuantity = null;
+  if (rawQuantityStr.includes('/')) {
+    const parts = rawQuantityStr.split('/');
+    const num = parseFloat(parts[0].replace(',', '.'));
+    const den = parseFloat(parts[1].replace(',', '.'));
+    if (!isNaN(num) && !isNaN(den) && den !== 0) parsedQuantity = num / den;
+  } else {
+    const n = parseFloat(rawQuantityStr.replace(',', '.'));
+    if (!isNaN(n)) parsedQuantity = n;
   }
 
   const possibleUnit = (numericPrefixMatch[2] || '').trim();
   const rest = (numericPrefixMatch[3] || '').trim();
   if (possibleUnit && COMMON_UNITS.has(normalizeNutritionReferenceId(possibleUnit))) {
-    return { name: rest || raw, unit: possibleUnit };
+    return { quantity: parsedQuantity, name: rest || raw, unit: possibleUnit };
   }
 
   const withoutAmount = raw.replace(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s+/, '').trim();
-  return { name: withoutAmount || raw, unit: null };
+  return { quantity: parsedQuantity, name: withoutAmount || raw, unit: null };
 }
 
 export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRows = []) {
