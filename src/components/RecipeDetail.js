@@ -742,7 +742,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       await persistIngredientIDs(fieldName, updatedIngredients);
     }
 
-    return { updatedIngredients, matchingLog };
+    return { fieldName, updatedIngredients, matchingLog };
   };
 
   const handleEnsureIngredientIDsForModal = async () => {
