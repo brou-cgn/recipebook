@@ -78,6 +78,29 @@ Rules:
 }
 
 /**
+ * @param {string} ingredientID
+ * @param {string} nutritionFamily
+ * @param {string} category
+ * @return {string}
+ */
+function buildReferenceSearchTermPrompt(ingredientID, nutritionFamily, category) {
+  return `You are a food database expert. Based on the metadata below, generate the best English search term for finding this food ingredient in the OpenFoodFacts database.
+
+Return ONLY a JSON object (no markdown, no explanation):
+{"searchTerm": "<concise English food name>"}
+
+Metadata:
+- ingredientID: ${ingredientID}
+- nutritionFamily: ${nutritionFamily || ''}
+- category: ${category || ''}
+
+Rules:
+- Return a simple, generic English food name (e.g. "olive oil", "wheat flour", "tomato")
+- Do NOT include modifiers like "organic", "fresh", "dried"
+- Use the most common English food database search term`;
+}
+
+/**
  * @param {string} ingredientStr
  * @param {object} parsed
  * @param {string} parsed.name
@@ -335,15 +358,53 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
     return null;
   }
 
+  /**
+   * Uses Gemini to generate an English search term for a nutrition reference entry
+   * based on its ingredientID, nutritionFamily, and category metadata.
+   *
+   * @param {string} ingredientID
+   * @param {string} nutritionFamily
+   * @param {string} category
+   * @param {object} [options]
+   * @return {Promise<string|null>}
+   */
+  async function generateSearchTermWithGemini(ingredientID, nutritionFamily, category, options = {}) {
+    const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
+    if (!apiKey || !GoogleGenerativeAI) return null;
+
+    const model = options.model || (options.createModel ?
+      options.createModel(apiKey) :
+      new GoogleGenerativeAI(apiKey).getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {responseMimeType: 'application/json', temperature: 0},
+      }));
+
+    try {
+      const result = await withTimeout(
+        model.generateContent(buildReferenceSearchTermPrompt(ingredientID, nutritionFamily, category)),
+        options.timeoutMs ?? 15000,
+      );
+      const text = await result.response.text();
+      const jsonText = extractJsonObject(text);
+      const parsed = JSON.parse(jsonText);
+      const searchTerm = normalizeName(parsed?.searchTerm);
+      return searchTerm || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   return {
     parseIngredientForNutrition,
     normalizeIngredientWithGemini,
     estimateNutritionWithGemini,
+    generateSearchTermWithGemini,
   };
 }
 
 module.exports = {
   buildIngredientNormalizationPrompt,
+  buildReferenceSearchTermPrompt,
   createNutritionNormalizationUtils,
   extractJsonObject,
   normalizeGeminiPayload,

@@ -2153,6 +2153,89 @@ const sendBringHtml = (res, title, recipeIngredients) => {
 };
 
 /**
+ * Generates nutrition data for a nutrition reference entry by:
+ * 1. Using Gemini to generate a meaningful English search term from the metadata
+ * 2. Querying OpenFoodFacts with the generated search term
+ * 3. Falling back to Gemini nutrition estimation if OpenFoodFacts returns no results
+ */
+exports.generateNutritionFromReference = onCall(
+    {maxInstances: 5, timeoutSeconds: 120, secrets: [geminiApiKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'You must be logged in to generate nutrition data');
+      }
+
+      const {ingredientID, nutritionFamily, category} = request.data || {};
+      if (!ingredientID || typeof ingredientID !== 'string') {
+        throw new HttpsError('invalid-argument', 'ingredientID is required');
+      }
+
+      const {
+        generateSearchTermWithGemini,
+        estimateNutritionWithGemini,
+      } = createNutritionNormalizationUtils({
+        GoogleGenerativeAI,
+        env: {GEMINI_API_KEY: geminiApiKey.value()},
+      });
+
+      // 1. Generate search term with Gemini
+      const generatedSearchTerm = await generateSearchTermWithGemini(
+          ingredientID,
+          nutritionFamily || '',
+          category || '',
+      );
+      const searchTerm = generatedSearchTerm || ingredientID;
+
+      // 2. Query OpenFoodFacts
+      let offValues = null;
+      let productName = null;
+      try {
+        const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerm)}&action=process&json=1&page_size=5`;
+        const offResponse = await fetch(offUrl);
+        if (offResponse.ok) {
+          const offData = await offResponse.json();
+          const product = (offData.products || []).find((entry) => {
+            const nutriments = entry?.nutriments || {};
+            return nutriments['energy-kcal_100g'] != null || nutriments['energy-kcal'] != null;
+          });
+          if (product) {
+            const nutriments = product.nutriments || {};
+            offValues = {
+              kalorien: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null,
+              protein: nutriments['proteins_100g'] ?? nutriments.proteins ?? null,
+              fett: nutriments['fat_100g'] ?? nutriments.fat ?? null,
+              kohlenhydrate: nutriments['carbohydrates_100g'] ?? nutriments.carbohydrates ?? null,
+              zucker: nutriments['sugars_100g'] ?? nutriments.sugars ?? null,
+              ballaststoffe: nutriments['fiber_100g'] ?? nutriments.fiber ?? null,
+              salz: nutriments['salt_100g'] ?? nutriments.salt ?? null,
+            };
+            productName = product.product_name || searchTerm;
+          }
+        }
+      } catch (e) {
+        // Network error → fall back to Gemini
+      }
+
+      if (offValues) {
+        return {searchTerm, source: 'openfoodfacts', values: offValues, productName};
+      }
+
+      // 3. Gemini fallback: estimate nutrition
+      const estimated = await estimateNutritionWithGemini(
+          ingredientID,
+          {amountG: 100, name: ingredientID, searchName: searchTerm},
+          {timeoutMs: 20000},
+      );
+
+      if (estimated?.per100g) {
+        return {searchTerm, source: 'ai-generiert', values: estimated.per100g, productName: null};
+      }
+
+      throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
+    }
+);
+
+/**
  * HTTP function to serve Schema.org Recipe HTML for Bring! deeplink integration.
  * Accepts ?shareId=<id> and returns an HTML page with structured Recipe JSON-LD
  * so the Bring! shopping list app can parse the ingredients.

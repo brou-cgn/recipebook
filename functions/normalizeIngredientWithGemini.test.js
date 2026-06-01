@@ -447,3 +447,46 @@ test('estimateNutritionWithGemini retries once after timeout and reuses the same
     name: 'Zwiebelpulver',
   });
 });
+
+test('generateSearchTermWithGemini returns search term on success', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    searchTerm: 'olive oil',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.generateSearchTermWithGemini('dummy-olivenoel', 'Öle', 'Fette');
+
+  assert.equal(result, 'olive oil');
+});
+
+test('generateSearchTermWithGemini returns null on invalid JSON', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => 'not valid json');
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.generateSearchTermWithGemini('dummy-mehl', 'Getreide', 'Mehlprodukte');
+
+  assert.equal(result, null);
+});
+
+test('generateSearchTermWithGemini returns null without an API key', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    searchTerm: 'wheat flour',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {},
+  });
+
+  const result = await utils.generateSearchTermWithGemini('dummy-mehl', 'Getreide', 'Mehlprodukte');
+
+  assert.equal(result, null);
+});

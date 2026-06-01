@@ -5,6 +5,7 @@ import { NutritionReferenceProvider } from '../contexts/NutritionReferenceContex
 
 jest.mock('../firebase', () => ({
   db: {},
+  functions: {},
 }));
 
 const mockGetDocs = jest.fn();
@@ -14,6 +15,7 @@ const mockFetch = jest.fn();
 const mockDoc = jest.fn((db, coll, id) => `${coll}/${id}`);
 const mockServerTimestamp = jest.fn(() => 'server-ts');
 const mockDeleteField = jest.fn(() => 'delete-field');
+const mockHttpsCallable = jest.fn();
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(() => 'collection-ref'),
@@ -23,6 +25,10 @@ jest.mock('firebase/firestore', () => ({
   deleteDoc: (...args) => mockDeleteDoc(...args),
   serverTimestamp: (...args) => mockServerTimestamp(...args),
   deleteField: (...args) => mockDeleteField(...args),
+}));
+
+jest.mock('firebase/functions', () => ({
+  httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
 describe('NutritionReferenceTab', () => {
@@ -57,6 +63,7 @@ describe('NutritionReferenceTab', () => {
     mockServerTimestamp.mockClear();
     mockDeleteField.mockClear();
     mockFetch.mockReset();
+    mockHttpsCallable.mockReset();
     global.fetch = mockFetch;
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.spyOn(window, 'confirm').mockImplementation(() => true);
@@ -130,37 +137,38 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
-  test('refreshes an existing row from OpenFoodFacts and overwrites the document', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        products: [
-          {
-            product_name: 'Tomatenmark',
-            nutriments: {
-              'energy-kcal_100g': 82,
-              proteins_100g: 4.3,
-              fat_100g: 0.5,
-              carbohydrates_100g: 18.9,
-              sugars_100g: 12.5,
-              fiber_100g: 4.1,
-              salt_100g: 0.2,
-            },
-          },
-        ],
-      }),
+  test('refreshes an existing row via generateNutritionFromReference and writes openfoodfacts data', async () => {
+    const mockCallFn = jest.fn().mockResolvedValue({
+      data: {
+        searchTerm: 'tomato',
+        source: 'openfoodfacts',
+        values: {
+          kalorien: 82,
+          protein: 4.3,
+          fett: 0.5,
+          kohlenhydrate: 18.9,
+          zucker: 12.5,
+          ballaststoffe: 4.1,
+          salz: 0.2,
+        },
+        productName: 'Tomatenmark',
+      },
     });
+    mockHttpsCallable.mockReturnValue(mockCallFn);
 
     renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
+    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://world.openfoodfacts.org/cgi/search.pl?search_terms=Tomate&action=process&json=1&page_size=5'
-      );
+      expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'generateNutritionFromReference');
+      expect(mockCallFn).toHaveBeenCalledWith({
+        ingredientID: 'dummy-tomate',
+        nutritionFamily: 'Gemüse',
+        category: '',
+      });
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
       expect(mockSetDoc.mock.calls[0][1]).toEqual(
         expect.objectContaining({
@@ -168,6 +176,7 @@ describe('NutritionReferenceTab', () => {
           synonyms: ['Tomate'],
           normalizedSynonyms: ['tomate'],
           product: 'Tomatenmark',
+          searchTerm: 'tomato',
           kalorien: 82,
           protein: 4.3,
           fett: 0.5,
@@ -183,21 +192,17 @@ describe('NutritionReferenceTab', () => {
     });
   });
 
-  test('shows an error message when the OpenFoodFacts refresh fails', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        products: [],
-      }),
-    });
+  test('shows an error message when generateNutritionFromReference fails', async () => {
+    const mockCallFn = jest.fn().mockRejectedValue(new Error('Abruf fehlgeschlagen.'));
+    mockHttpsCallable.mockReturnValue(mockCallFn);
 
     renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '🔍 OpenFoodFacts' }));
+    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
 
-    expect(await screen.findByText('Keine Nährwertdaten bei OpenFoodFacts gefunden.')).toBeInTheDocument();
+    expect(await screen.findByText('Abruf fehlgeschlagen.')).toBeInTheDocument();
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
