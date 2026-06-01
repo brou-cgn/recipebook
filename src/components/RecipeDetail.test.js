@@ -2416,8 +2416,15 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
 
     fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
 
-    // No new ID assignment should occur – ingredient is skipped
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for nutrition calculation to start (naehrwerte pending state is persisted)
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-5',
+        expect.objectContaining({ naehrwerte: expect.objectContaining({ calcPending: true }) })
+      );
+    });
+
+    // Ingredient IDs should not have been updated – the existing ID was still valid
     expect(mockUpdateRecipe).not.toHaveBeenCalledWith(
       'recipe-5',
       expect.objectContaining({ ingredients: expect.arrayContaining([expect.objectContaining({ ingredientID: expect.anything() })]) })
