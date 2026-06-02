@@ -417,6 +417,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     }
 
     const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+    const nutritionReferenceByIngredientID = new Map(
+      (nutritionReferenceRows || [])
+        .map((row) => [String(row?.ingredientID || '').trim(), row])
+        .filter(([id]) => Boolean(id))
+    );
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
     const successfulReformulations = {};
@@ -437,7 +442,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       const ingredient = ingredientItem.text;
       const ingredientID = String(ingredientItem.ingredientID || '').trim();
       const existingRow = ingredientID
-        ? (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID)
+        ? nutritionReferenceByIngredientID.get(ingredientID)
         : null;
 
       // Skip accepted ingredients – but NOT AI-estimated ones (re-check against OpenFoodFacts)

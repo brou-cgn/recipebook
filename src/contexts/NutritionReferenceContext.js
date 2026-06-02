@@ -145,8 +145,10 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
       try {
         const updatedAt = await fetchNutritionReferenceLastUpdatedAt();
         const cached = loadCachedRows();
+        const cachedLastUpdatedAt = cached?.lastUpdatedAt;
         const cacheIsFresh = cached && (Date.now() - cached.cachedAt) < NUTRITION_REF_CACHE_TTL_MS;
-        const cacheIsCurrent = updatedAt == null || (cached?.lastUpdatedAt != null && cached.lastUpdatedAt >= updatedAt);
+        const cacheIsCurrent = updatedAt === null
+          || (typeof cachedLastUpdatedAt === 'number' && cachedLastUpdatedAt >= updatedAt);
         if (cacheIsFresh && cacheIsCurrent) {
           if (isMounted) {
             setRows(cached.rows);
