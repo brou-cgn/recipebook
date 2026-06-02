@@ -513,6 +513,8 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const webImportListPreselected = useRef(false);
   // FAB button pressed state for animation
   const [fabPressed, setFabPressed] = useState(false);
+  // Saving state to show loading overlay and disable FAB button
+  const [isSaving, setIsSaving] = useState(false);
   // Form ref for FAB button
   const formRef = useRef(null);
   // Cancel button press state
@@ -999,7 +1001,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    if (isSaving) return;
+
     if (!title.trim()) {
       alert('Bitte geben Sie einen Rezepttitel ein');
       return;
@@ -1024,84 +1028,90 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
     // Derive the default image from the images array (first isDefault, or first overall)
     const defaultImg = images.find(img => img.isDefault) || images[0];
     let finalImage = (defaultImg?.url || image || '').trim();
-    if (!finalImage && speisekategorie.length > 0) {
-      // Recipe without title image (new or update) - try to get image from category
-      const categoryImage = await getImageForCategories(speisekategorie);
-      if (categoryImage) {
-        finalImage = categoryImage;
-      }
-    }
 
-    // Build final images array, ensuring default is correct
-    const finalImages = images.length > 0
-      ? images.map(img => ({ url: img.url, thumbnailUrl: img.thumbnailUrl || null, isDefault: img.url === finalImage, imageBrightness: img.imageBrightness || null }))
-      : (finalImage ? [{ url: finalImage, thumbnailUrl: null, isDefault: true }] : []);
-
-    // Filter out empty items and convert to storage format
-    const filteredIngredients = ingredients.filter(i => i.text.trim() !== '');
-    
-    // Format ingredients but preserve type information
-    const formattedIngredients = filteredIngredients.map(item => {
-      if (item.type === 'heading') {
-        // Don't format headings, keep them as-is
-        return item;
+    setIsSaving(true);
+    try {
+      if (!finalImage && speisekategorie.length > 0) {
+        // Recipe without title image (new or update) - try to get image from category
+        const categoryImage = await getImageForCategories(speisekategorie);
+        if (categoryImage) {
+          finalImage = categoryImage;
+        }
       }
-      // Format ingredient text to ensure proper spacing
-      return {
-        ...item,
-        text: formatIngredientSpacing(item.text)
+
+      // Build final images array, ensuring default is correct
+      const finalImages = images.length > 0
+        ? images.map(img => ({ url: img.url, thumbnailUrl: img.thumbnailUrl || null, isDefault: img.url === finalImage, imageBrightness: img.imageBrightness || null }))
+        : (finalImage ? [{ url: finalImage, thumbnailUrl: null, isDefault: true }] : []);
+
+      // Filter out empty items and convert to storage format
+      const filteredIngredients = ingredients.filter(i => i.text.trim() !== '');
+      
+      // Format ingredients but preserve type information
+      const formattedIngredients = filteredIngredients.map(item => {
+        if (item.type === 'heading') {
+          // Don't format headings, keep them as-is
+          return item;
+        }
+        // Format ingredient text to ensure proper spacing
+        return {
+          ...item,
+          text: formatIngredientSpacing(item.text)
+        };
+      });
+
+      // Keep object format when headings or ingredient IDs are present
+      const hasIngredientHeadings = formattedIngredients.some(item => item.type === 'heading');
+      const hasIngredientIds = formattedIngredients.some(item => item?.ingredientID !== undefined);
+      
+      // Convert to string format if no headings (backward compatibility)
+      const ingredientsToSave = hasIngredientHeadings || hasIngredientIds
+        ? formattedIngredients 
+        : formattedIngredients.map(item => item.text);
+
+      // Same for steps
+      const filteredSteps = steps.filter(s => s.text.trim() !== '');
+
+      // Append signature sentence as last step for new recipes (not edits/versions)
+      const signatureSatz = !recipe && !isCreatingVersion ? currentUser?.signatureSatz?.trim() : '';
+      if (signatureSatz) {
+        filteredSteps.push({ type: 'step', text: signatureSatz });
+      }
+
+      const hasStepHeadings = filteredSteps.some(item => item.type === 'heading');
+      const stepsToSave = hasStepHeadings 
+        ? filteredSteps 
+        : filteredSteps.map(item => item.text);
+
+      const recipeData = {
+        title: title.trim(),
+        image: finalImage,
+        images: finalImages,
+        portionen: portionen !== '' && !isNaN(parseInt(portionen, 10)) ? parseInt(portionen, 10) : undefined,
+        portionUnitId: portionUnitId,
+        kulinarik: kulinarik,
+        schwierigkeit: parseInt(schwierigkeit) || 3,
+        kochdauer: kochdauer !== '' && !isNaN(parseInt(kochdauer, 10)) ? parseInt(kochdauer, 10) : undefined,
+        speisekategorie: speisekategorie,
+        ingredients: ingredientsToSave,
+        steps: stepsToSave,
+        authorId: authorId,
+        parentRecipeId: parentRecipeId || null,
+        isPrivate: isPrivate,
+        createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
+        versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
+        ...(!recipe && !isCreatingVersion && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
       };
-    });
 
-    // Keep object format when headings or ingredient IDs are present
-    const hasIngredientHeadings = formattedIngredients.some(item => item.type === 'heading');
-    const hasIngredientIds = formattedIngredients.some(item => item?.ingredientID !== undefined);
-    
-    // Convert to string format if no headings (backward compatibility)
-    const ingredientsToSave = hasIngredientHeadings || hasIngredientIds
-      ? formattedIngredients 
-      : formattedIngredients.map(item => item.text);
+      // Add id only if it exists (editing existing recipe)
+      if (!isCreatingVersion && recipe?.id) {
+        recipeData.id = recipe.id;
+      }
 
-    // Same for steps
-    const filteredSteps = steps.filter(s => s.text.trim() !== '');
-
-    // Append signature sentence as last step for new recipes (not edits/versions)
-    const signatureSatz = !recipe && !isCreatingVersion ? currentUser?.signatureSatz?.trim() : '';
-    if (signatureSatz) {
-      filteredSteps.push({ type: 'step', text: signatureSatz });
+      await onSave(recipeData);
+    } finally {
+      setIsSaving(false);
     }
-
-    const hasStepHeadings = filteredSteps.some(item => item.type === 'heading');
-    const stepsToSave = hasStepHeadings 
-      ? filteredSteps 
-      : filteredSteps.map(item => item.text);
-
-    const recipeData = {
-      title: title.trim(),
-      image: finalImage,
-      images: finalImages,
-      portionen: portionen !== '' && !isNaN(parseInt(portionen, 10)) ? parseInt(portionen, 10) : undefined,
-      portionUnitId: portionUnitId,
-      kulinarik: kulinarik,
-      schwierigkeit: parseInt(schwierigkeit) || 3,
-      kochdauer: kochdauer !== '' && !isNaN(parseInt(kochdauer, 10)) ? parseInt(kochdauer, 10) : undefined,
-      speisekategorie: speisekategorie,
-      ingredients: ingredientsToSave,
-      steps: stepsToSave,
-      authorId: authorId,
-      parentRecipeId: parentRecipeId || null,
-      isPrivate: isPrivate,
-      createdAt: isCreatingVersion ? new Date().toISOString() : recipe?.createdAt,
-      versionCreatedFrom: isCreatingVersion ? recipe?.title : null,
-      ...(!recipe && !isCreatingVersion && selectedPrivateListId ? { selectedGroupId: selectedPrivateListId } : {}),
-    };
-
-    // Add id only if it exists (editing existing recipe)
-    if (!isCreatingVersion && recipe?.id) {
-      recipeData.id = recipe.id;
-    }
-
-    onSave(recipeData);
   };
 
   const handleFabClick = (e) => {
@@ -1792,6 +1802,17 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         />
       )}
 
+      {/* Loading overlay with animated dots while saving */}
+      {isSaving && (
+        <div className="recipe-form-saving-overlay" aria-busy="true" aria-label="Rezept wird gespeichert">
+          <div className="recipe-form-saving-dots">
+            <span className="recipe-form-saving-dot" />
+            <span className="recipe-form-saving-dot" />
+            <span className="recipe-form-saving-dot" />
+          </div>
+        </div>
+      )}
+
       {/* FAB Save Button */}
       <button
         type="button"
@@ -1802,6 +1823,7 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
         onMouseLeave={handleFabMouseUp}
         onTouchStart={handleFabMouseDown}
         onTouchEnd={handleFabMouseUp}
+        disabled={isSaving}
         aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
         title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
       >
