@@ -3602,3 +3602,124 @@ describe('RecipeForm - Private List Selector', () => {
     expect(toolbar.compareDocumentPosition(titleInput) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });
+
+describe('RecipeForm - Saving Loading State', () => {
+  const mockOnSave = jest.fn();
+  const mockOnCancel = jest.fn();
+
+  const regularUser = {
+    id: 'user-1',
+    vorname: 'Regular',
+    nachname: 'User',
+    email: 'user@example.com',
+    isAdmin: false,
+    role: 'edit',
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const fillRequiredFields = async () => {
+    fireEvent.change(screen.getByLabelText('Rezepttitel *'), {
+      target: { value: 'Test Rezept' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Zutat 1'), { target: { value: 'Test Zutat' } });
+    fireEvent.change(screen.getByPlaceholderText('Schritt 1'), { target: { value: 'Test Schritt' } });
+    const speisekategorieSelect = screen.getByLabelText('Speisekategorie (Mehrfachauswahl möglich)');
+    await waitFor(() => expect(speisekategorieSelect.options.length).toBeGreaterThan(0));
+    speisekategorieSelect.options[0].selected = true;
+    fireEvent.change(speisekategorieSelect);
+  };
+
+  test('shows loading overlay while saving', async () => {
+    let resolveSave;
+    mockOnSave.mockReturnValue(new Promise(resolve => { resolveSave = resolve; }));
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    await fillRequiredFields();
+
+    expect(document.querySelector('.recipe-form-saving-overlay')).not.toBeInTheDocument();
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => {
+      expect(document.querySelector('.recipe-form-saving-overlay')).toBeInTheDocument();
+    });
+
+    // Three dots should be rendered
+    expect(document.querySelectorAll('.recipe-form-saving-dot')).toHaveLength(3);
+
+    // Overlay disappears after save completes
+    await act(async () => { resolveSave(); });
+
+    await waitFor(() => {
+      expect(document.querySelector('.recipe-form-saving-overlay')).not.toBeInTheDocument();
+    });
+  });
+
+  test('disables save FAB button while saving', async () => {
+    let resolveSave;
+    mockOnSave.mockReturnValue(new Promise(resolve => { resolveSave = resolve; }));
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    await fillRequiredFields();
+
+    const fabButton = screen.getByRole('button', { name: /Rezept speichern/i });
+    expect(fabButton).not.toBeDisabled();
+
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await waitFor(() => {
+      expect(fabButton).toBeDisabled();
+    });
+
+    await act(async () => { resolveSave(); });
+
+    await waitFor(() => {
+      expect(fabButton).not.toBeDisabled();
+    });
+  });
+
+  test('prevents duplicate save calls when already saving', async () => {
+    let resolveSave;
+    mockOnSave.mockReturnValue(new Promise(resolve => { resolveSave = resolve; }));
+
+    render(
+      <RecipeForm
+        recipe={null}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        currentUser={regularUser}
+      />
+    );
+
+    await fillRequiredFields();
+
+    // Submit the form twice
+    fireEvent.submit(document.querySelector('.recipe-form'));
+    await waitFor(() => expect(document.querySelector('.recipe-form-saving-overlay')).toBeInTheDocument());
+    fireEvent.submit(document.querySelector('.recipe-form'));
+
+    await act(async () => { resolveSave(); });
+
+    // onSave should only be called once despite two submits
+    await waitFor(() => expect(mockOnSave).toHaveBeenCalledTimes(1));
+  });
+});
