@@ -2534,6 +2534,40 @@
   color: #ccc;
 }
 
+/* ---- ingredientID-Prüfen Dialog ---- */
+[data-theme="dark"] .ingredient-match-dialog {
+  background: #1f1f1f;
+  color: #f0f0f0;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-close {
+  color: #ddd;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-note {
+  color: #ccc;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-list {
+  border-color: #3a3a3a;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-list li {
+  border-bottom-color: #3a3a3a;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-list select {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-cancel {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
 [data-theme="dark"] .cuisine-badge {
   background: #2A2623;
   color: #E6DED6;
