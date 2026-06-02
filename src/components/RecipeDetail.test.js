@@ -2303,6 +2303,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         expect.objectContaining({
           ingredientID: 'tomate',
           synonyms: expect.arrayContaining(['Tomate', 'Tomatensauce']),
+          normalizedSynonyms: expect.arrayContaining(['tomate', 'tomatensauce']),
           possibleUnits: expect.arrayContaining(['g', 'EL']),
         }),
         { merge: true }
