@@ -8,7 +8,9 @@ import {
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
   NUTRITION_REFERENCE_MANUAL_STATUS,
+  NUTRITION_REFERENCE_NEW_STATUS,
   NUTRITION_REFERENCE_PENDING_STATUS,
+  NUTRITION_REFERENCE_STATUS_OPTIONS,
   normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceStatus,
@@ -47,7 +49,7 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
   { key: 'nutritionFamily', label: 'nutritionFamily' },
   { key: 'seasonalFamily', label: 'seasonalFamily' },
   { key: 'category', label: 'category' },
-  { key: 'status', label: 'Status' },
+  { key: 'status', label: 'Status', type: 'status' },
   { key: 'source', label: 'Quelle' },
   { key: 'searchTerm', label: 'Suchbegriff' },
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => ({
@@ -88,7 +90,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [newNutritionFamily, setNewNutritionFamily] = useState('');
   const [newSeasonalFamily, setNewSeasonalFamily] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [newStatus, setNewStatus] = useState('');
+  const [newStatus, setNewStatus] = useState('Neu');
   const [newSource, setNewSource] = useState('');
   const [newSearchTerm, setNewSearchTerm] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
@@ -345,7 +347,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         buildPayload({
           ingredientID: candidate,
           synonyms: [name],
-          status: NUTRITION_REFERENCE_PENDING_STATUS,
+          status: NUTRITION_REFERENCE_NEW_STATUS,
         }, 'recipe-import'),
         { merge: true }
       ));
@@ -516,14 +518,17 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       <label className="section-description" htmlFor="nutrition-reference-status-filter">
         Status filtern
       </label>
-      <input
+      <select
         id="nutrition-reference-status-filter"
-        type="text"
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value)}
-        placeholder="z. B. Freizugeben"
         className="conversion-table-input"
-      />
+      >
+        <option value="">Alle</option>
+        {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
 
       <div className="season-matrix-import-export-actions">
         <button type="button" className="save-button" onClick={importRecipeIngredients}>
@@ -587,6 +592,18 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                         <option value="all">Alle</option>
                         <option value="true">Ja</option>
                         <option value="false">Nein</option>
+                      </select>
+                    ) : column.type === 'status' ? (
+                      <select
+                        className="conversion-table-input"
+                        aria-label={`Filter ${column.label}`}
+                        value={columnFilters[column.key] || 'all'}
+                        onChange={(e) => updateColumnFilter(column.key, e.target.value)}
+                      >
+                        <option value="all">Alle</option>
+                        {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     ) : (
                       <input
@@ -652,13 +669,16 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     />
                   </td>
                   <td>
-                    <input
-                      type="text"
+                    <select
                       value={parseNutritionReferenceStatus(row)}
                       onChange={(e) => updateCell(row.id, 'status', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`Status ${row.id}`}
-                    />
+                    >
+                      {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <input
@@ -789,13 +809,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
+                  <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
                     className="conversion-table-input"
-                    placeholder={NUTRITION_REFERENCE_PENDING_STATUS}
-                  />
+                  >
+                    {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
                 </td>
                 <td>
                   <input
