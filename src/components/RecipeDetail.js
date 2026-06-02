@@ -10,7 +10,7 @@ import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThu
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
 import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
-import { normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { getNormalizedNutritionReferenceSynonyms, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import { db, functions } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -817,7 +817,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const parsedSynonym = String(name || '').trim();
         const parsedUnit = String(unit || '').trim();
 
-        if (parsedSynonym) {
+        if (parsedSynonym && parsedSynonym.length >= 3) {
           learningUpdate.synonyms.add(parsedSynonym);
         }
         if (parsedUnit) {
@@ -852,6 +852,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
       const mergedSynonyms = mergeUniqueNormalizedValues(existingSynonyms, newSynonyms);
       const mergedPossibleUnits = mergeUniqueNormalizedValues(existingPossibleUnits, newPossibleUnits);
+      const normalizedSynonyms = getNormalizedNutritionReferenceSynonyms({ synonyms: mergedSynonyms });
 
       try {
         await setDoc(
@@ -859,6 +860,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           {
             ingredientID,
             synonyms: mergedSynonyms,
+            normalizedSynonyms,
             possibleUnits: mergedPossibleUnits,
             updatedAt: serverTimestamp(),
           },

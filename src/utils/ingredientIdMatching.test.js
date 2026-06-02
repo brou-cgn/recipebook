@@ -11,6 +11,8 @@ describe('ingredientIdMatching', () => {
     expect(parseIngredientNameAndUnit('1 Liter Kokosmilch')).toEqual({ quantity: 1, name: 'Kokosmilch', unit: 'Liter' });
     expect(parseIngredientNameAndUnit('1 Esslöffel Fish Sauce')).toEqual({ quantity: 1, name: 'Fish Sauce', unit: 'Esslöffel' });
     expect(parseIngredientNameAndUnit('1 Teelöffel Salz')).toEqual({ quantity: 1, name: 'Salz', unit: 'Teelöffel' });
+    expect(parseIngredientNameAndUnit('1 Glas Miracle Whip')).toEqual({ quantity: 1, name: 'Miracle Whip', unit: 'Glas' });
+    expect(parseIngredientNameAndUnit('1 Dose Tomaten')).toEqual({ quantity: 1, name: 'Tomaten', unit: 'Dose' });
   });
 
   test('returns 100% confidence for exact synonym match', () => {
@@ -28,6 +30,14 @@ describe('ingredientIdMatching', () => {
     ]);
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'kokosmilch', confidencePercent: 100 });
+  });
+
+  test('returns 100% confidence for exact synonym match with Glas unit', () => {
+    const suggestions = getIngredientIdSuggestions('1 Glas Miracle Whip', [
+      { ingredientID: 'miracle_whip', synonyms: ['miracle whip'] },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'miracle_whip', confidencePercent: 100 });
   });
 
   test('returns 100% confidence for exact synonym match parsed from semicolon-separated reference data', () => {
