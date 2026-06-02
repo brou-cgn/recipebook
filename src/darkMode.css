@@ -1255,6 +1255,35 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .nutrition-composition-toggle {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-composition-table-wrap {
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-composition-table th {
+  background: #2a2a2a;
+  color: #ccc;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-composition-table td {
+  color: #e8e8e8;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-composition-row--ai-estimated td {
+  background: #33280f;
+}
+
+[data-theme="dark"] .nutrition-ai-estimated-badge {
+  color: #ffd27a;
+}
+
 /* ---- Rating modal ---- */
 [data-theme="dark"] .rating-star {
   color: #555;
