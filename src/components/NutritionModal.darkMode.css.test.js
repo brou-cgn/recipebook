@@ -8,9 +8,14 @@ const getRuleBody = (css, selector) => {
 };
 
 describe('NutritionModal dark mode styles', () => {
-  test('uses dark backgrounds for composition toggle and table header', () => {
+  let css = '';
+
+  beforeAll(() => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
-    const css = fs.readFileSync(cssPath, 'utf8');
+    css = fs.readFileSync(cssPath, 'utf8');
+  });
+
+  test('uses dark backgrounds for composition toggle and table header', () => {
     const toggleRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-toggle');
     const headerRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-table th');
 
@@ -20,9 +25,7 @@ describe('NutritionModal dark mode styles', () => {
     expect(headerRule).toContain('color: #ccc;');
   });
 
-  test('uses a distinct readable highlight color for ai-estimated composition rows', () => {
-    const cssPath = path.join(__dirname, '..', 'darkMode.css');
-    const css = fs.readFileSync(cssPath, 'utf8');
+  test('uses a distinct readable highlight color for AI-estimated composition rows', () => {
     const rowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-row--ai-estimated td');
     const badgeRule = getRuleBody(css, '[data-theme="dark"] .nutrition-ai-estimated-badge');
 
