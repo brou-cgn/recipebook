@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NutritionReferenceTab from './NutritionReferenceTab';
-import { NutritionReferenceProvider } from '../contexts/NutritionReferenceContext';
+import { NutritionReferenceProvider, clearNutritionReferenceCache } from '../contexts/NutritionReferenceContext';
 
 jest.mock('../firebase', () => ({
   db: {},
@@ -40,6 +40,7 @@ describe('NutritionReferenceTab', () => {
     );
 
   beforeEach(() => {
+    clearNutritionReferenceCache();
     mockGetDocs.mockResolvedValue({
       docs: [
         {
@@ -72,6 +73,7 @@ describe('NutritionReferenceTab', () => {
   });
 
   afterEach(() => {
+    clearNutritionReferenceCache();
     window.alert.mockRestore();
     window.confirm.mockRestore();
   });
@@ -176,6 +178,7 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByLabelText('Filter ingredientID')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Anzeigename')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Quelle')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Saisonrelevant')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Kalorien (kcal)')).toBeInTheDocument();
 
@@ -187,6 +190,11 @@ describe('NutritionReferenceTab', () => {
     fireEvent.change(screen.getByLabelText('Filter Saisonrelevant'), { target: { value: 'true' } });
     expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('dummy-milch')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Filter Saisonrelevant'), { target: { value: 'all' } });
+    fireEvent.change(screen.getByLabelText('Filter Quelle'), { target: { value: 'openfoodfacts' } });
+    expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
   test('does not create duplicates for existing ingredient ids', async () => {
