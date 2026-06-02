@@ -43,6 +43,13 @@ const NUTRITION_BOOLEAN_LABELS = {
   isProcessed: 'Verarbeitet',
 };
 
+const SOURCE_OPTIONS = [
+  { value: '', label: '—' },
+  { value: 'openfoodfacts', label: 'OpenFoodFacts' },
+  { value: 'manual', label: 'Manuell' },
+  { value: 'ai', label: 'AI generiert' },
+];
+
 const NUTRITION_REFERENCE_TABLE_COLUMNS = [
   { key: 'ingredientID', label: 'ingredientID' },
   { key: 'displayName', label: 'Anzeigename' },
@@ -50,7 +57,7 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
   { key: 'seasonalFamily', label: 'seasonalFamily' },
   { key: 'category', label: 'category' },
   { key: 'status', label: 'Status', type: 'status' },
-  { key: 'source', label: 'Quelle' },
+  { key: 'source', label: 'Quelle', type: 'select' },
   { key: 'searchTerm', label: 'Suchbegriff' },
   ...NUTRITION_REFERENCE_BOOLEAN_FIELDS.map((field) => ({
     key: field,
@@ -467,17 +474,22 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   };
 
   const normalizedStatusFilter = statusFilter.trim().toLowerCase();
+  const columnTypeByKey = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
+    acc[column.key] = column.type || 'text';
+    return acc;
+  }, {}), []);
   const normalizedColumnFilters = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     const rawValue = columnFilters[column.key];
     if (rawValue == null) return acc;
     const trimmed = String(rawValue).trim();
     if (!trimmed || trimmed === 'all') return acc;
-    acc[column.key] = column.type === 'boolean' ? trimmed : trimmed.toLowerCase();
+    acc[column.key] = (column.type === 'boolean' || column.type === 'select') ? trimmed : trimmed.toLowerCase();
     return acc;
   }, {}), [columnFilters]);
   const getRowFilterValue = useCallback((row, field) => {
     if (field === 'ingredientID') return getIngredientID(row);
     if (field === 'status') return parseNutritionReferenceStatus(row);
+    if (field === 'source') return row.source || '';
     if (field === 'synonyms') return parseNutritionReferenceSynonyms(row).join(', ');
     if (field === 'possibleUnits') return parseNutritionReferencePossibleUnits(row).join(';');
     if (NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS.has(field)) return row[field] === true ? 'true' : 'false';
@@ -501,8 +513,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     if (!matchesStatusFilter) return false;
 
     return Object.entries(normalizedColumnFilters).every(([field, filterValue]) => {
-      const value = String(getRowFilterValue(row, field)).toLowerCase();
-      return value.includes(filterValue);
+      const value = String(getRowFilterValue(row, field));
+      if (columnTypeByKey[field] === 'select') {
+        return value === filterValue;
+      }
+      return value.toLowerCase().includes(filterValue);
     });
   });
 
@@ -605,6 +620,20 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                           <option key={opt} value={opt}>{opt}</option>
                         ))}
                       </select>
+                    ) : column.type === 'select' ? (
+                      <select
+                        className="conversion-table-input"
+                        aria-label={`Filter ${column.label}`}
+                        value={columnFilters[column.key] || 'all'}
+                        onChange={(e) => updateColumnFilter(column.key, e.target.value)}
+                      >
+                        <option value="all">Alle</option>
+                        {SOURCE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <input
                         type="text"
@@ -681,13 +710,19 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     </select>
                   </td>
                   <td>
-                    <input
-                      type="text"
+                    <select
                       value={row.source || ''}
                       onChange={(e) => updateCell(row.id, 'source', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`Quelle ${row.id}`}
-                    />
+                    >
+                      {SOURCE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                      {row.source && !SOURCE_OPTIONS.find(option => option.value === row.source) && (
+                        <option value={row.source}>{row.source}</option>
+                      )}
+                    </select>
                   </td>
                   <td>
                     <input
@@ -820,12 +855,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                   </select>
                 </td>
                 <td>
-                  <input
-                    type="text"
+                  <select
                     value={newSource}
                     onChange={(e) => setNewSource(e.target.value)}
                     className="conversion-table-input"
-                  />
+                  >
+                    {SOURCE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
                 </td>
                 <td>
                   <input

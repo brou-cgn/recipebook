@@ -200,6 +200,27 @@ describe('getRecipeCalcResult', () => {
       }));
     });
 
+    it('shows reference hint when preferred source exists but amount cannot be determined', () => {
+      const recipe = {
+        ingredients: ['3 Stück Eier'],
+        naehrwerte: {},
+      };
+
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        { notIncluded: [], ingredientDetails: [{ ingredient: '3 Stück Eier', noAmountG: true, fromReference: true, source: 'manual' }] },
+        {},
+        []
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '3 Stück Eier',
+        status: 'Berechnet',
+        detail: 'Referenzquelle vorhanden, Menge nicht berechenbar',
+        naehrwerte: null,
+      }));
+    });
+
     it('includes naehrwerte for recipe-link ingredients', () => {
       const linkNaehrwerte = { kalorien: 50, protein: 3, fett: 0.5, kohlenhydrate: 8, zucker: 0.5, ballaststoffe: 1, salz: 0.05 };
       const recipe = {

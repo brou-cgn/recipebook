@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NutritionReferenceTab from './NutritionReferenceTab';
-import { NutritionReferenceProvider } from '../contexts/NutritionReferenceContext';
+import { NutritionReferenceProvider, clearNutritionReferenceCache } from '../contexts/NutritionReferenceContext';
 
 jest.mock('../firebase', () => ({
   db: {},
@@ -40,6 +40,7 @@ describe('NutritionReferenceTab', () => {
     );
 
   beforeEach(() => {
+    clearNutritionReferenceCache();
     mockGetDocs.mockResolvedValue({
       docs: [
         {
@@ -49,7 +50,7 @@ describe('NutritionReferenceTab', () => {
             displayName: 'Tomate',
             nutritionFamily: 'Gemüse',
             seasonalFamily: 'Fruchtgemüse',
-            status: 'Freizugeben',
+            status: 'Validiert',
             source: 'manual',
             searchTerm: 'Tomate',
             synonyms: ['Tomate'],
@@ -72,6 +73,7 @@ describe('NutritionReferenceTab', () => {
   });
 
   afterEach(() => {
+    clearNutritionReferenceCache();
     window.alert.mockRestore();
     window.confirm.mockRestore();
   });
@@ -95,11 +97,10 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Quelle')).toBeInTheDocument();
     expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
-    expect(screen.getByLabelText('Status tomate')).toHaveValue('Freizugeben');
+    expect(screen.getByLabelText('Status tomate')).toHaveValue('Validiert');
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });
-    fireEvent.change(screen.getByPlaceholderText('Freizugeben'), { target: { value: 'Freizugeben' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Haferflocken' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
@@ -109,7 +110,7 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
       ingredientID: 'dummy-haferflocken',
       displayName: 'Haferflocken',
-      status: 'Freizugeben',
+      status: 'Neu',
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
@@ -119,11 +120,11 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freizugeben' } });
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Validiert' } });
 
     expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freigegeben' } });
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Prüfen' } });
     expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
@@ -176,6 +177,7 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByLabelText('Filter ingredientID')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Anzeigename')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter Quelle')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Saisonrelevant')).toBeInTheDocument();
     expect(screen.getByLabelText('Filter Kalorien (kcal)')).toBeInTheDocument();
 
@@ -187,6 +189,11 @@ describe('NutritionReferenceTab', () => {
     fireEvent.change(screen.getByLabelText('Filter Saisonrelevant'), { target: { value: 'true' } });
     expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('dummy-milch')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Filter Saisonrelevant'), { target: { value: 'all' } });
+    fireEvent.change(screen.getByLabelText('Filter Quelle'), { target: { value: 'openfoodfacts' } });
+    expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
   test('does not create duplicates for existing ingredient ids', async () => {
