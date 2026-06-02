@@ -79,6 +79,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     const reformulation = reformulationMap?.[ingredient]?.text || notIncludedItem?.reformulation || null;
     const ingredientDetail = detailsByIngredient.get(ingredient);
     const searchTerm = ingredientDetail?.searchTerm || null;
+    const noAmountG = ingredientDetail?.noAmountG === true;
     let status = 'Berechnet';
     if (acceptedIngredients.has(ingredient)) {
       status = 'Akzeptiert';
@@ -95,7 +96,9 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
           ? `Umformulierung: ${reformulation}`
           : (searchTerm
             ? `Suchbegriff: ${searchTerm}`
-            : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—'))),
+            : (noAmountG
+              ? 'Referenzquelle vorhanden, Menge nicht berechenbar'
+              : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—')))),
       naehrwerte: ingredientDetail?.naehrwerte || null,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,
@@ -432,6 +435,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       const ingredientItem = ingredients[i];
       const ingredient = ingredientItem.text;
+      const ingredientID = String(ingredientItem.ingredientID || '').trim();
+      const existingRow = ingredientID
+        ? (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID)
+        : null;
 
       // Skip accepted ingredients – but NOT AI-estimated ones (re-check against OpenFoodFacts)
       if (acceptedIngredients.has(ingredient) && !aiEstimatedIngredients.has(ingredient)) {
@@ -461,6 +468,22 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         continue;
       }
 
+      if (ingredientID) {
+        const existingSource = existingRow?.source || '';
+        if (PREFERRED_NUTRITION_SOURCES.has(existingSource)) {
+          ingredientDetails.push({
+            ingredient,
+            naehrwerte: null,
+            searchTerm: null,
+            aiEstimated: false,
+            fromReference: true,
+            source: existingSource,
+            noAmountG: true,
+          });
+          continue;
+        }
+      }
+
       // Fall back to OpenFoodFacts
       try {
         const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
@@ -483,12 +506,9 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
           // Write back to nutritionReferences when we have an ingredientID whose
           // existing source is not preferred (openfoodfacts / manual) and status is not 'manuell'
-          const ingredientID = String(ingredientItem.ingredientID || '').trim();
           if (ingredientID) {
-            const existingRow = (nutritionReferenceRows || []).find(r => r.ingredientID === ingredientID);
-            const existingSource = existingRow?.source || '';
             const existingStatus = parseNutritionReferenceStatus(existingRow || {});
-            if (!PREFERRED_NUTRITION_SOURCES.has(existingSource) && existingStatus !== NUTRITION_REFERENCE_MANUAL_STATUS) {
+            if (existingStatus !== NUTRITION_REFERENCE_MANUAL_STATUS) {
               const amountG = computeIngredientAmountG(ingredient, existingRow);
 
               if (amountG != null && amountG > 0) {

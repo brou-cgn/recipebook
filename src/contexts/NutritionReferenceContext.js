@@ -11,6 +11,46 @@ import {
 } from '../utils/nutritionReferenceUtils';
 
 const NutritionReferenceContext = createContext(null);
+export const NUTRITION_REF_CACHE_KEY = 'nutrition_reference_cache';
+export const NUTRITION_REF_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+export function loadCachedRows() {
+  try {
+    const raw = localStorage.getItem(NUTRITION_REF_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!Array.isArray(parsed.rows)) return null;
+    if (typeof parsed.cachedAt !== 'number') return null;
+    const lastUpdatedAt = typeof parsed.lastUpdatedAt === 'number' ? parsed.lastUpdatedAt : null;
+    return { rows: parsed.rows, cachedAt: parsed.cachedAt, lastUpdatedAt };
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedRows(rows, lastUpdatedAt) {
+  try {
+    localStorage.setItem(
+      NUTRITION_REF_CACHE_KEY,
+      JSON.stringify({
+        rows: Array.isArray(rows) ? rows : [],
+        cachedAt: Date.now(),
+        lastUpdatedAt: typeof lastUpdatedAt === 'number' ? lastUpdatedAt : null,
+      })
+    );
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function clearNutritionReferenceCache() {
+  try {
+    localStorage.removeItem(NUTRITION_REF_CACHE_KEY);
+  } catch {
+    // ignore storage errors
+  }
+}
 
 function mapNutritionReferenceRows(snapshot) {
   return snapshot.docs
@@ -70,6 +110,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
       return [];
     }
 
+    clearNutritionReferenceCache();
     setLoading(true);
     try {
       const [loaded, updatedAt] = await Promise.all([
@@ -78,6 +119,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
       ]);
       setRows(loaded);
       setLastUpdatedAt(updatedAt);
+      saveCachedRows(loaded, updatedAt);
       return loaded;
     } catch (error) {
       console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
@@ -101,10 +143,20 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
 
     const run = async () => {
       try {
-        const [loaded, updatedAt] = await Promise.all([
-          fetchNutritionReferenceRows(),
-          fetchNutritionReferenceLastUpdatedAt(),
-        ]);
+        const updatedAt = await fetchNutritionReferenceLastUpdatedAt();
+        const cached = loadCachedRows();
+        const cacheIsFresh = cached && (Date.now() - cached.cachedAt) < NUTRITION_REF_CACHE_TTL_MS;
+        const cacheIsCurrent = updatedAt == null || (cached?.lastUpdatedAt != null && cached.lastUpdatedAt >= updatedAt);
+        if (cacheIsFresh && cacheIsCurrent) {
+          if (isMounted) {
+            setRows(cached.rows);
+            setLastUpdatedAt(updatedAt);
+          }
+          return;
+        }
+
+        const loaded = await fetchNutritionReferenceRows();
+        saveCachedRows(loaded, updatedAt);
         if (isMounted) {
           setRows(loaded);
           setLastUpdatedAt(updatedAt);
