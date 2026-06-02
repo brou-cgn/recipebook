@@ -1,16 +1,24 @@
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 
 const COMMON_UNITS = new Set([
+  // Gewicht
   'g', 'kg', 'mg',
+  // Maße & Gewichte
+  'cm', 'mm',
+  'pfund',
+  // Volumen
   'ml', 'l', 'dl', 'cl', 'liter',
+  // Küchenmaße (Löffel, Tasse, Glas)
   'el', 'tl', 'essloffel', 'essloeffel', 'teeloffel', 'teeloeffel',
   'tasse', 'tassen',
   'glas', 'glaser',
+  // Verpackungen
   'dose', 'dosen',
   'packung', 'packungen', 'pck', 'pkg',
   'flasche', 'flaschen',
   'becher',
   'tube', 'tuben',
+  // Formen & Stücke
   'wurfel', 'wuerfel',
   'scheibe', 'scheiben',
   'blatt', 'blatter', 'blaetter',
@@ -20,6 +28,30 @@ const COMMON_UNITS = new Set([
   'prise', 'prisen',
   'bund', 'zehe', 'zehen',
   'stück', 'stueck', 'stk', 'st',
+  // Mengenangaben
+  'portion', 'portionen',
+  'stuck', 'stuecke',
+  'halbe', 'halber', 'halbes',
+  // Küchenmaße (klein)
+  'messerspitze', 'msp',
+  'schuss',
+  'spritzer',
+  'tropfen',
+  'handvoll',
+  'schale', 'schalen',
+  'topf', 'topfe',
+  // Lebensmittelspezifisch
+  'riegel',
+  'tafel', 'tafeln',
+  'beutel',
+  'sachet', 'sachets',
+  'knolle', 'knollen',
+  'stiel', 'stiele',
+  'filet', 'filets',
+  'ei', 'eier',
+  // Häufige Abkürzungen
+  'bd',
+  'bl',
 ]);
 
 const IGNORED_INGREDIENT_MARKERS = new Set([
@@ -98,7 +130,7 @@ export function parseIngredientNameAndUnit(ingredientText) {
   const possibleUnit = (numericPrefixMatch[2] || '').trim();
   const rest = (numericPrefixMatch[3] || '').trim();
   if (possibleUnit && COMMON_UNITS.has(normalizeNutritionReferenceId(possibleUnit))) {
-    return { quantity: parsedQuantity, name: rest || raw, unit: possibleUnit };
+    return { quantity: parsedQuantity, name: rest || possibleUnit || raw, unit: possibleUnit };
   }
 
   const withoutAmount = raw.replace(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s+/, '').trim();

@@ -7,12 +7,19 @@ import {
 describe('ingredientIdMatching', () => {
   test('parses ingredient name and unit for matching', () => {
     expect(parseIngredientNameAndUnit('200 g Tomaten')).toEqual({ quantity: 200, name: 'Tomaten', unit: 'g' });
-    expect(parseIngredientNameAndUnit('2 Eier')).toEqual({ quantity: 2, name: 'Eier', unit: null });
+    expect(parseIngredientNameAndUnit('2 Eier')).toEqual({ quantity: 2, name: 'Eier', unit: 'Eier' });
     expect(parseIngredientNameAndUnit('1 Liter Kokosmilch')).toEqual({ quantity: 1, name: 'Kokosmilch', unit: 'Liter' });
     expect(parseIngredientNameAndUnit('1 Esslöffel Fish Sauce')).toEqual({ quantity: 1, name: 'Fish Sauce', unit: 'Esslöffel' });
     expect(parseIngredientNameAndUnit('1 Teelöffel Salz')).toEqual({ quantity: 1, name: 'Salz', unit: 'Teelöffel' });
     expect(parseIngredientNameAndUnit('1 Glas Miracle Whip')).toEqual({ quantity: 1, name: 'Miracle Whip', unit: 'Glas' });
     expect(parseIngredientNameAndUnit('1 Dose Tomaten')).toEqual({ quantity: 1, name: 'Tomaten', unit: 'Dose' });
+    // newly recognised units
+    expect(parseIngredientNameAndUnit('5 cm Ingwer')).toEqual({ quantity: 5, name: 'Ingwer', unit: 'cm' });
+    expect(parseIngredientNameAndUnit('4 Portionen Ramen Nudeln')).toEqual({ quantity: 4, name: 'Ramen Nudeln', unit: 'Portionen' });
+    expect(parseIngredientNameAndUnit('1 Beutel Vanillezucker')).toEqual({ quantity: 1, name: 'Vanillezucker', unit: 'Beutel' });
+    expect(parseIngredientNameAndUnit('1 Msp Salz')).toEqual({ quantity: 1, name: 'Salz', unit: 'Msp' });
+    // ingredient without a recognised unit still has unit: null
+    expect(parseIngredientNameAndUnit('Petersilie')).toEqual({ quantity: null, name: 'Petersilie', unit: null });
   });
 
   test('returns 100% confidence for exact synonym match', () => {
