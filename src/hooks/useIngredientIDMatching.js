@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
-import { NUTRITION_REFERENCE_PENDING_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 
 function defaultGetNutritionIngredientSource(recipe) {
   if (!recipe) return { fieldName: 'ingredients', rawIngredients: [] };
@@ -150,7 +150,7 @@ export function useIngredientIDMatching({
               normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
               name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
               possibleUnits: draft.possibleUnits,
-              status: NUTRITION_REFERENCE_PENDING_STATUS,
+              status: NUTRITION_REFERENCE_NEW_STATUS,
               source: 'auto-created',
               updatedAt: serverTimestamp(),
               updatedBy: currentUserId,
