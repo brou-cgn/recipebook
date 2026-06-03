@@ -92,7 +92,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
       if (values && Object.keys(values).length > 0) {
         rowToUse = { ...values, ingredientID };
       } else if (firestoreDb) {
-        // Fallback: Firestore lesen (für Rückwärtskompatibilität)
+        // Fallback: read from Firestore (for backward compatibility)
         const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
         if (refreshedSnapshot.exists()) {
           rowToUse = { ...refreshedSnapshot.data(), ingredientID };
