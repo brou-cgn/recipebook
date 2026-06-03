@@ -2174,7 +2174,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     mockHttpsCallable.mockReturnValue(calculateNutritionMock);
     mockNutritionReferenceState = {
       rows: [
-        { ingredientID: 'tomate', status: 'Validiert', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+        { ingredientID: 'tomate', status: 'Freigegeben', synonyms: ['Tomaten'], possibleUnits: ['g'] },
       ],
       loading: false,
       reload: jest.fn(),
@@ -2212,7 +2212,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     expect(mockSetDoc).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        status: 'Prüfen',
+        status: 'Prüfung ausstehend',
       }),
       { merge: true }
     );

@@ -35,18 +35,29 @@ describe('nutritionReferenceUtils', () => {
     });
   });
 
-  test('offers Freizugeben as status option', () => {
-    expect(NUTRITION_REFERENCE_STATUS_OPTIONS).toContain('Freizugeben');
+  test('offers the new status concept options', () => {
+    expect(NUTRITION_REFERENCE_STATUS_OPTIONS).toEqual([
+      '',
+      'Neu',
+      'Datenerfassung ausstehend',
+      'Prüfung ausstehend',
+      'Freigegeben',
+    ]);
   });
 
   describe('getStatusAfterNutritionFetch', () => {
-    test('returns Prüfen for existing non-new statuses', () => {
-      expect(getStatusAfterNutritionFetch('Validiert')).toBe('Prüfen');
-      expect(getStatusAfterNutritionFetch('')).toBe('Prüfen');
+    test('returns Prüfung ausstehend for existing non-new statuses', () => {
+      expect(getStatusAfterNutritionFetch('Freigegeben')).toBe('Prüfung ausstehend');
+      expect(getStatusAfterNutritionFetch('')).toBe('Prüfung ausstehend');
     });
 
     test('keeps Neu for newly created ingredient ids', () => {
       expect(getStatusAfterNutritionFetch('Neu')).toBe('Neu');
+    });
+
+    test('maps legacy statuses to the new concept during refresh', () => {
+      expect(getStatusAfterNutritionFetch('Validiert')).toBe('Prüfung ausstehend');
+      expect(getStatusAfterNutritionFetch('Freizugeben')).toBe('Prüfung ausstehend');
     });
   });
 

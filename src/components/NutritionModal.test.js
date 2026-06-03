@@ -339,11 +339,10 @@ describe('resolveIngredientNutritionFromReference', () => {
     expect(result.naehrwerte.kalorien).toBeCloseTo(270);
   });
 
-  it('returns scaled nutrition for a row with status manuell and preferred source', () => {
-    // 'manuell' status should NOT block the read path – only automatic writes are blocked
-    const manuelleRow = { ...referenceRow, ingredientID: 'butter', source: 'openfoodfacts', status: 'manuell' };
+  it('returns scaled nutrition for a row with status Freigegeben and preferred source', () => {
+    const approvedRow = { ...referenceRow, ingredientID: 'butter', source: 'openfoodfacts', status: 'Freigegeben' };
     const ingredient = { text: '100 g Butter', ingredientID: 'butter' };
-    const result = resolveIngredientNutritionFromReference(ingredient, [manuelleRow]);
+    const result = resolveIngredientNutritionFromReference(ingredient, [approvedRow]);
     expect(result).not.toBeNull();
     expect(result.naehrwerte.kalorien).toBeCloseTo(20);
   });

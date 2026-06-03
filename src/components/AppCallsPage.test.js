@@ -661,7 +661,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     ));
   });
 
-  test('creates a new pending ingredientID with status Freizugeben when no match exists', async () => {
+  test('creates a new pending ingredientID with status Neu when no match exists', async () => {
     mockNutritionReferenceState = {
       rows: [],
       loading: false,
@@ -704,7 +704,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
       displayName: 'Sumach',
       synonyms: ['Sumach'],
       possibleUnits: ['Prise'],
-      status: 'Freizugeben',
+      status: 'Neu',
       source: 'auto-created',
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });

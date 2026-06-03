@@ -7,7 +7,6 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
-  NUTRITION_REFERENCE_MANUAL_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
   NUTRITION_REFERENCE_STATUS_OPTIONS,
   getStatusAfterNutritionFetch,
@@ -73,6 +72,9 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
   })),
 ];
 const NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS = new Set(NUTRITION_REFERENCE_BOOLEAN_FIELDS);
+const EMPTY_STATUS_FILTER_VALUE = '__empty__';
+const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
+const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 
 const getRecipeIngredientTexts = (recipe = {}) => {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
@@ -97,7 +99,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [newNutritionFamily, setNewNutritionFamily] = useState('');
   const [newSeasonalFamily, setNewSeasonalFamily] = useState('');
   const [newCategory, setNewCategory] = useState('');
-  const [newStatus, setNewStatus] = useState('Neu');
+  const [newStatus, setNewStatus] = useState(NUTRITION_REFERENCE_NEW_STATUS);
   const [newSource, setNewSource] = useState('');
   const [newSearchTerm, setNewSearchTerm] = useState('');
   const [newSynonyms, setNewSynonyms] = useState('');
@@ -237,7 +239,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setNewNutritionFamily('');
     setNewSeasonalFamily('');
     setNewCategory('');
-    setNewStatus('');
+    setNewStatus(NUTRITION_REFERENCE_NEW_STATUS);
     setNewSource('');
     setNewSearchTerm('');
     setNewSynonyms('');
@@ -263,10 +265,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   const refreshRowFromOpenFoodFacts = async (row) => {
     setLookupError('');
-    if (parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS) {
-      setLookupError(`Eintrag „${getIngredientID(row)}" hat Status „${NUTRITION_REFERENCE_MANUAL_STATUS}" und wird nicht automatisch aktualisiert.`);
-      return;
-    }
     setRefreshingRowId(row.id);
     const ingredientID = getIngredientID(row);
 
@@ -474,7 +472,9 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     }
   };
 
-  const normalizedStatusFilter = statusFilter.trim().toLowerCase();
+  const normalizedStatusFilter = statusFilter === EMPTY_STATUS_FILTER_VALUE
+    ? EMPTY_STATUS_FILTER_VALUE
+    : statusFilter.trim().toLowerCase();
   const columnTypeByKey = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     acc[column.key] = column.type || 'text';
     return acc;
@@ -482,6 +482,10 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const normalizedColumnFilters = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     const rawValue = columnFilters[column.key];
     if (rawValue == null) return acc;
+    if (column.type === 'status' && rawValue === EMPTY_STATUS_FILTER_VALUE) {
+      acc[column.key] = EMPTY_STATUS_FILTER_VALUE;
+      return acc;
+    }
     const trimmed = String(rawValue).trim();
     if (!trimmed || trimmed === 'all') return acc;
     acc[column.key] = (column.type === 'boolean' || column.type === 'select') ? trimmed : trimmed.toLowerCase();
@@ -509,12 +513,18 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     );
   }
   const visibleRows = rows.filter((row) => {
+    const parsedStatus = parseNutritionReferenceStatus(row);
     const matchesStatusFilter = !normalizedStatusFilter
-      || parseNutritionReferenceStatus(row).toLowerCase().includes(normalizedStatusFilter);
+      || (normalizedStatusFilter === EMPTY_STATUS_FILTER_VALUE
+        ? parsedStatus === ''
+        : parsedStatus.toLowerCase().includes(normalizedStatusFilter));
     if (!matchesStatusFilter) return false;
 
     return Object.entries(normalizedColumnFilters).every(([field, filterValue]) => {
       const value = String(getRowFilterValue(row, field));
+      if (filterValue === EMPTY_STATUS_FILTER_VALUE) {
+        return value === '';
+      }
       if (columnTypeByKey[field] === 'select') {
         return value === filterValue;
       }
@@ -542,7 +552,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       >
         <option value="">Alle</option>
         {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
+          <option key={opt || 'empty'} value={opt || EMPTY_STATUS_FILTER_VALUE}>{getStatusOptionLabel(opt)}</option>
         ))}
       </select>
 
@@ -618,7 +628,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       >
                         <option value="all">Alle</option>
                         {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
+                          <option key={opt || 'empty'} value={opt || EMPTY_STATUS_FILTER_VALUE}>{getStatusOptionLabel(opt)}</option>
                         ))}
                       </select>
                     ) : column.type === 'select' ? (
@@ -706,7 +716,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       aria-label={`Status ${row.id}`}
                     >
                       {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option key={opt || 'empty'} value={opt}>{getStatusOptionLabel(opt)}</option>
                       ))}
                     </select>
                   </td>
@@ -792,8 +802,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     <button
                       className="add-btn"
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
-                      disabled={refreshingRowId === row.id || parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS}
-                      title={parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_MANUAL_STATUS ? `Status „${NUTRITION_REFERENCE_MANUAL_STATUS}": keine automatische Aktualisierung` : undefined}
+                      disabled={refreshingRowId === row.id}
                     >
                       {refreshingRowId === row.id ? '⏳' : '🤖 Nährwerte abrufen'}
                     </button>
@@ -851,7 +860,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     className="conversion-table-input"
                   >
                     {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={opt || 'empty'} value={opt}>{getStatusOptionLabel(opt)}</option>
                     ))}
                   </select>
                 </td>
