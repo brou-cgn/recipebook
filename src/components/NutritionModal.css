@@ -636,6 +636,30 @@
   cursor: not-allowed;
 }
 
+.nutrition-reset-adjustments-button {
+  margin-top: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1.5px solid #8b3a3a;
+  background: #fdf0f0;
+  color: #8b3a3a;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nutrition-reset-adjustments-button:hover:not(:disabled) {
+  background: #8b3a3a;
+  color: white;
+}
+
+.nutrition-reset-adjustments-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .nutrition-abort-button {
   margin-top: 8px;
   padding: 6px 12px;

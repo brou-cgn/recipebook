@@ -317,6 +317,37 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     }
   };
 
+  const handleResetAdjustments = async () => {
+    setReformulations({});
+    setAcceptedIngredients(new Set());
+
+    if (autoCalcResult) {
+      const cleanedNotIncluded = (autoCalcResult.notIncluded || []).map(item => {
+        const cleaned = { ...item };
+        delete cleaned.reformulation;
+        delete cleaned.changeLog;
+        return cleaned;
+      });
+      const updatedResult = { ...autoCalcResult, notIncluded: cleanedNotIncluded };
+      delete updatedResult.calcReformulations;
+      delete updatedResult.acceptedIngredients;
+      setAutoCalcResult(updatedResult);
+      saveStoredCalcResult(recipe?.id, updatedResult);
+    } else {
+      clearStoredCalcResult(recipe?.id);
+    }
+
+    try {
+      await onSave({
+        ...(recipe?.naehrwerte || {}),
+        calcReformulations: null,
+        calcAcceptedIngredients: null,
+      });
+    } catch (err) {
+      console.error('Could not reset adjustments in Firebase:', err);
+    }
+  };
+
   const handleAutoCalculate = async () => {
     // Step 1: Ensure ingredient IDs are set before calculating
     let currentRecipe = recipe;
@@ -1110,6 +1141,16 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                   Erneut versuchen
                 </button>
               </div>
+            )}
+            {(Object.keys(reformulations).length > 0 || acceptedIngredients.size > 0) && (
+              <button
+                className="nutrition-reset-adjustments-button"
+                onClick={handleResetAdjustments}
+                disabled={autoCalcLoading}
+                title="Umformulierungen und ausgeschlossene Zutaten zurücksetzen"
+              >
+                Anpassungen zurücksetzen
+              </button>
             )}
             <p className="nutrition-autocalc-source">
               Quelle:{' '}
