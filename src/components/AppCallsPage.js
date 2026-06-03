@@ -86,6 +86,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [shareLinkErrors, setShareLinkErrors] = useState({});
   const [abortingCalcId, setAbortingCalcId] = useState(null);
   const [selectedNutritionRecipeId, setSelectedNutritionRecipeId] = useState(null);
+  const [retryAutoCalculateToken, setRetryAutoCalculateToken] = useState(0);
   const [expandedAppCallId, setExpandedAppCallId] = useState(null);
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
@@ -205,7 +206,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     ingredientMatchDialog,
     setIngredientMatchDialog,
     persistIngredientIDs,
-    ensureIngredientIDsForNutrition,
     handleEnsureIngredientIDsForModal,
   } = useIngredientIDMatching({
     recipe: selectedNutritionRecipe,
@@ -316,6 +316,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     await persistIngredientIDs(fieldName, nextIngredients, dialogRecipe);
     setIngredientMatchDialog(null);
     ingredientMatchFromModalRef.current = false;
+    setRetryAutoCalculateToken((prev) => prev + 1);
   };
 
   const handleStartEdit = (proposal) => {
@@ -1214,6 +1215,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
+          retryAutoCalculateToken={retryAutoCalculateToken}
         />
       )}
       {ingredientMatchDialog && (
