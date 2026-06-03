@@ -15,6 +15,14 @@ import {
 const DIRECT_REFERENCE_SOURCES_WHEN_CHECK_PENDING = new Set(['openfoodfacts', 'manual']);
 const GENERATED_NUTRITION_REQUIRED_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate'];
 
+function hasMeaningfulGeneratedNutrition(values) {
+  return GENERATED_NUTRITION_REQUIRED_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
+}
+
+function hasAnyNutritionData(values) {
+  return NUTRITION_REFERENCE_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
+}
+
 export function computeIngredientAmountG(ingredientText, referenceRow) {
   const { quantity, unit } = parseIngredientNameAndUnit(ingredientText);
   const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
@@ -89,10 +97,8 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
         nutritionFamily: referenceRow?.nutritionFamily || '',
         category: referenceRow?.category || '',
       });
-
       const { values, searchTerm: returnedSearchTerm, source: returnedSource } = result?.data || {};
-      const hasRealValues = GENERATED_NUTRITION_REQUIRED_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
-      if (hasRealValues) {
+      if (hasMeaningfulGeneratedNutrition(values)) {
         rowToUse = {
           ...values,
           ingredientID,
@@ -109,8 +115,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     }
   }
 
-  const hasNutritionData = NUTRITION_REFERENCE_FIELDS.some((field) => (rowToUse?.[field] ?? 0) > 0);
-  if (!hasNutritionData) {
+  if (!hasAnyNutritionData(rowToUse)) {
     return { found: false, error: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)' };
   }
 
