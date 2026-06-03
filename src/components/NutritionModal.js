@@ -111,7 +111,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0 }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -153,7 +153,9 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   });
   const closeButtonRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const handleAutoCalculateRef = useRef(null);
   const [showCompositionTable, setShowCompositionTable] = useState(false);
+  const lastRetryAutoCalculateTokenRef = useRef(retryAutoCalculateToken);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
   useEffect(() => {
@@ -597,6 +599,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       setAutoCalcResult(prev => prev ? { ...prev, saveError: true } : null);
     }
   };
+
+  handleAutoCalculateRef.current = handleAutoCalculate;
+
+  useEffect(() => {
+    if (!retryAutoCalculateToken || retryAutoCalculateToken === lastRetryAutoCalculateTokenRef.current) return;
+    lastRetryAutoCalculateTokenRef.current = retryAutoCalculateToken;
+    handleAutoCalculateRef.current?.();
+  }, [retryAutoCalculateToken]);
 
   const handleRecalcReformulated = async () => {
     const notIncludedItems = autoCalcResult?.notIncluded || [];

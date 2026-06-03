@@ -2344,6 +2344,59 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     }
   });
 
+  test('restarts modal auto calculation immediately after manual ingredientID confirmation', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-modal-1',
+          title: 'Tomatensalat',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+          steps: ['Mischen'],
+          speisekategorie: ['Salat'],
+          naehrwerte: { kalorien: 10 },
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Nährwerte anzeigen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Automatisch berechnen (OpenFoodFacts)' }));
+
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => {
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-modal-1',
+        expect.objectContaining({
+          ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+        })
+      );
+      expect(mockUpdateRecipe).toHaveBeenCalledWith(
+        'recipe-modal-1',
+        expect.objectContaining({
+          naehrwerte: expect.objectContaining({ calcPending: false, calcTotalCount: 1 }),
+        })
+      );
+    });
+  });
+
   test('does not open ingredientID dialog while nutrition reference data is still loading', async () => {
     const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
     mockNutritionReferenceState = {

@@ -886,13 +886,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     await persistIngredientIDs(fieldName, nextIngredients);
     setIngredientMatchDialog(null);
-
-    if (ingredientMatchFromModalRef.current) {
-      // Triggered from NutritionModal – the modal will handle the rest after re-invoking
-      ingredientMatchFromModalRef.current = false;
-    } else {
-      await runAutoCalculateAndSave(nextIngredients, nextLog);
-    }
+    ingredientMatchFromModalRef.current = false;
+    await runAutoCalculateAndSave(nextIngredients, nextLog);
   };
 
   const handleNutritionButtonClick = () => {
