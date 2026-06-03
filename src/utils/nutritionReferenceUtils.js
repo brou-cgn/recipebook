@@ -19,7 +19,13 @@ export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
 export const NUTRITION_REFERENCE_PENDING_STATUS = 'Freizugeben';
 export const NUTRITION_REFERENCE_MANUAL_STATUS = 'manuell';
 export const NUTRITION_REFERENCE_NEW_STATUS = 'Neu';
-export const NUTRITION_REFERENCE_STATUS_OPTIONS = ['Neu', 'Validiert', 'Prüfen'];
+export const NUTRITION_REFERENCE_CHECK_STATUS = 'Prüfen';
+export const NUTRITION_REFERENCE_STATUS_OPTIONS = [
+  NUTRITION_REFERENCE_NEW_STATUS,
+  'Validiert',
+  NUTRITION_REFERENCE_CHECK_STATUS,
+  NUTRITION_REFERENCE_PENDING_STATUS,
+];
 
 export function normalizeNutritionReferenceId(name) {
   return String(name || '')
@@ -108,6 +114,14 @@ export function parseNutritionReferencePossibleUnits(input = {}) {
 
 export function parseNutritionReferenceStatus(input = {}) {
   return String(input.status || input.Status || '').trim();
+}
+
+export function getStatusAfterNutritionFetch(existingStatus = '') {
+  const parsedStatus = String(existingStatus || '').trim();
+  if (parsedStatus === NUTRITION_REFERENCE_NEW_STATUS) {
+    return NUTRITION_REFERENCE_NEW_STATUS;
+  }
+  return NUTRITION_REFERENCE_CHECK_STATUS;
 }
 
 export function scaleNutritionValues(per100g, amountG) {

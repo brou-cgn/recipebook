@@ -2165,9 +2165,16 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
   });
 
   test('auto-assigns unique 100% ingredientID matches before nutrition calculation', async () => {
+    const calculateNutritionMock = jest.fn().mockResolvedValue({
+      data: {
+        naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
+        details: [{ found: true }],
+      },
+    });
+    mockHttpsCallable.mockReturnValue(calculateNutritionMock);
     mockNutritionReferenceState = {
       rows: [
-        { ingredientID: 'tomate', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+        { ingredientID: 'tomate', status: 'Validiert', synonyms: ['Tomaten'], possibleUnits: ['g'] },
       ],
       loading: false,
       reload: jest.fn(),
@@ -2202,6 +2209,13 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: 'Prüfen',
+      }),
+      { merge: true }
+    );
   });
 
   test('shows manual dialog with confidence percentages for ambiguous ingredientID matches', async () => {
@@ -2472,7 +2486,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     });
   });
 
-  test('creates a new pending ingredientID with status Freizugeben when no match exists', async () => {
+  test('creates a new pending ingredientID with status Neu when no match exists', async () => {
     mockNutritionReferenceState = {
       rows: [{ ingredientID: 'tomate', synonyms: ['Tomate'] }],
       loading: false,
@@ -2516,7 +2530,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         displayName: 'Sumach',
         synonyms: ['Sumach'],
         possibleUnits: ['Prise'],
-        status: 'Freizugeben',
+        status: 'Neu',
         source: 'auto-created',
       }),
       { merge: true }

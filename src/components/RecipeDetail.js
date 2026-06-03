@@ -10,7 +10,13 @@ import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThu
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
 import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
-import { getNormalizedNutritionReferenceSynonyms, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import {
+  getNormalizedNutritionReferenceSynonyms,
+  NUTRITION_REFERENCE_NEW_STATUS,
+  getStatusAfterNutritionFetch,
+  normalizeNutritionReferenceId,
+  parseNutritionReferenceStatus,
+} from '../utils/nutritionReferenceUtils';
 import { db, functions } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -700,10 +706,22 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   };
 
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
-    const ingredients = ingredientsInput
+    const ingredientItems = ingredientsInput
       .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
-      .map(item => typeof item === 'string' ? item : item.text);
-    if (ingredients.length === 0) return;
+      .map(item => (typeof item === 'string' ? { text: item } : { ...item, text: item.text || '' }));
+    if (ingredientItems.length === 0) return;
+
+    const nutritionReferenceByIngredientID = new Map(
+      (nutritionReferenceRows || [])
+        .map((row) => [String(row?.ingredientID || '').trim(), row])
+        .filter(([id]) => Boolean(id))
+    );
+    const createdIngredientIDs = new Set(
+      (ingredientIDMatchingLog || [])
+        .filter((entry) => entry?.status === 'created')
+        .map((entry) => String(entry?.selectedIngredientID || '').trim())
+        .filter(Boolean)
+    );
 
     const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcPendingAt: Date.now(), calcError: null };
     try {
@@ -717,8 +735,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
 
-    for (let i = 0; i < ingredients.length; i++) {
-      const ingredient = ingredients[i];
+    for (let i = 0; i < ingredientItems.length; i++) {
+      const ingredient = ingredientItems[i]?.text || '';
+      const ingredientID = String(ingredientItems[i]?.ingredientID || '').trim();
       try {
         const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
         const { naehrwerte: n, details } = result.data;
@@ -727,6 +746,23 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           Object.keys(totals).forEach(key => {
             totals[key] += n[key] || 0;
           });
+          if (ingredientID) {
+            const existingStatus = createdIngredientIDs.has(ingredientID)
+              ? NUTRITION_REFERENCE_NEW_STATUS
+              : parseNutritionReferenceStatus(nutritionReferenceByIngredientID.get(ingredientID) || {});
+            try {
+              await setDoc(
+                doc(db, 'nutritionReferences', ingredientID),
+                {
+                  status: getStatusAfterNutritionFetch(existingStatus),
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              );
+            } catch (statusErr) {
+              console.error(`Could not update status for "${ingredientID}":`, statusErr);
+            }
+          }
         } else {
           notIncluded.push({ ingredient, error: detail?.error || 'Nicht gefunden' });
         }
@@ -746,8 +782,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       calcCompletedAt: Date.now(),
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
-      calcFoundCount: ingredients.length - notIncluded.length,
-      calcTotalCount: ingredients.length,
+      calcFoundCount: ingredientItems.length - notIncluded.length,
+      calcTotalCount: ingredientItems.length,
       ingredientIDMatchingLog: ingredientIDMatchingLog.length > 0 ? ingredientIDMatchingLog : null,
       ingredientIDMatchingLoggedAt: ingredientIDMatchingLog.length > 0 ? Date.now() : null,
     };

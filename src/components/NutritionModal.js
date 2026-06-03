@@ -5,7 +5,14 @@ import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { mapNutritionCalcError, naehrwertePerPortion, naehrwerteToTotals, extractQuantityFromPrefix } from '../utils/nutritionUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
-import { normalizeNutritionReferenceId, NUTRITION_REFERENCE_FIELDS, NUTRITION_REFERENCE_MANUAL_STATUS, parseNutritionReferenceStatus, scaleNutritionValues } from '../utils/nutritionReferenceUtils';
+import {
+  getStatusAfterNutritionFetch,
+  normalizeNutritionReferenceId,
+  NUTRITION_REFERENCE_FIELDS,
+  NUTRITION_REFERENCE_MANUAL_STATUS,
+  parseNutritionReferenceStatus,
+  scaleNutritionValues,
+} from '../utils/nutritionReferenceUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -523,7 +530,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                 });
                 setDoc(
                   doc(db, 'nutritionReferences', ingredientID),
-                  { ...per100g, source: 'openfoodfacts', updatedAt: serverTimestamp() },
+                  {
+                    ...per100g,
+                    source: 'openfoodfacts',
+                    status: getStatusAfterNutritionFetch(existingStatus),
+                    updatedAt: serverTimestamp(),
+                  },
                   { merge: true }
                 ).catch(err => console.error('Could not write back nutritionReferences:', err));
               }
