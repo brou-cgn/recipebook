@@ -119,7 +119,7 @@ describe('getRecipeCalcResult', () => {
         recipe,
         {
           notIncluded: [],
-          ingredientDetails: [{ ingredient: 'Linsen', naehrwerte: ingredientNaehrwerte, searchTerm: 'lentils', aiEstimated: true }],
+          ingredientDetails: [{ ingredient: 'Linsen', naehrwerte: ingredientNaehrwerte, amountG: 150, searchTerm: 'lentils', aiEstimated: true }],
         },
         {},
         ['Salz']
@@ -129,6 +129,7 @@ describe('getRecipeCalcResult', () => {
         ingredient: 'Linsen',
         status: 'Berechnet',
         naehrwerte: ingredientNaehrwerte,
+        amountG: 150,
         searchTerm: 'lentils',
         aiEstimated: true,
         detail: 'Suchbegriff: lentils',
@@ -178,6 +179,27 @@ describe('getRecipeCalcResult', () => {
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: 'Kartoffeln',
         naehrwerte: ingredientNaehrwerte,
+      }));
+    });
+
+    it('passes calculated amount in grams through to composition rows', () => {
+      const recipe = {
+        ingredients: ['10 ml Cointreau'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [],
+          ingredientDetails: [{ ingredient: '10 ml Cointreau', amountG: 10 }],
+        },
+        {},
+        []
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '10 ml Cointreau',
+        amountG: 10,
       }));
     });
 
@@ -261,20 +283,16 @@ describe('computeIngredientAmountG', () => {
     expect(computeIngredientAmountG('1,5 kg Kartoffeln', rowWith(null))).toBeCloseTo(1500);
   });
 
-  it('uses defaultAmountG multiplied by quantity for other units', () => {
-    expect(computeIngredientAmountG('2 EL Öl', rowWith(15))).toBe(30);
-  });
-
-  it('uses defaultAmountG with multiplier 1 when no quantity given', () => {
-    expect(computeIngredientAmountG('Salz', rowWith(5))).toBe(5);
-  });
-
   it('returns null when unit is not g/kg and no defaultAmountG in row', () => {
     expect(computeIngredientAmountG('3 Stück Eier', rowWith(null))).toBeNull();
   });
 
   it('returns null when no quantity and no defaultAmountG', () => {
     expect(computeIngredientAmountG('Salz', null)).toBeNull();
+  });
+
+  it('returns null for non-gram units so conversion can be resolved via parseIngredientAmountG', () => {
+    expect(computeIngredientAmountG('2 EL Öl', rowWith(15))).toBeNull();
   });
 });
 
@@ -342,15 +360,41 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(mockGenerateNutritionCallable).not.toHaveBeenCalled();
   });
 
-  it('uses defaultAmountG when unit is not g/kg', async () => {
-    const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 15 };
+  it('converts non-gram units via parseIngredientAmountG and does not multiply defaultAmountG', async () => {
+    mockParseAmountCallable.mockResolvedValue({ data: { amountG: 30 } });
+    const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 20 };
     const ingredient = { text: '2 EL Öl', ingredientID: 'oel' };
     const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
     expect(result).not.toBeNull();
     expect(result.naehrwerte.kalorien).toBeCloseTo(6);
+    expect(result.amountG).toBe(30);
+    expect(mockParseAmountCallable).toHaveBeenCalledWith({ ingredientText: '2 EL Öl' });
+  });
+
+  it('converts 10 ml Cointreau to ~10 g and calculates ~33 kcal despite defaultAmountG', async () => {
+    mockParseAmountCallable.mockResolvedValue({ data: { amountG: 10 } });
+    const row = { ...referenceRow, ingredientID: 'cointreau', source: 'manual', defaultAmountG: 20, kalorien: 330 };
+    const ingredient = { text: '10 ml Cointreau', ingredientID: 'cointreau' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
+
+    expect(result.found).toBe(true);
+    expect(result.amountG).toBe(10);
+    expect(result.naehrwerte.kalorien).toBeCloseTo(33);
+  });
+
+  it('uses defaultAmountG only when no quantity is provided', async () => {
+    const row = { ...referenceRow, ingredientID: 'cointreau-ohne-menge', source: 'manual', defaultAmountG: 20, kalorien: 330 };
+    const ingredient = { text: 'Cointreau', ingredientID: 'cointreau-ohne-menge' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
+
+    expect(result.found).toBe(true);
+    expect(result.amountG).toBe(20);
+    expect(result.naehrwerte.kalorien).toBeCloseTo(66);
+    expect(mockParseAmountCallable).not.toHaveBeenCalled();
   });
 
   it('calls generateNutritionFromReference for status Prüfung ausstehend with ai source and uses refreshed row', async () => {
+    mockParseAmountCallable.mockResolvedValue({ data: { amountG: 100 } });
     const aiRow = { ...referenceRow, ingredientID: 'ei', source: 'ai-generiert', status: 'Prüfung ausstehend', defaultAmountG: 50 };
     const refreshed = {
       source: 'openfoodfacts',

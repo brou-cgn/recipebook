@@ -388,3 +388,75 @@ test('uses cached nutrition reference matched by normalized synonym', async () =
 
   global.fetch = originalFetch;
 });
+
+test('does not replace parsed amount with defaultAmountG when quantity is provided', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 10, name: 'Cointreau'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 10, name: 'Cointreau'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Cointreau',
+      defaultAmountG: 20,
+      kalorien: 330,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['10 ml Cointreau'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.details[0].amountG, 10);
+  assert.equal(response.naehrwerte.kalorien, 33);
+
+  global.fetch = originalFetch;
+});
+
+test('uses defaultAmountG from cache when no quantity is provided', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 100, name: 'Cointreau'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Cointreau'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Cointreau',
+      defaultAmountG: 20,
+      kalorien: 330,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['Cointreau'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.details[0].amountG, 20);
+  assert.equal(response.naehrwerte.kalorien, 66);
+
+  global.fetch = originalFetch;
+});

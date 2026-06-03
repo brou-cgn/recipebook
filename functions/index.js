@@ -1632,6 +1632,17 @@ const isSkippableIngredientLine = (ingredientStr) => {
 };
 
 /**
+ * Detects whether an ingredient starts with a numeric quantity (including
+ * decimal values like "1,5" and fractions like "1/2").
+ *
+ * @param {string} ingredientStr
+ * @returns {boolean}
+ */
+const hasExplicitQuantityInIngredient = (ingredientStr) => (
+  /^\s*(?:\d+(?:[.,]\d+)?\/\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)\b/.test(String(ingredientStr || '').trim())
+);
+
+/**
  * Fetches a URL and retries on OpenFoodFacts timeouts/network errors and HTTP 503.
  * @param {string} url
  * @param {object} options
@@ -1694,7 +1705,10 @@ exports.parseIngredientAmountG = onCall(
         throw new HttpsError('invalid-argument', 'ingredientText is required');
       }
 
-      const {normalizeIngredientWithGemini} = createNutritionNormalizationUtils({
+      const {
+        normalizeIngredientWithGemini,
+        parseIngredientForNutrition,
+      } = createNutritionNormalizationUtils({
         GoogleGenerativeAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
@@ -1705,6 +1719,9 @@ exports.parseIngredientAmountG = onCall(
       } catch (error) {
         console.warn(`Failed to parse ingredient amount for "${ingredientText}" with Gemini:`, error);
         parsed = null;
+      }
+      if (!parsed) {
+        parsed = parseIngredientForNutrition(ingredientText);
       }
 
       return {
@@ -1825,6 +1842,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         }
 
         let parsed = null;
+        const hasExplicitQuantity = hasExplicitQuantityInIngredient(ingredientStr);
         try {
           parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000}); // 5s – Regex-Fallback ist ausreichend
         } catch (geminiError) {
@@ -1864,7 +1882,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
             if (cachedSnapshot.exists) {
               const cachedData = cachedSnapshot.data();
               const fallbackAmountG = cachedData.defaultAmountG;
-              if (typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
+              if (!hasExplicitQuantity && typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
                 parsed = {...parsed, amountG: fallbackAmountG};
               }
               const cachedValues = parseNutritionReferenceValues(cachedData);

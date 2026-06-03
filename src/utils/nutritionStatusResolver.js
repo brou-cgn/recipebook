@@ -31,7 +31,7 @@ function hasAnyNutritionData(values) {
   return NUTRITION_REFERENCE_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
 }
 
-export function computeIngredientAmountG(ingredientText, referenceRow) {
+export function computeIngredientAmountG(ingredientText) {
   const { quantity, unit } = parseIngredientNameAndUnit(ingredientText);
   const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
 
@@ -40,13 +40,6 @@ export function computeIngredientAmountG(ingredientText, referenceRow) {
   }
   if (normalizedUnit === 'kg') {
     return quantity != null ? quantity * 1000 : null;
-  }
-
-  // For other units or no unit, scale by defaultAmountG from the reference row
-  const defaultAmountG = referenceRow?.defaultAmountG;
-  if (defaultAmountG != null) {
-    const multiplier = quantity != null ? quantity : 1;
-    return multiplier * defaultAmountG;
   }
 
   return null;
@@ -59,6 +52,8 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
   }
 
   const ingredientText = ingredientObj?.text || '';
+  const { quantity } = parseIngredientNameAndUnit(ingredientText);
+  const hasExplicitQuantity = quantity != null;
   const callableFactory = deps.httpsCallable || httpsCallable;
   const callableFunctions = deps.functions;
   const firestoreDb = deps.db;
@@ -67,7 +62,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
   const docFn = deps.doc || doc;
 
   let amountG = computeIngredientAmountG(ingredientText, referenceRow);
-  if (amountG == null) {
+  if (amountG == null && hasExplicitQuantity) {
     try {
       const parseAmount = callableFactory(callableFunctions, 'parseIngredientAmountG');
       if (typeof parseAmount === 'function') {
@@ -80,7 +75,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     }
   }
 
-  if (amountG == null && referenceRow?.defaultAmountG != null) {
+  if (!hasExplicitQuantity && amountG == null && referenceRow?.defaultAmountG != null) {
     amountG = referenceRow.defaultAmountG;
   }
 
