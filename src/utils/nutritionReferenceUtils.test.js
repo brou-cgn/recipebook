@@ -1,5 +1,7 @@
 import {
+  getStatusAfterNutritionFetch,
   parseNutritionReferenceBooleanFields,
+  NUTRITION_REFERENCE_STATUS_OPTIONS,
   normalizeNutritionReferenceId,
   parseNutritionReferenceValues,
   parseNutritionReferenceFallbackWeight,
@@ -30,6 +32,21 @@ describe('nutritionReferenceUtils', () => {
       kalorien: 123,
       protein: 3.4,
       salz: 0.8,
+    });
+  });
+
+  test('offers Freizugeben as status option', () => {
+    expect(NUTRITION_REFERENCE_STATUS_OPTIONS).toContain('Freizugeben');
+  });
+
+  describe('getStatusAfterNutritionFetch', () => {
+    test('returns Prüfen for existing non-new statuses', () => {
+      expect(getStatusAfterNutritionFetch('Validiert')).toBe('Prüfen');
+      expect(getStatusAfterNutritionFetch('')).toBe('Prüfen');
+    });
+
+    test('keeps Neu for newly created ingredient ids', () => {
+      expect(getStatusAfterNutritionFetch('Neu')).toBe('Neu');
     });
   });
 

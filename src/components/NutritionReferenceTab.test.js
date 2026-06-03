@@ -264,6 +264,7 @@ describe('NutritionReferenceTab', () => {
       });
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
       expect(mockSetDoc.mock.calls[0][1]).toEqual({
+        status: 'Prüfen',
         searchTerm: 'tomato',
         kalorien: 82,
         protein: 4.3,
@@ -323,6 +324,7 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][1].AI_Gemini_Error).toBeUndefined();
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
     expect(mockSetDoc.mock.calls[1][1]).toEqual({
+      status: 'Prüfen',
       searchTerm: 'tomato puree',
       kalorien: 80,
       protein: 4,
@@ -334,6 +336,45 @@ describe('NutritionReferenceTab', () => {
       source: 'ai-generiert',
     });
     expect(mockSetDoc.mock.calls[1][2]).toEqual({ merge: true });
+  });
+
+  test('keeps status "Neu" when refreshing a newly created row', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'hafer',
+          data: () => ({
+            ingredientID: 'dummy-hafer',
+            status: 'Neu',
+            source: 'auto-created',
+            synonyms: ['Hafer'],
+          }),
+        },
+      ],
+    });
+    const mockCallFn = jest.fn().mockResolvedValue({
+      data: {
+        searchTerm: 'oats',
+        source: 'openfoodfacts',
+        values: { kalorien: 60 },
+      },
+    });
+    mockHttpsCallable.mockReturnValue(mockCallFn);
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-hafer')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Neu',
+      source: 'openfoodfacts',
+      searchTerm: 'oats',
+      kalorien: 60,
+    }));
   });
 
   test('shows an error message when generateNutritionFromReference fails and stores AI_Gemini_Error', async () => {

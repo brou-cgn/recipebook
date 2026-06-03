@@ -9,8 +9,8 @@ import {
   NUTRITION_REFERENCE_FIELDS,
   NUTRITION_REFERENCE_MANUAL_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
-  NUTRITION_REFERENCE_PENDING_STATUS,
   NUTRITION_REFERENCE_STATUS_OPTIONS,
+  getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceStatus,
@@ -293,6 +293,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         doc(db, 'nutritionReferences', ingredientID),
         {
           source: String(source || '').trim(),
+          status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
           ...(searchTerm ? { searchTerm } : {}),
           ...parsedValues,
         },
