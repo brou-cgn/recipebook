@@ -301,13 +301,22 @@ describe('resolveIngredientNutritionByStatus', () => {
   };
   const mockDoc = jest.fn();
   const mockGetDoc = jest.fn();
-  const deps = { httpsCallable: mockHttpsCallable, functions: {}, db: {}, doc: mockDoc, getDoc: mockGetDoc };
+  const mockSetDoc = jest.fn();
+  const deps = {
+    httpsCallable: mockHttpsCallable,
+    functions: {},
+    db: {},
+    doc: mockDoc,
+    getDoc: mockGetDoc,
+    setDoc: mockSetDoc,
+  };
 
   beforeEach(() => {
     mockParseAmountCallable.mockReset().mockResolvedValue({ data: { amountG: null } });
     mockGenerateNutritionCallable.mockReset().mockResolvedValue({ data: {} });
     mockDoc.mockReset().mockReturnValue('doc-ref');
     mockGetDoc.mockReset().mockResolvedValue({ exists: () => false });
+    mockSetDoc.mockReset().mockResolvedValue(undefined);
   });
 
   it('returns scaled nutrition for status Freigegeben', async () => {
@@ -370,8 +379,14 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result.naehrwerte.kalorien).toBeCloseTo(150);
   });
 
-  it('uses result.data.values directly from generateNutritionFromReference without Firestore read', async () => {
-    const aiRow = { ...referenceRow, ingredientID: 'lachs', source: 'ai-generiert', status: 'Prüfung ausstehend', defaultAmountG: 100 };
+  it('writes generated nutrition data back to Firestore and uses result.data.values without Firestore read', async () => {
+    const aiRow = {
+      ...referenceRow,
+      ingredientID: 'lachs',
+      source: 'ai-generiert',
+      status: 'Datenerfassung ausstehend',
+      defaultAmountG: 100,
+    };
     const returnedValues = {
       kalorien: 200,
       protein: 20,
@@ -390,12 +405,59 @@ describe('resolveIngredientNutritionByStatus', () => {
       nutritionFamily: '',
       category: '',
     });
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      'doc-ref',
+      {
+        source: 'ai-generiert',
+        status: 'Prüfung ausstehend',
+        searchTerm: 'Lachs',
+        ...returnedValues,
+      },
+      { merge: true }
+    );
     expect(mockGetDoc).not.toHaveBeenCalled();
     expect(result.found).toBe(true);
     expect(result.source).toBe('ai-generiert');
     expect(result.searchTerm).toBe('Lachs');
     expect(result.naehrwerte.kalorien).toBeCloseTo(200);
     expect(result.naehrwerte.protein).toBeCloseTo(20);
+  });
+
+  it('returns generated nutrition even when Firestore writeback fails', async () => {
+    const aiRow = {
+      ...referenceRow,
+      ingredientID: 'tofu',
+      source: 'ai-generiert',
+      status: 'Datenerfassung ausstehend',
+      defaultAmountG: 100,
+    };
+    const returnedValues = {
+      kalorien: 120,
+      protein: 13,
+      fett: 7,
+      kohlenhydrate: 2,
+      zucker: 0.5,
+      ballaststoffe: 1,
+      salz: 0.1,
+    };
+    mockGenerateNutritionCallable.mockResolvedValue({ data: { values: returnedValues, searchTerm: 'Tofu', source: 'openfoodfacts' } });
+    mockSetDoc.mockRejectedValue(new Error('permission denied'));
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await resolveIngredientNutritionByStatus({ text: '100 g Tofu', ingredientID: 'tofu' }, aiRow, deps);
+      expect(mockSetDoc).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"tofu"'),
+        expect.any(Error)
+      );
+      expect(result.found).toBe(true);
+      expect(result.source).toBe('openfoodfacts');
+      expect(result.searchTerm).toBe('Tofu');
+      expect(result.naehrwerte.kalorien).toBeCloseTo(120);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('returns not found when generated values only contain zeros and refreshed data is also empty', async () => {
