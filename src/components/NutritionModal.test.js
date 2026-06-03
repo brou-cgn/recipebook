@@ -373,7 +373,6 @@ describe('resolveIngredientNutritionByStatus', () => {
   it('uses result.data.values directly from generateNutritionFromReference without Firestore read', async () => {
     const aiRow = { ...referenceRow, ingredientID: 'lachs', source: 'ai-generiert', status: 'Prüfung ausstehend', defaultAmountG: 100 };
     const returnedValues = {
-      source: 'ai-generiert',
       kalorien: 200,
       protein: 20,
       fett: 12,
@@ -394,8 +393,50 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(mockGetDoc).not.toHaveBeenCalled();
     expect(result.found).toBe(true);
     expect(result.source).toBe('ai-generiert');
+    expect(result.searchTerm).toBe('Lachs');
     expect(result.naehrwerte.kalorien).toBeCloseTo(200);
     expect(result.naehrwerte.protein).toBeCloseTo(20);
+  });
+
+  it('returns not found when generated values only contain zeros and refreshed data is also empty', async () => {
+    const aiRow = {
+      ...referenceRow,
+      ingredientID: 'miracle_whip',
+      source: 'ai-generiert',
+      status: 'Datenerfassung ausstehend',
+      defaultAmountG: 100,
+    };
+    mockGenerateNutritionCallable.mockResolvedValue({
+      data: {
+        values: {
+          kalorien: 0,
+          protein: 0,
+          fett: 0,
+          kohlenhydrate: 0,
+          zucker: 0,
+          ballaststoffe: 0,
+          salz: 0,
+        },
+        searchTerm: 'Miracle Whip',
+        source: 'ai-generiert',
+      },
+    });
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ source: 'ai-generiert' }),
+    });
+
+    const result = await resolveIngredientNutritionByStatus(
+      { text: '100 g Miracle Whip', ingredientID: 'miracle_whip' },
+      aiRow,
+      deps
+    );
+
+    expect(mockDoc).toHaveBeenCalledWith(deps.db, 'nutritionReferences', 'miracle_whip');
+    expect(result).toEqual({
+      found: false,
+      error: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)',
+    });
   });
 
   it('returns not found when ingredientID is missing', async () => {
