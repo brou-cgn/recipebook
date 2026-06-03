@@ -19,6 +19,7 @@ import {
   parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
 } from '../utils/nutritionReferenceUtils';
+import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 import {
   createNutritionReferenceCsv,
   parseNutritionReferenceCsv,
@@ -299,16 +300,18 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const { searchTerm, source, values } = result.data;
       const parsedValues = parseNutritionReferenceValues(values || {});
 
-      await setDoc(
-        doc(db, 'nutritionReferences', ingredientID),
-        {
-          source: String(source || '').trim(),
-          status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
-          ...(searchTerm ? { searchTerm } : {}),
-          ...parsedValues,
-        },
-        { merge: true }
-      );
+      if (hasMeaningfulGeneratedNutrition(values)) {
+        await setDoc(
+          doc(db, 'nutritionReferences', ingredientID),
+          {
+            source: String(source || '').trim(),
+            status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
+            ...(searchTerm ? { searchTerm } : {}),
+            ...parsedValues,
+          },
+          { merge: true }
+        );
+      }
 
       if (row.id !== ingredientID) {
         await deleteDoc(doc(db, 'nutritionReferences', row.id));

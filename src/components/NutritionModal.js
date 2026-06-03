@@ -109,7 +109,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [] }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -382,6 +382,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         .map(d => d.ingredient)
     );
     let foundCount = 0;
+    let anyWritebackHappened = false;
+    const writebackErrors = [];
 
     // Process regular ingredients
     for (let i = 0; i < ingredients.length; i++) {
@@ -406,6 +408,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
       try {
         const resolved = await resolveIngredientNutritionByStatus(ingredientItem, existingRow, { httpsCallable, functions, db });
+        if (resolved.wroteBackReference) anyWritebackHappened = true;
+        if (resolved.writebackError) writebackErrors.push(resolved.writebackError);
         if (resolved.found) {
           const { naehrwerte: n, fromReference, source, searchTerm, aiEstimated } = resolved;
           Object.keys(totals).forEach(key => {
@@ -519,9 +523,18 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(ingredientDetails.length > 0 && { ingredientDetails }),
+      ...(writebackErrors.length > 0 && {
+        writebackError: writebackErrors[0]?.message || 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
+      }),
     };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
+
+    // Reload the NutritionReferenceContext when at least one reference was written back,
+    // so the table "Nährwerte je 100 g" reflects the updated values immediately.
+    if (anyWritebackHappened && typeof onReloadNutritionReferences === 'function') {
+      onReloadNutritionReferences();
+    }
 
     // Persist totals and per-ingredient errors to Firestore automatically
     const finalNaehrwerte = {
@@ -1065,6 +1078,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                 {autoCalcResult.saveError && (
                   <p className="nutrition-autocalc-error">
                     Speichern fehlgeschlagen. Bitte manuell speichern.
+                  </p>
+                )}
+                {autoCalcResult.writebackError && (
+                  <p className="nutrition-autocalc-error">
+                    Nährwertreferenz konnte nicht aktualisiert werden: {autoCalcResult.writebackError}
                   </p>
                 )}
               </>

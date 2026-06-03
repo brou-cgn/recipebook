@@ -92,7 +92,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
   const tabsRef = useRef(null);
   const ingredientMatchFromModalRef = useRef(false);
-  const { rows: nutritionReferenceRows } = useNutritionReference();
+  const { rows: nutritionReferenceRows, reload: reloadNutritionReferences } = useNutritionReference();
 
   // Kulinariktypen state
   const [cuisineProposals, setCuisineProposals] = useState([]);
@@ -1213,6 +1213,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           onSave={(naehrwerte) => handleSaveNutrition(selectedNutritionRecipe.id, naehrwerte)}
           onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
           nutritionReferenceRows={nutritionReferenceRows}
+          onReloadNutritionReferences={reloadNutritionReferences}
         />
       )}
       {ingredientMatchDialog && (

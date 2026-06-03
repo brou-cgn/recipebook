@@ -1,4 +1,5 @@
 import { getRecipeCalcResult, buildNutritionCompositionRows, resolveIngredientNutritionByStatus, computeIngredientAmountG } from './NutritionModal';
+import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 
 jest.mock('../firebase', () => ({
   functions: {},
@@ -421,6 +422,8 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result.searchTerm).toBe('Lachs');
     expect(result.naehrwerte.kalorien).toBeCloseTo(200);
     expect(result.naehrwerte.protein).toBeCloseTo(20);
+    expect(result.wroteBackReference).toBe(true);
+    expect(result.writebackError).toBeNull();
   });
 
   it('returns generated nutrition even when Firestore writeback fails', async () => {
@@ -441,7 +444,8 @@ describe('resolveIngredientNutritionByStatus', () => {
       salz: 0.1,
     };
     mockGenerateNutritionCallable.mockResolvedValue({ data: { values: returnedValues, searchTerm: 'Tofu', source: 'openfoodfacts' } });
-    mockSetDoc.mockRejectedValue(new Error('permission denied'));
+    const writebackErr = new Error('permission denied');
+    mockSetDoc.mockRejectedValue(writebackErr);
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
@@ -455,6 +459,9 @@ describe('resolveIngredientNutritionByStatus', () => {
       expect(result.source).toBe('openfoodfacts');
       expect(result.searchTerm).toBe('Tofu');
       expect(result.naehrwerte.kalorien).toBeCloseTo(120);
+      // Writeback error is surfaced in the result instead of being silently swallowed
+      expect(result.wroteBackReference).toBe(false);
+      expect(result.writebackError).toBe(writebackErr);
     } finally {
       warnSpy.mockRestore();
     }
@@ -511,5 +518,29 @@ describe('resolveIngredientNutritionByStatus', () => {
     const ingredient = { text: '3 Stück Eier', ingredientID: 'ei2' };
     const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
     expect(result).toEqual({ found: false, error: 'Mengenangabe konnte nicht ermittelt werden' });
+  });
+
+  it('sets wroteBackReference false and writebackError null when no generation is triggered', async () => {
+    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, referenceRow, deps);
+    expect(result.found).toBe(true);
+    expect(result.wroteBackReference).toBe(false);
+    expect(result.writebackError).toBeNull();
+  });
+});
+
+describe('hasMeaningfulGeneratedNutrition', () => {
+  it('returns true when at least one macronutrient field is positive', () => {
+    expect(hasMeaningfulGeneratedNutrition({ kalorien: 100, protein: 0, fett: 0, kohlenhydrate: 0 })).toBe(true);
+    expect(hasMeaningfulGeneratedNutrition({ kalorien: 0, protein: 5, fett: 0, kohlenhydrate: 0 })).toBe(true);
+    expect(hasMeaningfulGeneratedNutrition({ kalorien: 0, protein: 0, fett: 3, kohlenhydrate: 0 })).toBe(true);
+    expect(hasMeaningfulGeneratedNutrition({ kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 10 })).toBe(true);
+  });
+
+  it('returns false when all macronutrient fields are zero or missing', () => {
+    expect(hasMeaningfulGeneratedNutrition({ kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0 })).toBe(false);
+    expect(hasMeaningfulGeneratedNutrition({})).toBe(false);
+    expect(hasMeaningfulGeneratedNutrition(null)).toBe(false);
+    expect(hasMeaningfulGeneratedNutrition(undefined)).toBe(false);
   });
 });
