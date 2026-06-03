@@ -82,17 +82,21 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
   if (shouldGenerateNutrition) {
     const generateNutrition = callableFactory(callableFunctions, 'generateNutritionFromReference');
     if (typeof generateNutrition === 'function') {
-      await generateNutrition({
+      const result = await generateNutrition({
         ingredientID,
         nutritionFamily: referenceRow?.nutritionFamily || '',
         category: referenceRow?.category || '',
       });
-    }
 
-    if (firestoreDb) {
-      const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
-      if (refreshedSnapshot.exists()) {
-        rowToUse = { ...refreshedSnapshot.data(), ingredientID };
+      const { values } = result?.data || {};
+      if (values && Object.keys(values).length > 0) {
+        rowToUse = { ...values, ingredientID };
+      } else if (firestoreDb) {
+        // Fallback: read from Firestore (for backward compatibility)
+        const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
+        if (refreshedSnapshot.exists()) {
+          rowToUse = { ...refreshedSnapshot.data(), ingredientID };
+        }
       }
     }
   }

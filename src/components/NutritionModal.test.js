@@ -370,6 +370,34 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result.naehrwerte.kalorien).toBeCloseTo(150);
   });
 
+  it('uses result.data.values directly from generateNutritionFromReference without Firestore read', async () => {
+    const aiRow = { ...referenceRow, ingredientID: 'lachs', source: 'ai-generiert', status: 'Prüfung ausstehend', defaultAmountG: 100 };
+    const returnedValues = {
+      source: 'ai-generiert',
+      kalorien: 200,
+      protein: 20,
+      fett: 12,
+      kohlenhydrate: 0,
+      zucker: 0,
+      ballaststoffe: 0,
+      salz: 0.3,
+    };
+    mockGenerateNutritionCallable.mockResolvedValue({ data: { values: returnedValues, searchTerm: 'Lachs', source: 'ai-generiert' } });
+
+    const result = await resolveIngredientNutritionByStatus({ text: '100 g Lachs', ingredientID: 'lachs' }, aiRow, deps);
+
+    expect(mockGenerateNutritionCallable).toHaveBeenCalledWith({
+      ingredientID: 'lachs',
+      nutritionFamily: '',
+      category: '',
+    });
+    expect(mockGetDoc).not.toHaveBeenCalled();
+    expect(result.found).toBe(true);
+    expect(result.source).toBe('ai-generiert');
+    expect(result.naehrwerte.kalorien).toBeCloseTo(200);
+    expect(result.naehrwerte.protein).toBeCloseTo(20);
+  });
+
   it('returns not found when ingredientID is missing', async () => {
     const result = await resolveIngredientNutritionByStatus({ text: '250 g Tomaten' }, null, deps);
     expect(result).toEqual({ found: false, error: 'Keine ingredientID zugeordnet' });
