@@ -886,10 +886,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     await persistIngredientIDs(fieldName, nextIngredients);
     setIngredientMatchDialog(null);
-
-    if (ingredientMatchFromModalRef.current) {
-      ingredientMatchFromModalRef.current = false;
-    }
+    ingredientMatchFromModalRef.current = false;
     await runAutoCalculateAndSave(nextIngredients, nextLog);
   };
 
