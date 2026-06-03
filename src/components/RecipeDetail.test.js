@@ -5,13 +5,20 @@ import * as ingredientIdMatching from '../utils/ingredientIdMatching';
 
 const mockUpdateRecipe = jest.fn(() => Promise.resolve());
 const mockSetDoc = jest.fn(() => Promise.resolve());
-const mockNutritionCallable = jest.fn(() => Promise.resolve({
+const mockCalculateNutritionCallable = jest.fn(() => Promise.resolve({
   data: {
     naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
     details: [{ found: true }],
   },
 }));
-const mockHttpsCallable = jest.fn(() => mockNutritionCallable);
+const mockParseIngredientAmountCallable = jest.fn(() => Promise.resolve({ data: { amountG: null, name: 'Ingredient' } }));
+const mockGenerateNutritionFromReferenceCallable = jest.fn(() => Promise.resolve({ data: { source: 'openfoodfacts' } }));
+const mockHttpsCallable = jest.fn((_, name) => {
+  if (name === 'calculateNutritionFromOpenFoodFacts') return mockCalculateNutritionCallable;
+  if (name === 'parseIngredientAmountG') return mockParseIngredientAmountCallable;
+  if (name === 'generateNutritionFromReference') return mockGenerateNutritionFromReferenceCallable;
+  return jest.fn();
+});
 let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 
 // Mock the utility modules
@@ -110,6 +117,7 @@ jest.mock('firebase/firestore', () => {
   return {
     ...actual,
     setDoc: (...args) => mockSetDoc(...args),
+    getDoc: jest.fn(() => Promise.resolve({ exists: () => false })),
   };
 });
 
@@ -121,7 +129,14 @@ jest.mock('firebase/functions', () => ({
 beforeEach(() => {
   mockUpdateRecipe.mockClear();
   mockSetDoc.mockClear();
-  mockNutritionCallable.mockClear();
+  mockCalculateNutritionCallable.mockReset().mockResolvedValue({
+    data: {
+      naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
+      details: [{ found: true }],
+    },
+  });
+  mockParseIngredientAmountCallable.mockReset().mockResolvedValue({ data: { amountG: null, name: 'Ingredient' } });
+  mockGenerateNutritionFromReferenceCallable.mockReset().mockResolvedValue({ data: { source: 'openfoodfacts' } });
   mockHttpsCallable.mockClear();
   mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 });
@@ -2165,16 +2180,24 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
   });
 
   test('auto-assigns unique 100% ingredientID matches before nutrition calculation', async () => {
-    const calculateNutritionMock = jest.fn().mockResolvedValue({
-      data: {
-        naehrwerte: { kalorien: 10, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 },
-        details: [{ found: true }],
-      },
-    });
-    mockHttpsCallable.mockReturnValue(calculateNutritionMock);
+    mockParseIngredientAmountCallable.mockResolvedValue({ data: { amountG: 200, name: 'Tomaten' } });
     mockNutritionReferenceState = {
       rows: [
-        { ingredientID: 'tomate', status: 'Freigegeben', synonyms: ['Tomaten'], possibleUnits: ['g'] },
+        {
+          ingredientID: 'tomate',
+          status: 'Freigegeben',
+          source: 'manual',
+          defaultAmountG: 100,
+          kalorien: 20,
+          protein: 1,
+          fett: 0,
+          kohlenhydrate: 3,
+          zucker: 2,
+          ballaststoffe: 1,
+          salz: 0.01,
+          synonyms: ['Tomaten'],
+          possibleUnits: ['g'],
+        },
       ],
       loading: false,
       reload: jest.fn(),
@@ -2209,13 +2232,7 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
-    expect(mockSetDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        status: 'Prüfung ausstehend',
-      }),
-      { merge: true }
-    );
+    expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
   test('shows manual dialog with confidence percentages for ambiguous ingredientID matches', async () => {
