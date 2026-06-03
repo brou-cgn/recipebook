@@ -2,6 +2,7 @@ import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc } from 'firebase/firestore';
 import { parseIngredientNameAndUnit } from './ingredientIdMatching';
 import {
+  NUTRITION_REFERENCE_FIELDS,
   NUTRITION_REFERENCE_CHECK_STATUS,
   NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS,
   NUTRITION_REFERENCE_EMPTY_STATUS,
@@ -12,6 +13,7 @@ import {
 } from './nutritionReferenceUtils';
 
 const DIRECT_REFERENCE_SOURCES_WHEN_CHECK_PENDING = new Set(['openfoodfacts', 'manual']);
+const GENERATED_NUTRITION_REQUIRED_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate'];
 
 export function computeIngredientAmountG(ingredientText, referenceRow) {
   const { quantity, unit } = parseIngredientNameAndUnit(ingredientText);
@@ -88,9 +90,15 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
         category: referenceRow?.category || '',
       });
 
-      const { values } = result?.data || {};
-      if (values && Object.keys(values).length > 0) {
-        rowToUse = { ...values, ingredientID };
+      const { values, searchTerm: returnedSearchTerm, source: returnedSource } = result?.data || {};
+      const hasRealValues = GENERATED_NUTRITION_REQUIRED_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
+      if (hasRealValues) {
+        rowToUse = {
+          ...values,
+          ingredientID,
+          searchTerm: returnedSearchTerm,
+          source: returnedSource,
+        };
       } else if (firestoreDb) {
         // Fallback: read from Firestore (for backward compatibility)
         const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
@@ -99,6 +107,11 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
         }
       }
     }
+  }
+
+  const hasNutritionData = NUTRITION_REFERENCE_FIELDS.some((field) => (rowToUse?.[field] ?? 0) > 0);
+  if (!hasNutritionData) {
+    return { found: false, error: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)' };
   }
 
   return {
