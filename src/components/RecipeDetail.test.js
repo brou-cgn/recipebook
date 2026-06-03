@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import RecipeDetail from './RecipeDetail';
 import * as ingredientIdMatching from '../utils/ingredientIdMatching';
+import {
+  INGREDIENT_MATCH_CREATE_NEW_OPTION,
+  INGREDIENT_MATCH_IGNORE_OPTION,
+} from '../hooks/useIngredientIDMatching';
 
 const mockUpdateRecipe = jest.fn(() => Promise.resolve());
 const mockSetDoc = jest.fn(() => Promise.resolve());
@@ -2268,6 +2272,8 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
 
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /Tomate \(100%\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Neue Zutat' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Zutat ignorieren' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
@@ -2280,6 +2286,119 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
+  });
+
+  test('creates a new pending ingredientID from ambiguous dialog via "Neue Zutat"', async () => {
+    const suggestionSpy = jest.spyOn(ingredientIdMatching, 'getIngredientIdSuggestions').mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    try {
+      render(
+        <RecipeDetail
+          recipe={{
+            id: 'recipe-2-new',
+            title: 'Testgericht',
+            authorId: 'user-1',
+            portionen: 2,
+            ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+            steps: ['Mischen'],
+            speisekategorie: ['Salat'],
+          }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+      expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: INGREDIENT_MATCH_CREATE_NEW_OPTION } });
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+      await waitFor(() => {
+        expect(mockUpdateRecipe).toHaveBeenCalledWith(
+          'recipe-2-new',
+          expect.objectContaining({
+            ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate-2' }],
+          })
+        );
+      });
+      expect(mockSetDoc).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          ingredientID: 'tomate-2',
+          status: 'Neu',
+        }),
+        { merge: true }
+      );
+    } finally {
+      suggestionSpy.mockRestore();
+    }
+  });
+
+  test('accepts ambiguous ingredient as ignored via "Zutat ignorieren"', async () => {
+    const suggestionSpy = jest.spyOn(ingredientIdMatching, 'getIngredientIdSuggestions').mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    try {
+      render(
+        <RecipeDetail
+          recipe={{
+            id: 'recipe-2-ignore',
+            title: 'Testgericht',
+            authorId: 'user-1',
+            portionen: 2,
+            ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+            steps: ['Mischen'],
+            speisekategorie: ['Salat'],
+          }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
+      expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: INGREDIENT_MATCH_IGNORE_OPTION } });
+      fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+      await waitFor(() => {
+        expect(mockUpdateRecipe).toHaveBeenCalledWith(
+          'recipe-2-ignore',
+          expect.objectContaining({
+            ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: '', ignoreNutritionCalculation: true }],
+          })
+        );
+      });
+      expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
+    } finally {
+      suggestionSpy.mockRestore();
+    }
   });
 
   test('stores manual low-confidence ingredient unit and synonym for selected ingredientID', async () => {

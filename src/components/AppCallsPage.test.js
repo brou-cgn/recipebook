@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
+import { INGREDIENT_MATCH_CREATE_NEW_OPTION } from '../hooks/useIngredientIDMatching';
 
 let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 const mockGetIngredientIdSuggestions = jest.fn(() => []);
@@ -650,6 +651,8 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
 
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Neue Zutat' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Zutat ignorieren' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
 
@@ -659,6 +662,58 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
         ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
       }
     ));
+  });
+
+  test('creates a new pending ingredientID from ambiguous selection via "Neue Zutat"', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+    const onUpdateRecipe = jest.fn(() => Promise.resolve());
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r-new-ambiguous',
+            title: 'Gemüsepfanne',
+            ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: INGREDIENT_MATCH_CREATE_NEW_OPTION } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
+      'r-new-ambiguous',
+      {
+        ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate-2' }],
+      }
+    ));
+    expect(mockSetDoc).toHaveBeenCalled();
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      ingredientID: 'tomate-2',
+      status: 'Neu',
+    }));
+    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
   test('creates a new pending ingredientID with status Neu when no match exists', async () => {

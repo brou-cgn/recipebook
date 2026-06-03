@@ -9,8 +9,9 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
-import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { buildPendingNutritionReferenceDraft, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
 import {
+  NUTRITION_REFERENCE_NEW_STATUS,
   getNormalizedNutritionReferenceSynonyms,
   normalizeNutritionReferenceId,
 } from '../utils/nutritionReferenceUtils';
@@ -29,7 +30,11 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndexBreakdown } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
-import { useIngredientIDMatching } from '../hooks/useIngredientIDMatching';
+import {
+  INGREDIENT_MATCH_CREATE_NEW_OPTION,
+  INGREDIENT_MATCH_IGNORE_OPTION,
+  useIngredientIDMatching,
+} from '../hooks/useIngredientIDMatching';
 
 
 // Mobile breakpoint constant
@@ -706,7 +711,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const runAutoCalculateAndSave = async (ingredientsInput, ingredientIDMatchingLog = []) => {
     const ingredientItems = ingredientsInput
       .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
-      .map(item => (typeof item === 'string' ? { text: item } : { ...item, text: item.text || '' }));
+      .map(item => (typeof item === 'string' ? { text: item } : { ...item, text: item.text || '' }))
+      .filter(item => item.ignoreNutritionCalculation !== true);
     if (ingredientItems.length === 0) return;
 
     const nutritionReferenceByIngredientID = new Map(
@@ -807,10 +813,12 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const nextIngredients = [...updatedIngredients];
     const nextLog = [...matchingLog];
     const ingredientLearningData = new Map();
+    const createdReferenceDrafts = new Map();
+    const referencesToCreate = [];
 
     for (const entry of unresolved) {
-      const selectedIngredientID = String(selections?.[entry.index] || '').trim();
-      if (!selectedIngredientID) {
+      const selectedOption = String(selections?.[entry.index] || '').trim();
+      if (!selectedOption) {
         setIngredientMatchDialog((prev) => prev ? {
           ...prev,
           errorMessage: 'Bitte für jede Zutat eine ingredientID auswählen.',
@@ -818,10 +826,50 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         return;
       }
 
+      if (selectedOption === INGREDIENT_MATCH_IGNORE_OPTION) {
+        const original = nextIngredients[entry.index];
+        nextIngredients[entry.index] = typeof original === 'string'
+          ? { type: 'ingredient', text: original, ingredientID: '', ignoreNutritionCalculation: true }
+          : { ...original, ingredientID: '', ignoreNutritionCalculation: true };
+        nextLog.push({
+          ingredient: entry.ingredient,
+          status: 'ignored',
+        });
+        continue;
+      }
+
+      let selectedIngredientID = selectedOption;
+      if (selectedOption === INGREDIENT_MATCH_CREATE_NEW_OPTION) {
+        const draftKey = buildPendingNutritionReferenceDraft(entry.ingredient, nutritionReferenceRows);
+        const createdDraft = draftKey?.canonicalKey
+          ? createdReferenceDrafts.get(draftKey.canonicalKey)
+          : null;
+        const nextDraft = createdDraft || buildPendingNutritionReferenceDraft(
+          entry.ingredient,
+          [...nutritionReferenceRows, ...Array.from(createdReferenceDrafts.values())]
+        );
+
+        if (!nextDraft) {
+          setIngredientMatchDialog((prev) => prev ? {
+            ...prev,
+            errorMessage: `Für "${entry.ingredient}" konnte keine neue ingredientID angelegt werden.`,
+          } : prev);
+          return;
+        }
+
+        if (!createdDraft) {
+          createdReferenceDrafts.set(nextDraft.canonicalKey, nextDraft);
+          referencesToCreate.push(nextDraft);
+        }
+        selectedIngredientID = nextDraft.ingredientID;
+      }
+
       const original = nextIngredients[entry.index];
+      const originalObject = (original && typeof original === 'object') ? original : null;
+      const { ignoreNutritionCalculation: _ignoredFlag, ...restOriginal } = originalObject || {};
       nextIngredients[entry.index] = typeof original === 'string'
         ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
-        : { ...original, ingredientID: selectedIngredientID };
+        : { ...restOriginal, ingredientID: selectedIngredientID };
 
       const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
       if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
@@ -840,10 +888,36 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       }
       nextLog.push({
         ingredient: entry.ingredient,
-        status: 'manual',
+        status: selectedOption === INGREDIENT_MATCH_CREATE_NEW_OPTION ? 'created' : 'manual',
         selectedIngredientID,
+        ...(selectedOption === INGREDIENT_MATCH_CREATE_NEW_OPTION ? { createdReference: true } : {}),
         confidencePercent: selectedSuggestion?.confidencePercent || null,
       });
+    }
+
+    if (referencesToCreate.length > 0) {
+      await Promise.all(referencesToCreate.map(async (draft) => {
+        try {
+          await setDoc(
+            doc(db, 'nutritionReferences', draft.ingredientID),
+            {
+              ingredientID: draft.ingredientID,
+              displayName: draft.displayName,
+              synonyms: draft.synonyms,
+              normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
+              name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
+              possibleUnits: draft.possibleUnits,
+              status: NUTRITION_REFERENCE_NEW_STATUS,
+              source: 'auto-created',
+              updatedAt: serverTimestamp(),
+              updatedBy: currentUser?.id || null,
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.error('Could not create pending nutrition reference:', err);
+        }
+      }));
     }
 
     for (const [ingredientID, additions] of ingredientLearningData.entries()) {
@@ -2637,7 +2711,11 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               </button>
             </div>
             <p className="ingredient-match-dialog-note">
-              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden.
+              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden. Bei Uneindeutigkeit können Sie auch
+              {' '}
+              „Neue Zutat“
+              {' '}
+              oder „Zutat ignorieren“ wählen.
             </p>
             {ingredientMatchDialog.errorMessage ? (
               <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
@@ -2652,6 +2730,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     aria-label={`ingredientID für ${entry.ingredient}`}
                   >
                     <option value="">Bitte auswählen</option>
+                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
+                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
                     {entry.suggestions.map((suggestion) => (
                       <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
                         {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
