@@ -73,7 +73,8 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
 ];
 const NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS = new Set(NUTRITION_REFERENCE_BOOLEAN_FIELDS);
 const EMPTY_STATUS_FILTER_VALUE = '__empty__';
-const getStatusOptionLabel = (status) => (status || '<leer>');
+const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
+const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 
 const getRecipeIngredientTexts = (recipe = {}) => {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
