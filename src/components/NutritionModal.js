@@ -92,6 +92,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
       ingredient,
       source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
       status,
+      amountG: ingredientDetail?.amountG ?? null,
       detail: notIncludedItem?.error ||
         (reformulation
           ? `Umformulierung: ${reformulation}`
@@ -193,6 +194,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     const value = naehrwerte[key] ?? 0;
     const factor = Math.pow(10, decimals);
     return String(Math.round(value * factor) / factor);
+  };
+
+  const formatAmountG = (amountG) => {
+    if (amountG == null) return '—';
+    const rounded = Math.round(amountG * 10) / 10;
+    return `${rounded} g`;
   };
 
   const handleSave = async () => {
@@ -419,6 +426,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           ingredientDetails.push({
             ingredient,
             naehrwerte: n,
+            amountG: resolved.amountG ?? null,
             searchTerm: searchTerm || null,
             aiEstimated: Boolean(aiEstimated),
             fromReference,
@@ -800,6 +808,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                         <th className="nutrition-composition-num">Fett</th>
                         <th className="nutrition-composition-num">KH</th>
                         <th>Status</th>
+                        <th className="nutrition-composition-num">Menge (g)</th>
                         <th>Detail</th>
                       </tr>
                     </thead>
@@ -819,6 +828,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'fett')}</td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kohlenhydrate')}</td>
                           <td>{row.status}</td>
+                          <td className="nutrition-composition-num">{formatAmountG(row.amountG)}</td>
                           <td>{row.detail}</td>
                         </tr>
                       ))}
