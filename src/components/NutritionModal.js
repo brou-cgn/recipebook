@@ -375,7 +375,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     // Keep as objects with text + optional ingredientID
     const normalizedItems = allIngredientItems.map(item =>
       typeof item === 'string' ? { text: item } : { ...item, text: item.text || '' }
-    );
+    ).filter((item) => item.ignoreNutritionCalculation !== true);
 
     // Separate recipe-link ingredients from regular ingredients
     const ingredients = []; // { text, ingredientID? }

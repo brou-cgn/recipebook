@@ -4,6 +4,9 @@ import { db } from '../firebase';
 import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
 import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 
+export const INGREDIENT_MATCH_CREATE_NEW_OPTION = '__ingredient_match_create_new__';
+export const INGREDIENT_MATCH_IGNORE_OPTION = '__ingredient_match_ignore__';
+
 function defaultGetNutritionIngredientSource(recipe) {
   if (!recipe) return { fieldName: 'ingredients', rawIngredients: [] };
   if (Array.isArray(recipe.zutaten)) {
@@ -46,6 +49,13 @@ export function useIngredientIDMatching({
     rawIngredients.forEach((item, index) => {
       const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
       if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
+      if (ingredientItem.ignoreNutritionCalculation === true) {
+        matchingLog.push({
+          ingredient: ingredientItem.text,
+          status: 'ignored',
+        });
+        return;
+      }
 
       const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
       if (existingIngredientID) {

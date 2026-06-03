@@ -20,12 +20,20 @@ import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
+import { db } from '../firebase';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { buildPendingNutritionReferenceDraft } from '../utils/ingredientIdMatching';
+import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
   updateCuisineProposal,
   releaseCuisineProposal,
 } from '../utils/cuisineProposalsFirestore';
-import { useIngredientIDMatching } from '../hooks/useIngredientIDMatching';
+import {
+  INGREDIENT_MATCH_CREATE_NEW_OPTION,
+  INGREDIENT_MATCH_IGNORE_OPTION,
+  useIngredientIDMatching,
+} from '../hooks/useIngredientIDMatching';
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -296,10 +304,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     if (!ingredientMatchDialog) return;
     const { recipe: dialogRecipe, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
+    const createdReferenceDrafts = new Map();
+    const referencesToCreate = [];
 
     for (const entry of unresolved) {
-      const selectedIngredientID = String(selections?.[entry.index] || '').trim();
-      if (!selectedIngredientID) {
+      const selectedOption = String(selections?.[entry.index] || '').trim();
+      if (!selectedOption) {
         setIngredientMatchDialog((prev) => prev ? {
           ...prev,
           errorMessage: 'Bitte für jede Zutat eine ingredientID auswählen.',
@@ -307,10 +317,71 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return;
       }
 
+      if (selectedOption === INGREDIENT_MATCH_IGNORE_OPTION) {
+        const original = nextIngredients[entry.index];
+        nextIngredients[entry.index] = typeof original === 'string'
+          ? { type: 'ingredient', text: original, ingredientID: '', ignoreNutritionCalculation: true }
+          : { ...original, ingredientID: '', ignoreNutritionCalculation: true };
+        continue;
+      }
+
+      let selectedIngredientID = selectedOption;
+      if (selectedOption === INGREDIENT_MATCH_CREATE_NEW_OPTION) {
+        const draftKey = buildPendingNutritionReferenceDraft(entry.ingredient, nutritionReferenceRows);
+        const createdDraft = draftKey?.canonicalKey
+          ? createdReferenceDrafts.get(draftKey.canonicalKey)
+          : null;
+        const nextDraft = createdDraft || buildPendingNutritionReferenceDraft(
+          entry.ingredient,
+          [...nutritionReferenceRows, ...Array.from(createdReferenceDrafts.values())]
+        );
+
+        if (!nextDraft) {
+          setIngredientMatchDialog((prev) => prev ? {
+            ...prev,
+            errorMessage: `Für "${entry.ingredient}" konnte keine neue ingredientID angelegt werden.`,
+          } : prev);
+          return;
+        }
+
+        if (!createdDraft) {
+          createdReferenceDrafts.set(nextDraft.canonicalKey, nextDraft);
+          referencesToCreate.push(nextDraft);
+        }
+        selectedIngredientID = nextDraft.ingredientID;
+      }
+
       const original = nextIngredients[entry.index];
+      const originalObject = (original && typeof original === 'object') ? original : null;
+      const { ignoreNutritionCalculation: _ignoredFlag, ...restOriginal } = originalObject || {};
       nextIngredients[entry.index] = typeof original === 'string'
         ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
-        : { ...original, ingredientID: selectedIngredientID };
+        : { ...restOriginal, ingredientID: selectedIngredientID };
+    }
+
+    if (referencesToCreate.length > 0) {
+      await Promise.all(referencesToCreate.map(async (draft) => {
+        try {
+          await setDoc(
+            doc(db, 'nutritionReferences', draft.ingredientID),
+            {
+              ingredientID: draft.ingredientID,
+              displayName: draft.displayName,
+              synonyms: draft.synonyms,
+              normalizedSynonyms: [...new Set(draft.synonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean))],
+              name: draft.synonyms[0] || draft.displayName || draft.ingredientID,
+              possibleUnits: draft.possibleUnits,
+              status: NUTRITION_REFERENCE_NEW_STATUS,
+              source: 'auto-created',
+              updatedAt: serverTimestamp(),
+              updatedBy: currentUser?.id || null,
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.error('Could not create pending nutrition reference:', err);
+        }
+      }));
     }
 
     await persistIngredientIDs(fieldName, nextIngredients, dialogRecipe);
@@ -1239,7 +1310,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </button>
             </div>
             <p className="ingredient-match-dialog-note">
-              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden.
+              Bitte bestätigen Sie die vorgeschlagenen ingredientIDs, bevor die Nährwerte berechnet werden. Bei Uneindeutigkeit können Sie auch
+              {' '}
+              „Neue Zutat“
+              {' '}
+              oder „Zutat ignorieren“ wählen.
             </p>
             {ingredientMatchDialog.errorMessage ? (
               <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
@@ -1254,6 +1329,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     aria-label={`ingredientID für ${entry.ingredient}`}
                   >
                     <option value="">Bitte auswählen</option>
+                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
+                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
                     {entry.suggestions.map((suggestion) => (
                       <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
                         {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
