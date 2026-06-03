@@ -1,5 +1,5 @@
 import { httpsCallable } from 'firebase/functions';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { parseIngredientNameAndUnit } from './ingredientIdMatching';
 import {
   NUTRITION_REFERENCE_FIELDS,
@@ -7,8 +7,10 @@ import {
   NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS,
   NUTRITION_REFERENCE_EMPTY_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
+  getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
   parseNutritionReferenceStatus,
+  parseNutritionReferenceValues,
   scaleNutritionValues,
 } from './nutritionReferenceUtils';
 
@@ -55,6 +57,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
   const callableFunctions = deps.functions;
   const firestoreDb = deps.db;
   const getDocFn = deps.getDoc || getDoc;
+  const setDocFn = deps.setDoc || setDoc;
   const docFn = deps.doc || doc;
 
   let amountG = computeIngredientAmountG(ingredientText, referenceRow);
@@ -99,8 +102,26 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
       });
       const { values, searchTerm: returnedSearchTerm, source: returnedSource } = result?.data || {};
       if (hasMeaningfulGeneratedNutrition(values)) {
+        const parsedValues = parseNutritionReferenceValues(values || {});
+        const nextStatus = getStatusAfterNutritionFetch(status);
+        if (firestoreDb && typeof setDocFn === 'function') {
+          try {
+            await setDocFn(
+              docFn(firestoreDb, 'nutritionReferences', ingredientID),
+              {
+                source: String(returnedSource || '').trim(),
+                status: nextStatus,
+                ...(returnedSearchTerm ? { searchTerm: returnedSearchTerm } : {}),
+                ...parsedValues,
+              },
+              { merge: true }
+            );
+          } catch (error) {
+            console.warn(`nutrition writeback failed for "${ingredientID}"`, error);
+          }
+        }
         rowToUse = {
-          ...values,
+          ...parsedValues,
           ingredientID,
           searchTerm: returnedSearchTerm,
           source: returnedSource,
