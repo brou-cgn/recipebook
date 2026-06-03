@@ -1632,11 +1632,14 @@ const isSkippableIngredientLine = (ingredientStr) => {
 };
 
 /**
+ * Detects whether an ingredient starts with a numeric quantity (including
+ * decimal values like "1,5" and fractions like "1/2").
+ *
  * @param {string} ingredientStr
  * @returns {boolean}
  */
 const hasExplicitQuantityInIngredient = (ingredientStr) => (
-  /^\s*\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?\b/.test(String(ingredientStr || '').trim())
+  /^\s*(?:\d+(?:[.,]\d+)?\/\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)\b/.test(String(ingredientStr || '').trim())
 );
 
 /**
@@ -1702,7 +1705,10 @@ exports.parseIngredientAmountG = onCall(
         throw new HttpsError('invalid-argument', 'ingredientText is required');
       }
 
-      const {normalizeIngredientWithGemini} = createNutritionNormalizationUtils({
+      const {
+        normalizeIngredientWithGemini,
+        parseIngredientForNutrition,
+      } = createNutritionNormalizationUtils({
         GoogleGenerativeAI,
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
@@ -1715,7 +1721,6 @@ exports.parseIngredientAmountG = onCall(
         parsed = null;
       }
       if (!parsed) {
-        const {parseIngredientForNutrition} = createNutritionNormalizationUtils();
         parsed = parseIngredientForNutrition(ingredientText);
       }
 

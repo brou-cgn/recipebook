@@ -31,7 +31,7 @@ function hasAnyNutritionData(values) {
   return NUTRITION_REFERENCE_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
 }
 
-export function computeIngredientAmountG(ingredientText, _referenceRow) {
+export function computeIngredientAmountG(ingredientText) {
   const { quantity, unit } = parseIngredientNameAndUnit(ingredientText);
   const normalizedUnit = unit ? normalizeNutritionReferenceId(unit) : null;
 

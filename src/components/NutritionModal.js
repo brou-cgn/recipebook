@@ -10,6 +10,7 @@ import {
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
+const AMOUNT_G_DECIMALS = 1;
 
 function loadStoredCalcResult(recipeId) {
   if (!recipeId) return null;
@@ -198,7 +199,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
   const formatAmountG = (amountG) => {
     if (amountG == null) return '—';
-    const rounded = Math.round(amountG * 10) / 10;
+    const factor = Math.pow(10, AMOUNT_G_DECIMALS);
+    const rounded = Math.round(amountG * factor) / factor;
     return `${rounded} g`;
   };
 
