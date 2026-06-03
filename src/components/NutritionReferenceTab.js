@@ -189,9 +189,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
     const clearedNutritionValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
       const raw = row[field];
-      const isEmpty = raw == null
-        || (typeof raw === 'string' && raw.trim() === '')
-        || (typeof raw === 'number' && !Number.isFinite(raw));
+      const isEmpty = raw == null || (typeof raw === 'string' && raw.trim() === '');
       if (isEmpty) {
         acc[field] = deleteField();
       }
