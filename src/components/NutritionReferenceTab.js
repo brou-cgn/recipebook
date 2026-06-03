@@ -127,7 +127,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
   const buildPayload = (
     row,
-    source = 'manual',
+    source = '',
     { removeLegacyFamily = true } = {}
   ) => {
     const ingredientID = getIngredientID(row);
@@ -187,9 +187,21 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       return;
     }
 
+    const clearedNutritionValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+      const raw = row[field];
+      const isEmpty = raw == null || (typeof raw === 'string' && raw.trim() === '');
+      if (isEmpty) {
+        acc[field] = deleteField();
+      }
+      return acc;
+    }, {});
+
     await setDoc(
       doc(db, 'nutritionReferences', ingredientID),
-      buildPayload(row, row.source || 'manual'),
+      {
+        ...buildPayload(row, row.source),
+        ...clearedNutritionValues,
+      },
       { merge: true }
     );
     if (row.id !== ingredientID) {
@@ -231,7 +243,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         defaultAmountG: newDefaultAmountG,
         ...newBooleanValues,
         ...newValues,
-      }, newSource || 'manual'),
+      }, newSource),
       { merge: true }
     );
     setNewIngredientID('');
