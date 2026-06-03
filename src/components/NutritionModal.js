@@ -523,7 +523,9 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(ingredientDetails.length > 0 && { ingredientDetails }),
-      ...(writebackErrors.length > 0 && { writebackError: true }),
+      ...(writebackErrors.length > 0 && {
+        writebackError: writebackErrors[0]?.message || 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
+      }),
     };
     setAutoCalcResult(result);
     saveStoredCalcResult(recipe?.id, result);
@@ -1080,7 +1082,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                 )}
                 {autoCalcResult.writebackError && (
                   <p className="nutrition-autocalc-error">
-                    Nährwertreferenz konnte nicht aktualisiert werden (fehlende Schreibrechte oder Netzwerkfehler).
+                    Nährwertreferenz konnte nicht aktualisiert werden: {autoCalcResult.writebackError}
                   </p>
                 )}
               </>
