@@ -9,7 +9,6 @@ import {
   getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
   NUTRITION_REFERENCE_FIELDS,
-  NUTRITION_REFERENCE_MANUAL_STATUS,
   parseNutritionReferenceStatus,
   scaleNutritionValues,
 } from '../utils/nutritionReferenceUtils';
@@ -517,28 +516,26 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           }
 
           // Write back to nutritionReferences when we have an ingredientID whose
-          // existing source is not preferred (openfoodfacts / manual) and status is not 'manuell'
+          // existing source is not preferred (openfoodfacts / manual)
           if (ingredientID) {
             const existingStatus = parseNutritionReferenceStatus(existingRow || {});
-            if (existingStatus !== NUTRITION_REFERENCE_MANUAL_STATUS) {
-              const amountG = computeIngredientAmountG(ingredient, existingRow);
+            const amountG = computeIngredientAmountG(ingredient, existingRow);
 
-              if (amountG != null && amountG > 0) {
-                const per100g = {};
-                NUTRITION_REFERENCE_FIELDS.forEach(field => {
-                  if (n[field] != null) per100g[field] = (n[field] / amountG) * 100;
-                });
-                setDoc(
-                  doc(db, 'nutritionReferences', ingredientID),
-                  {
-                    ...per100g,
-                    source: 'openfoodfacts',
-                    status: getStatusAfterNutritionFetch(existingStatus),
-                    updatedAt: serverTimestamp(),
-                  },
-                  { merge: true }
-                ).catch(err => console.error('Could not write back nutritionReferences:', err));
-              }
+            if (amountG != null && amountG > 0) {
+              const per100g = {};
+              NUTRITION_REFERENCE_FIELDS.forEach(field => {
+                if (n[field] != null) per100g[field] = (n[field] / amountG) * 100;
+              });
+              setDoc(
+                doc(db, 'nutritionReferences', ingredientID),
+                {
+                  ...per100g,
+                  source: 'openfoodfacts',
+                  status: getStatusAfterNutritionFetch(existingStatus),
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              ).catch(err => console.error('Could not write back nutritionReferences:', err));
             }
           }
         } else {

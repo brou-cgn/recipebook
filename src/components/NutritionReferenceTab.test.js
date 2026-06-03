@@ -50,7 +50,7 @@ describe('NutritionReferenceTab', () => {
             displayName: 'Tomate',
             nutritionFamily: 'Gemüse',
             seasonalFamily: 'Fruchtgemüse',
-            status: 'Validiert',
+            status: 'Freigegeben',
             source: 'manual',
             searchTerm: 'Tomate',
             synonyms: ['Tomate'],
@@ -97,7 +97,7 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Quelle')).toBeInTheDocument();
     expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
-    expect(screen.getByLabelText('Status tomate')).toHaveValue('Validiert');
+    expect(screen.getByLabelText('Status tomate')).toHaveValue('Freigegeben');
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });
@@ -120,11 +120,11 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Validiert' } });
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freigegeben' } });
 
     expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Prüfen' } });
+    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Prüfung ausstehend' } });
     expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe('NutritionReferenceTab', () => {
             nutritionFamily: 'Gemüse',
             seasonalFamily: 'Fruchtgemüse',
             category: 'Gemüse',
-            status: 'Freizugeben',
+            status: 'Datenerfassung ausstehend',
             source: 'manual',
             searchTerm: 'Tomate',
             seasonRelevant: true,
@@ -264,7 +264,7 @@ describe('NutritionReferenceTab', () => {
       });
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
       expect(mockSetDoc.mock.calls[0][1]).toEqual({
-        status: 'Prüfen',
+        status: 'Prüfung ausstehend',
         searchTerm: 'tomato',
         kalorien: 82,
         protein: 4.3,
@@ -324,7 +324,7 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][1].AI_Gemini_Error).toBeUndefined();
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
     expect(mockSetDoc.mock.calls[1][1]).toEqual({
-      status: 'Prüfen',
+      status: 'Prüfung ausstehend',
       searchTerm: 'tomato puree',
       kalorien: 80,
       protein: 4,
@@ -392,7 +392,7 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
-  test('disables "Nährwerte abrufen" button and shows tooltip for rows with status manuell', async () => {
+  test('allows refreshing rows with status Freigegeben', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [
         {
@@ -400,50 +400,33 @@ describe('NutritionReferenceTab', () => {
           data: () => ({
             ingredientID: 'dummy-tomate',
             nutritionFamily: 'Gemüse',
-            status: 'manuell',
+            status: 'Freigegeben',
             source: 'manual',
             searchTerm: 'Tomate',
           }),
         },
       ],
     });
-
-    renderTab({ id: 'u1', role: 'moderator' });
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-
-    const btn = screen.getByRole('button', { name: '🤖 Nährwerte abrufen' });
-    expect(btn).toBeDisabled();
-    expect(btn.title).toContain('manuell');
-  });
-
-  test('does not call generateNutritionFromReference for rows with status manuell', async () => {
-    mockGetDocs.mockResolvedValueOnce({
-      docs: [
-        {
-          id: 'tomate',
-          data: () => ({
-            ingredientID: 'dummy-tomate',
-            nutritionFamily: 'Gemüse',
-            status: 'manuell',
-            source: 'manual',
-            searchTerm: 'Tomate',
-          }),
-        },
-      ],
+    const mockCallFn = jest.fn().mockResolvedValue({
+      data: {
+        searchTerm: 'tomato',
+        source: 'openfoodfacts',
+        values: { kalorien: 20 },
+      },
     });
-
-    const mockCallFn = jest.fn();
     mockHttpsCallable.mockReturnValue(mockCallFn);
 
     renderTab({ id: 'u1', role: 'moderator' });
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    // Button is disabled – clicking it via fireEvent (which bypasses disabled) should still not trigger API
+    const btn = screen.getByRole('button', { name: '🤖 Nährwerte abrufen' });
+    expect(btn).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: '🤖 Nährwerte abrufen' }));
 
-    // The guard inside the handler must prevent the API call
-    expect(mockCallFn).not.toHaveBeenCalled();
-    expect(mockSetDoc).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockCallFn).toHaveBeenCalled();
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
   });
 
   test('imports ingredient names from recipes with dummy ids', async () => {

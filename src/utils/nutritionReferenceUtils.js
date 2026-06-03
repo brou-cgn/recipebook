@@ -16,15 +16,17 @@ export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
   'isProcessed',
 ];
 
-export const NUTRITION_REFERENCE_PENDING_STATUS = 'Freizugeben';
-export const NUTRITION_REFERENCE_MANUAL_STATUS = 'manuell';
+export const NUTRITION_REFERENCE_EMPTY_STATUS = '';
 export const NUTRITION_REFERENCE_NEW_STATUS = 'Neu';
-export const NUTRITION_REFERENCE_CHECK_STATUS = 'Prüfen';
+export const NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS = 'Datenerfassung ausstehend';
+export const NUTRITION_REFERENCE_CHECK_STATUS = 'Prüfung ausstehend';
+export const NUTRITION_REFERENCE_APPROVED_STATUS = 'Freigegeben';
 export const NUTRITION_REFERENCE_STATUS_OPTIONS = [
+  NUTRITION_REFERENCE_EMPTY_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
-  'Validiert',
+  NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS,
   NUTRITION_REFERENCE_CHECK_STATUS,
-  NUTRITION_REFERENCE_PENDING_STATUS,
+  NUTRITION_REFERENCE_APPROVED_STATUS,
 ];
 
 export function normalizeNutritionReferenceId(name) {
@@ -112,12 +114,24 @@ export function parseNutritionReferencePossibleUnits(input = {}) {
   return [...new Set(raw.split(delimiter).map((u) => u.trim()).filter(Boolean))];
 }
 
+const LEGACY_STATUS_MAP = {
+  validiert: NUTRITION_REFERENCE_APPROVED_STATUS,
+  freizugeben: NUTRITION_REFERENCE_CHECK_STATUS,
+  prüfen: NUTRITION_REFERENCE_CHECK_STATUS,
+  pruefen: NUTRITION_REFERENCE_CHECK_STATUS,
+  manuell: NUTRITION_REFERENCE_APPROVED_STATUS,
+};
+
 export function parseNutritionReferenceStatus(input = {}) {
-  return String(input.status || input.Status || '').trim();
+  const raw = String(input.status || input.Status || '').trim();
+  if (!raw) return NUTRITION_REFERENCE_EMPTY_STATUS;
+  if (NUTRITION_REFERENCE_STATUS_OPTIONS.includes(raw)) return raw;
+  const normalized = LEGACY_STATUS_MAP[raw.toLowerCase()];
+  return normalized || NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS;
 }
 
 export function getStatusAfterNutritionFetch(existingStatus = '') {
-  const parsedStatus = String(existingStatus || '').trim();
+  const parsedStatus = parseNutritionReferenceStatus({ status: existingStatus });
   if (parsedStatus === NUTRITION_REFERENCE_NEW_STATUS) {
     return NUTRITION_REFERENCE_NEW_STATUS;
   }
