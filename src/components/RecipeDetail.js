@@ -58,7 +58,7 @@ const TIME_REGEX_SOURCE = String.raw`(\d+(?:[.,]\d+)?)\s*(Stunden?|h\b|Minuten?|
 function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPublish, onToggleFavorite, onCreateVersion, currentUser, allRecipes = [], allUsers = [], onHeaderVisibilityChange, onAddToMyRecipes, isAddToMyRecipesLoading, isAddToMyRecipesSuccess, isSharedView, publicGroupId, menuPortionCount, onPortionCountChange }) {
   const [servingMultiplier, setServingMultiplier] = useState(1);
   const [selectedRecipe, setSelectedRecipe] = useState(initialRecipe);
-  const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, lastUpdatedAt } = useNutritionReference();
+  const { rows: nutritionReferenceRows, loading: nutritionReferenceLoading, lastUpdatedAt, reload: reloadNutritionReferences } = useNutritionReference();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [lastOwnCookDateMs, setLastOwnCookDateMs] = useState(undefined);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
@@ -2617,6 +2617,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           isStale={isNutritionStale}
           onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
           nutritionReferenceRows={nutritionReferenceRows}
+          onReloadNutritionReferences={reloadNutritionReferences}
         />
       )}
 

@@ -17,7 +17,13 @@ import {
 const DIRECT_REFERENCE_SOURCES_WHEN_CHECK_PENDING = new Set(['openfoodfacts', 'manual']);
 const GENERATED_NUTRITION_REQUIRED_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate'];
 
-function hasMeaningfulGeneratedNutrition(values) {
+/**
+ * Returns true only when at least one of the core macronutrient fields (kalorien,
+ * protein, fett, kohlenhydrate) is a positive number.  Both paths that write
+ * generated nutrition back to Firestore (resolveIngredientNutritionByStatus and
+ * refreshRowFromOpenFoodFacts) use this guard so the write rule is identical.
+ */
+export function hasMeaningfulGeneratedNutrition(values) {
   return GENERATED_NUTRITION_REQUIRED_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
 }
 
@@ -92,6 +98,8 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
       !DIRECT_REFERENCE_SOURCES_WHEN_CHECK_PENDING.has(source));
 
   let rowToUse = referenceRow;
+  let wroteBackReference = false;
+  let writebackError = null;
   if (shouldGenerateNutrition) {
     const generateNutrition = callableFactory(callableFunctions, 'generateNutritionFromReference');
     if (typeof generateNutrition === 'function') {
@@ -116,8 +124,10 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
               },
               { merge: true }
             );
+            wroteBackReference = true;
           } catch (error) {
             console.warn(`nutrition writeback failed for "${ingredientID}"`, error);
+            writebackError = error;
           }
         }
         rowToUse = {
@@ -148,5 +158,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     searchTerm: rowToUse?.searchTerm || null,
     aiEstimated: String(rowToUse?.source || '').trim().toLowerCase() === 'ai-generiert',
     fromReference: true,
+    wroteBackReference,
+    writebackError,
   };
 }
