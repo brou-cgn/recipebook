@@ -48,7 +48,7 @@ function hasMissingNutritionReferenceStatus(data = {}) {
     return true;
   }
 
-  if (data.status == null) {
+  if (data.status === null || data.status === undefined) {
     return true;
   }
 
