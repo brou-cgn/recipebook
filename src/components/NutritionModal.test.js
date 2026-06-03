@@ -1,4 +1,4 @@
-import { getRecipeCalcResult, buildNutritionCompositionRows, resolveIngredientNutritionFromReference, computeIngredientAmountG } from './NutritionModal';
+import { getRecipeCalcResult, buildNutritionCompositionRows, resolveIngredientNutritionByStatus, computeIngredientAmountG } from './NutritionModal';
 
 jest.mock('../firebase', () => ({
   functions: {},
@@ -8,6 +8,7 @@ jest.mock('../firebase', () => ({
 jest.mock('firebase/firestore', () => ({
   setDoc: jest.fn(),
   doc: jest.fn(),
+  getDoc: jest.fn(),
   serverTimestamp: jest.fn(),
 }));
 
@@ -276,10 +277,11 @@ describe('computeIngredientAmountG', () => {
   });
 });
 
-describe('resolveIngredientNutritionFromReference', () => {
+describe('resolveIngredientNutritionByStatus', () => {
   const referenceRow = {
     ingredientID: 'tomate',
     source: 'openfoodfacts',
+    status: 'Freigegeben',
     defaultAmountG: null,
     kalorien: 20,
     protein: 1,
@@ -290,67 +292,93 @@ describe('resolveIngredientNutritionFromReference', () => {
     salz: 0.01,
   };
 
-  const manualRow = { ...referenceRow, ingredientID: 'mehl', source: 'manual' };
-  const aiRow = { ...referenceRow, ingredientID: 'ei', source: 'ai-generiert', defaultAmountG: 50 };
+  const mockParseAmountCallable = jest.fn();
+  const mockGenerateNutritionCallable = jest.fn();
+  const mockHttpsCallable = (_, name) => {
+    if (name === 'parseIngredientAmountG') return mockParseAmountCallable;
+    if (name === 'generateNutritionFromReference') return mockGenerateNutritionCallable;
+    return jest.fn();
+  };
+  const mockDoc = jest.fn();
+  const mockGetDoc = jest.fn();
+  const deps = { httpsCallable: mockHttpsCallable, functions: {}, db: {}, doc: mockDoc, getDoc: mockGetDoc };
 
-  const rows = [referenceRow, manualRow, aiRow];
-
-  it('returns scaled nutrition when source is openfoodfacts', () => {
-    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
-    const result = resolveIngredientNutritionFromReference(ingredient, rows);
-    expect(result).not.toBeNull();
-    expect(result.fromReference).toBe(true);
-    expect(result.source).toBe('openfoodfacts');
-    // 500g at 20 kcal/100g = 100 kcal
-    expect(result.naehrwerte.kalorien).toBeCloseTo(100);
-    expect(result.naehrwerte.protein).toBeCloseTo(5);
+  beforeEach(() => {
+    mockParseAmountCallable.mockReset().mockResolvedValue({ data: { amountG: null } });
+    mockGenerateNutritionCallable.mockReset().mockResolvedValue({ data: {} });
+    mockDoc.mockReset().mockReturnValue('doc-ref');
+    mockGetDoc.mockReset().mockResolvedValue({ exists: () => false });
   });
 
-  it('returns scaled nutrition when source is manual', () => {
+  it('returns scaled nutrition for status Freigegeben', async () => {
+    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, referenceRow, deps);
+    expect(result).not.toBeNull();
+    expect(result.found).toBe(true);
+    expect(result.fromReference).toBe(true);
+    expect(result.source).toBe('openfoodfacts');
+    expect(result.naehrwerte.kalorien).toBeCloseTo(100);
+    expect(result.naehrwerte.protein).toBeCloseTo(5);
+    expect(mockGenerateNutritionCallable).not.toHaveBeenCalled();
+  });
+
+  it('uses direct reference data for status Prüfung ausstehend with source manual', async () => {
+    const manualRow = { ...referenceRow, ingredientID: 'mehl', source: 'manual', status: 'Prüfung ausstehend' };
     const ingredient = { text: '200 g Mehl', ingredientID: 'mehl' };
-    const result = resolveIngredientNutritionFromReference(ingredient, rows);
+    const result = await resolveIngredientNutritionByStatus(ingredient, manualRow, deps);
     expect(result).not.toBeNull();
     expect(result.source).toBe('manual');
     expect(result.naehrwerte.kalorien).toBeCloseTo(40);
+    expect(mockGenerateNutritionCallable).not.toHaveBeenCalled();
   });
 
-  it('returns null when source is ai-generiert', () => {
-    const ingredient = { text: '2 Stück Eier', ingredientID: 'ei' };
-    // ai-generiert source → should NOT use reference
-    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
-  });
-
-  it('returns null when ingredient has no ingredientID', () => {
-    const ingredient = { text: '250 g Tomaten' };
-    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
-  });
-
-  it('returns null when no matching row exists in reference', () => {
-    const ingredient = { text: '100 g Unbekannt', ingredientID: 'unknown-ingredient' };
-    expect(resolveIngredientNutritionFromReference(ingredient, rows)).toBeNull();
-  });
-
-  it('uses defaultAmountG when unit is not g/kg', () => {
-    const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 15, kalorien: 900 };
+  it('uses defaultAmountG when unit is not g/kg', async () => {
+    const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 15 };
     const ingredient = { text: '2 EL Öl', ingredientID: 'oel' };
-    const result = resolveIngredientNutritionFromReference(ingredient, [row]);
+    const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
     expect(result).not.toBeNull();
-    // 2 EL × 15g = 30g → 900/100*30 = 270 kcal
-    expect(result.naehrwerte.kalorien).toBeCloseTo(270);
+    expect(result.naehrwerte.kalorien).toBeCloseTo(6);
   });
 
-  it('returns scaled nutrition for a row with status Freigegeben and preferred source', () => {
-    const approvedRow = { ...referenceRow, ingredientID: 'butter', source: 'openfoodfacts', status: 'Freigegeben' };
-    const ingredient = { text: '100 g Butter', ingredientID: 'butter' };
-    const result = resolveIngredientNutritionFromReference(ingredient, [approvedRow]);
-    expect(result).not.toBeNull();
-    expect(result.naehrwerte.kalorien).toBeCloseTo(20);
+  it('calls generateNutritionFromReference for status Prüfung ausstehend with ai source and uses refreshed row', async () => {
+    const aiRow = { ...referenceRow, ingredientID: 'ei', source: 'ai-generiert', status: 'Prüfung ausstehend', defaultAmountG: 50 };
+    const refreshed = {
+      source: 'openfoodfacts',
+      kalorien: 150,
+      protein: 12,
+      fett: 10,
+      kohlenhydrate: 1,
+      zucker: 1,
+      ballaststoffe: 0,
+      salz: 0.2,
+    };
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => refreshed,
+    });
+
+    const result = await resolveIngredientNutritionByStatus({ text: '2 Stück Eier', ingredientID: 'ei' }, aiRow, deps);
+
+    expect(mockGenerateNutritionCallable).toHaveBeenCalledWith({
+      ingredientID: 'ei',
+      nutritionFamily: '',
+      category: '',
+    });
+    expect(mockDoc).toHaveBeenCalledWith(deps.db, 'nutritionReferences', 'ei');
+    expect(result.found).toBe(true);
+    expect(result.source).toBe('openfoodfacts');
+    expect(result.naehrwerte.kalorien).toBeCloseTo(150);
   });
 
-  it('returns null when amount in grams cannot be determined', () => {
-    // no unit=g, no defaultAmountG
+  it('returns not found when ingredientID is missing', async () => {
+    const result = await resolveIngredientNutritionByStatus({ text: '250 g Tomaten' }, null, deps);
+    expect(result).toEqual({ found: false, error: 'Keine ingredientID zugeordnet' });
+  });
+
+  it('returns not found when amount in grams cannot be determined', async () => {
     const row = { ...referenceRow, ingredientID: 'ei2', source: 'manual', defaultAmountG: undefined };
     const ingredient = { text: '3 Stück Eier', ingredientID: 'ei2' };
-    expect(resolveIngredientNutritionFromReference(ingredient, [row])).toBeNull();
+    const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
+    expect(result).toEqual({ found: false, error: 'Mengenangabe konnte nicht ermittelt werden' });
   });
 });

@@ -12,11 +12,9 @@ import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngr
 import { parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
 import {
   getNormalizedNutritionReferenceSynonyms,
-  NUTRITION_REFERENCE_NEW_STATUS,
-  getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
-  parseNutritionReferenceStatus,
 } from '../utils/nutritionReferenceUtils';
+import { resolveIngredientNutritionByStatus } from '../utils/nutritionStatusResolver';
 import { db, functions } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -716,13 +714,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         .map((row) => [String(row?.ingredientID || '').trim(), row])
         .filter(([id]) => Boolean(id))
     );
-    const createdIngredientIDs = new Set(
-      (ingredientIDMatchingLog || [])
-        .filter((entry) => entry?.status === 'created')
-        .map((entry) => String(entry?.selectedIngredientID || '').trim())
-        .filter(Boolean)
-    );
-
     const pending = { ...(recipe.naehrwerte || {}), calcPending: true, calcPendingAt: Date.now(), calcError: null };
     try {
       await updateRecipe(recipe.id, { naehrwerte: pending });
@@ -731,40 +722,26 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     }
     setSelectedRecipe(prev => ({ ...prev, naehrwerte: pending }));
 
-    const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
+    let foundCount = 0;
 
     for (let i = 0; i < ingredientItems.length; i++) {
       const ingredient = ingredientItems[i]?.text || '';
       const ingredientID = String(ingredientItems[i]?.ingredientID || '').trim();
+      const existingRow = ingredientID
+        ? nutritionReferenceByIngredientID.get(ingredientID)
+        : null;
       try {
-        const result = await calculateNutrition({ ingredients: [ingredient], portionen: 1 });
-        const { naehrwerte: n, details } = result.data;
-        const detail = details && details[0];
-        if (detail && detail.found) {
+        const resolved = await resolveIngredientNutritionByStatus(ingredientItems[i], existingRow, { httpsCallable, functions, db });
+        if (resolved.found) {
+          const n = resolved.naehrwerte;
           Object.keys(totals).forEach(key => {
             totals[key] += n[key] || 0;
           });
-          if (ingredientID) {
-            const existingStatus = createdIngredientIDs.has(ingredientID)
-              ? NUTRITION_REFERENCE_NEW_STATUS
-              : parseNutritionReferenceStatus(nutritionReferenceByIngredientID.get(ingredientID) || {});
-            try {
-              await setDoc(
-                doc(db, 'nutritionReferences', ingredientID),
-                {
-                  status: getStatusAfterNutritionFetch(existingStatus),
-                  updatedAt: serverTimestamp(),
-                },
-                { merge: true }
-              );
-            } catch (statusErr) {
-              console.error(`Could not update status for "${ingredientID}":`, statusErr);
-            }
-          }
+          foundCount++;
         } else {
-          notIncluded.push({ ingredient, error: detail?.error || 'Nicht gefunden' });
+          notIncluded.push({ ingredient, error: resolved.error || 'Nicht gefunden' });
         }
       } catch (err) {
         console.error(`Auto-calculation failed for "${ingredient}":`, err);
@@ -782,7 +759,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       calcCompletedAt: Date.now(),
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
-      calcFoundCount: ingredientItems.length - notIncluded.length,
+      calcFoundCount: foundCount,
       calcTotalCount: ingredientItems.length,
       ingredientIDMatchingLog: ingredientIDMatchingLog.length > 0 ? ingredientIDMatchingLog : null,
       ingredientIDMatchingLoggedAt: ingredientIDMatchingLog.length > 0 ? Date.now() : null,

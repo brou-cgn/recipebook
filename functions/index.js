@@ -1680,6 +1680,41 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
 }
 
 /**
+ * Cloud Function: Parse ingredient text to amount in grams with Gemini.
+ */
+exports.parseIngredientAmountG = onCall(
+    {maxInstances: 5, timeoutSeconds: 10, secrets: [geminiApiKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'You must be logged in to parse ingredient amounts');
+      }
+
+      const ingredientText = String(request.data?.ingredientText || '').trim();
+      if (!ingredientText) {
+        throw new HttpsError('invalid-argument', 'ingredientText is required');
+      }
+
+      const {normalizeIngredientWithGemini} = createNutritionNormalizationUtils({
+        GoogleGenerativeAI,
+        env: {GEMINI_API_KEY: geminiApiKey.value()},
+      });
+
+      let parsed = null;
+      try {
+        parsed = await normalizeIngredientWithGemini(ingredientText, {timeoutMs: 7000});
+      } catch (error) {
+        console.warn(`Failed to parse ingredient amount for "${ingredientText}" with Gemini:`, error);
+        parsed = null;
+      }
+
+      return {
+        amountG: parsed?.amountG ?? null,
+        name: parsed?.name || ingredientText,
+      };
+    },
+);
+
+/**
  * Cloud Function: Calculate Nutrition from OpenFoodFacts
  *
  * Acts as a server-side proxy for the OpenFoodFacts API so the browser
