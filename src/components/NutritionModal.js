@@ -407,7 +407,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       try {
         const resolved = await resolveIngredientNutritionByStatus(ingredientItem, existingRow, { httpsCallable, functions, db });
         if (resolved.found) {
-          const { naehrwerte: n, fromReference, source } = resolved;
+          const { naehrwerte: n, fromReference, source, searchTerm, aiEstimated } = resolved;
           Object.keys(totals).forEach(key => {
             totals[key] += n[key] || 0;
           });
@@ -415,8 +415,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           ingredientDetails.push({
             ingredient,
             naehrwerte: n,
-            searchTerm: null,
-            aiEstimated: false,
+            searchTerm: searchTerm || null,
+            aiEstimated: Boolean(aiEstimated),
             fromReference,
             source,
           });

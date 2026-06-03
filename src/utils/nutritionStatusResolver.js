@@ -56,6 +56,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
         amountG = parsedResult?.data?.amountG ?? null;
       }
     } catch {
+      console.warn(`parseIngredientAmountG failed for "${ingredientText}"`);
       amountG = null;
     }
   }
@@ -101,6 +102,8 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     naehrwerte: scaleNutritionValues(rowToUse, amountG),
     amountG,
     source: rowToUse?.source || referenceRow?.source || '',
+    searchTerm: rowToUse?.searchTerm || null,
+    aiEstimated: String(rowToUse?.source || '').trim().toLowerCase() === 'ai-generiert',
     fromReference: true,
   };
 }

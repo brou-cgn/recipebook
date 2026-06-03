@@ -1702,7 +1702,8 @@ exports.parseIngredientAmountG = onCall(
       let parsed = null;
       try {
         parsed = await normalizeIngredientWithGemini(ingredientText, {timeoutMs: 7000});
-      } catch {
+      } catch (error) {
+        console.warn(`Failed to parse ingredient amount for "${ingredientText}" with Gemini:`, error);
         parsed = null;
       }
 
