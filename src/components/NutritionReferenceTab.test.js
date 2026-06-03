@@ -98,6 +98,9 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByText('Quelle')).toBeInTheDocument();
     expect(screen.getByText('Suchbegriff')).toBeInTheDocument();
     expect(screen.getByLabelText('Status tomate')).toHaveValue('Freigegeben');
+    const sourceSelect = screen.getByLabelText('Quelle tomate');
+    expect(sourceSelect.querySelector('option[value="ai-generiert"]')).not.toBeNull();
+    expect(sourceSelect.querySelector('option[value="ai"]')).toBeNull();
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });

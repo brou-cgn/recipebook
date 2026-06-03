@@ -46,7 +46,7 @@ const SOURCE_OPTIONS = [
   { value: '', label: '—' },
   { value: 'openfoodfacts', label: 'OpenFoodFacts' },
   { value: 'manual', label: 'Manuell' },
-  { value: 'ai', label: 'AI generiert' },
+  { value: 'ai-generiert', label: 'AI generiert' },
 ];
 
 const NUTRITION_REFERENCE_TABLE_COLUMNS = [
