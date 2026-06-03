@@ -111,6 +111,7 @@ describe('NutritionReferenceTab', () => {
       ingredientID: 'dummy-haferflocken',
       displayName: 'Haferflocken',
       status: 'Neu',
+      source: '',
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
@@ -229,6 +230,26 @@ describe('NutritionReferenceTab', () => {
       seasonRelevant: true,
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+  });
+
+  test('persists clearing nutrition values and source for an existing row', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Kalorien (kcal) tomate'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Quelle tomate'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockSetDoc.mock.calls[0][1];
+    expect(payload.source).toBe('');
+    expect(Object.prototype.hasOwnProperty.call(payload, 'kalorien')).toBe(true);
+    expect(payload.kalorien).toBeUndefined();
+    expect(mockDeleteField).toHaveBeenCalled();
   });
 
   test('refreshes an existing row via generateNutritionFromReference and writes openfoodfacts data', async () => {
