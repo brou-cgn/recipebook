@@ -1,4 +1,4 @@
-import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction } from './ingredientUtils';
+import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
 
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
@@ -583,8 +583,6 @@ describe('formatIngredientAsFraction', () => {
     expect(formatIngredientAsFraction('')).toBe('');
   });
 });
-
-import { isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
 
 describe('isSaltAndPepperCombination', () => {
   test('recognizes "Salz und Pfeffer" with different separators', () => {

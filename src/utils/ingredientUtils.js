@@ -457,7 +457,7 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
 const SALT_AND_PEPPER_REGEX = /^(salz|pfeffer)(?:\s+und\s+|\s*[,&]\s*|\s+)(salz|pfeffer)$/i;
 
 /**
- * Returns true if the ingredient text is a combined "Salz und/oder Pfeffer" entry.
+ * Returns true if the ingredient text is a combined "Salz und Pfeffer" entry.
  * @param {string} text - The ingredient text to check
  * @returns {boolean}
  */
