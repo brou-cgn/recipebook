@@ -93,7 +93,7 @@ jobs:
 
       - name: Set Firebase Function Secrets
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | firebase functions:secrets:set GITHUB_TOKEN --project broubook --data-file -
+          echo "${{ secrets.FIREBASE_GITHUB_PAT }}" | firebase functions:secrets:set GITHUB_TOKEN --project broubook --data-file -
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
