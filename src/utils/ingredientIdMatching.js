@@ -88,6 +88,13 @@ const BASE_COMMON_ADJECTIVES = [
   'hart', 'harte', 'harter', 'hartes', 'harten',
 ];
 
+const PROTECTED_ADJECTIVES = new Set([
+  'weiss',
+  'weisse',
+  'weisser',
+  'weisses',
+]);
+
 const COMMON_UNITS = new Set(BASE_COMMON_UNITS);
 const COMMON_ADJECTIVES = new Set(BASE_COMMON_ADJECTIVES);
 const CUSTOM_UNITS = new Set();
@@ -145,8 +152,8 @@ function sanitizeIngredientNameForIdMatching(name) {
       const normalized = normalizeNutritionReferenceId(token);
       if (!normalized) return false;
       if (IGNORED_INGREDIENT_MARKERS.has(normalized)) return false;
-      if (COMMON_ADJECTIVES.has(normalized)) return false;
-      if (CUSTOM_ADJECTIVES.has(normalized)) return false;
+      if (!PROTECTED_ADJECTIVES.has(normalized) && COMMON_ADJECTIVES.has(normalized)) return false;
+      if (!PROTECTED_ADJECTIVES.has(normalized) && CUSTOM_ADJECTIVES.has(normalized)) return false;
       return true;
     })
     .join(' ')
