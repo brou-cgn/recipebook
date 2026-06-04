@@ -283,6 +283,7 @@ firebase functions:secrets:set GITHUB_TOKEN
 
 When prompted, enter your Gemini API key from https://aistudio.google.com/
 For `GITHUB_TOKEN`, use a GitHub Personal Access Token with the scopes `repo` and `workflow`.
+Prefer a fine-grained token with repository-only access whenever possible.
 
 ### 3. Deploy
 

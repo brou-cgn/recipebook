@@ -96,6 +96,15 @@ function buildIngredientMatchingConfig({
   }, null, 2)}\n`;
 }
 
+function sanitizeBranchSuffix(requestId) {
+  return String(requestId || 'request')
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 24);
+}
+
 async function githubApiRequest({
   token,
   method,
@@ -106,7 +115,7 @@ async function githubApiRequest({
   const response = await fetch(`https://api.github.com${path}`, {
     method,
     headers: {
-      Authorization: 'token ' + token,
+      Authorization: 'Bearer ' + token,
       Accept: 'application/vnd.github+json',
       'Content-Type': 'application/json',
       'User-Agent': 'RecipeBook-DeployBot/1.0',
@@ -145,14 +154,8 @@ async function createIngredientMatchingPullRequest({
     )}`,
   });
 
-  const branchSuffix = String(requestId || 'request')
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 24);
-  const branchName =
-    `auto-deploy/ingredient-matching-${Date.now()}-${branchSuffix || 'request'}`;
+  const branchSuffix = sanitizeBranchSuffix(requestId);
+  const branchName = `auto-deploy/ingredient-matching-${Date.now()}-${branchSuffix}`;
   const branchRef = `refs/heads/${branchName}`;
 
   await githubApiRequest({
@@ -195,9 +198,12 @@ async function createIngredientMatchingPullRequest({
     },
   });
 
-  const customUnitsList = customUnits.map((entry) => `- ${entry}`).join('\n') || '- (leer)';
-  const customAdjectivesList =
-    customIngredientAdjectives.map((entry) => `- ${entry}`).join('\n') || '- (leer)';
+  const customUnitsMarkdown = customUnits.length ?
+    customUnits.map((entry) => `- ${entry}`).join('\n') :
+    '- (leer)';
+  const customAdjectivesMarkdown = customIngredientAdjectives.length ?
+    customIngredientAdjectives.map((entry) => `- ${entry}`).join('\n') :
+    '- (leer)';
 
   const pullRequest = await githubApiRequest({
     token,
@@ -212,9 +218,9 @@ async function createIngredientMatchingPullRequest({
         `Request-ID: \`${requestId}\`\n` +
         `Requested by: \`${requestedBy}\`\n\n` +
         '### Standard-Einheiten\n' +
-        `${customUnitsList}\n\n` +
+        `${customUnitsMarkdown}\n\n` +
         '### Standard-Adjektive\n' +
-        `${customAdjectivesList}`,
+        `${customAdjectivesMarkdown}`,
     },
   });
 

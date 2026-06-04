@@ -166,6 +166,8 @@ test.beforeEach(() => {
 test('creates GitHub PR and marks request completed', async () => {
   const originalFetch = global.fetch;
   const fetchCalls = [];
+  const configPath = '/contents/src%2Fconfig%2FingredientMatching.json';
+  const configPathWithRef = `${configPath}?ref=main`;
   global.fetch = async (url, options = {}) => {
     fetchCalls.push({url, options});
 
@@ -177,7 +179,7 @@ test('creates GitHub PR and marks request completed', async () => {
       };
     }
 
-    if (url.includes('/contents/src%2Fconfig%2FingredientMatching.json?ref=main')) {
+    if (url.includes(configPathWithRef)) {
       return {
         ok: false,
         status: 404,
@@ -193,7 +195,7 @@ test('creates GitHub PR and marks request completed', async () => {
       };
     }
 
-    if (url.includes('/contents/src%2Fconfig%2FingredientMatching.json')) {
+    if (url.includes(configPath) && !url.includes('?ref=main')) {
       return {
         ok: true,
         status: 200,
@@ -238,10 +240,7 @@ test('creates GitHub PR and marks request completed', async () => {
 });
 
 test('rejects request from non-moderator user and marks failed', async () => {
-  usersById = {
-    'user-2': {role: 'read', isAdmin: false},
-  };
-  loadWrappedFunction();
+  usersById['user-2'] = {role: 'read', isAdmin: false};
 
   const originalFetch = global.fetch;
   global.fetch = async () => {
