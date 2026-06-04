@@ -64,6 +64,8 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 
 const INGREDIENT_WORD_LONG_PRESS_MS = 500;
 const ADJECTIVE_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
+const CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX = 12;
+const CONTEXT_MENU_POINTER_OFFSET_PX = 8;
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
@@ -73,12 +75,10 @@ const buildAdjectiveDeclensionForms = (word) => {
   const cleanWord = trimIngredientContextWord(word).toLowerCase();
   if (!cleanWord) return [];
 
-  let stem = cleanWord;
-  ['en', 'em', 'er', 'es', 'e'].forEach((ending) => {
-    if (stem.endsWith(ending) && stem.length > ending.length + 1) {
-      stem = stem.slice(0, -ending.length);
-    }
-  });
+  const stemEnding = ['en', 'em', 'er', 'es', 'e'].find((ending) => (
+    cleanWord.endsWith(ending) && cleanWord.length > ending.length + 1
+  ));
+  const stem = stemEnding ? cleanWord.slice(0, -stemEnding.length) : cleanWord;
 
   const forms = new Set([cleanWord]);
   ADJECTIVE_DECLENSION_SUFFIXES.forEach((suffix) => {
@@ -1786,8 +1786,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 <div
                   className="ingredient-word-context-menu"
                   style={{
-                    top: `${Math.max(12, ingredientWordContextMenu.top + 8)}px`,
-                    left: `${Math.max(12, ingredientWordContextMenu.left + 8)}px`,
+                    top: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.top + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
+                    left: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.left + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
                   }}
                   onClick={(event) => event.stopPropagation()}
                 >
