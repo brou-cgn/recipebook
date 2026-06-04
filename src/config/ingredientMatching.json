@@ -1,7 +1,9 @@
 {
-  "requestId": "ingredient-matching-1780587553278",
+  "requestId": "ingredient-matching-1780589877628",
   "requestedBy": "WXG6Z8bh5yX1Ge1ZQCZ3Q0nnT3o2",
-  "generatedAt": "2026-06-04T15:39:15.983Z",
-  "customUnits": [],
+  "generatedAt": "2026-06-04T16:18:00.223Z",
+  "customUnits": [
+    "Kästchen"
+  ],
   "customIngredientAdjectives": []
 }
