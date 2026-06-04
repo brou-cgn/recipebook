@@ -1,9 +1,12 @@
 {
-  "requestId": "ingredient-matching-1780589877628",
-  "requestedBy": "WXG6Z8bh5yX1Ge1ZQCZ3Q0nnT3o2",
-  "generatedAt": "2026-06-04T16:18:00.223Z",
-  "customUnits": [
-    "Kästchen"
-  ],
-  "customIngredientAdjectives": []
+  "requestId": "ingredient-matching-1780596029779",
+  "requestedBy": "4C0VO5hdk7bKQnrP570zO01GILO2",
+  "generatedAt": "2026-06-04T18:00:35.160Z",
+  "customUnits": [],
+  "customIngredientAdjectives": [
+    "unbehandelt",
+    "unbehandelte",
+    "unbehandelter",
+    "unbehandeltes"
+  ]
 }
