@@ -251,5 +251,14 @@ service cloud.firestore {
       // Only admins can delete proposals
       allow delete: if isAdmin();
     }
+
+    // Development deployment requests collection
+    match /developmentDeployRequests/{requestId} {
+      allow read: if isModeratorOrAdmin();
+      allow create: if isModeratorOrAdmin()
+                    && request.resource.data.requestedBy == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
   }
 }
