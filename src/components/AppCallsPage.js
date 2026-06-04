@@ -25,9 +25,14 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   buildPendingNutritionReferenceDraft,
   hasMissingIngredientIDs,
+  parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
-import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import {
+  NUTRITION_REFERENCE_NEW_STATUS,
+  getNormalizedNutritionReferenceSynonyms,
+  normalizeNutritionReferenceId,
+} from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
   updateCuisineProposal,
@@ -38,6 +43,22 @@ import {
   INGREDIENT_MATCH_IGNORE_OPTION,
   useIngredientIDMatching,
 } from '../hooks/useIngredientIDMatching';
+
+const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
+  const merged = [];
+  const seen = new Set();
+
+  [...existingValues, ...valuesToAdd].forEach((value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return;
+    const normalized = normalizeNutritionReferenceId(trimmed);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    merged.push(trimmed);
+  });
+
+  return merged;
+};
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -352,6 +373,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     if (!ingredientMatchDialog) return;
     const { recipe: dialogRecipe, fieldName, updatedIngredients, unresolved, selections } = ingredientMatchDialog;
     const nextIngredients = [...updatedIngredients];
+    const ingredientLearningData = new Map();
     const createdReferenceDrafts = new Map();
     const referencesToCreate = [];
 
@@ -405,6 +427,22 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       nextIngredients[entry.index] = typeof original === 'string'
         ? { type: 'ingredient', text: original, ingredientID: selectedIngredientID }
         : { ...restOriginal, ingredientID: selectedIngredientID };
+
+      const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
+      if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
+        const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
+        const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
+        const parsedSynonym = String(name || '').trim();
+        const parsedUnit = String(unit || '').trim();
+
+        if (parsedSynonym && parsedSynonym.length >= 3) {
+          learningUpdate.synonyms.add(parsedSynonym);
+        }
+        if (parsedUnit) {
+          learningUpdate.possibleUnits.add(parsedUnit);
+        }
+        ingredientLearningData.set(selectedIngredientID, learningUpdate);
+      }
     }
 
     if (referencesToCreate.length > 0) {
@@ -430,6 +468,44 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           console.error('Could not create pending nutrition reference:', err);
         }
       }));
+    }
+
+    for (const [ingredientID, additions] of ingredientLearningData.entries()) {
+      const existingRow = nutritionReferenceRows.find((row) => String(row?.ingredientID || '').trim() === ingredientID);
+      const existingSynonyms = Array.isArray(existingRow?.synonyms) ? existingRow.synonyms : [];
+      const existingPossibleUnits = Array.isArray(existingRow?.possibleUnits) ? existingRow.possibleUnits : [];
+      const existingSynonymIds = new Set(existingSynonyms.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean));
+      const existingUnitIds = new Set(existingPossibleUnits.map((value) => normalizeNutritionReferenceId(value)).filter(Boolean));
+      const newSynonyms = [...additions.synonyms].filter((value) => {
+        const normalized = normalizeNutritionReferenceId(value);
+        return Boolean(normalized) && !existingSynonymIds.has(normalized);
+      });
+      const newPossibleUnits = [...additions.possibleUnits].filter((value) => {
+        const normalized = normalizeNutritionReferenceId(value);
+        return Boolean(normalized) && !existingUnitIds.has(normalized);
+      });
+
+      if (newSynonyms.length === 0 && newPossibleUnits.length === 0) continue;
+
+      const mergedSynonyms = mergeUniqueNormalizedValues(existingSynonyms, newSynonyms);
+      const mergedPossibleUnits = mergeUniqueNormalizedValues(existingPossibleUnits, newPossibleUnits);
+      const normalizedSynonyms = getNormalizedNutritionReferenceSynonyms({ synonyms: mergedSynonyms });
+
+      try {
+        await setDoc(
+          doc(db, 'nutritionReferences', ingredientID),
+          {
+            ingredientID,
+            synonyms: mergedSynonyms,
+            normalizedSynonyms,
+            possibleUnits: mergedPossibleUnits,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error(`Could not persist manual ingredient synonym/unit updates for ${ingredientID}:`, err);
+      }
     }
 
     await persistIngredientIDs(fieldName, nextIngredients, dialogRecipe);
