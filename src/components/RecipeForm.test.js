@@ -120,6 +120,10 @@ jest.mock('../utils/cuisineProposalsFirestore', () => ({
   addCuisineProposal: jest.fn(() => Promise.resolve('proposal-id-1')),
 }));
 
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => ({ rows: [], loading: false }),
+}));
+
 // Mock @dnd-kit modules
 jest.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }) => <div>{children}</div>,

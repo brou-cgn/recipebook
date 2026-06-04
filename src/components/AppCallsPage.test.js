@@ -1140,3 +1140,111 @@ describe('AppCallsPage – Benjamin Rousselli filter', () => {
     expect(stats.textContent).not.toMatch(/gefiltert/);
   });
 });
+
+describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
+    const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+    getInspirationListSettings.mockResolvedValue({
+      inspirationListName: 'Inspirationen',
+      inspirationListDescription: 'Interaktive Liste',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: 'Klassische Liste',
+    });
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+  });
+
+  test('tab button is present', async () => {
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+    expect(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' })).toBeInTheDocument();
+  });
+
+  test('shows empty state when all ingredients have IDs', async () => {
+    const recipes = [
+      { id: 'r1', title: 'Pasta', ingredients: [{ type: 'ingredient', text: '200 g Nudeln', ingredientID: 'nudel' }] },
+    ];
+    render(<AppCallsPage currentUser={adminUser} recipes={recipes} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    expect(await screen.findByText('Alle Zutaten haben bereits eine ingredientID.')).toBeInTheDocument();
+  });
+
+  test('lists recipes with missing ingredient IDs', async () => {
+    const recipes = [
+      {
+        id: 'r1',
+        title: 'Tomatensuppe',
+        ingredients: [
+          { type: 'ingredient', text: '200 g Tomaten' },
+          { type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' },
+        ],
+      },
+      {
+        id: 'r2',
+        title: 'Salat',
+        ingredients: [{ type: 'ingredient', text: '100 g Salat', ingredientID: 'salat' }],
+      },
+    ];
+    render(<AppCallsPage currentUser={adminUser} recipes={recipes} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+
+    expect(await screen.findByText('Tomatensuppe')).toBeInTheDocument();
+    expect(screen.queryByText('Salat')).not.toBeInTheDocument();
+  });
+
+  test('shows "IDs zuordnen" button for each recipe with missing IDs', async () => {
+    const recipes = [
+      { id: 'r1', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }] },
+    ];
+    render(<AppCallsPage currentUser={adminUser} recipes={recipes} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    expect(await screen.findByRole('button', { name: 'IDs zuordnen' })).toBeInTheDocument();
+  });
+
+  test('opens recipe detail when recipe title is clicked', async () => {
+    const onSelectRecipe = jest.fn();
+    const recipe = { id: 'r1', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }] };
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[recipe]}
+        onUpdateRecipe={jest.fn()}
+        onSelectRecipe={onSelectRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(await screen.findByText('Tomatensuppe'));
+    expect(onSelectRecipe).toHaveBeenCalledWith(recipe);
+  });
+
+  test('shows stats with correct recipe count', async () => {
+    const recipes = [
+      { id: 'r1', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }] },
+      { id: 'r2', title: 'Zwiebelsuppe', ingredients: [{ type: 'ingredient', text: '2 Zwiebeln' }] },
+    ];
+    const { container } = render(
+      <AppCallsPage currentUser={adminUser} recipes={recipes} onUpdateRecipe={jest.fn()} />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    await screen.findByText('Tomatensuppe');
+
+    const stats = container.querySelector('.app-calls-stats');
+    expect(stats.textContent).toMatch(/2/);
+    expect(stats.textContent).toMatch(/Rezepte/);
+  });
+});

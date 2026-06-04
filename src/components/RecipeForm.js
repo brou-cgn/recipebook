@@ -9,6 +9,8 @@ import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/us
 import { getImageForCategories } from '../utils/categoryImages';
 import { formatIngredientSpacing } from '../utils/ingredientUtils';
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
+import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import RecipeImportModal from './RecipeImportModal';
 import OcrScanModal from './OcrScanModal';
 import WebImportModal from './WebImportModal';
@@ -524,6 +526,9 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   const ingredientDeleteBannerTimeoutsRef = useRef(new Map());
   const stepDeleteBannerTimeoutsRef = useRef(new Map());
   const swipeDeleteBannerCounterRef = useRef(0);
+
+  // Nutrition reference rows for auto-assigning ingredient IDs
+  const { rows: nutritionReferenceRows } = useNutritionReference();
 
   // Derived cuisine pill lists for the pill-based cuisine selector
   const visibleCuisinePills = useMemo(() => {
@@ -1063,11 +1068,19 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       // Keep object format when headings or ingredient IDs are present
       const hasIngredientHeadings = formattedIngredients.some(item => item.type === 'heading');
       const hasIngredientIds = formattedIngredients.some(item => item?.ingredientID !== undefined);
-      
+
+      // Auto-assign ingredientIDs for ingredients with a unique 100% match
+      const { updatedIngredients: autoAssignedIngredients, autoAssigned } = nutritionReferenceRows.length > 0
+        ? getAutoAssignedIngredients(formattedIngredients, nutritionReferenceRows)
+        : { updatedIngredients: formattedIngredients, autoAssigned: 0 };
+
+      const finalIngredients = autoAssigned > 0 ? autoAssignedIngredients : formattedIngredients;
+      const hasAutoAssignedIds = autoAssigned > 0;
+
       // Convert to string format if no headings (backward compatibility)
-      const ingredientsToSave = hasIngredientHeadings || hasIngredientIds
-        ? formattedIngredients 
-        : formattedIngredients.map(item => item.text);
+      const ingredientsToSave = hasIngredientHeadings || hasIngredientIds || hasAutoAssignedIds
+        ? finalIngredients
+        : finalIngredients.map(item => item.text);
 
       // Same for steps
       const filteredSteps = steps.filter(s => s.text.trim() !== '');
