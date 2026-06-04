@@ -1,12 +1,13 @@
 {
-  "requestId": "ingredient-matching-1780596029779",
+  "requestId": "ingredient-matching-1780596079126",
   "requestedBy": "4C0VO5hdk7bKQnrP570zO01GILO2",
-  "generatedAt": "2026-06-04T18:00:35.160Z",
+  "generatedAt": "2026-06-04T18:01:22.436Z",
   "customUnits": [],
   "customIngredientAdjectives": [
     "unbehandelt",
     "unbehandelte",
     "unbehandelter",
-    "unbehandeltes"
+    "unbehandeltes",
+    "kochendheiße"
   ]
 }
