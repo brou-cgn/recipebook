@@ -2730,13 +2730,13 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     aria-label={`ingredientID für ${entry.ingredient}`}
                   >
                     <option value="">Bitte auswählen</option>
-                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
-                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
                     {entry.suggestions.map((suggestion) => (
                       <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
                         {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
                       </option>
                     ))}
+                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
+                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
                   </select>
                 </li>
               ))}
