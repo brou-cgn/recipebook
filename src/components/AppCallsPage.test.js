@@ -673,6 +673,61 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     ));
   });
 
+  test('learns synonyms and units for manual existing ingredientID assignments below 100% confidence', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'walnuss', displayName: 'Walnuss', synonyms: ['Walnuss'], possibleUnits: ['EL'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'walnuss', displayName: 'Walnuss', confidencePercent: 75 },
+    ]);
+    const onUpdateRecipe = jest.fn(() => Promise.resolve());
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r-walnuss',
+            title: 'Walnussbrot',
+            ingredients: [{ type: 'ingredient', text: '50 g Walnüsse' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+    mockSetDoc.mockClear();
+
+    fireEvent.change(screen.getByLabelText('ingredientID für 50 g Walnüsse'), { target: { value: 'walnuss' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
+      'r-walnuss',
+      {
+        ingredients: [{ type: 'ingredient', text: '50 g Walnüsse', ingredientID: 'walnuss' }],
+      }
+    ));
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    const [, payload, options] = mockSetDoc.mock.calls[0];
+    expect(payload).toEqual(expect.objectContaining({
+      ingredientID: 'walnuss',
+      synonyms: expect.arrayContaining(['Walnuss', 'Walnüsse']),
+      normalizedSynonyms: expect.arrayContaining(['walnuss', 'walnuesse']),
+      possibleUnits: expect.arrayContaining(['EL', 'g']),
+    }));
+    expect(options).toEqual({ merge: true });
+  });
+
   test('creates a new pending ingredientID from ambiguous selection via "Neue Zutat"', async () => {
     mockNutritionReferenceState = {
       rows: [
