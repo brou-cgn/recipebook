@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
 import { INGREDIENT_MATCH_CREATE_NEW_OPTION } from '../hooks/useIngredientIDMatching';
 
@@ -487,9 +487,18 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     mockGetIngredientIdSuggestions.mockReset();
     mockGetIngredientIdSuggestions.mockReturnValue([]);
     mockNutritionModalProps.mockReset();
-    const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    const {
+      getCustomLists,
+      getButtonIcons,
+      getInspirationListSettings,
+      getStandardIngredientTerms,
+    } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+    getStandardIngredientTerms.mockResolvedValue({
+      standardUnits: ['Tasse'],
+      standardAdjectives: ['frisch'],
+    });
     getInspirationListSettings.mockResolvedValue({
       inspirationListName: 'Inspirationen',
       inspirationListDescription: 'Interaktive Liste',
@@ -868,6 +877,58 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     expect(within(withWarningRow).getByLabelText('Enthält nicht einkalkulierte Zutaten')).toBeInTheDocument();
     expect(within(withoutWarningRow).queryByLabelText('Enthält nicht einkalkulierte Zutaten')).not.toBeInTheDocument();
+  });
+
+  test('does not show long-press context menu outside missing ingredientID tab', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Gemüsepfanne',
+            ingredients: [{ type: 'ingredient', text: '1 frische Tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn(() => Promise.resolve())}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+
+    jest.useFakeTimers();
+    try {
+      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frische"' });
+      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
+      act(() => {
+        jest.advanceTimersByTime(600);
+      });
+      fireEvent.touchEnd(wordButton);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    expect(screen.queryByRole('button', { name: 'Als Standardeinheit definieren' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Als Standardadjektiv definieren' })).not.toBeInTheDocument();
   });
 
   test('opens recipe detail when recipe name is clicked', async () => {
@@ -1430,6 +1491,111 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     const stats = container.querySelector('.app-calls-stats');
     expect(stats.textContent).toMatch(/2/);
     expect(stats.textContent).toMatch(/Rezepte/);
+  });
+
+  test('long press on ingredient word allows defining a standard unit on missing ingredientID page', async () => {
+    const { saveStandardIngredientTerms } = require('../utils/customLists');
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[{ id: 'r1', title: 'Suppe', ingredients: [{ type: 'ingredient', text: '1 frische Tomate' }] }]}
+        onUpdateRecipe={jest.fn(() => Promise.resolve())}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+
+    jest.useFakeTimers();
+    try {
+      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frische"' });
+      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
+      act(() => {
+        jest.advanceTimersByTime(600);
+      });
+      fireEvent.touchEnd(wordButton);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Als Standardeinheit definieren' }));
+
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
+    const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);
+    expect(savedUnits).toContain('frische');
+    expect(savedAdjectives).toEqual(expect.any(Array));
+    expect(savedUserId).toBe(adminUser.id);
+  });
+
+  test('long press standard adjective option stores declension forms', async () => {
+    const { saveStandardIngredientTerms } = require('../utils/customLists');
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[{ id: 'r1', title: 'Suppe', ingredients: [{ type: 'ingredient', text: '1 frischen Tomate' }] }]}
+        onUpdateRecipe={jest.fn(() => Promise.resolve())}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+
+    jest.useFakeTimers();
+    try {
+      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frischen"' });
+      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
+      act(() => {
+        jest.advanceTimersByTime(600);
+      });
+      fireEvent.touchEnd(wordButton);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Als Standardadjektiv definieren' }));
+
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
+    const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);
+    expect(savedUnits).toEqual(expect.any(Array));
+    expect(savedAdjectives).toEqual(expect.arrayContaining([
+      'frisch',
+      'frische',
+      'frischen',
+      'frischem',
+      'frischer',
+      'frisches',
+    ]));
+    expect(savedUserId).toBe(adminUser.id);
   });
 });
 
