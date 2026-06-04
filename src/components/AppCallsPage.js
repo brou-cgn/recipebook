@@ -85,10 +85,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTabLocal] = useState(activeTabProp ?? 'app');
+  const isControlled = activeTabProp !== undefined && onActiveTabChange !== undefined;
+  const [localActiveTab, setLocalActiveTab] = useState(activeTabProp ?? 'app');
+  const activeTab = isControlled ? activeTabProp : localActiveTab;
   const setActiveTab = (tab) => {
-    setActiveTabLocal(tab);
-    if (onActiveTabChange) onActiveTabChange(tab);
+    if (isControlled) {
+      onActiveTabChange(tab);
+    } else {
+      setLocalActiveTab(tab);
+    }
   };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
