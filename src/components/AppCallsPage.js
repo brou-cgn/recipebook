@@ -504,7 +504,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           { merge: true }
         );
       } catch (err) {
-        console.error('Could not persist manual ingredient synonym/unit updates:', err);
+        console.error(`Could not persist manual ingredient synonym/unit updates for ${ingredientID}:`, err);
       }
     }
 
