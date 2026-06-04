@@ -104,7 +104,7 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
   const [loading, setLoading] = useState(enabled);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async ({ throwOnError = false } = {}) => {
     if (!enabled) {
       setRows([]);
       setLoading(false);
@@ -125,6 +125,9 @@ export function NutritionReferenceProvider({ children, enabled = true }) {
     } catch (error) {
       console.error('Fehler beim Laden der Nährwert-Referenzen:', error);
       setRows([]);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     } finally {
       setLoading(false);

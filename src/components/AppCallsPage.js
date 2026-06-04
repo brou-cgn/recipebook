@@ -284,6 +284,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   // Fehlende Zutaten-IDs tab state
   const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
+  const [refreshingNutritionReferenceCache, setRefreshingNutritionReferenceCache] = useState(false);
+  const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
   const ingredientWordLongPressTimerRef = useRef(null);
 
@@ -402,6 +404,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       await handleEnsureIngredientIDsForModal(recipe);
     } finally {
       setAssigningIngredientIdRecipeId(null);
+    }
+  };
+
+  const handleRefreshNutritionReferenceCache = async () => {
+    setNutritionReferenceCacheFeedback(null);
+    setRefreshingNutritionReferenceCache(true);
+
+    try {
+      await reloadNutritionReferences({ throwOnError: true });
+      setNutritionReferenceCacheFeedback({
+        type: 'success',
+        message: 'nutritionReferences-Cache wurde geleert und neu geladen.',
+      });
+    } catch (error) {
+      setNutritionReferenceCacheFeedback({
+        type: 'error',
+        message: error?.message
+          ? `Fehler beim Leeren des nutritionReferences-Caches: ${error.message}`
+          : 'Fehler beim Leeren des nutritionReferences-Caches.',
+      });
+    } finally {
+      setRefreshingNutritionReferenceCache(false);
     }
   };
 
@@ -1302,6 +1326,24 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               Hier werden alle Rezepte aufgelistet, bei denen mindestens eine Zutat noch keine ingredientID besitzt.
               Über den Button „IDs zuordnen" kann die Zuordnung direkt vorgenommen werden.
             </p>
+            <div className="app-calls-action-row">
+              <button
+                type="button"
+                className="app-calls-share-btn"
+                onClick={handleRefreshNutritionReferenceCache}
+                disabled={refreshingNutritionReferenceCache}
+              >
+                {refreshingNutritionReferenceCache ? 'Cache wird geleert…' : 'Cache leeren'}
+              </button>
+              {nutritionReferenceCacheFeedback?.message ? (
+                <span
+                  className={`app-calls-feedback${nutritionReferenceCacheFeedback.type === 'error' ? ' is-error' : ''}`}
+                  role={nutritionReferenceCacheFeedback.type === 'error' ? 'alert' : 'status'}
+                >
+                  {nutritionReferenceCacheFeedback.message}
+                </span>
+              ) : null}
+            </div>
             {recipesWithMissingIngredientIDs.length === 0 ? (
               <div className="app-calls-empty">Alle Zutaten haben bereits eine ingredientID.</div>
             ) : (
