@@ -7,7 +7,7 @@ import { getCustomLists, saveCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon
 import { addCuisineProposal } from '../utils/cuisineProposalsFirestore';
 import { getUsers, isCurrentUserAdmin, getUserAiOcrScanCount } from '../utils/userManagement';
 import { getImageForCategories } from '../utils/categoryImages';
-import { formatIngredientSpacing } from '../utils/ingredientUtils';
+import { formatIngredientSpacing, expandSaltAndPepperIngredients } from '../utils/ingredientUtils';
 import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
 import { getAutoAssignedIngredients } from '../utils/ingredientIdMatching';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
@@ -1069,12 +1069,15 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
       const hasIngredientHeadings = formattedIngredients.some(item => item.type === 'heading');
       const hasIngredientIds = formattedIngredients.some(item => item?.ingredientID !== undefined);
 
+      // Split "Salz und Pfeffer" combined entries into two separate entries
+      const expandedIngredients = expandSaltAndPepperIngredients(formattedIngredients);
+
       // Auto-assign ingredientIDs for ingredients with a unique 100% match
       const { updatedIngredients: autoAssignedIngredients, autoAssigned } = nutritionReferenceRows.length > 0
-        ? getAutoAssignedIngredients(formattedIngredients, nutritionReferenceRows)
-        : { updatedIngredients: formattedIngredients, autoAssigned: 0 };
+        ? getAutoAssignedIngredients(expandedIngredients, nutritionReferenceRows)
+        : { updatedIngredients: expandedIngredients, autoAssigned: 0 };
 
-      const finalIngredients = autoAssigned > 0 ? autoAssignedIngredients : formattedIngredients;
+      const finalIngredients = autoAssigned > 0 ? autoAssignedIngredients : expandedIngredients;
       const hasAutoAssignedIds = autoAssigned > 0;
 
       // Convert to string format if no headings (backward compatibility)
