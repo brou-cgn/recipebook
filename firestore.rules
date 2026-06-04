@@ -150,8 +150,9 @@ service cloud.firestore {
       // Admins may update any settings document.
       // edit/moderator users may update only the list fields in settings/app
       // (cuisineTypes, cuisineGroups, mealCategories, units, portionUnits,
-      //  conversionTable, customUnits) or the standard ingredient term fields
-      // in settings/standardIngredientTerms – all other fields remain admin-only.
+      //  conversionTable, plus the legacy customUnits field) or the standard
+      // ingredient term fields in settings/standardIngredientTerms – all other
+      // fields remain admin-only.
       // Moderators may additionally update Kochatelier name/description fields.
       allow update: if isAdmin()
                  || (
