@@ -14,6 +14,10 @@ describe('nutritionReferenceUtils', () => {
   test('normalizeNutritionReferenceId creates stable ids', () => {
     expect(normalizeNutritionReferenceId('Crème fraîche')).toBe('creme-fraiche');
     expect(normalizeNutritionReferenceId('  Weißkohl  ')).toBe('weisskohl');
+    expect(normalizeNutritionReferenceId('Äpfel')).toBe('aepfel');
+    expect(normalizeNutritionReferenceId('Öl')).toBe('oel');
+    expect(normalizeNutritionReferenceId('Müsli')).toBe('muesli');
+    expect(normalizeNutritionReferenceId('Straße')).toBe('strasse');
     expect(normalizeNutritionReferenceId('')).toBe('');
   });
 
