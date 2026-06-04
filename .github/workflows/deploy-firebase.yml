@@ -93,11 +93,8 @@ jobs:
 
       - name: Set Firebase Function Secrets
         run: |
-          secret_file="$(mktemp)"
-          trap 'rm -f "$secret_file"' EXIT
-          chmod 600 "$secret_file"
-          printf '%s' "${{ secrets.GITHUB_TOKEN }}" > "$secret_file"
-          firebase functions:secrets:set GITHUB_TOKEN --project broubook --data-file "$secret_file"
+          set -euo pipefail
+          firebase functions:secrets:set GITHUB_TOKEN --project broubook --data-file - <<< "${{ secrets.GITHUB_TOKEN }}"
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
