@@ -829,6 +829,119 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
   });
 });
 
+describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSetDoc.mockClear();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    mockNutritionModalProps.mockReset();
+    const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({
+      cuisineTypes: ['Spanisch'],
+      cuisineGroups: [],
+      customUnits: ['Tasse'],
+      customIngredientAdjectives: ['frisch'],
+    });
+    saveCustomLists.mockResolvedValue();
+    getInspirationListSettings.mockResolvedValue({
+      inspirationListName: 'Inspirationen',
+      inspirationListDescription: 'Interaktive Liste',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: 'Klassische Liste',
+    });
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    getAppCalls.mockResolvedValue([]);
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getRecipeCalls.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+  });
+
+  test('shows and persists custom units and adjectives', async () => {
+    const { saveCustomLists } = require('../utils/customLists');
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+
+    expect(await screen.findByText('Tasse')).toBeInTheDocument();
+    expect(screen.getByText('frisch')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Neue Einheit hinzufügen (z.B. Päckchen)...'), {
+      target: { value: 'Päckchen' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[0]);
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customUnits: expect.arrayContaining(['Tasse', 'Päckchen']),
+        customIngredientAdjectives: expect.arrayContaining(['frisch']),
+      })
+    ));
+
+    fireEvent.change(screen.getByPlaceholderText('Neues Adjektiv hinzufügen (z.B. gehackt)...'), {
+      target: { value: 'gehackt' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[1]);
+
+    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customUnits: expect.arrayContaining(['Tasse', 'Päckchen']),
+        customIngredientAdjectives: expect.arrayContaining(['frisch', 'gehackt']),
+      })
+    ));
+  });
+
+  test('starts deployment request and shows success message', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt deployen' }));
+
+    await waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      kind: 'ingredient-id-matching',
+      status: 'pending',
+    }));
+    expect(await screen.findByText('Deployment wurde gestartet. Der Entwicklungs-Workflow wurde angefragt.')).toBeInTheDocument();
+  });
+
+  test('shows clear error when deployment request fails', async () => {
+    mockSetDoc.mockRejectedValueOnce(new Error('request failed'));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt deployen' }));
+
+    expect(await screen.findByText('Fehler beim Starten des Deployments. Bitte erneut versuchen.')).toBeInTheDocument();
+    errorSpy.mockRestore();
+  });
+});
+
 describe('AppCallsPage – Kochateliereinstellungen tab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
