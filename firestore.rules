@@ -139,11 +139,19 @@ service cloud.firestore {
     // Settings collection
     match /settings/{settingId} {
       allow read: if isAnyUser();
-      allow create, delete: if isAdmin();
+      allow create: if isAdmin()
+                    || (
+                         isEditOrAdmin()
+                         && settingId == 'standardIngredientTerms'
+                         && request.resource.data.keys()
+                              .hasOnly(['standardUnits', 'standardAdjectives', 'updatedAt', 'updatedBy'])
+                       );
+      allow delete: if isAdmin();
       // Admins may update any settings document.
       // edit/moderator users may update only the list fields in settings/app
       // (cuisineTypes, cuisineGroups, mealCategories, units, portionUnits,
-      //  conversionTable, customUnits) – all other fields remain admin-only.
+      //  conversionTable, customUnits) or the standard ingredient term fields
+      // in settings/standardIngredientTerms – all other fields remain admin-only.
       // Moderators may additionally update Kochatelier name/description fields.
       allow update: if isAdmin()
                  || (
@@ -152,6 +160,12 @@ service cloud.firestore {
                       && request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['cuisineTypes', 'cuisineGroups', 'mealCategories',
                                      'units', 'portionUnits', 'conversionTable', 'customUnits'])
+                    )
+                 || (
+                     isEditOrAdmin()
+                     && settingId == 'standardIngredientTerms'
+                     && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['standardUnits', 'standardAdjectives', 'updatedAt', 'updatedBy'])
                     )
                  || (
                      isModeratorOrAdmin()
@@ -252,13 +266,5 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Development deployment requests collection
-    match /developmentDeployRequests/{requestId} {
-      allow read: if isModeratorOrAdmin();
-      allow create: if isModeratorOrAdmin()
-                    && request.resource.data.requestedBy == request.auth.uid
-                    && request.resource.data.status == 'pending';
-      allow update, delete: if isAdmin();
-    }
   }
 }

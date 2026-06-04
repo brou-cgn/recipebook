@@ -5,6 +5,7 @@ import { INGREDIENT_MATCH_CREATE_NEW_OPTION } from '../hooks/useIngredientIDMatc
 
 let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 const mockGetIngredientIdSuggestions = jest.fn(() => []);
+const mockSetCustomIngredientMatchingTerms = jest.fn();
 const mockNutritionModalProps = jest.fn();
 const mockSetDoc = jest.fn(() => Promise.resolve());
 
@@ -39,6 +40,7 @@ jest.mock('../utils/ingredientIdMatching', () => {
   return {
     ...actual,
     getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
+    setCustomIngredientMatchingTerms: (...args) => mockSetCustomIngredientMatchingTerms(...args),
   };
 });
 
@@ -81,6 +83,10 @@ jest.mock('../utils/customLists', () => ({
     Promise.resolve({ cuisineTypes: ['Spanisch', 'Italienisch'], cuisineGroups: [] })
   ),
   saveCustomLists: jest.fn(() => Promise.resolve()),
+  getStandardIngredientTerms: jest.fn(() =>
+    Promise.resolve({ standardUnits: ['Tasse'], standardAdjectives: ['frisch'] })
+  ),
+  saveStandardIngredientTerms: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/cuisineProposalsFirestore', () => ({
@@ -114,6 +120,7 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSetDoc.mockClear();
+    mockSetCustomIngredientMatchingTerms.mockClear();
     mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
     mockGetIngredientIdSuggestions.mockReset();
     mockGetIngredientIdSuggestions.mockReturnValue([]);
@@ -888,19 +895,28 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSetDoc.mockClear();
+    mockSetCustomIngredientMatchingTerms.mockClear();
     mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
     mockGetIngredientIdSuggestions.mockReset();
     mockGetIngredientIdSuggestions.mockReturnValue([]);
     mockNutritionModalProps.mockReset();
-    const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    const {
+      getCustomLists,
+      getStandardIngredientTerms,
+      saveStandardIngredientTerms,
+      getButtonIcons,
+      getInspirationListSettings,
+    } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
     getCustomLists.mockResolvedValue({
       cuisineTypes: ['Spanisch'],
       cuisineGroups: [],
-      customUnits: ['Tasse'],
-      customIngredientAdjectives: ['frisch'],
     });
-    saveCustomLists.mockResolvedValue();
+    getStandardIngredientTerms.mockResolvedValue({
+      standardUnits: ['Tasse'],
+      standardAdjectives: ['frisch'],
+    });
+    saveStandardIngredientTerms.mockResolvedValue();
     getInspirationListSettings.mockResolvedValue({
       inspirationListName: 'Inspirationen',
       inspirationListDescription: 'Interaktive Liste',
@@ -915,8 +931,8 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     getCuisineProposals.mockResolvedValue([]);
   });
 
-  test('shows and persists custom units and adjectives', async () => {
-    const { saveCustomLists } = require('../utils/customLists');
+  test('shows loaded standard terms, applies them in memory, and persists updates', async () => {
+    const { saveStandardIngredientTerms } = require('../utils/customLists');
     render(
       <AppCallsPage
         onBack={jest.fn()}
@@ -928,19 +944,25 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
+    expect(await screen.findByText('Standard-Einheiten')).toBeInTheDocument();
+    expect(screen.getByText('Standard-Adjektive')).toBeInTheDocument();
     expect(await screen.findByText('Tasse')).toBeInTheDocument();
     expect(screen.getByText('frisch')).toBeInTheDocument();
+    expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
+      units: ['Tasse'],
+      adjectives: ['frisch'],
+    });
+    expect(screen.queryByRole('button', { name: 'Jetzt deployen' })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('Neue Einheit hinzufügen (z.B. Päckchen)...'), {
       target: { value: 'Päckchen' },
     });
     fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[0]);
 
-    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
-      expect.objectContaining({
-        customUnits: expect.arrayContaining(['Tasse', 'Päckchen']),
-        customIngredientAdjectives: expect.arrayContaining(['frisch']),
-      })
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
+      ['Tasse', 'Päckchen'],
+      ['frisch'],
+      adminUser.id,
     ));
 
     fireEvent.change(screen.getByPlaceholderText('Neues Adjektiv hinzufügen (z.B. gehackt)...'), {
@@ -948,52 +970,16 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     });
     fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[1]);
 
-    await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
-      expect.objectContaining({
-        customUnits: expect.arrayContaining(['Tasse', 'Päckchen']),
-        customIngredientAdjectives: expect.arrayContaining(['frisch', 'gehackt']),
-      })
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenLastCalledWith(
+      ['Tasse', 'Päckchen'],
+      ['frisch', 'gehackt'],
+      adminUser.id,
     ));
-  });
-
-  test('starts deployment request and shows success message', async () => {
-    render(
-      <AppCallsPage
-        onBack={jest.fn()}
-        currentUser={adminUser}
-        recipes={[]}
-        onUpdateRecipe={jest.fn()}
-      />
-    );
-
-    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt deployen' }));
-
-    await waitFor(() => expect(mockSetDoc).toHaveBeenCalled());
-    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
-      kind: 'ingredient-id-matching',
-      status: 'pending',
-    }));
-    expect(await screen.findByText('Deployment wurde gestartet. Der Entwicklungs-Workflow wurde angefragt.')).toBeInTheDocument();
-  });
-
-  test('shows clear error when deployment request fails', async () => {
-    mockSetDoc.mockRejectedValueOnce(new Error('request failed'));
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    render(
-      <AppCallsPage
-        onBack={jest.fn()}
-        currentUser={adminUser}
-        recipes={[]}
-        onUpdateRecipe={jest.fn()}
-      />
-    );
-
-    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Jetzt deployen' }));
-
-    expect(await screen.findByText('Fehler beim Starten des Deployments. Bitte erneut versuchen.')).toBeInTheDocument();
-    errorSpy.mockRestore();
+    expect(mockSetCustomIngredientMatchingTerms).toHaveBeenLastCalledWith({
+      units: ['Tasse', 'Päckchen'],
+      adjectives: ['frisch', 'gehackt'],
+    });
+    expect(await screen.findByText('Standard-Einheiten/-Adjektive gespeichert.')).toBeInTheDocument();
   });
 });
 

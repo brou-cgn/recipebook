@@ -9,6 +9,8 @@ import {
   getDarkModePreference,
   getCustomLists,
   saveCustomLists,
+  getStandardIngredientTerms,
+  saveStandardIngredientTerms,
   getInspirationListSettings,
   saveInspirationListSettings,
   DEFAULT_INSPIRATION_LIST_NAME,
@@ -149,13 +151,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   // Cuisine list management state
   const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
   const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
-  const [customIngredientUnits, setCustomIngredientUnits] = useState([]);
-  const [customIngredientAdjectives, setCustomIngredientAdjectives] = useState([]);
+  const [standardUnits, setStandardUnits] = useState([]);
+  const [standardAdjectives, setStandardAdjectives] = useState([]);
   const [newCustomIngredientUnit, setNewCustomIngredientUnit] = useState('');
   const [newCustomIngredientAdjective, setNewCustomIngredientAdjective] = useState('');
   const [standardTermsFeedback, setStandardTermsFeedback] = useState('');
-  const [standardTermsDeployFeedback, setStandardTermsDeployFeedback] = useState('');
-  const [deployingStandardTerms, setDeployingStandardTerms] = useState(false);
   const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
   const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
   const [inspirationTargetListName, setInspirationTargetListName] = useState(DEFAULT_INSPIRATION_TARGET_LIST_NAME);
@@ -187,13 +187,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     getCustomLists().then((lists) => {
       setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
-      const loadedCustomUnits = Array.isArray(lists.customUnits) ? lists.customUnits : [];
-      const loadedCustomAdjectives = Array.isArray(lists.customIngredientAdjectives) ? lists.customIngredientAdjectives : [];
-      setCustomIngredientUnits(loadedCustomUnits);
-      setCustomIngredientAdjectives(loadedCustomAdjectives);
+    }).catch(() => {});
+    Promise.resolve(getStandardIngredientTerms()).then((terms) => {
+      const loadedStandardUnits = Array.isArray(terms.standardUnits) ? terms.standardUnits : [];
+      const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives) ? terms.standardAdjectives : [];
+      setStandardUnits(loadedStandardUnits);
+      setStandardAdjectives(loadedStandardAdjectives);
       setCustomIngredientMatchingTerms({
-        units: loadedCustomUnits,
-        adjectives: loadedCustomAdjectives,
+        units: loadedStandardUnits,
+        adjectives: loadedStandardAdjectives,
       });
     }).catch(() => {});
     getCuisineProposals().then((proposals) => {
@@ -709,77 +711,50 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const saveStandardTerms = async (units, adjectives) => {
     const normalizedUnits = normalizeUniqueEntries(units);
     const normalizedAdjectives = normalizeUniqueEntries(adjectives);
-    setCustomIngredientUnits(normalizedUnits);
-    setCustomIngredientAdjectives(normalizedAdjectives);
+    setStandardUnits(normalizedUnits);
+    setStandardAdjectives(normalizedAdjectives);
+    setStandardTermsFeedback('');
     setCustomIngredientMatchingTerms({
       units: normalizedUnits,
       adjectives: normalizedAdjectives,
     });
-    setStandardTermsFeedback('');
     try {
-      await saveCustomLists({
-        customUnits: normalizedUnits,
-        customIngredientAdjectives: normalizedAdjectives,
-      });
-      setStandardTermsFeedback('Standardeinheiten/-adjektive gespeichert.');
+      await saveStandardIngredientTerms(normalizedUnits, normalizedAdjectives, currentUser?.id);
+      setStandardTermsFeedback('Standard-Einheiten/-Adjektive gespeichert.');
     } catch (err) {
       console.error('Error saving standard units/adjectives:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Standardeinheiten/-adjektive.');
+      setStandardTermsFeedback('Fehler beim Speichern der Standard-Einheiten/-Adjektive.');
     }
   };
 
   const handleAddCustomIngredientUnit = async () => {
     const entry = newCustomIngredientUnit.trim();
     if (!entry) return;
-    if (customIngredientUnits.some((unit) => unit.toLowerCase() === entry.toLowerCase())) return;
+    if (standardUnits.some((unit) => unit.toLowerCase() === entry.toLowerCase())) return;
     setNewCustomIngredientUnit('');
-    await saveStandardTerms([...customIngredientUnits, entry], customIngredientAdjectives);
+    await saveStandardTerms([...standardUnits, entry], standardAdjectives);
   };
 
   const handleRemoveCustomIngredientUnit = async (entry) => {
     await saveStandardTerms(
-      customIngredientUnits.filter((unit) => unit !== entry),
-      customIngredientAdjectives
+      standardUnits.filter((unit) => unit !== entry),
+      standardAdjectives
     );
   };
 
   const handleAddCustomIngredientAdjective = async () => {
     const entry = newCustomIngredientAdjective.trim();
     if (!entry) return;
-    if (customIngredientAdjectives.some((adjective) => adjective.toLowerCase() === entry.toLowerCase())) return;
+    if (standardAdjectives.some((adjective) => adjective.toLowerCase() === entry.toLowerCase())) return;
     setNewCustomIngredientAdjective('');
-    await saveStandardTerms(customIngredientUnits, [...customIngredientAdjectives, entry]);
+    await saveStandardTerms(standardUnits, [...standardAdjectives, entry]);
   };
 
   const handleRemoveCustomIngredientAdjective = async (entry) => {
     await saveStandardTerms(
-      customIngredientUnits,
-      customIngredientAdjectives.filter((adjective) => adjective !== entry)
+      standardUnits,
+      standardAdjectives.filter((adjective) => adjective !== entry)
     );
-  };
-
-  const handleDeployStandardTerms = async () => {
-    setStandardTermsDeployFeedback('');
-    setDeployingStandardTerms(true);
-    try {
-      const requestId = `ingredient-matching-${Date.now()}`;
-      await setDoc(doc(db, 'developmentDeployRequests', requestId), {
-        kind: 'ingredient-id-matching',
-        status: 'pending',
-        requestedAt: serverTimestamp(),
-        requestedBy: currentUser?.id || null,
-        payload: {
-          customUnits: customIngredientUnits,
-          customIngredientAdjectives,
-        },
-      });
-      setStandardTermsDeployFeedback('Deployment wurde gestartet. Der Entwicklungs-Workflow wurde angefragt.');
-    } catch (err) {
-      console.error('Error starting standard terms deployment:', err);
-      setStandardTermsDeployFeedback('Fehler beim Starten des Deployments. Bitte erneut versuchen.');
-    } finally {
-      setDeployingStandardTerms(false);
-    }
   };
 
   const handleSaveKochatelierSettings = async () => {
@@ -1468,9 +1443,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         ) : activeTab === 'standardeinheiten' ? (
           <>
             <div className="settings-section">
-              <h3>Standardeinheiten</h3>
+              <h3>Standard-Einheiten</h3>
               <p className="section-description">
-                Einheiten, die beim ingredientID-Matching als Mengenangaben erkannt werden.
+                Einheiten, die beim ingredientID-Matching automatisch erkannt werden.
               </p>
               <div className="list-input">
                 <input
@@ -1484,10 +1459,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 <button onClick={handleAddCustomIngredientUnit}>Hinzufügen</button>
               </div>
               <div className="list-items">
-                {customIngredientUnits.length === 0 ? (
-                  <p className="section-description">Noch keine zusätzlichen Einheiten vorhanden.</p>
+                {standardUnits.length === 0 ? (
+                  <p className="section-description">Noch keine Standard-Einheiten vorhanden.</p>
                 ) : (
-                  customIngredientUnits.map((unit) => (
+                  standardUnits.map((unit) => (
                     <div key={unit} className="list-item">
                       <span>{unit}</span>
                       <button
@@ -1504,7 +1479,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
             </div>
 
             <div className="settings-section">
-              <h3>Standardadjektive</h3>
+              <h3>Standard-Adjektive</h3>
               <p className="section-description">
                 Adjektive, die beim ingredientID-Matching automatisch entfernt werden.
               </p>
@@ -1520,10 +1495,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 <button onClick={handleAddCustomIngredientAdjective}>Hinzufügen</button>
               </div>
               <div className="list-items">
-                {customIngredientAdjectives.length === 0 ? (
-                  <p className="section-description">Noch keine zusätzlichen Adjektive vorhanden.</p>
+                {standardAdjectives.length === 0 ? (
+                  <p className="section-description">Noch keine Standard-Adjektive vorhanden.</p>
                 ) : (
-                  customIngredientAdjectives.map((adjective) => (
+                  standardAdjectives.map((adjective) => (
                     <div key={adjective} className="list-item">
                       <span>{adjective}</span>
                       <button
@@ -1538,26 +1513,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 )}
               </div>
             </div>
-
-            <div className="settings-section">
-              <h3>Entwicklungspfad</h3>
-              <p className="section-description">
-                Überträgt die aktuellen Einheiten/Adjektive in den automatisierten Entwicklungs- und Deployment-Prozess.
-              </p>
-              <button
-                className="app-calls-share-btn"
-                onClick={handleDeployStandardTerms}
-                disabled={deployingStandardTerms}
-              >
-                {deployingStandardTerms ? 'Deployment wird gestartet…' : 'Jetzt deployen'}
-              </button>
-              {standardTermsFeedback && (
-                <p className="app-calls-info-text">{standardTermsFeedback}</p>
-              )}
-              {standardTermsDeployFeedback && (
-                <p className="app-calls-info-text">{standardTermsDeployFeedback}</p>
-              )}
-            </div>
+            {standardTermsFeedback && (
+              <p className="app-calls-info-text">{standardTermsFeedback}</p>
+            )}
           </>
         ) : (
           <div className="kochatelier-settings-section">
