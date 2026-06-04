@@ -315,6 +315,21 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
     ])[0]).toMatchObject({ ingredientID: 'milch', confidencePercent: 100 });
   });
 
+  test('keeps white adjective variants for ingredient matching', () => {
+    expect(normalizeIngredientNameForIdMatching('weißer Reis')).toBe('weißer Reis');
+    expect(normalizeIngredientNameForIdMatching('weißes Brot')).toBe('weißes Brot');
+
+    expect(getIngredientIdSuggestions('weißer Reis', [
+      { ingredientID: 'weisser_reis', synonyms: ['weißer Reis'] },
+    ])[0]).toMatchObject({ ingredientID: 'weisser_reis', confidencePercent: 100 });
+  });
+
+  test('does not remove white adjective variants even when configured as custom adjectives', () => {
+    setCustomIngredientMatchingTerms({ adjectives: ['weiß', 'weiße', 'weißes', 'weißer'] });
+    expect(normalizeIngredientNameForIdMatching('weißer Reis')).toBe('weißer Reis');
+    expect(normalizeIngredientNameForIdMatching('weißes Brot')).toBe('weißes Brot');
+  });
+
   test('removes configured custom adjectives', () => {
     setCustomIngredientMatchingTerms({ adjectives: ['gehackte'] });
     expect(normalizeIngredientNameForIdMatching('gehackte Zwiebel')).toBe('Zwiebel');
