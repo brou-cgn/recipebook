@@ -70,6 +70,18 @@ describe('ingredientIdMatching', () => {
     expect(suggestions[0]).toMatchObject({ ingredientID: 'karotte', displayName: 'karotte', confidencePercent: 100 });
   });
 
+  test('returns 100% confidence for umlaut ingredient and unit names when normalized synonyms use ae/oe/ue/ss', () => {
+    const suggestions = getIngredientIdSuggestions('2 Esslöffel Öl', [
+      {
+        ingredientID: 'oel',
+        synonyms: parseNutritionReferenceSynonyms({ synonyms: 'oel;Öl' }),
+        possibleUnits: parseNutritionReferencePossibleUnits({ possibleUnits: 'essloeffel;Esslöffel' }),
+      },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'oel', confidencePercent: 100 });
+  });
+
   test('returns 100% confidence for exact synonym match from malformed semicolon array data', () => {
     const suggestions = getIngredientIdSuggestions('200 g Spaghetti', [
       {
