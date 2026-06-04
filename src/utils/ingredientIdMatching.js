@@ -1,4 +1,5 @@
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
+import { decodeRecipeLink } from './recipeLinks';
 
 const BASE_COMMON_UNITS = [
   // Gewicht
@@ -310,6 +311,7 @@ export function hasMissingIngredientIDs(recipe) {
     const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
     if (!ingredientItem || ingredientItem.type === 'heading') return false;
     if (typeof ingredientItem.text !== 'string' || !ingredientItem.text.trim()) return false;
+    if (decodeRecipeLink(ingredientItem.text)) return false;
     if (ingredientItem.ignoreNutritionCalculation === true) return false;
     return !String(ingredientItem.ingredientID || '').trim();
   });
