@@ -1248,3 +1248,97 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(stats.textContent).toMatch(/Rezepte/);
   });
 });
+
+describe('AppCallsPage – tab preservation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockGetIngredientIdSuggestions.mockReset();
+    mockGetIngredientIdSuggestions.mockReturnValue([]);
+    const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    const { getAppCalls } = require('../utils/appCallsFirestore');
+    const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+    getButtonIcons.mockResolvedValue({});
+    getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+    getCuisineProposals.mockResolvedValue([]);
+    getAppCalls.mockResolvedValue([]);
+    getRecipeCalls.mockResolvedValue([]);
+    getInspirationListSettings.mockResolvedValue({
+      inspirationListName: 'Inspirationen',
+      inspirationListDescription: '',
+      inspirationTargetListName: 'Für jeden Tag',
+      inspirationTargetListDescription: '',
+    });
+  });
+
+  test('renders with the tab specified by activeTab prop', async () => {
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        activeTab="kulinariktypen"
+      />
+    );
+
+    await waitFor(() => {
+      const kulinarikBtn = screen.getByRole('button', { name: 'Kulinariktypen' });
+      expect(kulinarikBtn.className).toContain('active');
+    });
+  });
+
+  test('calls onActiveTabChange when a tab is switched', async () => {
+    const onActiveTabChange = jest.fn();
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        activeTab="app"
+        onActiveTabChange={onActiveTabChange}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Rezeptaufrufe' }));
+    expect(onActiveTabChange).toHaveBeenCalledWith('recipe');
+  });
+
+  test('restores active tab when remounted with preserved activeTab prop', async () => {
+    const onActiveTabChange = jest.fn();
+    const { unmount } = render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        activeTab="naehrwert"
+        onActiveTabChange={onActiveTabChange}
+      />
+    );
+
+    // Verify the Nährwertberechnungen tab is active
+    await waitFor(() => {
+      const naehrwertBtn = screen.getByRole('button', { name: 'Nährwertberechnungen' });
+      expect(naehrwertBtn.className).toContain('active');
+    });
+
+    // Simulate unmount (e.g. user opens a recipe) and remount with preserved tab
+    unmount();
+
+    render(
+      <AppCallsPage
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+        activeTab="naehrwert"
+        onActiveTabChange={onActiveTabChange}
+      />
+    );
+
+    // After remount the same tab should still be active
+    await waitFor(() => {
+      const naehrwertBtn = screen.getByRole('button', { name: 'Nährwertberechnungen' });
+      expect(naehrwertBtn.className).toContain('active');
+    });
+  });
+});

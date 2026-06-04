@@ -269,6 +269,7 @@ function App() {
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);
   const [kuecheOpenPersonalData, setKuecheOpenPersonalData] = useState(false);
+  const [appCallsActiveTab, setAppCallsActiveTab] = useState('app');
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -1749,6 +1750,8 @@ function App() {
           recipes={recipes}
           onUpdateRecipe={(id, updates) => updateRecipeInFirestore(id, updates)}
           onSelectRecipe={handleSelectRecipe}
+          activeTab={appCallsActiveTab}
+          onActiveTabChange={setAppCallsActiveTab}
         />
         ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage

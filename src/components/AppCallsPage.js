@@ -81,11 +81,20 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
   );
 }
 
-function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe }) {
+function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('app');
+  const isControlled = activeTabProp !== undefined && onActiveTabChange !== undefined;
+  const [localActiveTab, setLocalActiveTab] = useState(activeTabProp ?? 'app');
+  const activeTab = isControlled ? activeTabProp : localActiveTab;
+  const setActiveTab = (tab) => {
+    if (isControlled) {
+      onActiveTabChange(tab);
+    } else {
+      setLocalActiveTab(tab);
+    }
+  };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
