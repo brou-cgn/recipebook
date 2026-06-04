@@ -95,3 +95,4 @@ jobs:
         run: firebase deploy --only hosting,functions,firestore:rules --project broubook --force
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
