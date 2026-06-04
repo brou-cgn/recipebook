@@ -30,12 +30,16 @@ import {
   DEFAULT_CUISINE_TYPES,
   DEFAULT_MEAL_CATEGORIES,
   DEFAULT_UNITS,
+  DEFAULT_STANDARD_INGREDIENT_UNITS,
+  DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
   DEFAULT_PORTION_UNITS,
   DEFAULT_CONVERSION_TABLE,
   expandCuisineSelection,
   getParentCuisineNames,
+  getStandardIngredientTerms,
+  saveStandardIngredientTerms,
 } from './customLists';
-import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch } from 'firebase/firestore';
+import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 const mockBatch = {
   set: jest.fn(),
@@ -227,7 +231,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.portionUnits[2].id).toBe('neue-einheit');
   });
 
-  test('includes customUnits from Firestore in the returned lists', async () => {
+  test('keeps legacy customUnits empty even when Firestore still contains old values', async () => {
     const savedCustomUnits = ['myUnit', 'anotherUnit'];
     mockGetDoc.mockResolvedValue({
       exists: () => true,
@@ -239,7 +243,7 @@ describe('getCustomLists – default fallbacks', () => {
 
     const lists = await getCustomLists();
 
-    expect(lists.customUnits).toEqual(savedCustomUnits);
+    expect(lists.customUnits).toEqual([]);
   });
 
   test('customUnits defaults to empty array when not in Firestore', async () => {
@@ -264,7 +268,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.customIngredientAdjectives).toEqual([]);
   });
 
-  test('includes customIngredientAdjectives from Firestore in the returned lists', async () => {
+  test('keeps legacy customIngredientAdjectives empty even when Firestore still contains old values', async () => {
     const savedAdjectives = ['frisch', 'gehackt'];
     mockGetDoc.mockResolvedValue({
       exists: () => true,
@@ -276,7 +280,60 @@ describe('getCustomLists – default fallbacks', () => {
 
     const lists = await getCustomLists();
 
-    expect(lists.customIngredientAdjectives).toEqual(savedAdjectives);
+    expect(lists.customIngredientAdjectives).toEqual([]);
+  });
+});
+
+describe('standard ingredient terms', () => {
+  test('returns hardcoded defaults when the standard terms document does not exist', async () => {
+    mockGetDoc.mockImplementation(async (ref) => ({
+      exists: () => ref.path !== 'settings/standardIngredientTerms',
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    }));
+
+    const terms = await getStandardIngredientTerms();
+
+    expect(terms.standardUnits).toEqual(DEFAULT_STANDARD_INGREDIENT_UNITS);
+    expect(terms.standardAdjectives).toEqual(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
+  });
+
+  test('returns stored standard ingredient terms from Firestore', async () => {
+    mockGetDoc.mockImplementation(async (ref) => {
+      if (ref.path === 'settings/standardIngredientTerms') {
+        return {
+          exists: () => true,
+          data: () => ({
+            standardUnits: ['Päckchen', 'EL'],
+            standardAdjectives: ['gehackt', 'frisch'],
+          }),
+        };
+      }
+      return {
+        exists: () => true,
+        data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+      };
+    });
+
+    const terms = await getStandardIngredientTerms();
+
+    expect(terms).toEqual({
+      standardUnits: ['Päckchen', 'EL'],
+      standardAdjectives: ['gehackt', 'frisch'],
+    });
+  });
+
+  test('saveStandardIngredientTerms stores arrays together with audit fields', async () => {
+    await saveStandardIngredientTerms(['Tasse', ' Tasse ', 'EL'], ['frisch', ' frisch ', 'gehackt'], 'admin-1');
+
+    expect(setDoc).toHaveBeenCalledWith(
+      { path: 'settings/standardIngredientTerms' },
+      {
+        standardUnits: ['Tasse', 'EL'],
+        standardAdjectives: ['frisch', 'gehackt'],
+        updatedAt: serverTimestamp(),
+        updatedBy: 'admin-1',
+      }
+    );
   });
 });
 

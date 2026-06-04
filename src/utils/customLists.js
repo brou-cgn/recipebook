@@ -49,6 +49,38 @@ export const DEFAULT_UNITS = [
   'cl'
 ];
 
+export const DEFAULT_STANDARD_INGREDIENT_UNITS = [
+  'g', 'kg', 'ml', 'l', 'Esslöffel', 'Teelöffel', 'Prise', 'Prisen',
+  'Tasse', 'Tassen', 'Becher', 'Stück', 'Bund', 'Dose', 'Dosen', 'cl',
+  'Pfund', 'Liter', 'Päckchen', 'Packung', 'Packungen', 'Beutel',
+  'Glas', 'Gläser', 'Flasche', 'Flaschen', 'Würfel', 'Zehe', 'Zehen',
+  'Knolle', 'Knollen', 'Scheibe', 'Scheiben', 'Zweig', 'Zweige',
+  'Blatt', 'Blätter', 'Stiel', 'Stiele', 'Messerspitze', 'Handvoll',
+  'Schuss', 'Spritzer', 'EL', 'TL', 'Bd', 'Pck', 'Pk',
+];
+
+export const DEFAULT_STANDARD_INGREDIENT_ADJECTIVES = [
+  'warm', 'warme', 'warmer', 'warmes', 'warmen',
+  'kalt', 'kalte', 'kalter', 'kaltes', 'kalten',
+  'heiß', 'heiße', 'heißer', 'heißes', 'heißen',
+  'eiskalt', 'eiskalte', 'eiskalter', 'eiskaltes', 'eiskalten',
+  'kühl', 'kühle', 'kühler', 'kühles', 'kühlen',
+  'lauwarm', 'lauwarme', 'lauwarmer', 'lauwarmes', 'lauwarmen',
+  'reif', 'reife', 'reifer', 'reifes', 'reifen',
+  'unreif', 'unreife', 'unreifer', 'unreifes', 'unreifen',
+  'frisch', 'frische', 'frischer', 'frisches', 'frischen',
+  'trocken', 'trockene', 'trockener', 'trockenes', 'trockenen',
+  'getrocknet', 'getrocknete', 'getrockneter', 'getrocknetes', 'getrockneten',
+  'groß', 'große', 'großer', 'großes', 'großen',
+  'klein', 'kleine', 'kleiner', 'kleines', 'kleinen',
+  'mittel', 'mittlere', 'mittlerer', 'mittleres', 'mittleren',
+  'ganz', 'ganze', 'ganzer', 'ganzes', 'ganzen',
+  'halb', 'halbe', 'halber', 'halbes', 'halben',
+  'fest', 'feste', 'fester', 'festes', 'festen',
+  'weich', 'weiche', 'weicher', 'weiches', 'weichen',
+  'hart', 'harte', 'harter', 'hartes', 'harten',
+];
+
 export const DEFAULT_PORTION_UNITS = [
   { id: 'portion', singular: 'Portion', plural: 'Portionen' },
   { id: 'pizza', singular: 'Pizza', plural: 'Pizzen' },
@@ -1106,9 +1138,63 @@ export async function getCustomLists() {
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
     conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
-    customUnits: settings.customUnits ?? [],
-    customIngredientAdjectives: settings.customIngredientAdjectives ?? []
+    customUnits: [],
+    customIngredientAdjectives: [],
   };
+}
+
+function normalizeStandardIngredientEntries(entries = []) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)
+    .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index);
+}
+
+export async function getStandardIngredientTerms() {
+  try {
+    const standardTermsRef = doc(db, 'settings', 'standardIngredientTerms');
+    const standardTermsSnap = await getDoc(standardTermsRef);
+    if (!standardTermsSnap.exists()) {
+      return {
+        standardUnits: [...DEFAULT_STANDARD_INGREDIENT_UNITS],
+        standardAdjectives: [...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES],
+      };
+    }
+
+    const data = standardTermsSnap.data() || {};
+    return {
+      standardUnits: Array.isArray(data.standardUnits)
+        ? normalizeStandardIngredientEntries(data.standardUnits)
+        : [...DEFAULT_STANDARD_INGREDIENT_UNITS],
+      standardAdjectives: Array.isArray(data.standardAdjectives)
+        ? normalizeStandardIngredientEntries(data.standardAdjectives)
+        : [...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES],
+    };
+  } catch (error) {
+    console.error('Error loading standard ingredient terms:', error);
+    return {
+      standardUnits: [...DEFAULT_STANDARD_INGREDIENT_UNITS],
+      standardAdjectives: [...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES],
+    };
+  }
+}
+
+export async function saveStandardIngredientTerms(standardUnits, standardAdjectives, userId) {
+  const normalizedUnits = normalizeStandardIngredientEntries(standardUnits);
+  const normalizedAdjectives = normalizeStandardIngredientEntries(standardAdjectives);
+
+  try {
+    await setDoc(doc(db, 'settings', 'standardIngredientTerms'), {
+      standardUnits: normalizedUnits,
+      standardAdjectives: normalizedAdjectives,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId || null,
+    });
+  } catch (error) {
+    console.error('Error saving standard ingredient terms:', error);
+    throw error;
+  }
 }
 
 /**
@@ -1150,21 +1236,23 @@ export async function resetCustomLists() {
 }
 
 /**
- * Get all available units from defaults and custom units stored in Firestore
- * Combines DEFAULT_UNITS, customUnits, and units from conversionTable
+ * Get all available units from defaults, standard ingredient units, and conversionTable
  * @returns {Promise<string[]>} Promise resolving to array of unit strings
  */
 export async function getAvailableUnits() {
   try {
-    const lists = await getCustomLists();
-    const customUnits = lists.customUnits || [];
+    const [lists, standardTerms] = await Promise.all([
+      getCustomLists(),
+      getStandardIngredientTerms(),
+    ]);
+    const standardUnits = standardTerms.standardUnits || [];
     const conversionUnits = (lists.conversionTable || [])
       .map(entry => entry.unit)
       .filter(u => u && u.trim());
 
     const allUnits = [
       ...DEFAULT_UNITS,
-      ...customUnits,
+      ...standardUnits,
       ...conversionUnits
     ];
 

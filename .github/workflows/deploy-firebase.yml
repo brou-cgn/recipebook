@@ -91,12 +91,6 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
-      - name: Set Firebase Function Secrets
-        run: |
-          echo "${{ secrets.FIREBASE_GITHUB_PAT }}" | firebase functions:secrets:set GITHUB_TOKEN --project broubook --data-file -
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: firebase deploy --only hosting,functions,firestore:rules --project broubook --force
         env:
