@@ -2275,6 +2275,14 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     expect(screen.getByRole('option', { name: 'Neue Zutat' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Zutat ignorieren' })).toBeInTheDocument();
 
+    const selectEl = screen.getByLabelText('ingredientID für 1 Tomate');
+    const optionTexts = Array.from(selectEl.options).map((o) => o.textContent);
+    const suggestionIdx = optionTexts.findIndex((t) => /Tomate \(100%\)/i.test(t));
+    const neueZutatIdx = optionTexts.findIndex((t) => t === 'Neue Zutat');
+    const ignoriereIdx = optionTexts.findIndex((t) => t === 'Zutat ignorieren');
+    expect(suggestionIdx).toBeLessThan(neueZutatIdx);
+    expect(neueZutatIdx).toBeLessThan(ignoriereIdx);
+
     fireEvent.change(screen.getByLabelText('ingredientID für 1 Tomate'), { target: { value: 'tomate' } });
     fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
 
