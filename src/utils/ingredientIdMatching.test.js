@@ -1,4 +1,4 @@
-import { getIngredientIdSuggestions, parseIngredientNameAndUnit } from './ingredientIdMatching';
+import { getIngredientIdSuggestions, parseIngredientNameAndUnit, getAutoAssignedIngredients, hasMissingIngredientIDs } from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceSynonyms,
@@ -110,5 +110,135 @@ describe('ingredientIdMatching', () => {
       { ingredientID: 'tomate', synonyms: ['Tomate'] },
     ]);
     expect(suggestions).toEqual([]);
+  });
+});
+
+describe('getAutoAssignedIngredients', () => {
+  const referenceRows = [
+    { ingredientID: 'tomate', synonyms: ['Tomaten', 'Tomate'] },
+    { ingredientID: 'zwiebel', synonyms: ['Zwiebeln', 'Zwiebel'] },
+    { ingredientID: 'salz', synonyms: ['Salz'] },
+  ];
+
+  test('assigns ingredientID for 100% unique matches', () => {
+    const ingredients = [
+      { type: 'ingredient', text: '200 g Tomaten' },
+      { type: 'ingredient', text: '1 Zwiebel' },
+    ];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(2);
+    expect(updatedIngredients[0].ingredientID).toBe('tomate');
+    expect(updatedIngredients[1].ingredientID).toBe('zwiebel');
+  });
+
+  test('leaves unmatched ingredients unchanged', () => {
+    const ingredients = [{ type: 'ingredient', text: '100 g Fantasiezutat' }];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients[0].ingredientID).toBeUndefined();
+  });
+
+  test('skips headings', () => {
+    const ingredients = [
+      { type: 'heading', text: 'Für die Soße' },
+      { type: 'ingredient', text: '200 g Tomaten' },
+    ];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(1);
+    expect(updatedIngredients[0].type).toBe('heading');
+    expect(updatedIngredients[0].ingredientID).toBeUndefined();
+  });
+
+  test('skips ingredients with ignoreNutritionCalculation', () => {
+    const ingredients = [
+      { type: 'ingredient', text: '200 g Tomaten', ignoreNutritionCalculation: true },
+    ];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients[0].ingredientID).toBeUndefined();
+  });
+
+  test('skips ingredients that already have a valid ingredientID', () => {
+    const ingredients = [
+      { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+    ];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients[0].ingredientID).toBe('tomate');
+  });
+
+  test('returns empty result for empty ingredient list', () => {
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients([], referenceRows);
+    expect(autoAssigned).toBe(0);
+    expect(updatedIngredients).toEqual([]);
+  });
+
+  test('handles string ingredients', () => {
+    const ingredients = ['200 g Tomaten', '1 Zwiebel'];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(2);
+    expect(updatedIngredients[0]).toEqual({ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' });
+    expect(updatedIngredients[1]).toEqual({ type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' });
+  });
+});
+
+describe('hasMissingIngredientIDs', () => {
+  test('returns true when any ingredient lacks an ingredientID', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+        { type: 'ingredient', text: '1 Zwiebel' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(true);
+  });
+
+  test('returns false when all ingredients have ingredientIDs', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+        { type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(false);
+  });
+
+  test('ignores headings', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'heading', text: 'Für die Soße' },
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(false);
+  });
+
+  test('ignores ingredients with ignoreNutritionCalculation', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ignoreNutritionCalculation: true },
+        { type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(false);
+  });
+
+  test('handles string ingredients without IDs', () => {
+    const recipe = { ingredients: ['200 g Tomaten', '1 Zwiebel'] };
+    expect(hasMissingIngredientIDs(recipe)).toBe(true);
+  });
+
+  test('uses zutaten field when present', () => {
+    const recipe = {
+      zutaten: [{ type: 'ingredient', text: 'Salz' }],
+      ingredients: [{ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' }],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(true);
+  });
+
+  test('returns false for recipe with no ingredients', () => {
+    expect(hasMissingIngredientIDs({ ingredients: [] })).toBe(false);
+    expect(hasMissingIngredientIDs({})).toBe(false);
+    expect(hasMissingIngredientIDs(null)).toBe(false);
   });
 });

@@ -22,7 +22,7 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
 import { db } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { buildPendingNutritionReferenceDraft } from '../utils/ingredientIdMatching';
+import { buildPendingNutritionReferenceDraft, hasMissingIngredientIDs } from '../utils/ingredientIdMatching';
 import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
@@ -206,6 +206,17 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     return { pending, completed };
   }, [recipes]);
 
+  // Fehlende Zutaten-IDs tab state
+  const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
+
+  const recipesWithMissingIngredientIDs = useMemo(
+    () =>
+      recipes
+        .filter((recipe) => hasMissingIngredientIDs(recipe))
+        .sort((a, b) => (a.title || a.id || '').localeCompare(b.title || b.id || '', 'de-DE')),
+    [recipes]
+  );
+
   const selectedNutritionRecipe = useMemo(
     () => recipes.find((recipe) => recipe.id === selectedNutritionRecipeId) || null,
     [recipes, selectedNutritionRecipeId]
@@ -234,6 +245,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const hasNotIncludedNutritionIngredients = (recipe) => (
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
+
+  const handleAssignIngredientIDs = async (recipe) => {
+    setAssigningIngredientIdRecipeId(recipe.id);
+    try {
+      await handleEnsureIngredientIDsForModal(recipe);
+    } finally {
+      setAssigningIngredientIdRecipeId(null);
+    }
+  };
 
   const formatCalcDuration = useCallback((calcPendingAt) => {
     if (!calcPendingAt) return null;
@@ -668,6 +688,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           Nährwertberechnungen
         </button>
         <button
+          className={`app-calls-tab${activeTab === 'missingIngredientIDs' ? ' active' : ''}`}
+          onClick={() => setActiveTab('missingIngredientIDs')}
+        >
+          Fehlende Zutaten-IDs
+        </button>
+        <button
           className={`app-calls-tab${activeTab === 'kulinariktypen' ? ' active' : ''}`}
           onClick={() => setActiveTab('kulinariktypen')}
         >
@@ -986,6 +1012,57 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 </div>
                 <div className="app-calls-stats">
                   Gesamt: <strong>{nutritionListData.completed.length}</strong> {nutritionListData.completed.length === 1 ? 'abgeschlossene Berechnung' : 'abgeschlossene Berechnungen'}
+                </div>
+              </>
+            )}
+          </>
+        ) : activeTab === 'missingIngredientIDs' ? (
+          <>
+            <p className="app-calls-info-text">
+              Hier werden alle Rezepte aufgelistet, bei denen mindestens eine Zutat noch keine ingredientID besitzt.
+              Über den Button „IDs zuordnen" kann die Zuordnung direkt vorgenommen werden.
+            </p>
+            {recipesWithMissingIngredientIDs.length === 0 ? (
+              <div className="app-calls-empty">Alle Zutaten haben bereits eine ingredientID.</div>
+            ) : (
+              <>
+                <div className="app-calls-table-container">
+                  <table className="app-calls-table">
+                    <thead>
+                      <tr>
+                        <th>Rezept</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recipesWithMissingIngredientIDs.map((recipe) => (
+                        <tr key={recipe.id}>
+                          <td>
+                            <button
+                              type="button"
+                              className="app-calls-recipe-link-btn"
+                              onClick={() => onSelectRecipe?.(recipe)}
+                            >
+                              {recipe.title || recipe.id}
+                            </button>
+                          </td>
+                          <td>
+                            <button
+                              className="app-calls-share-btn"
+                              onClick={() => handleAssignIngredientIDs(recipe)}
+                              disabled={assigningIngredientIdRecipeId === recipe.id}
+                              title="ingredientIDs zuordnen"
+                            >
+                              {assigningIngredientIdRecipeId === recipe.id ? 'Wird zugeordnet…' : 'IDs zuordnen'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="app-calls-stats">
+                  Gesamt: <strong>{recipesWithMissingIngredientIDs.length}</strong> {recipesWithMissingIngredientIDs.length === 1 ? 'Rezept' : 'Rezepte'} mit fehlenden Zutaten-IDs
                 </div>
               </>
             )}

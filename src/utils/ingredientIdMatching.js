@@ -203,6 +203,67 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
   return deduplicated;
 }
 
+/**
+ * Returns a copy of rawIngredients with ingredientID auto-assigned for any ingredient
+ * that has a unique 100% match in nutritionReferenceRows.
+ * Only handles exact matches – ambiguous or unmatched ingredients are left unchanged.
+ */
+export function getAutoAssignedIngredients(rawIngredients = [], nutritionReferenceRows = []) {
+  const updatedIngredients = [...rawIngredients];
+  let autoAssigned = 0;
+
+  rawIngredients.forEach((item, index) => {
+    const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
+    if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
+    if (ingredientItem.ignoreNutritionCalculation === true) return;
+
+    const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
+    if (existingIngredientID) {
+      const idStillValid = nutritionReferenceRows.some(
+        (row) => String(row?.ingredientID || '').trim() === existingIngredientID
+      );
+      if (idStillValid) return;
+    }
+
+    const suggestions = getIngredientIdSuggestions(ingredientItem.text, nutritionReferenceRows);
+    const top = suggestions[0];
+    const hasUniqueTop =
+      Boolean(top) &&
+      suggestions.filter((entry) => entry.confidencePercent === top.confidencePercent).length === 1;
+
+    if (top && top.confidencePercent === 100 && hasUniqueTop) {
+      const nextItem =
+        typeof item === 'string'
+          ? { type: 'ingredient', text: item, ingredientID: top.ingredientID }
+          : { ...item, ingredientID: top.ingredientID };
+      updatedIngredients[index] = nextItem;
+      autoAssigned += 1;
+    }
+  });
+
+  return { updatedIngredients, autoAssigned };
+}
+
+/**
+ * Returns true if the recipe has at least one ingredient (that is not a heading
+ * and not explicitly ignored) without a valid ingredientID.
+ */
+export function hasMissingIngredientIDs(recipe) {
+  const rawIngredients = Array.isArray(recipe?.zutaten)
+    ? recipe.zutaten
+    : Array.isArray(recipe?.ingredients)
+    ? recipe.ingredients
+    : [];
+
+  return rawIngredients.some((item) => {
+    const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
+    if (!ingredientItem || ingredientItem.type === 'heading') return false;
+    if (typeof ingredientItem.text !== 'string' || !ingredientItem.text.trim()) return false;
+    if (ingredientItem.ignoreNutritionCalculation === true) return false;
+    return !String(ingredientItem.ingredientID || '').trim();
+  });
+}
+
 export function buildPendingNutritionReferenceDraft(ingredientText, nutritionReferenceRows = []) {
   const { name, unit } = parseIngredientNameAndUnit(ingredientText);
   const displayName = String(normalizeIngredientNameForIdMatching(name) || String(name || '').trim()).trim();
