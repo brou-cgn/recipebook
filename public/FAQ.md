@@ -94,6 +94,7 @@ Du kannst das Rezept auch als Entwurf speichern, falls du es noch nicht vollstä
 Beim Erstellen oder Bearbeiten eines Rezepts kannst du die Nährwertberechnung starten. Die App analysiert die eingetragenen Zutaten und gibt dir eine Übersicht über Kalorien, Kohlenhydrate, Eiweiß und Fett – praktisch, wenn du auf eine ausgewogene Ernährung achtest.
 
 In der Nährwert-Referenztabelle werden Zutaten über folgende Status gepflegt: **<leer>**, **Neu**, **Datenerfassung ausstehend**, **Prüfung ausstehend**, **Freigegeben**.
+Sobald eine ingredientID den Status **Freigegeben** erhält, wird zusätzlich das Feld `approvedAt` mit Datum und Uhrzeit der Freigabe gespeichert.
 
 ### Menü erstellen
 <!-- id: faq-menue-erstellen -->

@@ -235,6 +235,67 @@ describe('NutritionReferenceTab', () => {
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
   });
 
+  test('stores approvedAt when status changes to Freigegeben', async () => {
+    mockServerTimestamp.mockReturnValue('server-ts');
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            synonyms: ['Tomate'],
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      approvedAt: 'server-ts',
+    }));
+  });
+
+  test('keeps existing approvedAt when status remains Freigegeben', async () => {
+    mockServerTimestamp.mockReturnValue('server-ts');
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Freigegeben',
+            approvedAt: 'existing-approved-at',
+            nutritionFamily: 'Gemüse',
+            synonyms: ['Tomate'],
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      approvedAt: 'existing-approved-at',
+      status: 'Freigegeben',
+      nutritionFamily: 'Nachtschatten',
+    }));
+  });
+
   test('persists clearing nutrition values and source for an existing row', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 

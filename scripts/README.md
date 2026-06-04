@@ -29,3 +29,12 @@ Pure JavaScript module for parsing the `ImportDatum.csv` file. Used by `updateRe
 
 **Exports:**
 - `parseCSV(filePath)` - Parse CSV file and return array of recipe data
+
+## migrateNutritionReferenceApprovedAt.js
+
+One-time migration for `nutritionReferences`: sets `approvedAt` for entries with status `Freigegeben` where the field is still missing.
+
+**Usage:**
+```bash
+node scripts/migrateNutritionReferenceApprovedAt.js [--dry-run]
+```

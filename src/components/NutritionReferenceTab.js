@@ -5,6 +5,7 @@ import { db, functions } from '../firebase';
 import { ROLES } from '../utils/userManagement';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
+  NUTRITION_REFERENCE_APPROVED_STATUS,
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
   NUTRITION_REFERENCE_NEW_STATUS,
@@ -129,7 +130,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const buildPayload = (
     row,
     source = '',
-    { removeLegacyFamily = true } = {}
+    { removeLegacyFamily = true, previousRow = null } = {}
   ) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
@@ -165,6 +166,15 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     if (category) payload.category = category;
     if (status) payload.status = status;
     if (searchTerm) payload.searchTerm = searchTerm;
+    const previousStatus = parseNutritionReferenceStatus(previousRow || {});
+    if (
+      status === NUTRITION_REFERENCE_APPROVED_STATUS
+      && previousStatus !== NUTRITION_REFERENCE_APPROVED_STATUS
+    ) {
+      payload.approvedAt = serverTimestamp();
+    } else if (previousRow?.approvedAt !== undefined && previousRow?.approvedAt !== null) {
+      payload.approvedAt = previousRow.approvedAt;
+    }
     return payload;
   };
 
@@ -197,10 +207,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       return acc;
     }, {});
 
+    const previousRow = cachedRows.find((entry) => entry.id === row.id) || null;
     await setDoc(
       doc(db, 'nutritionReferences', ingredientID),
       {
-        ...buildPayload(row, row.source),
+        ...buildPayload(row, row.source, { previousRow }),
         ...clearedNutritionValues,
       },
       { merge: true }
@@ -463,7 +474,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         return setDoc(
           doc(db, 'nutritionReferences', importedRow.ingredientID),
           // merge:false replaces the document, so legacy "family" is dropped implicitly.
-          buildPayload(mergedRow, source, { removeLegacyFamily: false }),
+          buildPayload(mergedRow, source, { removeLegacyFamily: false, previousRow: existing || null }),
           { merge: false }
         );
       }));
