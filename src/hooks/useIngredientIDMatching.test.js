@@ -46,7 +46,7 @@ describe('useIngredientIDMatching', () => {
     jest.clearAllMocks();
   });
 
-  test('skips recipe links from unresolved matching and keeps dialog closed when remaining ingredients resolve', async () => {
+  test('skips recipe links during ingredient ID matching', async () => {
     const persistIngredientIDs = jest.fn(() => Promise.resolve());
     const recipe = {
       id: 'r1',
