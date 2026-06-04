@@ -255,6 +255,16 @@ describe('hasMissingIngredientIDs', () => {
     expect(hasMissingIngredientIDs(recipe)).toBe(false);
   });
 
+  test('ignores linked recipe ingredients without ingredientID', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '#recipe:linked123:Tomatensoße' },
+        { type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe)).toBe(false);
+  });
+
   test('handles string ingredients without IDs', () => {
     const recipe = { ingredients: ['200 g Tomaten', '1 Zwiebel'] };
     expect(hasMissingIngredientIDs(recipe)).toBe(true);

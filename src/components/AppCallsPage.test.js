@@ -1381,6 +1381,27 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(screen.queryByText('Salat')).not.toBeInTheDocument();
   });
 
+  test('ignores recipes where missing IDs are only linked recipe ingredients', async () => {
+    const recipes = [
+      {
+        id: 'r1',
+        title: 'Mit Verlinkung',
+        ingredients: [{ type: 'ingredient', text: '#recipe:linked123:Tomatensoße' }],
+      },
+      {
+        id: 'r2',
+        title: 'Mit fehlender ID',
+        ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }],
+      },
+    ];
+    render(<AppCallsPage currentUser={adminUser} recipes={recipes} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+
+    expect(await screen.findByText('Mit fehlender ID')).toBeInTheDocument();
+    expect(screen.queryByText('Mit Verlinkung')).not.toBeInTheDocument();
+  });
+
   test('shows "IDs zuordnen" button for each recipe with missing IDs', async () => {
     const recipes = [
       { id: 'r1', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }] },
