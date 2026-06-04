@@ -206,6 +206,62 @@
   vertical-align: middle;
 }
 
+.ingredient-match-dialog-ingredient-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.ingredient-word-context-trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ingredient-word-context-trigger:focus-visible {
+  outline: 2px solid #d32f2f;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.ingredient-word-context-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+}
+
+.ingredient-word-context-menu {
+  position: fixed;
+  z-index: 2201;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  min-width: 240px;
+  overflow: hidden;
+}
+
+.ingredient-word-context-menu button {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ingredient-word-context-menu button:hover {
+  background: #f4f4f4;
+}
+
 /* Mobile info button for E-Mail / Art columns */
 .app-calls-col-mobile {
   display: none;
