@@ -101,6 +101,7 @@ jest.mock('../utils/ingredientUtils', () => {
   const actual = jest.requireActual('../utils/ingredientUtils');
   return {
     formatIngredientSpacing: actual.formatIngredientSpacing,
+    expandSaltAndPepperIngredients: actual.expandSaltAndPepperIngredients,
   };
 });
 

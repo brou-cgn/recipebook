@@ -583,3 +583,122 @@ describe('formatIngredientAsFraction', () => {
     expect(formatIngredientAsFraction('')).toBe('');
   });
 });
+
+import { isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
+
+describe('isSaltAndPepperCombination', () => {
+  test('recognizes "Salz und Pfeffer" with different separators', () => {
+    expect(isSaltAndPepperCombination('Salz und Pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz Pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz, Pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz & Pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz,Pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz&Pfeffer')).toBe(true);
+  });
+
+  test('recognizes reversed order "Pfeffer und Salz"', () => {
+    expect(isSaltAndPepperCombination('Pfeffer und Salz')).toBe(true);
+    expect(isSaltAndPepperCombination('Pfeffer Salz')).toBe(true);
+    expect(isSaltAndPepperCombination('Pfeffer, Salz')).toBe(true);
+    expect(isSaltAndPepperCombination('Pfeffer & Salz')).toBe(true);
+    expect(isSaltAndPepperCombination('Pfeffer,Salz')).toBe(true);
+    expect(isSaltAndPepperCombination('Pfeffer&Salz')).toBe(true);
+  });
+
+  test('is case-insensitive', () => {
+    expect(isSaltAndPepperCombination('salz und pfeffer')).toBe(true);
+    expect(isSaltAndPepperCombination('SALZ UND PFEFFER')).toBe(true);
+    expect(isSaltAndPepperCombination('Salz UND Pfeffer')).toBe(true);
+  });
+
+  test('does not match individual ingredients', () => {
+    expect(isSaltAndPepperCombination('Salz')).toBe(false);
+    expect(isSaltAndPepperCombination('Pfeffer')).toBe(false);
+  });
+
+  test('does not match other combinations', () => {
+    expect(isSaltAndPepperCombination('Salz und Zucker')).toBe(false);
+    expect(isSaltAndPepperCombination('300g Mehl')).toBe(false);
+    expect(isSaltAndPepperCombination('Salz nach Geschmack')).toBe(false);
+  });
+
+  test('handles invalid inputs', () => {
+    expect(isSaltAndPepperCombination(null)).toBe(false);
+    expect(isSaltAndPepperCombination(undefined)).toBe(false);
+    expect(isSaltAndPepperCombination('')).toBe(false);
+  });
+});
+
+describe('expandSaltAndPepperIngredients', () => {
+  test('splits "Salz und Pfeffer" into two entries', () => {
+    const input = [{ type: 'ingredient', text: 'Salz und Pfeffer' }];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result).toEqual([
+      { type: 'ingredient', text: 'Salz' },
+      { type: 'ingredient', text: 'Pfeffer' },
+    ]);
+  });
+
+  test('splits reversed order "Pfeffer und Salz" into Salz then Pfeffer', () => {
+    const input = [{ type: 'ingredient', text: 'Pfeffer und Salz' }];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result).toEqual([
+      { type: 'ingredient', text: 'Salz' },
+      { type: 'ingredient', text: 'Pfeffer' },
+    ]);
+  });
+
+  test('splits all supported separator formats', () => {
+    const formats = ['Salz Pfeffer', 'Salz, Pfeffer', 'Salz & Pfeffer', 'Salz,Pfeffer', 'Salz&Pfeffer'];
+    for (const text of formats) {
+      const result = expandSaltAndPepperIngredients([{ type: 'ingredient', text }]);
+      expect(result).toEqual([
+        { type: 'ingredient', text: 'Salz' },
+        { type: 'ingredient', text: 'Pfeffer' },
+      ]);
+    }
+  });
+
+  test('preserves surrounding ingredients unchanged', () => {
+    const input = [
+      { type: 'ingredient', text: '300 g Mehl' },
+      { type: 'ingredient', text: 'Salz und Pfeffer' },
+      { type: 'ingredient', text: '50 g Butter' },
+    ];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result).toEqual([
+      { type: 'ingredient', text: '300 g Mehl' },
+      { type: 'ingredient', text: 'Salz' },
+      { type: 'ingredient', text: 'Pfeffer' },
+      { type: 'ingredient', text: '50 g Butter' },
+    ]);
+  });
+
+  test('does not copy ingredientID to split entries', () => {
+    const input = [{ type: 'ingredient', text: 'Salz und Pfeffer', ingredientID: 'old-id' }];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result[0].ingredientID).toBeUndefined();
+    expect(result[1].ingredientID).toBeUndefined();
+  });
+
+  test('does not split heading items', () => {
+    const input = [{ type: 'heading', text: 'Salz und Pfeffer' }];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result).toEqual(input);
+  });
+
+  test('leaves ingredients that are not salt/pepper unchanged', () => {
+    const input = [
+      { type: 'ingredient', text: 'Salz' },
+      { type: 'ingredient', text: 'Pfeffer' },
+      { type: 'ingredient', text: '200 g Mehl' },
+    ];
+    const result = expandSaltAndPepperIngredients(input);
+    expect(result).toEqual(input);
+  });
+
+  test('handles non-array input gracefully', () => {
+    expect(expandSaltAndPepperIngredients(null)).toBe(null);
+    expect(expandSaltAndPepperIngredients(undefined)).toBe(undefined);
+  });
+});

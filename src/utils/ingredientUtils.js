@@ -450,6 +450,52 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
 }
 
 /**
+ * Regex that matches combined "Salz und Pfeffer" ingredient entries in the supported formats:
+ * "Salz Pfeffer", "Salz, Pfeffer", "Salz und Pfeffer", "Salz & Pfeffer",
+ * "Salz,Pfeffer", "Salz&Pfeffer", and the same with Pfeffer first.
+ */
+const SALT_AND_PEPPER_REGEX = /^(salz|pfeffer)(?:\s+und\s+|\s*[,&]\s*|\s+)(salz|pfeffer)$/i;
+
+/**
+ * Returns true if the ingredient text is a combined "Salz und/oder Pfeffer" entry.
+ * @param {string} text - The ingredient text to check
+ * @returns {boolean}
+ */
+export function isSaltAndPepperCombination(text) {
+  if (!text || typeof text !== 'string') return false;
+  return SALT_AND_PEPPER_REGEX.test(text.trim());
+}
+
+/**
+ * Expands combined "Salz und Pfeffer" ingredient entries into two separate entries.
+ * The first entry is always "Salz", the second is always "Pfeffer".
+ * Headings and all other ingredients are returned unchanged.
+ * The ingredientID is not carried over to the split entries since they become distinct items.
+ *
+ * Example:
+ *   [{ type: 'ingredient', text: 'Salz und Pfeffer' }]
+ *   => [{ type: 'ingredient', text: 'Salz' }, { type: 'ingredient', text: 'Pfeffer' }]
+ *
+ * @param {Array<{type: string, text: string, [key: string]: any}>} ingredients
+ * @returns {Array<{type: string, text: string, [key: string]: any}>}
+ */
+export function expandSaltAndPepperIngredients(ingredients) {
+  if (!Array.isArray(ingredients)) return ingredients;
+  const result = [];
+  for (const item of ingredients) {
+    if (item && item.type !== 'heading' && isSaltAndPepperCombination(item.text)) {
+      // eslint-disable-next-line no-unused-vars
+      const { ingredientID, ...rest } = item;
+      result.push({ ...rest, text: 'Salz' });
+      result.push({ ...rest, text: 'Pfeffer' });
+    } else {
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+/**
  * Scales the numeric amounts in an ingredient string by a given multiplier.
  * Example: scaleIngredient("200 g Mehl", 2) => "400 g Mehl"
  * @param {string} ingredient - The ingredient string to scale
