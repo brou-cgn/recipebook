@@ -15,6 +15,7 @@ const COMMON_UNITS = new Set([
   // Verpackungen
   'dose', 'dosen',
   'packung', 'packungen', 'pck', 'pkg',
+  'packchen', 'paeckchen',
   'flasche', 'flaschen',
   'becher',
   'tube', 'tuben',
@@ -60,6 +61,32 @@ const IGNORED_INGREDIENT_MARKERS = new Set([
   'gegebenenfalls',
 ]);
 
+const COMMON_ADJECTIVES = new Set([
+  // Temperatur (normalized: umlauts stripped, ß→ss)
+  'warm', 'warme', 'warmer', 'warmes', 'warmen',
+  'kalt', 'kalte', 'kalter', 'kaltes', 'kalten',
+  'heiss', 'heisse', 'heisser', 'heisses', 'heissen',
+  'eiskalt', 'eiskalte', 'eiskalter', 'eiskaltes', 'eiskalten',
+  'lauwarm', 'lauwarme', 'lauwarmer', 'lauwarmes', 'lauwarmen',
+  'gekuhlt', 'gekuehlt', 'gekuehl',
+  // Zustand & Reife
+  'reif', 'reife', 'reifer', 'reifes', 'reifen',
+  'unreif', 'unreife', 'unreifer', 'unreifes', 'unreifen',
+  'frisch', 'frische', 'frischer', 'frisches', 'frischen',
+  'trocken', 'trockene', 'trockener', 'trockenes', 'trockenen',
+  'getrocknet', 'getrocknete', 'getrockneter', 'getrocknetes', 'getrockneten',
+  // Größe (groß→gross after normalization)
+  'gross', 'grosse', 'grosser', 'grosses', 'grossen',
+  'klein', 'kleine', 'kleiner', 'kleines', 'kleinen',
+  'mittel', 'mittlere', 'mittlerer', 'mittleres', 'mittleren',
+  // Weitere häufige Beschreibungen
+  'ganz', 'ganze', 'ganzer', 'ganzes', 'ganzen',
+  'halb', 'halber', 'halbes', 'halben',
+  'fest', 'feste', 'fester', 'festes', 'festen',
+  'weich', 'weiche', 'weicher', 'weiches', 'weichen',
+  'hart', 'harte', 'harter', 'hartes', 'harten',
+]);
+
 function levenshteinDistance(a, b) {
   if (a === b) return 0;
   if (!a) return b.length;
@@ -96,7 +123,10 @@ function sanitizeIngredientNameForIdMatching(name) {
     .split(/\s+/)
     .filter((token) => {
       const normalized = normalizeNutritionReferenceId(token);
-      return normalized && !IGNORED_INGREDIENT_MARKERS.has(normalized);
+      if (!normalized) return false;
+      if (IGNORED_INGREDIENT_MARKERS.has(normalized)) return false;
+      if (COMMON_ADJECTIVES.has(normalized)) return false;
+      return true;
     })
     .join(' ')
     .trim();
