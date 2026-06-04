@@ -1,4 +1,4 @@
-import { getIngredientIdSuggestions, parseIngredientNameAndUnit, getAutoAssignedIngredients, hasMissingIngredientIDs } from './ingredientIdMatching';
+import { getIngredientIdSuggestions, parseIngredientNameAndUnit, getAutoAssignedIngredients, hasMissingIngredientIDs, normalizeIngredientNameForIdMatching } from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceSynonyms,
@@ -240,5 +240,42 @@ describe('hasMissingIngredientIDs', () => {
     expect(hasMissingIngredientIDs({ ingredients: [] })).toBe(false);
     expect(hasMissingIngredientIDs({})).toBe(false);
     expect(hasMissingIngredientIDs(null)).toBe(false);
+  });
+});
+
+describe('normalizeIngredientNameForIdMatching with adjectives', () => {
+  test('removes temperature adjectives', () => {
+    expect(normalizeIngredientNameForIdMatching('warme Milch')).toBe('Milch');
+    expect(normalizeIngredientNameForIdMatching('kaltes Wasser')).toBe('Wasser');
+  });
+
+  test('removes ripeness adjectives', () => {
+    expect(normalizeIngredientNameForIdMatching('reife Bananen')).toBe('Bananen');
+    expect(normalizeIngredientNameForIdMatching('frische Tomaten')).toBe('Tomaten');
+  });
+
+  test('removes size adjectives', () => {
+    expect(normalizeIngredientNameForIdMatching('große Zwiebel')).toBe('Zwiebel');
+    expect(normalizeIngredientNameForIdMatching('kleine Kartoffeln')).toBe('Kartoffeln');
+  });
+
+  test('adjective filtering improves confidence for ingredient ID matching', () => {
+    expect(getIngredientIdSuggestions('2 reife Bananen', [
+      { ingredientID: 'banane', synonyms: ['Banane', 'Bananen'] },
+    ])[0]).toMatchObject({ ingredientID: 'banane', confidencePercent: 100 });
+
+    expect(getIngredientIdSuggestions('200 ml warme Milch', [
+      { ingredientID: 'milch', synonyms: ['Milch'] },
+    ])[0]).toMatchObject({ ingredientID: 'milch', confidencePercent: 100 });
+  });
+});
+
+describe('parseIngredientNameAndUnit with Päckchen', () => {
+  test('recognizes Päckchen as unit', () => {
+    expect(parseIngredientNameAndUnit('1 Päckchen Backpulver')).toEqual({
+      quantity: 1,
+      name: 'Backpulver',
+      unit: 'Päckchen',
+    });
   });
 });
