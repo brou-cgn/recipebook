@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import {
   NutritionReferenceProvider,
   useNutritionReference,
@@ -34,6 +34,14 @@ function NutritionReferenceConsumer() {
       <span data-testid="first-id">{rows[0]?.ingredientID || ''}</span>
     </div>
   );
+}
+
+let reloadNutritionReferences;
+
+function NutritionReferenceReloadConsumer() {
+  const { reload } = useNutritionReference();
+  reloadNutritionReferences = reload;
+  return null;
 }
 
 describe('NutritionReferenceContext caching', () => {
@@ -117,5 +125,33 @@ describe('NutritionReferenceContext caching', () => {
     const stored = JSON.parse(localStorage.getItem(NUTRITION_REF_CACHE_KEY));
     expect(stored.lastUpdatedAt).toBe(2000);
     expect(stored.rows[0].ingredientID).toBe('fresh-tomate');
+  });
+
+  test('reload throws when requested so callers can show error feedback', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    saveCachedRows([{ ingredientID: 'cached-tomate', source: 'manual' }], 5000);
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ lastUpdatedAt: { toMillis: () => 5000 } }),
+    });
+
+    render(
+      <NutritionReferenceProvider>
+        <NutritionReferenceConsumer />
+        <NutritionReferenceReloadConsumer />
+      </NutritionReferenceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading')).toHaveTextContent('ready');
+    });
+
+    mockGetDocs.mockRejectedValueOnce(new Error('Firestore down'));
+
+    await act(async () => {
+      await expect(reloadNutritionReferences({ throwOnError: true })).rejects.toThrow('Firestore down');
+    });
+
+    consoleErrorSpy.mockRestore();
   });
 });

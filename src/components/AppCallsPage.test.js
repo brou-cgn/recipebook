@@ -1404,6 +1404,33 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(await screen.findByText('Alle Zutaten haben bereits eine ingredientID.')).toBeInTheDocument();
   });
 
+  test('clears nutrition reference cache and shows success feedback', async () => {
+    const reload = jest.fn(() => Promise.resolve([]));
+    mockNutritionReferenceState = { rows: [], loading: false, reload, lastUpdatedAt: null };
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cache leeren' }));
+
+    await waitFor(() => {
+      expect(reload).toHaveBeenCalledWith({ throwOnError: true });
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('nutritionReferences-Cache wurde geleert und neu geladen.');
+  });
+
+  test('shows an error message when clearing nutrition reference cache fails', async () => {
+    const reload = jest.fn(() => Promise.reject(new Error('Netzwerkfehler')));
+    mockNutritionReferenceState = { rows: [], loading: false, reload, lastUpdatedAt: null };
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cache leeren' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fehler beim Leeren des nutritionReferences-Caches: Netzwerkfehler');
+  });
+
   test('lists recipes with missing ingredient IDs', async () => {
     const recipes = [
       {
