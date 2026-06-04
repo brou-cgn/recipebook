@@ -252,6 +252,32 @@ describe('getCustomLists – default fallbacks', () => {
 
     expect(lists.customUnits).toEqual([]);
   });
+
+  test('customIngredientAdjectives defaults to empty array when not in Firestore', async () => {
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.customIngredientAdjectives).toEqual([]);
+  });
+
+  test('includes customIngredientAdjectives from Firestore in the returned lists', async () => {
+    const savedAdjectives = ['frisch', 'gehackt'];
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        customIngredientAdjectives: savedAdjectives,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.customIngredientAdjectives).toEqual(savedAdjectives);
+  });
 });
 
 describe('expandCuisineSelection', () => {

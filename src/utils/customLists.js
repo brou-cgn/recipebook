@@ -952,6 +952,7 @@ export async function getSettings() {
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
+        customIngredientAdjectives: settings.customIngredientAdjectives || [],
         headerSlogan: settings.headerSlogan || DEFAULT_SLOGAN,
         faviconText: settings.faviconText || DEFAULT_FAVICON_TEXT,
         aiRecipePrompt,
@@ -999,6 +1000,7 @@ export async function getSettings() {
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
+      customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
       aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
@@ -1053,6 +1055,7 @@ export async function getSettings() {
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
+      customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
       faviconText: DEFAULT_FAVICON_TEXT,
       faviconImage: null,
@@ -1103,7 +1106,8 @@ export async function getCustomLists() {
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
     conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
-    customUnits: settings.customUnits ?? []
+    customUnits: settings.customUnits ?? [],
+    customIngredientAdjectives: settings.customIngredientAdjectives ?? []
   };
 }
 

@@ -1,10 +1,21 @@
-import { getIngredientIdSuggestions, parseIngredientNameAndUnit, getAutoAssignedIngredients, hasMissingIngredientIDs, normalizeIngredientNameForIdMatching } from './ingredientIdMatching';
+import {
+  getIngredientIdSuggestions,
+  parseIngredientNameAndUnit,
+  getAutoAssignedIngredients,
+  hasMissingIngredientIDs,
+  normalizeIngredientNameForIdMatching,
+  setCustomIngredientMatchingTerms,
+} from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceSynonyms,
 } from './nutritionReferenceUtils';
 
 describe('ingredientIdMatching', () => {
+  afterEach(() => {
+    setCustomIngredientMatchingTerms();
+  });
+
   test('parses ingredient name and unit for matching', () => {
     expect(parseIngredientNameAndUnit('200 g Tomaten')).toEqual({ quantity: 200, name: 'Tomaten', unit: 'g' });
     expect(parseIngredientNameAndUnit('2 Eier')).toEqual({ quantity: 2, name: 'Eier', unit: 'Eier' });
@@ -103,6 +114,15 @@ describe('ingredientIdMatching', () => {
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'petersilie', confidencePercent: 100 });
     expect(suggestions[1].confidencePercent).toBeLessThan(100);
+  });
+
+  test('recognizes custom unit from settings', () => {
+    setCustomIngredientMatchingTerms({ units: ['Päckchen'] });
+    expect(parseIngredientNameAndUnit('1 Päckchen Backpulver')).toEqual({
+      quantity: 1,
+      name: 'Backpulver',
+      unit: 'Päckchen',
+    });
   });
 
   test('returns empty list for unmatched ingredient', () => {
@@ -244,6 +264,10 @@ describe('hasMissingIngredientIDs', () => {
 });
 
 describe('normalizeIngredientNameForIdMatching with adjectives', () => {
+  afterEach(() => {
+    setCustomIngredientMatchingTerms();
+  });
+
   test('removes temperature adjectives', () => {
     expect(normalizeIngredientNameForIdMatching('warme Milch')).toBe('Milch');
     expect(normalizeIngredientNameForIdMatching('kaltes Wasser')).toBe('Wasser');
@@ -268,14 +292,9 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
       { ingredientID: 'milch', synonyms: ['Milch'] },
     ])[0]).toMatchObject({ ingredientID: 'milch', confidencePercent: 100 });
   });
-});
 
-describe('parseIngredientNameAndUnit with Päckchen', () => {
-  test('recognizes Päckchen as unit', () => {
-    expect(parseIngredientNameAndUnit('1 Päckchen Backpulver')).toEqual({
-      quantity: 1,
-      name: 'Backpulver',
-      unit: 'Päckchen',
-    });
+  test('removes configured custom adjectives', () => {
+    setCustomIngredientMatchingTerms({ adjectives: ['gehackte'] });
+    expect(normalizeIngredientNameForIdMatching('gehackte Zwiebel')).toBe('Zwiebel');
   });
 });

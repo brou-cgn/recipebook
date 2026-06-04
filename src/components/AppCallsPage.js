@@ -22,7 +22,11 @@ import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
 import { db } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { buildPendingNutritionReferenceDraft, hasMissingIngredientIDs } from '../utils/ingredientIdMatching';
+import {
+  buildPendingNutritionReferenceDraft,
+  hasMissingIngredientIDs,
+  setCustomIngredientMatchingTerms,
+} from '../utils/ingredientIdMatching';
 import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
 import {
   getCuisineProposals,
@@ -124,6 +128,13 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   // Cuisine list management state
   const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
   const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
+  const [customIngredientUnits, setCustomIngredientUnits] = useState([]);
+  const [customIngredientAdjectives, setCustomIngredientAdjectives] = useState([]);
+  const [newCustomIngredientUnit, setNewCustomIngredientUnit] = useState('');
+  const [newCustomIngredientAdjective, setNewCustomIngredientAdjective] = useState('');
+  const [standardTermsFeedback, setStandardTermsFeedback] = useState('');
+  const [standardTermsDeployFeedback, setStandardTermsDeployFeedback] = useState('');
+  const [deployingStandardTerms, setDeployingStandardTerms] = useState(false);
   const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
   const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
   const [inspirationTargetListName, setInspirationTargetListName] = useState(DEFAULT_INSPIRATION_TARGET_LIST_NAME);
@@ -155,6 +166,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     getCustomLists().then((lists) => {
       setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
+      const loadedCustomUnits = Array.isArray(lists.customUnits) ? lists.customUnits : [];
+      const loadedCustomAdjectives = Array.isArray(lists.customIngredientAdjectives) ? lists.customIngredientAdjectives : [];
+      setCustomIngredientUnits(loadedCustomUnits);
+      setCustomIngredientAdjectives(loadedCustomAdjectives);
+      setCustomIngredientMatchingTerms({
+        units: loadedCustomUnits,
+        adjectives: loadedCustomAdjectives,
+      });
     }).catch(() => {});
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
@@ -604,6 +623,89 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     await saveCuisineLists(cuisineTypes, updated);
   };
 
+  const normalizeUniqueEntries = useCallback((entries = []) => (
+    entries
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean)
+      .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index)
+  ), []);
+
+  const saveStandardTerms = async (units, adjectives) => {
+    const normalizedUnits = normalizeUniqueEntries(units);
+    const normalizedAdjectives = normalizeUniqueEntries(adjectives);
+    setCustomIngredientUnits(normalizedUnits);
+    setCustomIngredientAdjectives(normalizedAdjectives);
+    setCustomIngredientMatchingTerms({
+      units: normalizedUnits,
+      adjectives: normalizedAdjectives,
+    });
+    setStandardTermsFeedback('');
+    try {
+      await saveCustomLists({
+        customUnits: normalizedUnits,
+        customIngredientAdjectives: normalizedAdjectives,
+      });
+      setStandardTermsFeedback('Standardeinheiten/-adjektive gespeichert.');
+    } catch (err) {
+      console.error('Error saving standard units/adjectives:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Standardeinheiten/-adjektive.');
+    }
+  };
+
+  const handleAddCustomIngredientUnit = async () => {
+    const entry = newCustomIngredientUnit.trim();
+    if (!entry) return;
+    if (customIngredientUnits.some((unit) => unit.toLowerCase() === entry.toLowerCase())) return;
+    setNewCustomIngredientUnit('');
+    await saveStandardTerms([...customIngredientUnits, entry], customIngredientAdjectives);
+  };
+
+  const handleRemoveCustomIngredientUnit = async (entry) => {
+    await saveStandardTerms(
+      customIngredientUnits.filter((unit) => unit !== entry),
+      customIngredientAdjectives
+    );
+  };
+
+  const handleAddCustomIngredientAdjective = async () => {
+    const entry = newCustomIngredientAdjective.trim();
+    if (!entry) return;
+    if (customIngredientAdjectives.some((adjective) => adjective.toLowerCase() === entry.toLowerCase())) return;
+    setNewCustomIngredientAdjective('');
+    await saveStandardTerms(customIngredientUnits, [...customIngredientAdjectives, entry]);
+  };
+
+  const handleRemoveCustomIngredientAdjective = async (entry) => {
+    await saveStandardTerms(
+      customIngredientUnits,
+      customIngredientAdjectives.filter((adjective) => adjective !== entry)
+    );
+  };
+
+  const handleDeployStandardTerms = async () => {
+    setStandardTermsDeployFeedback('');
+    setDeployingStandardTerms(true);
+    try {
+      const requestId = `ingredient-matching-${Date.now()}`;
+      await setDoc(doc(db, 'developmentDeployRequests', requestId), {
+        kind: 'ingredient-id-matching',
+        status: 'pending',
+        requestedAt: serverTimestamp(),
+        requestedBy: currentUser?.id || null,
+        payload: {
+          customUnits: customIngredientUnits,
+          customIngredientAdjectives,
+        },
+      });
+      setStandardTermsDeployFeedback('Deployment wurde gestartet. Der Entwicklungs-Workflow wurde angefragt.');
+    } catch (err) {
+      console.error('Error starting standard terms deployment:', err);
+      setStandardTermsDeployFeedback('Fehler beim Starten des Deployments. Bitte erneut versuchen.');
+    } finally {
+      setDeployingStandardTerms(false);
+    }
+  };
+
   const handleSaveKochatelierSettings = async () => {
     if (!canManageKochatelierSettings) {
       setKochatelierSettingsFeedback('Nur Administratoren und Moderatoren können diese Einstellungen speichern.');
@@ -707,6 +809,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           onClick={() => setActiveTab('kulinariktypen')}
         >
           Kulinariktypen
+        </button>
+        <button
+          className={`app-calls-tab${activeTab === 'standardeinheiten' ? ' active' : ''}`}
+          onClick={() => setActiveTab('standardeinheiten')}
+        >
+          Standardeinheiten/-adjektive
         </button>
         <button
           className={`app-calls-tab${activeTab === 'kochatelier' ? ' active' : ''}`}
@@ -1279,6 +1387,100 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   ))
                 )}
               </div>
+            </div>
+          </>
+        ) : activeTab === 'standardeinheiten' ? (
+          <>
+            <div className="settings-section">
+              <h3>Standardeinheiten</h3>
+              <p className="section-description">
+                Einheiten, die beim ingredientID-Matching als Mengenangaben erkannt werden.
+              </p>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCustomIngredientUnit}
+                  onChange={(e) => setNewCustomIngredientUnit(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomIngredientUnit()}
+                  placeholder="Neue Einheit hinzufügen (z.B. Päckchen)..."
+                  aria-label="Neue Standardeinheit eingeben"
+                />
+                <button onClick={handleAddCustomIngredientUnit}>Hinzufügen</button>
+              </div>
+              <div className="list-items">
+                {customIngredientUnits.length === 0 ? (
+                  <p className="section-description">Noch keine zusätzlichen Einheiten vorhanden.</p>
+                ) : (
+                  customIngredientUnits.map((unit) => (
+                    <div key={unit} className="list-item">
+                      <span>{unit}</span>
+                      <button
+                        className="remove-btn"
+                        onClick={() => handleRemoveCustomIngredientUnit(unit)}
+                        title="Entfernen"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Standardadjektive</h3>
+              <p className="section-description">
+                Adjektive, die beim ingredientID-Matching automatisch entfernt werden.
+              </p>
+              <div className="list-input">
+                <input
+                  type="text"
+                  value={newCustomIngredientAdjective}
+                  onChange={(e) => setNewCustomIngredientAdjective(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomIngredientAdjective()}
+                  placeholder="Neues Adjektiv hinzufügen (z.B. gehackt)..."
+                  aria-label="Neues Standardadjektiv eingeben"
+                />
+                <button onClick={handleAddCustomIngredientAdjective}>Hinzufügen</button>
+              </div>
+              <div className="list-items">
+                {customIngredientAdjectives.length === 0 ? (
+                  <p className="section-description">Noch keine zusätzlichen Adjektive vorhanden.</p>
+                ) : (
+                  customIngredientAdjectives.map((adjective) => (
+                    <div key={adjective} className="list-item">
+                      <span>{adjective}</span>
+                      <button
+                        className="remove-btn"
+                        onClick={() => handleRemoveCustomIngredientAdjective(adjective)}
+                        title="Entfernen"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Entwicklungspfad</h3>
+              <p className="section-description">
+                Überträgt die aktuellen Einheiten/Adjektive in den automatisierten Entwicklungs- und Deployment-Prozess.
+              </p>
+              <button
+                className="app-calls-share-btn"
+                onClick={handleDeployStandardTerms}
+                disabled={deployingStandardTerms}
+              >
+                {deployingStandardTerms ? 'Deployment wird gestartet…' : 'Jetzt deployen'}
+              </button>
+              {standardTermsFeedback && (
+                <p className="app-calls-info-text">{standardTermsFeedback}</p>
+              )}
+              {standardTermsDeployFeedback && (
+                <p className="app-calls-info-text">{standardTermsDeployFeedback}</p>
+              )}
             </div>
           </>
         ) : (

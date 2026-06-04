@@ -1,6 +1,6 @@
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 
-const COMMON_UNITS = new Set([
+const BASE_COMMON_UNITS = [
   // Gewicht
   'g', 'kg', 'mg',
   // Maße & Gewichte
@@ -53,7 +53,7 @@ const COMMON_UNITS = new Set([
   // Häufige Abkürzungen
   'bd',
   'bl',
-]);
+];
 
 const IGNORED_INGREDIENT_MARKERS = new Set([
   'optional',
@@ -61,7 +61,7 @@ const IGNORED_INGREDIENT_MARKERS = new Set([
   'gegebenenfalls',
 ]);
 
-const COMMON_ADJECTIVES = new Set([
+const BASE_COMMON_ADJECTIVES = [
   // Temperatur (normalized: umlauts stripped, ß→ss)
   'warm', 'warme', 'warmer', 'warmes', 'warmen',
   'kalt', 'kalte', 'kalter', 'kaltes', 'kalten',
@@ -85,7 +85,26 @@ const COMMON_ADJECTIVES = new Set([
   'fest', 'feste', 'fester', 'festes', 'festen',
   'weich', 'weiche', 'weicher', 'weiches', 'weichen',
   'hart', 'harte', 'harter', 'hartes', 'harten',
-]);
+];
+
+const COMMON_UNITS = new Set(BASE_COMMON_UNITS);
+const COMMON_ADJECTIVES = new Set(BASE_COMMON_ADJECTIVES);
+const CUSTOM_UNITS = new Set();
+const CUSTOM_ADJECTIVES = new Set();
+
+function normalizeMatchingTokens(entries = []) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map((entry) => normalizeNutritionReferenceId(entry))
+    .filter(Boolean);
+}
+
+export function setCustomIngredientMatchingTerms({ units = [], adjectives = [] } = {}) {
+  CUSTOM_UNITS.clear();
+  CUSTOM_ADJECTIVES.clear();
+  normalizeMatchingTokens(units).forEach((unit) => CUSTOM_UNITS.add(unit));
+  normalizeMatchingTokens(adjectives).forEach((adjective) => CUSTOM_ADJECTIVES.add(adjective));
+}
 
 function levenshteinDistance(a, b) {
   if (a === b) return 0;
@@ -126,6 +145,7 @@ function sanitizeIngredientNameForIdMatching(name) {
       if (!normalized) return false;
       if (IGNORED_INGREDIENT_MARKERS.has(normalized)) return false;
       if (COMMON_ADJECTIVES.has(normalized)) return false;
+      if (CUSTOM_ADJECTIVES.has(normalized)) return false;
       return true;
     })
     .join(' ')
@@ -159,7 +179,8 @@ export function parseIngredientNameAndUnit(ingredientText) {
 
   const possibleUnit = (numericPrefixMatch[2] || '').trim();
   const rest = (numericPrefixMatch[3] || '').trim();
-  if (possibleUnit && COMMON_UNITS.has(normalizeNutritionReferenceId(possibleUnit))) {
+  const normalizedUnit = normalizeNutritionReferenceId(possibleUnit);
+  if (possibleUnit && (COMMON_UNITS.has(normalizedUnit) || CUSTOM_UNITS.has(normalizedUnit))) {
     return { quantity: parsedQuantity, name: rest || possibleUnit || raw, unit: possibleUnit };
   }
 
