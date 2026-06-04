@@ -278,9 +278,11 @@ npm install
 
 ```bash
 firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set GITHUB_TOKEN
 ```
 
 When prompted, enter your Gemini API key from https://aistudio.google.com/
+For `GITHUB_TOKEN`, use a GitHub Personal Access Token with the scopes `repo` and `workflow`.
 
 ### 3. Deploy
 
@@ -304,12 +306,28 @@ firebase emulators:start --only functions
 # http://localhost:5001/YOUR_PROJECT_ID/us-central1/scanRecipeWithAI
 ```
 
+### Test `handleDeploymentRequest` with Emulator
+
+1. Start the emulator:
+   ```bash
+   firebase emulators:start --only functions,firestore
+   ```
+2. Create a request document in `developmentDeployRequests/{requestId}` with:
+   - `kind: "ingredient-id-matching"`
+   - `status: "pending"`
+   - `requestedBy: "<admin-or-moderator-uid>"`
+   - `payload.customUnits` and `payload.customIngredientAdjectives` as string arrays
+3. Verify status transitions in Firestore:
+   - `pending` → `processing` → `completed` (with `pullRequestUrl`)  
+   - or `failed` (with `error`) if validation/API calls fail
+
 ## Environment Variables
 
 The function uses Firebase Secrets for secure API key storage:
 
 - `GEMINI_API_KEY` - Google Gemini Vision API key (required for `scanRecipeWithAI`)
 - `SHORTCUT_API_KEY` - API key for `addRecipeViaAPI` (required for Apple Shortcut integration)
+- `GITHUB_TOKEN` - GitHub PAT for `handleDeploymentRequest` (scopes: `repo`, `workflow`)
 
 ## Rate Limiting
 
