@@ -190,6 +190,20 @@ describe('getAutoAssignedIngredients', () => {
     expect(updatedIngredients[0].ingredientID).toBeUndefined();
   });
 
+  test('ignores linked recipe ingredients during auto-assignment', () => {
+    const referenceRows = [
+      { ingredientID: 'tomate', synonyms: ['Tomaten'] },
+    ];
+    const ingredients = [
+      { type: 'ingredient', text: '#recipe:linked123:Tomatensoße' },
+      { type: 'ingredient', text: '200 g Tomaten' },
+    ];
+    const { updatedIngredients, autoAssigned } = getAutoAssignedIngredients(ingredients, referenceRows);
+    expect(autoAssigned).toBe(1);
+    expect(updatedIngredients[0]).toEqual({ type: 'ingredient', text: '#recipe:linked123:Tomatensoße' });
+    expect(updatedIngredients[1]).toEqual({ type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' });
+  });
+
   test('skips ingredients that already have a valid ingredientID', () => {
     const ingredients = [
       { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },

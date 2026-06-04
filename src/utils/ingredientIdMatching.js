@@ -275,6 +275,7 @@ export function getAutoAssignedIngredients(rawIngredients = [], nutritionReferen
     const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
     if (!ingredientItem || ingredientItem.type === 'heading' || typeof ingredientItem.text !== 'string') return;
     if (ingredientItem.ignoreNutritionCalculation === true) return;
+    if (decodeRecipeLink(ingredientItem.text)) return;
 
     const existingIngredientID = String(ingredientItem.ingredientID || '').trim();
     if (existingIngredientID) {

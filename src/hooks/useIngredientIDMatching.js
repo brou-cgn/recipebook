@@ -3,6 +3,7 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { buildPendingNutritionReferenceDraft, getIngredientIdSuggestions } from '../utils/ingredientIdMatching';
 import { NUTRITION_REFERENCE_NEW_STATUS, normalizeNutritionReferenceId } from '../utils/nutritionReferenceUtils';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 
 export const INGREDIENT_MATCH_CREATE_NEW_OPTION = '__ingredient_match_create_new__';
 export const INGREDIENT_MATCH_IGNORE_OPTION = '__ingredient_match_ignore__';
@@ -53,6 +54,13 @@ export function useIngredientIDMatching({
         matchingLog.push({
           ingredient: ingredientItem.text,
           status: 'ignored',
+        });
+        return;
+      }
+      if (decodeRecipeLink(ingredientItem.text)) {
+        matchingLog.push({
+          ingredient: ingredientItem.text,
+          status: 'recipe-link',
         });
         return;
       }
