@@ -28,6 +28,7 @@ const defaultCommonAdjectivesDoc = {
 };
 
 beforeEach(async () => {
+  setCustomIngredientMatchingTerms();
   getDoc.mockResolvedValue(defaultCommonAdjectivesDoc);
   await initializeCommonAdjectivesFromFirebase({ forceReload: true });
 });
@@ -438,5 +439,20 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
     expect(normalizeIngredientNameForIdMatching('frischen Kräutern')).toBe('Kräutern');
     expect(normalizeIngredientNameForIdMatching('mittleren Zwiebeln')).toBe('Zwiebeln');
     expect(normalizeIngredientNameForIdMatching('weißem Reis')).toBe('weißem Reis');
+  });
+
+  test('removes former protected adjective when not in normalizedProtected', async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        normalizedTemperature: [],
+        normalizedState: ['weiss'],
+        normalizedSizing: [],
+        normalizedProtected: [],
+      }),
+    });
+    await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+
+    expect(normalizeIngredientNameForIdMatching('weißem Reis')).toBe('Reis');
   });
 });

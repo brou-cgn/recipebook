@@ -95,9 +95,10 @@ const COMMON_ADJECTIVE_GROUP_CONFIG = {
   sizing: { normalizedField: 'normalizedSizing', includeInBase: true },
   protected: { normalizedField: 'normalizedProtected', includeInBase: false },
 };
+const BASE_ADJECTIVE_GROUPS = Object.keys(COMMON_ADJECTIVE_GROUP_CONFIG)
+  .filter((group) => COMMON_ADJECTIVE_GROUP_CONFIG[group].includeInBase);
 
 const DEFAULT_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
-const DECLENSION_STRIP_SUFFIXES = ['en', 'em', 'er', 'es', 'e'];
 const ADJECTIVE_DECLENSION_OVERRIDES = {
   mittel: {
     stems: ['mittler'],
@@ -112,13 +113,6 @@ const DEFAULT_COMMON_ADJECTIVE_BASE_FORMS = {
   protected: ['weiss'],
 };
 
-function getBaseDeclensionStem(normalizedWord) {
-  const trimSuffix = DECLENSION_STRIP_SUFFIXES.find((suffix) => (
-    normalizedWord.endsWith(suffix) && normalizedWord.length > suffix.length + 1
-  ));
-  return trimSuffix ? normalizedWord.slice(0, -trimSuffix.length) : normalizedWord;
-}
-
 function buildDeclensionForms(normalizedWord) {
   const token = normalizeNutritionReferenceId(normalizedWord);
   if (!token) return [];
@@ -126,7 +120,7 @@ function buildDeclensionForms(normalizedWord) {
   const override = ADJECTIVE_DECLENSION_OVERRIDES[token];
   const stems = override?.stems?.length
     ? override.stems.map((stem) => normalizeNutritionReferenceId(stem)).filter(Boolean)
-    : [getBaseDeclensionStem(token)];
+    : [token];
   const suffixes = Array.isArray(override?.suffixes) && override.suffixes.length > 0
     ? override.suffixes
     : DEFAULT_DECLENSION_SUFFIXES;
@@ -150,8 +144,7 @@ function expandNormalizedAdjectives(words = []) {
 }
 
 function buildDefaultBaseCommonAdjectives() {
-  const grouped = Object.keys(COMMON_ADJECTIVE_GROUP_CONFIG)
-    .filter((group) => COMMON_ADJECTIVE_GROUP_CONFIG[group].includeInBase)
+  const grouped = BASE_ADJECTIVE_GROUPS
     .flatMap((group) => DEFAULT_COMMON_ADJECTIVE_BASE_FORMS[group] || []);
   return expandNormalizedAdjectives(grouped);
 }
@@ -201,15 +194,19 @@ export async function initializeCommonAdjectivesFromFirebase({ forceReload = fal
         acc[group] = expandNormalizedAdjectives(normalizedFieldValues);
         return acc;
       }, {});
+      const hasConfiguredBaseFields = BASE_ADJECTIVE_GROUPS
+        .some((group) => Array.isArray(data[COMMON_ADJECTIVE_GROUP_CONFIG[group].normalizedField]));
+      const hasConfiguredProtectedField = Array.isArray(
+        data[COMMON_ADJECTIVE_GROUP_CONFIG.protected.normalizedField]
+      );
 
-      const loadedBase = Object.keys(COMMON_ADJECTIVE_GROUP_CONFIG)
-        .filter((group) => COMMON_ADJECTIVE_GROUP_CONFIG[group].includeInBase)
+      const loadedBase = BASE_ADJECTIVE_GROUPS
         .flatMap((group) => loadedByGroup[group] || []);
       const loadedProtected = loadedByGroup.protected || [];
 
       applyCommonAdjectiveSets(
-        loadedBase.length > 0 ? loadedBase : defaultBase,
-        loadedProtected.length > 0 ? loadedProtected : defaultProtected
+        hasConfiguredBaseFields ? loadedBase : defaultBase,
+        hasConfiguredProtectedField ? loadedProtected : defaultProtected
       );
     } catch (error) {
       console.error('Error loading common adjectives for ingredient matching:', error);
@@ -220,7 +217,13 @@ export async function initializeCommonAdjectivesFromFirebase({ forceReload = fal
   return commonAdjectivesInitializationPromise;
 }
 
-initializeCommonAdjectivesFromFirebase().catch(() => {});
+// Best-effort background initialization: runtime calls continue to work with defaults
+// if Firebase is temporarily unavailable.
+if (process.env.NODE_ENV !== 'test') {
+  initializeCommonAdjectivesFromFirebase().catch((error) => {
+    console.warn('Common adjective background initialization failed. Falling back to defaults.', error);
+  });
+}
 
 function normalizeMatchingTokens(entries = []) {
   if (!Array.isArray(entries)) return [];
