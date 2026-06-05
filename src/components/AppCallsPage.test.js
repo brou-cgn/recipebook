@@ -81,6 +81,7 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION: '',
   DEFAULT_STANDARD_INGREDIENT_UNITS: ['g', 'kg'],
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES: ['frisch', 'warm'],
+  COMMON_ADJECTIVE_GROUPS: ['temperature', 'state', 'sizing', 'protected'],
   getCustomLists: jest.fn(() =>
     Promise.resolve({ cuisineTypes: ['Spanisch', 'Italienisch'], cuisineGroups: [] })
   ),
@@ -89,6 +90,10 @@ jest.mock('../utils/customLists', () => ({
     Promise.resolve({ standardUnits: ['Tasse'], standardAdjectives: ['frisch'] })
   ),
   saveStandardIngredientTerms: jest.fn(() => Promise.resolve()),
+  getCommonAdjectives: jest.fn(() =>
+    Promise.resolve({ temperature: [], state: [], sizing: [], protected: [] })
+  ),
+  saveCommonAdjectives: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/cuisineProposalsFirestore', () => ({
@@ -967,6 +972,8 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       getCustomLists,
       getStandardIngredientTerms,
       saveStandardIngredientTerms,
+      getCommonAdjectives,
+      saveCommonAdjectives,
       getButtonIcons,
       getInspirationListSettings,
     } = require('../utils/customLists');
@@ -980,6 +987,13 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       standardAdjectives: ['frisch'],
     });
     saveStandardIngredientTerms.mockResolvedValue();
+    getCommonAdjectives.mockResolvedValue({
+      temperature: ['warm'],
+      state: ['frisch'],
+      sizing: ['groß'],
+      protected: ['weiß'],
+    });
+    saveCommonAdjectives.mockResolvedValue();
     getInspirationListSettings.mockResolvedValue({
       inspirationListName: 'Inspirationen',
       inspirationListDescription: 'Interaktive Liste',
@@ -1008,7 +1022,10 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
     expect(await screen.findByText('Standard-Einheiten')).toBeInTheDocument();
-    expect(screen.getByText('Standard-Adjektive')).toBeInTheDocument();
+    expect(screen.getByText('Temperatur')).toBeInTheDocument();
+    expect(screen.getByText('Zustand')).toBeInTheDocument();
+    expect(screen.getByText('Größe')).toBeInTheDocument();
+    expect(screen.getByText('Geschützt')).toBeInTheDocument();
     expect(await screen.findByText('Tasse')).toBeInTheDocument();
     expect(screen.getByText('frisch')).toBeInTheDocument();
     expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
@@ -1028,27 +1045,64 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       adminUser.id,
     ));
 
-    fireEvent.change(screen.getByPlaceholderText('Neues Adjektiv hinzufügen (z.B. gehackt)...'), {
-      target: { value: 'gehackt' },
-    });
-    fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[1]);
-
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenLastCalledWith(
-      ['Tasse', 'Päckchen'],
-      ['frisch', 'gehackt'],
-      adminUser.id,
-    ));
     expect(mockSetCustomIngredientMatchingTerms).toHaveBeenLastCalledWith({
       units: ['Tasse', 'Päckchen'],
-      adjectives: ['frisch', 'gehackt'],
+      adjectives: ['frisch'],
     });
     expect(await screen.findByText('Standard-Einheiten/-Adjektive gespeichert.')).toBeInTheDocument();
   });
 
+  test('renders grouped common adjectives and persists add/remove per group', async () => {
+    const { saveCommonAdjectives } = require('../utils/customLists');
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+
+    const temperaturSection = screen.getByText('Temperatur').closest('.settings-section');
+    const geschuetztSection = screen.getByText('Geschützt').closest('.settings-section');
+    expect(temperaturSection).toBeTruthy();
+    expect(geschuetztSection).toBeTruthy();
+
+    fireEvent.change(within(temperaturSection).getByPlaceholderText('Neues Adjektiv für Temperatur hinzufügen...'), {
+      target: { value: 'heiß' },
+    });
+    fireEvent.click(within(temperaturSection).getByRole('button', { name: 'Hinzufügen' }));
+
+    await waitFor(() => expect(saveCommonAdjectives).toHaveBeenCalledWith(
+      {
+        temperature: ['warm', 'heiß'],
+        state: ['frisch'],
+        sizing: ['groß'],
+        protected: ['weiß'],
+      },
+      adminUser.id,
+    ));
+
+    fireEvent.click(within(geschuetztSection).getByTitle('Entfernen'));
+    await waitFor(() => expect(saveCommonAdjectives).toHaveBeenLastCalledWith(
+      {
+        temperature: ['warm', 'heiß'],
+        state: ['frisch'],
+        sizing: ['groß'],
+        protected: [],
+      },
+      adminUser.id,
+    ));
+  });
+
   test('uses default standard terms as fallback when loading fails', async () => {
-    const { getStandardIngredientTerms } = require('../utils/customLists');
+    const { getStandardIngredientTerms, getCommonAdjectives } = require('../utils/customLists');
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     getStandardIngredientTerms.mockRejectedValue(new Error('Firestore down'));
+    getCommonAdjectives.mockResolvedValue({ temperature: [], state: [], sizing: [], protected: [] });
 
     render(
       <AppCallsPage
@@ -1062,7 +1116,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
     expect(await screen.findByText('g')).toBeInTheDocument();
-    expect(screen.getByText('frisch')).toBeInTheDocument();
+    expect(screen.getByText('Temperatur')).toBeInTheDocument();
     await waitFor(() => expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
       units: ['g', 'kg'],
       adjectives: ['frisch', 'warm'],
@@ -1074,7 +1128,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     errorSpy.mockRestore();
   });
 
-  test('shows reset buttons only for custom values and resets lists to defaults', async () => {
+  test('shows reset button only for custom unit values and resets units to defaults', async () => {
     const { getStandardIngredientTerms, saveStandardIngredientTerms } = require('../utils/customLists');
     getStandardIngredientTerms.mockResolvedValue({
       standardUnits: ['Tasse'],
@@ -1093,7 +1147,6 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
     const resetUnitsButton = await screen.findByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' });
-    const resetAdjectivesButton = screen.getByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' });
 
     fireEvent.click(resetUnitsButton);
     await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
@@ -1101,17 +1154,9 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       ['gehackt'],
       adminUser.id,
     ));
-
-    fireEvent.click(resetAdjectivesButton);
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenLastCalledWith(
-      ['g', 'kg'],
-      ['frisch', 'warm'],
-      adminUser.id,
-    ));
-    expect(await screen.findByText('Standard-Adjektive auf Standardwerte zurückgesetzt.')).toBeInTheDocument();
+    expect(await screen.findByText('Standard-Einheiten auf Standardwerte zurückgesetzt.')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
     });
   });
 
@@ -1132,10 +1177,8 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     );
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
-
     await screen.findByText('g');
     expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
   });
 });
 
