@@ -85,6 +85,12 @@ service cloud.firestore {
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
+    // Common terms collection (e.g. grouped ingredient adjectives)
+    match /commonTerms/{termId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isModeratorOrAdmin();
+    }
+
     // FAQs collection
     match /faqs/{faqId} {
       allow read: if isAnyUser();

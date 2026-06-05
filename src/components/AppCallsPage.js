@@ -11,6 +11,9 @@ import {
   saveCustomLists,
   getStandardIngredientTerms,
   saveStandardIngredientTerms,
+  getCommonAdjectives,
+  saveCommonAdjectives,
+  COMMON_ADJECTIVE_GROUPS,
   DEFAULT_STANDARD_INGREDIENT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
   getInspirationListSettings,
@@ -97,7 +100,25 @@ const normalizeEntryListForComparison = (entries = []) => {
 };
 
 const NORMALIZED_DEFAULT_STANDARD_UNITS = normalizeEntryListForComparison(DEFAULT_STANDARD_INGREDIENT_UNITS);
-const NORMALIZED_DEFAULT_STANDARD_ADJECTIVES = normalizeEntryListForComparison(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
+
+const COMMON_ADJECTIVE_GROUP_LABELS = {
+  temperature: 'Temperatur',
+  state: 'Zustand',
+  sizing: 'Größe',
+  protected: 'Geschützt',
+};
+
+const COMMON_ADJECTIVE_GROUP_DESCRIPTIONS = {
+  temperature: 'Temperatur-Adjektive für das ingredientID-Matching.',
+  state: 'Zustands-Adjektive für das ingredientID-Matching.',
+  sizing: 'Größen-Adjektive für das ingredientID-Matching.',
+  protected: 'Geschützte Adjektive, die beim ingredientID-Matching erhalten bleiben.',
+};
+
+const getEmptyCommonAdjectiveGroups = () => COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+  acc[group] = [];
+  return acc;
+}, {});
 
 const areNormalizedEntryListsEqual = (leftEntries = [], preNormalizedRightEntries = []) => {
   const normalizedLeft = normalizeEntryListForComparison(leftEntries);
@@ -197,8 +218,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
   const [standardUnits, setStandardUnits] = useState([]);
   const [standardAdjectives, setStandardAdjectives] = useState([]);
+  const [commonAdjectives, setCommonAdjectives] = useState(getEmptyCommonAdjectiveGroups);
   const [newCustomIngredientUnit, setNewCustomIngredientUnit] = useState('');
-  const [newCustomIngredientAdjective, setNewCustomIngredientAdjective] = useState('');
+  const [newCommonAdjective, setNewCommonAdjective] = useState(getEmptyCommonAdjectiveGroups);
   const [standardTermsFeedback, setStandardTermsFeedback] = useState('');
   const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
   const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
@@ -253,6 +275,16 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         units: DEFAULT_STANDARD_INGREDIENT_UNITS,
         adjectives: DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
       });
+    });
+    Promise.resolve(getCommonAdjectives()).then((groups = {}) => {
+      const loadedGroups = COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+        acc[group] = Array.isArray(groups[group]) ? groups[group] : [];
+        return acc;
+      }, {});
+      setCommonAdjectives(loadedGroups);
+    }).catch((error) => {
+      console.error('Error loading common adjectives:', error);
+      setCommonAdjectives(getEmptyCommonAdjectiveGroups());
     });
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
@@ -866,10 +898,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     () => !areNormalizedEntryListsEqual(standardUnits, NORMALIZED_DEFAULT_STANDARD_UNITS),
     [standardUnits]
   );
-  const hasCustomStandardAdjectives = useMemo(
-    () => !areNormalizedEntryListsEqual(standardAdjectives, NORMALIZED_DEFAULT_STANDARD_ADJECTIVES),
-    [standardAdjectives]
-  );
 
   const saveStandardTerms = async (units, adjectives) => {
     const normalizedUnits = normalizeUniqueEntries(units);
@@ -920,32 +948,50 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     );
   };
 
-  const handleAddCustomIngredientAdjective = async () => {
-    const entry = newCustomIngredientAdjective.trim();
+  const handleAddCommonAdjective = async (group, value) => {
+    if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
+    const entry = String(value || '').trim();
     if (!entry) return;
-    if (standardAdjectives.some((adjective) => adjective.toLowerCase() === entry.toLowerCase())) return;
-    setNewCustomIngredientAdjective('');
-    await saveStandardTerms(standardUnits, [...standardAdjectives, entry]);
+    const currentGroupEntries = commonAdjectives[group] || [];
+    if (currentGroupEntries.some((adjective) => adjective.toLowerCase() === entry.toLowerCase())) return;
+
+    const updatedGroups = {
+      ...commonAdjectives,
+      [group]: [...currentGroupEntries, entry],
+    };
+    setCommonAdjectives(updatedGroups);
+    setNewCommonAdjective((prev) => ({ ...prev, [group]: '' }));
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonAdjectives(updatedGroups, currentUser?.id);
+      setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common adjectives:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
+    }
   };
 
-  const handleRemoveCustomIngredientAdjective = async (entry) => {
-    await saveStandardTerms(
-      standardUnits,
-      standardAdjectives.filter((adjective) => adjective !== entry)
-    );
+  const handleRemoveCommonAdjective = async (group, entry) => {
+    if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
+    const updatedGroups = {
+      ...commonAdjectives,
+      [group]: (commonAdjectives[group] || []).filter((adjective) => adjective !== entry),
+    };
+    setCommonAdjectives(updatedGroups);
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonAdjectives(updatedGroups, currentUser?.id);
+      setStandardTermsFeedback('Standard-Adjektivgruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common adjectives:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
+    }
   };
 
   const handleResetStandardIngredientUnits = async () => {
     const didSave = await saveStandardTerms(DEFAULT_STANDARD_INGREDIENT_UNITS, standardAdjectives);
     if (didSave) {
       setStandardTermsFeedback('Standard-Einheiten auf Standardwerte zurückgesetzt.');
-    }
-  };
-
-  const handleResetStandardIngredientAdjectives = async () => {
-    const didSave = await saveStandardTerms(standardUnits, DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
-    if (didSave) {
-      setStandardTermsFeedback('Standard-Adjektive auf Standardwerte zurückgesetzt.');
     }
   };
 
@@ -1696,49 +1742,41 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               )}
             </div>
 
-            <div className="settings-section">
-              <h3>Standard-Adjektive</h3>
-              <p className="section-description">
-                Adjektive, die beim ingredientID-Matching automatisch entfernt werden.
-              </p>
-              <div className="list-input">
-                <input
-                  type="text"
-                  value={newCustomIngredientAdjective}
-                  onChange={(e) => setNewCustomIngredientAdjective(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomIngredientAdjective()}
-                  placeholder="Neues Adjektiv hinzufügen (z.B. gehackt)..."
-                  aria-label="Neues Standardadjektiv eingeben"
-                />
-                <button onClick={handleAddCustomIngredientAdjective}>Hinzufügen</button>
+            {COMMON_ADJECTIVE_GROUPS.map((group) => (
+              <div key={group} className="settings-section">
+                <h3>{COMMON_ADJECTIVE_GROUP_LABELS[group]}</h3>
+                <p className="section-description">{COMMON_ADJECTIVE_GROUP_DESCRIPTIONS[group]}</p>
+                <div className="list-input">
+                  <input
+                    type="text"
+                    value={newCommonAdjective[group] || ''}
+                    onChange={(e) => setNewCommonAdjective((prev) => ({ ...prev, [group]: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddCommonAdjective(group, newCommonAdjective[group])}
+                    placeholder={`Neues Adjektiv für ${COMMON_ADJECTIVE_GROUP_LABELS[group]} hinzufügen...`}
+                    aria-label={`Neues Adjektiv für ${COMMON_ADJECTIVE_GROUP_LABELS[group]} eingeben`}
+                  />
+                  <button onClick={() => handleAddCommonAdjective(group, newCommonAdjective[group])}>Hinzufügen</button>
+                </div>
+                <div className="list-items">
+                  {(commonAdjectives[group] || []).length === 0 ? (
+                    <p className="section-description">Noch keine Adjektive vorhanden.</p>
+                  ) : (
+                    (commonAdjectives[group] || []).map((adjective) => (
+                      <div key={adjective} className="list-item">
+                        <span>{adjective}</span>
+                        <button
+                          className="remove-btn"
+                          onClick={() => handleRemoveCommonAdjective(group, adjective)}
+                          title="Entfernen"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-              <div className="list-items">
-                {standardAdjectives.length === 0 ? (
-                  <p className="section-description">Noch keine Standard-Adjektive vorhanden.</p>
-                ) : (
-                  standardAdjectives.map((adjective) => (
-                    <div key={adjective} className="list-item">
-                      <span>{adjective}</span>
-                      <button
-                        className="remove-btn"
-                        onClick={() => handleRemoveCustomIngredientAdjective(adjective)}
-                        title="Entfernen"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-              {hasCustomStandardAdjectives && (
-                <button
-                  onClick={handleResetStandardIngredientAdjectives}
-                  aria-label="Standard-Adjektive auf Standardwerte zurücksetzen"
-                >
-                  Auf Standardwerte zurücksetzen
-                </button>
-              )}
-            </div>
+            ))}
             {standardTermsFeedback && (
               <p className="app-calls-info-text">{standardTermsFeedback}</p>
             )}

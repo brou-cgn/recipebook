@@ -32,12 +32,15 @@ import {
   DEFAULT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
+  DEFAULT_COMMON_ADJECTIVES,
   DEFAULT_PORTION_UNITS,
   DEFAULT_CONVERSION_TABLE,
   expandCuisineSelection,
   getParentCuisineNames,
   getStandardIngredientTerms,
   saveStandardIngredientTerms,
+  getCommonAdjectives,
+  saveCommonAdjectives,
 } from './customLists';
 import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
@@ -330,6 +333,75 @@ describe('standard ingredient terms', () => {
       {
         standardUnits: ['Tasse', 'EL'],
         standardAdjectives: ['frisch', 'gehackt'],
+        updatedAt: serverTimestamp(),
+        updatedBy: 'admin-1',
+      }
+    );
+  });
+});
+
+describe('common adjectives', () => {
+  test('getCommonAdjectives returns defaults when document does not exist', async () => {
+    mockGetDoc.mockImplementation(async (ref) => ({
+      exists: () => ref.path !== 'commonTerms/commonAdjectives',
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    }));
+
+    const groups = await getCommonAdjectives();
+
+    expect(groups).toEqual(DEFAULT_COMMON_ADJECTIVES);
+    expect(groups).not.toBe(DEFAULT_COMMON_ADJECTIVES);
+    expect(groups.temperature).not.toBe(DEFAULT_COMMON_ADJECTIVES.temperature);
+  });
+
+  test('getCommonAdjectives returns stored raw groups from Firestore', async () => {
+    mockGetDoc.mockImplementation(async (ref) => {
+      if (ref.path === 'commonTerms/commonAdjectives') {
+        return {
+          exists: () => true,
+          data: () => ({
+            temperature: [' heiß ', 'kühl', 'HEIß', ''],
+            state: ['frisch', ' Frisch '],
+            sizing: ['groß', 'klein'],
+            protected: ['weiß'],
+          }),
+        };
+      }
+      return {
+        exists: () => true,
+        data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+      };
+    });
+
+    const groups = await getCommonAdjectives();
+
+    expect(groups).toEqual({
+      temperature: ['heiß', 'kühl'],
+      state: ['frisch'],
+      sizing: ['groß', 'klein'],
+      protected: ['weiß'],
+    });
+  });
+
+  test('saveCommonAdjectives stores grouped raw values with normalized fields and audit fields', async () => {
+    await saveCommonAdjectives({
+      temperature: [' heiß ', 'HEIß', 'kühl', ''],
+      state: [' Frisch ', 'frisch', ''],
+      sizing: ['groß', ' klein ', 'Groß'],
+      protected: ['weiß', ' WEIß ', ''],
+    }, 'admin-1');
+
+    expect(setDoc).toHaveBeenCalledWith(
+      { path: 'commonTerms/commonAdjectives' },
+      {
+        temperature: ['heiß', 'kühl'],
+        state: ['Frisch'],
+        sizing: ['groß', 'klein'],
+        protected: ['weiß'],
+        normalizedTemperature: ['heiss', 'kuehl'],
+        normalizedState: ['frisch'],
+        normalizedSizing: ['gross', 'klein'],
+        normalizedProtected: ['weiss'],
         updatedAt: serverTimestamp(),
         updatedBy: 'admin-1',
       }

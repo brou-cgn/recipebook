@@ -3,6 +3,7 @@
  */
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, setDoc, updateDoc, deleteField, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 
 export const DEFAULT_CUISINE_TYPES = [
   'Deutsche Küche',
@@ -80,6 +81,39 @@ export const DEFAULT_STANDARD_INGREDIENT_ADJECTIVES = [
   'weich', 'weiche', 'weicher', 'weiches', 'weichen',
   'hart', 'harte', 'harter', 'hartes', 'harten',
 ];
+
+export const COMMON_ADJECTIVE_GROUPS = ['temperature', 'state', 'sizing', 'protected'];
+
+export const DEFAULT_COMMON_ADJECTIVES = {
+  temperature: [
+    'warm', 'warme', 'warmer', 'warmes', 'warmen',
+    'kalt', 'kalte', 'kalter', 'kaltes', 'kalten',
+    'heiß', 'heiße', 'heißer', 'heißes', 'heißen',
+    'eiskalt', 'eiskalte', 'eiskalter', 'eiskaltes', 'eiskalten',
+    'kühl', 'kühle', 'kühler', 'kühles', 'kühlen',
+    'lauwarm', 'lauwarme', 'lauwarmer', 'lauwarmes', 'lauwarmen',
+  ],
+  state: [
+    'reif', 'reife', 'reifer', 'reifes', 'reifen',
+    'unreif', 'unreife', 'unreifer', 'unreifes', 'unreifen',
+    'frisch', 'frische', 'frischer', 'frisches', 'frischen',
+    'trocken', 'trockene', 'trockener', 'trockenes', 'trockenen',
+    'getrocknet', 'getrocknete', 'getrockneter', 'getrocknetes', 'getrockneten',
+    'ganz', 'ganze', 'ganzer', 'ganzes', 'ganzen',
+    'halb', 'halbe', 'halber', 'halbes', 'halben',
+    'fest', 'feste', 'fester', 'festes', 'festen',
+    'weich', 'weiche', 'weicher', 'weiches', 'weichen',
+    'hart', 'harte', 'harter', 'hartes', 'harten',
+  ],
+  sizing: [
+    'groß', 'große', 'großer', 'großes', 'großen',
+    'klein', 'kleine', 'kleiner', 'kleines', 'kleinen',
+    'mittel', 'mittlere', 'mittlerer', 'mittleres', 'mittleren',
+  ],
+  protected: [
+    'weiß', 'weiße', 'weißer', 'weißes',
+  ],
+};
 
 export const DEFAULT_PORTION_UNITS = [
   { id: 'portion', singular: 'Portion', plural: 'Portionen' },
@@ -1151,6 +1185,13 @@ function normalizeStandardIngredientEntries(entries = []) {
     .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index);
 }
 
+const COMMON_ADJECTIVE_NORMALIZED_FIELDS = {
+  temperature: 'normalizedTemperature',
+  state: 'normalizedState',
+  sizing: 'normalizedSizing',
+  protected: 'normalizedProtected',
+};
+
 export async function getStandardIngredientTerms() {
   try {
     const standardTermsRef = doc(db, 'settings', 'standardIngredientTerms');
@@ -1193,6 +1234,62 @@ export async function saveStandardIngredientTerms(standardUnits, standardAdjecti
     });
   } catch (error) {
     console.error('Error saving standard ingredient terms:', error);
+    throw error;
+  }
+}
+
+export async function getCommonAdjectives() {
+  const defaultGroups = COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+    acc[group] = [...DEFAULT_COMMON_ADJECTIVES[group]];
+    return acc;
+  }, {});
+
+  try {
+    const commonAdjectivesRef = doc(db, 'commonTerms', 'commonAdjectives');
+    const commonAdjectivesSnap = await getDoc(commonAdjectivesRef);
+    if (!commonAdjectivesSnap.exists()) {
+      return defaultGroups;
+    }
+
+    const data = commonAdjectivesSnap.data() || {};
+    return COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+      acc[group] = Array.isArray(data[group])
+        ? normalizeStandardIngredientEntries(data[group])
+        : [...DEFAULT_COMMON_ADJECTIVES[group]];
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error('Error loading common adjectives:', error);
+    return defaultGroups;
+  }
+}
+
+export async function saveCommonAdjectives(groups, userId) {
+  const normalizedGroups = COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+    acc[group] = normalizeStandardIngredientEntries(groups?.[group]);
+    return acc;
+  }, {});
+  const normalizedGroupTokens = COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
+    acc[group] = Array.from(new Set(
+      normalizedGroups[group]
+        .map((value) => normalizeNutritionReferenceId(value))
+        .filter(Boolean)
+    ));
+    return acc;
+  }, {});
+
+  try {
+    await setDoc(doc(db, 'commonTerms', 'commonAdjectives'), {
+      ...normalizedGroups,
+      [COMMON_ADJECTIVE_NORMALIZED_FIELDS.temperature]: normalizedGroupTokens.temperature,
+      [COMMON_ADJECTIVE_NORMALIZED_FIELDS.state]: normalizedGroupTokens.state,
+      [COMMON_ADJECTIVE_NORMALIZED_FIELDS.sizing]: normalizedGroupTokens.sizing,
+      [COMMON_ADJECTIVE_NORMALIZED_FIELDS.protected]: normalizedGroupTokens.protected,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId || null,
+    });
+  } catch (error) {
+    console.error('Error saving common adjectives:', error);
     throw error;
   }
 }
