@@ -56,6 +56,28 @@ const BASE_COMMON_UNITS = [
   'bl',
 ];
 
+const VULGAR_FRACTIONS = {
+  '½': '1/2',
+  '⅓': '1/3',
+  '⅔': '2/3',
+  '¼': '1/4',
+  '¾': '3/4',
+  '⅕': '1/5',
+  '⅖': '2/5',
+  '⅗': '3/5',
+  '⅘': '4/5',
+  '⅙': '1/6',
+  '⅚': '5/6',
+  '⅐': '1/7',
+  '⅛': '1/8',
+  '⅜': '3/8',
+  '⅝': '5/8',
+  '⅞': '7/8',
+  '⅑': '1/9',
+  '⅒': '1/10',
+};
+const VULGAR_FRACTION_CHARS = Object.keys(VULGAR_FRACTIONS).join('');
+
 const IGNORED_INGREDIENT_MARKERS = new Set([
   'optional',
   'ggf',
@@ -164,8 +186,28 @@ export function normalizeIngredientNameForIdMatching(name) {
   return sanitizeIngredientNameForIdMatching(name);
 }
 
+function normalizeVulgarFractions(text) {
+  if (!text || typeof text !== 'string') return text;
+  let result = text.replace(
+    new RegExp(`(\\d+)\\s*([${VULGAR_FRACTION_CHARS}])`, 'g'),
+    (_, whole, fractionChar) => {
+      const asciiFraction = VULGAR_FRACTIONS[fractionChar];
+      const [numerator, denominator] = asciiFraction.split('/').map(Number);
+      return String(Number(whole) + (numerator / denominator));
+    }
+  );
+  result = result.replace(
+    new RegExp(`([${VULGAR_FRACTION_CHARS}])(\\S)`, 'g'),
+    '$1 $2'
+  );
+  return result.replace(
+    new RegExp(`[${VULGAR_FRACTION_CHARS}]`, 'g'),
+    (match) => VULGAR_FRACTIONS[match]
+  );
+}
+
 export function parseIngredientNameAndUnit(ingredientText) {
-  const raw = String(ingredientText || '').trim();
+  const raw = normalizeVulgarFractions(String(ingredientText || '').trim());
   if (!raw) return { quantity: null, name: '', unit: null };
 
   const numericPrefixMatch = raw.match(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s*(\S+)?\s*(.*)$/);

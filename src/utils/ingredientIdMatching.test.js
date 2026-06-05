@@ -33,6 +33,30 @@ describe('ingredientIdMatching', () => {
     expect(parseIngredientNameAndUnit('Petersilie')).toEqual({ quantity: null, name: 'Petersilie', unit: null });
   });
 
+  test('parses Unicode vulgar fractions as quantity', () => {
+    expect(parseIngredientNameAndUnit('½ Teelöffel Koriandersamen')).toEqual({
+      quantity: 0.5, name: 'Koriandersamen', unit: 'Teelöffel',
+    });
+    expect(parseIngredientNameAndUnit('¼ TL Salz')).toEqual({
+      quantity: 0.25, name: 'Salz', unit: 'TL',
+    });
+    expect(parseIngredientNameAndUnit('¾ Tasse Mehl')).toEqual({
+      quantity: 0.75, name: 'Mehl', unit: 'Tasse',
+    });
+    expect(parseIngredientNameAndUnit('⅓ Liter Milch')).toEqual({
+      quantity: 1 / 3, name: 'Milch', unit: 'Liter',
+    });
+  });
+
+  test('handles Unicode fraction directly attached to digit or unit', () => {
+    expect(parseIngredientNameAndUnit('1½ TL Salz')).toMatchObject({
+      name: 'Salz', unit: 'TL',
+    });
+    expect(parseIngredientNameAndUnit('½TL Salz')).toEqual({
+      quantity: 0.5, name: 'Salz', unit: 'TL',
+    });
+  });
+
   test('returns 100% confidence for exact synonym match', () => {
     const suggestions = getIngredientIdSuggestions('250 g Tomaten', [
       { ingredientID: 'tomate', synonyms: ['Tomaten'] },
@@ -40,6 +64,34 @@ describe('ingredientIdMatching', () => {
     ]);
 
     expect(suggestions[0]).toMatchObject({ ingredientID: 'tomate', displayName: 'Tomaten', confidencePercent: 100 });
+  });
+
+  test('returns 100% confidence for ingredient with Unicode vulgar fraction', () => {
+    const suggestions = getIngredientIdSuggestions('½ Teelöffel Koriandersamen', [
+      {
+        ingredientID: 'koriandersamen',
+        synonyms: ['koriandersamen'],
+        possibleUnits: ['tl', 'el', 'g', 'prise', 'Teelöffel'],
+      },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({
+      ingredientID: 'koriandersamen', confidencePercent: 100,
+    });
+  });
+
+  test('returns 100% confidence for ingredient with ASCII fraction (regression)', () => {
+    const suggestions = getIngredientIdSuggestions('1/2 Teelöffel Koriandersamen', [
+      {
+        ingredientID: 'koriandersamen',
+        synonyms: ['koriandersamen'],
+        possibleUnits: ['tl', 'el', 'g', 'prise', 'Teelöffel'],
+      },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({
+      ingredientID: 'koriandersamen', confidencePercent: 100,
+    });
   });
 
   test('returns 100% confidence for exact synonym match with long-form unit', () => {
