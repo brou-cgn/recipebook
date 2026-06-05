@@ -1,5 +1,7 @@
 import { normalizeNutritionReferenceId } from './nutritionReferenceUtils';
 import { decodeRecipeLink } from './recipeLinks';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const BASE_COMMON_UNITS = [
   // Gewicht
@@ -87,43 +89,141 @@ const IGNORED_INGREDIENT_MARKERS = new Set([
   'gegebenenfalls',
 ]);
 
-const BASE_COMMON_ADJECTIVES = [
-  // Temperatur (normalized: umlauts stripped, ß→ss)
-  'warm', 'warme', 'warmer', 'warmes', 'warmen',
-  'kalt', 'kalte', 'kalter', 'kaltes', 'kalten',
-  'heiss', 'heisse', 'heisser', 'heisses', 'heissen',
-  'eiskalt', 'eiskalte', 'eiskalter', 'eiskaltes', 'eiskalten',
-  'lauwarm', 'lauwarme', 'lauwarmer', 'lauwarmes', 'lauwarmen',
-  'gekuhlt', 'gekuehlt', 'gekuehl',
-  // Zustand & Reife
-  'reif', 'reife', 'reifer', 'reifes', 'reifen',
-  'unreif', 'unreife', 'unreifer', 'unreifes', 'unreifen',
-  'frisch', 'frische', 'frischer', 'frisches', 'frischen',
-  'trocken', 'trockene', 'trockener', 'trockenes', 'trockenen',
-  'getrocknet', 'getrocknete', 'getrockneter', 'getrocknetes', 'getrockneten',
-  // Größe (groß→gross after normalization)
-  'gross', 'grosse', 'grosser', 'grosses', 'grossen',
-  'klein', 'kleine', 'kleiner', 'kleines', 'kleinen',
-  'mittel', 'mittlere', 'mittlerer', 'mittleres', 'mittleren',
-  // Weitere häufige Beschreibungen
-  'ganz', 'ganze', 'ganzer', 'ganzes', 'ganzen',
-  'halb', 'halber', 'halbes', 'halben',
-  'fest', 'feste', 'fester', 'festes', 'festen',
-  'weich', 'weiche', 'weicher', 'weiches', 'weichen',
-  'hart', 'harte', 'harter', 'hartes', 'harten',
-];
+const COMMON_ADJECTIVE_GROUP_CONFIG = {
+  temperature: { normalizedField: 'normalizedTemperature', includeInBase: true },
+  state: { normalizedField: 'normalizedState', includeInBase: true },
+  sizing: { normalizedField: 'normalizedSizing', includeInBase: true },
+  protected: { normalizedField: 'normalizedProtected', includeInBase: false },
+};
+const BASE_ADJECTIVE_GROUPS = Object.keys(COMMON_ADJECTIVE_GROUP_CONFIG)
+  .filter((group) => COMMON_ADJECTIVE_GROUP_CONFIG[group].includeInBase);
 
-const PROTECTED_ADJECTIVES = new Set([
-  'weiss',
-  'weisse',
-  'weisser',
-  'weisses',
-]);
+const DEFAULT_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
+const ADJECTIVE_DECLENSION_OVERRIDES = {
+  mittel: {
+    stems: ['mittler'],
+    suffixes: ['e', 'en', 'em', 'er', 'es'],
+  },
+};
+
+const DEFAULT_COMMON_ADJECTIVE_BASE_FORMS = {
+  temperature: ['warm', 'kalt', 'heiss', 'eiskalt', 'kuehl', 'lauwarm'],
+  state: ['reif', 'unreif', 'frisch', 'trocken', 'getrocknet', 'ganz', 'halb', 'fest', 'weich', 'hart'],
+  sizing: ['gross', 'klein', 'mittel'],
+  protected: ['weiss'],
+};
+
+function buildDeclensionForms(normalizedWord) {
+  const token = normalizeNutritionReferenceId(normalizedWord);
+  if (!token) return [];
+
+  const override = ADJECTIVE_DECLENSION_OVERRIDES[token];
+  const stems = override?.stems?.length
+    ? override.stems.map((stem) => normalizeNutritionReferenceId(stem)).filter(Boolean)
+    : [token];
+  const suffixes = Array.isArray(override?.suffixes) && override.suffixes.length > 0
+    ? override.suffixes
+    : DEFAULT_DECLENSION_SUFFIXES;
+
+  const forms = new Set([token]);
+  stems.forEach((stem) => {
+    suffixes.forEach((suffix) => {
+      const form = normalizeNutritionReferenceId(`${stem}${suffix}`);
+      if (form) forms.add(form);
+    });
+  });
+  return Array.from(forms);
+}
+
+function expandNormalizedAdjectives(words = []) {
+  const expanded = new Set();
+  words.forEach((word) => {
+    buildDeclensionForms(word).forEach((form) => expanded.add(form));
+  });
+  return Array.from(expanded);
+}
+
+function buildDefaultBaseCommonAdjectives() {
+  const grouped = BASE_ADJECTIVE_GROUPS
+    .flatMap((group) => DEFAULT_COMMON_ADJECTIVE_BASE_FORMS[group] || []);
+  return expandNormalizedAdjectives(grouped);
+}
+
+function buildDefaultProtectedAdjectives() {
+  return expandNormalizedAdjectives(DEFAULT_COMMON_ADJECTIVE_BASE_FORMS.protected || []);
+}
+
+const BASE_COMMON_ADJECTIVES = buildDefaultBaseCommonAdjectives();
+const PROTECTED_ADJECTIVES = new Set(buildDefaultProtectedAdjectives());
 
 const COMMON_UNITS = new Set(BASE_COMMON_UNITS);
 const COMMON_ADJECTIVES = new Set(BASE_COMMON_ADJECTIVES);
 const CUSTOM_UNITS = new Set();
 const CUSTOM_ADJECTIVES = new Set();
+let commonAdjectivesInitializationPromise = null;
+
+function applyCommonAdjectiveSets(commonAdjectives = [], protectedAdjectives = []) {
+  COMMON_ADJECTIVES.clear();
+  commonAdjectives.forEach((entry) => COMMON_ADJECTIVES.add(entry));
+
+  PROTECTED_ADJECTIVES.clear();
+  protectedAdjectives.forEach((entry) => PROTECTED_ADJECTIVES.add(entry));
+}
+
+export async function initializeCommonAdjectivesFromFirebase({ forceReload = false } = {}) {
+  if (commonAdjectivesInitializationPromise && !forceReload) {
+    return commonAdjectivesInitializationPromise;
+  }
+
+  commonAdjectivesInitializationPromise = (async () => {
+    const defaultBase = buildDefaultBaseCommonAdjectives();
+    const defaultProtected = buildDefaultProtectedAdjectives();
+
+    try {
+      const snap = await getDoc(doc(db, 'commonTerms', 'commonAdjectives'));
+      if (!snap.exists()) {
+        applyCommonAdjectiveSets(defaultBase, defaultProtected);
+        return;
+      }
+
+      const data = snap.data() || {};
+      const loadedByGroup = Object.entries(COMMON_ADJECTIVE_GROUP_CONFIG).reduce((acc, [group, groupConfig]) => {
+        const normalizedFieldValues = Array.isArray(data[groupConfig.normalizedField])
+          ? data[groupConfig.normalizedField]
+          : [];
+        acc[group] = expandNormalizedAdjectives(normalizedFieldValues);
+        return acc;
+      }, {});
+      const hasConfiguredBaseFields = BASE_ADJECTIVE_GROUPS
+        .some((group) => Array.isArray(data[COMMON_ADJECTIVE_GROUP_CONFIG[group].normalizedField]));
+      const hasConfiguredProtectedField = Array.isArray(
+        data[COMMON_ADJECTIVE_GROUP_CONFIG.protected.normalizedField]
+      );
+
+      const loadedBase = BASE_ADJECTIVE_GROUPS
+        .flatMap((group) => loadedByGroup[group] || []);
+      const loadedProtected = loadedByGroup.protected || [];
+
+      applyCommonAdjectiveSets(
+        hasConfiguredBaseFields ? loadedBase : defaultBase,
+        hasConfiguredProtectedField ? loadedProtected : defaultProtected
+      );
+    } catch (error) {
+      console.error('Error loading common adjectives for ingredient matching:', error);
+      applyCommonAdjectiveSets(defaultBase, defaultProtected);
+    }
+  })();
+
+  return commonAdjectivesInitializationPromise;
+}
+
+// Best-effort background initialization: runtime calls continue to work with defaults
+// if Firebase is temporarily unavailable.
+if (process.env.NODE_ENV !== 'test') {
+  initializeCommonAdjectivesFromFirebase().catch((error) => {
+    console.warn('Common adjective background initialization failed. Falling back to defaults.', error);
+  });
+}
 
 function normalizeMatchingTokens(entries = []) {
   if (!Array.isArray(entries)) return [];

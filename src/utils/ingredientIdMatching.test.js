@@ -1,3 +1,12 @@
+jest.mock('../firebase', () => ({ db: {} }));
+jest.mock('firebase/firestore', () => ({
+  doc: jest.fn((...args) => ({ path: args.slice(1).join('/') })),
+  getDoc: jest.fn(async () => ({
+    exists: () => false,
+    data: () => ({}),
+  })),
+}));
+
 import {
   getIngredientIdSuggestions,
   parseIngredientNameAndUnit,
@@ -5,11 +14,24 @@ import {
   hasMissingIngredientIDs,
   normalizeIngredientNameForIdMatching,
   setCustomIngredientMatchingTerms,
+  initializeCommonAdjectivesFromFirebase,
 } from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceSynonyms,
 } from './nutritionReferenceUtils';
+import { getDoc } from 'firebase/firestore';
+
+const defaultCommonAdjectivesDoc = {
+  exists: () => false,
+  data: () => ({}),
+};
+
+beforeEach(async () => {
+  setCustomIngredientMatchingTerms();
+  getDoc.mockResolvedValue(defaultCommonAdjectivesDoc);
+  await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+});
 
 describe('ingredientIdMatching', () => {
   afterEach(() => {
@@ -399,5 +421,38 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
   test('removes configured custom adjectives', () => {
     setCustomIngredientMatchingTerms({ adjectives: ['gehackte'] });
     expect(normalizeIngredientNameForIdMatching('gehackte Zwiebel')).toBe('Zwiebel');
+  });
+
+  test('loads adjective base forms from Firebase normalized fields and expands declensions', async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        normalizedTemperature: ['kalt'],
+        normalizedState: ['frisch'],
+        normalizedSizing: ['mittel'],
+        normalizedProtected: ['weiss'],
+      }),
+    });
+    await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+
+    expect(normalizeIngredientNameForIdMatching('kaltem Wasser')).toBe('Wasser');
+    expect(normalizeIngredientNameForIdMatching('frischen Kräutern')).toBe('Kräutern');
+    expect(normalizeIngredientNameForIdMatching('mittleren Zwiebeln')).toBe('Zwiebeln');
+    expect(normalizeIngredientNameForIdMatching('weißem Reis')).toBe('weißem Reis');
+  });
+
+  test('removes former protected adjective when not in normalizedProtected', async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        normalizedTemperature: [],
+        normalizedState: ['weiss'],
+        normalizedSizing: [],
+        normalizedProtected: [],
+      }),
+    });
+    await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+
+    expect(normalizeIngredientNameForIdMatching('weißem Reis')).toBe('Reis');
   });
 });
