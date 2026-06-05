@@ -1179,7 +1179,6 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
     await screen.findByText('g');
     expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
   });
 });
 
