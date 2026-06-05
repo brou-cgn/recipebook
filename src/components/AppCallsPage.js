@@ -11,6 +11,8 @@ import {
   saveCustomLists,
   getStandardIngredientTerms,
   saveStandardIngredientTerms,
+  DEFAULT_STANDARD_INGREDIENT_UNITS,
+  DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
   getInspirationListSettings,
   saveInspirationListSettings,
   DEFAULT_INSPIRATION_LIST_NAME,
@@ -85,6 +87,23 @@ const buildAdjectiveDeclensionForms = (word) => {
     forms.add(`${stem}${suffix}`.trim());
   });
   return Array.from(forms).filter(Boolean);
+};
+
+const normalizeEntryListForComparison = (entries = []) => {
+  const normalizedEntries = entries
+    .map((entry) => String(entry || '').trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set(normalizedEntries)).sort();
+};
+
+const NORMALIZED_DEFAULT_STANDARD_UNITS = normalizeEntryListForComparison(DEFAULT_STANDARD_INGREDIENT_UNITS);
+const NORMALIZED_DEFAULT_STANDARD_ADJECTIVES = normalizeEntryListForComparison(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
+
+const areNormalizedEntryListsEqual = (leftEntries = [], preNormalizedRightEntries = []) => {
+  const normalizedLeft = normalizeEntryListForComparison(leftEntries);
+  const normalizedRight = preNormalizedRightEntries;
+  if (normalizedLeft.length !== normalizedRight.length) return false;
+  return normalizedLeft.every((entry, index) => entry === normalizedRight[index]);
 };
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
@@ -213,16 +232,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
     }).catch(() => {});
-    Promise.resolve(getStandardIngredientTerms()).then((terms) => {
-      const loadedStandardUnits = Array.isArray(terms.standardUnits) ? terms.standardUnits : [];
-      const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives) ? terms.standardAdjectives : [];
+    Promise.resolve(getStandardIngredientTerms()).then((terms = {}) => {
+      const loadedStandardUnits = Array.isArray(terms.standardUnits)
+        ? terms.standardUnits
+        : DEFAULT_STANDARD_INGREDIENT_UNITS;
+      const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives)
+        ? terms.standardAdjectives
+        : DEFAULT_STANDARD_INGREDIENT_ADJECTIVES;
       setStandardUnits(loadedStandardUnits);
       setStandardAdjectives(loadedStandardAdjectives);
       setCustomIngredientMatchingTerms({
         units: loadedStandardUnits,
         adjectives: loadedStandardAdjectives,
       });
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Error loading standard ingredient terms:', error);
+      setStandardUnits(DEFAULT_STANDARD_INGREDIENT_UNITS);
+      setStandardAdjectives(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
+      setCustomIngredientMatchingTerms({
+        units: DEFAULT_STANDARD_INGREDIENT_UNITS,
+        adjectives: DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
+      });
+    });
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
     }).catch(() => {});
@@ -831,6 +862,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index)
   ), []);
 
+  const hasCustomStandardUnits = useMemo(
+    () => !areNormalizedEntryListsEqual(standardUnits, NORMALIZED_DEFAULT_STANDARD_UNITS),
+    [standardUnits]
+  );
+  const hasCustomStandardAdjectives = useMemo(
+    () => !areNormalizedEntryListsEqual(standardAdjectives, NORMALIZED_DEFAULT_STANDARD_ADJECTIVES),
+    [standardAdjectives]
+  );
+
   const saveStandardTerms = async (units, adjectives) => {
     const normalizedUnits = normalizeUniqueEntries(units);
     const normalizedAdjectives = normalizeUniqueEntries(adjectives);
@@ -844,9 +884,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     try {
       await saveStandardIngredientTerms(normalizedUnits, normalizedAdjectives, currentUser?.id);
       setStandardTermsFeedback('Standard-Einheiten/-Adjektive gespeichert.');
+      return true;
     } catch (err) {
       console.error('Error saving standard units/adjectives:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Standard-Einheiten/-Adjektive.');
+      return false;
     }
   };
 
@@ -891,6 +933,20 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       standardUnits,
       standardAdjectives.filter((adjective) => adjective !== entry)
     );
+  };
+
+  const handleResetStandardIngredientUnits = async () => {
+    const didSave = await saveStandardTerms(DEFAULT_STANDARD_INGREDIENT_UNITS, standardAdjectives);
+    if (didSave) {
+      setStandardTermsFeedback('Standard-Einheiten auf Standardwerte zurückgesetzt.');
+    }
+  };
+
+  const handleResetStandardIngredientAdjectives = async () => {
+    const didSave = await saveStandardTerms(standardUnits, DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
+    if (didSave) {
+      setStandardTermsFeedback('Standard-Adjektive auf Standardwerte zurückgesetzt.');
+    }
   };
 
   const handleSaveKochatelierSettings = async () => {
@@ -1630,6 +1686,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   ))
                 )}
               </div>
+              {hasCustomStandardUnits && (
+                <button
+                  onClick={handleResetStandardIngredientUnits}
+                  aria-label="Standard-Einheiten auf Standardwerte zurücksetzen"
+                >
+                  Auf Standardwerte zurücksetzen
+                </button>
+              )}
             </div>
 
             <div className="settings-section">
@@ -1666,6 +1730,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   ))
                 )}
               </div>
+              {hasCustomStandardAdjectives && (
+                <button
+                  onClick={handleResetStandardIngredientAdjectives}
+                  aria-label="Standard-Adjektive auf Standardwerte zurücksetzen"
+                >
+                  Auf Standardwerte zurücksetzen
+                </button>
+              )}
             </div>
             {standardTermsFeedback && (
               <p className="app-calls-info-text">{standardTermsFeedback}</p>
