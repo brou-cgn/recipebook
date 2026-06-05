@@ -1092,24 +1092,27 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
-    const resetButtons = await screen.findAllByRole('button', { name: 'Auf Standardwerte zurücksetzen' });
-    expect(resetButtons).toHaveLength(2);
+    const resetUnitsButton = await screen.findByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' });
+    const resetAdjectivesButton = screen.getByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' });
 
-    fireEvent.click(resetButtons[0]);
+    fireEvent.click(resetUnitsButton);
     await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
       ['g', 'kg'],
       ['gehackt'],
       adminUser.id,
     ));
 
-    fireEvent.click(resetButtons[1]);
+    fireEvent.click(resetAdjectivesButton);
     await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenLastCalledWith(
       ['g', 'kg'],
       ['frisch', 'warm'],
       adminUser.id,
     ));
     expect(await screen.findByText('Standard-Adjektive auf Standardwerte zurückgesetzt.')).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Auf Standardwerte zurücksetzen' })).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
+    });
   });
 
   test('does not show reset buttons when loaded lists already match defaults', async () => {
@@ -1131,7 +1134,8 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
     await screen.findByText('g');
-    expect(screen.queryByRole('button', { name: 'Auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Standard-Adjektive auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
   });
 });
 
