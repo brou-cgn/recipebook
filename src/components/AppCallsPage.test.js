@@ -79,6 +79,8 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_INSPIRATION_LIST_DESCRIPTION: '',
   DEFAULT_INSPIRATION_TARGET_LIST_NAME: 'Für jeden Tag',
   DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION: '',
+  DEFAULT_STANDARD_INGREDIENT_UNITS: ['g', 'kg'],
+  DEFAULT_STANDARD_INGREDIENT_ADJECTIVES: ['frisch', 'warm'],
   getCustomLists: jest.fn(() =>
     Promise.resolve({ cuisineTypes: ['Spanisch', 'Italienisch'], cuisineGroups: [] })
   ),
@@ -1041,6 +1043,95 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
       adjectives: ['frisch', 'gehackt'],
     });
     expect(await screen.findByText('Standard-Einheiten/-Adjektive gespeichert.')).toBeInTheDocument();
+  });
+
+  test('uses default standard terms as fallback when loading fails', async () => {
+    const { getStandardIngredientTerms } = require('../utils/customLists');
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    getStandardIngredientTerms.mockRejectedValue(new Error('Firestore down'));
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+
+    expect(await screen.findByText('g')).toBeInTheDocument();
+    expect(screen.getByText('frisch')).toBeInTheDocument();
+    await waitFor(() => expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
+      units: ['g', 'kg'],
+      adjectives: ['frisch', 'warm'],
+    }));
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Error loading standard ingredient terms:',
+      expect.any(Error)
+    );
+    errorSpy.mockRestore();
+  });
+
+  test('shows reset buttons only for custom values and resets lists to defaults', async () => {
+    const { getStandardIngredientTerms, saveStandardIngredientTerms } = require('../utils/customLists');
+    getStandardIngredientTerms.mockResolvedValue({
+      standardUnits: ['Tasse'],
+      standardAdjectives: ['gehackt'],
+    });
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+
+    const resetButtons = await screen.findAllByRole('button', { name: 'Auf Standardwerte zurücksetzen' });
+    expect(resetButtons).toHaveLength(2);
+
+    fireEvent.click(resetButtons[0]);
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
+      ['g', 'kg'],
+      ['gehackt'],
+      adminUser.id,
+    ));
+
+    fireEvent.click(resetButtons[1]);
+    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenLastCalledWith(
+      ['g', 'kg'],
+      ['frisch', 'warm'],
+      adminUser.id,
+    ));
+    expect(await screen.findByText('Standard-Adjektive auf Standardwerte zurückgesetzt.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Auf Standardwerte zurücksetzen' })).not.toBeInTheDocument());
+  });
+
+  test('does not show reset buttons when loaded lists already match defaults', async () => {
+    const { getStandardIngredientTerms } = require('../utils/customLists');
+    getStandardIngredientTerms.mockResolvedValue({
+      standardUnits: ['g', 'kg'],
+      standardAdjectives: ['frisch', 'warm'],
+    });
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
+
+    await screen.findByText('g');
+    expect(screen.queryByRole('button', { name: 'Auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
   });
 });
 

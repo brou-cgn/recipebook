@@ -11,6 +11,8 @@ import {
   saveCustomLists,
   getStandardIngredientTerms,
   saveStandardIngredientTerms,
+  DEFAULT_STANDARD_INGREDIENT_UNITS,
+  DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
   getInspirationListSettings,
   saveInspirationListSettings,
   DEFAULT_INSPIRATION_LIST_NAME,
@@ -85,6 +87,11 @@ const buildAdjectiveDeclensionForms = (word) => {
     forms.add(`${stem}${suffix}`.trim());
   });
   return Array.from(forms).filter(Boolean);
+};
+
+const areNormalizedEntryListsEqual = (leftEntries = [], rightEntries = []) => {
+  if (leftEntries.length !== rightEntries.length) return false;
+  return leftEntries.every((entry, index) => entry.toLowerCase() === String(rightEntries[index] || '').toLowerCase());
 };
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
@@ -213,16 +220,28 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
     }).catch(() => {});
-    Promise.resolve(getStandardIngredientTerms()).then((terms) => {
-      const loadedStandardUnits = Array.isArray(terms.standardUnits) ? terms.standardUnits : [];
-      const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives) ? terms.standardAdjectives : [];
+    Promise.resolve(getStandardIngredientTerms()).then((terms = {}) => {
+      const loadedStandardUnits = Array.isArray(terms.standardUnits)
+        ? terms.standardUnits
+        : [...DEFAULT_STANDARD_INGREDIENT_UNITS];
+      const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives)
+        ? terms.standardAdjectives
+        : [...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES];
       setStandardUnits(loadedStandardUnits);
       setStandardAdjectives(loadedStandardAdjectives);
       setCustomIngredientMatchingTerms({
         units: loadedStandardUnits,
         adjectives: loadedStandardAdjectives,
       });
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Error loading standard ingredient terms:', error);
+      setStandardUnits([...DEFAULT_STANDARD_INGREDIENT_UNITS]);
+      setStandardAdjectives([...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES]);
+      setCustomIngredientMatchingTerms({
+        units: [...DEFAULT_STANDARD_INGREDIENT_UNITS],
+        adjectives: [...DEFAULT_STANDARD_INGREDIENT_ADJECTIVES],
+      });
+    });
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
     }).catch(() => {});
@@ -831,6 +850,23 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index)
   ), []);
 
+  const defaultStandardUnits = useMemo(
+    () => normalizeUniqueEntries(DEFAULT_STANDARD_INGREDIENT_UNITS),
+    [normalizeUniqueEntries]
+  );
+  const defaultStandardAdjectives = useMemo(
+    () => normalizeUniqueEntries(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES),
+    [normalizeUniqueEntries]
+  );
+  const hasCustomStandardUnits = useMemo(
+    () => !areNormalizedEntryListsEqual(normalizeUniqueEntries(standardUnits), defaultStandardUnits),
+    [standardUnits, defaultStandardUnits, normalizeUniqueEntries]
+  );
+  const hasCustomStandardAdjectives = useMemo(
+    () => !areNormalizedEntryListsEqual(normalizeUniqueEntries(standardAdjectives), defaultStandardAdjectives),
+    [standardAdjectives, defaultStandardAdjectives, normalizeUniqueEntries]
+  );
+
   const saveStandardTerms = async (units, adjectives) => {
     const normalizedUnits = normalizeUniqueEntries(units);
     const normalizedAdjectives = normalizeUniqueEntries(adjectives);
@@ -844,9 +880,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     try {
       await saveStandardIngredientTerms(normalizedUnits, normalizedAdjectives, currentUser?.id);
       setStandardTermsFeedback('Standard-Einheiten/-Adjektive gespeichert.');
+      return true;
     } catch (err) {
       console.error('Error saving standard units/adjectives:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Standard-Einheiten/-Adjektive.');
+      return false;
     }
   };
 
@@ -891,6 +929,20 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       standardUnits,
       standardAdjectives.filter((adjective) => adjective !== entry)
     );
+  };
+
+  const handleResetStandardIngredientUnits = async () => {
+    const didSave = await saveStandardTerms(defaultStandardUnits, standardAdjectives);
+    if (didSave) {
+      setStandardTermsFeedback('Standard-Einheiten auf Standardwerte zurückgesetzt.');
+    }
+  };
+
+  const handleResetStandardIngredientAdjectives = async () => {
+    const didSave = await saveStandardTerms(standardUnits, defaultStandardAdjectives);
+    if (didSave) {
+      setStandardTermsFeedback('Standard-Adjektive auf Standardwerte zurückgesetzt.');
+    }
   };
 
   const handleSaveKochatelierSettings = async () => {
@@ -1630,6 +1682,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   ))
                 )}
               </div>
+              {hasCustomStandardUnits && (
+                <button onClick={handleResetStandardIngredientUnits}>Auf Standardwerte zurücksetzen</button>
+              )}
             </div>
 
             <div className="settings-section">
@@ -1666,6 +1721,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   ))
                 )}
               </div>
+              {hasCustomStandardAdjectives && (
+                <button onClick={handleResetStandardIngredientAdjectives}>Auf Standardwerte zurücksetzen</button>
+              )}
             </div>
             {standardTermsFeedback && (
               <p className="app-calls-info-text">{standardTermsFeedback}</p>
