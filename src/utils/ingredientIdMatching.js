@@ -77,6 +77,9 @@ const VULGAR_FRACTIONS = {
   '⅒': '1/10',
 };
 const VULGAR_FRACTION_CHARS = Object.keys(VULGAR_FRACTIONS).join('');
+const DIGIT_VULGAR_FRACTION_REGEX = new RegExp(`(\\d+)\\s*([${VULGAR_FRACTION_CHARS}])`, 'g');
+const VULGAR_FRACTION_WITH_SUFFIX_REGEX = new RegExp(`([${VULGAR_FRACTION_CHARS}])(\\S)`, 'g');
+const VULGAR_FRACTION_REGEX = new RegExp(`[${VULGAR_FRACTION_CHARS}]`, 'g');
 
 const IGNORED_INGREDIENT_MARKERS = new Set([
   'optional',
@@ -189,19 +192,20 @@ export function normalizeIngredientNameForIdMatching(name) {
 function normalizeVulgarFractions(text) {
   if (!text || typeof text !== 'string') return text;
   let result = text.replace(
-    new RegExp(`(\\d+)\\s*([${VULGAR_FRACTION_CHARS}])`, 'g'),
+    DIGIT_VULGAR_FRACTION_REGEX,
     (_, whole, fractionChar) => {
       const asciiFraction = VULGAR_FRACTIONS[fractionChar];
+      if (!asciiFraction) return `${whole}${fractionChar}`;
       const [numerator, denominator] = asciiFraction.split('/').map(Number);
       return String(Number(whole) + (numerator / denominator));
     }
   );
   result = result.replace(
-    new RegExp(`([${VULGAR_FRACTION_CHARS}])(\\S)`, 'g'),
+    VULGAR_FRACTION_WITH_SUFFIX_REGEX,
     '$1 $2'
   );
   return result.replace(
-    new RegExp(`[${VULGAR_FRACTION_CHARS}]`, 'g'),
+    VULGAR_FRACTION_REGEX,
     (match) => VULGAR_FRACTIONS[match]
   );
 }

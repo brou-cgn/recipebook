@@ -49,8 +49,8 @@ describe('ingredientIdMatching', () => {
   });
 
   test('handles Unicode fraction directly attached to digit or unit', () => {
-    expect(parseIngredientNameAndUnit('1½ TL Salz')).toMatchObject({
-      name: 'Salz', unit: 'TL',
+    expect(parseIngredientNameAndUnit('1½ TL Salz')).toEqual({
+      quantity: 1.5, name: 'Salz', unit: 'TL',
     });
     expect(parseIngredientNameAndUnit('½TL Salz')).toEqual({
       quantity: 0.5, name: 'Salz', unit: 'TL',
@@ -80,7 +80,7 @@ describe('ingredientIdMatching', () => {
     });
   });
 
-  test('returns 100% confidence for ingredient with ASCII fraction (regression)', () => {
+  test('returns 100% confidence for ingredient with ASCII fraction (ensures existing behavior unchanged)', () => {
     const suggestions = getIngredientIdSuggestions('1/2 Teelöffel Koriandersamen', [
       {
         ingredientID: 'koriandersamen',
