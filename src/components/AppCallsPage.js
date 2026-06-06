@@ -2125,30 +2125,51 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               })}
             </ul>
             {ingredientWordContextMenu && activeTab === 'missingIngredientIDs' && (
-              <>
-                <div
-                  className="ingredient-word-context-backdrop"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeIngredientWordContextMenu();
-                  }}
-                />
-                <div
-                  className="ingredient-word-context-menu"
-                  style={{
-                    top: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.top + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
-                    left: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.left + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button type="button" onClick={handleDefineContextWordAsStandardUnit}>
-                    Als Standardeinheit definieren
-                  </button>
-                  <button type="button" onClick={handleDefineContextWordAsStandardAdjective}>
-                    Als Standardadjektiv definieren
-                  </button>
+              <dialog
+                className="ingredient-word-context-dialog"
+                open
+                aria-label={`Segmentzuordnung für "${ingredientWordContextMenu.word}"`}
+                onCancel={(event) => {
+                  event.preventDefault();
+                  closeIngredientWordContextMenu();
+                }}
+              >
+                <div className="ingredient-word-context-dialog-content">
+                  <p className="ingredient-word-context-dialog-title">
+                    Segment für „{ingredientWordContextMenu.word}“
+                  </p>
+                  <label className="ingredient-word-context-dialog-label" htmlFor="ingredient-word-segment-select">
+                    Zielsegment
+                  </label>
+                  <select
+                    id="ingredient-word-segment-select"
+                    value={ingredientWordContextMenu.segment || ''}
+                    onChange={(event) => handleIngredientWordSegmentChange(event.target.value)}
+                    aria-label="Zielsegment"
+                  >
+                    {ingredientContextSegmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="ingredient-word-context-dialog-doc">
+                    Dokument: {
+                      ingredientContextSegmentOptions.find(
+                        (option) => option.value === ingredientWordContextMenu.segment
+                      )?.documentPath || '—'
+                    }
+                  </p>
+                  <div className="ingredient-word-context-dialog-actions">
+                    <button type="button" onClick={closeIngredientWordContextMenu}>
+                      Abbrechen
+                    </button>
+                    <button type="button" onClick={handleApplyIngredientWordSegmentAssignment}>
+                      Zuweisen
+                    </button>
+                  </div>
                 </div>
-              </>
+              </dialog>
             )}
             <div className="ingredient-match-dialog-actions">
               <button type="button" className="ingredient-match-dialog-cancel" onClick={handleCloseIngredientMatchDialog}>
