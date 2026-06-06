@@ -1075,8 +1075,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     getCuisineProposals.mockResolvedValue([]);
   });
 
-  test('shows loaded standard terms, applies them in memory, and persists updates', async () => {
-    const { saveStandardIngredientTerms } = require('../utils/customLists');
+  test('shows loaded standard terms, applies them in memory, and renders without standalone standard units section', async () => {
     render(
       <AppCallsPage
         onBack={jest.fn()}
@@ -1088,35 +1087,18 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
-    expect(await screen.findByText('Standard-Einheiten')).toBeInTheDocument();
+    expect(screen.queryByText('Standard-Einheiten')).not.toBeInTheDocument();
     expect(screen.getByText('Temperatur')).toBeInTheDocument();
     expect(screen.getByText('Zustand')).toBeInTheDocument();
     expect(screen.getByText('Größe')).toBeInTheDocument();
     expect(screen.getByText('Geschützt')).toBeInTheDocument();
-    expect(await screen.findByText('Tasse')).toBeInTheDocument();
+    expect(screen.getByText('Standard-Einheitengruppen')).toBeInTheDocument();
     expect(screen.getByText('frisch')).toBeInTheDocument();
     expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
       units: ['Tasse'],
       adjectives: ['frisch'],
     });
     expect(screen.queryByRole('button', { name: 'Jetzt deployen' })).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('Neue Einheit hinzufügen (z.B. Päckchen)...'), {
-      target: { value: 'Päckchen' },
-    });
-    fireEvent.click(screen.getAllByRole('button', { name: /Hinzufügen/i })[0]);
-
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
-      ['Tasse', 'Päckchen'],
-      ['frisch'],
-      adminUser.id,
-    ));
-
-    expect(mockSetCustomIngredientMatchingTerms).toHaveBeenLastCalledWith({
-      units: ['Tasse', 'Päckchen'],
-      adjectives: ['frisch'],
-    });
-    expect(await screen.findByText('Standard-Einheiten/-Adjektive gespeichert.')).toBeInTheDocument();
   });
 
   test('renders grouped common adjectives and persists add/remove per group', async () => {
@@ -1182,7 +1164,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
-    expect(await screen.findByText('g')).toBeInTheDocument();
+    expect(screen.queryByText('Standard-Einheiten')).not.toBeInTheDocument();
     expect(screen.getByText('Temperatur')).toBeInTheDocument();
     await waitFor(() => expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
       units: ['g', 'kg'],
@@ -1195,11 +1177,13 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     errorSpy.mockRestore();
   });
 
-  test('shows reset button only for custom unit values and resets units to defaults', async () => {
-    const { getStandardIngredientTerms, saveStandardIngredientTerms } = require('../utils/customLists');
-    getStandardIngredientTerms.mockResolvedValue({
-      standardUnits: ['Tasse'],
-      standardAdjectives: ['gehackt'],
+  test('uses list-input/list-items layout for standard unit groups and persists group updates', async () => {
+    const { getCommonUnits, saveCommonUnits } = require('../utils/customLists');
+    getCommonUnits.mockResolvedValue({
+      volume: ['ml'],
+      kitchenSize: ['Esslöffel'],
+      weight: ['g'],
+      dimension: ['cm'],
     });
 
     render(
@@ -1213,39 +1197,25 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
 
-    const resetUnitsButton = await screen.findByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' });
+    const volumenSection = screen.getByText('Volumen').closest('.standard-terms-group-section');
+    expect(volumenSection).toBeTruthy();
+    expect(volumenSection.querySelector('.list-input')).toBeTruthy();
+    expect(volumenSection.querySelector('.list-items')).toBeTruthy();
 
-    fireEvent.click(resetUnitsButton);
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalledWith(
-      ['g', 'kg'],
-      ['gehackt'],
+    fireEvent.change(within(volumenSection).getByPlaceholderText('Volumen hinzufügen...'), {
+      target: { value: 'dl' },
+    });
+    fireEvent.click(within(volumenSection).getByRole('button', { name: 'Hinzufügen' }));
+
+    await waitFor(() => expect(saveCommonUnits).toHaveBeenCalledWith(
+      {
+        volume: ['ml', 'dl'],
+        kitchenSize: ['Esslöffel'],
+        weight: ['g'],
+        dimension: ['cm'],
+      },
       adminUser.id,
     ));
-    expect(await screen.findByText('Standard-Einheiten auf Standardwerte zurückgesetzt.')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
-    });
-  });
-
-  test('does not show reset buttons when loaded lists already match defaults', async () => {
-    const { getStandardIngredientTerms } = require('../utils/customLists');
-    getStandardIngredientTerms.mockResolvedValue({
-      standardUnits: ['g', 'kg'],
-      standardAdjectives: ['frisch', 'warm'],
-    });
-
-    render(
-      <AppCallsPage
-        onBack={jest.fn()}
-        currentUser={adminUser}
-        recipes={[]}
-        onUpdateRecipe={jest.fn()}
-      />
-    );
-
-    fireEvent.click(await screen.findByText('Standardeinheiten/-adjektive'));
-    await screen.findByText('g');
-    expect(screen.queryByRole('button', { name: 'Standard-Einheiten auf Standardwerte zurücksetzen' })).not.toBeInTheDocument();
   });
 });
 
