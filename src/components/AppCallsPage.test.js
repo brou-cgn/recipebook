@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import AppCallsPage from './AppCallsPage';
 import { INGREDIENT_MATCH_CREATE_NEW_OPTION } from '../hooks/useIngredientIDMatching';
 
@@ -956,7 +956,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     expect(within(withoutWarningRow).queryByLabelText('Enthält nicht einkalkulierte Zutaten')).not.toBeInTheDocument();
   });
 
-  test('does not show long-press context menu outside missing ingredientID tab', async () => {
+  test('does not show ingredient word context dialog outside missing ingredientID tab', async () => {
     mockNutritionReferenceState = {
       rows: [
         { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
@@ -992,20 +992,10 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    jest.useFakeTimers();
-    try {
-      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frische"' });
-      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
-      act(() => {
-        jest.advanceTimersByTime(600);
-      });
-      fireEvent.touchEnd(wordButton);
-    } finally {
-      jest.useRealTimers();
-    }
+    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
+    fireEvent.click(wordButton);
 
-    expect(screen.queryByRole('button', { name: 'Als Standardeinheit definieren' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Als Standardadjektiv definieren' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).not.toBeInTheDocument();
   });
 
   test('opens recipe detail when recipe name is clicked', async () => {
@@ -1700,7 +1690,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(stats.textContent).toMatch(/Rezepte/);
   });
 
-  test('long press on ingredient word allows defining a standard unit on missing ingredientID page', async () => {
+  test('click on ingredient word allows assigning standard unit segment on missing ingredientID page', async () => {
     const { saveStandardIngredientTerms } = require('../utils/customLists');
     mockNutritionReferenceState = {
       rows: [
@@ -1728,19 +1718,11 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    jest.useFakeTimers();
-    try {
-      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frische"' });
-      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
-      act(() => {
-        jest.advanceTimersByTime(600);
-      });
-      fireEvent.touchEnd(wordButton);
-    } finally {
-      jest.useRealTimers();
-    }
+    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
+    fireEvent.click(wordButton);
+    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Als Standardeinheit definieren' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
 
     await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
     const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);
@@ -1749,7 +1731,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(savedUserId).toBe(adminUser.id);
   });
 
-  test('long press standard adjective option stores declension forms', async () => {
+  test('context dialog standard adjective option stores declension forms', async () => {
     const { saveStandardIngredientTerms } = require('../utils/customLists');
     mockNutritionReferenceState = {
       rows: [
@@ -1777,19 +1759,13 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    jest.useFakeTimers();
-    try {
-      const wordButton = screen.getByRole('button', { name: 'Kontextmenü für "frischen"' });
-      fireEvent.touchStart(wordButton, { touches: [{ clientX: 120, clientY: 240 }] });
-      act(() => {
-        jest.advanceTimersByTime(600);
-      });
-      fireEvent.touchEnd(wordButton);
-    } finally {
-      jest.useRealTimers();
-    }
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Als Standardadjektiv definieren' }));
+    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frischen"' });
+    fireEvent.click(wordButton);
+    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frischen.*/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Zielsegment' }), {
+      target: { value: 'standardAdjectives' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
 
     await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
     const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);

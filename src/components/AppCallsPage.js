@@ -76,10 +76,8 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
   return merged;
 };
 
-const INGREDIENT_WORD_LONG_PRESS_MS = 500;
 const ADJECTIVE_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
-const CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX = 12;
-const CONTEXT_MENU_POINTER_OFFSET_PX = 8;
+const DEFAULT_INGREDIENT_CONTEXT_SEGMENT = 'standardUnits';
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
@@ -398,7 +396,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
-  const ingredientWordLongPressTimerRef = useRef(null);
 
   const recipesWithMissingIngredientIDs = useMemo(
     () =>
@@ -437,17 +434,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
 
-  const clearIngredientWordLongPress = useCallback(() => {
-    if (ingredientWordLongPressTimerRef.current) {
-      clearTimeout(ingredientWordLongPressTimerRef.current);
-      ingredientWordLongPressTimerRef.current = null;
-    }
-  }, []);
-
   const closeIngredientWordContextMenu = useCallback(() => {
-    clearIngredientWordLongPress();
     setIngredientWordContextMenu(null);
-  }, [clearIngredientWordLongPress]);
+  }, []);
 
   const handleCloseIngredientMatchDialog = useCallback(() => {
     closeIngredientWordContextMenu();
@@ -455,27 +444,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setIngredientMatchDialog(null);
   }, [closeIngredientWordContextMenu, setIngredientMatchDialog]);
 
-  const openIngredientWordContextMenuFromLongPress = useCallback((event, rawWord) => {
+  const openIngredientWordContextMenuFromClick = useCallback((rawWord) => {
     if (activeTab !== 'missingIngredientIDs') return;
     const trimmedWord = trimIngredientContextWord(rawWord);
     if (!trimmedWord) return;
-
-    clearIngredientWordLongPress();
-
-    const touchPoint = event.touches?.[0];
-    const position = touchPoint
-      ? { top: touchPoint.clientY, left: touchPoint.clientX }
-      : { top: event.clientY, left: event.clientX };
-
-    ingredientWordLongPressTimerRef.current = setTimeout(() => {
-      setIngredientWordContextMenu({
-        word: trimmedWord,
-        top: position.top,
-        left: position.left,
-      });
-      ingredientWordLongPressTimerRef.current = null;
-    }, INGREDIENT_WORD_LONG_PRESS_MS);
-  }, [activeTab, clearIngredientWordLongPress]);
+    setIngredientWordContextMenu({
+      word: trimmedWord,
+      segment: DEFAULT_INGREDIENT_CONTEXT_SEGMENT,
+    });
+  }, [activeTab]);
 
   const renderIngredientWords = useCallback((ingredientText) => {
     const words = String(ingredientText || '').split(/\s+/).filter(Boolean);
@@ -484,25 +461,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         <button
           type="button"
           className="ingredient-word-context-trigger"
-          onMouseDown={(event) => openIngredientWordContextMenuFromLongPress(event, word)}
-          onMouseUp={clearIngredientWordLongPress}
-          onMouseLeave={clearIngredientWordLongPress}
-          onTouchStart={(event) => openIngredientWordContextMenuFromLongPress(event, word)}
-          onTouchEnd={clearIngredientWordLongPress}
-          onTouchCancel={clearIngredientWordLongPress}
-          onTouchMove={clearIngredientWordLongPress}
-          aria-label={`Kontextmenü für "${trimIngredientContextWord(word) || word}"`}
+          onClick={() => openIngredientWordContextMenuFromClick(word)}
+          aria-label={`Kontextdialog für "${trimIngredientContextWord(word) || word}"`}
         >
           {word}
         </button>
         {index < words.length - 1 ? ' ' : null}
       </React.Fragment>
     ));
-  }, [clearIngredientWordLongPress, openIngredientWordContextMenuFromLongPress]);
-
-  useEffect(() => () => {
-    clearIngredientWordLongPress();
-  }, [clearIngredientWordLongPress]);
+  }, [openIngredientWordContextMenuFromClick]);
 
   useEffect(() => {
     if (!ingredientMatchDialog || activeTab !== 'missingIngredientIDs') {
@@ -964,18 +931,38 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  const handleDefineContextWordAsStandardUnit = async () => {
-    if (!ingredientWordContextMenu?.word) return;
-    await saveStandardTerms([...standardUnits, ingredientWordContextMenu.word], standardAdjectives);
-    closeIngredientWordContextMenu();
-  };
+  const ingredientContextSegmentOptions = useMemo(() => ([
+    {
+      value: 'standardUnits',
+      label: 'Standard-Einheiten',
+      documentPath: 'settings/standardIngredientTerms',
+    },
+    {
+      value: 'standardAdjectives',
+      label: 'Standard-Adjektive',
+      documentPath: 'settings/standardIngredientTerms',
+    },
+    ...COMMON_ADJECTIVE_GROUPS.map((group) => ({
+      value: `commonAdjectives:${group}`,
+      label: `${COMMON_ADJECTIVE_GROUP_LABELS[group]} (Adjektive)`,
+      documentPath: 'commonTerms/commonAdjectives',
+    })),
+    ...COMMON_UNIT_GROUPS.map((group) => ({
+      value: `commonUnits:${group}`,
+      label: `${COMMON_UNIT_GROUP_LABELS[group]} (Einheiten)`,
+      documentPath: 'commonTerms/commonUnits',
+    })),
+  ]), []);
 
-  const handleDefineContextWordAsStandardAdjective = async () => {
-    if (!ingredientWordContextMenu?.word) return;
-    const declensionForms = buildAdjectiveDeclensionForms(ingredientWordContextMenu.word);
-    await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
-    closeIngredientWordContextMenu();
-  };
+  const handleIngredientWordSegmentChange = useCallback((segment) => {
+    setIngredientWordContextMenu((current) => (current ? { ...current, segment } : current));
+  }, []);
+
+  const selectedIngredientContextSegment = ingredientWordContextMenu?.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
+  const selectedIngredientContextSegmentOption = useMemo(
+    () => ingredientContextSegmentOptions.find((option) => option.value === selectedIngredientContextSegment) || null,
+    [ingredientContextSegmentOptions, selectedIngredientContextSegment]
+  );
 
   const handleAddCommonAdjective = async (group, value) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
@@ -1089,6 +1076,39 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     } catch (err) {
       console.error('Error saving common units:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    }
+  };
+
+  const handleApplyIngredientWordSegmentAssignment = async () => {
+    if (!ingredientWordContextMenu?.word) return;
+
+    const word = ingredientWordContextMenu.word;
+    const segment = ingredientWordContextMenu.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
+
+    if (segment === 'standardUnits') {
+      await saveStandardTerms([...standardUnits, word], standardAdjectives);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment === 'standardAdjectives') {
+      const declensionForms = buildAdjectiveDeclensionForms(word);
+      await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment.startsWith('commonAdjectives:')) {
+      const adjectiveGroup = segment.split(':')[1];
+      await handleAddCommonAdjective(adjectiveGroup, word);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment.startsWith('commonUnits:')) {
+      const unitGroup = segment.split(':')[1];
+      await handleAddCommonUnit(unitGroup, word);
+      closeIngredientWordContextMenu();
     }
   };
 
@@ -2116,30 +2136,47 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               })}
             </ul>
             {ingredientWordContextMenu && activeTab === 'missingIngredientIDs' && (
-              <>
-                <div
-                  className="ingredient-word-context-backdrop"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeIngredientWordContextMenu();
-                  }}
-                />
-                <div
-                  className="ingredient-word-context-menu"
-                  style={{
-                    top: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.top + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
-                    left: `${Math.max(CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX, ingredientWordContextMenu.left + CONTEXT_MENU_POINTER_OFFSET_PX)}px`,
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button type="button" onClick={handleDefineContextWordAsStandardUnit}>
-                    Als Standardeinheit definieren
-                  </button>
-                  <button type="button" onClick={handleDefineContextWordAsStandardAdjective}>
-                    Als Standardadjektiv definieren
-                  </button>
+              <dialog
+                className="ingredient-word-context-dialog"
+                open
+                aria-label={`Segmentzuordnung für „${ingredientWordContextMenu.word}“`}
+                onCancel={(event) => {
+                  event.preventDefault();
+                  closeIngredientWordContextMenu();
+                }}
+              >
+                <div className="ingredient-word-context-dialog-content">
+                  <p className="ingredient-word-context-dialog-title">
+                    Segment für „{ingredientWordContextMenu.word}“
+                  </p>
+                  <label className="ingredient-word-context-dialog-label" htmlFor="ingredient-word-segment-select">
+                    Zielsegment
+                  </label>
+                  <select
+                    id="ingredient-word-segment-select"
+                    value={selectedIngredientContextSegment}
+                    onChange={(event) => handleIngredientWordSegmentChange(event.target.value)}
+                    aria-label="Zielsegment"
+                  >
+                    {ingredientContextSegmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="ingredient-word-context-dialog-doc">
+                    Dokument: {selectedIngredientContextSegmentOption?.documentPath || '—'}
+                  </p>
+                  <div className="ingredient-word-context-dialog-actions">
+                    <button type="button" onClick={closeIngredientWordContextMenu}>
+                      Abbrechen
+                    </button>
+                    <button type="button" onClick={handleApplyIngredientWordSegmentAssignment}>
+                      Zuweisen
+                    </button>
+                  </div>
                 </div>
-              </>
+              </dialog>
             )}
             <div className="ingredient-match-dialog-actions">
               <button type="button" className="ingredient-match-dialog-cancel" onClick={handleCloseIngredientMatchDialog}>
