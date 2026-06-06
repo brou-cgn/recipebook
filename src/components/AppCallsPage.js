@@ -31,6 +31,7 @@ import { db } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   buildPendingNutritionReferenceDraft,
+  classifyIngredientWords,
   hasMissingIngredientIDs,
   parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
@@ -350,6 +351,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [refreshingNutritionReferenceCache, setRefreshingNutritionReferenceCache] = useState(false);
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
+  const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
   const ingredientWordLongPressTimerRef = useRef(null);
 
   const recipesWithMissingIngredientIDs = useMemo(
@@ -403,6 +405,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   const handleCloseIngredientMatchDialog = useCallback(() => {
     closeIngredientWordContextMenu();
+    setOpenIngredientInfoIndex(null);
     setIngredientMatchDialog(null);
   }, [closeIngredientWordContextMenu, setIngredientMatchDialog]);
 
@@ -1906,25 +1909,68 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
             ) : null}
             <ul className="ingredient-match-dialog-list">
-              {ingredientMatchDialog.unresolved.map((entry) => (
-                <li key={entry.index}>
-                  <span className="ingredient-match-dialog-ingredient-text">{renderIngredientWords(entry.ingredient)}</span>
-                  <select
-                    value={ingredientMatchDialog.selections?.[entry.index] || ''}
-                    onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
-                    aria-label={`ingredientID für ${entry.ingredient}`}
-                  >
-                    <option value="">Bitte auswählen</option>
-                    {entry.suggestions.map((suggestion) => (
-                      <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
-                        {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
-                      </option>
-                    ))}
-                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
-                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
-                  </select>
-                </li>
-              ))}
+              {ingredientMatchDialog.unresolved.map((entry) => {
+                const isInfoOpen = openIngredientInfoIndex === entry.index;
+                const wordInfo = isInfoOpen ? classifyIngredientWords(entry.ingredient) : null;
+                return (
+                  <li key={entry.index}>
+                    <span className="ingredient-match-dialog-ingredient-text">
+                      {renderIngredientWords(entry.ingredient)}
+                      <button
+                        type="button"
+                        className="ingredient-info-trigger"
+                        aria-label={`Details zur Erkennung von „${entry.ingredient}"`}
+                        aria-expanded={isInfoOpen}
+                        onClick={() => setOpenIngredientInfoIndex(isInfoOpen ? null : entry.index)}
+                      >
+                        ⓘ
+                      </button>
+                    </span>
+                    {isInfoOpen && wordInfo && (
+                      <dl className="ingredient-info-panel">
+                        <div className="ingredient-info-row">
+                          <dt>Menge</dt>
+                          <dd>{wordInfo.amount ?? <span className="ingredient-info-none">—</span>}</dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Einheit</dt>
+                          <dd>{wordInfo.unit ?? <span className="ingredient-info-none">—</span>}</dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Zutat</dt>
+                          <dd>
+                            {wordInfo.ingredientWords.length > 0
+                              ? wordInfo.ingredientWords.join(' ')
+                              : <span className="ingredient-info-none">—</span>}
+                          </dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Ignoriert</dt>
+                          <dd>
+                            {wordInfo.ignoredWords.length > 0
+                              ? wordInfo.ignoredWords.join(' ')
+                              : <span className="ingredient-info-none">—</span>}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                    <select
+                      value={ingredientMatchDialog.selections?.[entry.index] || ''}
+                      onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
+                      aria-label={`ingredientID für ${entry.ingredient}`}
+                    >
+                      <option value="">Bitte auswählen</option>
+                      {entry.suggestions.map((suggestion) => (
+                        <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
+                          {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
+                        </option>
+                      ))}
+                      <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
+                      <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
+                    </select>
+                  </li>
+                );
+              })}
             </ul>
             {ingredientWordContextMenu && activeTab === 'missingIngredientIDs' && (
               <>

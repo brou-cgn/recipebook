@@ -9,7 +9,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
-import { buildPendingNutritionReferenceDraft, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { buildPendingNutritionReferenceDraft, classifyIngredientWords, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
 import {
   NUTRITION_REFERENCE_NEW_STATUS,
   getNormalizedNutritionReferenceSynonyms,
@@ -166,6 +166,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const notifyTimerDoneRef = useRef(null);
   const ingredientMatchFromModalRef = useRef(false);
   const [alarmSoundKey] = useState(() => getAlarmSoundPreference());
+  const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -960,6 +961,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
 
     await persistIngredientIDs(fieldName, nextIngredients);
     setIngredientMatchDialog(null);
+    setOpenIngredientInfoIndex(null);
     ingredientMatchFromModalRef.current = false;
     await runAutoCalculateAndSave(nextIngredients, nextLog);
   };
@@ -2691,7 +2693,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       )}
 
       {ingredientMatchDialog && (
-        <div className="ingredient-match-dialog-overlay" onClick={() => setIngredientMatchDialog(null)}>
+        <div className="ingredient-match-dialog-overlay" onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}>
           <div
             className="ingredient-match-dialog"
             role="dialog"
@@ -2704,7 +2706,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <button
                 type="button"
                 className="ingredient-match-dialog-close"
-                onClick={() => setIngredientMatchDialog(null)}
+                onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}
                 aria-label="ingredientID-Dialog schließen"
               >
                 ×
@@ -2721,28 +2723,71 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               <p className="ingredient-match-dialog-error">{ingredientMatchDialog.errorMessage}</p>
             ) : null}
             <ul className="ingredient-match-dialog-list">
-              {ingredientMatchDialog.unresolved.map((entry) => (
-                <li key={entry.index}>
-                  <span>{entry.ingredient}</span>
-                  <select
-                    value={ingredientMatchDialog.selections?.[entry.index] || ''}
-                    onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
-                    aria-label={`ingredientID für ${entry.ingredient}`}
-                  >
-                    <option value="">Bitte auswählen</option>
-                    {entry.suggestions.map((suggestion) => (
-                      <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
-                        {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
-                      </option>
-                    ))}
-                    <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
-                    <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
-                  </select>
-                </li>
-              ))}
+              {ingredientMatchDialog.unresolved.map((entry) => {
+                const isInfoOpen = openIngredientInfoIndex === entry.index;
+                const wordInfo = isInfoOpen ? classifyIngredientWords(entry.ingredient) : null;
+                return (
+                  <li key={entry.index}>
+                    <span className="ingredient-match-dialog-ingredient-text">
+                      <span>{entry.ingredient}</span>
+                      <button
+                        type="button"
+                        className="ingredient-info-trigger"
+                        aria-label={`Details zur Erkennung von „${entry.ingredient}"`}
+                        aria-expanded={isInfoOpen}
+                        onClick={() => setOpenIngredientInfoIndex(isInfoOpen ? null : entry.index)}
+                      >
+                        ⓘ
+                      </button>
+                    </span>
+                    {isInfoOpen && wordInfo && (
+                      <dl className="ingredient-info-panel">
+                        <div className="ingredient-info-row">
+                          <dt>Menge</dt>
+                          <dd>{wordInfo.amount ?? <span className="ingredient-info-none">—</span>}</dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Einheit</dt>
+                          <dd>{wordInfo.unit ?? <span className="ingredient-info-none">—</span>}</dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Zutat</dt>
+                          <dd>
+                            {wordInfo.ingredientWords.length > 0
+                              ? wordInfo.ingredientWords.join(' ')
+                              : <span className="ingredient-info-none">—</span>}
+                          </dd>
+                        </div>
+                        <div className="ingredient-info-row">
+                          <dt>Ignoriert</dt>
+                          <dd>
+                            {wordInfo.ignoredWords.length > 0
+                              ? wordInfo.ignoredWords.join(' ')
+                              : <span className="ingredient-info-none">—</span>}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                    <select
+                      value={ingredientMatchDialog.selections?.[entry.index] || ''}
+                      onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
+                      aria-label={`ingredientID für ${entry.ingredient}`}
+                    >
+                      <option value="">Bitte auswählen</option>
+                      {entry.suggestions.map((suggestion) => (
+                        <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
+                          {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
+                        </option>
+                      ))}
+                      <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
+                      <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
+                    </select>
+                  </li>
+                );
+              })}
             </ul>
             <div className="ingredient-match-dialog-actions">
-              <button type="button" className="ingredient-match-dialog-cancel" onClick={() => setIngredientMatchDialog(null)}>
+              <button type="button" className="ingredient-match-dialog-cancel" onClick={() => { setIngredientMatchDialog(null); setOpenIngredientInfoIndex(null); }}>
                 Abbrechen
               </button>
               <button type="button" className="ingredient-match-dialog-confirm" onClick={handleIngredientMatchConfirm}>
