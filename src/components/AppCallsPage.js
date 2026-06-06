@@ -1784,10 +1784,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </div>
             ))}
 
-            <h3>Standard-Einheitengruppen</h3>
-            <p className="section-description">
-              Einheiten nach Kategorien für das ingredientID-Matching. Diese Einheiten werden automatisch erkannt und ignoriert.
-            </p>
             <div className="standard-terms-groups-container">
               {COMMON_UNIT_GROUPS.map((group) => (
                 <div key={group} className="standard-terms-group-section">

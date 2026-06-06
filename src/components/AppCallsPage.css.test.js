@@ -25,6 +25,15 @@ describe('AppCallsPage CSS layout', () => {
     expect(fieldRule).toContain('font-size: 16px;');
     expect(fontSizeMatches).toHaveLength(1);
   });
+
+  test('matches standard unit group heading size to settings section headings', () => {
+    const cssPath = path.join(__dirname, 'AppCallsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const headingRule = getRuleBody(css, '.standard-terms-group-section h4');
+
+    expect(headingRule).toContain('font-size: 1.25rem;');
+    expect(headingRule).toContain('font-weight: 700;');
+  });
 });
 
 describe('AppCallsPage dark mode styles', () => {
@@ -60,5 +69,13 @@ describe('AppCallsPage dark mode styles', () => {
     expect(css).toContain('[data-theme="dark"] .kochatelier-settings-field textarea:focus {');
     expect(css).toContain('border-color: #e57373;');
     expect(feedbackRule).toContain('color: #aaa;');
+  });
+
+  test('keeps standard unit group headings readable in dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const headingRule = getRuleBody(css, '[data-theme="dark"] .standard-terms-group-section h4');
+
+    expect(headingRule).toContain('color: #e8e8e8;');
   });
 });
