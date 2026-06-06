@@ -668,13 +668,15 @@ export function classifyIngredientWords(ingredientText) {
 
   const ingredientWords = [];
   nameWithoutParens.split(/\s+/).filter(Boolean).forEach((token) => {
-    const normalized = normalizeNutritionReferenceId(token);
+    const cleanedToken = token.replace(/^,+|,+$/g, '');
+    if (!cleanedToken) return;
+    const normalized = normalizeNutritionReferenceId(cleanedToken);
     if (!normalized || IGNORED_INGREDIENT_MARKERS.has(normalized)) {
-      ignoredWords.push(token);
+      ignoredWords.push(cleanedToken);
     } else if (!PROTECTED_ADJECTIVES.has(normalized) && (COMMON_ADJECTIVES.has(normalized) || CUSTOM_ADJECTIVES.has(normalized))) {
-      ignoredWords.push(token);
+      ignoredWords.push(cleanedToken);
     } else {
-      ingredientWords.push(token);
+      ingredientWords.push(cleanedToken);
     }
   });
 

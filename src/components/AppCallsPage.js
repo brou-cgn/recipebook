@@ -41,6 +41,7 @@ import {
   hasMissingIngredientIDs,
   initializeCommonUnitsFromFirebase,
   initializeIgnoredMarkersFromFirebase,
+  normalizeIngredientNameForIdMatching,
   parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
@@ -636,7 +637,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
         const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
         const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
-        const parsedSynonym = String(name || '').trim();
+        const parsedSynonym = normalizeIngredientNameForIdMatching(name);
         const parsedUnit = String(unit || '').trim();
 
         if (parsedSynonym && parsedSynonym.length >= 3) {
