@@ -395,7 +395,7 @@ function sanitizeIngredientNameForIdMatching(name) {
     .join(' ')
     .trim();
 
-  return normalizedName.replace(/^,+|,+$/g, '').trim();
+  return normalizedName.replace(/^,+|,+$/g, '');
 }
 
 export function normalizeIngredientNameForIdMatching(name) {
