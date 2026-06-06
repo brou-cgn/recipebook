@@ -1836,22 +1836,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               <p className="section-description">
                 Diese Begriffe werden bei der ingredientID-Zuordnung ignoriert (z.B. "optional", "ggf").
               </p>
-              <div className="tag-list">
-                {ignoredTerms.map((term) => (
-                  <span key={term} className="tag">
-                    {term}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveIgnoredTerm(term)}
-                      className="tag-remove-button"
-                      title="Entfernen"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="add-term-row">
+              <div className="list-input">
                 <input
                   type="text"
                   value={newIgnoredTerm}
@@ -1871,6 +1856,24 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 >
                   Hinzufügen
                 </button>
+              </div>
+              <div className="list-items">
+                {ignoredTerms.length === 0 ? (
+                  <p className="section-description">Noch keine Begriffe vorhanden.</p>
+                ) : (
+                  ignoredTerms.map((term) => (
+                    <div key={term} className="list-item">
+                      <span>{term}</span>
+                      <button
+                        className="remove-btn"
+                        onClick={() => handleRemoveIgnoredTerm(term)}
+                        title="Entfernen"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

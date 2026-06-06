@@ -623,3 +623,9 @@
   font-size: 1.25rem;
   font-weight: 700;
 }
+
+.standard-terms-group-section + .standard-terms-group-section {
+  border-top: 2px solid #f0f0f0;
+  padding-top: 2rem;
+  margin-top: 2rem;
+}
