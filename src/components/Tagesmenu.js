@@ -1031,7 +1031,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                                 e.target.value = '';
                               }
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              try { e.target.showPicker(); } catch (_) {}
+                            }}
                             value=""
                             className="tagesmenu-kachel-context-select"
                             aria-label="Kachel-Kontextmenü öffnen"
@@ -1126,7 +1129,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                           e.target.value = '';
                         }
                       }}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        try { e.target.showPicker(); } catch (_) {}
+                      }}
                       value=""
                       className="tagesmenu-kachel-context-select"
                       aria-label="Kachel-Kontextmenü öffnen"
@@ -1242,7 +1248,10 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                                 e.target.value = '';
                               }
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              try { e.target.showPicker(); } catch (_) {}
+                            }}
                             value=""
                             className="tagesmenu-kachel-context-select"
                             aria-label="Kachel-Kontextmenü öffnen"

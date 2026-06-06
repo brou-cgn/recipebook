@@ -2256,6 +2256,18 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(document.querySelector('.tagesmenu-kachel-context-menu')).toBeNull();
   });
 
+  test('ruft showPicker beim Klick auf das Select auf', async () => {
+    await act(async () => { renderMenu(); });
+    swipeAllCardsToResults();
+
+    const select = document.querySelector('.tagesmenu-results-tile .tagesmenu-kachel-context-select');
+    const showPickerMock = jest.fn();
+    select.showPicker = showPickerMock;
+
+    await act(async () => { fireEvent.click(select); });
+    expect(showPickerMock).toHaveBeenCalledTimes(1);
+  });
+
   test('verwendet das Alt-Icon im Kachel-Menü bei dunklem Bild (isBright === false)', async () => {
     const darkRecipe = {
       ...makeRecipe('r-dark', 'Dunkles Rezept'),
