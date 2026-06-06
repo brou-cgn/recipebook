@@ -115,6 +115,19 @@ export const DEFAULT_COMMON_ADJECTIVES = {
   ],
 };
 
+export const COMMON_UNIT_GROUPS = ['volume', 'kitchenSize', 'weight', 'dimension'];
+
+export const DEFAULT_COMMON_UNITS = {
+  volume: ['ml', 'l', 'dl', 'cl'],
+  kitchenSize: [
+    'Esslöffel', 'Teelöffel', 'Tasse', 'Tassen', 'Becher',
+    'Prise', 'Prisen', 'Messerspitze', 'Schuss', 'Spritzer',
+    'Handvoll', 'Glas', 'Gläser',
+  ],
+  weight: ['g', 'kg', 'mg', 'Pfund'],
+  dimension: ['cm', 'mm'],
+};
+
 export const DEFAULT_PORTION_UNITS = [
   { id: 'portion', singular: 'Portion', plural: 'Portionen' },
   { id: 'pizza', singular: 'Pizza', plural: 'Pizzen' },
@@ -1192,6 +1205,13 @@ const COMMON_ADJECTIVE_NORMALIZED_FIELDS = {
   protected: 'normalizedProtected',
 };
 
+const COMMON_UNIT_NORMALIZED_FIELDS = {
+  volume: 'normalizedVolume',
+  kitchenSize: 'normalizedKitchenSize',
+  weight: 'normalizedWeight',
+  dimension: 'normalizedDimension',
+};
+
 export async function getStandardIngredientTerms() {
   try {
     const standardTermsRef = doc(db, 'settings', 'standardIngredientTerms');
@@ -1290,6 +1310,62 @@ export async function saveCommonAdjectives(groups, userId) {
     });
   } catch (error) {
     console.error('Error saving common adjectives:', error);
+    throw error;
+  }
+}
+
+export async function getCommonUnits() {
+  const defaultGroups = COMMON_UNIT_GROUPS.reduce((acc, group) => {
+    acc[group] = [...DEFAULT_COMMON_UNITS[group]];
+    return acc;
+  }, {});
+
+  try {
+    const commonUnitsRef = doc(db, 'commonTerms', 'commonUnits');
+    const commonUnitsSnap = await getDoc(commonUnitsRef);
+    if (!commonUnitsSnap.exists()) {
+      return defaultGroups;
+    }
+
+    const data = commonUnitsSnap.data() || {};
+    return COMMON_UNIT_GROUPS.reduce((acc, group) => {
+      acc[group] = Array.isArray(data[group])
+        ? normalizeStandardIngredientEntries(data[group])
+        : [...DEFAULT_COMMON_UNITS[group]];
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error('Error loading common units:', error);
+    return defaultGroups;
+  }
+}
+
+export async function saveCommonUnits(groups, userId) {
+  const normalizedGroups = COMMON_UNIT_GROUPS.reduce((acc, group) => {
+    acc[group] = normalizeStandardIngredientEntries(groups?.[group]);
+    return acc;
+  }, {});
+  const normalizedGroupTokens = COMMON_UNIT_GROUPS.reduce((acc, group) => {
+    acc[group] = Array.from(new Set(
+      normalizedGroups[group]
+        .map((value) => normalizeNutritionReferenceId(value))
+        .filter(Boolean)
+    ));
+    return acc;
+  }, {});
+
+  try {
+    await setDoc(doc(db, 'commonTerms', 'commonUnits'), {
+      ...normalizedGroups,
+      [COMMON_UNIT_NORMALIZED_FIELDS.volume]: normalizedGroupTokens.volume,
+      [COMMON_UNIT_NORMALIZED_FIELDS.kitchenSize]: normalizedGroupTokens.kitchenSize,
+      [COMMON_UNIT_NORMALIZED_FIELDS.weight]: normalizedGroupTokens.weight,
+      [COMMON_UNIT_NORMALIZED_FIELDS.dimension]: normalizedGroupTokens.dimension,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId || null,
+    });
+  } catch (error) {
+    console.error('Error saving common units:', error);
     throw error;
   }
 }

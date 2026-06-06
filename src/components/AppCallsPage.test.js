@@ -41,6 +41,7 @@ jest.mock('../utils/ingredientIdMatching', () => {
     ...actual,
     getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
     setCustomIngredientMatchingTerms: (...args) => mockSetCustomIngredientMatchingTerms(...args),
+    initializeCommonUnitsFromFirebase: jest.fn(() => Promise.resolve()),
   };
 });
 
@@ -82,6 +83,13 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_STANDARD_INGREDIENT_UNITS: ['g', 'kg'],
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES: ['frisch', 'warm'],
   COMMON_ADJECTIVE_GROUPS: ['temperature', 'state', 'sizing', 'protected'],
+  COMMON_UNIT_GROUPS: ['volume', 'kitchenSize', 'weight', 'dimension'],
+  DEFAULT_COMMON_UNITS: {
+    volume: ['ml', 'l'],
+    kitchenSize: ['Esslöffel'],
+    weight: ['g', 'kg'],
+    dimension: ['cm'],
+  },
   getCustomLists: jest.fn(() =>
     Promise.resolve({ cuisineTypes: ['Spanisch', 'Italienisch'], cuisineGroups: [] })
   ),
@@ -94,6 +102,10 @@ jest.mock('../utils/customLists', () => ({
     Promise.resolve({ temperature: [], state: [], sizing: [], protected: [] })
   ),
   saveCommonAdjectives: jest.fn(() => Promise.resolve()),
+  getCommonUnits: jest.fn(() =>
+    Promise.resolve({ volume: [], kitchenSize: [], weight: [], dimension: [] })
+  ),
+  saveCommonUnits: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../utils/cuisineProposalsFirestore', () => ({

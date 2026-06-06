@@ -98,6 +98,15 @@ const COMMON_ADJECTIVE_GROUP_CONFIG = {
 const BASE_ADJECTIVE_GROUPS = Object.keys(COMMON_ADJECTIVE_GROUP_CONFIG)
   .filter((group) => COMMON_ADJECTIVE_GROUP_CONFIG[group].includeInBase);
 
+const COMMON_UNIT_GROUP_CONFIG = {
+  volume: { normalizedField: 'normalizedVolume', includeInBase: true },
+  kitchenSize: { normalizedField: 'normalizedKitchenSize', includeInBase: true },
+  weight: { normalizedField: 'normalizedWeight', includeInBase: true },
+  dimension: { normalizedField: 'normalizedDimension', includeInBase: true },
+};
+const BASE_UNIT_GROUPS = Object.keys(COMMON_UNIT_GROUP_CONFIG)
+  .filter((group) => COMMON_UNIT_GROUP_CONFIG[group].includeInBase);
+
 const DEFAULT_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
 const ADJECTIVE_DECLENSION_OVERRIDES = {
   mittel: {
@@ -111,6 +120,15 @@ const DEFAULT_COMMON_ADJECTIVE_BASE_FORMS = {
   state: ['reif', 'unreif', 'frisch', 'trocken', 'getrocknet', 'ganz', 'halb', 'fest', 'weich', 'hart'],
   sizing: ['gross', 'klein', 'mittel'],
   protected: ['weiss'],
+};
+
+const DEFAULT_COMMON_UNIT_BASE_FORMS = {
+  volume: ['ml', 'l', 'dl', 'cl', 'liter'],
+  kitchenSize: ['el', 'tl', 'essloffel', 'essloeffel', 'teeloffel', 'teeloeffel',
+    'tasse', 'tassen', 'glas', 'glaser', 'becher', 'prise', 'prisen',
+    'messerspitze', 'msp', 'schuss', 'spritzer', 'handvoll'],
+  weight: ['g', 'kg', 'mg', 'pfund'],
+  dimension: ['cm', 'mm'],
 };
 
 function buildDeclensionForms(normalizedWord) {
@@ -153,6 +171,14 @@ function buildDefaultProtectedAdjectives() {
   return expandNormalizedAdjectives(DEFAULT_COMMON_ADJECTIVE_BASE_FORMS.protected || []);
 }
 
+function buildDefaultBaseCommonUnits() {
+  const grouped = BASE_UNIT_GROUPS
+    .flatMap((group) => DEFAULT_COMMON_UNIT_BASE_FORMS[group] || []);
+  return Array.from(new Set(
+    grouped.map((unit) => normalizeNutritionReferenceId(unit)).filter(Boolean)
+  ));
+}
+
 const BASE_COMMON_ADJECTIVES = buildDefaultBaseCommonAdjectives();
 const PROTECTED_ADJECTIVES = new Set(buildDefaultProtectedAdjectives());
 
@@ -160,7 +186,53 @@ const COMMON_UNITS = new Set(BASE_COMMON_UNITS);
 const COMMON_ADJECTIVES = new Set(BASE_COMMON_ADJECTIVES);
 const CUSTOM_UNITS = new Set();
 const CUSTOM_ADJECTIVES = new Set();
+let commonUnitsInitializationPromise = null;
 let commonAdjectivesInitializationPromise = null;
+
+function applyCommonUnitSets(commonUnits = []) {
+  COMMON_UNITS.clear();
+  commonUnits.forEach((entry) => COMMON_UNITS.add(entry));
+}
+
+export async function initializeCommonUnitsFromFirebase({ forceReload = false } = {}) {
+  if (commonUnitsInitializationPromise && !forceReload) {
+    return commonUnitsInitializationPromise;
+  }
+
+  commonUnitsInitializationPromise = (async () => {
+    const defaultBase = Array.from(new Set([...BASE_COMMON_UNITS, ...buildDefaultBaseCommonUnits()]));
+
+    try {
+      const snap = await getDoc(doc(db, 'commonTerms', 'commonUnits'));
+      if (!snap.exists()) {
+        applyCommonUnitSets(defaultBase);
+        return;
+      }
+
+      const data = snap.data() || {};
+      const loadedByGroup = Object.entries(COMMON_UNIT_GROUP_CONFIG).reduce((acc, [group, groupConfig]) => {
+        const normalizedFieldValues = Array.isArray(data[groupConfig.normalizedField])
+          ? data[groupConfig.normalizedField]
+          : [];
+        acc[group] = normalizedFieldValues;
+        return acc;
+      }, {});
+
+      const hasConfiguredFields = BASE_UNIT_GROUPS
+        .some((group) => Array.isArray(data[COMMON_UNIT_GROUP_CONFIG[group].normalizedField]));
+
+      const loadedBase = BASE_UNIT_GROUPS
+        .flatMap((group) => loadedByGroup[group] || []);
+
+      applyCommonUnitSets(hasConfiguredFields ? loadedBase : defaultBase);
+    } catch (error) {
+      console.error('Error loading common units for ingredient matching:', error);
+      applyCommonUnitSets(defaultBase);
+    }
+  })();
+
+  return commonUnitsInitializationPromise;
+}
 
 function applyCommonAdjectiveSets(commonAdjectives = [], protectedAdjectives = []) {
   COMMON_ADJECTIVES.clear();
@@ -220,6 +292,9 @@ export async function initializeCommonAdjectivesFromFirebase({ forceReload = fal
 // Best-effort background initialization: runtime calls continue to work with defaults
 // if Firebase is temporarily unavailable.
 if (process.env.NODE_ENV !== 'test') {
+  initializeCommonUnitsFromFirebase().catch((error) => {
+    console.warn('Common units background initialization failed. Falling back to defaults.', error);
+  });
   initializeCommonAdjectivesFromFirebase().catch((error) => {
     console.warn('Common adjective background initialization failed. Falling back to defaults.', error);
   });

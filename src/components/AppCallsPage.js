@@ -14,6 +14,10 @@ import {
   getCommonAdjectives,
   saveCommonAdjectives,
   COMMON_ADJECTIVE_GROUPS,
+  COMMON_UNIT_GROUPS,
+  DEFAULT_COMMON_UNITS,
+  getCommonUnits,
+  saveCommonUnits,
   DEFAULT_STANDARD_INGREDIENT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
   getInspirationListSettings,
@@ -33,6 +37,7 @@ import {
   buildPendingNutritionReferenceDraft,
   classifyIngredientWords,
   hasMissingIngredientIDs,
+  initializeCommonUnitsFromFirebase,
   parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
@@ -114,6 +119,20 @@ const COMMON_ADJECTIVE_GROUP_DESCRIPTIONS = {
   state: 'Zustands-Adjektive für das ingredientID-Matching.',
   sizing: 'Größen-Adjektive für das ingredientID-Matching.',
   protected: 'Geschützte Adjektive, die beim ingredientID-Matching erhalten bleiben.',
+};
+
+const COMMON_UNIT_GROUP_LABELS = {
+  volume: 'Volumen',
+  kitchenSize: 'Küchenmaße',
+  weight: 'Gewicht',
+  dimension: 'Maße',
+};
+
+const COMMON_UNIT_GROUP_DESCRIPTIONS = {
+  volume: 'Volumeneinheiten (ml, l, dl, cl)',
+  kitchenSize: 'Kücheneinheiten (EL, TL, Tasse, Prise, ...)',
+  weight: 'Gewichtseinheiten (g, kg, mg, Pfund)',
+  dimension: 'Maßeinheiten (cm, mm)',
 };
 
 const getEmptyCommonAdjectiveGroups = () => COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
@@ -220,8 +239,20 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [standardUnits, setStandardUnits] = useState([]);
   const [standardAdjectives, setStandardAdjectives] = useState([]);
   const [commonAdjectives, setCommonAdjectives] = useState(getEmptyCommonAdjectiveGroups);
+  const [commonUnits, setCommonUnits] = useState({
+    volume: [],
+    kitchenSize: [],
+    weight: [],
+    dimension: [],
+  });
   const [newCustomIngredientUnit, setNewCustomIngredientUnit] = useState('');
   const [newCommonAdjective, setNewCommonAdjective] = useState(getEmptyCommonAdjectiveGroups);
+  const [newCommonUnit, setNewCommonUnit] = useState({
+    volume: '',
+    kitchenSize: '',
+    weight: '',
+    dimension: '',
+  });
   const [standardTermsFeedback, setStandardTermsFeedback] = useState('');
   const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
   const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
@@ -286,6 +317,22 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }).catch((error) => {
       console.error('Error loading common adjectives:', error);
       setCommonAdjectives(getEmptyCommonAdjectiveGroups());
+    });
+    Promise.resolve(getCommonUnits()).then((groups = {}) => {
+      const loadedGroups = COMMON_UNIT_GROUPS.reduce((acc, group) => {
+        acc[group] = Array.isArray(groups[group]) ? groups[group] : [];
+        return acc;
+      }, {});
+      setCommonUnits(loadedGroups);
+      initializeCommonUnitsFromFirebase({ forceReload: true });
+    }).catch((error) => {
+      console.error('Error loading common units:', error);
+      setCommonUnits({
+        volume: DEFAULT_COMMON_UNITS.volume,
+        kitchenSize: DEFAULT_COMMON_UNITS.kitchenSize,
+        weight: DEFAULT_COMMON_UNITS.weight,
+        dimension: DEFAULT_COMMON_UNITS.dimension,
+      });
     });
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
@@ -988,6 +1035,48 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     } catch (err) {
       console.error('Error saving common adjectives:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Standard-Adjektivgruppen.');
+    }
+  };
+
+  const handleAddCommonUnit = async (group, value) => {
+    if (!COMMON_UNIT_GROUPS.includes(group)) return;
+    const entry = String(value || '').trim();
+    if (!entry) return;
+    const currentGroupEntries = commonUnits[group] || [];
+    if (currentGroupEntries.some((unit) => unit.toLowerCase() === entry.toLowerCase())) return;
+
+    const updatedGroups = {
+      ...commonUnits,
+      [group]: [...currentGroupEntries, entry],
+    };
+    setCommonUnits(updatedGroups);
+    setNewCommonUnit((prev) => ({ ...prev, [group]: '' }));
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonUnits(updatedGroups, currentUser?.id);
+      await initializeCommonUnitsFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Einheitengruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common units:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    }
+  };
+
+  const handleRemoveCommonUnit = async (group, value) => {
+    if (!COMMON_UNIT_GROUPS.includes(group)) return;
+    const updatedGroups = {
+      ...commonUnits,
+      [group]: (commonUnits[group] || []).filter((unit) => unit !== value),
+    };
+    setCommonUnits(updatedGroups);
+    setStandardTermsFeedback('');
+    try {
+      await saveCommonUnits(updatedGroups, currentUser?.id);
+      await initializeCommonUnitsFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Einheitengruppen gespeichert.');
+    } catch (err) {
+      console.error('Error saving common units:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
     }
   };
 
@@ -1780,6 +1869,57 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 </div>
               </div>
             ))}
+
+            <h3>Standard-Einheitengruppen</h3>
+            <p className="section-description">
+              Einheiten nach Kategorien für das ingredientID-Matching. Diese Einheiten werden automatisch erkannt und ignoriert.
+            </p>
+            <div className="standard-terms-groups-container">
+              {COMMON_UNIT_GROUPS.map((group) => (
+                <div key={group} className="standard-terms-group-section">
+                  <h4>{COMMON_UNIT_GROUP_LABELS[group]}</h4>
+                  <p className="group-description">{COMMON_UNIT_GROUP_DESCRIPTIONS[group]}</p>
+                  <div className="group-add-input">
+                    <input
+                      type="text"
+                      value={newCommonUnit[group] || ''}
+                      onChange={(e) => setNewCommonUnit((prev) => ({ ...prev, [group]: e.target.value }))}
+                      placeholder={`${COMMON_UNIT_GROUP_LABELS[group]} hinzufügen...`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCommonUnit(group, newCommonUnit[group]);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleAddCommonUnit(group, newCommonUnit[group])}
+                      disabled={!newCommonUnit[group]?.trim()}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="group-items-list">
+                    {(commonUnits[group] || []).length === 0 ? (
+                      <p className="empty-group-hint">Keine Einträge vorhanden</p>
+                    ) : (
+                      (commonUnits[group] || []).map((unit) => (
+                        <div key={unit} className="list-item">
+                          <span>{unit}</span>
+                          <button
+                            className="remove-btn"
+                            onClick={() => handleRemoveCommonUnit(group, unit)}
+                            title="Entfernen"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
             {standardTermsFeedback && (
               <p className="app-calls-info-text">{standardTermsFeedback}</p>
             )}

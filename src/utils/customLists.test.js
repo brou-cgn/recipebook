@@ -32,6 +32,8 @@ import {
   DEFAULT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_UNITS,
   DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
+  COMMON_UNIT_GROUPS,
+  DEFAULT_COMMON_UNITS,
   DEFAULT_COMMON_ADJECTIVES,
   DEFAULT_PORTION_UNITS,
   DEFAULT_CONVERSION_TABLE,
@@ -39,6 +41,8 @@ import {
   getParentCuisineNames,
   getStandardIngredientTerms,
   saveStandardIngredientTerms,
+  getCommonUnits,
+  saveCommonUnits,
   getCommonAdjectives,
   saveCommonAdjectives,
 } from './customLists';
@@ -380,6 +384,92 @@ describe('common adjectives', () => {
       state: ['frisch'],
       sizing: ['groß', 'klein'],
       protected: ['weiß'],
+    });
+  });
+
+  describe('common units', () => {
+    test('getCommonUnits returns defaults when document does not exist', async () => {
+      mockGetDoc.mockImplementation(async (ref) => ({
+        exists: () => ref.path !== 'commonTerms/commonUnits',
+        data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+      }));
+
+      const groups = await getCommonUnits();
+
+      expect(groups).toEqual(DEFAULT_COMMON_UNITS);
+      expect(groups).not.toBe(DEFAULT_COMMON_UNITS);
+      expect(groups.volume).not.toBe(DEFAULT_COMMON_UNITS.volume);
+    });
+
+    test('getCommonUnits returns stored raw groups from Firestore', async () => {
+      mockGetDoc.mockImplementation(async (ref) => {
+        if (ref.path === 'commonTerms/commonUnits') {
+          return {
+            exists: () => true,
+            data: () => ({
+              volume: [' ml ', 'l', 'ML', ''],
+              kitchenSize: ['Esslöffel', ' Teelöffel '],
+              weight: ['g', 'kg'],
+              dimension: ['cm'],
+            }),
+          };
+        }
+        return {
+          exists: () => true,
+          data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+        };
+      });
+
+      const groups = await getCommonUnits();
+
+      expect(groups).toEqual({
+        volume: ['ml', 'l'],
+        kitchenSize: ['Esslöffel', 'Teelöffel'],
+        weight: ['g', 'kg'],
+        dimension: ['cm'],
+      });
+    });
+
+    test('saveCommonUnits stores grouped raw values with normalized fields and audit fields', async () => {
+      await saveCommonUnits({
+        volume: [' ml ', 'ML', 'l', ''],
+        kitchenSize: [' Esslöffel ', 'esslöffel', ''],
+        weight: ['g', ' kg ', 'G'],
+        dimension: ['cm', ' CM ', ''],
+      }, 'admin-1');
+
+      expect(setDoc).toHaveBeenCalledWith(
+        { path: 'commonTerms/commonUnits' },
+        {
+          volume: ['ml', 'l'],
+          kitchenSize: ['Esslöffel'],
+          weight: ['g', 'kg'],
+          dimension: ['cm'],
+          normalizedVolume: ['ml', 'l'],
+          normalizedKitchenSize: ['essloeffel'],
+          normalizedWeight: ['g', 'kg'],
+          normalizedDimension: ['cm'],
+          updatedAt: serverTimestamp(),
+          updatedBy: 'admin-1',
+        }
+      );
+    });
+
+    test('getCommonUnits returns fresh copies of default arrays', async () => {
+      mockGetDoc.mockImplementation(async () => ({
+        exists: () => false,
+        data: () => ({}),
+      }));
+
+      const groups1 = await getCommonUnits();
+      const groups2 = await getCommonUnits();
+
+      expect(groups1.volume).toEqual(groups2.volume);
+      expect(groups1.volume).not.toBe(groups2.volume);
+    });
+
+    test('COMMON_UNIT_GROUPS is in sync with DEFAULT_COMMON_UNITS', () => {
+      expect(Object.keys(DEFAULT_COMMON_UNITS)).toEqual(COMMON_UNIT_GROUPS);
     });
   });
 
