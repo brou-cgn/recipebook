@@ -324,7 +324,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return acc;
       }, {});
       setCommonUnits(loadedGroups);
-      initializeCommonUnitsFromFirebase({ forceReload: true });
+      Promise.resolve(initializeCommonUnitsFromFirebase({ forceReload: true })).catch((error) => {
+        console.warn('Common units initialization failed after loading grouped units.', error);
+      });
     }).catch((error) => {
       console.error('Error loading common units:', error);
       setCommonUnits({

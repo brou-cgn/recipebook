@@ -469,7 +469,7 @@ describe('common adjectives', () => {
     });
 
     test('COMMON_UNIT_GROUPS is in sync with DEFAULT_COMMON_UNITS', () => {
-      expect(Object.keys(DEFAULT_COMMON_UNITS)).toEqual(COMMON_UNIT_GROUPS);
+      expect(COMMON_UNIT_GROUPS).toEqual(Object.keys(DEFAULT_COMMON_UNITS));
     });
   });
 
