@@ -98,15 +98,6 @@ const buildAdjectiveDeclensionForms = (word) => {
   return Array.from(forms).filter(Boolean);
 };
 
-const normalizeEntryListForComparison = (entries = []) => {
-  const normalizedEntries = entries
-    .map((entry) => String(entry || '').trim().toLowerCase())
-    .filter(Boolean);
-  return Array.from(new Set(normalizedEntries)).sort();
-};
-
-const NORMALIZED_DEFAULT_STANDARD_UNITS = normalizeEntryListForComparison(DEFAULT_STANDARD_INGREDIENT_UNITS);
-
 const COMMON_ADJECTIVE_GROUP_LABELS = {
   temperature: 'Temperatur',
   state: 'Zustand',
@@ -139,13 +130,6 @@ const getEmptyCommonAdjectiveGroups = () => COMMON_ADJECTIVE_GROUPS.reduce((acc,
   acc[group] = [];
   return acc;
 }, {});
-
-const areNormalizedEntryListsEqual = (leftEntries = [], preNormalizedRightEntries = []) => {
-  const normalizedLeft = normalizeEntryListForComparison(leftEntries);
-  const normalizedRight = preNormalizedRightEntries;
-  if (normalizedLeft.length !== normalizedRight.length) return false;
-  return normalizedLeft.every((entry, index) => entry === normalizedRight[index]);
-};
 
 function CuisineTypeListItem({ label, onRemove, onRename }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -245,7 +229,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     weight: [],
     dimension: [],
   });
-  const [newCustomIngredientUnit, setNewCustomIngredientUnit] = useState('');
   const [newCommonAdjective, setNewCommonAdjective] = useState(getEmptyCommonAdjectiveGroups);
   const [newCommonUnit, setNewCommonUnit] = useState({
     volume: '',
@@ -946,11 +929,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index)
   ), []);
 
-  const hasCustomStandardUnits = useMemo(
-    () => !areNormalizedEntryListsEqual(standardUnits, NORMALIZED_DEFAULT_STANDARD_UNITS),
-    [standardUnits]
-  );
-
   const saveStandardTerms = async (units, adjectives) => {
     const normalizedUnits = normalizeUniqueEntries(units);
     const normalizedAdjectives = normalizeUniqueEntries(adjectives);
@@ -983,21 +961,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const declensionForms = buildAdjectiveDeclensionForms(ingredientWordContextMenu.word);
     await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
     closeIngredientWordContextMenu();
-  };
-
-  const handleAddCustomIngredientUnit = async () => {
-    const entry = newCustomIngredientUnit.trim();
-    if (!entry) return;
-    if (standardUnits.some((unit) => unit.toLowerCase() === entry.toLowerCase())) return;
-    setNewCustomIngredientUnit('');
-    await saveStandardTerms([...standardUnits, entry], standardAdjectives);
-  };
-
-  const handleRemoveCustomIngredientUnit = async (entry) => {
-    await saveStandardTerms(
-      standardUnits.filter((unit) => unit !== entry),
-      standardAdjectives
-    );
   };
 
   const handleAddCommonAdjective = async (group, value) => {
@@ -1079,13 +1042,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     } catch (err) {
       console.error('Error saving common units:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
-    }
-  };
-
-  const handleResetStandardIngredientUnits = async () => {
-    const didSave = await saveStandardTerms(DEFAULT_STANDARD_INGREDIENT_UNITS, standardAdjectives);
-    if (didSave) {
-      setStandardTermsFeedback('Standard-Einheiten auf Standardwerte zurückgesetzt.');
     }
   };
 
@@ -1792,50 +1748,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           </>
         ) : activeTab === 'standardeinheiten' ? (
           <>
-            <div className="settings-section">
-              <h3>Standard-Einheiten</h3>
-              <p className="section-description">
-                Einheiten, die beim ingredientID-Matching automatisch erkannt werden.
-              </p>
-              <div className="list-input">
-                <input
-                  type="text"
-                  value={newCustomIngredientUnit}
-                  onChange={(e) => setNewCustomIngredientUnit(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCustomIngredientUnit()}
-                  placeholder="Neue Einheit hinzufügen (z.B. Päckchen)..."
-                  aria-label="Neue Standardeinheit eingeben"
-                />
-                <button onClick={handleAddCustomIngredientUnit}>Hinzufügen</button>
-              </div>
-              <div className="list-items">
-                {standardUnits.length === 0 ? (
-                  <p className="section-description">Noch keine Standard-Einheiten vorhanden.</p>
-                ) : (
-                  standardUnits.map((unit) => (
-                    <div key={unit} className="list-item">
-                      <span>{unit}</span>
-                      <button
-                        className="remove-btn"
-                        onClick={() => handleRemoveCustomIngredientUnit(unit)}
-                        title="Entfernen"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-              {hasCustomStandardUnits && (
-                <button
-                  onClick={handleResetStandardIngredientUnits}
-                  aria-label="Standard-Einheiten auf Standardwerte zurücksetzen"
-                >
-                  Auf Standardwerte zurücksetzen
-                </button>
-              )}
-            </div>
-
             {COMMON_ADJECTIVE_GROUPS.map((group) => (
               <div key={group} className="settings-section">
                 <h3>{COMMON_ADJECTIVE_GROUP_LABELS[group]}</h3>
@@ -1881,7 +1793,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 <div key={group} className="standard-terms-group-section">
                   <h4>{COMMON_UNIT_GROUP_LABELS[group]}</h4>
                   <p className="group-description">{COMMON_UNIT_GROUP_DESCRIPTIONS[group]}</p>
-                  <div className="group-add-input">
+                  <div className="list-input">
                     <input
                       type="text"
                       value={newCommonUnit[group] || ''}
@@ -1898,10 +1810,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                       onClick={() => handleAddCommonUnit(group, newCommonUnit[group])}
                       disabled={!newCommonUnit[group]?.trim()}
                     >
-                      +
+                      Hinzufügen
                     </button>
                   </div>
-                  <div className="group-items-list">
+                  <div className="list-items">
                     {(commonUnits[group] || []).length === 0 ? (
                       <p className="empty-group-hint">Keine Einträge vorhanden</p>
                     ) : (
