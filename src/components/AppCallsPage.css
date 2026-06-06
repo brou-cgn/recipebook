@@ -230,6 +230,56 @@
   align-items: center;
 }
 
+.ingredient-info-trigger {
+  border: none;
+  background: transparent;
+  padding: 0 0 0 2px;
+  margin: 0;
+  font-size: 0.95rem;
+  color: #888;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ingredient-info-trigger:hover,
+.ingredient-info-trigger:focus-visible {
+  color: #402C1C;
+  outline: none;
+}
+
+.ingredient-info-panel {
+  margin: 0.35rem 0 0.1rem;
+  padding: 0.5rem 0.6rem;
+  background: #faf8f5;
+  border: 1px solid #e8e0d8;
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.ingredient-info-row {
+  display: contents;
+}
+
+.ingredient-info-panel dt {
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+}
+
+.ingredient-info-panel dd {
+  margin: 0;
+  color: #222;
+  word-break: break-word;
+}
+
+.ingredient-info-none {
+  color: #aaa;
+}
+
 .ingredient-word-context-trigger {
   border: none;
   background: transparent;

@@ -13,6 +13,7 @@ import {
   getAutoAssignedIngredients,
   hasMissingIngredientIDs,
   normalizeIngredientNameForIdMatching,
+  classifyIngredientWords,
   setCustomIngredientMatchingTerms,
   initializeCommonAdjectivesFromFirebase,
 } from './ingredientIdMatching';
@@ -454,5 +455,82 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
     await initializeCommonAdjectivesFromFirebase({ forceReload: true });
 
     expect(normalizeIngredientNameForIdMatching('weißem Reis')).toBe('Reis');
+  });
+
+  describe('classifyIngredientWords', () => {
+    test('classifies basic ingredient with amount, unit and name', () => {
+      expect(classifyIngredientWords('200 g Mehl')).toEqual({
+        amount: '200',
+        unit: 'g',
+        ingredientWords: ['Mehl'],
+        ignoredWords: [],
+      });
+    });
+
+    test('classifies ingredient without unit', () => {
+      expect(classifyIngredientWords('3 Eier')).toEqual({
+        amount: '3',
+        unit: 'Eier',
+        ingredientWords: ['Eier'],
+        ignoredWords: [],
+      });
+    });
+
+    test('classifies ingredient without amount or unit', () => {
+      expect(classifyIngredientWords('Salz')).toEqual({
+        amount: null,
+        unit: null,
+        ingredientWords: ['Salz'],
+        ignoredWords: [],
+      });
+    });
+
+    test('moves adjective words to ignoredWords', () => {
+      const result = classifyIngredientWords('2 frische Tomaten');
+      expect(result.amount).toBe('2');
+      expect(result.unit).toBeNull();
+      expect(result.ingredientWords).toContain('Tomaten');
+      expect(result.ignoredWords).toContain('frische');
+    });
+
+    test('moves IGNORED_INGREDIENT_MARKERS to ignoredWords', () => {
+      const result = classifyIngredientWords('3 Tomaten optional');
+      expect(result.ingredientWords).toContain('Tomaten');
+      expect(result.ignoredWords).toContain('optional');
+    });
+
+    test('moves parenthesised segments to ignoredWords', () => {
+      const result = classifyIngredientWords('3 Tomaten (gewürfelt)');
+      expect(result.ingredientWords).toContain('Tomaten');
+      expect(result.ignoredWords).toContain('(gewürfelt)');
+      expect(result.ignoredWords).not.toContain('gewürfelt');
+    });
+
+    test('handles vulgar fraction amounts', () => {
+      const result = classifyIngredientWords('½ TL Salz');
+      expect(result.amount).toBe('½');
+      expect(result.unit).toBe('TL');
+      expect(result.ingredientWords).toContain('Salz');
+    });
+
+    test('returns null amount for ingredient without quantity', () => {
+      const result = classifyIngredientWords('Petersilie');
+      expect(result.amount).toBeNull();
+    });
+
+    test('handles empty input', () => {
+      expect(classifyIngredientWords('')).toEqual({
+        amount: null,
+        unit: null,
+        ingredientWords: [],
+        ignoredWords: [],
+      });
+      expect(classifyIngredientWords(null)).toEqual({
+        amount: null,
+        unit: null,
+        ingredientWords: [],
+        ignoredWords: [],
+      });
+    });
   });
 });

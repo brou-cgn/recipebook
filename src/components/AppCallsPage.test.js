@@ -696,6 +696,61 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     ));
   });
 
+  test('shows ingredient info panel when info button is clicked', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', synonyms: ['Tomate'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 100 },
+      { ingredientID: 'tomatenmark', displayName: 'Tomatenmark', confidencePercent: 100 },
+    ]);
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r-info',
+            title: 'Tomatensalat',
+            ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn(() => Promise.resolve())}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+
+    const infoBtn = screen.getByRole('button', { name: /Details zur Erkennung/ });
+    expect(infoBtn).toBeInTheDocument();
+    expect(infoBtn).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(infoBtn);
+
+    expect(infoBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Menge')).toBeInTheDocument();
+    expect(screen.getByText('Einheit')).toBeInTheDocument();
+    expect(screen.getByText('Zutat')).toBeInTheDocument();
+    expect(screen.getByText('Ignoriert')).toBeInTheDocument();
+
+    // clicking again collapses the panel
+    fireEvent.click(infoBtn);
+    expect(infoBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Menge')).not.toBeInTheDocument();
+  });
+
   test('learns synonyms and units for manual existing ingredientID assignments below 100% confidence', async () => {
     mockNutritionReferenceState = {
       rows: [

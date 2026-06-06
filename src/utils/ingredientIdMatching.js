@@ -471,6 +471,65 @@ export function hasMissingIngredientIDs(recipe) {
   });
 }
 
+/**
+ * Classifies the words of an ingredient text into semantic categories used during
+ * ingredient-ID matching.  Useful for explaining the parsing result to the user.
+ *
+ * @param {string} ingredientText - Raw ingredient string
+ * @returns {{
+ *   amount: string|null,
+ *   unit: string|null,
+ *   ingredientWords: string[],
+ *   ignoredWords: string[]
+ * }}
+ */
+export function classifyIngredientWords(ingredientText) {
+  const rawText = String(ingredientText || '').trim();
+  if (!rawText) {
+    return { amount: null, unit: null, ingredientWords: [], ignoredWords: [] };
+  }
+
+  const { quantity, name, unit } = parseIngredientNameAndUnit(rawText);
+
+  // Use the first whitespace-delimited token as the displayed amount when a
+  // numeric quantity was detected (covers digits, fractions and vulgar fractions).
+  const firstWord = rawText.split(/\s+/)[0] || '';
+  const amount = quantity !== null && /^[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅐⅛⅜⅝⅞⅑⅒\d]/u.test(firstWord)
+    ? firstWord
+    : null;
+
+  // Classify words inside the name part:
+  // – parenthesised segments are always treated as ignored
+  // – remaining tokens are checked against adjective / marker sets
+  const rawName = String(name || '');
+  const ignoredWords = [];
+
+  const nameWithoutParens = rawName.replace(/\(([^()]*)\)/g, (match) => {
+    const inner = match.slice(1, -1).trim();
+    if (inner) ignoredWords.push(match);
+    return ' ';
+  });
+
+  const ingredientWords = [];
+  nameWithoutParens.split(/\s+/).filter(Boolean).forEach((token) => {
+    const normalized = normalizeNutritionReferenceId(token);
+    if (!normalized || IGNORED_INGREDIENT_MARKERS.has(normalized)) {
+      ignoredWords.push(token);
+    } else if (!PROTECTED_ADJECTIVES.has(normalized) && (COMMON_ADJECTIVES.has(normalized) || CUSTOM_ADJECTIVES.has(normalized))) {
+      ignoredWords.push(token);
+    } else {
+      ingredientWords.push(token);
+    }
+  });
+
+  return {
+    amount,
+    unit: unit || null,
+    ingredientWords,
+    ignoredWords,
+  };
+}
+
 export function buildPendingNutritionReferenceDraft(ingredientText, nutritionReferenceRows = []) {
   const { name, unit } = parseIngredientNameAndUnit(ingredientText);
   const displayName = String(normalizeIngredientNameForIdMatching(name) || String(name || '').trim()).trim();
