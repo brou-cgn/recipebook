@@ -76,10 +76,7 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
   return merged;
 };
 
-const INGREDIENT_WORD_LONG_PRESS_MS = 500;
 const ADJECTIVE_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
-const CONTEXT_MENU_MIN_VIEWPORT_OFFSET_PX = 12;
-const CONTEXT_MENU_POINTER_OFFSET_PX = 8;
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
@@ -398,7 +395,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
-  const ingredientWordLongPressTimerRef = useRef(null);
 
   const recipesWithMissingIngredientIDs = useMemo(
     () =>
@@ -437,17 +433,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
 
-  const clearIngredientWordLongPress = useCallback(() => {
-    if (ingredientWordLongPressTimerRef.current) {
-      clearTimeout(ingredientWordLongPressTimerRef.current);
-      ingredientWordLongPressTimerRef.current = null;
-    }
-  }, []);
-
   const closeIngredientWordContextMenu = useCallback(() => {
-    clearIngredientWordLongPress();
     setIngredientWordContextMenu(null);
-  }, [clearIngredientWordLongPress]);
+  }, []);
 
   const handleCloseIngredientMatchDialog = useCallback(() => {
     closeIngredientWordContextMenu();
@@ -455,27 +443,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setIngredientMatchDialog(null);
   }, [closeIngredientWordContextMenu, setIngredientMatchDialog]);
 
-  const openIngredientWordContextMenuFromLongPress = useCallback((event, rawWord) => {
+  const openIngredientWordContextMenuFromClick = useCallback((rawWord) => {
     if (activeTab !== 'missingIngredientIDs') return;
     const trimmedWord = trimIngredientContextWord(rawWord);
     if (!trimmedWord) return;
-
-    clearIngredientWordLongPress();
-
-    const touchPoint = event.touches?.[0];
-    const position = touchPoint
-      ? { top: touchPoint.clientY, left: touchPoint.clientX }
-      : { top: event.clientY, left: event.clientX };
-
-    ingredientWordLongPressTimerRef.current = setTimeout(() => {
-      setIngredientWordContextMenu({
-        word: trimmedWord,
-        top: position.top,
-        left: position.left,
-      });
-      ingredientWordLongPressTimerRef.current = null;
-    }, INGREDIENT_WORD_LONG_PRESS_MS);
-  }, [activeTab, clearIngredientWordLongPress]);
+    setIngredientWordContextMenu({
+      word: trimmedWord,
+      segment: 'standardUnits',
+    });
+  }, [activeTab]);
 
   const renderIngredientWords = useCallback((ingredientText) => {
     const words = String(ingredientText || '').split(/\s+/).filter(Boolean);
@@ -484,25 +460,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         <button
           type="button"
           className="ingredient-word-context-trigger"
-          onMouseDown={(event) => openIngredientWordContextMenuFromLongPress(event, word)}
-          onMouseUp={clearIngredientWordLongPress}
-          onMouseLeave={clearIngredientWordLongPress}
-          onTouchStart={(event) => openIngredientWordContextMenuFromLongPress(event, word)}
-          onTouchEnd={clearIngredientWordLongPress}
-          onTouchCancel={clearIngredientWordLongPress}
-          onTouchMove={clearIngredientWordLongPress}
-          aria-label={`Kontextmenü für "${trimIngredientContextWord(word) || word}"`}
+          onClick={() => openIngredientWordContextMenuFromClick(word)}
+          aria-label={`Kontextdialog für "${trimIngredientContextWord(word) || word}"`}
         >
           {word}
         </button>
         {index < words.length - 1 ? ' ' : null}
       </React.Fragment>
     ));
-  }, [clearIngredientWordLongPress, openIngredientWordContextMenuFromLongPress]);
-
-  useEffect(() => () => {
-    clearIngredientWordLongPress();
-  }, [clearIngredientWordLongPress]);
+  }, [openIngredientWordContextMenuFromClick]);
 
   useEffect(() => {
     if (!ingredientMatchDialog || activeTab !== 'missingIngredientIDs') {
@@ -964,18 +930,32 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  const handleDefineContextWordAsStandardUnit = async () => {
-    if (!ingredientWordContextMenu?.word) return;
-    await saveStandardTerms([...standardUnits, ingredientWordContextMenu.word], standardAdjectives);
-    closeIngredientWordContextMenu();
-  };
+  const ingredientContextSegmentOptions = useMemo(() => ([
+    {
+      value: 'standardUnits',
+      label: 'Standard-Einheiten',
+      documentPath: 'settings/standardIngredientTerms',
+    },
+    {
+      value: 'standardAdjectives',
+      label: 'Standard-Adjektive',
+      documentPath: 'settings/standardIngredientTerms',
+    },
+    ...COMMON_ADJECTIVE_GROUPS.map((group) => ({
+      value: `commonAdjectives:${group}`,
+      label: `${COMMON_ADJECTIVE_GROUP_LABELS[group]} (Adjektive)`,
+      documentPath: 'commonTerms/commonAdjectives',
+    })),
+    ...COMMON_UNIT_GROUPS.map((group) => ({
+      value: `commonUnits:${group}`,
+      label: `${COMMON_UNIT_GROUP_LABELS[group]} (Einheiten)`,
+      documentPath: 'commonTerms/commonUnits',
+    })),
+  ]), []);
 
-  const handleDefineContextWordAsStandardAdjective = async () => {
-    if (!ingredientWordContextMenu?.word) return;
-    const declensionForms = buildAdjectiveDeclensionForms(ingredientWordContextMenu.word);
-    await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
-    closeIngredientWordContextMenu();
-  };
+  const handleIngredientWordSegmentChange = useCallback((segment) => {
+    setIngredientWordContextMenu((current) => (current ? { ...current, segment } : current));
+  }, []);
 
   const handleAddCommonAdjective = async (group, value) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
@@ -1089,6 +1069,38 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     } catch (err) {
       console.error('Error saving common units:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    }
+  };
+
+  const handleApplyIngredientWordSegmentAssignment = async () => {
+    if (!ingredientWordContextMenu?.word || !ingredientWordContextMenu?.segment) return;
+
+    const { word, segment } = ingredientWordContextMenu;
+
+    if (segment === 'standardUnits') {
+      await saveStandardTerms([...standardUnits, word], standardAdjectives);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment === 'standardAdjectives') {
+      const declensionForms = buildAdjectiveDeclensionForms(word);
+      await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment.startsWith('commonAdjectives:')) {
+      const adjectiveGroup = segment.split(':')[1];
+      await handleAddCommonAdjective(adjectiveGroup, word);
+      closeIngredientWordContextMenu();
+      return;
+    }
+
+    if (segment.startsWith('commonUnits:')) {
+      const unitGroup = segment.split(':')[1];
+      await handleAddCommonUnit(unitGroup, word);
+      closeIngredientWordContextMenu();
     }
   };
 
