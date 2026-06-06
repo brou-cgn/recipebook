@@ -616,3 +616,10 @@
   font-size: 0.9rem;
   color: #555;
 }
+
+.standard-terms-group-section h4 {
+  margin: 0 0 1rem 0;
+  color: #1a1a1a;
+  font-size: 1.25rem;
+  font-weight: 700;
+}

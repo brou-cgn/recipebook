@@ -1092,7 +1092,8 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
     expect(screen.getByText('Zustand')).toBeInTheDocument();
     expect(screen.getByText('Größe')).toBeInTheDocument();
     expect(screen.getByText('Geschützt')).toBeInTheDocument();
-    expect(screen.getByText('Standard-Einheitengruppen')).toBeInTheDocument();
+    expect(screen.queryByText('Standard-Einheitengruppen')).not.toBeInTheDocument();
+    expect(screen.queryByText('Einheiten nach Kategorien für das ingredientID-Matching. Diese Einheiten werden automatisch erkannt und ignoriert.')).not.toBeInTheDocument();
     expect(screen.getByText('frisch')).toBeInTheDocument();
     expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
       units: ['Tasse'],
@@ -1166,6 +1167,7 @@ describe('AppCallsPage – Standardeinheiten/-adjektive tab', () => {
 
     expect(screen.queryByText('Standard-Einheiten')).not.toBeInTheDocument();
     expect(screen.getByText('Temperatur')).toBeInTheDocument();
+    expect(screen.queryByText('Standard-Einheitengruppen')).not.toBeInTheDocument();
     await waitFor(() => expect(mockSetCustomIngredientMatchingTerms).toHaveBeenCalledWith({
       units: ['g', 'kg'],
       adjectives: ['frisch', 'warm'],
