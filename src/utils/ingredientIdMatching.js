@@ -347,7 +347,6 @@ function similarityFromNormalized(a, b) {
 function sanitizeIngredientNameForIdMatching(name) {
   return String(name || '')
     .replace(/\([^()]*\)/g, ' ')
-    .replace(/,/g, ' ')
     .split(/\s+/)
     .filter((token) => {
       const normalized = normalizeNutritionReferenceId(token);

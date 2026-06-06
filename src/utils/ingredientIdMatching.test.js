@@ -240,19 +240,6 @@ describe('ingredientIdMatching', () => {
     ]);
     expect(suggestions).toEqual([]);
   });
-
-  test('strips commas from ingredient name during normalization', () => {
-    expect(getIngredientIdSuggestions('2 EL Olivenöl, kalt', [
-      { ingredientID: 'olivenoel', synonyms: ['Olivenöl'] },
-    ])[0]).toMatchObject({ ingredientID: 'olivenoel', confidencePercent: 100 });
-
-    expect(getIngredientIdSuggestions('2 EL Olivenöl,kalt', [
-      { ingredientID: 'olivenoel', synonyms: ['Olivenöl'] },
-    ])[0]).toMatchObject({ ingredientID: 'olivenoel', confidencePercent: 100 });
-
-    expect(normalizeIngredientNameForIdMatching('Olivenöl, kalt')).toBe('Olivenöl');
-    expect(normalizeIngredientNameForIdMatching('Olivenöl,kalt')).toBe('Olivenöl');
-  });
 });
 
 describe('getAutoAssignedIngredients', () => {
