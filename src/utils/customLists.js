@@ -1258,6 +1258,47 @@ export async function saveStandardIngredientTerms(standardUnits, standardAdjecti
   }
 }
 
+export async function getIgnoredTerms() {
+  const defaultTerms = ['optional', 'ggf', 'gegebenenfalls'];
+
+  try {
+    const ignoredTermsRef = doc(db, 'commonTerms', 'ignoredTerms');
+    const ignoredTermsSnap = await getDoc(ignoredTermsRef);
+    if (!ignoredTermsSnap.exists()) {
+      return defaultTerms;
+    }
+
+    const data = ignoredTermsSnap.data() || {};
+    return Array.isArray(data.terms)
+      ? normalizeStandardIngredientEntries(data.terms)
+      : defaultTerms;
+  } catch (error) {
+    console.error('Error loading ignored terms:', error);
+    return defaultTerms;
+  }
+}
+
+export async function saveIgnoredTerms(terms, userId) {
+  const normalizedTerms = normalizeStandardIngredientEntries(terms);
+  const normalizedTokens = Array.from(new Set(
+    normalizedTerms
+      .map((value) => normalizeNutritionReferenceId(value))
+      .filter(Boolean)
+  ));
+
+  try {
+    await setDoc(doc(db, 'commonTerms', 'ignoredTerms'), {
+      terms: normalizedTerms,
+      normalizedTerms: normalizedTokens,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId || null,
+    });
+  } catch (error) {
+    console.error('Error saving ignored terms:', error);
+    throw error;
+  }
+}
+
 export async function getCommonAdjectives() {
   const defaultGroups = COMMON_ADJECTIVE_GROUPS.reduce((acc, group) => {
     acc[group] = [...DEFAULT_COMMON_ADJECTIVES[group]];

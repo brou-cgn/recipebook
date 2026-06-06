@@ -83,11 +83,8 @@ const DIGIT_VULGAR_FRACTION_REGEX = new RegExp(`(\\d+)\\s*([${VULGAR_FRACTION_CH
 const VULGAR_FRACTION_WITH_SUFFIX_REGEX = new RegExp(`([${VULGAR_FRACTION_CHARS}])(\\S)`, 'g');
 const VULGAR_FRACTION_REGEX = new RegExp(`[${VULGAR_FRACTION_CHARS}]`, 'g');
 
-const IGNORED_INGREDIENT_MARKERS = new Set([
-  'optional',
-  'ggf',
-  'gegebenenfalls',
-]);
+const DEFAULT_IGNORED_MARKERS = ['optional', 'ggf', 'gegebenenfalls'];
+const IGNORED_INGREDIENT_MARKERS = new Set(DEFAULT_IGNORED_MARKERS);
 
 const COMMON_ADJECTIVE_GROUP_CONFIG = {
   temperature: { normalizedField: 'normalizedTemperature', includeInBase: true },
@@ -188,6 +185,7 @@ const CUSTOM_UNITS = new Set();
 const CUSTOM_ADJECTIVES = new Set();
 let commonUnitsInitializationPromise = null;
 let commonAdjectivesInitializationPromise = null;
+let ignoredMarkersInitializationPromise = null;
 
 function applyCommonUnitSets(commonUnits = []) {
   COMMON_UNITS.clear();
@@ -242,6 +240,11 @@ function applyCommonAdjectiveSets(commonAdjectives = [], protectedAdjectives = [
   protectedAdjectives.forEach((entry) => PROTECTED_ADJECTIVES.add(entry));
 }
 
+function applyIgnoredMarkerSets(markers = []) {
+  IGNORED_INGREDIENT_MARKERS.clear();
+  markers.forEach((entry) => IGNORED_INGREDIENT_MARKERS.add(entry));
+}
+
 export async function initializeCommonAdjectivesFromFirebase({ forceReload = false } = {}) {
   if (commonAdjectivesInitializationPromise && !forceReload) {
     return commonAdjectivesInitializationPromise;
@@ -289,6 +292,36 @@ export async function initializeCommonAdjectivesFromFirebase({ forceReload = fal
   return commonAdjectivesInitializationPromise;
 }
 
+export async function initializeIgnoredMarkersFromFirebase({ forceReload = false } = {}) {
+  if (ignoredMarkersInitializationPromise && !forceReload) {
+    return ignoredMarkersInitializationPromise;
+  }
+
+  ignoredMarkersInitializationPromise = (async () => {
+    const defaultBase = [...DEFAULT_IGNORED_MARKERS];
+
+    try {
+      const snap = await getDoc(doc(db, 'commonTerms', 'ignoredTerms'));
+      if (!snap.exists()) {
+        applyIgnoredMarkerSets(defaultBase);
+        return;
+      }
+
+      const data = snap.data() || {};
+      const normalizedTerms = Array.isArray(data.normalizedTerms)
+        ? data.normalizedTerms
+        : [];
+
+      applyIgnoredMarkerSets(normalizedTerms.length > 0 ? normalizedTerms : defaultBase);
+    } catch (error) {
+      console.error('Error loading ignored markers for ingredient matching:', error);
+      applyIgnoredMarkerSets(defaultBase);
+    }
+  })();
+
+  return ignoredMarkersInitializationPromise;
+}
+
 // Best-effort background initialization: runtime calls continue to work with defaults
 // if Firebase is temporarily unavailable.
 if (process.env.NODE_ENV !== 'test') {
@@ -297,6 +330,9 @@ if (process.env.NODE_ENV !== 'test') {
   });
   initializeCommonAdjectivesFromFirebase().catch((error) => {
     console.warn('Common adjective background initialization failed. Falling back to defaults.', error);
+  });
+  initializeIgnoredMarkersFromFirebase().catch((error) => {
+    console.warn('Ignored marker background initialization failed. Falling back to defaults.', error);
   });
 }
 

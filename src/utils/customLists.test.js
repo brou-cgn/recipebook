@@ -45,6 +45,8 @@ import {
   saveCommonUnits,
   getCommonAdjectives,
   saveCommonAdjectives,
+  getIgnoredTerms,
+  saveIgnoredTerms,
 } from './customLists';
 import { getDoc, getDocs, updateDoc, setDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
@@ -492,6 +494,55 @@ describe('common adjectives', () => {
         normalizedState: ['frisch'],
         normalizedSizing: ['gross', 'klein'],
         normalizedProtected: ['weiss'],
+        updatedAt: serverTimestamp(),
+        updatedBy: 'admin-1',
+      }
+    );
+  });
+});
+
+describe('ignored terms', () => {
+  test('getIgnoredTerms returns defaults when document does not exist', async () => {
+    mockGetDoc.mockImplementation(async (ref) => ({
+      exists: () => ref.path !== 'commonTerms/ignoredTerms',
+      data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+    }));
+
+    const terms = await getIgnoredTerms();
+
+    expect(terms).toEqual(['optional', 'ggf', 'gegebenenfalls']);
+  });
+
+  test('getIgnoredTerms returns stored terms from Firestore', async () => {
+    mockGetDoc.mockImplementation(async (ref) => {
+      if (ref.path === 'commonTerms/ignoredTerms') {
+        return {
+          exists: () => true,
+          data: () => ({
+            terms: [' optional ', 'ggf', 'OPTIONAL', ''],
+            normalizedTerms: ['optional', 'ggf'],
+          }),
+        };
+      }
+      return {
+        exists: () => true,
+        data: () => ({ aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }),
+      };
+    });
+
+    const terms = await getIgnoredTerms();
+
+    expect(terms).toEqual(['optional', 'ggf']);
+  });
+
+  test('saveIgnoredTerms stores normalized terms', async () => {
+    await saveIgnoredTerms(['optional', ' optional ', 'GGF'], 'admin-1');
+
+    expect(setDoc).toHaveBeenCalledWith(
+      { path: 'commonTerms/ignoredTerms' },
+      {
+        terms: ['optional', 'GGF'],
+        normalizedTerms: ['optional', 'ggf'],
         updatedAt: serverTimestamp(),
         updatedBy: 'admin-1',
       }

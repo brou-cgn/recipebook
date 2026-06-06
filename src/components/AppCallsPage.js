@@ -13,6 +13,8 @@ import {
   saveStandardIngredientTerms,
   getCommonAdjectives,
   saveCommonAdjectives,
+  getIgnoredTerms,
+  saveIgnoredTerms,
   COMMON_ADJECTIVE_GROUPS,
   COMMON_UNIT_GROUPS,
   DEFAULT_COMMON_UNITS,
@@ -38,6 +40,7 @@ import {
   classifyIngredientWords,
   hasMissingIngredientIDs,
   initializeCommonUnitsFromFirebase,
+  initializeIgnoredMarkersFromFirebase,
   parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
@@ -223,6 +226,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [standardUnits, setStandardUnits] = useState([]);
   const [standardAdjectives, setStandardAdjectives] = useState([]);
   const [commonAdjectives, setCommonAdjectives] = useState(getEmptyCommonAdjectiveGroups);
+  const [ignoredTerms, setIgnoredTerms] = useState([]);
+  const [newIgnoredTerm, setNewIgnoredTerm] = useState('');
   const [commonUnits, setCommonUnits] = useState({
     volume: [],
     kitchenSize: [],
@@ -300,6 +305,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }).catch((error) => {
       console.error('Error loading common adjectives:', error);
       setCommonAdjectives(getEmptyCommonAdjectiveGroups());
+    });
+    Promise.resolve(getIgnoredTerms()).then((terms = []) => {
+      setIgnoredTerms(Array.isArray(terms) ? terms : []);
+      Promise.resolve(initializeIgnoredMarkersFromFirebase({ forceReload: true })).catch((error) => {
+        console.warn('Ignored markers initialization failed after loading terms.', error);
+      });
+    }).catch((error) => {
+      console.error('Error loading ignored terms:', error);
+      setIgnoredTerms([]);
     });
     Promise.resolve(getCommonUnits()).then((groups = {}) => {
       const loadedGroups = COMMON_UNIT_GROUPS.reduce((acc, group) => {
@@ -1024,6 +1038,39 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     } catch (err) {
       console.error('Error saving common units:', err);
       setStandardTermsFeedback('Fehler beim Speichern der Einheiten.');
+    }
+  };
+
+  const handleAddIgnoredTerm = async (value) => {
+    const entry = String(value || '').trim();
+    if (!entry) return;
+    if (ignoredTerms.some((term) => term.toLowerCase() === entry.toLowerCase())) return;
+
+    const updatedTerms = [...ignoredTerms, entry];
+    setIgnoredTerms(updatedTerms);
+    setNewIgnoredTerm('');
+    setStandardTermsFeedback('');
+    try {
+      await saveIgnoredTerms(updatedTerms, currentUser?.id);
+      await initializeIgnoredMarkersFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Ignorierte Begriffe gespeichert.');
+    } catch (err) {
+      console.error('Error saving ignored terms:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der ignorierten Begriffe.');
+    }
+  };
+
+  const handleRemoveIgnoredTerm = async (entry) => {
+    const updatedTerms = ignoredTerms.filter((term) => term !== entry);
+    setIgnoredTerms(updatedTerms);
+    setStandardTermsFeedback('');
+    try {
+      await saveIgnoredTerms(updatedTerms, currentUser?.id);
+      await initializeIgnoredMarkersFromFirebase({ forceReload: true });
+      setStandardTermsFeedback('Ignorierte Begriffe gespeichert.');
+    } catch (err) {
+      console.error('Error saving ignored terms:', err);
+      setStandardTermsFeedback('Fehler beim Speichern der ignorierten Begriffe.');
     }
   };
 
@@ -1783,6 +1830,49 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 </div>
               </div>
             ))}
+
+            <div className="settings-section">
+              <h3>Ignorierte Begriffe</h3>
+              <p className="section-description">
+                Diese Begriffe werden bei der ingredientID-Zuordnung ignoriert (z.B. "optional", "ggf").
+              </p>
+              <div className="tag-list">
+                {ignoredTerms.map((term) => (
+                  <span key={term} className="tag">
+                    {term}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIgnoredTerm(term)}
+                      className="tag-remove-button"
+                      title="Entfernen"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="add-term-row">
+                <input
+                  type="text"
+                  value={newIgnoredTerm}
+                  onChange={(e) => setNewIgnoredTerm(e.target.value)}
+                  placeholder="Neuen Begriff hinzufügen..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddIgnoredTerm(newIgnoredTerm);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddIgnoredTerm(newIgnoredTerm)}
+                  disabled={!newIgnoredTerm.trim()}
+                >
+                  Hinzufügen
+                </button>
+              </div>
+            </div>
 
             <div className="standard-terms-groups-container">
               {COMMON_UNIT_GROUPS.map((group) => (

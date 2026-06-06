@@ -16,6 +16,7 @@ import {
   classifyIngredientWords,
   setCustomIngredientMatchingTerms,
   initializeCommonAdjectivesFromFirebase,
+  initializeIgnoredMarkersFromFirebase,
 } from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
@@ -32,6 +33,7 @@ beforeEach(async () => {
   setCustomIngredientMatchingTerms();
   getDoc.mockResolvedValue(defaultCommonAdjectivesDoc);
   await initializeCommonAdjectivesFromFirebase({ forceReload: true });
+  await initializeIgnoredMarkersFromFirebase({ forceReload: true });
 });
 
 describe('ingredientIdMatching', () => {
@@ -213,6 +215,20 @@ describe('ingredientIdMatching', () => {
     expect(getIngredientIdSuggestions('gegebenenfalls Zucker', [
       { ingredientID: 'zucker', synonyms: ['Zucker'] },
     ])[0]).toMatchObject({ ingredientID: 'zucker', confidencePercent: 100 });
+  });
+
+  test('loads ignored markers from Firebase normalized field', async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        terms: ['custom', 'ignored'],
+        normalizedTerms: ['custom', 'ignored'],
+      }),
+    });
+    await initializeIgnoredMarkersFromFirebase({ forceReload: true });
+
+    expect(normalizeIngredientNameForIdMatching('custom Zwiebel')).toBe('Zwiebel');
+    expect(normalizeIngredientNameForIdMatching('ignored Tomaten')).toBe('Tomaten');
   });
 
   test('applies unit match as tie breaker for close candidates', () => {
