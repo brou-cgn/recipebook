@@ -42,6 +42,7 @@ jest.mock('../utils/ingredientIdMatching', () => {
     getIngredientIdSuggestions: (...args) => mockGetIngredientIdSuggestions(...args),
     setCustomIngredientMatchingTerms: (...args) => mockSetCustomIngredientMatchingTerms(...args),
     initializeCommonUnitsFromFirebase: jest.fn(() => Promise.resolve()),
+    initializeIgnoredMarkersFromFirebase: jest.fn(() => Promise.resolve()),
   };
 });
 
@@ -102,6 +103,8 @@ jest.mock('../utils/customLists', () => ({
     Promise.resolve({ temperature: [], state: [], sizing: [], protected: [] })
   ),
   saveCommonAdjectives: jest.fn(() => Promise.resolve()),
+  getIgnoredTerms: jest.fn(() => Promise.resolve(['optional', 'ggf', 'gegebenenfalls'])),
+  saveIgnoredTerms: jest.fn(() => Promise.resolve()),
   getCommonUnits: jest.fn(() =>
     Promise.resolve({ volume: [], kitchenSize: [], weight: [], dimension: [] })
   ),
