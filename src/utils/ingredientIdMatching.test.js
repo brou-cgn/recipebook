@@ -56,6 +56,28 @@ describe('ingredientIdMatching', () => {
     expect(parseIngredientNameAndUnit('Petersilie')).toEqual({ quantity: null, name: 'Petersilie', unit: null });
   });
 
+  test('parses ingredient with adjective between quantity and unit', () => {
+    // single adjective before unit (custom adjective)
+    setCustomIngredientMatchingTerms({ adjectives: ['gestrichener', 'gehäufte'] });
+    expect(parseIngredientNameAndUnit('1 gestrichener Esslöffel Zucker')).toEqual({
+      quantity: 1, name: 'Zucker', unit: 'Esslöffel',
+    });
+    expect(parseIngredientNameAndUnit('2 gehäufte TL Salz')).toEqual({
+      quantity: 2, name: 'Salz', unit: 'TL',
+    });
+    setCustomIngredientMatchingTerms();
+
+    // single adjective before unit (default adjective)
+    expect(parseIngredientNameAndUnit('½ großer Teelöffel Zimt')).toEqual({
+      quantity: 0.5, name: 'Zimt', unit: 'Teelöffel',
+    });
+
+    // multiple adjectives, no unit → name excludes adjectives
+    expect(parseIngredientNameAndUnit('3 kleine frische Tomaten')).toEqual({
+      quantity: 3, name: 'Tomaten', unit: null,
+    });
+  });
+
   test('parses Unicode vulgar fractions as quantity', () => {
     expect(parseIngredientNameAndUnit('½ Teelöffel Koriandersamen')).toEqual({
       quantity: 0.5, name: 'Koriandersamen', unit: 'Teelöffel',
