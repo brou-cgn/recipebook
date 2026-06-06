@@ -462,6 +462,12 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
     expect(normalizeIngredientNameForIdMatching('gehackte Zwiebel')).toBe('Zwiebel');
   });
 
+  test('removes leading and trailing commas after normalization', () => {
+    expect(normalizeIngredientNameForIdMatching(',Tomaten')).toBe('Tomaten');
+    expect(normalizeIngredientNameForIdMatching('Tomaten,')).toBe('Tomaten');
+    expect(normalizeIngredientNameForIdMatching(',Tomaten,')).toBe('Tomaten');
+  });
+
   test('loads adjective base forms from Firebase normalized fields and expands declensions', async () => {
     getDoc.mockResolvedValue({
       exists: () => true,

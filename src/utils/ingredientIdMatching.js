@@ -381,7 +381,7 @@ function similarityFromNormalized(a, b) {
 }
 
 function sanitizeIngredientNameForIdMatching(name) {
-  return String(name || '')
+  const normalizedName = String(name || '')
     .replace(/\([^()]*\)/g, ' ')
     .split(/\s+/)
     .filter((token) => {
@@ -394,6 +394,8 @@ function sanitizeIngredientNameForIdMatching(name) {
     })
     .join(' ')
     .trim();
+
+  return normalizedName.replace(/^,+|,+$/g, '').trim();
 }
 
 export function normalizeIngredientNameForIdMatching(name) {
