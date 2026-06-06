@@ -995,7 +995,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
     fireEvent.click(wordButton);
 
-    expect(screen.queryByRole('dialog', { name: 'Segmentzuordnung für "frische"' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).not.toBeInTheDocument();
   });
 
   test('opens recipe detail when recipe name is clicked', async () => {
@@ -1720,7 +1720,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
 
     const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
     fireEvent.click(wordButton);
-    expect(await screen.findByRole('dialog', { name: 'Segmentzuordnung für "frische"' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
 
@@ -1761,7 +1761,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
 
     const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frischen"' });
     fireEvent.click(wordButton);
-    expect(await screen.findByRole('dialog', { name: 'Segmentzuordnung für "frischen"' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frischen.*/ })).toBeInTheDocument();
     fireEvent.change(screen.getByRole('combobox', { name: 'Zielsegment' }), {
       target: { value: 'standardAdjectives' },
     });

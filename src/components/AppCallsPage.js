@@ -77,6 +77,7 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
 };
 
 const ADJECTIVE_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
+const DEFAULT_INGREDIENT_CONTEXT_SEGMENT = 'standardUnits';
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
@@ -449,7 +450,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     if (!trimmedWord) return;
     setIngredientWordContextMenu({
       word: trimmedWord,
-      segment: 'standardUnits',
+      segment: DEFAULT_INGREDIENT_CONTEXT_SEGMENT,
     });
   }, [activeTab]);
 
@@ -957,6 +958,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setIngredientWordContextMenu((current) => (current ? { ...current, segment } : current));
   }, []);
 
+  const selectedIngredientContextSegment = ingredientWordContextMenu?.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
+  const selectedIngredientContextSegmentOption = useMemo(
+    () => ingredientContextSegmentOptions.find((option) => option.value === selectedIngredientContextSegment) || null,
+    [ingredientContextSegmentOptions, selectedIngredientContextSegment]
+  );
+
   const handleAddCommonAdjective = async (group, value) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
     const entry = String(value || '').trim();
@@ -1073,9 +1080,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
 
   const handleApplyIngredientWordSegmentAssignment = async () => {
-    if (!ingredientWordContextMenu?.word || !ingredientWordContextMenu?.segment) return;
+    if (!ingredientWordContextMenu?.word) return;
 
-    const { word, segment } = ingredientWordContextMenu;
+    const word = ingredientWordContextMenu.word;
+    const segment = ingredientWordContextMenu.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
 
     if (segment === 'standardUnits') {
       await saveStandardTerms([...standardUnits, word], standardAdjectives);
@@ -2128,7 +2136,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               <dialog
                 className="ingredient-word-context-dialog"
                 open
-                aria-label={`Segmentzuordnung für "${ingredientWordContextMenu.word}"`}
+                aria-label={`Segmentzuordnung für „${ingredientWordContextMenu.word}“`}
                 onCancel={(event) => {
                   event.preventDefault();
                   closeIngredientWordContextMenu();
@@ -2143,7 +2151,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   </label>
                   <select
                     id="ingredient-word-segment-select"
-                    value={ingredientWordContextMenu.segment || ''}
+                    value={selectedIngredientContextSegment}
                     onChange={(event) => handleIngredientWordSegmentChange(event.target.value)}
                     aria-label="Zielsegment"
                   >
@@ -2154,11 +2162,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                     ))}
                   </select>
                   <p className="ingredient-word-context-dialog-doc">
-                    Dokument: {
-                      ingredientContextSegmentOptions.find(
-                        (option) => option.value === ingredientWordContextMenu.segment
-                      )?.documentPath || '—'
-                    }
+                    Dokument: {selectedIngredientContextSegmentOption?.documentPath || '—'}
                   </p>
                   <div className="ingredient-word-context-dialog-actions">
                     <button type="button" onClick={closeIngredientWordContextMenu}>
