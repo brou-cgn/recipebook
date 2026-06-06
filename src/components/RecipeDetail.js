@@ -9,7 +9,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThumbnail } from '../utils/recipeFirestore';
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
-import { buildPendingNutritionReferenceDraft, classifyIngredientWords, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { buildPendingNutritionReferenceDraft, classifyIngredientWords, normalizeIngredientNameForIdMatching, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
 import {
   NUTRITION_REFERENCE_NEW_STATUS,
   getNormalizedNutritionReferenceSynonyms,
@@ -876,7 +876,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
         const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
         const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
-        const parsedSynonym = String(name || '').trim();
+        const parsedSynonym = normalizeIngredientNameForIdMatching(name);
         const parsedUnit = String(unit || '').trim();
 
         if (parsedSynonym && parsedSynonym.length >= 3) {

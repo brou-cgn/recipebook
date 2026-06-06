@@ -543,6 +543,14 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
       expect(result.ignoredWords).toContain('optional');
     });
 
+    test('strips commas from classified ingredient words', () => {
+      setCustomIngredientMatchingTerms({ adjectives: ['gewürfelt'] });
+      const result = classifyIngredientWords('0.5 rote Zwiebel, gewürfelt');
+      expect(result.ingredientWords).toContain('Zwiebel');
+      expect(result.ingredientWords).not.toContain('Zwiebel,');
+      expect(result.ignoredWords).toContain('gewürfelt');
+    });
+
     test('moves parenthesised segments to ignoredWords', () => {
       const result = classifyIngredientWords('3 Tomaten (gewürfelt)');
       expect(result.ingredientWords).toContain('Tomaten');
