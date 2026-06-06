@@ -338,6 +338,33 @@ export function parseIngredientNameAndUnit(ingredientText) {
     return { quantity: parsedQuantity, name: rest || possibleUnit || raw, unit: possibleUnit };
   }
 
+  // If the first token after the number is a known adjective, scan further tokens for
+  // a unit (skipping any additional adjectives), e.g. "1 gestrichener Esslöffel Zucker".
+  if (possibleUnit && (COMMON_ADJECTIVES.has(normalizedUnit) || CUSTOM_ADJECTIVES.has(normalizedUnit))) {
+    const remainingTokens = rest.split(/\s+/).filter(Boolean);
+    for (let i = 0; i < remainingTokens.length; i++) {
+      const token = remainingTokens[i];
+      const normalized = normalizeNutritionReferenceId(token);
+      if (COMMON_ADJECTIVES.has(normalized) || CUSTOM_ADJECTIVES.has(normalized)) {
+        continue;
+      }
+      if (COMMON_UNITS.has(normalized) || CUSTOM_UNITS.has(normalized)) {
+        const name = remainingTokens.slice(i + 1).join(' ').trim() || token;
+        return { quantity: parsedQuantity, name, unit: token };
+      }
+      // First non-adjective, non-unit token found – no unit in this ingredient.
+      break;
+    }
+    // No unit found: return only the non-adjective tokens as the ingredient name.
+    const allTokens = [possibleUnit, ...remainingTokens];
+    const nonAdjectiveTokens = allTokens.filter((token) => {
+      const normalized = normalizeNutritionReferenceId(token);
+      return !COMMON_ADJECTIVES.has(normalized) && !CUSTOM_ADJECTIVES.has(normalized);
+    });
+    const name = nonAdjectiveTokens.join(' ').trim() || allTokens.join(' ').trim() || raw;
+    return { quantity: parsedQuantity, name, unit: null };
+  }
+
   const withoutAmount = raw.replace(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s+/, '').trim();
   return { quantity: parsedQuantity, name: withoutAmount || raw, unit: null };
 }
@@ -498,11 +525,27 @@ export function classifyIngredientWords(ingredientText) {
     ? firstWord
     : null;
 
+  // Collect any adjectives that appear in the raw text between the amount token and
+  // the unit/name.  parseIngredientNameAndUnit strips these from the returned name
+  // when it skips them to locate a unit, so they must be gathered here from the
+  // original text to ensure they are still reported as ignoredWords.
+  const ignoredWords = [];
+  if (amount !== null) {
+    const tokensAfterAmount = rawText.split(/\s+/).filter(Boolean).slice(1);
+    for (const token of tokensAfterAmount) {
+      const normalized = normalizeNutritionReferenceId(token);
+      if (!PROTECTED_ADJECTIVES.has(normalized) && (COMMON_ADJECTIVES.has(normalized) || CUSTOM_ADJECTIVES.has(normalized))) {
+        ignoredWords.push(token);
+      } else {
+        break;
+      }
+    }
+  }
+
   // Classify words inside the name part:
   // – parenthesised segments are always treated as ignored
   // – remaining tokens are checked against adjective / marker sets
   const rawName = String(name || '');
-  const ignoredWords = [];
 
   const nameWithoutParens = rawName.replace(/\(([^()]*)\)/g, (match) => {
     const inner = match.slice(1, -1).trim();
