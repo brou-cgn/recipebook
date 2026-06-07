@@ -8,8 +8,12 @@ import {
   NUTRITION_REFERENCE_APPROVED_STATUS,
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
   NUTRITION_REFERENCE_FIELDS,
+  NUTRITION_SOURCE_SUFFIX,
+  NUTRITION_SOURCE_PRIORITY,
   NUTRITION_REFERENCE_NEW_STATUS,
   NUTRITION_REFERENCE_STATUS_OPTIONS,
+  buildSourceNutritionFields,
+  computeEffectiveNutritionValues,
   getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
@@ -137,6 +141,29 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     const possibleUnits = parseNutritionReferencePossibleUnits(row);
     const sourceValue = String(source || '').trim();
     const status = parseNutritionReferenceStatus(row);
+
+    // Collect all source-specific nutrition fields present in the row.
+    const sourceFields = {};
+    for (const src of Object.keys(NUTRITION_SOURCE_SUFFIX)) {
+      const suffix = NUTRITION_SOURCE_SUFFIX[src];
+      for (const field of NUTRITION_REFERENCE_FIELDS) {
+        const fname = `${field}${suffix}`;
+        const raw = row[fname];
+        if (raw === '' || raw == null) continue;
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric) && numeric >= 0) {
+          sourceFields[fname] = numeric;
+        }
+      }
+    }
+
+    // Compute effective flat values. If source-specific fields are present use
+    // priority (manual > openfoodfacts > ai), otherwise fall back to any flat
+    // values already on the row (backward-compat for CSV-import mergedRow etc.).
+    const effectiveValues = Object.keys(sourceFields).length > 0
+      ? computeEffectiveNutritionValues({ ...row, ...sourceFields })
+      : parseNutritionReferenceValues(row);
+
     const payload = {
       ingredientID,
       displayName: String(row.displayName || '').trim(),
@@ -145,7 +172,8 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       name: synonyms[0] || '',
       possibleUnits,
       ...parseNutritionReferenceBooleanFields(row),
-      ...parseNutritionReferenceValues(row),
+      ...sourceFields,
+      ...effectiveValues,
       updatedAt: serverTimestamp(),
       updatedBy: currentUser?.id || null,
       source: sourceValue,
@@ -198,10 +226,25 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       return;
     }
 
-    const clearedNutritionValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
-      const raw = row[field];
+    // Explicitly delete manual source-specific fields that were cleared by the user.
+    const clearedManualNutritionValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+      const raw = row[`${field}_manual`];
       const isEmpty = raw == null || (typeof raw === 'string' && raw.trim() === '');
       if (isEmpty) {
+        acc[`${field}_manual`] = deleteField();
+      }
+      return acc;
+    }, {});
+
+    // Explicitly delete the effective flat field when no source has a value
+    // (so the old value is removed from Firestore rather than staying stale).
+    const clearedEffectiveFlatValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+      const hasValue = NUTRITION_SOURCE_PRIORITY.some((src) => {
+        const fname = `${field}${NUTRITION_SOURCE_SUFFIX[src]}`;
+        const raw = row[fname];
+        return raw !== '' && raw != null && Number.isFinite(Number(raw)) && Number(raw) >= 0;
+      });
+      if (!hasValue) {
         acc[field] = deleteField();
       }
       return acc;
@@ -212,7 +255,8 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       doc(db, 'nutritionReferences', ingredientID),
       {
         ...buildPayload(row, row.source, { previousRow }),
-        ...clearedNutritionValues,
+        ...clearedManualNutritionValues,
+        ...clearedEffectiveFlatValues,
       },
       { merge: true }
     );
@@ -287,6 +331,43 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setActionMessage('Alle Einträge wurden gelöscht.');
   };
 
+  /**
+   * One-time migration: writes source-specific nutrition fields to Firestore
+   * for all rows that only have flat values (legacy format).
+   */
+  const migrateSourceSpecificFields = async () => {
+    const rowsToMigrate = rows.filter((row) => {
+      const hasAnySourceSpecific = Object.keys(NUTRITION_SOURCE_SUFFIX).some((src) => {
+        const suffix = NUTRITION_SOURCE_SUFFIX[src];
+        return NUTRITION_REFERENCE_FIELDS.some((field) => row[`${field}${suffix}`] != null);
+      });
+      const hasAnyFlat = NUTRITION_REFERENCE_FIELDS.some((field) => row[field] != null);
+      return !hasAnySourceSpecific && hasAnyFlat && NUTRITION_SOURCE_SUFFIX[row.source];
+    });
+
+    if (rowsToMigrate.length === 0) {
+      setActionMessage('Keine Einträge zur Migration gefunden – alle Daten sind bereits migriert.');
+      return;
+    }
+
+    await Promise.all(rowsToMigrate.map((row) => {
+      const ingredientID = getIngredientID(row);
+      const suffix = NUTRITION_SOURCE_SUFFIX[row.source];
+      const sourceSpecificUpdate = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+        if (row[field] != null) acc[`${field}${suffix}`] = row[field];
+        return acc;
+      }, {});
+      return setDoc(
+        doc(db, 'nutritionReferences', ingredientID),
+        { ...sourceSpecificUpdate, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    }));
+
+    await reload();
+    setActionMessage(`${rowsToMigrate.length} Einträge migriert.`);
+  };
+
   const refreshRowFromOpenFoodFacts = async (row) => {
     setLookupError('');
     setRefreshingRowId(row.id);
@@ -319,6 +400,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
             status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
             ...(searchTerm ? { searchTerm } : {}),
             ...parsedValues,
+            ...buildSourceNutritionFields(parsedValues, source),
           },
           { merge: true }
         );
@@ -468,9 +550,20 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         const source = existing?.source || importedRow.source || 'csv-import';
         // Protect nutrition fields: keep existing values if already set
         const existingNutrition = parseNutritionReferenceValues(existing || {});
+        // Protect source-specific nutrition fields from the existing row
+        const existingSourceSpecificNutrition = {};
+        if (existing) {
+          for (const src of Object.keys(NUTRITION_SOURCE_SUFFIX)) {
+            const suffix = NUTRITION_SOURCE_SUFFIX[src];
+            for (const field of NUTRITION_REFERENCE_FIELDS) {
+              const fname = `${field}${suffix}`;
+              if (existing[fname] != null) existingSourceSpecificNutrition[fname] = existing[fname];
+            }
+          }
+        }
         // Protect searchTerm (Suchbegriff): keep existing value if already set
         const existingSearchTerm = existing?.searchTerm ? { searchTerm: existing.searchTerm } : {};
-        const mergedRow = { ...importedRow, ...existingNutrition, ...existingSearchTerm };
+        const mergedRow = { ...importedRow, ...existingNutrition, ...existingSourceSpecificNutrition, ...existingSearchTerm };
         return setDoc(
           doc(db, 'nutritionReferences', importedRow.ingredientID),
           // merge:false replaces the document, so legacy "family" is dropped implicitly.
@@ -600,6 +693,9 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
           onChange={handleImportCsv}
           disabled={isImportingCsv}
         />
+        <button type="button" className="save-button" onClick={migrateSourceSpecificFields}>
+          Quellenfelder migrieren
+        </button>
         <button type="button" className="remove-btn" onClick={removeAllRows}>
           Alle Einträge löschen
         </button>
@@ -811,16 +907,43 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     />
                   </td>
                   {NUTRITION_REFERENCE_FIELDS.map((field) => (
-                    <td key={field}>
-                      <input
-                        type="number"
-                        min="0"
-                        step={field === 'kalorien' ? '1' : '0.1'}
-                        value={row[field] ?? ''}
-                        onChange={(e) => updateCell(row.id, field, e.target.value)}
-                        className="conversion-table-input"
-                        aria-label={`${NUTRITION_FIELD_LABELS[field]} ${row.id}`}
-                      />
+                    <td key={field} className="nutrition-source-cell">
+                      <div className="nutrition-source-row">
+                        <span className="nutrition-source-label">OFf</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step={field === 'kalorien' ? '1' : '0.1'}
+                          value={row[`${field}_openfoodfacts`] ?? ''}
+                          readOnly
+                          className="conversion-table-input nutrition-source-input-readonly"
+                          aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts) ${row.id}`}
+                        />
+                      </div>
+                      <div className="nutrition-source-row">
+                        <span className="nutrition-source-label">KI</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step={field === 'kalorien' ? '1' : '0.1'}
+                          value={row[`${field}_ai`] ?? ''}
+                          readOnly
+                          className="conversion-table-input nutrition-source-input-readonly"
+                          aria-label={`${NUTRITION_FIELD_LABELS[field]} (KI) ${row.id}`}
+                        />
+                      </div>
+                      <div className="nutrition-source-row">
+                        <span className="nutrition-source-label">Man</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step={field === 'kalorien' ? '1' : '0.1'}
+                          value={row[`${field}_manual`] ?? ''}
+                          onChange={(e) => updateCell(row.id, `${field}_manual`, e.target.value)}
+                          className="conversion-table-input"
+                          aria-label={`${NUTRITION_FIELD_LABELS[field]} (Manuell) ${row.id}`}
+                        />
+                      </div>
                     </td>
                   ))}
                   <td className="conversion-table-actions">
@@ -950,15 +1073,19 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                   />
                 </td>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
-                  <td key={field}>
-                    <input
-                      type="number"
-                      min="0"
-                      step={field === 'kalorien' ? '1' : '0.1'}
-                      value={newValues[field] ?? ''}
-                      onChange={(e) => setNewValues((prev) => ({ ...prev, [field]: e.target.value }))}
-                      className="conversion-table-input"
-                    />
+                  <td key={field} className="nutrition-source-cell">
+                    <div className="nutrition-source-row">
+                      <span className="nutrition-source-label">Man</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step={field === 'kalorien' ? '1' : '0.1'}
+                        value={newValues[`${field}_manual`] ?? ''}
+                        onChange={(e) => setNewValues((prev) => ({ ...prev, [`${field}_manual`]: e.target.value }))}
+                        className="conversion-table-input"
+                        aria-label={`${NUTRITION_FIELD_LABELS[field]} (Manuell) neu`}
+                      />
+                    </div>
                   </td>
                 ))}
                 <td>

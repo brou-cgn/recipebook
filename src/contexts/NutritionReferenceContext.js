@@ -2,6 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
+  NUTRITION_REFERENCE_FIELDS,
+  NUTRITION_SOURCE_SUFFIX,
+  NUTRITION_SOURCE_PRIORITY,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceStatus,
@@ -60,6 +63,41 @@ function mapNutritionReferenceRows(snapshot) {
       const ingredientID = String(data.ingredientID || entry.id || '').trim();
       const synonyms = parseNutritionReferenceSynonyms(data);
       const displayName = String(data.displayName || data.Anzeigename || data.name || '').trim();
+
+      // Read source-specific nutrition fields that are already stored in Firestore.
+      const sourceSpecificFields = {};
+      for (const src of Object.keys(NUTRITION_SOURCE_SUFFIX)) {
+        const suffix = NUTRITION_SOURCE_SUFFIX[src];
+        for (const field of NUTRITION_REFERENCE_FIELDS) {
+          const fname = `${field}${suffix}`;
+          const raw = data[fname];
+          if (raw === '' || raw == null) continue;
+          const numeric = Number(raw);
+          if (Number.isFinite(numeric) && numeric >= 0) {
+            sourceSpecificFields[fname] = numeric;
+          }
+        }
+      }
+
+      // Lazy migration: if no source-specific fields exist yet but the document
+      // has flat nutrition values and a known source, populate in-memory so the
+      // UI shows the correct sub-cell without requiring an explicit save first.
+      const hasAnySourceSpecific = Object.keys(sourceSpecificFields).length > 0;
+      if (!hasAnySourceSpecific) {
+        const src = data.source || '';
+        const suffix = NUTRITION_SOURCE_SUFFIX[src];
+        if (suffix) {
+          for (const field of NUTRITION_REFERENCE_FIELDS) {
+            const raw = data[field];
+            if (raw === '' || raw == null) continue;
+            const numeric = Number(raw);
+            if (Number.isFinite(numeric) && numeric >= 0) {
+              sourceSpecificFields[`${field}${suffix}`] = numeric;
+            }
+          }
+        }
+      }
+
       return {
         id: entry.id,
         ingredientID,
@@ -78,6 +116,7 @@ function mapNutritionReferenceRows(snapshot) {
         name: displayName || synonyms[0] || data.name || '',
         ...(fallbackWeight != null ? { defaultAmountG: fallbackWeight } : {}),
         ...parseNutritionReferenceValues(data),
+        ...sourceSpecificFields,
       };
     })
     .sort((a, b) => (a.ingredientID || '').localeCompare(b.ingredientID || '', 'de', { sensitivity: 'base' }));
