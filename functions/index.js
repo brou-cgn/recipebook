@@ -1605,14 +1605,18 @@ function normalizeNutritionReferenceId(name) {
  */
 function parseNutritionReferenceValues(data = {}) {
   return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
-    const raw = data[key];
-    if (raw === '' || raw == null) return acc;
-    const numeric = Number(raw);
-    if (Number.isFinite(numeric) && numeric >= 0) {
+    const numeric = parseNutritionReferenceNumber(data[key]);
+    if (numeric != null) {
       acc[key] = numeric;
     }
     return acc;
   }, {});
+}
+
+function parseNutritionReferenceNumber(raw) {
+  if (raw === '' || raw == null) return null;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
 }
 
 function getNutritionSourceSuffix(source) {
@@ -1632,27 +1636,21 @@ function getNutritionSourceSuffix(source) {
 function getNutritionValuesForSource(data = {}, source = '') {
   const suffix = getNutritionSourceSuffix(source);
   const hasSourceSpecificValues = suffix && NUTRITION_REFERENCE_FIELDS.some((key) => {
-    const raw = data[`${key}${suffix}`];
-    if (raw === '' || raw == null) return false;
-    const numeric = Number(raw);
-    return Number.isFinite(numeric) && numeric >= 0;
+    const numeric = parseNutritionReferenceNumber(data[`${key}${suffix}`]);
+    return numeric != null;
   });
 
   return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
     if (hasSourceSpecificValues) {
-      const raw = data[`${key}${suffix}`];
-      if (raw === '' || raw == null) return acc;
-      const numeric = Number(raw);
-      if (Number.isFinite(numeric) && numeric >= 0) {
+      const numeric = parseNutritionReferenceNumber(data[`${key}${suffix}`]);
+      if (numeric != null) {
         acc[key] = numeric;
       }
       return acc;
     }
 
-    const raw = data[key];
-    if (raw === '' || raw == null) return acc;
-    const numeric = Number(raw);
-    if (Number.isFinite(numeric) && numeric >= 0) {
+    const numeric = parseNutritionReferenceNumber(data[key]);
+    if (numeric != null) {
       acc[key] = numeric;
     }
     return acc;

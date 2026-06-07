@@ -112,13 +112,16 @@ function parseSingleNutritionValue(raw) {
 
 export function getNutritionValuesForSource(data = {}, source = '') {
   const normalizedSource = String(source || '').trim().toLowerCase();
-  const hasSourceSpecificValues = NUTRITION_REFERENCE_FIELDS.some((field) => {
-    const sourceFieldName = getSourceFieldName(field, normalizedSource);
-    return sourceFieldName && parseSingleNutritionValue(data[sourceFieldName]) != null;
-  });
+  const sourceFieldNames = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+    acc[field] = getSourceFieldName(field, normalizedSource);
+    return acc;
+  }, {});
+  const hasSourceSpecificValues = NUTRITION_REFERENCE_FIELDS.some((field) => (
+    sourceFieldNames[field] && parseSingleNutritionValue(data[sourceFieldNames[field]]) != null
+  ));
 
   return NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
-    const sourceFieldName = getSourceFieldName(field, normalizedSource);
+    const sourceFieldName = sourceFieldNames[field];
     const sourceValue = sourceFieldName ? parseSingleNutritionValue(data[sourceFieldName]) : null;
 
     if (sourceValue != null) {
