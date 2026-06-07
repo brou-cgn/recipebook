@@ -389,6 +389,86 @@ test('uses cached nutrition reference matched by normalized synonym', async () =
   global.fetch = originalFetch;
 });
 
+test('uses source-specific cached nutrition values for openfoodfacts references', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 100, name: 'Rice'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Rice'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Rice',
+      source: 'openfoodfacts',
+      kalorien: 50,
+      protein: 1,
+      kalorien_openfoodfacts: 130,
+      protein_openfoodfacts: 2.7,
+      kalorien_ai: 80,
+      protein_ai: 8,
+      kalorien_manual: 200,
+      protein_manual: 20,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['100 g Reis'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.naehrwerte.kalorien, 130);
+  assert.equal(response.naehrwerte.protein, 2.7);
+
+  global.fetch = originalFetch;
+});
+
+test('falls back to flat cached nutrition values when no source-specific fields exist', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 100, name: 'Rice'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Rice'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Rice',
+      source: 'manual',
+      kalorien: 330,
+      protein: 7,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['100 g Reis'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.naehrwerte.kalorien, 330);
+  assert.equal(response.naehrwerte.protein, 7);
+
+  global.fetch = originalFetch;
+});
+
 test('does not replace parsed amount with defaultAmountG when quantity is provided', async () => {
   const originalFetch = global.fetch;
   global.fetch = async () => {

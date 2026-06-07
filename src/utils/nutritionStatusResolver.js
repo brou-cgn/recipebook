@@ -8,6 +8,7 @@ import {
   NUTRITION_REFERENCE_EMPTY_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
   buildSourceNutritionFields,
+  getNutritionValuesForSource,
   getStatusAfterNutritionFetch,
   normalizeNutritionReferenceId,
   parseNutritionReferenceStatus,
@@ -143,13 +144,15 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     }
   }
 
-  if (!hasAnyNutritionData(rowToUse)) {
+  const nutritionValues = getNutritionValuesForSource(rowToUse, rowToUse?.source || referenceRow?.source || '');
+
+  if (!hasAnyNutritionData(nutritionValues)) {
     return { found: false, error: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)' };
   }
 
   return {
     found: true,
-    naehrwerte: scaleNutritionValues(rowToUse, amountG),
+    naehrwerte: scaleNutritionValues(nutritionValues, amountG),
     amountG,
     source: rowToUse?.source || referenceRow?.source || '',
     searchTerm: rowToUse?.searchTerm || null,

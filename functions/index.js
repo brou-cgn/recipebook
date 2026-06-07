@@ -1580,6 +1580,7 @@ const NUTRITION_REFERENCE_COLLECTION = 'nutritionReferences';
 const NUTRITION_REFERENCE_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
 const NUTRITION_SOURCE_SUFFIX_OFF = '_openfoodfacts';
 const NUTRITION_SOURCE_SUFFIX_AI = '_ai';
+const NUTRITION_SOURCE_SUFFIX_MANUAL = '_manual';
 
 /**
  * Create a deterministic document id for nutrition reference entries.
@@ -1604,6 +1605,50 @@ function normalizeNutritionReferenceId(name) {
  */
 function parseNutritionReferenceValues(data = {}) {
   return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
+    const raw = data[key];
+    if (raw === '' || raw == null) return acc;
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      acc[key] = numeric;
+    }
+    return acc;
+  }, {});
+}
+
+function getNutritionSourceSuffix(source) {
+  switch (String(source || '').trim().toLowerCase()) {
+    case 'openfoodfacts':
+      return NUTRITION_SOURCE_SUFFIX_OFF;
+    case 'ai-generiert':
+      return NUTRITION_SOURCE_SUFFIX_AI;
+    case 'manual':
+    case 'manuell':
+      return NUTRITION_SOURCE_SUFFIX_MANUAL;
+    default:
+      return null;
+  }
+}
+
+function getNutritionValuesForSource(data = {}, source = '') {
+  const suffix = getNutritionSourceSuffix(source);
+  const hasSourceSpecificValues = suffix && NUTRITION_REFERENCE_FIELDS.some((key) => {
+    const raw = data[`${key}${suffix}`];
+    if (raw === '' || raw == null) return false;
+    const numeric = Number(raw);
+    return Number.isFinite(numeric) && numeric >= 0;
+  });
+
+  return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
+    if (hasSourceSpecificValues) {
+      const raw = data[`${key}${suffix}`];
+      if (raw === '' || raw == null) return acc;
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric) && numeric >= 0) {
+        acc[key] = numeric;
+      }
+      return acc;
+    }
+
     const raw = data[key];
     if (raw === '' || raw == null) return acc;
     const numeric = Number(raw);
@@ -1887,7 +1932,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
               if (!hasExplicitQuantity && typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
                 parsed = {...parsed, amountG: fallbackAmountG};
               }
-              const cachedValues = parseNutritionReferenceValues(cachedData);
+              const cachedValues = getNutritionValuesForSource(cachedData, cachedData.source);
               if (Object.keys(cachedValues).length > 0) {
                 const scale = parsed.amountG / 100;
                 NUTRITION_REFERENCE_FIELDS.forEach((key) => {
