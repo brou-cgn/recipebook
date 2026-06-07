@@ -8,6 +8,10 @@ import {
   parseNutritionReferenceSynonyms,
   parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
+  buildSourceNutritionFields,
+  computeEffectiveNutritionValues,
+  parseAllSourceNutritionFields,
+  getSourceFieldName,
 } from './nutritionReferenceUtils';
 
 describe('nutritionReferenceUtils', () => {
@@ -189,6 +193,117 @@ describe('nutritionReferenceUtils', () => {
   describe('getNormalizedNutritionReferenceSynonyms', () => {
     test('normalizes parsed synonyms for lookup ids', () => {
       expect(getNormalizedNutritionReferenceSynonyms({ synonyms: ['Crème fraîche', 'Weißkohl'] })).toEqual(['creme-fraiche', 'weisskohl']);
+    });
+  });
+
+  describe('getSourceFieldName', () => {
+    test('returns suffixed field name for known sources', () => {
+      expect(getSourceFieldName('kalorien', 'openfoodfacts')).toBe('kalorien_openfoodfacts');
+      expect(getSourceFieldName('protein', 'ai-generiert')).toBe('protein_ai');
+      expect(getSourceFieldName('fett', 'manual')).toBe('fett_manual');
+    });
+
+    test('returns null for unknown sources', () => {
+      expect(getSourceFieldName('kalorien', 'unknown')).toBeNull();
+      expect(getSourceFieldName('kalorien', '')).toBeNull();
+    });
+  });
+
+  describe('buildSourceNutritionFields', () => {
+    test('builds source-specific field keys for openfoodfacts', () => {
+      expect(buildSourceNutritionFields({ kalorien: 82, protein: 4.3 }, 'openfoodfacts')).toEqual({
+        kalorien_openfoodfacts: 82,
+        protein_openfoodfacts: 4.3,
+      });
+    });
+
+    test('builds source-specific field keys for ai-generiert', () => {
+      expect(buildSourceNutritionFields({ kalorien: 80 }, 'ai-generiert')).toEqual({
+        kalorien_ai: 80,
+      });
+    });
+
+    test('builds source-specific field keys for manual', () => {
+      expect(buildSourceNutritionFields({ salz: 0.5 }, 'manual')).toEqual({
+        salz_manual: 0.5,
+      });
+    });
+
+    test('skips empty or null values', () => {
+      expect(buildSourceNutritionFields({ kalorien: null, protein: '' }, 'manual')).toEqual({});
+    });
+
+    test('skips negative values', () => {
+      expect(buildSourceNutritionFields({ kalorien: -5 }, 'manual')).toEqual({});
+    });
+
+    test('returns empty object for unknown source', () => {
+      expect(buildSourceNutritionFields({ kalorien: 100 }, 'unknown')).toEqual({});
+    });
+  });
+
+  describe('computeEffectiveNutritionValues', () => {
+    test('prefers manual over openfoodfacts and ai', () => {
+      expect(computeEffectiveNutritionValues({
+        kalorien_manual: 50,
+        kalorien_openfoodfacts: 82,
+        kalorien_ai: 80,
+      })).toEqual({ kalorien: 50 });
+    });
+
+    test('falls back to openfoodfacts when manual is absent', () => {
+      expect(computeEffectiveNutritionValues({
+        kalorien_openfoodfacts: 82,
+        kalorien_ai: 80,
+      })).toEqual({ kalorien: 82 });
+    });
+
+    test('falls back to ai when only ai value is present', () => {
+      expect(computeEffectiveNutritionValues({
+        kalorien_ai: 80,
+      })).toEqual({ kalorien: 80 });
+    });
+
+    test('returns empty object when no source fields are present', () => {
+      expect(computeEffectiveNutritionValues({})).toEqual({});
+    });
+
+    test('combines multiple fields from different sources', () => {
+      expect(computeEffectiveNutritionValues({
+        kalorien_manual: 50,
+        protein_openfoodfacts: 4.3,
+        fett_ai: 1.2,
+      })).toEqual({ kalorien: 50, protein: 4.3, fett: 1.2 });
+    });
+
+    test('skips negative or invalid values', () => {
+      expect(computeEffectiveNutritionValues({
+        kalorien_manual: -1,
+        kalorien_openfoodfacts: 82,
+      })).toEqual({ kalorien: 82 });
+    });
+  });
+
+  describe('parseAllSourceNutritionFields', () => {
+    test('reads all source-specific fields from data', () => {
+      const data = {
+        kalorien_openfoodfacts: 82,
+        kalorien_ai: 80,
+        kalorien_manual: 50,
+        protein_openfoodfacts: 4.3,
+        // flat fields should be ignored
+        kalorien: 50,
+      };
+      expect(parseAllSourceNutritionFields(data)).toEqual({
+        kalorien_openfoodfacts: 82,
+        kalorien_ai: 80,
+        kalorien_manual: 50,
+        protein_openfoodfacts: 4.3,
+      });
+    });
+
+    test('returns empty object when no source-specific fields exist', () => {
+      expect(parseAllSourceNutritionFields({ kalorien: 82 })).toEqual({});
     });
   });
 });

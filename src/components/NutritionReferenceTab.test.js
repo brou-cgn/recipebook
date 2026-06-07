@@ -301,7 +301,9 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Kalorien (kcal) tomate'), { target: { value: '' } });
+    // The row has source:'manual', so lazy migration puts kalorien into kalorien_manual.
+    // Clear the manual Kalorien field and change source to empty.
+    fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) tomate'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Quelle tomate'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
@@ -358,6 +360,13 @@ describe('NutritionReferenceTab', () => {
         zucker: 12.5,
         ballaststoffe: 4.1,
         salz: 0.2,
+        kalorien_openfoodfacts: 82,
+        protein_openfoodfacts: 4.3,
+        fett_openfoodfacts: 0.5,
+        kohlenhydrate_openfoodfacts: 18.9,
+        zucker_openfoodfacts: 12.5,
+        ballaststoffe_openfoodfacts: 4.1,
+        salz_openfoodfacts: 0.2,
         source: 'openfoodfacts',
       });
       expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
@@ -418,6 +427,13 @@ describe('NutritionReferenceTab', () => {
       zucker: 12,
       ballaststoffe: 4,
       salz: 0.1,
+      kalorien_ai: 80,
+      protein_ai: 4,
+      fett_ai: 0.4,
+      kohlenhydrate_ai: 18,
+      zucker_ai: 12,
+      ballaststoffe_ai: 4,
+      salz_ai: 0.1,
       source: 'ai-generiert',
     });
     expect(mockSetDoc.mock.calls[1][2]).toEqual({ merge: true });

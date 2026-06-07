@@ -8,6 +8,102 @@ export const NUTRITION_REFERENCE_FIELDS = [
   'salz',
 ];
 
+/**
+ * Maps nutrition source keys to their Firestore field name suffixes.
+ * e.g. 'kalorien' + '_openfoodfacts' → 'kalorien_openfoodfacts'
+ */
+export const NUTRITION_SOURCE_SUFFIX = {
+  openfoodfacts: '_openfoodfacts',
+  'ai-generiert': '_ai',
+  manual: '_manual',
+};
+
+/** Ordered list of sources used for effective-value priority (manual > openfoodfacts > ai). */
+export const NUTRITION_SOURCE_PRIORITY = ['manual', 'openfoodfacts', 'ai-generiert'];
+
+/**
+ * Returns the Firestore field name for a given base field and source,
+ * e.g. getSourceFieldName('kalorien', 'openfoodfacts') → 'kalorien_openfoodfacts'.
+ * Returns null for unknown sources.
+ * @param {string} field
+ * @param {string} source
+ * @returns {string|null}
+ */
+export function getSourceFieldName(field, source) {
+  const suffix = NUTRITION_SOURCE_SUFFIX[source];
+  return suffix ? `${field}${suffix}` : null;
+}
+
+/**
+ * Builds a partial Firestore update object with source-specific nutrition fields
+ * for a single source, e.g. { kalorien_openfoodfacts: 82, protein_openfoodfacts: 4.3, … }.
+ * Only includes fields that have a valid non-negative number.
+ * @param {object} values  Plain { kalorien, protein, … } object
+ * @param {string} source  One of 'openfoodfacts', 'ai-generiert', 'manual'
+ * @returns {object}
+ */
+export function buildSourceNutritionFields(values = {}, source) {
+  const suffix = NUTRITION_SOURCE_SUFFIX[source];
+  if (!suffix) return {};
+  return NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
+    const raw = values[key];
+    if (raw === '' || raw == null) return acc;
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      acc[`${key}${suffix}`] = numeric;
+    }
+    return acc;
+  }, {});
+}
+
+/**
+ * Computes effective (flat) nutrition values from source-specific fields stored in a
+ * data object (e.g. a Firestore document or a row in local state).
+ * Priority: manual > openfoodfacts > ai-generiert.
+ * Only includes fields for which at least one source has a valid value.
+ * @param {object} data
+ * @returns {object}  e.g. { kalorien: 18, protein: 2.1, … }
+ */
+export function computeEffectiveNutritionValues(data = {}) {
+  return NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+    for (const src of NUTRITION_SOURCE_PRIORITY) {
+      const fname = getSourceFieldName(field, src);
+      if (!fname) continue;
+      const raw = data[fname];
+      if (raw === '' || raw == null) continue;
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric) && numeric >= 0) {
+        acc[field] = numeric;
+        break;
+      }
+    }
+    return acc;
+  }, {});
+}
+
+/**
+ * Reads all source-specific nutrition fields from a data object.
+ * Returns a flat object with keys like 'kalorien_openfoodfacts', 'protein_ai', etc.
+ * @param {object} data
+ * @returns {object}
+ */
+export function parseAllSourceNutritionFields(data = {}) {
+  const result = {};
+  for (const src of Object.keys(NUTRITION_SOURCE_SUFFIX)) {
+    const suffix = NUTRITION_SOURCE_SUFFIX[src];
+    for (const field of NUTRITION_REFERENCE_FIELDS) {
+      const fname = `${field}${suffix}`;
+      const raw = data[fname];
+      if (raw === '' || raw == null) continue;
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric) && numeric >= 0) {
+        result[fname] = numeric;
+      }
+    }
+  }
+  return result;
+}
+
 export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
   'seasonRelevant',
   'nutritionRelevant',

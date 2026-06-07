@@ -457,6 +457,13 @@ describe('resolveIngredientNutritionByStatus', () => {
         status: 'Prüfung ausstehend',
         searchTerm: 'Lachs',
         ...returnedValues,
+        kalorien_ai: 200,
+        protein_ai: 20,
+        fett_ai: 12,
+        kohlenhydrate_ai: 0,
+        zucker_ai: 0,
+        ballaststoffe_ai: 0,
+        salz_ai: 0.3,
       },
       { merge: true }
     );
