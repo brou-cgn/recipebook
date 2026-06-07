@@ -500,6 +500,18 @@ describe('resolveIngredientNutritionByStatus', () => {
         zucker_ai: 0,
         ballaststoffe_ai: 0,
         salz_ai: 0.3,
+        nutritionSetActual: [{
+          source: 'ai-generiert',
+          kalorien: 200,
+          protein: 20,
+          fett: 12,
+          kohlenhydrate: 0,
+          zucker: 0,
+          ballaststoffe: 0,
+          salz: 0.3,
+        }],
+        nutritionSetOutdated: [],
+        recalc: false,
       },
       { merge: true }
     );

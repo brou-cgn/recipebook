@@ -166,6 +166,9 @@ test('fills OFF and AI fields when missing and keeps manual source priority in c
   assert.equal(setCalls[0].payload.kalorien_openfoodfacts, 20);
   assert.equal(setCalls[0].payload.kalorien_ai, 18);
   assert.equal(setCalls[0].payload.kalorien, 91);
+  assert.deepEqual(setCalls[0].payload.nutritionSetActual, []);
+  assert.deepEqual(setCalls[0].payload.nutritionSetOutdated, []);
+  assert.equal(setCalls[0].payload.recalc, false);
   assert.equal(result.source, 'manual');
   assert.equal(result.values.kalorien, 91);
   assert.deepEqual(setCalls[0].options, {merge: true});
@@ -199,6 +202,15 @@ test('never changes source for approved status', async () => {
   assert.equal(estimateCalls, 1);
   assert.equal(setCalls.length, 1);
   assert.equal(Object.hasOwn(setCalls[0].payload, 'source'), false);
+  assert.deepEqual(setCalls[0].payload.nutritionSetActual, [{
+    source: 'manual',
+    kalorien: 110,
+    protein: 0.8,
+    fett: 0.2,
+    kohlenhydrate: 3.9,
+  }]);
+  assert.deepEqual(setCalls[0].payload.nutritionSetOutdated, []);
+  assert.equal(setCalls[0].payload.recalc, false);
   assert.equal(result.source, 'manual');
 
   global.fetch = originalFetch;
