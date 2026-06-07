@@ -199,8 +199,14 @@ export function calculateOpenFoodFactsDiagnostics(data = {}) {
     : null;
   const calorieValidationConfidence = calculateSimilarityScore(offCalories, calculatedCalories);
 
+  const nonNullConfidences = Object.values(confidenceByField).filter((v) => v != null);
+  const overallConfidence = nonNullConfidences.length > 0
+    ? Math.round(nonNullConfidences.reduce((sum, v) => sum + v, 0) / nonNullConfidences.length)
+    : null;
+
   return {
     confidenceByField,
+    overallConfidence,
     deviationToAiByField,
     calorieValidation: {
       calculatedCalories,

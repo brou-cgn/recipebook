@@ -225,14 +225,17 @@ describe('NutritionReferenceTab', () => {
 
     renderTab({ id: 'u1', role: 'moderator' });
 
-    const caloriesDiagnostics = await screen.findByLabelText('Kalorien (kcal) (OpenFoodFacts Diagnose) tomate');
-    expect(caloriesDiagnostics).toHaveTextContent('C: 98%');
+    const overallConfidence = await screen.findByLabelText('Gesamt-Confidence tomate');
+    expect(overallConfidence).toHaveTextContent('C: 84%');
+
+    const caloriesDiagnostics = screen.getByLabelText('Kalorien (kcal) (OpenFoodFacts Diagnose) tomate');
+    expect(caloriesDiagnostics).not.toHaveTextContent('C: 98%');
     expect(caloriesDiagnostics).toHaveTextContent('Δ KI: +2');
     expect(caloriesDiagnostics).toHaveTextContent('Δ Formel: -6');
     expect(caloriesDiagnostics).toHaveTextContent('C Formel: 94%');
 
     const proteinDiagnostics = screen.getByLabelText('Protein (g) (OpenFoodFacts Diagnose) tomate');
-    expect(proteinDiagnostics).toHaveTextContent('C: 78%');
+    expect(proteinDiagnostics).not.toHaveTextContent('C: 78%');
     expect(proteinDiagnostics).toHaveTextContent('Δ KI: +1');
   });
 

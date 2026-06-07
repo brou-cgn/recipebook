@@ -804,6 +804,9 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       className="conversion-table-input"
                       aria-label={`ingredientID ${row.id}`}
                     />
+                    <span className="nutrition-overall-confidence" aria-label={`Gesamt-Confidence ${row.id}`}>
+                      C: {diagnostics.overallConfidence == null ? '—' : `${diagnostics.overallConfidence}%`}
+                    </span>
                   </td>
                   <td>
                     <input
@@ -932,9 +935,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                         />
                       </div>
                       <div className="nutrition-source-meta" aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts Diagnose) ${row.id}`}>
-                        <span className="nutrition-source-meta-item">
-                          C: {diagnostics.confidenceByField[field] == null ? '—' : `${diagnostics.confidenceByField[field]}%`}
-                        </span>
                         <span className="nutrition-source-meta-item">
                           Δ KI: {formatSignedValue(diagnostics.deviationToAiByField[field])}
                         </span>
