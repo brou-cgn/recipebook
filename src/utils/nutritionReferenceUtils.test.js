@@ -13,6 +13,7 @@ import {
   getNutritionValuesForSource,
   parseAllSourceNutritionFields,
   getSourceFieldName,
+  calculateOpenFoodFactsDiagnostics,
 } from './nutritionReferenceUtils';
 
 describe('nutritionReferenceUtils', () => {
@@ -340,6 +341,80 @@ describe('nutritionReferenceUtils', () => {
       }, 'manual')).toEqual({
         kalorien: 50,
         protein: 4.3,
+      });
+    });
+  });
+
+  describe('calculateOpenFoodFactsDiagnostics', () => {
+    test('calculates per-field confidence, deviations and calorie formula validation', () => {
+      expect(calculateOpenFoodFactsDiagnostics({
+        source: 'openfoodfacts',
+        kalorien_openfoodfacts: 90,
+        protein_openfoodfacts: 5,
+        fett_openfoodfacts: 4,
+        kohlenhydrate_openfoodfacts: 10,
+        kalorien_ai: 88,
+        protein_ai: 4,
+        fett_ai: 5,
+        kohlenhydrate_ai: 12,
+      })).toEqual({
+        confidenceByField: {
+          kalorien: 98,
+          protein: 78,
+          fett: 78,
+          kohlenhydrate: 82,
+          zucker: null,
+          ballaststoffe: null,
+          salz: null,
+        },
+        deviationToAiByField: {
+          kalorien: 2,
+          protein: 1,
+          fett: -1,
+          kohlenhydrate: -2,
+          zucker: null,
+          ballaststoffe: null,
+          salz: null,
+        },
+        calorieValidation: {
+          calculatedCalories: 96,
+          calorieDeviation: -6,
+          confidence: 94,
+        },
+      });
+    });
+
+    test('uses legacy flat openfoodfacts values only for matching source rows', () => {
+      expect(calculateOpenFoodFactsDiagnostics({
+        source: 'openfoodfacts',
+        kalorien: 120,
+        protein: 3,
+        fett: 2,
+        kohlenhydrate: 20,
+      })).toEqual({
+        confidenceByField: {
+          kalorien: null,
+          protein: null,
+          fett: null,
+          kohlenhydrate: null,
+          zucker: null,
+          ballaststoffe: null,
+          salz: null,
+        },
+        deviationToAiByField: {
+          kalorien: null,
+          protein: null,
+          fett: null,
+          kohlenhydrate: null,
+          zucker: null,
+          ballaststoffe: null,
+          salz: null,
+        },
+        calorieValidation: {
+          calculatedCalories: 110,
+          calorieDeviation: 10,
+          confidence: 91,
+        },
       });
     });
   });

@@ -23,6 +23,7 @@ import {
   parseNutritionReferenceSynonyms,
   parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
+  calculateOpenFoodFactsDiagnostics,
 } from '../utils/nutritionReferenceUtils';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 import {
@@ -81,6 +82,13 @@ const NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS = new Set(NUTRITION_REFERENCE_BO
 const EMPTY_STATUS_FILTER_VALUE = '__empty__';
 const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
 const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
+// Highlight notable kcal mismatches (>15 kcal/100g) between declared and macro-derived values.
+const CALORIE_DEVIATION_ALERT_THRESHOLD = 15;
+const formatSignedValue = (value, decimals = 1) => {
+  if (value == null || !Number.isFinite(value)) return '—';
+  const rounded = Number(value.toFixed(decimals));
+  return `${rounded > 0 ? '+' : ''}${rounded}`;
+};
 
 const getRecipeIngredientTexts = (recipe = {}) => {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
@@ -783,8 +791,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
-                <tr key={row.id}>
+              {visibleRows.map((row) => {
+                const diagnostics = calculateOpenFoodFactsDiagnostics(row);
+                const calorieDeviation = diagnostics.calorieValidation.calorieDeviation;
+                return (
+                  <tr key={row.id}>
                   <td>
                     <input
                       type="text"
@@ -920,6 +931,24 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts) ${row.id}`}
                         />
                       </div>
+                      <div className="nutrition-source-meta" aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts Diagnose) ${row.id}`}>
+                        <span className="nutrition-source-meta-item">
+                          C: {diagnostics.confidenceByField[field] == null ? '—' : `${diagnostics.confidenceByField[field]}%`}
+                        </span>
+                        <span className="nutrition-source-meta-item">
+                          Δ KI: {formatSignedValue(diagnostics.deviationToAiByField[field])}
+                        </span>
+                        {field === 'kalorien' && (
+                          <>
+                            <span className={`nutrition-source-meta-item ${Math.abs(calorieDeviation ?? 0) > CALORIE_DEVIATION_ALERT_THRESHOLD ? 'is-alert' : ''}`}>
+                              Δ Formel: {formatSignedValue(calorieDeviation)}
+                            </span>
+                            <span className="nutrition-source-meta-item">
+                              C Formel: {diagnostics.calorieValidation.confidence == null ? '—' : `${diagnostics.calorieValidation.confidence}%`}
+                            </span>
+                          </>
+                        )}
+                      </div>
                       <div className="nutrition-source-row">
                         <span className="nutrition-source-label">KI</span>
                         <input
@@ -957,8 +986,9 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     </button>
                     <button className="remove-btn" onClick={() => removeRow(row.id)} title="Entfernen">×</button>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
               <tr className="conversion-table-new-row">
                 <td>
                   <input

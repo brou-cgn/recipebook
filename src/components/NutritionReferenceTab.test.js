@@ -200,6 +200,42 @@ describe('NutritionReferenceTab', () => {
     expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
+  test('shows confidence and deviations for OpenFoodFacts nutrients', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
+            source: 'openfoodfacts',
+            synonyms: ['Tomate'],
+            kalorien_openfoodfacts: 90,
+            protein_openfoodfacts: 5,
+            fett_openfoodfacts: 4,
+            kohlenhydrate_openfoodfacts: 10,
+            kalorien_ai: 88,
+            protein_ai: 4,
+            fett_ai: 5,
+            kohlenhydrate_ai: 12,
+          }),
+        },
+      ],
+    });
+
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    const caloriesDiagnostics = await screen.findByLabelText('Kalorien (kcal) (OpenFoodFacts Diagnose) tomate');
+    expect(caloriesDiagnostics).toHaveTextContent('C: 98%');
+    expect(caloriesDiagnostics).toHaveTextContent('Δ KI: +2');
+    expect(caloriesDiagnostics).toHaveTextContent('Δ Formel: -6');
+    expect(caloriesDiagnostics).toHaveTextContent('C Formel: 94%');
+
+    const proteinDiagnostics = screen.getByLabelText('Protein (g) (OpenFoodFacts Diagnose) tomate');
+    expect(proteinDiagnostics).toHaveTextContent('C: 78%');
+    expect(proteinDiagnostics).toHaveTextContent('Δ KI: +1');
+  });
+
   test('does not create duplicates for existing ingredient ids', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
