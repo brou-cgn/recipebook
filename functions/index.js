@@ -2294,12 +2294,6 @@ exports.generateNutritionFromReference = onCall(
       const status = String(referenceData.status || '').trim();
       const previousSource = String(referenceData.source || '').trim().toLowerCase();
 
-      const manualValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
-        const numeric = parseNutritionReferenceNumber(referenceData[`${field}${NUTRITION_SOURCE_SUFFIX_MANUAL}`]);
-        if (numeric != null) acc[field] = numeric;
-        return acc;
-      }, {});
-
       let hasOffValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_OFF);
       let hasAiValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_AI);
 
@@ -2380,15 +2374,11 @@ exports.generateNutritionFromReference = onCall(
         }
         return acc;
       }, {});
-      const nextData = {...referenceData};
-      for (const field of NUTRITION_REFERENCE_FIELDS) {
-        if (offFields[field] != null) {
-          nextData[`${field}${NUTRITION_SOURCE_SUFFIX_OFF}`] = offFields[field];
-        }
-        if (aiFields[field] != null) {
-          nextData[`${field}${NUTRITION_SOURCE_SUFFIX_AI}`] = aiFields[field];
-        }
-      }
+      const nextData = {
+        ...referenceData,
+        ...offSourceFields,
+        ...aiSourceFields,
+      };
 
       let nextSource = previousSource;
       if (status === 'Prüfung ausstehend') {
