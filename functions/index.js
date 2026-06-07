@@ -2281,6 +2281,28 @@ exports.generateNutritionFromReference = onCall(
         env: {GEMINI_API_KEY: geminiApiKey.value()},
       });
 
+      const referenceRef = admin.firestore()
+          .collection(NUTRITION_REFERENCE_COLLECTION)
+          .doc(ingredientID);
+      const referenceSnapshot = await referenceRef.get();
+      const referenceData = referenceSnapshot.exists ? (referenceSnapshot.data() || {}) : {};
+
+      const hasSourceValues = (suffix) => NUTRITION_REFERENCE_FIELDS.some((field) =>
+        parseNutritionReferenceNumber(referenceData[`${field}${suffix}`]) != null
+      );
+
+      const status = String(referenceData.status || '').trim();
+      const previousSource = String(referenceData.source || '').trim().toLowerCase();
+
+      const manualValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+        const numeric = parseNutritionReferenceNumber(referenceData[`${field}${NUTRITION_SOURCE_SUFFIX_MANUAL}`]);
+        if (numeric != null) acc[field] = numeric;
+        return acc;
+      }, {});
+
+      let hasOffValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_OFF);
+      let hasAiValues = hasSourceValues(NUTRITION_SOURCE_SUFFIX_AI);
+
       // 1. Generate search term with Gemini
       const generatedSearchTerm = await generateSearchTermWithGemini(
           ingredientID,
@@ -2289,52 +2311,141 @@ exports.generateNutritionFromReference = onCall(
       );
       const searchTerm = generatedSearchTerm || ingredientID;
 
-      // 2. Query OpenFoodFacts
+      // 2. Query OpenFoodFacts when OFF fields are empty
       let offValues = null;
       let productName = null;
-      try {
-        const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerm)}&action=process&json=1&page_size=5`;
-        const offResponse = await fetch(offUrl);
-        if (offResponse.ok) {
-          const offData = await offResponse.json();
-          const product = (offData.products || []).find((entry) => {
-            const nutriments = entry?.nutriments || {};
-            return nutriments['energy-kcal_100g'] != null || nutriments['energy-kcal'] != null;
-          });
-          if (product) {
-            const nutriments = product.nutriments || {};
-            offValues = {
-              kalorien: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null,
-              protein: nutriments['proteins_100g'] ?? nutriments.proteins ?? null,
-              fett: nutriments['fat_100g'] ?? nutriments.fat ?? null,
-              kohlenhydrate: nutriments['carbohydrates_100g'] ?? nutriments.carbohydrates ?? null,
-              zucker: nutriments['sugars_100g'] ?? nutriments.sugars ?? null,
-              ballaststoffe: nutriments['fiber_100g'] ?? nutriments.fiber ?? null,
-              salz: nutriments['salt_100g'] ?? nutriments.salt ?? null,
-            };
-            productName = product.product_name || searchTerm;
+      if (!hasOffValues) {
+        try {
+          const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerm)}&action=process&json=1&page_size=5`;
+          const offResponse = await fetch(offUrl);
+          if (offResponse.ok) {
+            const offData = await offResponse.json();
+            const product = (offData.products || []).find((entry) => {
+              const nutriments = entry?.nutriments || {};
+              return nutriments['energy-kcal_100g'] != null || nutriments['energy-kcal'] != null;
+            });
+            if (product) {
+              const nutriments = product.nutriments || {};
+              offValues = parseNutritionReferenceValues({
+                kalorien: nutriments['energy-kcal_100g'] ?? nutriments['energy-kcal'] ?? null,
+                protein: nutriments['proteins_100g'] ?? nutriments.proteins ?? null,
+                fett: nutriments['fat_100g'] ?? nutriments.fat ?? null,
+                kohlenhydrate: nutriments['carbohydrates_100g'] ?? nutriments.carbohydrates ?? null,
+                zucker: nutriments['sugars_100g'] ?? nutriments.sugars ?? null,
+                ballaststoffe: nutriments['fiber_100g'] ?? nutriments.fiber ?? null,
+                salz: nutriments['salt_100g'] ?? nutriments.salt ?? null,
+              });
+              if (Object.keys(offValues).length > 0) {
+                productName = product.product_name || searchTerm;
+                hasOffValues = true;
+              } else {
+                offValues = null;
+              }
+            }
+          }
+        } catch (e) {
+          // Network error → continue with Gemini generation if needed
+        }
+      }
+
+      // 3. Estimate with Gemini when AI fields are empty
+      let aiValues = null;
+      if (!hasAiValues) {
+        const estimated = await estimateNutritionWithGemini(
+            ingredientID,
+            {amountG: 100, name: ingredientID, searchName: searchTerm},
+            {timeoutMs: 20000},
+        );
+        if (estimated?.per100g) {
+          aiValues = parseNutritionReferenceValues(estimated.per100g);
+          if (Object.keys(aiValues).length > 0) {
+            hasAiValues = true;
+          } else {
+            aiValues = null;
           }
         }
-      } catch (e) {
-        // Network error → fall back to Gemini
       }
 
-      if (offValues) {
-        return {searchTerm, source: 'openfoodfacts', values: offValues, productName};
+      const offFields = (offValues || {});
+      const aiFields = (aiValues || {});
+      const offSourceFields = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+        if (offFields[field] != null) {
+          acc[`${field}${NUTRITION_SOURCE_SUFFIX_OFF}`] = offFields[field];
+        }
+        return acc;
+      }, {});
+      const aiSourceFields = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+        if (aiFields[field] != null) {
+          acc[`${field}${NUTRITION_SOURCE_SUFFIX_AI}`] = aiFields[field];
+        }
+        return acc;
+      }, {});
+      const nextData = {...referenceData};
+      for (const field of NUTRITION_REFERENCE_FIELDS) {
+        if (offFields[field] != null) {
+          nextData[`${field}${NUTRITION_SOURCE_SUFFIX_OFF}`] = offFields[field];
+        }
+        if (aiFields[field] != null) {
+          nextData[`${field}${NUTRITION_SOURCE_SUFFIX_AI}`] = aiFields[field];
+        }
       }
 
-      // 3. Gemini fallback: estimate nutrition
-      const estimated = await estimateNutritionWithGemini(
-          ingredientID,
-          {amountG: 100, name: ingredientID, searchName: searchTerm},
-          {timeoutMs: 20000},
-      );
-
-      if (estimated?.per100g) {
-        return {searchTerm, source: 'ai-generiert', values: estimated.per100g, productName: null};
+      let nextSource = previousSource;
+      if (status === 'Prüfung ausstehend') {
+        const hasManualAfter = NUTRITION_REFERENCE_FIELDS.some((field) =>
+          parseNutritionReferenceNumber(nextData[`${field}${NUTRITION_SOURCE_SUFFIX_MANUAL}`]) != null
+        );
+        const hasOffAfter = NUTRITION_REFERENCE_FIELDS.some((field) =>
+          parseNutritionReferenceNumber(nextData[`${field}${NUTRITION_SOURCE_SUFFIX_OFF}`]) != null
+        );
+        if (hasManualAfter) {
+          nextSource = 'manual';
+        } else if (hasOffAfter) {
+          nextSource = 'openfoodfacts';
+        } else {
+          nextSource = 'ai-generiert';
+        }
+      } else if (status !== 'Freigegeben') {
+        if (offValues) {
+          nextSource = 'openfoodfacts';
+        } else if (aiValues) {
+          nextSource = 'ai-generiert';
+        }
       }
 
-      throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
+      const selectedValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+        const manualValue = parseNutritionReferenceNumber(nextData[`${field}${NUTRITION_SOURCE_SUFFIX_MANUAL}`]);
+        const offValue = parseNutritionReferenceNumber(nextData[`${field}${NUTRITION_SOURCE_SUFFIX_OFF}`]);
+        const aiValue = parseNutritionReferenceNumber(nextData[`${field}${NUTRITION_SOURCE_SUFFIX_AI}`]);
+
+        const resolved = manualValue != null ?
+          manualValue :
+          (offValue != null ? offValue : aiValue);
+        if (resolved != null) {
+          acc[field] = resolved;
+        }
+        return acc;
+      }, {});
+
+      if (Object.keys(selectedValues).length === 0) {
+        throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
+      }
+
+      const updatePayload = {
+        ...(searchTerm ? {searchTerm} : {}),
+        ...selectedValues,
+        ...offSourceFields,
+        ...aiSourceFields,
+      };
+      if (nextSource && status !== 'Freigegeben') {
+        updatePayload.source = nextSource;
+      }
+      updatePayload.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+
+      await referenceRef.set(updatePayload, {merge: true});
+
+      const resolvedSource = status === 'Freigegeben' ? previousSource : (nextSource || previousSource);
+      return {searchTerm, source: resolvedSource, values: selectedValues, productName};
     }
 );
 
