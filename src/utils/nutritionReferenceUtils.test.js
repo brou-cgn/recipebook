@@ -367,6 +367,7 @@ describe('nutritionReferenceUtils', () => {
           ballaststoffe: null,
           salz: null,
         },
+        overallConfidence: 84,
         deviationToAiByField: {
           kalorien: 2,
           protein: 1,
@@ -401,6 +402,7 @@ describe('nutritionReferenceUtils', () => {
           ballaststoffe: null,
           salz: null,
         },
+        overallConfidence: null,
         deviationToAiByField: {
           kalorien: null,
           protein: null,
