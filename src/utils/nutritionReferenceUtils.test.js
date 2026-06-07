@@ -8,6 +8,8 @@ import {
   parseNutritionReferenceSynonyms,
   parseNutritionReferencePossibleUnits,
   getNormalizedNutritionReferenceSynonyms,
+  buildNutritionSet,
+  buildNutritionTrackingFields,
   buildSourceNutritionFields,
   computeEffectiveNutritionValues,
   getNutritionValuesForSource,
@@ -241,6 +243,81 @@ describe('nutritionReferenceUtils', () => {
 
     test('returns empty object for unknown source', () => {
       expect(buildSourceNutritionFields({ kalorien: 100 }, 'unknown')).toEqual({});
+    });
+  });
+
+  describe('buildNutritionSet', () => {
+    test('creates a normalized nutrition set entry', () => {
+      expect(buildNutritionSet({ kalorien: 82, protein: 4.3 }, 'OpenFoodFacts')).toEqual([
+        { source: 'openfoodfacts', kalorien: 82, protein: 4.3 },
+      ]);
+    });
+
+    test('returns empty array when values are invalid', () => {
+      expect(buildNutritionSet({ kalorien: '', protein: -1 }, 'manual')).toEqual([]);
+    });
+  });
+
+  describe('buildNutritionTrackingFields', () => {
+    test('initializes nutritionSetActual on first write', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {},
+        nextValues: { kalorien: 100, protein: 2 },
+        nextSource: 'openfoodfacts',
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        nutritionSetOutdated: [],
+        recalc: false,
+      });
+    });
+
+    test('moves previous actual to outdated and sets recalc on >5% calorie delta', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        },
+        nextValues: { kalorien: 110, protein: 2.2 },
+        nextSource: 'ai-generiert',
+      })).toEqual({
+        nutritionSetActual: [{ source: 'ai-generiert', kalorien: 110, protein: 2.2 }],
+        nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        recalc: true,
+      });
+    });
+
+    test('keeps sets unchanged when switching source to manual', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+          nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
+          recalc: false,
+        },
+        nextValues: { kalorien: 90 },
+        nextSource: 'manual',
+        preserveOnManualSourceChange: true,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+        nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
+        recalc: false,
+      });
+    });
+
+    test('forces recalc and shifts sets for approval transition', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'manual',
+          nutritionSetActual: [{ source: 'manual', kalorien: 100 }],
+        },
+        nextValues: { kalorien: 101 },
+        nextSource: 'manual',
+        forceRecalc: true,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'manual', kalorien: 101 }],
+        nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
+        recalc: true,
+      });
     });
   });
 

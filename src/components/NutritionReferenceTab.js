@@ -12,6 +12,7 @@ import {
   NUTRITION_SOURCE_PRIORITY,
   NUTRITION_REFERENCE_NEW_STATUS,
   NUTRITION_REFERENCE_STATUS_OPTIONS,
+  buildNutritionTrackingFields,
   buildSourceNutritionFields,
   computeEffectiveNutritionValues,
   getStatusAfterNutritionFetch,
@@ -203,9 +204,21 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     if (status) payload.status = status;
     if (searchTerm) payload.searchTerm = searchTerm;
     const previousStatus = parseNutritionReferenceStatus(previousRow || {});
-    if (
+    const isApprovalTransition =
       status === NUTRITION_REFERENCE_APPROVED_STATUS
-      && previousStatus !== NUTRITION_REFERENCE_APPROVED_STATUS
+      && previousStatus !== NUTRITION_REFERENCE_APPROVED_STATUS;
+    Object.assign(
+      payload,
+      buildNutritionTrackingFields({
+        previousData: previousRow || {},
+        nextValues: effectiveValues,
+        nextSource: sourceValue,
+        forceRecalc: isApprovalTransition,
+        preserveOnManualSourceChange: true,
+      })
+    );
+    if (
+      isApprovalTransition
     ) {
       payload.approvedAt = serverTimestamp();
     } else if (previousRow?.approvedAt !== undefined && previousRow?.approvedAt !== null) {
@@ -409,6 +422,12 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
             ...(searchTerm ? { searchTerm } : {}),
             ...parsedValues,
             ...buildSourceNutritionFields(parsedValues, source),
+            ...buildNutritionTrackingFields({
+              previousData: row,
+              nextValues: parsedValues,
+              nextSource: source,
+              preserveOnManualSourceChange: true,
+            }),
           },
           { merge: true }
         );

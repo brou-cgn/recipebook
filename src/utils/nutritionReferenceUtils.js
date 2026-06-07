@@ -23,6 +23,7 @@ export const NUTRITION_SOURCE_PRIORITY = ['manual', 'openfoodfacts', 'ai-generie
 const CALORIES_PER_GRAM_FAT = 9;
 const CALORIES_PER_GRAM_PROTEIN = 4;
 const CALORIES_PER_GRAM_CARBS = 4;
+const NUTRITION_RECALC_CALORIE_THRESHOLD = 0.05;
 
 /**
  * Returns the Firestore field name for a given base field and source,
@@ -147,6 +148,87 @@ function toNonNegativeNumber(raw) {
   if (raw === '' || raw == null) return null;
   const numeric = Number(raw);
   return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+}
+
+function normalizeNutritionSet(set = []) {
+  if (!Array.isArray(set)) return [];
+  return set.reduce((acc, entry) => {
+    if (!entry || typeof entry !== 'object') return acc;
+    const source = String(entry.source || '').trim().toLowerCase();
+    const rawValues = entry.values && typeof entry.values === 'object' ? entry.values : entry;
+    const parsedValues = parseNutritionReferenceValues(rawValues);
+    if (Object.keys(parsedValues).length === 0) return acc;
+    acc.push(source ? { source, ...parsedValues } : parsedValues);
+    return acc;
+  }, []);
+}
+
+function getCaloriesFromNutritionSet(set = []) {
+  const normalizedSet = normalizeNutritionSet(set);
+  if (normalizedSet.length === 0) return null;
+  return toNonNegativeNumber(normalizedSet[0].kalorien);
+}
+
+function shouldSetRecalc(previousCalories, currentCalories) {
+  if (previousCalories == null || currentCalories == null) return false;
+  const baseline = previousCalories === 0 ? 1 : previousCalories;
+  return Math.abs(currentCalories - previousCalories) / baseline > NUTRITION_RECALC_CALORIE_THRESHOLD;
+}
+
+export function buildNutritionSet(values = {}, source = '') {
+  const parsedValues = parseNutritionReferenceValues(values);
+  if (Object.keys(parsedValues).length === 0) return [];
+  const normalizedSource = String(source || '').trim().toLowerCase();
+  return [normalizedSource ? { source: normalizedSource, ...parsedValues } : parsedValues];
+}
+
+export function buildNutritionTrackingFields({
+  previousData = {},
+  nextValues = {},
+  nextSource = '',
+  forceRecalc = false,
+  preserveOnManualSourceChange = false,
+} = {}) {
+  const previousActual = normalizeNutritionSet(previousData.nutritionSetActual);
+  let nextActual = previousActual;
+  let nextOutdated = normalizeNutritionSet(previousData.nutritionSetOutdated);
+  let nextRecalc = typeof previousData.recalc === 'boolean' ? previousData.recalc : false;
+
+  const normalizedNextSource = String(nextSource || '').trim().toLowerCase();
+  const normalizedPreviousSource = String(previousData.source || '').trim().toLowerCase();
+  const normalizedNextSet = buildNutritionSet(nextValues, normalizedNextSource);
+  const hasNextSet = normalizedNextSet.length > 0;
+  const sourceChanged = normalizedNextSource && normalizedPreviousSource && normalizedNextSource !== normalizedPreviousSource;
+  const switchedToManual = sourceChanged && normalizedNextSource === 'manual';
+
+  if (hasNextSet && forceRecalc) {
+    nextOutdated = previousActual;
+    nextActual = normalizedNextSet;
+    nextRecalc = true;
+  } else if (
+    hasNextSet
+    && !(preserveOnManualSourceChange && switchedToManual)
+    && sourceChanged
+  ) {
+    nextOutdated = previousActual;
+    nextActual = normalizedNextSet;
+    nextRecalc = nextRecalc || shouldSetRecalc(
+      getCaloriesFromNutritionSet(nextOutdated),
+      getCaloriesFromNutritionSet(nextActual)
+    );
+  } else if (
+    hasNextSet
+    && previousActual.length === 0
+    && !(preserveOnManualSourceChange && switchedToManual)
+  ) {
+    nextActual = normalizedNextSet;
+  }
+
+  return {
+    nutritionSetActual: nextActual,
+    nutritionSetOutdated: nextOutdated,
+    recalc: Boolean(nextRecalc),
+  };
 }
 
 function calculateSimilarityScore(baseValue, comparedValue) {

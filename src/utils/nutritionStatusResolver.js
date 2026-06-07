@@ -7,6 +7,7 @@ import {
   NUTRITION_REFERENCE_DATA_COLLECTION_PENDING_STATUS,
   NUTRITION_REFERENCE_EMPTY_STATUS,
   NUTRITION_REFERENCE_NEW_STATUS,
+  buildNutritionTrackingFields,
   buildSourceNutritionFields,
   getNutritionValuesForSource,
   getStatusAfterNutritionFetch,
@@ -119,6 +120,12 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
                 ...(returnedSearchTerm ? { searchTerm: returnedSearchTerm } : {}),
                 ...parsedValues,
                 ...buildSourceNutritionFields(parsedValues, returnedSource),
+                ...buildNutritionTrackingFields({
+                  previousData: referenceRow || {},
+                  nextValues: parsedValues,
+                  nextSource: returnedSource,
+                  preserveOnManualSourceChange: true,
+                }),
               },
               { merge: true }
             );

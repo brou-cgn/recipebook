@@ -1581,6 +1581,7 @@ const NUTRITION_REFERENCE_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrat
 const NUTRITION_SOURCE_SUFFIX_OFF = '_openfoodfacts';
 const NUTRITION_SOURCE_SUFFIX_AI = '_ai';
 const NUTRITION_SOURCE_SUFFIX_MANUAL = '_manual';
+const NUTRITION_RECALC_CALORIE_THRESHOLD = 0.05;
 
 /**
  * Create a deterministic document id for nutrition reference entries.
@@ -1655,6 +1656,89 @@ function getNutritionValuesForSource(data = {}, source = '') {
     }
     return acc;
   }, {});
+}
+
+function buildNutritionSet(values = {}, source = '') {
+  const parsedValues = parseNutritionReferenceValues(values);
+  if (Object.keys(parsedValues).length === 0) return [];
+  const normalizedSource = String(source || '').trim().toLowerCase();
+  return [normalizedSource ? {source: normalizedSource, ...parsedValues} : parsedValues];
+}
+
+function normalizeNutritionSet(set = []) {
+  if (!Array.isArray(set)) return [];
+  return set.reduce((acc, entry) => {
+    if (!entry || typeof entry !== 'object') return acc;
+    const source = String(entry.source || '').trim().toLowerCase();
+    const rawValues = entry.values && typeof entry.values === 'object' ? entry.values : entry;
+    const parsedValues = parseNutritionReferenceValues(rawValues);
+    if (Object.keys(parsedValues).length === 0) return acc;
+    acc.push(source ? {source, ...parsedValues} : parsedValues);
+    return acc;
+  }, []);
+}
+
+function getCaloriesFromNutritionSet(set = []) {
+  const normalized = normalizeNutritionSet(set);
+  if (normalized.length === 0) return null;
+  return parseNutritionReferenceNumber(normalized[0].kalorien);
+}
+
+function shouldSetRecalc(previousCalories, currentCalories) {
+  if (previousCalories == null || currentCalories == null) return false;
+  const baseline = previousCalories === 0 ? 1 : previousCalories;
+  return Math.abs(currentCalories - previousCalories) / baseline >
+    NUTRITION_RECALC_CALORIE_THRESHOLD;
+}
+
+function buildNutritionTrackingFields({
+  previousData = {},
+  nextValues = {},
+  nextSource = '',
+  forceRecalc = false,
+  preserveOnManualSourceChange = false,
+} = {}) {
+  const previousActual = normalizeNutritionSet(previousData.nutritionSetActual);
+  let nextActual = previousActual;
+  let nextOutdated = normalizeNutritionSet(previousData.nutritionSetOutdated);
+  let nextRecalc = typeof previousData.recalc === 'boolean' ? previousData.recalc : false;
+
+  const normalizedNextSource = String(nextSource || '').trim().toLowerCase();
+  const normalizedPreviousSource = String(previousData.source || '').trim().toLowerCase();
+  const normalizedNextSet = buildNutritionSet(nextValues, normalizedNextSource);
+  const hasNextSet = normalizedNextSet.length > 0;
+  const sourceChanged = normalizedNextSource && normalizedPreviousSource &&
+    normalizedNextSource !== normalizedPreviousSource;
+  const switchedToManual = sourceChanged && normalizedNextSource === 'manual';
+
+  if (hasNextSet && forceRecalc) {
+    nextOutdated = previousActual;
+    nextActual = normalizedNextSet;
+    nextRecalc = true;
+  } else if (
+    hasNextSet &&
+    !(preserveOnManualSourceChange && switchedToManual) &&
+    sourceChanged
+  ) {
+    nextOutdated = previousActual;
+    nextActual = normalizedNextSet;
+    nextRecalc = nextRecalc || shouldSetRecalc(
+        getCaloriesFromNutritionSet(nextOutdated),
+        getCaloriesFromNutritionSet(nextActual),
+    );
+  } else if (
+    hasNextSet &&
+    previousActual.length === 0 &&
+    !(preserveOnManualSourceChange && switchedToManual)
+  ) {
+    nextActual = normalizedNextSet;
+  }
+
+  return {
+    nutritionSetActual: nextActual,
+    nutritionSetOutdated: nextOutdated,
+    recalc: Boolean(nextRecalc),
+  };
 }
 
 /**
@@ -2426,6 +2510,12 @@ exports.generateNutritionFromReference = onCall(
         ...selectedValues,
         ...offSourceFields,
         ...aiSourceFields,
+        ...buildNutritionTrackingFields({
+          previousData: referenceData,
+          nextValues: selectedValues,
+          nextSource: nextSource || previousSource,
+          preserveOnManualSourceChange: true,
+        }),
       };
       if (nextSource && status !== 'Freigegeben') {
         updatePayload.source = nextSource;

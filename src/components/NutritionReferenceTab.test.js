@@ -335,6 +335,79 @@ describe('NutritionReferenceTab', () => {
     }));
   });
 
+  test('sets recalc and shifts nutrition sets when status changes to Freigegeben', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            source: 'manual',
+            synonyms: ['Tomate'],
+            kalorien_manual: 100,
+            protein_manual: 2,
+            nutritionSetActual: [{ source: 'manual', kalorien: 100, protein: 2 }],
+            nutritionSetOutdated: [],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) tomate'), { target: { value: '130' } });
+    fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      recalc: true,
+      nutritionSetOutdated: [{ source: 'manual', kalorien: 100, protein: 2 }],
+      nutritionSetActual: [{ source: 'manual', kalorien: 130, protein: 2 }],
+    }));
+  });
+
+  test('keeps nutrition sets unchanged when source is switched to manual', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            source: 'openfoodfacts',
+            synonyms: ['Tomate'],
+            kalorien_openfoodfacts: 100,
+            kalorien_manual: 90,
+            nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+            nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Quelle tomate'), { target: { value: 'manual' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      source: 'manual',
+      nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+      nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
+      recalc: false,
+    }));
+  });
+
   test('persists clearing nutrition values and source for an existing row', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
@@ -406,6 +479,18 @@ describe('NutritionReferenceTab', () => {
         zucker_openfoodfacts: 12.5,
         ballaststoffe_openfoodfacts: 4.1,
         salz_openfoodfacts: 0.2,
+        nutritionSetActual: [{
+          source: 'openfoodfacts',
+          kalorien: 82,
+          protein: 4.3,
+          fett: 0.5,
+          kohlenhydrate: 18.9,
+          zucker: 12.5,
+          ballaststoffe: 4.1,
+          salz: 0.2,
+        }],
+        nutritionSetOutdated: [],
+        recalc: false,
         source: 'openfoodfacts',
       });
       expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
@@ -473,6 +558,18 @@ describe('NutritionReferenceTab', () => {
       zucker_ai: 12,
       ballaststoffe_ai: 4,
       salz_ai: 0.1,
+      nutritionSetActual: [{
+        source: 'ai-generiert',
+        kalorien: 80,
+        protein: 4,
+        fett: 0.4,
+        kohlenhydrate: 18,
+        zucker: 12,
+        ballaststoffe: 4,
+        salz: 0.1,
+      }],
+      nutritionSetOutdated: [],
+      recalc: false,
       source: 'ai-generiert',
     });
     expect(mockSetDoc.mock.calls[1][2]).toEqual({ merge: true });
