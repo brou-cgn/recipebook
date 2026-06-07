@@ -1581,7 +1581,9 @@ const NUTRITION_REFERENCE_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrat
 const NUTRITION_SOURCE_SUFFIX_OFF = '_openfoodfacts';
 const NUTRITION_SOURCE_SUFFIX_AI = '_ai';
 const NUTRITION_SOURCE_SUFFIX_MANUAL = '_manual';
+// 5% Kalorienabweichung zwischen actual/outdated setzt recalc=true.
 const NUTRITION_RECALC_CALORIE_THRESHOLD = 0.05;
+const ZERO_CALORIE_BASELINE = 1;
 
 /**
  * Create a deterministic document id for nutrition reference entries.
@@ -1662,7 +1664,7 @@ function buildNutritionSet(values = {}, source = '') {
   const parsedValues = parseNutritionReferenceValues(values);
   if (Object.keys(parsedValues).length === 0) return [];
   const normalizedSource = String(source || '').trim().toLowerCase();
-  return [normalizedSource ? {source: normalizedSource, ...parsedValues} : parsedValues];
+  return [normalizedSource ? { source: normalizedSource, ...parsedValues } : parsedValues];
 }
 
 function normalizeNutritionSet(set = []) {
@@ -1673,7 +1675,7 @@ function normalizeNutritionSet(set = []) {
     const rawValues = entry.values && typeof entry.values === 'object' ? entry.values : entry;
     const parsedValues = parseNutritionReferenceValues(rawValues);
     if (Object.keys(parsedValues).length === 0) return acc;
-    acc.push(source ? {source, ...parsedValues} : parsedValues);
+    acc.push(source ? { source, ...parsedValues } : parsedValues);
     return acc;
   }, []);
 }
@@ -1684,11 +1686,15 @@ function getCaloriesFromNutritionSet(set = []) {
   return parseNutritionReferenceNumber(normalized[0].kalorien);
 }
 
-function shouldSetRecalc(previousCalories, currentCalories) {
+function shouldTriggerRecalc(previousCalories, currentCalories) {
   if (previousCalories == null || currentCalories == null) return false;
-  const baseline = previousCalories === 0 ? 1 : previousCalories;
+  const baseline = previousCalories === 0 ? ZERO_CALORIE_BASELINE : previousCalories;
   return Math.abs(currentCalories - previousCalories) / baseline >
     NUTRITION_RECALC_CALORIE_THRESHOLD;
+}
+
+function hasSourceChanged(nextSource, previousSource) {
+  return Boolean(nextSource && previousSource && nextSource !== previousSource);
 }
 
 function buildNutritionTrackingFields({
@@ -1707,8 +1713,7 @@ function buildNutritionTrackingFields({
   const normalizedPreviousSource = String(previousData.source || '').trim().toLowerCase();
   const normalizedNextSet = buildNutritionSet(nextValues, normalizedNextSource);
   const hasNextSet = normalizedNextSet.length > 0;
-  const sourceChanged = normalizedNextSource && normalizedPreviousSource &&
-    normalizedNextSource !== normalizedPreviousSource;
+  const sourceChanged = hasSourceChanged(normalizedNextSource, normalizedPreviousSource);
   const switchedToManual = sourceChanged && normalizedNextSource === 'manual';
 
   if (hasNextSet && forceRecalc) {
@@ -1722,7 +1727,7 @@ function buildNutritionTrackingFields({
   ) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
-    nextRecalc = nextRecalc || shouldSetRecalc(
+    nextRecalc = nextRecalc || shouldTriggerRecalc(
         getCaloriesFromNutritionSet(nextOutdated),
         getCaloriesFromNutritionSet(nextActual),
     );

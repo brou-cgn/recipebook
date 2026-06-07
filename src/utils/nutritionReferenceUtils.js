@@ -23,7 +23,9 @@ export const NUTRITION_SOURCE_PRIORITY = ['manual', 'openfoodfacts', 'ai-generie
 const CALORIES_PER_GRAM_FAT = 9;
 const CALORIES_PER_GRAM_PROTEIN = 4;
 const CALORIES_PER_GRAM_CARBS = 4;
+// 5% Kalorienabweichung zwischen actual/outdated setzt recalc=true.
 const NUTRITION_RECALC_CALORIE_THRESHOLD = 0.05;
+const ZERO_CALORIE_BASELINE = 1;
 
 /**
  * Returns the Firestore field name for a given base field and source,
@@ -169,10 +171,14 @@ function getCaloriesFromNutritionSet(set = []) {
   return toNonNegativeNumber(normalizedSet[0].kalorien);
 }
 
-function shouldSetRecalc(previousCalories, currentCalories) {
+function shouldTriggerRecalc(previousCalories, currentCalories) {
   if (previousCalories == null || currentCalories == null) return false;
-  const baseline = previousCalories === 0 ? 1 : previousCalories;
+  const baseline = previousCalories === 0 ? ZERO_CALORIE_BASELINE : previousCalories;
   return Math.abs(currentCalories - previousCalories) / baseline > NUTRITION_RECALC_CALORIE_THRESHOLD;
+}
+
+function hasSourceChanged(nextSource, previousSource) {
+  return Boolean(nextSource && previousSource && nextSource !== previousSource);
 }
 
 export function buildNutritionSet(values = {}, source = '') {
@@ -198,7 +204,7 @@ export function buildNutritionTrackingFields({
   const normalizedPreviousSource = String(previousData.source || '').trim().toLowerCase();
   const normalizedNextSet = buildNutritionSet(nextValues, normalizedNextSource);
   const hasNextSet = normalizedNextSet.length > 0;
-  const sourceChanged = normalizedNextSource && normalizedPreviousSource && normalizedNextSource !== normalizedPreviousSource;
+  const sourceChanged = hasSourceChanged(normalizedNextSource, normalizedPreviousSource);
   const switchedToManual = sourceChanged && normalizedNextSource === 'manual';
 
   if (hasNextSet && forceRecalc) {
@@ -212,7 +218,7 @@ export function buildNutritionTrackingFields({
   ) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
-    nextRecalc = nextRecalc || shouldSetRecalc(
+    nextRecalc = nextRecalc || shouldTriggerRecalc(
       getCaloriesFromNutritionSet(nextOutdated),
       getCaloriesFromNutritionSet(nextActual)
     );
