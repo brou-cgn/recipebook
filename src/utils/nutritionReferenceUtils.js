@@ -20,6 +20,9 @@ export const NUTRITION_SOURCE_SUFFIX = {
 
 /** Ordered list of sources used for effective-value priority (manual > openfoodfacts > ai). */
 export const NUTRITION_SOURCE_PRIORITY = ['manual', 'openfoodfacts', 'ai-generiert'];
+const CALORIES_PER_GRAM_FAT = 9;
+const CALORIES_PER_GRAM_PROTEIN = 4;
+const CALORIES_PER_GRAM_CARBS = 4;
 
 /**
  * Returns the Firestore field name for a given base field and source,
@@ -138,6 +141,73 @@ export function getNutritionValuesForSource(data = {}, source = '') {
 
     return acc;
   }, {});
+}
+
+function toNonNegativeNumber(raw) {
+  if (raw === '' || raw == null) return null;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+}
+
+function calculateSimilarityScore(baseValue, comparedValue) {
+  if (baseValue == null || comparedValue == null) return null;
+  if (baseValue === 0 && comparedValue === 0) return 100;
+  const denominator = Math.max((Math.abs(baseValue) + Math.abs(comparedValue)) / 2, 1);
+  const deviation = Math.abs(baseValue - comparedValue);
+  const score = 100 - (deviation / denominator) * 100;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getSourceNutritionValue(data, field, source, hasAnySourceSpecific) {
+  const sourceFieldName = getSourceFieldName(field, source);
+  const sourceSpecificValue = toNonNegativeNumber(sourceFieldName ? data[sourceFieldName] : null);
+  if (sourceSpecificValue != null) return sourceSpecificValue;
+  const normalizedSource = String(data.source || '').trim().toLowerCase();
+  if (!hasAnySourceSpecific && normalizedSource === source) {
+    return toNonNegativeNumber(data[field]);
+  }
+  return null;
+}
+
+export function calculateOpenFoodFactsDiagnostics(data = {}) {
+  const hasAnySourceSpecific = Object.keys(NUTRITION_SOURCE_SUFFIX).some((source) => (
+    NUTRITION_REFERENCE_FIELDS.some((field) => (
+      toNonNegativeNumber(data[getSourceFieldName(field, source)]) != null
+    ))
+  ));
+
+  const deviationToAiByField = {};
+  const confidenceByField = {};
+  NUTRITION_REFERENCE_FIELDS.forEach((field) => {
+    const offValue = getSourceNutritionValue(data, field, 'openfoodfacts', hasAnySourceSpecific);
+    const aiValue = getSourceNutritionValue(data, field, 'ai-generiert', hasAnySourceSpecific);
+    deviationToAiByField[field] = offValue != null && aiValue != null ? offValue - aiValue : null;
+    confidenceByField[field] = calculateSimilarityScore(offValue, aiValue);
+  });
+
+  const offFat = getSourceNutritionValue(data, 'fett', 'openfoodfacts', hasAnySourceSpecific);
+  const offProtein = getSourceNutritionValue(data, 'protein', 'openfoodfacts', hasAnySourceSpecific);
+  const offCarbs = getSourceNutritionValue(data, 'kohlenhydrate', 'openfoodfacts', hasAnySourceSpecific);
+  const offCalories = getSourceNutritionValue(data, 'kalorien', 'openfoodfacts', hasAnySourceSpecific);
+  const calculatedCalories = [offFat, offProtein, offCarbs].every((value) => value != null)
+    ? (offFat * CALORIES_PER_GRAM_FAT)
+      + (offProtein * CALORIES_PER_GRAM_PROTEIN)
+      + (offCarbs * CALORIES_PER_GRAM_CARBS)
+    : null;
+  const calorieDeviation = offCalories != null && calculatedCalories != null
+    ? offCalories - calculatedCalories
+    : null;
+  const calorieValidationConfidence = calculateSimilarityScore(offCalories, calculatedCalories);
+
+  return {
+    confidenceByField,
+    deviationToAiByField,
+    calorieValidation: {
+      calculatedCalories,
+      calorieDeviation,
+      confidence: calorieValidationConfidence,
+    },
+  };
 }
 
 export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [

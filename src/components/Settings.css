@@ -441,6 +441,24 @@
   cursor: default;
 }
 
+.nutrition-source-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.4rem;
+  margin: 0.1rem 0 0.2rem;
+  font-size: 0.58rem;
+  line-height: 1.2;
+}
+
+.nutrition-source-meta-item {
+  color: #666;
+}
+
+.nutrition-source-meta-item.is-alert {
+  color: #c62828;
+  font-weight: 600;
+}
+
 @media (max-width: 1023px) {
   .nutrition-reference-section .conversion-table {
     --nutrition-header-height: 2.8rem;
