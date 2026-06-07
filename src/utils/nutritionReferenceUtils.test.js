@@ -10,6 +10,7 @@ import {
   getNormalizedNutritionReferenceSynonyms,
   buildSourceNutritionFields,
   computeEffectiveNutritionValues,
+  getNutritionValuesForSource,
   parseAllSourceNutritionFields,
   getSourceFieldName,
 } from './nutritionReferenceUtils';
@@ -304,6 +305,42 @@ describe('nutritionReferenceUtils', () => {
 
     test('returns empty object when no source-specific fields exist', () => {
       expect(parseAllSourceNutritionFields({ kalorien: 82 })).toEqual({});
+    });
+  });
+
+  describe('getNutritionValuesForSource', () => {
+    test('uses source-specific nutrition fields for openfoodfacts rows', () => {
+      expect(getNutritionValuesForSource({
+        source: 'openfoodfacts',
+        kalorien: 50,
+        kalorien_openfoodfacts: 82,
+        protein_openfoodfacts: 4.3,
+        protein_manual: 9.9,
+      }, 'openfoodfacts')).toEqual({
+        kalorien: 82,
+        protein: 4.3,
+      });
+    });
+
+    test('uses source-specific nutrition fields for ai-generiert rows', () => {
+      expect(getNutritionValuesForSource({
+        kalorien: 50,
+        kalorien_ai: 80,
+        protein_ai: 3.2,
+      }, 'ai-generiert')).toEqual({
+        kalorien: 80,
+        protein: 3.2,
+      });
+    });
+
+    test('falls back to flat fields when no source-specific values exist for the source', () => {
+      expect(getNutritionValuesForSource({
+        kalorien: 50,
+        protein: 4.3,
+      }, 'manual')).toEqual({
+        kalorien: 50,
+        protein: 4.3,
+      });
     });
   });
 });

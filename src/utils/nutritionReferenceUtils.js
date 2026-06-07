@@ -104,6 +104,42 @@ export function parseAllSourceNutritionFields(data = {}) {
   return result;
 }
 
+function parseSingleNutritionValue(raw) {
+  if (raw === '' || raw == null) return null;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+}
+
+export function getNutritionValuesForSource(data = {}, source = '') {
+  const normalizedSource = String(source || '').trim().toLowerCase();
+  const sourceFieldNames = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+    acc[field] = getSourceFieldName(field, normalizedSource);
+    return acc;
+  }, {});
+  const hasSourceSpecificValues = NUTRITION_REFERENCE_FIELDS.some((field) => (
+    sourceFieldNames[field] && parseSingleNutritionValue(data[sourceFieldNames[field]]) != null
+  ));
+
+  return NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+    const sourceFieldName = sourceFieldNames[field];
+    const sourceValue = sourceFieldName ? parseSingleNutritionValue(data[sourceFieldName]) : null;
+
+    if (sourceValue != null) {
+      acc[field] = sourceValue;
+      return acc;
+    }
+
+    if (!hasSourceSpecificValues) {
+      const flatValue = parseSingleNutritionValue(data[field]);
+      if (flatValue != null) {
+        acc[field] = flatValue;
+      }
+    }
+
+    return acc;
+  }, {});
+}
+
 export const NUTRITION_REFERENCE_BOOLEAN_FIELDS = [
   'seasonRelevant',
   'nutritionRelevant',

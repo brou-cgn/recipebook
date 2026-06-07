@@ -360,6 +360,42 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(mockGenerateNutritionCallable).not.toHaveBeenCalled();
   });
 
+  it('prefers source-specific fields that match the reference source', async () => {
+    const ingredient = { text: '100 g Tomaten', ingredientID: 'tomate' };
+    const row = {
+      ...referenceRow,
+      kalorien: 10,
+      protein: 0.5,
+      kalorien_openfoodfacts: 20,
+      protein_openfoodfacts: 1,
+      kalorien_ai: 80,
+      protein_ai: 8,
+      kalorien_manual: 50,
+      protein_manual: 5,
+    };
+    const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
+
+    expect(result.found).toBe(true);
+    expect(result.naehrwerte.kalorien).toBeCloseTo(20);
+    expect(result.naehrwerte.protein).toBeCloseTo(1);
+  });
+
+  it('falls back to flat fields when no matching source-specific values exist', async () => {
+    const ingredient = { text: '100 g Mehl', ingredientID: 'mehl' };
+    const manualRow = {
+      ...referenceRow,
+      ingredientID: 'mehl',
+      source: 'manual',
+      kalorien: 340,
+      protein: 10,
+    };
+    const result = await resolveIngredientNutritionByStatus(ingredient, manualRow, deps);
+
+    expect(result.found).toBe(true);
+    expect(result.naehrwerte.kalorien).toBeCloseTo(340);
+    expect(result.naehrwerte.protein).toBeCloseTo(10);
+  });
+
   it('converts non-gram units via parseIngredientAmountG and does not multiply defaultAmountG', async () => {
     mockParseAmountCallable.mockResolvedValue({ data: { amountG: 30 } });
     const row = { ...referenceRow, ingredientID: 'oel', source: 'manual', defaultAmountG: 20 };
