@@ -58,6 +58,7 @@ const SOURCE_OPTIONS = [
 ];
 
 const NUTRITION_REFERENCE_TABLE_COLUMNS = [
+  { key: 'overallConfidence', label: 'Verlässlichkeit', type: 'static' },
   { key: 'ingredientID', label: 'ingredientID' },
   { key: 'displayName', label: 'Anzeigename' },
   { key: 'nutritionFamily', label: 'nutritionFamily' },
@@ -74,6 +75,7 @@ const NUTRITION_REFERENCE_TABLE_COLUMNS = [
   { key: 'synonyms', label: 'Synonyme' },
   { key: 'possibleUnits', label: 'Mögliche Einheiten' },
   { key: 'defaultAmountG', label: 'Fallbackgew. (g)' },
+  { key: 'nutritionLabels', label: 'Beschriftung', type: 'static' },
   ...NUTRITION_REFERENCE_FIELDS.map((field) => ({
     key: field,
     label: NUTRITION_FIELD_LABELS[field],
@@ -83,13 +85,18 @@ const NUTRITION_REFERENCE_BOOLEAN_FILTER_FIELDS = new Set(NUTRITION_REFERENCE_BO
 const EMPTY_STATUS_FILTER_VALUE = '__empty__';
 const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
 const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
-// Highlight notable kcal mismatches (>15 kcal/100g) between declared and macro-derived values.
-const CALORIE_DEVIATION_ALERT_THRESHOLD = 15;
 const DEFAULT_HEADER_ROW_HEIGHT = 32;
-const formatSignedValue = (value, decimals = 1) => {
-  if (value == null || !Number.isFinite(value)) return '—';
-  const rounded = Number(value.toFixed(decimals));
-  return `${rounded > 0 ? '+' : ''}${rounded}`;
+const formatConfidenceValue = (value) => (value == null ? '—' : `${value}%`);
+const getConfidenceInfoText = (diagnostics) => {
+  const fieldBreakdown = NUTRITION_REFERENCE_FIELDS
+    .map((field) => `${NUTRITION_FIELD_LABELS[field]}: ${formatConfidenceValue(diagnostics.confidenceByField[field])}`)
+    .join('\n');
+  return [
+    'Gesamt-Confidence = Durchschnitt der Feld-Confidencewerte (OFf vs. KI).',
+    'Feld-Confidence = 100 - (|OFf - KI| / max((|OFf| + |KI|) / 2, 1)) * 100, begrenzt auf 0–100 und gerundet.',
+    '',
+    fieldBreakdown,
+  ].join('\n');
 };
 
 const getRecipeIngredientTexts = (recipe = {}) => {
@@ -793,6 +800,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
           >
             <thead>
               <tr ref={tableHeaderRowRef}>
+                <th>Verlässlichkeit</th>
                 <th>ingredientID</th>
                 <th>Anzeigename</th>
                 <th>nutritionFamily</th>
@@ -807,6 +815,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                 <th>Synonyme</th>
                 <th>Mögliche Einheiten</th>
                 <th>Fallbackgew. (g)</th>
+                <th>Beschriftung</th>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
                   <th key={field}>{NUTRITION_FIELD_LABELS[field]}</th>
                 ))}
@@ -852,6 +861,8 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                           </option>
                         ))}
                       </select>
+                    ) : column.type === 'static' ? (
+                      <span className="nutrition-static-filter-placeholder">—</span>
                     ) : (
                       <input
                         type="text"
@@ -870,9 +881,22 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
             <tbody>
               {visibleRows.map((row) => {
                 const diagnostics = calculateOpenFoodFactsDiagnostics(row);
-                const calorieDeviation = diagnostics.calorieValidation.calorieDeviation;
+                const confidenceInfo = getConfidenceInfoText(diagnostics);
                 return (
                   <tr key={row.id}>
+                  <td className="nutrition-confidence-cell">
+                    <span className="nutrition-overall-confidence" aria-label={`Gesamt-Confidence ${row.id}`}>
+                      {formatConfidenceValue(diagnostics.overallConfidence)}
+                    </span>
+                    <button
+                      type="button"
+                      className="nutrition-confidence-info"
+                      aria-label={`Confidence-Berechnung ${row.id}`}
+                      title={confidenceInfo}
+                    >
+                      (i)
+                    </button>
+                  </td>
                   <td>
                     <input
                       type="text"
@@ -881,9 +905,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       className="conversion-table-input"
                       aria-label={`ingredientID ${row.id}`}
                     />
-                    <span className="nutrition-overall-confidence" aria-label={`Gesamt-Confidence ${row.id}`}>
-                      C: {diagnostics.overallConfidence == null ? '—' : `${diagnostics.overallConfidence}%`}
-                    </span>
                   </td>
                   <td>
                     <input
@@ -997,10 +1018,14 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                       aria-label={`Fallbackgewicht ${row.id}`}
                     />
                   </td>
+                  <td className="nutrition-source-label-column">
+                    <div className="nutrition-source-row">OFf</div>
+                    <div className="nutrition-source-row">KI</div>
+                    <div className="nutrition-source-row">Man</div>
+                  </td>
                   {NUTRITION_REFERENCE_FIELDS.map((field) => (
                     <td key={field} className="nutrition-source-cell">
                       <div className="nutrition-source-row">
-                        <span className="nutrition-source-label">OFf</span>
                         <input
                           type="number"
                           min="0"
@@ -1011,23 +1036,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts) ${row.id}`}
                         />
                       </div>
-                      <div className="nutrition-source-meta" aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts Diagnose) ${row.id}`}>
-                        <span className="nutrition-source-meta-item">
-                          Δ KI: {formatSignedValue(diagnostics.deviationToAiByField[field])}
-                        </span>
-                        {field === 'kalorien' && (
-                          <>
-                            <span className={`nutrition-source-meta-item ${Math.abs(calorieDeviation ?? 0) > CALORIE_DEVIATION_ALERT_THRESHOLD ? 'is-alert' : ''}`}>
-                              Δ Formel: {formatSignedValue(calorieDeviation)}
-                            </span>
-                            <span className="nutrition-source-meta-item">
-                              C Formel: {diagnostics.calorieValidation.confidence == null ? '—' : `${diagnostics.calorieValidation.confidence}%`}
-                            </span>
-                          </>
-                        )}
-                      </div>
                       <div className="nutrition-source-row">
-                        <span className="nutrition-source-label">KI</span>
                         <input
                           type="number"
                           min="0"
@@ -1039,7 +1048,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                         />
                       </div>
                       <div className="nutrition-source-row">
-                        <span className="nutrition-source-label">Man</span>
                         <input
                           type="number"
                           min="0"
@@ -1067,6 +1075,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                 );
               })}
               <tr className="conversion-table-new-row">
+                <td className="nutrition-confidence-cell">—</td>
                 <td>
                   <input
                     type="text"
@@ -1179,10 +1188,12 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
                     placeholder="z.B. 2"
                   />
                 </td>
+                <td className="nutrition-source-label-column">
+                  <div className="nutrition-source-row">Man</div>
+                </td>
                 {NUTRITION_REFERENCE_FIELDS.map((field) => (
                   <td key={field} className="nutrition-source-cell">
                     <div className="nutrition-source-row">
-                      <span className="nutrition-source-label">Man</span>
                       <input
                         type="number"
                         min="0"
