@@ -4925,7 +4925,7 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
 
 exports.runNutritionRecalcForFlaggedRecipes = onCall(
     {
-      timeoutSeconds: 540,
+      timeoutSeconds: 10,
       maxInstances: 1,
       secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
     },
@@ -4942,7 +4942,13 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
         throw new HttpsError('permission-denied', 'Admin role required.');
       }
 
-      return runNutritionRecalcForFlaggedRecipesCore({triggeredBy: `manual:${callerUid}`});
+      void runNutritionRecalcForFlaggedRecipesCore({triggeredBy: `manual:${callerUid}`})
+          .catch((err) => console.error('runNutritionRecalcForFlaggedRecipes: background job error', err));
+
+      return {
+        started: true,
+        message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+      };
     }
 );
 
