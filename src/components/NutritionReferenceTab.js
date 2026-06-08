@@ -85,6 +85,7 @@ const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
 const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 // Highlight notable kcal mismatches (>15 kcal/100g) between declared and macro-derived values.
 const CALORIE_DEVIATION_ALERT_THRESHOLD = 15;
+const DEFAULT_HEADER_ROW_HEIGHT = 32;
 const formatSignedValue = (value, decimals = 1) => {
   if (value == null || !Number.isFinite(value)) return '—';
   const rounded = Number(value.toFixed(decimals));
@@ -129,10 +130,60 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [columnFilters, setColumnFilters] = useState({});
   const importInputRef = useRef(null);
+  const tableContainerRef = useRef(null);
+  const tableHeaderRowRef = useRef(null);
+  const [headerRowHeight, setHeaderRowHeight] = useState(null);
 
   useEffect(() => {
     setRows(cachedRows);
   }, [cachedRows]);
+
+  useEffect(() => {
+    const headerRow = tableHeaderRowRef.current;
+    if (!headerRow) return undefined;
+
+    const updateHeaderHeight = () => {
+      const clientHeight = headerRow.getBoundingClientRect().height;
+      const offsetHeight = headerRow.offsetHeight;
+      const measuredHeight = (Number.isFinite(clientHeight) && clientHeight > 0)
+        ? clientHeight
+        : ((Number.isFinite(offsetHeight) && offsetHeight > 0) ? offsetHeight : DEFAULT_HEADER_ROW_HEIGHT);
+      setHeaderRowHeight(measuredHeight);
+    };
+
+    updateHeaderHeight();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateHeaderHeight);
+      observer.observe(headerRow);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, [loading]);
+
+  const withPreservedTableScroll = useCallback(async (operation) => {
+    const container = tableContainerRef.current;
+    const scrollTop = container?.scrollTop ?? null;
+    const scrollLeft = container?.scrollLeft ?? null;
+    await operation();
+    if (container) {
+      const restoreScroll = () => {
+        if (scrollTop != null) {
+          container.scrollTop = scrollTop;
+        }
+        if (scrollLeft != null) {
+          container.scrollLeft = scrollLeft;
+        }
+      };
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(restoreScroll);
+      } else {
+        setTimeout(restoreScroll, 0);
+      }
+    }
+  }, []);
 
   const updateCell = (id, field, value) => {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -272,19 +323,21 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     }, {});
 
     const previousRow = cachedRows.find((entry) => entry.id === row.id) || null;
-    await setDoc(
-      doc(db, 'nutritionReferences', ingredientID),
-      {
-        ...buildPayload(row, row.source, { previousRow }),
-        ...clearedManualNutritionValues,
-        ...clearedEffectiveFlatValues,
-      },
-      { merge: true }
-    );
-    if (row.id !== ingredientID) {
-      await deleteDoc(doc(db, 'nutritionReferences', row.id));
-    }
-    await reload();
+    await withPreservedTableScroll(async () => {
+      await setDoc(
+        doc(db, 'nutritionReferences', ingredientID),
+        {
+          ...buildPayload(row, row.source, { previousRow }),
+          ...clearedManualNutritionValues,
+          ...clearedEffectiveFlatValues,
+        },
+        { merge: true }
+      );
+      if (row.id !== ingredientID) {
+        await deleteDoc(doc(db, 'nutritionReferences', row.id));
+      }
+      await reload();
+    });
     setActionMessage(`Eintrag ${ingredientID} gespeichert.`);
   };
 
@@ -413,30 +466,32 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
       const { searchTerm, source, values } = result.data;
       const parsedValues = parseNutritionReferenceValues(values || {});
 
-      if (hasMeaningfulGeneratedNutrition(values)) {
-        await setDoc(
-          doc(db, 'nutritionReferences', ingredientID),
-          {
-            source: String(source || '').trim(),
-            status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
-            ...(searchTerm ? { searchTerm } : {}),
-            ...parsedValues,
-            ...buildSourceNutritionFields(parsedValues, source),
-            ...buildNutritionTrackingFields({
-              previousData: row,
-              nextValues: parsedValues,
-              nextSource: source,
-              preserveOnManualSourceChange: true,
-            }),
-          },
-          { merge: true }
-        );
-      }
+      await withPreservedTableScroll(async () => {
+        if (hasMeaningfulGeneratedNutrition(values)) {
+          await setDoc(
+            doc(db, 'nutritionReferences', ingredientID),
+            {
+              source: String(source || '').trim(),
+              status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
+              ...(searchTerm ? { searchTerm } : {}),
+              ...parsedValues,
+              ...buildSourceNutritionFields(parsedValues, source),
+              ...buildNutritionTrackingFields({
+                previousData: row,
+                nextValues: parsedValues,
+                nextSource: source,
+                preserveOnManualSourceChange: true,
+              }),
+            },
+            { merge: true }
+          );
+        }
 
-      if (row.id !== ingredientID) {
-        await deleteDoc(doc(db, 'nutritionReferences', row.id));
-      }
-      await reload();
+        if (row.id !== ingredientID) {
+          await deleteDoc(doc(db, 'nutritionReferences', row.id));
+        }
+        await reload();
+      });
       const sourceLabel = source === 'openfoodfacts' ? 'OpenFoodFacts' : 'KI-Schätzung';
       setActionMessage(`${sourceLabel}-Daten für ${ingredientID} aktualisiert. Suchbegriff: „${searchTerm}"`);
     } catch (error) {
@@ -728,13 +783,16 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
         </button>
       </div>
 
-      {loading ? (
+      {loading && rows.length === 0 ? (
         <p>Lade Nährwerte...</p>
       ) : (
-        <div className="conversion-table-container">
-          <table className="conversion-table">
+        <div className="conversion-table-container" ref={tableContainerRef}>
+          <table
+            className="conversion-table"
+            style={headerRowHeight != null ? { '--nutrition-header-height': `${headerRowHeight}px` } : undefined}
+          >
             <thead>
-              <tr>
+              <tr ref={tableHeaderRowRef}>
                 <th>ingredientID</th>
                 <th>Anzeigename</th>
                 <th>nutritionFamily</th>

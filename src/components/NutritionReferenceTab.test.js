@@ -705,6 +705,71 @@ describe('NutritionReferenceTab', () => {
     });
   });
 
+  test('keeps table mounted and restores table scroll after saving a row', async () => {
+    let resolveReload;
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          {
+            id: 'tomate',
+            data: () => ({
+              ingredientID: 'dummy-tomate',
+              displayName: 'Tomate',
+              nutritionFamily: 'Gemüse',
+              status: 'Freigegeben',
+              source: 'manual',
+              synonyms: ['Tomate'],
+              kalorien: 18,
+            }),
+          },
+        ],
+      })
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveReload = resolve;
+      }));
+
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const container = document.querySelector('.conversion-table-container');
+    expect(container).not.toBeNull();
+    container.scrollTop = 123;
+    container.scrollLeft = 45;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.queryByText('Lade Nährwerte...')).not.toBeInTheDocument();
+
+    // Simulate the observed UI jump where the table snaps back to the top during reload.
+    container.scrollTop = 0;
+    container.scrollLeft = 0;
+    resolveReload({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
+            nutritionFamily: 'Gemüse',
+            status: 'Freigegeben',
+            source: 'manual',
+            synonyms: ['Tomate'],
+            kalorien: 18,
+          }),
+        },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(container.scrollTop).toBe(123);
+      expect(container.scrollLeft).toBe(45);
+    });
+  });
+
   const makeCsvFile = (csvContent) => ({
     text: () => Promise.resolve(csvContent),
     arrayBuffer: () => {
