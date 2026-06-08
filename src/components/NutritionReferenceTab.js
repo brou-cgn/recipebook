@@ -85,6 +85,7 @@ const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
 const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 // Highlight notable kcal mismatches (>15 kcal/100g) between declared and macro-derived values.
 const CALORIE_DEVIATION_ALERT_THRESHOLD = 15;
+const DEFAULT_HEADER_ROW_HEIGHT = 32;
 const formatSignedValue = (value, decimals = 1) => {
   if (value == null || !Number.isFinite(value)) return '—';
   const rounded = Number(value.toFixed(decimals));
@@ -142,7 +143,11 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     if (!headerRow) return undefined;
 
     const updateHeaderHeight = () => {
-      const measuredHeight = headerRow.getBoundingClientRect().height || headerRow.offsetHeight || 32;
+      const clientHeight = headerRow.getBoundingClientRect().height;
+      const offsetHeight = headerRow.offsetHeight;
+      const measuredHeight = (Number.isFinite(clientHeight) && clientHeight > 0)
+        ? clientHeight
+        : ((Number.isFinite(offsetHeight) && offsetHeight > 0) ? offsetHeight : DEFAULT_HEADER_ROW_HEIGHT);
       setHeaderRowHeight(measuredHeight);
     };
 
@@ -156,16 +161,27 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
 
     window.addEventListener('resize', updateHeaderHeight);
     return () => window.removeEventListener('resize', updateHeaderHeight);
-  }, [rows.length]);
+  }, [loading]);
 
   const withPreservedTableScroll = useCallback(async (operation) => {
     const container = tableContainerRef.current;
     const scrollTop = container?.scrollTop ?? null;
     const scrollLeft = container?.scrollLeft ?? null;
     await operation();
-    if (container && scrollTop != null && scrollLeft != null) {
-      container.scrollTop = scrollTop;
-      container.scrollLeft = scrollLeft;
+    if (container) {
+      const restoreScroll = () => {
+        if (scrollTop != null) {
+          container.scrollTop = scrollTop;
+        }
+        if (scrollLeft != null) {
+          container.scrollLeft = scrollLeft;
+        }
+      };
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(restoreScroll);
+      } else {
+        setTimeout(restoreScroll, 0);
+      }
     }
   }, []);
 

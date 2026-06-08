@@ -744,6 +744,7 @@ describe('NutritionReferenceTab', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.queryByText('Lade Nährwerte...')).not.toBeInTheDocument();
 
+    // Simulate the observed UI jump where the table snaps back to the top during reload.
     container.scrollTop = 0;
     container.scrollLeft = 0;
     resolveReload({
