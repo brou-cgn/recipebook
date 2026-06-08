@@ -171,6 +171,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'copyLink', label: 'Link kopieren' },
   { key: 'nutritionEmpty', label: 'Nährwerte hinzufügen' },
   { key: 'nutritionFilled', label: 'Nährwerte vorhanden' },
+  { key: 'nutritionRecalc', label: 'Nährwerte nachkalkulieren' },
   { key: 'ratingHeartEmpty', label: 'Bewertung (leer)' },
   { key: 'ratingHeartEmptyModal', label: 'Bewertung Modal (leer)' },
   { key: 'ratingHeartFilled', label: 'Bewertung (gefüllt)' },
