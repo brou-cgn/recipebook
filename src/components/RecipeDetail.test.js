@@ -992,6 +992,57 @@ describe('RecipeDetail - Close Button Icon', () => {
   });
 });
 
+describe('RecipeDetail - Nutrition recalc icon', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  test('shows "Nährwerte nachkalkulieren" icon instead of filled icon when any ingredientID has recalc=true', async () => {
+    const customLists = require('../utils/customLists');
+    const getButtonIconsSpy = jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
+      nutritionFilled: '🥦',
+      nutritionRecalc: '♻️',
+    });
+
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', recalc: true }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    try {
+      render(
+        <RecipeDetail
+          recipe={{
+            id: 'recipe-recalc-1',
+            title: 'Test Recipe',
+            authorId: 'user-1',
+            portionen: 2,
+            ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+            steps: ['Mischen'],
+            naehrwerte: { kalorien: 200 },
+          }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Nährwerte nachkalkulieren')).toBeInTheDocument();
+        expect(screen.getByText('♻️')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('🥦')).not.toBeInTheDocument();
+    } finally {
+      getButtonIconsSpy.mockRestore();
+    }
+  });
+});
+
 describe('RecipeDetail - Brightness-based alt icon switching', () => {
   const currentUser = {
     id: 'user-1',

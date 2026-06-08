@@ -116,6 +116,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('+');
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('Nähr.');
+  const [nutritionRecalcIcon, setNutritionRecalcIcon] = useState('↻');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -193,6 +194,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setCopyLinkIcon(eff('copyLink') || 'Link');
       setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
       setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
+      setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
       setShoppingListIcon(eff('shoppingList') || 'Einkauf');
       setBringButtonIcon(eff('bringButton') || 'Bring');
       setTimerStartIcon(eff('timerStart') || '▶');
@@ -238,6 +240,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setCopyLinkIcon(eff('copyLink') || 'Link');
     setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
+    setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setTimerStartIcon(eff('timerStart') || '▶');
@@ -514,6 +517,27 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     lastUpdatedAt != null &&
     recipe.naehrwerte.calcCompletedAt < lastUpdatedAt
   );
+  const hasNutritionValues = Boolean(
+    recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded
+  );
+  const recalcIngredientIDs = useMemo(() => new Set(
+    (nutritionReferenceRows || [])
+      .filter((row) => row?.recalc === true)
+      .map((row) => String(row?.ingredientID || '').trim())
+      .filter(Boolean)
+  ), [nutritionReferenceRows]);
+  const hasNutritionRecalcIngredient = useMemo(() => (
+    Array.isArray(recipe.ingredients) &&
+    recipe.ingredients.some((item) => {
+      if (!item || typeof item !== 'object' || item.type === 'heading') return false;
+      const ingredientID = String(item.ingredientID || '').trim();
+      return ingredientID && recalcIngredientIDs.has(ingredientID);
+    })
+  ), [recipe.ingredients, recalcIngredientIDs]);
+  const showNutritionRecalcIcon = hasNutritionValues && hasNutritionRecalcIngredient;
+  const nutritionButtonTitle = showNutritionRecalcIcon
+    ? 'Nährwerte nachkalkulieren'
+    : (hasNutritionValues ? 'Nährwerte anzeigen' : 'Nährwerte berechnen');
 
   // Derive favorite status from favoriteIds
   const isFavorite = favoriteIds.includes(recipe?.id);
@@ -2520,18 +2544,24 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </div>
               )}
 
-              {/* Nutrition icon - always visible, two states */}
+              {/* Nutrition icon - always visible */}
               {!isSharedView && (
                 <div className="metadata-item">
                   <button
                     className="nutrition-metadata-btn"
                     onClick={handleNutritionButtonClick}
                     disabled={recipe.naehrwerte?.calcPending}
-                    title={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
-                    aria-label={recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? 'Nährwerte anzeigen' : 'Nährwerte berechnen'}
+                    title={nutritionButtonTitle}
+                    aria-label={nutritionButtonTitle}
                   >
                     <span className="nutrition-icon">
-                      {recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? (
+                      {showNutritionRecalcIcon ? (
+                        isBase64Image(nutritionRecalcIcon) ? (
+                          <img src={nutritionRecalcIcon} alt="Nährwerte nachkalkulieren" />
+                        ) : (
+                          nutritionRecalcIcon
+                        )
+                      ) : hasNutritionValues ? (
                         isBase64Image(nutritionFilledIcon) ? (
                           <img src={nutritionFilledIcon} alt="Nährwerte" />
                         ) : (
@@ -2552,7 +2582,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <span className="nutrition-stale-indicator" title="Nährwertetabelle wurde aktualisiert" aria-label="Nährwertetabelle wurde aktualisiert">⚠️</span>
                     )}
                     <span className="nutrition-label">
-                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded ? null : 'Nährwerte berechnen')}
+                      {recipe.naehrwerte?.calcPending ? 'Berechne…' : (hasNutritionValues ? null : 'Nährwerte berechnen')}
                     </span>
                   </button>
                 </div>
