@@ -304,7 +304,7 @@ describe('nutritionReferenceUtils', () => {
       });
     });
 
-    test('forces recalc and shifts sets for approval transition', () => {
+    test('shifts sets for approval transition without recalc below threshold', () => {
       expect(buildNutritionTrackingFields({
         previousData: {
           source: 'manual',
@@ -315,6 +315,22 @@ describe('nutritionReferenceUtils', () => {
         forceRecalc: true,
       })).toEqual({
         nutritionSetActual: [{ source: 'manual', kalorien: 101 }],
+        nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
+        recalc: false,
+      });
+    });
+
+    test('forces recalc on approval transition when calorie delta exceeds threshold', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'manual',
+          nutritionSetActual: [{ source: 'manual', kalorien: 100 }],
+        },
+        nextValues: { kalorien: 110 },
+        nextSource: 'manual',
+        forceRecalc: true,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'manual', kalorien: 110 }],
         nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
         recalc: true,
       });

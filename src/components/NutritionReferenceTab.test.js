@@ -375,6 +375,42 @@ describe('NutritionReferenceTab', () => {
     }));
   });
 
+  test('keeps recalc false on Freigegeben when calories stay unchanged', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            source: 'manual',
+            synonyms: ['Tomate'],
+            kalorien_manual: 268,
+            protein_manual: 2,
+            nutritionSetActual: [{ source: 'manual', kalorien: 268, protein: 2 }],
+            nutritionSetOutdated: [],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      recalc: false,
+      nutritionSetOutdated: [{ source: 'manual', kalorien: 268, protein: 2 }],
+      nutritionSetActual: [{ source: 'manual', kalorien: 268, protein: 2 }],
+    }));
+  });
+
   test('keeps nutrition sets unchanged when source is switched to manual', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [
