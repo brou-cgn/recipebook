@@ -540,3 +540,55 @@ test('uses defaultAmountG from cache when no quantity is provided', async () => 
 
   global.fetch = originalFetch;
 });
+
+test('does not create nutrition reference documents from OpenFoodFacts results', async () => {
+  const originalFetch = global.fetch;
+  const setCalls = [];
+
+  firestoreDocSetStub = async (...args) => {
+    setCalls.push(args);
+  };
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 100, name: 'Rice', searchName: 'rice'}),
+    normalizeIngredientWithGemini: async () => ({amountG: 100, name: 'Rice', searchName: 'rice'}),
+    estimateNutritionWithGemini: async () => null,
+  });
+  loadWrappedFunction();
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      products: [
+        {
+          product_name: 'Rice',
+          nutriments: {
+            'energy-kcal_100g': 130,
+            'proteins_100g': 2.7,
+            'fat_100g': 0.3,
+            'carbohydrates_100g': 28,
+            'sugars_100g': 0.1,
+            'fiber_100g': 0.4,
+            'salt_100g': 0,
+          },
+        },
+      ],
+    }),
+  });
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['100 g Reis'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.totalCount, 1);
+  assert.equal(response.details[0].found, true);
+  assert.equal(response.naehrwerte.kalorien, 130);
+  assert.equal(setCalls.length, 0);
+
+  global.fetch = originalFetch;
+});

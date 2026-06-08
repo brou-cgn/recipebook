@@ -2107,26 +2107,6 @@ async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen =
         ingredientTotals[key] += (per100gValues[key] || 0) * scale;
       });
 
-      if (referenceId && cachedSnapshot && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
-        const offSourceFields = NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
-          if (per100gValues[key] != null) acc[`${key}${NUTRITION_SOURCE_SUFFIX_OFF}`] = per100gValues[key];
-          return acc;
-        }, {});
-        await admin.firestore()
-            .collection(NUTRITION_REFERENCE_COLLECTION)
-            .doc(referenceId)
-            .set(
-                {
-                  name,
-                  product: product.product_name || name,
-                  ...per100gValues,
-                  ...offSourceFields,
-                  source: 'openfoodfacts',
-                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                }
-            );
-      }
-
       return {
         found: true,
         detail: {
