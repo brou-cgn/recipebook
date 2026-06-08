@@ -410,6 +410,36 @@ describe('hasMissingIngredientIDs', () => {
     expect(hasMissingIngredientIDs({})).toBe(false);
     expect(hasMissingIngredientIDs(null)).toBe(false);
   });
+
+  test('returns true when an ingredient has an ingredientID not present in nutritionReferenceRows (invalid ID)', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'geloeschte-zutat' },
+      ],
+    };
+    const nutritionReferenceRows = [{ ingredientID: 'tomate' }, { ingredientID: 'zwiebel' }];
+    expect(hasMissingIngredientIDs(recipe, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('returns false when all ingredient IDs are present in nutritionReferenceRows (valid IDs)', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+        { type: 'ingredient', text: '1 Zwiebel', ingredientID: 'zwiebel' },
+      ],
+    };
+    const nutritionReferenceRows = [{ ingredientID: 'tomate' }, { ingredientID: 'zwiebel' }];
+    expect(hasMissingIngredientIDs(recipe, nutritionReferenceRows)).toBe(false);
+  });
+
+  test('returns false when nutritionReferenceRows is empty, even if an ID is present (loading edge case)', () => {
+    const recipe = {
+      ingredients: [
+        { type: 'ingredient', text: '200 g Tomaten', ingredientID: 'tomate' },
+      ],
+    };
+    expect(hasMissingIngredientIDs(recipe, [])).toBe(false);
+  });
 });
 
 describe('normalizeIngredientNameForIdMatching with adjectives', () => {
