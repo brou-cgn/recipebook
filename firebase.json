@@ -9,6 +9,7 @@
     "source": "functions"
   },
   "hosting": {
+    "site": "broubook",
     "public": "build",
     "ignore": [
       "firebase.json",
