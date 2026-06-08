@@ -601,6 +601,15 @@ export function hasMissingIngredientIDs(recipe, nutritionReferenceRows = []) {
     ? recipe.ingredients
     : [];
 
+  const validIds =
+    nutritionReferenceRows.length > 0
+      ? new Set(
+          nutritionReferenceRows
+            .map((row) => String(row?.ingredientID || '').trim())
+            .filter(Boolean)
+        )
+      : null;
+
   return rawIngredients.some((item) => {
     const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
     if (!ingredientItem || ingredientItem.type === 'heading') return false;
@@ -609,10 +618,8 @@ export function hasMissingIngredientIDs(recipe, nutritionReferenceRows = []) {
     if (ingredientItem.ignoreNutritionCalculation === true) return false;
     const id = String(ingredientItem.ingredientID || '').trim();
     if (!id) return true;
-    if (nutritionReferenceRows.length > 0) {
-      return !nutritionReferenceRows.some(
-        (row) => String(row?.ingredientID || '').trim() === id
-      );
+    if (validIds) {
+      return !validIds.has(id);
     }
     return false;
   });
