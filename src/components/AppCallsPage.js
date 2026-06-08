@@ -1067,7 +1067,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 value=""
                 onChange={(e) => {
                   const segment = e.target.value;
-                  e.target.value = '';
                   if (segment) handleDirectWordSegmentAssign(trimmedWord, segment);
                 }}
                 onClick={(e) => e.stopPropagation()}
