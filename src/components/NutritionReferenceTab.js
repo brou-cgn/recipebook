@@ -16,7 +16,6 @@ import {
   buildSourceNutritionFields,
   computeEffectiveNutritionValues,
   getStatusAfterNutritionFetch,
-  normalizeNutritionReferenceId,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceStatus,
   parseNutritionReferenceValues,
@@ -29,7 +28,6 @@ import {
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 import {
   createNutritionReferenceCsv,
-  parseNutritionReferenceCsv,
 } from '../utils/nutritionReferenceImportExport';
 
 const NUTRITION_FIELD_LABELS = {
@@ -99,21 +97,7 @@ const getConfidenceInfoText = (diagnostics) => {
   ].join('\n');
 };
 
-const getRecipeIngredientTexts = (recipe = {}) => {
-  const rawIngredients = recipe.ingredients || recipe.zutaten || [];
-  return rawIngredients
-    .filter((item) => typeof item === 'string' || (item && item.type === 'ingredient'))
-    .map((item) => (typeof item === 'string' ? item : item.text || ''))
-    .filter(Boolean);
-};
-
-const extractIngredientName = (ingredientText) => String(ingredientText || '')
-  .replace(/^#recipe:[^\s]+\s*/i, '')
-  .replace(/^(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?)\s*[a-zA-ZäöüÄÖÜßµ%]+\.?\s+/u, '')
-  .replace(/^(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?)\s+/u, '')
-  .trim();
-
-function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
+function NutritionReferenceTab({ currentUser }) {
   const canManage = currentUser?.role === ROLES.ADMIN || currentUser?.role === ROLES.MODERATOR;
   const { rows: cachedRows, loading, reload } = useNutritionReference();
   const [rows, setRows] = useState([]);
@@ -133,10 +117,7 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   const [refreshingRowId, setRefreshingRowId] = useState(null);
   const [lookupError, setLookupError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
-  const [isImportingCsv, setIsImportingCsv] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('');
   const [columnFilters, setColumnFilters] = useState({});
-  const importInputRef = useRef(null);
   const tableContainerRef = useRef(null);
   const tableHeaderRowRef = useRef(null);
   const [headerRowHeight, setHeaderRowHeight] = useState(null);
@@ -405,50 +386,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     await reload();
   };
 
-  const removeAllRows = async () => {
-    if (!window.confirm('Alle Nährwert-Einträge wirklich löschen?')) return;
-    await Promise.all(rows.map((row) => deleteDoc(doc(db, 'nutritionReferences', row.id))));
-    await reload();
-    setActionMessage('Alle Einträge wurden gelöscht.');
-  };
-
-  /**
-   * One-time migration: writes source-specific nutrition fields to Firestore
-   * for all rows that only have flat values (legacy format).
-   */
-  const migrateSourceSpecificFields = async () => {
-    const rowsToMigrate = rows.filter((row) => {
-      const hasAnySourceSpecific = Object.keys(NUTRITION_SOURCE_SUFFIX).some((src) => {
-        const suffix = NUTRITION_SOURCE_SUFFIX[src];
-        return NUTRITION_REFERENCE_FIELDS.some((field) => row[`${field}${suffix}`] != null);
-      });
-      const hasAnyFlat = NUTRITION_REFERENCE_FIELDS.some((field) => row[field] != null);
-      return !hasAnySourceSpecific && hasAnyFlat && NUTRITION_SOURCE_SUFFIX[row.source];
-    });
-
-    if (rowsToMigrate.length === 0) {
-      setActionMessage('Keine Einträge zur Migration gefunden – alle Daten sind bereits migriert.');
-      return;
-    }
-
-    await Promise.all(rowsToMigrate.map((row) => {
-      const ingredientID = getIngredientID(row);
-      const suffix = NUTRITION_SOURCE_SUFFIX[row.source];
-      const sourceSpecificUpdate = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
-        if (row[field] != null) acc[`${field}${suffix}`] = row[field];
-        return acc;
-      }, {});
-      return setDoc(
-        doc(db, 'nutritionReferences', ingredientID),
-        { ...sourceSpecificUpdate, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }));
-
-    await reload();
-    setActionMessage(`${rowsToMigrate.length} Einträge migriert.`);
-  };
-
   const refreshRowFromOpenFoodFacts = async (row) => {
     setLookupError('');
     setRefreshingRowId(row.id);
@@ -513,57 +450,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     }
   };
 
-  const importRecipeIngredients = async () => {
-    const existingNormalizedSynonyms = new Set(
-      rows.flatMap((row) => getNormalizedNutritionReferenceSynonyms(row))
-    );
-    const names = [];
-
-    allRecipes.forEach((recipe) => {
-      getRecipeIngredientTexts(recipe).forEach((ingredientText) => {
-        const name = extractIngredientName(ingredientText);
-        if (name) names.push(name);
-      });
-    });
-
-    const uniqueNames = [...new Set(names)];
-    const usedIds = new Set(rows.map((row) => getIngredientID(row)).filter(Boolean));
-    let importedCount = 0;
-    const importOperations = [];
-
-    for (const name of uniqueNames) {
-      const normalizedName = normalizeNutritionReferenceId(name);
-      if (!normalizedName || existingNormalizedSynonyms.has(normalizedName)) {
-        continue;
-      }
-      let candidate = `dummy-${normalizedName}`;
-      let suffix = 2;
-      while (usedIds.has(candidate)) {
-        candidate = `dummy-${normalizedName}-${suffix}`;
-        suffix += 1;
-      }
-
-      usedIds.add(candidate);
-      existingNormalizedSynonyms.add(normalizedName);
-      importOperations.push(setDoc(
-        doc(db, 'nutritionReferences', candidate),
-        buildPayload({
-          ingredientID: candidate,
-          synonyms: [name],
-          status: NUTRITION_REFERENCE_NEW_STATUS,
-        }, 'recipe-import'),
-        { merge: true }
-      ));
-      importedCount += 1;
-    }
-
-    await Promise.all(importOperations);
-    await reload();
-    setActionMessage(importedCount > 0
-      ? `${importedCount} Zutaten aus Rezepten importiert.`
-      : 'Keine neuen Zutaten gefunden.');
-  };
-
   const handleExportCsv = () => {
     const csv = createNutritionReferenceCsv(rows.map((row) => ({
       ingredientID: getIngredientID(row),
@@ -592,97 +478,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     setActionMessage('CSV exportiert.');
   };
 
-  const readImportFile = async (file) => {
-    if (typeof TextDecoder === 'undefined') {
-      if (file.text) {
-        return file.text();
-      }
-      throw new Error('Datei kann in dieser Browserumgebung nicht gelesen werden.');
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
-    } catch {
-      try {
-        return new TextDecoder('windows-1252').decode(arrayBuffer);
-      } catch {
-        return new TextDecoder('iso-8859-1').decode(arrayBuffer);
-      }
-    }
-  };
-
-  const handleImportCsv = async (event) => {
-    const [file] = event.target.files || [];
-    if (!file) {
-      if (importInputRef.current) {
-        importInputRef.current.value = '';
-      }
-      return;
-    }
-    setIsImportingCsv(true);
-    setActionMessage('');
-    setLookupError('');
-
-    try {
-      const content = await readImportFile(file);
-      const importedRows = parseNutritionReferenceCsv(content);
-      const importedIds = new Set(importedRows.map((row) => row.ingredientID));
-
-      const existingById = Object.fromEntries(
-        rows.map((row) => [getIngredientID(row), row])
-      );
-
-      await Promise.all(importedRows.map((importedRow) => {
-        const existing = existingById[importedRow.ingredientID];
-        // Protect source (Quelle): keep existing value if already set
-        const source = existing?.source || importedRow.source || 'csv-import';
-        // Protect nutrition fields: keep existing values if already set
-        const existingNutrition = parseNutritionReferenceValues(existing || {});
-        // Protect source-specific nutrition fields from the existing row
-        const existingSourceSpecificNutrition = {};
-        if (existing) {
-          for (const src of Object.keys(NUTRITION_SOURCE_SUFFIX)) {
-            const suffix = NUTRITION_SOURCE_SUFFIX[src];
-            for (const field of NUTRITION_REFERENCE_FIELDS) {
-              const fname = `${field}${suffix}`;
-              if (existing[fname] != null) existingSourceSpecificNutrition[fname] = existing[fname];
-            }
-          }
-        }
-        // Protect searchTerm (Suchbegriff): keep existing value if already set
-        const existingSearchTerm = existing?.searchTerm ? { searchTerm: existing.searchTerm } : {};
-        const mergedRow = { ...importedRow, ...existingNutrition, ...existingSourceSpecificNutrition, ...existingSearchTerm };
-        return setDoc(
-          doc(db, 'nutritionReferences', importedRow.ingredientID),
-          // merge:false replaces the document, so legacy "family" is dropped implicitly.
-          buildPayload(mergedRow, source, { removeLegacyFamily: false, previousRow: existing || null }),
-          { merge: false }
-        );
-      }));
-
-      await Promise.all(rows
-        .filter((row) => {
-          const ingredientID = getIngredientID(row);
-          return row.id !== ingredientID || !importedIds.has(ingredientID);
-        })
-        .map((row) => deleteDoc(doc(db, 'nutritionReferences', row.id))));
-
-      await reload();
-      setActionMessage(`CSV importiert (${importedRows.length} Einträge).`);
-    } catch (error) {
-      setLookupError(`Import fehlgeschlagen: ${error.message}`);
-    } finally {
-      setIsImportingCsv(false);
-      if (importInputRef.current) {
-        importInputRef.current.value = '';
-      }
-    }
-  };
-
-  const normalizedStatusFilter = statusFilter === EMPTY_STATUS_FILTER_VALUE
-    ? EMPTY_STATUS_FILTER_VALUE
-    : statusFilter.trim().toLowerCase();
   const columnTypeByKey = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     acc[column.key] = column.type || 'text';
     return acc;
@@ -721,13 +516,6 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
     );
   }
   const visibleRows = rows.filter((row) => {
-    const parsedStatus = parseNutritionReferenceStatus(row);
-    const matchesStatusFilter = !normalizedStatusFilter
-      || (normalizedStatusFilter === EMPTY_STATUS_FILTER_VALUE
-        ? parsedStatus === ''
-        : parsedStatus.toLowerCase().includes(normalizedStatusFilter));
-    if (!matchesStatusFilter) return false;
-
     return Object.entries(normalizedColumnFilters).every(([field, filterValue]) => {
       const value = String(getRowFilterValue(row, field));
       if (filterValue === EMPTY_STATUS_FILTER_VALUE) {
@@ -743,50 +531,12 @@ function NutritionReferenceTab({ currentUser, allRecipes = [] }) {
   return (
     <div className="settings-section nutrition-reference-section">
       <h3>Nährwerte je 100 g</h3>
-      <p className="section-description">
-        Diese Werte werden bei der automatischen Nährwert-Berechnung pro 100 g gespeichert und können hier korrigiert werden.
-      </p>
       {actionMessage && <p className="section-description">{actionMessage}</p>}
       {lookupError && <p className="section-description">{lookupError}</p>}
 
-      <label className="section-description" htmlFor="nutrition-reference-status-filter">
-        Status filtern
-      </label>
-      <select
-        id="nutrition-reference-status-filter"
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="conversion-table-input"
-      >
-        <option value="">Alle</option>
-        {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-          <option key={opt || 'empty'} value={opt || EMPTY_STATUS_FILTER_VALUE}>{getStatusOptionLabel(opt)}</option>
-        ))}
-      </select>
-
       <div className="season-matrix-import-export-actions">
-        <button type="button" className="save-button" onClick={importRecipeIngredients}>
-          Zutatenliste importieren (Dummy-IDs)
-        </button>
         <button type="button" className="save-button" onClick={handleExportCsv}>
           CSV exportieren
-        </button>
-        <label htmlFor="nutrition-reference-import-input" className={`save-button ${isImportingCsv ? 'disabled' : ''}`}>
-          {isImportingCsv ? 'Import läuft...' : 'CSV importieren'}
-        </label>
-        <input
-          id="nutrition-reference-import-input"
-          ref={importInputRef}
-          type="file"
-          accept="text/csv"
-          onChange={handleImportCsv}
-          disabled={isImportingCsv}
-        />
-        <button type="button" className="save-button" onClick={migrateSourceSpecificFields}>
-          Quellenfelder migrieren
-        </button>
-        <button type="button" className="remove-btn" onClick={removeAllRows}>
-          Alle Einträge löschen
         </button>
       </div>
 
