@@ -918,23 +918,30 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
 
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+    expect(onUpdateRecipe).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Prise Sumach'), { target: { value: INGREDIENT_MATCH_CREATE_NEW_OPTION } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
     await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
       'r-new',
       {
         ingredients: [{ type: 'ingredient', text: '1 Prise Sumach', ingredientID: 'sumach' }],
       }
     ));
-    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
     expect(mockSetDoc).toHaveBeenCalled();
-    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+    const setDocPayload = mockSetDoc.mock.calls[0][1];
+    const setDocOptions = mockSetDoc.mock.calls[0][2];
+    expect(setDocPayload).toEqual(expect.objectContaining({
       ingredientID: 'sumach',
       displayName: 'Sumach',
       synonyms: ['Sumach'],
       possibleUnits: ['Prise'],
       status: 'Neu',
-      source: 'auto-created',
     }));
-    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+    expect(setDocOptions).toEqual({ merge: true });
   });
 
   test('shows warning symbol only for recipes with non-included ingredients', async () => {

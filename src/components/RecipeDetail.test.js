@@ -2762,6 +2762,12 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
 
     fireEvent.click(screen.getByLabelText('Nährwerte berechnen'));
 
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Prise Sumach'), { target: { value: INGREDIENT_MATCH_CREATE_NEW_OPTION } });
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
     await waitFor(() => {
       expect(mockUpdateRecipe).toHaveBeenCalledWith(
         'recipe-6b',
@@ -2770,7 +2776,6 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         })
       );
     });
-    expect(screen.queryByRole('dialog', { name: 'ingredientID-Zuordnung' })).not.toBeInTheDocument();
     expect(mockSetDoc).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -2779,7 +2784,6 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
         synonyms: ['Sumach'],
         possibleUnits: ['Prise'],
         status: 'Neu',
-        source: 'auto-created',
       }),
       { merge: true }
     );
