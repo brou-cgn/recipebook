@@ -415,10 +415,39 @@
   vertical-align: top;
 }
 
+.nutrition-confidence-cell {
+  white-space: nowrap;
+}
+
+.nutrition-confidence-info {
+  margin-left: 0.25rem;
+  border: 1px solid #bbb;
+  border-radius: 999px;
+  background: #fff;
+  color: #333;
+  cursor: help;
+  font-size: 0.62rem;
+  line-height: 1;
+  padding: 0.12rem 0.28rem;
+}
+
+.nutrition-static-filter-placeholder {
+  display: inline-block;
+  color: #777;
+}
+
+.nutrition-source-label-column {
+  vertical-align: top;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #666;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .nutrition-source-row {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
   margin-bottom: 0.15rem;
 }
 
@@ -426,37 +455,10 @@
   margin-bottom: 0;
 }
 
-.nutrition-source-label {
-  font-size: 0.6rem;
-  font-weight: bold;
-  color: #666;
-  min-width: 2rem;
-  text-align: right;
-  flex-shrink: 0;
-}
-
 .nutrition-source-input-readonly {
   background: #f5f5f5;
   color: #888;
   cursor: default;
-}
-
-.nutrition-source-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.4rem;
-  margin: 0.1rem 0 0.2rem;
-  font-size: 0.58rem;
-  line-height: 1.2;
-}
-
-.nutrition-source-meta-item {
-  color: #666;
-}
-
-.nutrition-source-meta-item.is-alert {
-  color: #c62828;
-  font-weight: 600;
 }
 
 @media (max-width: 1023px) {

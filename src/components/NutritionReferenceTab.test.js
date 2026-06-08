@@ -200,7 +200,7 @@ describe('NutritionReferenceTab', () => {
     expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
-  test('shows confidence and deviations for OpenFoodFacts nutrients', async () => {
+  test('shows confidence column, info bubble and separate source labels column', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [
         {
@@ -226,17 +226,20 @@ describe('NutritionReferenceTab', () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
     const overallConfidence = await screen.findByLabelText('Gesamt-Confidence tomate');
-    expect(overallConfidence).toHaveTextContent('C: 84%');
+    expect(overallConfidence).toHaveTextContent('84%');
+    expect(screen.queryByText('Δ KI: +2')).not.toBeInTheDocument();
+    expect(screen.queryByText('Δ Formel: -6')).not.toBeInTheDocument();
+    expect(screen.queryByText('C Formel: 94%')).not.toBeInTheDocument();
 
-    const caloriesDiagnostics = screen.getByLabelText('Kalorien (kcal) (OpenFoodFacts Diagnose) tomate');
-    expect(caloriesDiagnostics).not.toHaveTextContent('C: 98%');
-    expect(caloriesDiagnostics).toHaveTextContent('Δ KI: +2');
-    expect(caloriesDiagnostics).toHaveTextContent('Δ Formel: -6');
-    expect(caloriesDiagnostics).toHaveTextContent('C Formel: 94%');
+    const confidenceInfo = screen.getByRole('button', { name: 'Confidence-Berechnung tomate' });
+    expect(confidenceInfo).toHaveAttribute('title', expect.stringContaining('Gesamt-Confidence = Durchschnitt der Feld-Confidencewerte'));
+    expect(confidenceInfo).toHaveAttribute('title', expect.stringContaining('Kalorien (kcal): 98%'));
 
-    const proteinDiagnostics = screen.getByLabelText('Protein (g) (OpenFoodFacts Diagnose) tomate');
-    expect(proteinDiagnostics).not.toHaveTextContent('C: 78%');
-    expect(proteinDiagnostics).toHaveTextContent('Δ KI: +1');
+    expect(screen.getByText('Verlässlichkeit')).toBeInTheDocument();
+    expect(screen.getByText('Beschriftung')).toBeInTheDocument();
+    expect(screen.getByText('OFf')).toBeInTheDocument();
+    expect(screen.getByText('KI')).toBeInTheDocument();
+    expect(screen.getAllByText('Man').length).toBeGreaterThanOrEqual(1);
   });
 
   test('does not create duplicates for existing ingredient ids', async () => {
