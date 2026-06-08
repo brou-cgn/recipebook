@@ -2584,6 +2584,17 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .ingredient-match-dialog-confirm {
+  background: #c62828;
+  color: #fff;
+  border-color: #c62828;
+}
+
+[data-theme="dark"] .ingredient-match-dialog-confirm:hover:not(:disabled) {
+  background: #b71c1c;
+  border-color: #b71c1c;
+}
+
 [data-theme="dark"] .cuisine-badge {
   background: #2A2623;
   color: #E6DED6;
