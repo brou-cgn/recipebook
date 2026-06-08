@@ -78,28 +78,11 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
   return merged;
 };
 
-const ADJECTIVE_DECLENSION_SUFFIXES = ['', 'e', 'en', 'em', 'er', 'es'];
-const DEFAULT_INGREDIENT_CONTEXT_SEGMENT = 'standardUnits';
+const DEFAULT_INGREDIENT_CONTEXT_SEGMENT = 'ignoredTerms';
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
   .trim();
-
-const buildAdjectiveDeclensionForms = (word) => {
-  const cleanWord = trimIngredientContextWord(word).toLowerCase();
-  if (!cleanWord) return [];
-
-  const stemEnding = ['en', 'em', 'er', 'es', 'e'].find((ending) => (
-    cleanWord.endsWith(ending) && cleanWord.length > ending.length + 1
-  ));
-  const stem = stemEnding ? cleanWord.slice(0, -stemEnding.length) : cleanWord;
-
-  const forms = new Set([cleanWord]);
-  ADJECTIVE_DECLENSION_SUFFIXES.forEach((suffix) => {
-    forms.add(`${stem}${suffix}`.trim());
-  });
-  return Array.from(forms).filter(Boolean);
-};
 
 const COMMON_ADJECTIVE_GROUP_LABELS = {
   temperature: 'Temperatur',
@@ -962,14 +945,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   const ingredientContextSegmentOptions = useMemo(() => ([
     {
-      value: 'standardUnits',
-      label: 'Standard-Einheiten',
-      documentPath: 'settings/standardIngredientTerms',
-    },
-    {
-      value: 'standardAdjectives',
-      label: 'Standard-Adjektive',
-      documentPath: 'settings/standardIngredientTerms',
+      value: 'ignoredTerms',
+      label: 'Ignorierte Wörter',
+      documentPath: 'commonTerms/ignoredTerms',
     },
     ...COMMON_ADJECTIVE_GROUPS.map((group) => ({
       value: `commonAdjectives:${group}`,
@@ -1114,15 +1092,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const word = ingredientWordContextMenu.word;
     const segment = ingredientWordContextMenu.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
 
-    if (segment === 'standardUnits') {
-      await saveStandardTerms([...standardUnits, word], standardAdjectives);
-      closeIngredientWordContextMenu();
-      return;
-    }
-
-    if (segment === 'standardAdjectives') {
-      const declensionForms = buildAdjectiveDeclensionForms(word);
-      await saveStandardTerms(standardUnits, [...standardAdjectives, ...declensionForms]);
+    if (segment === 'ignoredTerms') {
+      await handleAddIgnoredTerm(word);
       closeIngredientWordContextMenu();
       return;
     }

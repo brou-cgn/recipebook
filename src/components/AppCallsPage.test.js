@@ -1755,8 +1755,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     expect(stats.textContent).toMatch(/Rezepte/);
   });
 
-  test('click on ingredient word allows assigning standard unit segment on missing ingredientID page', async () => {
-    const { saveStandardIngredientTerms } = require('../utils/customLists');
+  test('click on ingredient word allows assigning ignored term segment on missing ingredientID page', async () => {
+    const { saveIgnoredTerms, saveStandardIngredientTerms } = require('../utils/customLists');
     mockNutritionReferenceState = {
       rows: [
         { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
@@ -1787,17 +1787,17 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(wordButton);
     expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).toBeInTheDocument();
 
+    expect(screen.getByRole('combobox', { name: 'Zielsegment' })).toHaveValue('ignoredTerms');
     fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
 
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
-    const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);
-    expect(savedUnits).toContain('frische');
-    expect(savedAdjectives).toEqual(expect.any(Array));
+    await waitFor(() => expect(saveIgnoredTerms).toHaveBeenCalled());
+    const [savedTerms, savedUserId] = saveIgnoredTerms.mock.calls.at(-1);
+    expect(savedTerms).toContain('frische');
     expect(savedUserId).toBe(adminUser.id);
+    expect(saveStandardIngredientTerms).not.toHaveBeenCalled();
   });
 
-  test('context dialog standard adjective option stores declension forms', async () => {
-    const { saveStandardIngredientTerms } = require('../utils/customLists');
+  test('context dialog shows ignored terms option and hides standard terms options', async () => {
     mockNutritionReferenceState = {
       rows: [
         { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
@@ -1827,23 +1827,9 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frischen"' });
     fireEvent.click(wordButton);
     expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frischen.*/ })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Zielsegment' }), {
-      target: { value: 'standardAdjectives' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
-
-    await waitFor(() => expect(saveStandardIngredientTerms).toHaveBeenCalled());
-    const [savedUnits, savedAdjectives, savedUserId] = saveStandardIngredientTerms.mock.calls.at(-1);
-    expect(savedUnits).toEqual(expect.any(Array));
-    expect(savedAdjectives).toEqual(expect.arrayContaining([
-      'frisch',
-      'frische',
-      'frischen',
-      'frischem',
-      'frischer',
-      'frisches',
-    ]));
-    expect(savedUserId).toBe(adminUser.id);
+    expect(screen.getByRole('option', { name: 'Ignorierte Wörter' })).toHaveAttribute('value', 'ignoredTerms');
+    expect(screen.queryByRole('option', { name: 'Standard-Einheiten' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Standard-Adjektive' })).not.toBeInTheDocument();
   });
 });
 
