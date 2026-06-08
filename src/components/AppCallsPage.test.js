@@ -932,7 +932,8 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
       }
     ));
     expect(mockSetDoc).toHaveBeenCalled();
-    const [, setDocPayload, setDocOptions] = mockSetDoc.mock.calls[0];
+    const setDocPayload = mockSetDoc.mock.calls[0][1];
+    const setDocOptions = mockSetDoc.mock.calls[0][2];
     expect(setDocPayload).toEqual(expect.objectContaining({
       ingredientID: 'sumach',
       displayName: 'Sumach',
