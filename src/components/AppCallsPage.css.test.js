@@ -34,6 +34,16 @@ describe('AppCallsPage CSS layout', () => {
     expect(headingRule).toContain('font-size: 1.25rem;');
     expect(headingRule).toContain('font-weight: 700;');
   });
+
+  test('styles ingredient-match confirm button with red to match Küchenbetrieb color scheme', () => {
+    const cssPath = path.join(__dirname, 'AppCallsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const confirmRule = getRuleBody(css, '.ingredient-match-dialog-confirm');
+
+    expect(confirmRule).toContain('background: #d32f2f;');
+    expect(confirmRule).toContain('color: #fff;');
+    expect(confirmRule).toContain('border-color: #d32f2f;');
+  });
 });
 
 describe('AppCallsPage dark mode styles', () => {
