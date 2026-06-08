@@ -210,7 +210,10 @@ export function buildNutritionTrackingFields({
   if (hasNextSet && forceRecalc) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
-    nextRecalc = true;
+    nextRecalc = nextRecalc || shouldTriggerRecalc(
+      getCaloriesFromNutritionSet(nextOutdated),
+      getCaloriesFromNutritionSet(nextActual)
+    );
   } else if (
     hasNextSet
     && !(preserveOnManualSourceChange && switchedToManual)
