@@ -32,10 +32,10 @@ jest.mock('firebase/functions', () => ({
 }));
 
 describe('NutritionReferenceTab', () => {
-  const renderTab = (user, providerEnabled = true, allRecipes = []) =>
+  const renderTab = (user, providerEnabled = true) =>
     render(
       <NutritionReferenceProvider enabled={providerEnabled}>
-        <NutritionReferenceTab currentUser={user} allRecipes={allRecipes} />
+        <NutritionReferenceTab currentUser={user} />
       </NutritionReferenceProvider>
     );
 
@@ -101,6 +101,13 @@ describe('NutritionReferenceTab', () => {
     const sourceSelect = screen.getByLabelText('Quelle tomate');
     expect(sourceSelect.querySelector('option[value="ai-generiert"]')).not.toBeNull();
     expect(sourceSelect.querySelector('option[value="ai"]')).toBeNull();
+    expect(screen.queryByText('Zutatenliste importieren (Dummy-IDs)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quellenfelder migrieren')).not.toBeInTheDocument();
+    expect(screen.queryByText('Alle Einträge löschen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Status filtern')).not.toBeInTheDocument();
+    expect(screen.queryByText(
+      'Diese Werte werden bei der automatischen Nährwert-Berechnung pro 100 g gespeichert und können hier korrigiert werden.'
+    )).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-haferflocken' } });
     fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Haferflocken' } });
@@ -118,18 +125,6 @@ describe('NutritionReferenceTab', () => {
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
-  });
-
-  test('filters rows by status', async () => {
-    renderTab({ id: 'u1', role: 'moderator' });
-
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Freigegeben' } });
-
-    expect(screen.getByDisplayValue('dummy-tomate')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Status filtern'), { target: { value: 'Prüfung ausstehend' } });
-    expect(screen.queryByDisplayValue('dummy-tomate')).not.toBeInTheDocument();
   });
 
   test('supports column filters for table headers', async () => {
@@ -705,45 +700,6 @@ describe('NutritionReferenceTab', () => {
     });
   });
 
-  test('imports ingredient names from recipes with dummy ids', async () => {
-    renderTab(
-      { id: 'u1', role: 'moderator' },
-      true,
-      [
-        {
-          ingredients: [
-            { type: 'ingredient', text: '500g Kartoffeln' },
-            { type: 'ingredient', text: '200ml Milch' },
-          ],
-        },
-      ]
-    );
-
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Zutatenliste importieren (Dummy-IDs)' }));
-
-    await waitFor(() => {
-      expect(mockSetDoc).toHaveBeenCalled();
-    });
-    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
-      ingredientID: 'dummy-kartoffeln',
-      synonyms: ['Kartoffeln'],
-      source: 'recipe-import',
-    }));
-    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
-  });
-
-  test('deletes all entries with one action', async () => {
-    renderTab({ id: 'u1', role: 'moderator' });
-
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Alle Einträge löschen' }));
-
-    await waitFor(() => {
-      expect(mockDeleteDoc).toHaveBeenCalled();
-    });
-  });
-
   test('keeps table mounted and restores table scroll after saving a row', async () => {
     let resolveReload;
     mockGetDocs
@@ -809,74 +765,4 @@ describe('NutritionReferenceTab', () => {
     });
   });
 
-  const makeCsvFile = (csvContent) => ({
-    text: () => Promise.resolve(csvContent),
-    arrayBuffer: () => {
-      const nodeBuffer = Buffer.from(csvContent, 'utf-8');
-      return Promise.resolve(nodeBuffer.buffer.slice(
-        nodeBuffer.byteOffset,
-        nodeBuffer.byteOffset + nodeBuffer.byteLength
-      ));
-    },
-    name: 'test.csv',
-    type: 'text/csv',
-  });
-
-  test('CSV import preserves existing source and nutrition fields for known rows', async () => {
-    renderTab({ id: 'u1', role: 'moderator' });
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-
-    const file = makeCsvFile('ingredientID;synonyms\ndummy-tomate;Tomate');
-    const input = document.querySelector('#nutrition-reference-import-input');
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    fireEvent.change(input);
-
-    await waitFor(() => {
-      expect(mockSetDoc).toHaveBeenCalled();
-    });
-
-    const payload = mockSetDoc.mock.calls[0][1];
-    // Existing source 'manual' must be preserved (not replaced with 'csv-import')
-    expect(payload.source).toBe('manual');
-    // Existing nutrition fields must be preserved
-    expect(payload.kalorien).toBe(18);
-    expect(payload.kohlenhydrate).toBe(3.9);
-    // setDoc options must still use merge:false to replace the document
-    expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: false });
-  });
-
-  test('CSV import preserves existing searchTerm for known rows', async () => {
-    renderTab({ id: 'u1', role: 'moderator' });
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-
-    const file = makeCsvFile('ingredientID;synonyms\ndummy-tomate;Tomate');
-    const input = document.querySelector('#nutrition-reference-import-input');
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    fireEvent.change(input);
-
-    await waitFor(() => {
-      expect(mockSetDoc).toHaveBeenCalled();
-    });
-
-    // Existing searchTerm 'Tomate' must be preserved
-    expect(mockSetDoc.mock.calls[0][1].searchTerm).toBe('Tomate');
-  });
-
-  test('CSV import uses csv-import as source for new rows without an existing entry', async () => {
-    renderTab({ id: 'u1', role: 'moderator' });
-    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
-
-    const file = makeCsvFile('ingredientID;synonyms\ndummy-kartoffel;Kartoffel');
-    const input = document.querySelector('#nutrition-reference-import-input');
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
-    fireEvent.change(input);
-
-    await waitFor(() => {
-      expect(mockSetDoc).toHaveBeenCalled();
-    });
-
-    const payload = mockSetDoc.mock.calls[0][1];
-    expect(payload.source).toBe('csv-import');
-    expect(payload).not.toHaveProperty('kalorien');
-  });
 });
