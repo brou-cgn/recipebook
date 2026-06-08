@@ -832,6 +832,19 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     });
   };
 
+  const handleIngredientMatchLearnChange = (index, value) => {
+    setIngredientMatchDialog((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        learnSynonyms: {
+          ...prev.learnSynonyms,
+          [index]: value,
+        },
+      };
+    });
+  };
+
   const handleIngredientMatchConfirm = async () => {
     if (!ingredientMatchDialog) return;
     const { fieldName, updatedIngredients, unresolved, matchingLog, selections } = ingredientMatchDialog;
@@ -897,7 +910,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         : { ...restOriginal, ingredientID: selectedIngredientID };
 
       const selectedSuggestion = entry.suggestions.find((suggestion) => suggestion.ingredientID === selectedIngredientID);
-      if (selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
+      const shouldLearnSynonym = ingredientMatchDialog.learnSynonyms?.[entry.index] !== false;
+      if (shouldLearnSynonym && selectedSuggestion && selectedSuggestion.confidencePercent < 100) {
         const learningUpdate = ingredientLearningData.get(selectedIngredientID) || { synonyms: new Set(), possibleUnits: new Set() };
         const { name, unit } = parseIngredientNameAndUnit(entry.ingredient);
         const parsedSynonym = normalizeIngredientNameForIdMatching(name);
@@ -2812,6 +2826,16 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                       <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
                       <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
                     </select>
+                    {entry.suggestions.length > 0 && (
+                      <label className="ingredient-match-learn-label">
+                        <input
+                          type="checkbox"
+                          checked={ingredientMatchDialog.learnSynonyms?.[entry.index] !== false}
+                          onChange={(e) => handleIngredientMatchLearnChange(entry.index, e.target.checked)}
+                        />
+                        {' '}Synonym lernen
+                      </label>
+                    )}
                   </li>
                 );
               })}
