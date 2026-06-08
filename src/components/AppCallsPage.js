@@ -78,7 +78,6 @@ const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
   return merged;
 };
 
-const DEFAULT_INGREDIENT_CONTEXT_SEGMENT = 'ignoredTerms';
 
 const trimIngredientContextWord = (word) => String(word || '')
   .replace(/^[^0-9A-Za-zÄÖÜäöüß]+|[^0-9A-Za-zÄÖÜäöüß-]+$/g, '')
@@ -380,7 +379,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [refreshingNutritionReferenceCache, setRefreshingNutritionReferenceCache] = useState(false);
   const [runningNutritionRecalcJob, setRunningNutritionRecalcJob] = useState(false);
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
-  const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
 
   const recipesWithMissingIngredientIDs = useMemo(
@@ -420,48 +418,10 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
 
-  const closeIngredientWordContextMenu = useCallback(() => {
-    setIngredientWordContextMenu(null);
-  }, []);
-
   const handleCloseIngredientMatchDialog = useCallback(() => {
-    closeIngredientWordContextMenu();
     setOpenIngredientInfoIndex(null);
     setIngredientMatchDialog(null);
-  }, [closeIngredientWordContextMenu, setIngredientMatchDialog]);
-
-  const openIngredientWordContextMenuFromClick = useCallback((rawWord) => {
-    if (activeTab !== 'missingIngredientIDs') return;
-    const trimmedWord = trimIngredientContextWord(rawWord);
-    if (!trimmedWord) return;
-    setIngredientWordContextMenu({
-      word: trimmedWord,
-      segment: DEFAULT_INGREDIENT_CONTEXT_SEGMENT,
-    });
-  }, [activeTab]);
-
-  const renderIngredientWords = useCallback((ingredientText) => {
-    const words = String(ingredientText || '').split(/\s+/).filter(Boolean);
-    return words.map((word, index) => (
-      <React.Fragment key={`${word}-${index}`}>
-        <button
-          type="button"
-          className="ingredient-word-context-trigger"
-          onClick={() => openIngredientWordContextMenuFromClick(word)}
-          aria-label={`Kontextdialog für "${trimIngredientContextWord(word) || word}"`}
-        >
-          {word}
-        </button>
-        {index < words.length - 1 ? ' ' : null}
-      </React.Fragment>
-    ));
-  }, [openIngredientWordContextMenuFromClick]);
-
-  useEffect(() => {
-    if (!ingredientMatchDialog || activeTab !== 'missingIngredientIDs') {
-      closeIngredientWordContextMenu();
-    }
-  }, [activeTab, closeIngredientWordContextMenu, ingredientMatchDialog]);
+  }, [setIngredientMatchDialog]);
 
   const handleAssignIngredientIDs = async (recipe) => {
     setAssigningIngredientIdRecipeId(recipe.id);
@@ -961,16 +921,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     })),
   ]), []);
 
-  const handleIngredientWordSegmentChange = useCallback((segment) => {
-    setIngredientWordContextMenu((current) => (current ? { ...current, segment } : current));
-  }, []);
-
-  const selectedIngredientContextSegment = ingredientWordContextMenu?.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
-  const selectedIngredientContextSegmentOption = useMemo(
-    () => ingredientContextSegmentOptions.find((option) => option.value === selectedIngredientContextSegment) || null,
-    [ingredientContextSegmentOptions, selectedIngredientContextSegment]
-  );
-
   const handleAddCommonAdjective = async (group, value) => {
     if (!COMMON_ADJECTIVE_GROUPS.includes(group)) return;
     const entry = String(value || '').trim();
@@ -1086,30 +1036,54 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  const handleApplyIngredientWordSegmentAssignment = async () => {
-    if (!ingredientWordContextMenu?.word) return;
-
-    const word = ingredientWordContextMenu.word;
-    const segment = ingredientWordContextMenu.segment || DEFAULT_INGREDIENT_CONTEXT_SEGMENT;
-
+  const handleDirectWordSegmentAssign = async (word, segment) => {
+    if (!word || !segment) return;
     if (segment === 'ignoredTerms') {
       await handleAddIgnoredTerm(word);
-      closeIngredientWordContextMenu();
       return;
     }
 
     if (segment.startsWith('commonAdjectives:')) {
-      const adjectiveGroup = segment.split(':')[1];
-      await handleAddCommonAdjective(adjectiveGroup, word);
-      closeIngredientWordContextMenu();
+      await handleAddCommonAdjective(segment.split(':')[1], word);
       return;
     }
 
     if (segment.startsWith('commonUnits:')) {
-      const unitGroup = segment.split(':')[1];
-      await handleAddCommonUnit(unitGroup, word);
-      closeIngredientWordContextMenu();
+      await handleAddCommonUnit(segment.split(':')[1], word);
     }
+  };
+
+  const renderIngredientWords = (ingredientText) => {
+    const words = String(ingredientText || '').split(/\s+/).filter(Boolean);
+    return words.map((word, index) => {
+      const trimmedWord = trimIngredientContextWord(word);
+      return (
+        <React.Fragment key={`${word}-${index}`}>
+          <span className="ingredient-word-context-trigger">
+            {word}
+            {trimmedWord && activeTab === 'missingIngredientIDs' && (
+              <select
+                className="ingredient-word-context-select"
+                value=""
+                onChange={(e) => {
+                  const segment = e.target.value;
+                  e.target.value = '';
+                  if (segment) handleDirectWordSegmentAssign(trimmedWord, segment);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Segment für „${trimmedWord}"`}
+              >
+                <option value="" disabled>Segment für „{trimmedWord}"…</option>
+                {ingredientContextSegmentOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            )}
+          </span>
+          {index < words.length - 1 ? ' ' : null}
+        </React.Fragment>
+      );
+    });
   };
 
   const handleSaveKochatelierSettings = async () => {
@@ -2143,49 +2117,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 );
               })}
             </ul>
-            {ingredientWordContextMenu && activeTab === 'missingIngredientIDs' && (
-              <dialog
-                className="ingredient-word-context-dialog"
-                open
-                aria-label={`Segmentzuordnung für „${ingredientWordContextMenu.word}“`}
-                onCancel={(event) => {
-                  event.preventDefault();
-                  closeIngredientWordContextMenu();
-                }}
-              >
-                <div className="ingredient-word-context-dialog-content">
-                  <p className="ingredient-word-context-dialog-title">
-                    Segment für „{ingredientWordContextMenu.word}“
-                  </p>
-                  <label className="ingredient-word-context-dialog-label" htmlFor="ingredient-word-segment-select">
-                    Zielsegment
-                  </label>
-                  <select
-                    id="ingredient-word-segment-select"
-                    value={selectedIngredientContextSegment}
-                    onChange={(event) => handleIngredientWordSegmentChange(event.target.value)}
-                    aria-label="Zielsegment"
-                  >
-                    {ingredientContextSegmentOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="ingredient-word-context-dialog-doc">
-                    Dokument: {selectedIngredientContextSegmentOption?.documentPath || '—'}
-                  </p>
-                  <div className="ingredient-word-context-dialog-actions">
-                    <button type="button" onClick={closeIngredientWordContextMenu}>
-                      Abbrechen
-                    </button>
-                    <button type="button" onClick={handleApplyIngredientWordSegmentAssignment}>
-                      Zuweisen
-                    </button>
-                  </div>
-                </div>
-              </dialog>
-            )}
             <div className="ingredient-match-dialog-actions">
               <button type="button" className="ingredient-match-dialog-cancel" onClick={handleCloseIngredientMatchDialog}>
                 Abbrechen

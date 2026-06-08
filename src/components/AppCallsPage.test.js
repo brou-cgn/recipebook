@@ -1014,10 +1014,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
-    fireEvent.click(wordButton);
-
-    expect(screen.queryByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Segment für.*frische/i })).not.toBeInTheDocument();
   });
 
   test('opens recipe detail when recipe name is clicked', async () => {
@@ -1783,12 +1780,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frische"' });
-    fireEvent.click(wordButton);
-    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frische.*/ })).toBeInTheDocument();
-
-    expect(screen.getByRole('combobox', { name: 'Zielsegment' })).toHaveValue('ignoredTerms');
-    fireEvent.click(screen.getByRole('button', { name: 'Zuweisen' }));
+    const wordSelect = screen.getByRole('combobox', { name: 'Segment für „frische"' });
+    fireEvent.change(wordSelect, { target: { value: 'ignoredTerms' } });
 
     await waitFor(() => expect(saveIgnoredTerms).toHaveBeenCalled());
     const [savedTerms, savedUserId] = saveIgnoredTerms.mock.calls.at(-1);
@@ -1824,10 +1817,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'IDs zuordnen' }));
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
 
-    const wordButton = screen.getByRole('button', { name: 'Kontextdialog für "frischen"' });
-    fireEvent.click(wordButton);
-    expect(await screen.findByRole('dialog', { name: /Segmentzuordnung für .*frischen.*/ })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Ignorierte Wörter' })).toHaveAttribute('value', 'ignoredTerms');
+    const wordSelect = screen.getByRole('combobox', { name: 'Segment für „frischen"' });
+    expect(within(wordSelect).getByRole('option', { name: 'Ignorierte Wörter' })).toHaveAttribute('value', 'ignoredTerms');
     expect(screen.queryByRole('option', { name: 'Standard-Einheiten' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Standard-Adjektive' })).not.toBeInTheDocument();
   });
