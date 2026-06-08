@@ -403,9 +403,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const recipesWithMissingIngredientIDs = useMemo(
     () =>
       recipes
-        .filter((recipe) => hasMissingIngredientIDs(recipe))
+        .filter((recipe) => hasMissingIngredientIDs(recipe, nutritionReferenceRows))
         .sort((a, b) => (a.title || a.id || '').localeCompare(b.title || b.id || '', 'de-DE')),
-    [recipes]
+    [recipes, nutritionReferenceRows]
   );
 
   const selectedNutritionRecipe = useMemo(
@@ -1571,7 +1571,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         ) : activeTab === 'missingIngredientIDs' ? (
           <>
             <p className="app-calls-info-text">
-              Hier werden alle Rezepte aufgelistet, bei denen mindestens eine Zutat noch keine ingredientID besitzt.
+              Hier werden alle Rezepte aufgelistet, bei denen mindestens eine Zutat noch keine oder keine gültige ingredientID besitzt.
               Über den Button „IDs zuordnen" kann die Zuordnung direkt vorgenommen werden.
             </p>
             <div className="app-calls-action-row">

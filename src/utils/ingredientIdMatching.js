@@ -594,12 +594,21 @@ export function getAutoAssignedIngredients(rawIngredients = [], nutritionReferen
  * Returns true if the recipe has at least one ingredient (that is not a heading
  * and not explicitly ignored) without a valid ingredientID.
  */
-export function hasMissingIngredientIDs(recipe) {
+export function hasMissingIngredientIDs(recipe, nutritionReferenceRows = []) {
   const rawIngredients = Array.isArray(recipe?.zutaten)
     ? recipe.zutaten
     : Array.isArray(recipe?.ingredients)
     ? recipe.ingredients
     : [];
+
+  const validIds =
+    nutritionReferenceRows.length > 0
+      ? new Set(
+          nutritionReferenceRows
+            .map((row) => String(row?.ingredientID || '').trim())
+            .filter(Boolean)
+        )
+      : null;
 
   return rawIngredients.some((item) => {
     const ingredientItem = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
@@ -607,7 +616,12 @@ export function hasMissingIngredientIDs(recipe) {
     if (typeof ingredientItem.text !== 'string' || !ingredientItem.text.trim()) return false;
     if (decodeRecipeLink(ingredientItem.text)) return false;
     if (ingredientItem.ignoreNutritionCalculation === true) return false;
-    return !String(ingredientItem.ingredientID || '').trim();
+    const id = String(ingredientItem.ingredientID || '').trim();
+    if (!id) return true;
+    if (validIds) {
+      return !validIds.has(id);
+    }
+    return false;
   });
 }
 
