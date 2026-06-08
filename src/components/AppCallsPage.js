@@ -518,22 +518,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       const runNutritionRecalc = httpsCallable(functions, 'runNutritionRecalcForFlaggedRecipes');
       const result = await runNutritionRecalc({});
       const data = result?.data || {};
-      const updatedCount = Array.isArray(data.updatedRecipes) ? data.updatedRecipes.length : 0;
-      const failedCount = Array.isArray(data.failedRecipes) ? data.failedRecipes.length : 0;
-      const affectedCount = Number.isFinite(data.affectedRecipeCount) ? data.affectedRecipeCount : null;
-
-      let message = `Nährwert-Recalc abgeschlossen: ${updatedCount} aktualisiert`;
-      if (failedCount > 0) {
-        message += `, ${failedCount} fehlgeschlagen`;
-      }
-      if (affectedCount != null) {
-        message += ` (von ${affectedCount} betroffen)`;
-      }
-      message += '.';
 
       setNutritionReferenceCacheFeedback({
         type: 'success',
-        message,
+        message: data.started === true && typeof data.message === 'string' && data.message.trim()
+          ? data.message
+          : 'Recalc-Job wurde gestartet. Das Ergebnis wird per E-Mail gesendet.',
       });
     } catch (error) {
       setNutritionReferenceCacheFeedback({

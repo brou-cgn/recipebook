@@ -1619,9 +1619,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
   test('starts manual nutrition recalc job and shows summary feedback', async () => {
     const runRecalc = jest.fn(() => Promise.resolve({
       data: {
-        updatedRecipes: [{ id: 'r1' }],
-        failedRecipes: [{ id: 'r2' }],
-        affectedRecipeCount: 2,
+        started: true,
+        message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
       },
     }));
     mockHttpsCallable.mockImplementation((_functions, fnName) => {
@@ -1639,7 +1638,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
       expect(runRecalc).toHaveBeenCalledWith({});
     });
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Nährwert-Recalc abgeschlossen: 1 aktualisiert, 1 fehlgeschlagen (von 2 betroffen).'
+      'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.'
     );
   });
 

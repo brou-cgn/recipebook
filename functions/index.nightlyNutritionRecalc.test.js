@@ -222,10 +222,13 @@ test('manual recalc job updates impacted recipes, resets recalc flags and sends 
     data: {},
   });
 
-  assert.equal(result.affectedRecipeCount, 1);
-  assert.equal(result.updatedRecipes.length, 1);
-  assert.equal(result.failedRecipes.length, 0);
-  assert.equal(result.resetRecalcCount, 1);
+  assert.deepEqual(result, {
+    started: true,
+    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, false);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
   assert.equal(sentMails.length, 1);
