@@ -8,9 +8,15 @@ const mockGetIngredientIdSuggestions = jest.fn(() => []);
 const mockSetCustomIngredientMatchingTerms = jest.fn();
 const mockNutritionModalProps = jest.fn();
 const mockSetDoc = jest.fn(() => Promise.resolve());
+const mockHttpsCallable = jest.fn();
 
 jest.mock('../firebase', () => ({
   db: {},
+  functions: {},
+}));
+
+jest.mock('firebase/functions', () => ({
+  httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
 jest.mock('firebase/firestore', () => ({
@@ -141,6 +147,15 @@ const moderatorUser = {
 describe('AppCallsPage – Kulinariktypen release with rename', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHttpsCallable.mockReset();
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runNutritionRecalcForFlaggedRecipes') {
+        return jest.fn(() => Promise.resolve({
+          data: { updatedRecipes: [], failedRecipes: [], affectedRecipeCount: 0 },
+        }));
+      }
+      return jest.fn(() => Promise.resolve({ data: {} }));
+    });
     mockSetDoc.mockClear();
     mockSetCustomIngredientMatchingTerms.mockClear();
     mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
@@ -1599,6 +1614,50 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cache leeren' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Fehler beim Leeren des nutritionReferences-Caches: Netzwerkfehler');
+  });
+
+  test('starts manual nutrition recalc job and shows summary feedback', async () => {
+    const runRecalc = jest.fn(() => Promise.resolve({
+      data: {
+        updatedRecipes: [{ id: 'r1' }],
+        failedRecipes: [{ id: 'r2' }],
+        affectedRecipeCount: 2,
+      },
+    }));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runNutritionRecalcForFlaggedRecipes') return runRecalc;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte jetzt neu berechnen' }));
+
+    await waitFor(() => {
+      expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'runNutritionRecalcForFlaggedRecipes');
+      expect(runRecalc).toHaveBeenCalledWith({});
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Nährwert-Recalc abgeschlossen: 1 aktualisiert, 1 fehlgeschlagen (von 2 betroffen).'
+    );
+  });
+
+  test('shows an error message when manual nutrition recalc job fails', async () => {
+    const runRecalc = jest.fn(() => Promise.reject(new Error('Cloud Function nicht erreichbar')));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runNutritionRecalcForFlaggedRecipes') return runRecalc;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={adminUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte jetzt neu berechnen' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Fehler beim Starten des Nährwert-Recalc-Jobs: Cloud Function nicht erreichbar'
+    );
   });
 
   test('lists recipes with missing ingredient IDs', async () => {

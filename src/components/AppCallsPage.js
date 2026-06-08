@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './AppCallsPage.css';
+import { httpsCallable } from 'firebase/functions';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
 import {
@@ -33,7 +34,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
-import { db } from '../firebase';
+import { db, functions } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   buildPendingNutritionReferenceDraft,
@@ -394,6 +395,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   // Fehlende Zutaten-IDs tab state
   const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
   const [refreshingNutritionReferenceCache, setRefreshingNutritionReferenceCache] = useState(false);
+  const [runningNutritionRecalcJob, setRunningNutritionRecalcJob] = useState(false);
   const [nutritionReferenceCacheFeedback, setNutritionReferenceCacheFeedback] = useState(null);
   const [ingredientWordContextMenu, setIngredientWordContextMenu] = useState(null);
   const [openIngredientInfoIndex, setOpenIngredientInfoIndex] = useState(null);
@@ -506,6 +508,42 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       });
     } finally {
       setRefreshingNutritionReferenceCache(false);
+    }
+  };
+
+  const handleRunNutritionRecalcJob = async () => {
+    setNutritionReferenceCacheFeedback(null);
+    setRunningNutritionRecalcJob(true);
+    try {
+      const runNutritionRecalc = httpsCallable(functions, 'runNutritionRecalcForFlaggedRecipes');
+      const result = await runNutritionRecalc({});
+      const data = result?.data || {};
+      const updatedCount = Array.isArray(data.updatedRecipes) ? data.updatedRecipes.length : 0;
+      const failedCount = Array.isArray(data.failedRecipes) ? data.failedRecipes.length : 0;
+      const affectedCount = Number.isFinite(data.affectedRecipeCount) ? data.affectedRecipeCount : null;
+
+      let message = `Nährwert-Recalc abgeschlossen: ${updatedCount} aktualisiert`;
+      if (failedCount > 0) {
+        message += `, ${failedCount} fehlgeschlagen`;
+      }
+      if (affectedCount != null) {
+        message += ` (von ${affectedCount} betroffen)`;
+      }
+      message += '.';
+
+      setNutritionReferenceCacheFeedback({
+        type: 'success',
+        message,
+      });
+    } catch (error) {
+      setNutritionReferenceCacheFeedback({
+        type: 'error',
+        message: error?.message
+          ? `Fehler beim Starten des Nährwert-Recalc-Jobs: ${error.message}`
+          : 'Fehler beim Starten des Nährwert-Recalc-Jobs.',
+      });
+    } finally {
+      setRunningNutritionRecalcJob(false);
     }
   };
 
@@ -1554,6 +1592,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 disabled={refreshingNutritionReferenceCache}
               >
                 {refreshingNutritionReferenceCache ? 'Cache wird geleert…' : 'Cache leeren'}
+              </button>
+              <button
+                type="button"
+                className="app-calls-share-btn"
+                onClick={handleRunNutritionRecalcJob}
+                disabled={runningNutritionRecalcJob}
+              >
+                {runningNutritionRecalcJob ? 'Recalc läuft…' : 'Nährwerte jetzt neu berechnen'}
               </button>
               {nutritionReferenceCacheFeedback?.message ? (
                 <span

@@ -1866,20 +1866,355 @@ exports.parseIngredientAmountG = onCall(
 );
 
 /**
+ * Core implementation for automatic nutrition calculation.
+ * @param {{ingredients: Array, portionen?: number, callerLabel?: string}} params
+ * @returns {Promise<{naehrwerte: object, details: Array, foundCount: number, totalCount: number}>}
+ */
+async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen = 1, callerLabel = 'system'} = {}) {
+  const {
+    parseIngredientForNutrition,
+    normalizeIngredientWithGemini,
+    estimateNutritionWithGemini,
+  } = createNutritionNormalizationUtils({
+    GoogleGenerativeAI,
+    env: {GEMINI_API_KEY: geminiApiKey.value()},
+  });
+
+  const totals = {
+    kalorien: 0,
+    protein: 0,
+    fett: 0,
+    kohlenhydrate: 0,
+    zucker: 0,
+    ballaststoffe: 0,
+    salz: 0,
+  };
+
+  const DEFAULT_SALT_PER_PORTION_G = 2;
+  const details = [];
+  let foundCount = 0;
+  const BATCH_SIZE = 5;
+  const ingredientEntries = ingredients.map((ingredient) => {
+    if (ingredient && typeof ingredient === 'object' && ingredient.type === 'heading') {
+      return null;
+    }
+    const ingredientStr = (ingredient && typeof ingredient === 'object') ? ingredient.text : ingredient;
+    if (isSkippableIngredientLine(ingredientStr)) {
+      return null;
+    }
+    return {ingredientStr};
+  }).filter(Boolean);
+
+  const processIngredient = async ({ingredientStr}) => {
+    const ingredientTotals = {
+      kalorien: 0,
+      protein: 0,
+      fett: 0,
+      kohlenhydrate: 0,
+      zucker: 0,
+      ballaststoffe: 0,
+      salz: 0,
+    };
+
+    if (/^salz$/i.test(ingredientStr.trim())) {
+      const saltAmountG = DEFAULT_SALT_PER_PORTION_G * portionen;
+      ingredientTotals.salz += saltAmountG;
+      return {
+        found: true,
+        detail: {
+          ingredient: ingredientStr,
+          name: 'Salz',
+          product: `Salz (Standard: ${DEFAULT_SALT_PER_PORTION_G} g pro Portion)`,
+          amountG: saltAmountG,
+        },
+        totals: ingredientTotals,
+      };
+    }
+
+    let parsed = null;
+    const hasExplicitQuantity = hasExplicitQuantityInIngredient(ingredientStr);
+    try {
+      parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000});
+    } catch (geminiError) {
+      console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
+    }
+    if (!parsed) {
+      parsed = parseIngredientForNutrition(ingredientStr);
+    }
+    if (!parsed) {
+      return {
+        found: false,
+        detail: {ingredient: ingredientStr, error: 'Konnte nicht geparst werden'},
+        totals: ingredientTotals,
+      };
+    }
+
+    const {name} = parsed;
+    const referenceId = normalizeNutritionReferenceId(name);
+    let cachedSnapshot = null;
+
+    try {
+      if (referenceId) {
+        const collectionRef = admin.firestore()
+            .collection(NUTRITION_REFERENCE_COLLECTION);
+        cachedSnapshot = await collectionRef
+            .doc(referenceId)
+            .get();
+        if (!cachedSnapshot.exists) {
+          const synonymQuerySnapshot = await collectionRef
+              .where('normalizedSynonyms', 'array-contains', referenceId)
+              .limit(1)
+              .get();
+          if (!synonymQuerySnapshot.empty) {
+            [cachedSnapshot] = synonymQuerySnapshot.docs;
+          }
+        }
+        if (cachedSnapshot.exists) {
+          const cachedData = cachedSnapshot.data();
+          const fallbackAmountG = cachedData.defaultAmountG;
+          if (!hasExplicitQuantity && typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
+            parsed = {...parsed, amountG: fallbackAmountG};
+          }
+          const cachedValues = getNutritionValuesForSource(cachedData, cachedData.source);
+          if (Object.keys(cachedValues).length > 0) {
+            const scale = parsed.amountG / 100;
+            NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+              ingredientTotals[key] += (cachedValues[key] || 0) * scale;
+            });
+            return {
+              found: true,
+              detail: {
+                ingredient: ingredientStr,
+                name,
+                product: cachedSnapshot.data().product || cachedSnapshot.data().name || name,
+                amountG: parsed.amountG,
+                searchTerm: parsed.searchName || name,
+              },
+              totals: ingredientTotals,
+            };
+          }
+        }
+      }
+
+      const searchTerms = [...new Set(
+          [parsed.searchName, name]
+              .filter((term) => typeof term === 'string' && term.trim() !== '')
+              .map((term) => term.trim())
+      )];
+      let product = null;
+      let searchError = 'Nicht gefunden';
+      let usedSearchTerm = null;
+
+      for (const searchTerm of searchTerms) {
+        const cleanSearchTerm = searchTerm.replace(/\s*\([^)]*\)/g, '').trim();
+        const termToSearch = cleanSearchTerm || searchTerm;
+        const searchUrl =
+          `https://world.openfoodfacts.org/cgi/search.pl` +
+          `?search_terms=${encodeURIComponent(termToSearch)}` +
+          `&json=1&page_size=3` +
+          `&fields=product_name,nutriments`;
+
+        const response = await fetchWithRetry(searchUrl, {
+          headers: {
+            'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
+          },
+        }, 1);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            searchError = 'Nicht gefunden';
+            continue;
+          }
+          searchError = `HTTP ${response.status}`;
+          console.warn(`OpenFoodFacts HTTP ${response.status} for "${termToSearch}", trying next search term`);
+          continue;
+        }
+
+        const data = await response.json();
+
+        if (!data.products || data.products.length === 0) {
+          searchError = 'Nicht gefunden';
+          continue;
+        }
+
+        product = data.products.find(
+            (entry) => entry.nutriments && entry.nutriments['energy-kcal_100g'] != null
+        );
+
+        if (product) {
+          usedSearchTerm = termToSearch;
+          break;
+        }
+
+        console.warn(`No energy data found for "${termToSearch}" in OpenFoodFacts results`);
+        searchError = 'Keine Nährwertdaten verfügbar';
+      }
+
+      if (!product) {
+        let geminiEstimate = null;
+        try {
+          geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
+        } catch (estimateError) {
+          console.warn(
+              `Gemini estimation failed for "${ingredientStr}":`,
+              estimateError?.message || estimateError,
+          );
+        }
+
+        if (!geminiEstimate) {
+          return {
+            found: false,
+            detail: {ingredient: ingredientStr, name, searchTerm: usedSearchTerm, error: searchError},
+            totals: ingredientTotals,
+          };
+        }
+
+        const scale = parsed.amountG / 100;
+        NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+          ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
+        });
+
+        return {
+          found: true,
+          aiEstimated: true,
+          detail: {
+            ingredient: ingredientStr,
+            name,
+            amountG: parsed.amountG,
+            searchTerm: usedSearchTerm || parsed.searchName || name,
+            aiEstimated: true,
+          },
+          totals: ingredientTotals,
+        };
+      }
+
+      const n = product.nutriments || {};
+      const per100gValues = parseNutritionReferenceValues({
+        kalorien: n['energy-kcal_100g'] ?? n['energy-kcal'],
+        protein: n['proteins_100g'] ?? n.proteins,
+        fett: n['fat_100g'] ?? n.fat,
+        kohlenhydrate: n['carbohydrates_100g'] ?? n.carbohydrates,
+        zucker: n['sugars_100g'] ?? n.sugars,
+        ballaststoffe: n['fiber_100g'] ?? n.fiber,
+        salz: n['salt_100g'] ?? n.salt,
+      });
+      const scale = parsed.amountG / 100;
+
+      NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+        ingredientTotals[key] += (per100gValues[key] || 0) * scale;
+      });
+
+      if (referenceId && cachedSnapshot && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
+        const offSourceFields = NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
+          if (per100gValues[key] != null) acc[`${key}${NUTRITION_SOURCE_SUFFIX_OFF}`] = per100gValues[key];
+          return acc;
+        }, {});
+        await admin.firestore()
+            .collection(NUTRITION_REFERENCE_COLLECTION)
+            .doc(referenceId)
+            .set(
+                {
+                  name,
+                  product: product.product_name || name,
+                  ...per100gValues,
+                  ...offSourceFields,
+                  source: 'openfoodfacts',
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                }
+            );
+      }
+
+      return {
+        found: true,
+        detail: {
+          ingredient: ingredientStr,
+          name,
+          product: product.product_name || name,
+          amountG: parsed.amountG,
+          searchTerm: usedSearchTerm || parsed.searchName || name,
+        },
+        totals: ingredientTotals,
+      };
+    } catch (err) {
+      const isNetworkError = isOpenFoodFactsNetworkError(err);
+      const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
+
+      if (parsed) {
+        try {
+          const geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
+          if (geminiEstimate) {
+            const scale = parsed.amountG / 100;
+            NUTRITION_REFERENCE_FIELDS.forEach((key) => {
+              ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
+            });
+
+            return {
+              found: true,
+              aiEstimated: true,
+              detail: {
+                ingredient: ingredientStr,
+                name,
+                amountG: parsed.amountG,
+                searchTerm: parsed.searchName || name,
+                aiEstimated: true,
+              },
+              totals: ingredientTotals,
+            };
+          }
+        } catch (estimateError) {
+          console.warn(`Gemini estimation also failed for "${ingredientStr}":`, estimateError?.message);
+        }
+      }
+
+      const errorType = isNetworkError ? 'Netzwerkfehler' : (isTimeout ? 'Timeout' : 'API-Fehler');
+      console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
+      return {
+        found: false,
+        detail: {
+          ingredient: ingredientStr,
+          name,
+          error: isTimeout ? 'Timeout bei OpenFoodFacts' : (err.message || errorType),
+        },
+        totals: ingredientTotals,
+      };
+    }
+  };
+
+  for (let i = 0; i < ingredientEntries.length; i += BATCH_SIZE) {
+    const batch = ingredientEntries.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map(processIngredient));
+    for (const result of batchResults) {
+      Object.keys(totals).forEach((key) => {
+        totals[key] += result.totals[key] || 0;
+      });
+      details.push({
+        ...result.detail,
+        found: result.found,
+      });
+      if (result.found) {
+        foundCount++;
+      }
+    }
+  }
+
+  const naehrwerte = {};
+  for (const [key, value] of Object.entries(totals)) {
+    const perPortion = value / portionen;
+    naehrwerte[key] = key === 'kalorien'
+      ? Math.round(perPortion)
+      : Math.round(perPortion * 10) / 10;
+  }
+
+  console.log(
+      `Nutrition calculated for ${callerLabel}: ` +
+      `${foundCount}/${ingredientEntries.length} ingredients found`
+  );
+
+  return {naehrwerte, details, foundCount, totalCount: ingredientEntries.length};
+}
+
+/**
  * Cloud Function: Calculate Nutrition from OpenFoodFacts
- *
- * Acts as a server-side proxy for the OpenFoodFacts API so the browser
- * never has to make cross-origin requests directly.
- *
- * Input data:
- * - ingredients: string[]  – array of ingredient strings from the recipe
- * - portionen: number      – number of servings to divide the total by
- *
- * Returns:
- * - naehrwerte: { kalorien, protein, fett, kohlenhydrate, zucker, ballaststoffe, salz }
- *   all values are per portion, rounded to 1 decimal (kalorien is an integer)
- * - details: array with per-ingredient lookup results (for UI feedback)
- * - foundCount / totalCount
  */
 exports.calculateNutritionFromOpenFoodFacts = onCall(
     {
@@ -1888,17 +2223,6 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       secrets: [geminiApiKey],
     },
     async (request) => {
-      // Instantiate utils here so geminiApiKey.value() is available at request time
-      const {
-        parseIngredientForNutrition,
-        normalizeIngredientWithGemini,
-        estimateNutritionWithGemini,
-      } = createNutritionNormalizationUtils({
-        GoogleGenerativeAI,
-        env: {GEMINI_API_KEY: geminiApiKey.value()},
-      });
-
-      // Authentication check
       if (!request.auth) {
         throw new HttpsError(
             'unauthenticated',
@@ -1906,9 +2230,7 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         );
       }
 
-      const {ingredients, portionen = 1} = request.data;
-
-      // Input validation
+      const {ingredients, portionen = 1} = request.data || {};
       if (!Array.isArray(ingredients) || ingredients.length === 0) {
         throw new HttpsError(
             'invalid-argument',
@@ -1922,340 +2244,11 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         );
       }
 
-      const totals = {
-        kalorien: 0,
-        protein: 0,
-        fett: 0,
-        kohlenhydrate: 0,
-        zucker: 0,
-        ballaststoffe: 0,
-        salz: 0,
-      };
-
-      const DEFAULT_SALT_PER_PORTION_G = 2;
-      const details = [];
-      let foundCount = 0;
-      const BATCH_SIZE = 5;
-      const ingredientEntries = ingredients.map((ingredient) => {
-        // Skip heading items (e.g. { type: 'heading', text: '...' })
-        if (ingredient && typeof ingredient === 'object' && ingredient.type === 'heading') {
-          return null;
-        }
-        const ingredientStr = (ingredient && typeof ingredient === 'object') ? ingredient.text : ingredient;
-        if (isSkippableIngredientLine(ingredientStr)) {
-          return null;
-        }
-        return {ingredientStr};
-      }).filter(Boolean);
-
-      const processIngredient = async ({ingredientStr}) => {
-        const ingredientTotals = {
-          kalorien: 0,
-          protein: 0,
-          fett: 0,
-          kohlenhydrate: 0,
-          zucker: 0,
-          ballaststoffe: 0,
-          salz: 0,
-        };
-
-        // Special case: salt without quantity → default 2 g per portion
-        if (/^salz$/i.test(ingredientStr.trim())) {
-          const saltAmountG = DEFAULT_SALT_PER_PORTION_G * portionen;
-          ingredientTotals.salz += saltAmountG;
-          return {
-            found: true,
-            detail: {
-              ingredient: ingredientStr,
-              name: 'Salz',
-              product: `Salz (Standard: ${DEFAULT_SALT_PER_PORTION_G} g pro Portion)`,
-              amountG: saltAmountG,
-            },
-            totals: ingredientTotals,
-          };
-        }
-
-        let parsed = null;
-        const hasExplicitQuantity = hasExplicitQuantityInIngredient(ingredientStr);
-        try {
-          parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000}); // 5s – Regex-Fallback ist ausreichend
-        } catch (geminiError) {
-          console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
-        }
-        if (!parsed) {
-          parsed = parseIngredientForNutrition(ingredientStr);
-        }
-        if (!parsed) {
-          return {
-            found: false,
-            detail: {ingredient: ingredientStr, error: 'Konnte nicht geparst werden'},
-            totals: ingredientTotals,
-          };
-        }
-
-        const {amountG, name} = parsed;
-        const referenceId = normalizeNutritionReferenceId(name);
-        let cachedSnapshot = null;
-
-        try {
-          if (referenceId) {
-            const collectionRef = admin.firestore()
-                .collection(NUTRITION_REFERENCE_COLLECTION);
-            cachedSnapshot = await collectionRef
-                .doc(referenceId)
-                .get();
-            if (!cachedSnapshot.exists) {
-              const synonymQuerySnapshot = await collectionRef
-                  .where('normalizedSynonyms', 'array-contains', referenceId)
-                  .limit(1)
-                  .get();
-              if (!synonymQuerySnapshot.empty) {
-                [cachedSnapshot] = synonymQuerySnapshot.docs;
-              }
-            }
-            if (cachedSnapshot.exists) {
-              const cachedData = cachedSnapshot.data();
-              const fallbackAmountG = cachedData.defaultAmountG;
-              if (!hasExplicitQuantity && typeof fallbackAmountG === 'number' && fallbackAmountG > 0) {
-                parsed = {...parsed, amountG: fallbackAmountG};
-              }
-              const cachedValues = getNutritionValuesForSource(cachedData, cachedData.source);
-              if (Object.keys(cachedValues).length > 0) {
-                const scale = parsed.amountG / 100;
-                NUTRITION_REFERENCE_FIELDS.forEach((key) => {
-                  ingredientTotals[key] += (cachedValues[key] || 0) * scale;
-                });
-                return {
-                  found: true,
-                  detail: {
-                    ingredient: ingredientStr,
-                    name,
-                    product: cachedSnapshot.data().product || cachedSnapshot.data().name || name,
-                    amountG: parsed.amountG,
-                    searchTerm: parsed.searchName || name,
-                  },
-                  totals: ingredientTotals,
-                };
-              }
-            }
-          }
-
-          const searchTerms = [...new Set(
-              [parsed.searchName, name]
-                  .filter((term) => typeof term === 'string' && term.trim() !== '')
-                  .map((term) => term.trim())
-          )];
-          let product = null;
-          let searchError = 'Nicht gefunden';
-          let usedSearchTerm = null;
-
-          for (const searchTerm of searchTerms) {
-            const cleanSearchTerm = searchTerm.replace(/\s*\([^)]*\)/g, '').trim();
-            const termToSearch = cleanSearchTerm || searchTerm;
-            const searchUrl =
-              `https://world.openfoodfacts.org/cgi/search.pl` +
-              `?search_terms=${encodeURIComponent(termToSearch)}` +
-              `&json=1&page_size=3` +
-              `&fields=product_name,nutriments`;
-
-            const response = await fetchWithRetry(searchUrl, {
-              headers: {
-                'User-Agent': 'RecipeBook/1.0 (https://github.com/brou-cgn/recipebook)',
-              },
-            }, 1); // Nur 1 Versuch, kein Retry – bei Timeout sofort zum Gemini-Fallback
-
-            if (!response.ok) {
-              if (response.status === 404) {
-                searchError = 'Nicht gefunden';
-                continue;
-              }
-              searchError = `HTTP ${response.status}`;
-              console.warn(`OpenFoodFacts HTTP ${response.status} for "${termToSearch}", trying next search term`);
-              continue;
-            }
-
-            const data = await response.json();
-
-            if (!data.products || data.products.length === 0) {
-              searchError = 'Nicht gefunden';
-              continue;
-            }
-
-            product = data.products.find(
-                (entry) => entry.nutriments && entry.nutriments['energy-kcal_100g'] != null
-            );
-
-            if (product) {
-              usedSearchTerm = termToSearch;
-              break;
-            }
-
-            console.warn(`No energy data found for "${termToSearch}" in OpenFoodFacts results`);
-            searchError = 'Keine Nährwertdaten verfügbar';
-          }
-
-          if (!product) {
-            let geminiEstimate = null;
-            try {
-              geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
-            } catch (estimateError) {
-              console.warn(
-                  `Gemini estimation failed for "${ingredientStr}":`,
-                  estimateError?.message || estimateError,
-              );
-            }
-
-            if (!geminiEstimate) {
-              return {
-                found: false,
-                detail: {ingredient: ingredientStr, name, searchTerm: usedSearchTerm, error: searchError},
-                totals: ingredientTotals,
-              };
-            }
-
-            const scale = parsed.amountG / 100;
-            NUTRITION_REFERENCE_FIELDS.forEach((key) => {
-              ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
-            });
-
-            return {
-              found: true,
-              aiEstimated: true,
-              detail: {
-                ingredient: ingredientStr,
-                name,
-                amountG: parsed.amountG,
-                searchTerm: usedSearchTerm || parsed.searchName || name,
-                aiEstimated: true,
-              },
-              totals: ingredientTotals,
-            };
-          }
-
-          const n = product.nutriments || {};
-          const per100gValues = parseNutritionReferenceValues({
-            kalorien: n['energy-kcal_100g'] ?? n['energy-kcal'],
-            protein: n['proteins_100g'] ?? n.proteins,
-            fett: n['fat_100g'] ?? n.fat,
-            kohlenhydrate: n['carbohydrates_100g'] ?? n.carbohydrates,
-            zucker: n['sugars_100g'] ?? n.sugars,
-            ballaststoffe: n['fiber_100g'] ?? n.fiber,
-            salz: n['salt_100g'] ?? n.salt,
-          });
-          const scale = parsed.amountG / 100;
-
-          NUTRITION_REFERENCE_FIELDS.forEach((key) => {
-            ingredientTotals[key] += (per100gValues[key] || 0) * scale;
-          });
-
-          if (referenceId && cachedSnapshot && Object.keys(per100gValues).length > 0 && !cachedSnapshot.exists) {
-            const offSourceFields = NUTRITION_REFERENCE_FIELDS.reduce((acc, key) => {
-              if (per100gValues[key] != null) acc[`${key}${NUTRITION_SOURCE_SUFFIX_OFF}`] = per100gValues[key];
-              return acc;
-            }, {});
-            await admin.firestore()
-                .collection(NUTRITION_REFERENCE_COLLECTION)
-                .doc(referenceId)
-                .set(
-                    {
-                      name,
-                      product: product.product_name || name,
-                      ...per100gValues,
-                      ...offSourceFields,
-                      source: 'openfoodfacts',
-                      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    }
-                );
-          }
-
-          return {
-            found: true,
-            detail: {
-              ingredient: ingredientStr,
-              name,
-              product: product.product_name || name,
-              amountG: parsed.amountG,
-              searchTerm: usedSearchTerm || parsed.searchName || name,
-            },
-            totals: ingredientTotals,
-          };
-        } catch (err) {
-          const isNetworkError = isOpenFoodFactsNetworkError(err);
-          const isTimeout = err.name === 'AbortError' || (err.message || '').toLowerCase().includes('timeout');
-
-          if (parsed) {
-            try {
-              const geminiEstimate = await estimateNutritionWithGemini(ingredientStr, parsed, {timeoutMs: 20000});
-              if (geminiEstimate) {
-                const scale = parsed.amountG / 100;
-                NUTRITION_REFERENCE_FIELDS.forEach((key) => {
-                  ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
-                });
-
-                return {
-                  found: true,
-                  aiEstimated: true,
-                  detail: {
-                    ingredient: ingredientStr,
-                    name,
-                    amountG: parsed.amountG,
-                    searchTerm: parsed.searchName || name,
-                    aiEstimated: true,
-                  },
-                  totals: ingredientTotals,
-                };
-              }
-            } catch (estimateError) {
-              console.warn(`Gemini estimation also failed for "${ingredientStr}":`, estimateError?.message);
-            }
-          }
-
-          const errorType = isNetworkError ? 'Netzwerkfehler' : (isTimeout ? 'Timeout' : 'API-Fehler');
-          console.error(`OpenFoodFacts ${errorType} for "${name}":`, err.message);
-          return {
-            found: false,
-            detail: {
-              ingredient: ingredientStr,
-              name,
-              error: isTimeout ? 'Timeout bei OpenFoodFacts' : (err.message || errorType),
-            },
-            totals: ingredientTotals,
-          };
-        }
-      };
-
-      for (let i = 0; i < ingredientEntries.length; i += BATCH_SIZE) {
-        const batch = ingredientEntries.slice(i, i + BATCH_SIZE);
-        const batchResults = await Promise.all(batch.map(processIngredient));
-        for (const result of batchResults) {
-          Object.keys(totals).forEach((key) => {
-            totals[key] += result.totals[key] || 0;
-          });
-          details.push({
-            ...result.detail,
-            found: result.found,
-          });
-          if (result.found) {
-            foundCount++;
-          }
-        }
-      }
-
-      // Divide totals by number of portions and round sensibly
-      const naehrwerte = {};
-      for (const [key, value] of Object.entries(totals)) {
-        const perPortion = value / portionen;
-        naehrwerte[key] = key === 'kalorien'
-          ? Math.round(perPortion)
-          : Math.round(perPortion * 10) / 10;
-      }
-
-      console.log(
-          `Nutrition calculated for user ${request.auth.uid}: ` +
-          `${foundCount}/${ingredientEntries.length} ingredients found`
-      );
-
-      return {naehrwerte, details, foundCount, totalCount: ingredientEntries.length};
+      return calculateNutritionFromOpenFoodFactsCore({
+        ingredients,
+        portionen,
+        callerLabel: `user ${request.auth.uid}`,
+      });
     }
 );
 
@@ -4628,6 +4621,343 @@ function buildTestResultEmailContent(results, runAt) {
 
   return {subject, text, html};
 }
+
+function extractRecipeIngredientItems(recipeData = {}) {
+  const rawIngredients = Array.isArray(recipeData?.zutaten) ?
+    recipeData.zutaten :
+    (Array.isArray(recipeData?.ingredients) ? recipeData.ingredients : []);
+
+  return rawIngredients
+      .map((item) => (typeof item === 'string' ? {text: item} : item))
+      .filter((item) => item && item.type !== 'heading')
+      .filter((item) => item.ignoreNutritionCalculation !== true)
+      .map((item) => ({
+        ...item,
+        text: String(item.text || '').trim(),
+      }))
+      .filter((item) => item.text !== '');
+}
+
+function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientIds = new Set()) {
+  if (!recalcIngredientIds || recalcIngredientIds.size === 0) return false;
+  const ingredientItems = extractRecipeIngredientItems(recipeData);
+  return ingredientItems.some((item) => {
+    const ingredientID = String(item.ingredientID || '').trim();
+    return ingredientID && recalcIngredientIds.has(ingredientID);
+  });
+}
+
+function escapeNutritionRecalcHtml(value) {
+  return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+}
+
+function buildNutritionRecalcSummaryMail(report, runAt) {
+  const updatedCount = report.updatedRecipes.length;
+  const failedCount = report.failedRecipes.length;
+  const skippedCount = report.skippedRecipes.length;
+  const totalAffected = report.affectedRecipeCount;
+  const status = failedCount === 0 && !report.fatalError ? '✅ Erfolgreich' : '⚠️ Mit Fehlern';
+  const subject = `[RecipeBook] Nährwert-Recalc ${status} (${runAt})`;
+
+  let text = `Nährwert-Recalc Bericht\n`;
+  text += `Ausgeführt: ${runAt}\n`;
+  text += `Trigger: ${report.triggeredBy}\n`;
+  text += `Betroffene Rezepte: ${totalAffected}\n`;
+  text += `Aktualisiert: ${updatedCount}\n`;
+  text += `Übersprungen: ${skippedCount}\n`;
+  text += `Fehlgeschlagen: ${failedCount}\n`;
+  text += `recalc zurückgesetzt: ${report.resetRecalcCount}\n`;
+  if (report.fatalError) {
+    text += `\nFataler Fehler: ${report.fatalError}\n`;
+  }
+  if (updatedCount > 0) {
+    text += `\nAktualisierte Rezepte:\n`;
+    report.updatedRecipes.forEach((entry) => {
+      text += `- ${entry.title} (${entry.recipeId})\n`;
+    });
+  }
+  if (failedCount > 0) {
+    text += `\nFehlgeschlagene Rezepte:\n`;
+    report.failedRecipes.forEach((entry) => {
+      text += `- ${entry.title} (${entry.recipeId}): ${entry.error}\n`;
+    });
+  }
+
+  const htmlList = (entries, formatter) => {
+    if (!entries || entries.length === 0) return '<p>Keine</p>';
+    return `<ul>${entries.map((entry) => `<li>${formatter(entry)}</li>`).join('')}</ul>`;
+  };
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:760px">
+      <h2>Nährwert-Recalc Bericht</h2>
+      <p><strong>Ausgeführt:</strong> ${escapeNutritionRecalcHtml(runAt)}</p>
+      <p><strong>Trigger:</strong> ${escapeNutritionRecalcHtml(report.triggeredBy)}</p>
+      <p><strong>Betroffene Rezepte:</strong> ${totalAffected}</p>
+      <p><strong>Aktualisiert:</strong> ${updatedCount}</p>
+      <p><strong>Übersprungen:</strong> ${skippedCount}</p>
+      <p><strong>Fehlgeschlagen:</strong> ${failedCount}</p>
+      <p><strong>recalc zurückgesetzt:</strong> ${report.resetRecalcCount}</p>
+      ${report.fatalError ? `<p style="color:#c62828"><strong>Fataler Fehler:</strong> ${escapeNutritionRecalcHtml(report.fatalError)}</p>` : ''}
+      <h3>Aktualisierte Rezepte</h3>
+      ${htmlList(report.updatedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)})`)}
+      <h3>Fehlgeschlagene Rezepte</h3>
+      ${htmlList(report.failedRecipes, (entry) => `${escapeNutritionRecalcHtml(entry.title)} (${escapeNutritionRecalcHtml(entry.recipeId)}): ${escapeNutritionRecalcHtml(entry.error)}`)}
+    </div>
+  `;
+
+  return {subject, text, html};
+}
+
+async function sendNutritionRecalcSummary(report) {
+  const db = admin.firestore();
+  const usersSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
+  const adminEmails = [];
+  usersSnapshot.forEach((doc) => {
+    const data = doc.data();
+    if (data.email) adminEmails.push(data.email);
+  });
+
+  if (adminEmails.length === 0) {
+    console.log('runNutritionRecalcForFlaggedRecipes: no admin emails found, skipping email');
+    return;
+  }
+
+  const smtpHostVal = smtpHost.value();
+  const smtpPortVal = smtpPort.value();
+  const smtpUserVal = smtpUser.value();
+  const smtpPasswordVal = smtpPassword.value();
+  const smtpFromVal = smtpFrom.value();
+  if (!smtpHostVal || !smtpUserVal || !smtpPasswordVal || !smtpFromVal) {
+    console.warn('runNutritionRecalcForFlaggedRecipes: SMTP not fully configured – skipping email');
+    return;
+  }
+
+  const smtpPortNum = parseInt(smtpPortVal || '587', 10);
+  const transporter = nodemailer.createTransport({
+    host: smtpHostVal,
+    port: smtpPortNum,
+    secure: smtpPortNum === 465,
+    auth: {user: smtpUserVal, pass: smtpPasswordVal},
+  });
+
+  const runAt = new Date(report.finishedAt || Date.now()).toLocaleString('de-DE', {timeZone: 'Europe/Berlin'});
+  const mailContent = buildNutritionRecalcSummaryMail(report, runAt);
+  await transporter.sendMail({
+    from: smtpFromVal,
+    bcc: adminEmails.join(', '),
+    subject: mailContent.subject,
+    text: mailContent.text,
+    html: mailContent.html,
+  });
+}
+
+async function setRecalcFalseForReferences(referenceDocs = []) {
+  if (!Array.isArray(referenceDocs) || referenceDocs.length === 0) {
+    return 0;
+  }
+  const db = admin.firestore();
+  let updatedCount = 0;
+  let batch = db.batch();
+  let operationCount = 0;
+
+  for (const docSnap of referenceDocs) {
+    batch.update(docSnap.ref, {recalc: false});
+    operationCount += 1;
+    if (operationCount >= 450) {
+      await batch.commit();
+      updatedCount += operationCount;
+      batch = db.batch();
+      operationCount = 0;
+    }
+  }
+
+  if (operationCount > 0) {
+    await batch.commit();
+    updatedCount += operationCount;
+  }
+
+  return updatedCount;
+}
+
+async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'} = {}) {
+  const db = admin.firestore();
+  const report = {
+    triggeredBy,
+    startedAt: Date.now(),
+    finishedAt: null,
+    affectedRecipeCount: 0,
+    updatedRecipes: [],
+    failedRecipes: [],
+    skippedRecipes: [],
+    resetRecalcCount: 0,
+    fatalError: null,
+  };
+
+  let recalcReferenceDocs = [];
+  try {
+    const recalcSnapshot = await db
+        .collection(NUTRITION_REFERENCE_COLLECTION)
+        .where('recalc', '==', true)
+        .get();
+    recalcReferenceDocs = recalcSnapshot.docs;
+
+    const recalcIngredientIds = new Set(
+        recalcSnapshot.docs
+            .map((docSnap) => String(docSnap.data()?.ingredientID || docSnap.id || '').trim())
+            .filter(Boolean)
+    );
+
+    if (recalcIngredientIds.size === 0) {
+      console.log('runNutritionRecalcForFlaggedRecipes: no recalc ingredientIDs found');
+      return report;
+    }
+
+    const recipesSnapshot = await db.collection('recipes').get();
+    const affectedRecipes = recipesSnapshot.docs.filter((recipeDoc) =>
+      recipeUsesRecalcIngredient(recipeDoc.data() || {}, recalcIngredientIds)
+    );
+    report.affectedRecipeCount = affectedRecipes.length;
+
+    for (const recipeDoc of affectedRecipes) {
+      const recipeData = recipeDoc.data() || {};
+      const recipeTitle = String(recipeData.title || recipeDoc.id);
+      const ingredientItems = extractRecipeIngredientItems(recipeData);
+      const regularIngredients = ingredientItems
+          .map((item) => item.text)
+          .filter((text) => !/#recipe:[^:]+:/i.test(text));
+      const skippedRecipeLinkIngredients = ingredientItems
+          .filter((item) => /#recipe:[^:]+:/i.test(item.text))
+          .map((item) => item.text);
+
+      if (regularIngredients.length === 0) {
+        report.skippedRecipes.push({
+          recipeId: recipeDoc.id,
+          title: recipeTitle,
+          reason: 'Keine berechenbaren Zutaten',
+        });
+        continue;
+      }
+
+      try {
+        const calcResult = await calculateNutritionFromOpenFoodFactsCore({
+          ingredients: regularIngredients,
+          portionen: Number(recipeData.portionen) > 0 ? Number(recipeData.portionen) : 1,
+          callerLabel: `nightly job (${recipeDoc.id})`,
+        });
+        const notIncluded = calcResult.details
+            .filter((entry) => entry.found === false)
+            .map((entry) => ({
+              ingredient: entry.ingredient,
+              error: entry.error || 'Nicht gefunden',
+            }));
+        skippedRecipeLinkIngredients.forEach((ingredient) => {
+          notIncluded.push({
+            ingredient,
+            error: 'Rezept-Link konnte im Nachtjob nicht automatisch aufgelöst werden.',
+            isRecipeLink: true,
+          });
+        });
+
+        await recipeDoc.ref.set({
+          naehrwerte: {
+            ...(recipeData.naehrwerte || {}),
+            ...calcResult.naehrwerte,
+            calcPending: false,
+            calcCompletedAt: Date.now(),
+            calcError: null,
+            calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
+            calcFoundCount: calcResult.foundCount,
+            calcTotalCount: calcResult.totalCount + skippedRecipeLinkIngredients.length,
+          },
+        }, {merge: true});
+
+        report.updatedRecipes.push({
+          recipeId: recipeDoc.id,
+          title: recipeTitle,
+        });
+      } catch (error) {
+        const errorMessage = error?.message || 'Unbekannter Fehler';
+        report.failedRecipes.push({
+          recipeId: recipeDoc.id,
+          title: recipeTitle,
+          error: errorMessage,
+        });
+        try {
+          await recipeDoc.ref.set({
+            naehrwerte: {
+              ...(recipeData.naehrwerte || {}),
+              calcPending: false,
+              calcCompletedAt: Date.now(),
+              calcError: errorMessage,
+            },
+          }, {merge: true});
+        } catch (persistError) {
+          console.error(`runNutritionRecalcForFlaggedRecipes: could not persist calcError for ${recipeDoc.id}`, persistError);
+        }
+      }
+    }
+  } catch (error) {
+    report.fatalError = error?.message || 'Unbekannter Fehler im Nachtjob';
+    console.error('runNutritionRecalcForFlaggedRecipes: fatal error', error);
+  } finally {
+    try {
+      report.resetRecalcCount = await setRecalcFalseForReferences(recalcReferenceDocs);
+    } catch (resetError) {
+      report.fatalError = report.fatalError || `recalc-Reset fehlgeschlagen: ${resetError?.message || resetError}`;
+      console.error('runNutritionRecalcForFlaggedRecipes: could not reset recalc flags', resetError);
+    }
+    report.finishedAt = Date.now();
+    try {
+      await sendNutritionRecalcSummary(report);
+    } catch (mailError) {
+      console.error('runNutritionRecalcForFlaggedRecipes: could not send summary email', mailError);
+    }
+  }
+
+  return report;
+}
+
+exports.runNutritionRecalcForFlaggedRecipes = onCall(
+    {
+      timeoutSeconds: 540,
+      maxInstances: 1,
+      secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+    },
+    async (request) => {
+      const callerUid = request.auth?.uid;
+      if (!callerUid) {
+        throw new HttpsError('unauthenticated', 'Authentication required.');
+      }
+
+      const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
+      const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
+      const isAdmin = callerData.role === 'admin' || callerData.isAdmin === true;
+      if (!isAdmin) {
+        throw new HttpsError('permission-denied', 'Admin role required.');
+      }
+
+      return runNutritionRecalcForFlaggedRecipesCore({triggeredBy: `manual:${callerUid}`});
+    }
+);
+
+exports.nightlyNutritionRecalc = onSchedule(
+    {
+      schedule: '0 2 * * *',
+      timeZone: 'Europe/Berlin',
+      timeoutSeconds: 540,
+      maxInstances: 1,
+      secrets: [geminiApiKey, smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
+    },
+    async () => {
+      await runNutritionRecalcForFlaggedRecipesCore({triggeredBy: 'schedule'});
+    }
+);
 
 /**
  * Scheduled Cloud Function: run daily AI recipe importer self-tests and send
