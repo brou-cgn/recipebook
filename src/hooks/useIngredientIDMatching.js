@@ -105,6 +105,10 @@ export function useIngredientIDMatching({
         acc[entry.index] = '';
         return acc;
       }, {});
+      const learnSynonyms = unresolvedIngredients.reduce((acc, entry) => {
+        acc[entry.index] = true;
+        return acc;
+      }, {});
       setIngredientMatchDialog({
         recipe: targetRecipe,
         recipeId: targetRecipe.id,
@@ -113,6 +117,7 @@ export function useIngredientIDMatching({
         unresolved: unresolvedIngredients,
         matchingLog,
         selections,
+        learnSynonyms,
         errorMessage: '',
       });
       return null;
