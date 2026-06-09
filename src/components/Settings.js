@@ -632,7 +632,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       saveHeaderSlogan(headerSlogan);
       saveFaviconImage(faviconImage);
       saveFaviconText(faviconText);
-      saveAppLogoImage(appLogoImage);
+      await saveAppLogoImage(appLogoImage);
 
       // Upload app logo to Firebase Storage so social-media crawlers can access it
       // via a public HTTPS URL, then persist that URL in Firestore.
