@@ -1707,7 +1707,8 @@ function buildNutritionTrackingFields({
   const previousActual = normalizeNutritionSet(previousData.nutritionSetActual);
   let nextActual = previousActual;
   let nextOutdated = normalizeNutritionSet(previousData.nutritionSetOutdated);
-  let nextRecalc = typeof previousData.recalc === 'boolean' ? previousData.recalc : false;
+  const wasAlreadyRecalc = typeof previousData.recalc === 'boolean' ? previousData.recalc : false;
+  let nextRecalc = wasAlreadyRecalc;
 
   const normalizedNextSource = String(nextSource || '').trim().toLowerCase();
   const normalizedPreviousSource = String(previousData.source || '').trim().toLowerCase();
@@ -1742,11 +1743,16 @@ function buildNutritionTrackingFields({
     nextActual = normalizedNextSet;
   }
 
-  return {
+  const finalRecalc = Boolean(nextRecalc);
+  const result = {
     nutritionSetActual: nextActual,
     nutritionSetOutdated: nextOutdated,
-    recalc: Boolean(nextRecalc),
+    recalc: finalRecalc,
   };
+  if (finalRecalc && !wasAlreadyRecalc) {
+    result.recalcDate = new Date();
+  }
+  return result;
 }
 
 /**
@@ -2486,17 +2492,21 @@ exports.generateNutritionFromReference = onCall(
         throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
       }
 
+      const trackingFields = buildNutritionTrackingFields({
+        previousData: referenceData,
+        nextValues: selectedValues,
+        nextSource: nextSource || previousSource,
+        preserveOnManualSourceChange: true,
+      });
+      if (trackingFields.recalcDate !== undefined) {
+        trackingFields.recalcDate = admin.firestore.FieldValue.serverTimestamp();
+      }
       const updatePayload = {
         ...(searchTerm ? {searchTerm} : {}),
         ...selectedValues,
         ...offSourceFields,
         ...aiSourceFields,
-        ...buildNutritionTrackingFields({
-          previousData: referenceData,
-          nextValues: selectedValues,
-          nextSource: nextSource || previousSource,
-          preserveOnManualSourceChange: true,
-        }),
+        ...trackingFields,
       };
       if (nextSource && status !== 'Freigegeben') {
         updatePayload.source = nextSource;

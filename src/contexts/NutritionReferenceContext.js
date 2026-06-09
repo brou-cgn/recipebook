@@ -113,6 +113,7 @@ function mapNutritionReferenceRows(snapshot) {
         nutritionSetActual: Array.isArray(data.nutritionSetActual) ? data.nutritionSetActual : [],
         nutritionSetOutdated: Array.isArray(data.nutritionSetOutdated) ? data.nutritionSetOutdated : [],
         recalc: typeof data.recalc === 'boolean' ? data.recalc : false,
+        recalcDate: data.recalcDate ?? null,
         ...parseNutritionReferenceBooleanFields(data),
         synonyms,
         possibleUnits: parseNutritionReferencePossibleUnits(data),

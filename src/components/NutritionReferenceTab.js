@@ -282,16 +282,17 @@ function NutritionReferenceTab({ currentUser }) {
     const isApprovalTransition =
       status === NUTRITION_REFERENCE_APPROVED_STATUS
       && previousStatus !== NUTRITION_REFERENCE_APPROVED_STATUS;
-    Object.assign(
-      payload,
-      buildNutritionTrackingFields({
-        previousData: previousRow || {},
-        nextValues: effectiveValues,
-        nextSource: sourceValue,
-        forceRecalc: isApprovalTransition,
-        preserveOnManualSourceChange: true,
-      })
-    );
+    const trackingFields = buildNutritionTrackingFields({
+      previousData: previousRow || {},
+      nextValues: effectiveValues,
+      nextSource: sourceValue,
+      forceRecalc: isApprovalTransition,
+      preserveOnManualSourceChange: true,
+    });
+    if (trackingFields.recalcDate !== undefined) {
+      trackingFields.recalcDate = serverTimestamp();
+    }
+    Object.assign(payload, trackingFields);
     if (
       isApprovalTransition
     ) {
