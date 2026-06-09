@@ -464,6 +464,24 @@ describe('NutritionReferenceTab', () => {
     expect(mockDeleteField).toHaveBeenCalled();
   });
 
+  test('persists clearing seasonalFamily for an existing row', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('seasonalFamily tomate'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    const payload = mockSetDoc.mock.calls[0][1];
+    expect(Object.prototype.hasOwnProperty.call(payload, 'seasonalFamily')).toBe(true);
+    expect(payload.seasonalFamily).toBeUndefined();
+    expect(mockDeleteField).toHaveBeenCalled();
+  });
+
   test('refreshes an existing row via generateNutritionFromReference and writes openfoodfacts data', async () => {
     const mockCallFn = jest.fn().mockResolvedValue({
       data: {

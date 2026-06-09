@@ -274,6 +274,7 @@ function NutritionReferenceTab({ currentUser }) {
     const searchTerm = String(row.searchTerm || '').trim();
     if (nutritionFamily) payload.nutritionFamily = nutritionFamily;
     if (seasonalFamily) payload.seasonalFamily = seasonalFamily;
+    else payload.seasonalFamily = deleteField();
     if (category) payload.category = category;
     if (status) payload.status = status;
     if (searchTerm) payload.searchTerm = searchTerm;
