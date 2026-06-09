@@ -47,21 +47,25 @@ const STATUS_PRIORITY = [
   SAISON_STATUS.AUSSERHALB,
 ];
 
-function getRecipeIngredientTexts(recipe = {}) {
+function getRecipeIngredients(recipe = {}) {
   const rawIngredients = recipe.ingredients || recipe.zutaten || [];
   return rawIngredients
     .filter((item) => typeof item === 'string' || (item && item.type === 'ingredient'))
-    .map((item) => (typeof item === 'string' ? item : item.text || ''))
-    .filter(Boolean);
+    .map((item) =>
+      typeof item === 'string'
+        ? { text: item, ingredientID: undefined }
+        : { text: item.text || '', ingredientID: item.ingredientID || undefined }
+    )
+    .filter((item) => item.text);
 }
 
-function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth) {
+function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth, nutritionReferenceRows = []) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) {
     return { saisonBonus: 0, saisonBonusIngredient: null };
   }
 
-  const ingredientTexts = getRecipeIngredientTexts(recipe);
-  if (ingredientTexts.length === 0) {
+  const ingredientItems = getRecipeIngredients(recipe);
+  if (ingredientItems.length === 0) {
     return { saisonBonus: 0, saisonBonusIngredient: null };
   }
 
@@ -71,10 +75,10 @@ function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth) 
   }
 
   const matchedEntries = [];
-  for (const ingredientText of ingredientTexts) {
+  for (const ingredientItem of ingredientItems) {
     for (const entry of activeEntries) {
-      if (matchIngredientToEntry(ingredientText, entry)) {
-        matchedEntries.push({ entry, ingredientText });
+      if (matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)) {
+        matchedEntries.push({ entry, ingredientItem });
         break;
       }
     }
@@ -109,7 +113,7 @@ function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth) 
     saisonBonusIngredient:
       bestMatchedIngredient?.entry?.name ||
       bestMatchedIngredient?.entry?.id ||
-      bestMatchedIngredient?.ingredientText ||
+      bestMatchedIngredient?.ingredientItem?.text ||
       null,
   };
 }
@@ -160,21 +164,51 @@ export function getIngredientSeasonStatus(entry, currentMonth) {
 }
 
 /**
- * Checks whether an ingredient text matches a season matrix entry
- * by name, id, or synonyms (case-insensitive substring match).
+ * Checks whether an ingredient matches a season matrix entry.
  *
- * @param {string} ingredientText - Free-form ingredient text (e.g. "500g Kartoffeln, geschält")
+ * Primary path (when ingredientID is set):
+ *   Looks up the ingredient in nutritionReferenceRows. If the matching row has
+ *   seasonRelevant === true, the row's seasonalFamily is compared (case-insensitive,
+ *   exact match) to entry.name. This path returns a definitive true/false and
+ *   short-circuits – the fallback path is NOT evaluated.
+ *
+ * Fallback path (no ingredientID, no nutritionReference found, or seasonRelevant !== true):
+ *   Case-insensitive substring match against entry.name, entry.id, and entry.synonyms –
+ *   identical to the previous implementation.
+ *
+ * @param {string|{text: string, ingredientID?: string}} ingredientItem
  * @param {Object} entry - Season matrix entry
+ * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
  * @returns {boolean}
  */
-export function matchIngredientToEntry(ingredientText, entry) {
-  const normalized = (ingredientText || '').toLowerCase();
+export function matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows = []) {
+  const ingredientText = typeof ingredientItem === 'string' ? ingredientItem : (ingredientItem?.text || '');
+  const ingredientID = typeof ingredientItem === 'string' ? undefined : (ingredientItem?.ingredientID || undefined);
+
+  // Primary path: use nutritionReference lookup when ingredientID is available
+  if (ingredientID && Array.isArray(nutritionReferenceRows) && nutritionReferenceRows.length > 0) {
+    const nutritionRef = nutritionReferenceRows.find(
+      (row) => String(row?.ingredientID || '').trim() === ingredientID
+    );
+    if (nutritionRef && nutritionRef.seasonRelevant === true) {
+      const seasonalFamily = String(nutritionRef.seasonalFamily || '').trim();
+      const entryName = String(entry?.name || '').trim();
+      return (
+        seasonalFamily.length > 0 &&
+        entryName.length > 0 &&
+        seasonalFamily.toLowerCase() === entryName.toLowerCase()
+      );
+    }
+  }
+
+  // Fallback: text-based matching (case-insensitive substring) – unchanged
+  const normalized = ingredientText.toLowerCase();
   if (!normalized) return false;
 
-  if (entry.name && normalized.includes(entry.name.toLowerCase())) return true;
-  if (entry.id && normalized.includes(entry.id.toLowerCase())) return true;
+  if (entry?.name && normalized.includes(entry.name.toLowerCase())) return true;
+  if (entry?.id && normalized.includes(entry.id.toLowerCase())) return true;
 
-  if (Array.isArray(entry.synonyms)) {
+  if (Array.isArray(entry?.synonyms)) {
     for (const synonym of entry.synonyms) {
       if (synonym && normalized.includes(synonym.toLowerCase())) return true;
     }
@@ -190,13 +224,19 @@ export function matchIngredientToEntry(ingredientText, entry) {
  * @param {Object} recipe - Recipe object with ingredients/zutaten
  * @param {Array} seasonMatrixEntries - Season matrix entries
  * @param {number} [minimumSeasonScore=60] - Minimum seasonScore threshold
+ * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
  * @returns {boolean}
  */
-export function hasSeasonalIngredient(recipe, seasonMatrixEntries, minimumSeasonScore = 60) {
+export function hasSeasonalIngredient(
+  recipe,
+  seasonMatrixEntries,
+  minimumSeasonScore = 60,
+  nutritionReferenceRows = []
+) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
 
-  const ingredientTexts = getRecipeIngredientTexts(recipe);
-  if (ingredientTexts.length === 0) return false;
+  const ingredientItems = getRecipeIngredients(recipe);
+  if (ingredientItems.length === 0) return false;
 
   const minimum = Number.isFinite(Number(minimumSeasonScore)) ? Number(minimumSeasonScore) : 60;
   const eligibleEntries = seasonMatrixEntries.filter((entry) => (
@@ -204,8 +244,8 @@ export function hasSeasonalIngredient(recipe, seasonMatrixEntries, minimumSeason
   ));
   if (eligibleEntries.length === 0) return false;
 
-  return ingredientTexts.some((ingredientText) =>
-    eligibleEntries.some((entry) => matchIngredientToEntry(ingredientText, entry))
+  return ingredientItems.some((ingredientItem) =>
+    eligibleEntries.some((entry) => matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows))
   );
 }
 
@@ -216,24 +256,26 @@ export function hasSeasonalIngredient(recipe, seasonMatrixEntries, minimumSeason
  * @param {Object} recipe - Recipe object with ingredients/zutaten
  * @param {Array} seasonMatrixEntries - Season matrix entries
  * @param {number} [currentMonth] - Current month (1–12), defaults to system month
+ * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
  * @returns {boolean}
  */
 export function hasHauptsaisonIngredient(
   recipe,
   seasonMatrixEntries,
-  currentMonth = new Date().getMonth() + 1
+  currentMonth = new Date().getMonth() + 1,
+  nutritionReferenceRows = []
 ) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
 
-  const ingredientTexts = getRecipeIngredientTexts(recipe);
-  if (ingredientTexts.length === 0) return false;
+  const ingredientItems = getRecipeIngredients(recipe);
+  if (ingredientItems.length === 0) return false;
 
   const activeEntries = seasonMatrixEntries.filter((entry) => entry?.isActive !== false);
   if (activeEntries.length === 0) return false;
 
-  return ingredientTexts.some((ingredientText) =>
+  return ingredientItems.some((ingredientItem) =>
     activeEntries.some((entry) =>
-      matchIngredientToEntry(ingredientText, entry) &&
+      matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows) &&
       getIngredientSeasonStatus(entry, currentMonth) === SAISON_STATUS.HAUPTSAISON
     )
   );
@@ -252,10 +294,16 @@ export function hasHauptsaisonIngredient(
  * @param {Object} recipe - Recipe object with ingredients array
  * @param {Array} seasonMatrixEntries - Array of season matrix entries
  * @param {number} currentMonth - Current month (1–12)
+ * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
  * @returns {number} The SaisonBonus
  */
-export function calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth) {
-  return calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth).saisonBonus;
+export function calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth, nutritionReferenceRows = []) {
+  return calculateSaisonBonusDetails(
+    recipe,
+    seasonMatrixEntries,
+    currentMonth,
+    nutritionReferenceRows
+  ).saisonBonus;
 }
 
 /**
@@ -268,6 +316,7 @@ export function calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth) 
  * @param {number|null|undefined} [params.lastCookDateMs] - Millisecond timestamp of the last cook
  *   date by the current user, or null/undefined if never cooked
  * @param {Array} [params.seasonMatrixEntries=[]] - Active season matrix entries from Firestore
+ * @param {Array} [params.nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
  * @param {Object} [params.recipe={}] - Recipe object (needs ingredients/zutaten array)
  * @param {number} [params.currentMonth] - Current month 1–12 (defaults to current calendar month)
  * @param {number} [params.nowMs] - Current time in ms for cook-distance calculation (default: Date.now())
@@ -277,6 +326,7 @@ export function calculateRecipeSortIndex({
   isFavorite = false,
   lastCookDateMs = undefined,
   seasonMatrixEntries = [],
+  nutritionReferenceRows = [],
   recipe = {},
   currentMonth = new Date().getMonth() + 1,
   nowMs = Date.now(),
@@ -285,6 +335,7 @@ export function calculateRecipeSortIndex({
     isFavorite,
     lastCookDateMs,
     seasonMatrixEntries,
+    nutritionReferenceRows,
     recipe,
     currentMonth,
     nowMs,
@@ -298,6 +349,7 @@ export function calculateRecipeSortIndex({
  * @param {boolean} [params.isFavorite=false]
  * @param {number|null|undefined} [params.lastCookDateMs]
  * @param {Array} [params.seasonMatrixEntries=[]]
+ * @param {Array} [params.nutritionReferenceRows=[]]
  * @param {Object} [params.recipe={}]
  * @param {number} [params.currentMonth]
  * @param {number} [params.nowMs]
@@ -314,13 +366,19 @@ export function calculateRecipeSortIndexBreakdown({
   isFavorite = false,
   lastCookDateMs = undefined,
   seasonMatrixEntries = [],
+  nutritionReferenceRows = [],
   recipe = {},
   currentMonth = new Date().getMonth() + 1,
   nowMs = Date.now(),
 } = {}) {
   const favoritenBonus = isFavorite ? FAVORITEN_BONUS : 0;
   const kochabstandsBonus = getKochabstandsBonus(lastCookDateMs, nowMs);
-  const saisonBonusDetails = calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth);
+  const saisonBonusDetails = calculateSaisonBonusDetails(
+    recipe,
+    seasonMatrixEntries,
+    currentMonth,
+    nutritionReferenceRows
+  );
 
   return {
     baseValue: BASE_VALUE,
