@@ -209,6 +209,27 @@
   cursor: pointer;
 }
 
+.season-matrix-inline-input,
+.season-matrix-inline-select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.84rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.season-matrix-inline-months {
+  min-width: 6.5rem;
+}
+
+.season-matrix-inline-checkbox {
+  width: 1rem;
+  height: 1rem;
+}
+
 .season-matrix-delete-btn {
   border-color: #ffc7c7;
   color: #b12626;

@@ -35,6 +35,12 @@ const normalizeMonthArray = (months = []) => {
   return unique.sort((a, b) => a - b);
 };
 
+const parseMonthInput = (value) => normalizeMonthArray(
+  String(value || '')
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+);
+
 const formatMonthRange = (months = []) => {
   const normalized = normalizeMonthArray(months);
   if (normalized.length === 0) return '—';
@@ -411,11 +417,80 @@ function SeasonMatrixTab({ currentUser }) {
             ) : (
               filteredEntries.map((entry) => (
                 <tr key={entry.id}>
-                  <td>{entry.name || entry.id}</td>
-                  <td>{entry.category || '—'}</td>
-                  <td>{entry.region || '—'}</td>
-                  <td>{formatMonthRange(entry.mainSeasonMonths)}</td>
-                  <td>{entry.seasonScore ?? '—'}</td>
+                  <td>
+                    {editingId === entry.id ? (
+                      <input
+                        type="text"
+                        className="season-matrix-inline-input"
+                        aria-label={`Name für ${entry.id}`}
+                        value={formData.name}
+                        onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+                      />
+                    ) : (
+                      entry.name || entry.id
+                    )}
+                  </td>
+                  <td>
+                    {editingId === entry.id ? (
+                      <input
+                        type="text"
+                        className="season-matrix-inline-input"
+                        aria-label={`Kategorie für ${entry.id}`}
+                        value={formData.category}
+                        onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))}
+                      />
+                    ) : (
+                      entry.category || '—'
+                    )}
+                  </td>
+                  <td>
+                    {editingId === entry.id ? (
+                      <select
+                        className="season-matrix-inline-select"
+                        aria-label={`Region für ${entry.id}`}
+                        value={formData.region}
+                        onChange={(event) => setFormData((prev) => ({ ...prev, region: event.target.value }))}
+                      >
+                        {REGION_OPTIONS.map((region) => (
+                          <option key={region} value={region}>{region}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      entry.region || '—'
+                    )}
+                  </td>
+                  <td>
+                    {editingId === entry.id ? (
+                      <input
+                        type="text"
+                        className="season-matrix-inline-input season-matrix-inline-months"
+                        aria-label={`Hauptsaison für ${entry.id}`}
+                        placeholder="z. B. 4,5,6"
+                        value={formData.mainSeasonMonths.join(',')}
+                        onChange={(event) => setFormData((prev) => ({
+                          ...prev,
+                          mainSeasonMonths: parseMonthInput(event.target.value)
+                        }))}
+                      />
+                    ) : (
+                      formatMonthRange(entry.mainSeasonMonths)
+                    )}
+                  </td>
+                  <td>
+                    {editingId === entry.id ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="season-matrix-inline-input"
+                        aria-label={`Score für ${entry.id}`}
+                        value={formData.seasonScore}
+                        onChange={(event) => setFormData((prev) => ({ ...prev, seasonScore: event.target.value }))}
+                      />
+                    ) : (
+                      entry.seasonScore ?? '—'
+                    )}
+                  </td>
                   <td>
                     {entry.currentSeasonStatus ? (
                       <span className={`current-season-badge ${SEASON_STATUS_CSS_CLASS[entry.currentSeasonStatus] || 'keine-saison'}`}>
@@ -424,19 +499,53 @@ function SeasonMatrixTab({ currentUser }) {
                     ) : '—'}
                   </td>
                   <td>
-                    <span className={`season-status-badge ${entry.isActive ? 'active' : 'inactive'}`}>
-                      {entry.isActive ? 'Aktiv' : 'Inaktiv'}
-                    </span>
+                    {editingId === entry.id ? (
+                      <input
+                        type="checkbox"
+                        className="season-matrix-inline-checkbox"
+                        aria-label={`Aktiv für ${entry.id}`}
+                        checked={formData.isActive}
+                        onChange={(event) => setFormData((prev) => ({ ...prev, isActive: event.target.checked }))}
+                      />
+                    ) : (
+                      <span className={`season-status-badge ${entry.isActive ? 'active' : 'inactive'}`}>
+                        {entry.isActive ? 'Aktiv' : 'Inaktiv'}
+                      </span>
+                    )}
                   </td>
                   <td>{formatGermanDate(entry.updatedAt)}</td>
                   <td>
                     <div className="season-matrix-actions">
-                      <button type="button" className="season-matrix-edit-btn" onClick={() => handleEdit(entry)}>
-                        Bearbeiten
-                      </button>
-                      <button type="button" className="season-matrix-delete-btn" onClick={() => handleDelete(entry.id)}>
-                        Löschen
-                      </button>
+                      {editingId === entry.id ? (
+                        <>
+                          <button
+                            type="button"
+                            className="season-matrix-edit-btn"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            aria-label={`Speichern für ${entry.id}`}
+                          >
+                            {isSaving ? 'Speichern...' : 'Speichern'}
+                          </button>
+                          <button
+                            type="button"
+                            className="season-matrix-delete-btn"
+                            onClick={resetForm}
+                            aria-label={`Bearbeitung abbrechen für ${entry.id}`}
+                          >
+                            Abbrechen
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" className="season-matrix-edit-btn" onClick={() => handleEdit(entry)}>
+                            Bearbeiten
+                          </button>
+                          <button type="button" className="season-matrix-delete-btn" onClick={() => handleDelete(entry.id)}>
+                            Löschen
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
