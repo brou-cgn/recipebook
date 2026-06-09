@@ -146,4 +146,51 @@ describe('SeasonMatrixTab import/export', () => {
     expect(await screen.findByText(/Import abgeschlossen/)).toBeInTheDocument();
     expect(screen.getByText(/Hinweise:/)).toBeInTheDocument();
   });
+
+  it('edits an entry directly in the table row', async () => {
+    subscribeToSeasonMatrix.mockImplementation((callback) => {
+      callback([{
+        id: 'kartoffel',
+        name: 'Kartoffel',
+        category: 'Gemüse',
+        mainSeasonMonths: [4, 5],
+        secondarySeasonMonths: [],
+        seasonScore: 80,
+        isActive: true,
+        region: 'DE',
+        synonyms: ['Erdapfel'],
+        description: 'Test'
+      }]);
+      return jest.fn();
+    });
+
+    render(<SeasonMatrixTab currentUser={{ vorname: 'Max', nachname: 'Muster', role: 'admin' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+
+    fireEvent.change(screen.getByLabelText('Name für kartoffel'), { target: { value: 'Neue Kartoffel' } });
+    fireEvent.change(screen.getByLabelText('Kategorie für kartoffel'), { target: { value: 'Wurzelgemüse' } });
+    fireEvent.change(screen.getByLabelText('Hauptsaison für kartoffel'), { target: { value: '2,3,4' } });
+    fireEvent.change(screen.getByLabelText('Score für kartoffel'), { target: { value: '85' } });
+    fireEvent.change(screen.getByLabelText('Region für kartoffel'), { target: { value: 'AT' } });
+    fireEvent.click(screen.getByLabelText('Aktiv für kartoffel'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern für kartoffel' }));
+
+    await waitFor(() => {
+      expect(updateSeasonMatrixEntry).toHaveBeenCalledWith(
+        'kartoffel',
+        expect.objectContaining({
+          id: 'kartoffel',
+          name: 'Neue Kartoffel',
+          category: 'Wurzelgemüse',
+          mainSeasonMonths: [2, 3, 4],
+          seasonScore: 85,
+          region: 'AT',
+          isActive: false
+        }),
+        'Max Muster'
+      );
+    });
+  });
 });
