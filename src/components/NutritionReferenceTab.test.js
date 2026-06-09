@@ -799,6 +799,7 @@ describe('NutritionReferenceTab', () => {
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Änderungen speichern' })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
     fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) milch'), { target: { value: '70' } });
