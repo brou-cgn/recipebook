@@ -10,6 +10,7 @@ import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex, hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -20,6 +21,7 @@ const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
 function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
+  const { rows: nutritionReferenceRows } = useNutritionReference();
   const [topRecipes, setTopRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -232,6 +234,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           isFavorite: favoriteRecipeIds.includes(a.id),
           lastCookDateMs: lastOwnCookDateByRecipeId[a.id] ?? null,
           seasonMatrixEntries,
+          nutritionReferenceRows,
           recipe: a,
           currentMonth,
         });
@@ -239,6 +242,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           isFavorite: favoriteRecipeIds.includes(b.id),
           lastCookDateMs: lastOwnCookDateByRecipeId[b.id] ?? null,
           seasonMatrixEntries,
+          nutritionReferenceRows,
           recipe: b,
           currentMonth,
         });
@@ -251,13 +255,13 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
       })
       .slice(0, NEUE_REZEPTE_TOP);
-  }, [recipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries]);
+  }, [recipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries, nutritionReferenceRows]);
 
   const saisonaleRezepte = useMemo(() => (
     recipes
-      .filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries))
+      .filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows))
       .slice(0, SAISONALE_REZEPTE_TOP)
-  ), [recipes, seasonMatrixEntries]);
+  ), [recipes, seasonMatrixEntries, nutritionReferenceRows]);
 
   const handleNeueRezepteMehrClick = () => {
     try {
@@ -361,6 +365,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           isFavorite: favoriteRecipeIds.includes(a.id),
           lastCookDateMs: lastOwnCookDateByRecipeId[a.id] ?? null,
           seasonMatrixEntries,
+          nutritionReferenceRows,
           recipe: a,
           currentMonth,
         });
@@ -368,6 +373,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
           isFavorite: favoriteRecipeIds.includes(b.id),
           lastCookDateMs: lastOwnCookDateByRecipeId[b.id] ?? null,
           seasonMatrixEntries,
+          nutritionReferenceRows,
           recipe: b,
           currentMonth,
         });
@@ -380,7 +386,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         return (a.id || '').localeCompare((b.id || ''), undefined, { sensitivity: 'base' });
       })
       .slice(0, ALLTAGSKLASSIKER_TOP);
-  }, [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries]);
+  }, [allAlltagsklassikerRecipes, lastOwnCookDateByRecipeId, favoriteRecipeIds, seasonMatrixEntries, nutritionReferenceRows]);
 
   const handleAssignAlltagsklassikerList = async (listId) => {
     if (!onAssignEverydayClassicsList || isAssigningAlltagsklassiker) return;
