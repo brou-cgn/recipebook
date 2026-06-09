@@ -1750,7 +1750,7 @@ function buildNutritionTrackingFields({
     recalc: finalRecalc,
   };
   if (finalRecalc && !wasAlreadyRecalc) {
-    result.recalcDate = admin.firestore.FieldValue.serverTimestamp();
+    result.recalcDate = new Date();
   }
   return result;
 }
@@ -2492,17 +2492,21 @@ exports.generateNutritionFromReference = onCall(
         throw new HttpsError('not-found', 'Keine Nährwertdaten gefunden.');
       }
 
+      const trackingFields = buildNutritionTrackingFields({
+        previousData: referenceData,
+        nextValues: selectedValues,
+        nextSource: nextSource || previousSource,
+        preserveOnManualSourceChange: true,
+      });
+      if (trackingFields.recalcDate !== undefined) {
+        trackingFields.recalcDate = admin.firestore.FieldValue.serverTimestamp();
+      }
       const updatePayload = {
         ...(searchTerm ? {searchTerm} : {}),
         ...selectedValues,
         ...offSourceFields,
         ...aiSourceFields,
-        ...buildNutritionTrackingFields({
-          previousData: referenceData,
-          nextValues: selectedValues,
-          nextSource: nextSource || previousSource,
-          preserveOnManualSourceChange: true,
-        }),
+        ...trackingFields,
       };
       if (nextSource && status !== 'Freigegeben') {
         updatePayload.source = nextSource;
