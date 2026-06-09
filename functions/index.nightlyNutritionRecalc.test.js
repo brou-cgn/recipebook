@@ -266,3 +266,40 @@ test('manual recalc job requires admin privileges', async () => {
     (error) => error && error.code === 'permission-denied'
   );
 });
+
+test('manual recalc job skips recipe whose calcCompletedAt is after recalcDate', async () => {
+  const recalcDate = 1700000000000;
+  const calcCompletedAt = 1800000000000; // after recalcDate → already recalculated
+  mockDbState.nutritionReferences.tomate.recalcDate = recalcDate;
+  mockDbState.recipes.r1.naehrwerte = { calcCompletedAt };
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Recipe was not affected because calcCompletedAt > recalcDate
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
+  assert.equal(sentMails.length, 1);
+});
+
+test('manual recalc job recalculates recipe whose calcCompletedAt is before recalcDate', async () => {
+  const recalcDate = 1800000000000;
+  const calcCompletedAt = 1700000000000; // before recalcDate → needs recalculation
+  mockDbState.nutritionReferences.tomate.recalcDate = recalcDate;
+  mockDbState.recipes.r1.naehrwerte = { calcCompletedAt };
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+  assert.equal(sentMails.length, 1);
+});
+
+test('manual recalc job recalculates recipe with no calcCompletedAt regardless of recalcDate', async () => {
+  mockDbState.nutritionReferences.tomate.recalcDate = 1700000000000;
+  mockDbState.recipes.r1.naehrwerte = {}; // no calcCompletedAt
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+});

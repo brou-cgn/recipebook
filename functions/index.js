@@ -4631,12 +4631,21 @@ function extractRecipeIngredientItems(recipeData = {}) {
       .filter((item) => item.text !== '');
 }
 
-function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientIds = new Set()) {
-  if (!recalcIngredientIds || recalcIngredientIds.size === 0) return false;
+function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientMap = new Map()) {
+  if (!recalcIngredientMap || recalcIngredientMap.size === 0) return false;
+  const calcCompletedAt = recipeData?.naehrwerte?.calcCompletedAt ?? null;
   const ingredientItems = extractRecipeIngredientItems(recipeData);
   return ingredientItems.some((item) => {
     const ingredientID = String(item.ingredientID || '').trim();
-    return ingredientID && recalcIngredientIds.has(ingredientID);
+    if (!ingredientID || !recalcIngredientMap.has(ingredientID)) return false;
+    const recalcDate = recalcIngredientMap.get(ingredientID);
+    if (recalcDate == null) return true; // kein recalcDate → immer recalculieren
+    const recalcDateMs = recalcDate?.toMillis
+      ? recalcDate.toMillis()
+      : (recalcDate instanceof Date ? recalcDate.getTime() : (typeof recalcDate === 'number' ? recalcDate : null));
+    if (recalcDateMs == null) return true;
+    if (calcCompletedAt == null) return true; // noch nie berechnet
+    return recalcDateMs > calcCompletedAt;
   });
 }
 
@@ -4800,20 +4809,25 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
         .get();
     recalcReferenceDocs = recalcSnapshot.docs;
 
-    const recalcIngredientIds = new Set(
+    const recalcIngredientMap = new Map(
         recalcSnapshot.docs
-            .map((docSnap) => String(docSnap.data()?.ingredientID || docSnap.id || '').trim())
+            .map((docSnap) => {
+              const data = docSnap.data() || {};
+              const ingredientID = String(data?.ingredientID || docSnap.id || '').trim();
+              if (!ingredientID) return null;
+              return [ingredientID, data?.recalcDate ?? null];
+            })
             .filter(Boolean)
     );
 
-    if (recalcIngredientIds.size === 0) {
+    if (recalcIngredientMap.size === 0) {
       console.log('runNutritionRecalcForFlaggedRecipes: no recalc ingredientIDs found');
       return report;
     }
 
     const recipesSnapshot = await db.collection('recipes').get();
     const affectedRecipes = recipesSnapshot.docs.filter((recipeDoc) =>
-      recipeUsesRecalcIngredient(recipeDoc.data() || {}, recalcIngredientIds)
+      recipeUsesRecalcIngredient(recipeDoc.data() || {}, recalcIngredientMap)
     );
     report.affectedRecipeCount = affectedRecipes.length;
 

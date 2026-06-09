@@ -358,11 +358,51 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     [appCalls, filterBenjaminRousselli]
   );
 
+  const hasNotIncludedNutritionIngredients = (recipe) => (
+    Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
+  );
+
   const nutritionListData = useMemo(() => {
     const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
     const pending = withNutrition.filter((recipe) => recipe.naehrwerte?.calcPending === true);
+
+    // Map von ingredientID -> recalcDateMs für alle References mit recalc === true
+    const recalcDateMap = new Map(
+      (nutritionReferenceRows || [])
+        .filter((row) => row?.recalc === true)
+        .map((row) => {
+          const ingredientID = String(row?.ingredientID || '').trim();
+          if (!ingredientID) return null;
+          const rd = row?.recalcDate;
+          const recalcDateMs = rd == null ? null :
+            (rd?.toMillis ? rd.toMillis() :
+            (rd instanceof Date ? rd.getTime() :
+            (typeof rd === 'number' ? rd : null)));
+          return [ingredientID, recalcDateMs];
+        })
+        .filter(Boolean)
+    );
+
+    const needsRecalc = (recipe) => {
+      if (recalcDateMap.size === 0) return false;
+      const calcCompletedAt = recipe.naehrwerte?.calcCompletedAt ?? null;
+      const rawIngredients = Array.isArray(recipe.zutaten)
+        ? recipe.zutaten
+        : (Array.isArray(recipe.ingredients) ? recipe.ingredients : []);
+      return rawIngredients.some((item) => {
+        if (!item || typeof item !== 'object' || item.type === 'heading') return false;
+        const ingredientID = String(item.ingredientID || '').trim();
+        if (!ingredientID || !recalcDateMap.has(ingredientID)) return false;
+        const recalcDateMs = recalcDateMap.get(ingredientID);
+        if (recalcDateMs == null) return true;
+        if (calcCompletedAt == null) return true;
+        return recalcDateMs > calcCompletedAt;
+      });
+    };
+
     const completed = withNutrition
       .filter((recipe) => recipe.naehrwerte?.calcPending !== true)
+      .filter((recipe) => needsRecalc(recipe) || hasNotIncludedNutritionIngredients(recipe))
       .sort((a, b) => {
         const aDate = a.naehrwerte?.calcCompletedAt ?? a.naehrwerte?.calcPendingAt ?? 0;
         const bDate = b.naehrwerte?.calcCompletedAt ?? b.naehrwerte?.calcPendingAt ?? 0;
@@ -372,7 +412,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return aTitle.localeCompare(bTitle, 'de-DE');
       });
     return { pending, completed };
-  }, [recipes]);
+  }, [recipes, nutritionReferenceRows]);
 
   // Fehlende Zutaten-IDs tab state
   const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
@@ -413,10 +453,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       }
     },
   });
-
-  const hasNotIncludedNutritionIngredients = (recipe) => (
-    Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
-  );
 
   const handleCloseIngredientMatchDialog = useCallback(() => {
     setOpenIngredientInfoIndex(null);
