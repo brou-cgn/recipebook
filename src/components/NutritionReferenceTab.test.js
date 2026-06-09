@@ -259,7 +259,7 @@ describe('NutritionReferenceTab', () => {
 
     fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
     fireEvent.click(screen.getByLabelText('Saisonrelevant tomate'));
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -321,7 +321,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -357,7 +357,7 @@ describe('NutritionReferenceTab', () => {
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) tomate'), { target: { value: '130' } });
     fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -393,7 +393,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -429,7 +429,7 @@ describe('NutritionReferenceTab', () => {
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Quelle tomate'), { target: { value: 'manual' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -451,7 +451,7 @@ describe('NutritionReferenceTab', () => {
     // Clear the manual Kalorien field and change source to empty.
     fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) tomate'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Quelle tomate'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -731,7 +731,8 @@ describe('NutritionReferenceTab', () => {
     container.scrollTop = 123;
     container.scrollLeft = 45;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    fireEvent.change(screen.getByLabelText('Anzeigename tomate'), { target: { value: 'Tomate fein' } });
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
 
     await waitFor(() => {
       expect(mockSetDoc).toHaveBeenCalled();
@@ -763,6 +764,64 @@ describe('NutritionReferenceTab', () => {
       expect(container.scrollTop).toBe(123);
       expect(container.scrollLeft).toBe(45);
     });
+  });
+
+  test('stages edits across multiple rows and saves them together with one central button', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
+            nutritionFamily: 'Gemüse',
+            source: 'manual',
+            synonyms: ['Tomate'],
+            kalorien_manual: 18,
+          }),
+        },
+        {
+          id: 'milch',
+          data: () => ({
+            ingredientID: 'dummy-milch',
+            displayName: 'Milch',
+            nutritionFamily: 'Milchprodukte',
+            source: 'manual',
+            synonyms: ['Milch'],
+            kalorien_manual: 64,
+          }),
+        },
+      ],
+    });
+
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('dummy-milch')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('nutritionFamily tomate'), { target: { value: 'Nachtschatten' } });
+    fireEvent.change(screen.getByLabelText('Kalorien (kcal) (Manuell) milch'), { target: { value: '70' } });
+
+    const saveButton = screen.getByRole('button', { name: 'Änderungen speichern (2)' });
+    expect(saveButton).toBeEnabled();
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalledTimes(2);
+    });
+    const savedPayloads = mockSetDoc.mock.calls.map((call) => call[1]);
+    expect(savedPayloads).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        ingredientID: 'dummy-tomate',
+        nutritionFamily: 'Nachtschatten',
+      }),
+      expect.objectContaining({
+        ingredientID: 'dummy-milch',
+        kalorien: 70,
+        kalorien_manual: 70,
+      }),
+    ]));
   });
 
 });
