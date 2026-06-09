@@ -259,11 +259,14 @@ describe('nutritionReferenceUtils', () => {
   });
 
   describe('buildNutritionTrackingFields', () => {
+    const fixedNow = new Date('2026-06-09T12:00:00.000Z');
+
     test('initializes nutritionSetActual on first write', () => {
       expect(buildNutritionTrackingFields({
         previousData: {},
         nextValues: { kalorien: 100, protein: 2 },
         nextSource: 'openfoodfacts',
+        now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
         nutritionSetOutdated: [],
@@ -279,10 +282,12 @@ describe('nutritionReferenceUtils', () => {
         },
         nextValues: { kalorien: 110, protein: 2.2 },
         nextSource: 'ai-generiert',
+        now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'ai-generiert', kalorien: 110, protein: 2.2 }],
         nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
         recalc: true,
+        recalcDate: fixedNow,
       });
     });
 
@@ -297,6 +302,7 @@ describe('nutritionReferenceUtils', () => {
         nextValues: { kalorien: 90 },
         nextSource: 'manual',
         preserveOnManualSourceChange: true,
+        now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
         nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
@@ -313,6 +319,7 @@ describe('nutritionReferenceUtils', () => {
         nextValues: { kalorien: 101 },
         nextSource: 'manual',
         forceRecalc: true,
+        now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'manual', kalorien: 101 }],
         nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
@@ -329,11 +336,54 @@ describe('nutritionReferenceUtils', () => {
         nextValues: { kalorien: 110 },
         nextSource: 'manual',
         forceRecalc: true,
+        now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'manual', kalorien: 110 }],
         nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
         recalc: true,
+        recalcDate: fixedNow,
       });
+    });
+
+    test('does not set recalcDate when recalc was already true', () => {
+      const result = buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          recalc: true,
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+        },
+        nextValues: { kalorien: 120 },
+        nextSource: 'ai-generiert',
+        now: fixedNow,
+      });
+      expect(result.recalc).toBe(true);
+      expect(result).not.toHaveProperty('recalcDate');
+    });
+
+    test('sets recalcDate using provided now parameter', () => {
+      const customNow = new Date('2026-01-15T08:30:00.000Z');
+      const result = buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
+        },
+        nextValues: { kalorien: 110 },
+        nextSource: 'ai-generiert',
+        now: customNow,
+      });
+      expect(result.recalc).toBe(true);
+      expect(result.recalcDate).toBe(customNow);
+    });
+
+    test('does not include recalcDate when recalc stays false', () => {
+      const result = buildNutritionTrackingFields({
+        previousData: {},
+        nextValues: { kalorien: 100 },
+        nextSource: 'openfoodfacts',
+        now: fixedNow,
+      });
+      expect(result.recalc).toBe(false);
+      expect(result).not.toHaveProperty('recalcDate');
     });
   });
 
