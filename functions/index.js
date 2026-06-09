@@ -4890,7 +4890,9 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
     console.error('runNutritionRecalcForFlaggedRecipes: fatal error', error);
   } finally {
     try {
-      report.resetRecalcCount = await setRecalcFalseForReferences(recalcReferenceDocs);
+      if (!report.fatalError && report.failedRecipes.length === 0) {
+        report.resetRecalcCount = await setRecalcFalseForReferences(recalcReferenceDocs);
+      }
     } catch (resetError) {
       report.fatalError = report.fatalError || `recalc-Reset fehlgeschlagen: ${resetError?.message || resetError}`;
       console.error('runNutritionRecalcForFlaggedRecipes: could not reset recalc flags', resetError);

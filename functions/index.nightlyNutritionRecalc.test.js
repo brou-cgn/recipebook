@@ -135,6 +135,9 @@ function loadHandlers() {
                   async (payload) => {
                     if (payload.naehrwerte) {
                       recipe.naehrwerte = payload.naehrwerte;
+                      if (recipe.failCalculationWrite) {
+                        throw new Error('Simulierter Schreibfehler');
+                      }
                     }
                   }
                 )),
@@ -231,6 +234,26 @@ test('manual recalc job updates impacted recipes, resets recalc flags and sends 
 
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, false);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+  assert.equal(sentMails.length, 1);
+});
+
+test('manual recalc job keeps recalc flag when recalculation fails', async () => {
+  mockDbState.recipes.r1.failCalculationWrite = true;
+
+  const result = await manualHandler({
+    auth: { uid: 'admin-1' },
+    data: {},
+  });
+
+  assert.deepEqual(result, {
+    started: true,
+    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(mockDbState.nutritionReferences.tomate.recalc, true);
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcError, 'Simulierter Schreibfehler');
   assert.equal(sentMails.length, 1);
 });
 
