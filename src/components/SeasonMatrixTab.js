@@ -398,6 +398,7 @@ function SeasonMatrixTab({ currentUser }) {
         <table className="season-matrix-table">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Name</th>
               <th>Kategorie</th>
               <th>Region</th>
@@ -412,11 +413,12 @@ function SeasonMatrixTab({ currentUser }) {
           <tbody>
             {filteredEntries.length === 0 ? (
               <tr>
-                <td colSpan={9} className="season-matrix-empty">Keine Einträge gefunden.</td>
+                <td colSpan={10} className="season-matrix-empty">Keine Einträge gefunden.</td>
               </tr>
             ) : (
               filteredEntries.map((entry) => (
                 <tr key={entry.id}>
+                  <td>{entry.id}</td>
                   <td>
                     {editingId === entry.id ? (
                       <input
