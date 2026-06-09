@@ -59,7 +59,7 @@ function getRecipeIngredients(recipe = {}) {
     .filter((item) => item.text);
 }
 
-function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth, nutritionReferenceRows = []) {
+function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth, nutritionReferenceRows = [], nutritionReferenceIndex = null) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) {
     return { saisonBonus: 0, saisonBonusIngredient: null };
   }
@@ -74,10 +74,14 @@ function calculateSaisonBonusDetails(recipe, seasonMatrixEntries, currentMonth, 
     return { saisonBonus: 0, saisonBonusIngredient: null };
   }
 
+  const nutritionIndex = nutritionReferenceIndex instanceof Map
+    ? nutritionReferenceIndex
+    : buildNutritionReferenceIndex(nutritionReferenceRows);
+
   const matchedEntries = [];
   for (const ingredientItem of ingredientItems) {
     for (const entry of activeEntries) {
-      if (matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)) {
+      if (matchIngredientToEntryWithIndex(ingredientItem, entry, nutritionIndex)) {
         matchedEntries.push({ entry, ingredientItem });
         break;
       }
@@ -196,6 +200,51 @@ export function matchIngredientToEntry(ingredientItem, entry, nutritionReference
 }
 
 /**
+ * Builds a Map<ingredientID, row> from nutritionReferenceRows for O(1) lookup.
+ * When duplicate ingredientIDs exist, the first occurrence is kept (matching
+ * the behaviour of the original Array.find() approach).
+ *
+ * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
+ * @returns {Map<string, Object>}
+ */
+export function buildNutritionReferenceIndex(nutritionReferenceRows = []) {
+  if (!Array.isArray(nutritionReferenceRows) || nutritionReferenceRows.length === 0) return new Map();
+  const index = new Map();
+  for (const row of nutritionReferenceRows) {
+    const id = String(row?.ingredientID || '').trim();
+    if (id && !index.has(id)) {
+      index.set(id, row);
+    }
+  }
+  return index;
+}
+
+/**
+ * Like matchIngredientToEntry but accepts a pre-built Map for O(1) lookup.
+ *
+ * @param {string|{text: string, ingredientID?: string}} ingredientItem
+ * @param {Object} entry - Season matrix entry
+ * @param {Map<string, Object>} nutritionIndex - Pre-built index from buildNutritionReferenceIndex
+ * @returns {boolean}
+ */
+function matchIngredientToEntryWithIndex(ingredientItem, entry, nutritionIndex) {
+  const ingredientID = typeof ingredientItem === 'string' ? undefined : (ingredientItem?.ingredientID || undefined);
+  if (!ingredientID) return false;
+  if (!nutritionIndex || nutritionIndex.size === 0) return false;
+
+  const nutritionRef = nutritionIndex.get(ingredientID);
+  if (!nutritionRef || nutritionRef.seasonRelevant !== true) return false;
+
+  const seasonalFamily = String(nutritionRef.seasonalFamily || '').trim();
+  const entryName = String(entry?.name || '').trim();
+  return (
+    seasonalFamily.length > 0 &&
+    entryName.length > 0 &&
+    seasonalFamily.toLowerCase() === entryName.toLowerCase()
+  );
+}
+
+/**
  * Checks whether a recipe contains at least one ingredient that matches an
  * active season matrix entry with a minimum season score.
  *
@@ -203,13 +252,15 @@ export function matchIngredientToEntry(ingredientItem, entry, nutritionReference
  * @param {Array} seasonMatrixEntries - Season matrix entries
  * @param {number} [minimumSeasonScore=60] - Minimum seasonScore threshold
  * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
+ * @param {Map} [nutritionReferenceIndex=null] - Pre-built index (skips internal build when provided)
  * @returns {boolean}
  */
 export function hasSeasonalIngredient(
   recipe,
   seasonMatrixEntries,
   minimumSeasonScore = 60,
-  nutritionReferenceRows = []
+  nutritionReferenceRows = [],
+  nutritionReferenceIndex = null
 ) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
 
@@ -222,8 +273,12 @@ export function hasSeasonalIngredient(
   ));
   if (eligibleEntries.length === 0) return false;
 
+  const nutritionIndex = nutritionReferenceIndex instanceof Map
+    ? nutritionReferenceIndex
+    : buildNutritionReferenceIndex(nutritionReferenceRows);
+
   return ingredientItems.some((ingredientItem) =>
-    eligibleEntries.some((entry) => matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows))
+    eligibleEntries.some((entry) => matchIngredientToEntryWithIndex(ingredientItem, entry, nutritionIndex))
   );
 }
 
@@ -235,13 +290,15 @@ export function hasSeasonalIngredient(
  * @param {Array} seasonMatrixEntries - Season matrix entries
  * @param {number} [currentMonth] - Current month (1–12), defaults to system month
  * @param {Array} [nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
+ * @param {Map} [nutritionReferenceIndex=null] - Pre-built index (skips internal build when provided)
  * @returns {boolean}
  */
 export function hasHauptsaisonIngredient(
   recipe,
   seasonMatrixEntries,
   currentMonth = new Date().getMonth() + 1,
-  nutritionReferenceRows = []
+  nutritionReferenceRows = [],
+  nutritionReferenceIndex = null
 ) {
   if (!Array.isArray(seasonMatrixEntries) || seasonMatrixEntries.length === 0) return false;
 
@@ -251,9 +308,13 @@ export function hasHauptsaisonIngredient(
   const activeEntries = seasonMatrixEntries.filter((entry) => entry?.isActive !== false);
   if (activeEntries.length === 0) return false;
 
+  const nutritionIndex = nutritionReferenceIndex instanceof Map
+    ? nutritionReferenceIndex
+    : buildNutritionReferenceIndex(nutritionReferenceRows);
+
   return ingredientItems.some((ingredientItem) =>
     activeEntries.some((entry) =>
-      matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows) &&
+      matchIngredientToEntryWithIndex(ingredientItem, entry, nutritionIndex) &&
       getIngredientSeasonStatus(entry, currentMonth) === SAISON_STATUS.HAUPTSAISON
     )
   );
@@ -295,6 +356,7 @@ export function calculateSaisonBonus(recipe, seasonMatrixEntries, currentMonth, 
  *   date by the current user, or null/undefined if never cooked
  * @param {Array} [params.seasonMatrixEntries=[]] - Active season matrix entries from Firestore
  * @param {Array} [params.nutritionReferenceRows=[]] - Rows from "Nährwerte je 100 g" table
+ * @param {Map} [params.nutritionReferenceIndex=null] - Pre-built index (skips internal build when provided)
  * @param {Object} [params.recipe={}] - Recipe object (needs ingredients/zutaten array)
  * @param {number} [params.currentMonth] - Current month 1–12 (defaults to current calendar month)
  * @param {number} [params.nowMs] - Current time in ms for cook-distance calculation (default: Date.now())
@@ -305,6 +367,7 @@ export function calculateRecipeSortIndex({
   lastCookDateMs = undefined,
   seasonMatrixEntries = [],
   nutritionReferenceRows = [],
+  nutritionReferenceIndex = null,
   recipe = {},
   currentMonth = new Date().getMonth() + 1,
   nowMs = Date.now(),
@@ -314,6 +377,7 @@ export function calculateRecipeSortIndex({
     lastCookDateMs,
     seasonMatrixEntries,
     nutritionReferenceRows,
+    nutritionReferenceIndex,
     recipe,
     currentMonth,
     nowMs,
@@ -328,6 +392,7 @@ export function calculateRecipeSortIndex({
  * @param {number|null|undefined} [params.lastCookDateMs]
  * @param {Array} [params.seasonMatrixEntries=[]]
  * @param {Array} [params.nutritionReferenceRows=[]]
+ * @param {Map} [params.nutritionReferenceIndex=null] - Pre-built index (skips internal build when provided)
  * @param {Object} [params.recipe={}]
  * @param {number} [params.currentMonth]
  * @param {number} [params.nowMs]
@@ -345,6 +410,7 @@ export function calculateRecipeSortIndexBreakdown({
   lastCookDateMs = undefined,
   seasonMatrixEntries = [],
   nutritionReferenceRows = [],
+  nutritionReferenceIndex = null,
   recipe = {},
   currentMonth = new Date().getMonth() + 1,
   nowMs = Date.now(),
@@ -355,7 +421,8 @@ export function calculateRecipeSortIndexBreakdown({
     recipe,
     seasonMatrixEntries,
     currentMonth,
-    nutritionReferenceRows
+    nutritionReferenceRows,
+    nutritionReferenceIndex
   );
 
   return {
