@@ -623,8 +623,8 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
         onBack={jest.fn()}
         currentUser={adminUser}
         recipes={[
-          { id: 'r1', title: 'Älteres Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1710000000000 } },
-          { id: 'r2', title: 'Neuestes Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } },
+          { id: 'r1', title: 'Älteres Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1710000000000, calcNotIncluded: [{ ingredient: 'x', error: 'y' }] } },
+          { id: 'r2', title: 'Neuestes Rezept', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: 'x', error: 'y' }] } },
         ]}
         onUpdateRecipe={jest.fn()}
       />
@@ -650,7 +650,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
         onBack={jest.fn()}
         currentUser={adminUser}
         recipes={[
-          { id: 'r1', title: 'Gemüsepfanne', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } },
+          { id: 'r1', title: 'Gemüsepfanne', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: 'x', error: 'y' }] } },
         ]}
         onUpdateRecipe={jest.fn()}
       />
@@ -692,7 +692,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r1',
             title: 'Gemüsepfanne',
             ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '1 Tomate', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={onUpdateRecipe}
@@ -750,7 +750,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r-info',
             title: 'Tomatensalat',
             ingredients: [{ type: 'ingredient', text: '200 g Tomaten' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '200 g Tomaten', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={jest.fn(() => Promise.resolve())}
@@ -804,7 +804,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r-walnuss',
             title: 'Walnussbrot',
             ingredients: [{ type: 'ingredient', text: '50 g Walnüsse' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '50 g Walnüsse', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={onUpdateRecipe}
@@ -861,7 +861,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r-new-ambiguous',
             title: 'Gemüsepfanne',
             ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '1 Tomate', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={onUpdateRecipe}
@@ -907,7 +907,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r-new',
             title: 'Gemüsepfanne',
             ingredients: [{ type: 'ingredient', text: '1 Prise Sumach' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '1 Prise Sumach', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={onUpdateRecipe}
@@ -945,6 +945,13 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
   });
 
   test('shows warning symbol only for recipes with non-included ingredients', async () => {
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: 1720000000000 }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
     render(
       <AppCallsPage
         onBack={jest.fn()}
@@ -962,6 +969,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
           {
             id: 'r2',
             title: 'Ohne Hinweis',
+            ingredients: [{ type: 'ingredient', text: '100 g Tomate', ingredientID: 'tomate' }],
             naehrwerte: { calcPending: false, calcCompletedAt: 1710000000000, calcNotIncluded: [] },
           },
         ]}
@@ -1002,7 +1010,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
             id: 'r1',
             title: 'Gemüsepfanne',
             ingredients: [{ type: 'ingredient', text: '1 frische Tomate' }],
-            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 },
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '1 frische Tomate', error: 'Nicht gefunden' }] },
           },
         ]}
         onUpdateRecipe={jest.fn(() => Promise.resolve())}
@@ -1019,7 +1027,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
   test('opens recipe detail when recipe name is clicked', async () => {
     const onSelectRecipe = jest.fn();
-    const recipe = { id: 'r1', title: 'Kichererbsensalat', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000 } };
+    const recipe = { id: 'r1', title: 'Kichererbsensalat', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: 'x', error: 'y' }] } };
 
     render(
       <AppCallsPage
@@ -1035,6 +1043,63 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kichererbsensalat' }));
 
     expect(onSelectRecipe).toHaveBeenCalledWith(recipe);
+  });
+
+  test('shows recipe in completed list when recalcDate is after calcCompletedAt', async () => {
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: 1800000000000 }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Tomatensuppe',
+            ingredients: [{ type: 'ingredient', text: '100 g Tomate', ingredientID: 'tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1700000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    expect(screen.getByText('Tomatensuppe')).toBeInTheDocument();
+  });
+
+  test('does not show recipe in completed list when recalcDate is before calcCompletedAt', async () => {
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: 1700000000000 }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Tomatensuppe',
+            ingredients: [{ type: 'ingredient', text: '100 g Tomate', ingredientID: 'tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1800000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    expect(screen.queryByText('Tomatensuppe')).not.toBeInTheDocument();
+    expect(await screen.findByText('Keine abgeschlossenen Berechnungen vorhanden.')).toBeInTheDocument();
   });
 });
 
