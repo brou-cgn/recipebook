@@ -178,6 +178,14 @@ describe('matchIngredientToEntry', () => {
     expect(matchIngredientToEntry('100g Potato', entry)).toBe(true);
   });
 
+  test('matches fallback path for ingredient item without ingredientID', () => {
+    expect(matchIngredientToEntry({ text: '500g Kartoffeln' }, entry)).toBe(true);
+  });
+
+  test('returns false for non-matching ingredient item without ingredientID', () => {
+    expect(matchIngredientToEntry({ text: '200g Karotte' }, entry)).toBe(false);
+  });
+
   test('returns false for non-matching ingredient', () => {
     expect(matchIngredientToEntry('200g Karotte', entry)).toBe(false);
   });
@@ -188,6 +196,85 @@ describe('matchIngredientToEntry', () => {
 
   test('returns false for null ingredient text', () => {
     expect(matchIngredientToEntry(null, entry)).toBe(false);
+  });
+});
+
+describe('matchIngredientToEntry – primary path via nutritionReference', () => {
+  const entry = {
+    id: 'fruchtgemuese',
+    name: 'Fruchtgemüse',
+    synonyms: ['Tomate'],
+    seasonScore: 80,
+    isActive: true,
+  };
+
+  test('returns true when ingredientID maps to seasonRelevant family matching entry name', () => {
+    const ingredientItem = { text: 'unrelated text', ingredientID: 'ing-1' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: 'Fruchtgemüse' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('returns false when seasonRelevant family does not match entry name (no fallback)', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix', ingredientID: 'ing-1' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: 'Wurzelgemüse' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(false);
+  });
+
+  test('falls back to text path when seasonRelevant is false', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix', ingredientID: 'ing-1' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: false, seasonalFamily: 'Wurzelgemüse' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('falls back to text path when nutrition reference is not found', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix', ingredientID: 'missing-id' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: 'Fruchtgemüse' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('falls back to text path when nutritionReferenceRows is empty', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix', ingredientID: 'ing-1' };
+    expect(matchIngredientToEntry(ingredientItem, entry, [])).toBe(true);
+  });
+
+  test('falls back to text path when ingredientID is missing', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: 'Fruchtgemüse' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('matches seasonalFamily and entry.name case-insensitively', () => {
+    const ingredientItem = { text: 'anything', ingredientID: 'ing-1' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: 'Fruchtgemüse' },
+    ];
+    const lowerCaseEntry = { ...entry, name: 'fruchtgemüse' };
+
+    expect(matchIngredientToEntry(ingredientItem, lowerCaseEntry, nutritionReferenceRows)).toBe(true);
+  });
+
+  test('returns false when seasonalFamily is empty despite seasonRelevant=true', () => {
+    const ingredientItem = { text: 'Fruchtgemüse Mix', ingredientID: 'ing-1' };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-1', seasonRelevant: true, seasonalFamily: '' },
+    ];
+
+    expect(matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows)).toBe(false);
   });
 });
 
@@ -245,6 +332,17 @@ describe('calculateSaisonBonus', () => {
       const recipe = { ingredients: ['Asparagus mit Kartoffeln'] };
       expect(hasSeasonalIngredient(recipe, [seasonalEntry])).toBe(true);
     });
+
+    test('uses nutritionReference primary path when ingredientID maps to matching seasonalFamily', () => {
+      const recipe = {
+        ingredients: [{ type: 'ingredient', text: 'Gemüsemix', ingredientID: 'ing-spargel' }],
+      };
+      const nutritionReferenceRows = [
+        { ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' },
+      ];
+
+      expect(hasSeasonalIngredient(recipe, [seasonalEntry], 60, nutritionReferenceRows)).toBe(true);
+    });
   });
 
   describe('hasHauptsaisonIngredient', () => {
@@ -273,6 +371,17 @@ describe('calculateSaisonBonus', () => {
     test('ignores inactive entries even if they would be in Hauptsaison', () => {
       const recipe = { ingredients: [{ type: 'ingredient', text: 'Asparagus' }] };
       expect(hasHauptsaisonIngredient(recipe, [{ ...spargelEntry, isActive: false }], 5)).toBe(false);
+    });
+
+    test('uses nutritionReference primary path when ingredientID maps to matching seasonalFamily', () => {
+      const recipe = {
+        ingredients: [{ type: 'ingredient', text: 'Gemüsemix', ingredientID: 'ing-spargel' }],
+      };
+      const nutritionReferenceRows = [
+        { ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' },
+      ];
+
+      expect(hasHauptsaisonIngredient(recipe, [spargelEntry], 5, nutritionReferenceRows)).toBe(true);
     });
   });
 
@@ -347,6 +456,17 @@ describe('calculateSaisonBonus', () => {
   test('handles recipe with zutaten field instead of ingredients', () => {
     const recipe = { zutaten: [{ type: 'ingredient', text: '500g Spargel' }] };
     expect(calculateSaisonBonus(recipe, [spargelEntry], 5)).toBeCloseTo(27, 5);
+  });
+
+  test('uses nutritionReference primary path when ingredientID maps to matching seasonalFamily', () => {
+    const recipe = {
+      ingredients: [{ type: 'ingredient', text: 'Gemüsemix', ingredientID: 'ing-spargel' }],
+    };
+    const nutritionReferenceRows = [
+      { ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' },
+    ];
+
+    expect(calculateSaisonBonus(recipe, [spargelEntry], 5, nutritionReferenceRows)).toBeCloseTo(27, 5);
   });
 
   test('returns BALD bonus when ingredient will be in season next month', () => {
