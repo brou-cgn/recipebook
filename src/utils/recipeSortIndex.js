@@ -166,15 +166,10 @@ export function getIngredientSeasonStatus(entry, currentMonth) {
 /**
  * Checks whether an ingredient matches a season matrix entry.
  *
- * Primary path (when ingredientID is set):
- *   Looks up the ingredient in nutritionReferenceRows. If the matching row has
- *   seasonRelevant === true, the row's seasonalFamily is compared (case-insensitive,
- *   exact match) to entry.name. This path returns a definitive true/false and
- *   short-circuits – the fallback path is NOT evaluated.
- *
- * Fallback path (no ingredientID, no nutritionReference found, or seasonRelevant !== true):
- *   Case-insensitive substring match against entry.name, entry.id, and entry.synonyms –
- *   identical to the previous implementation.
+ * Uses only ingredientID + nutritionReference lookup:
+ *   Looks up ingredientID in nutritionReferenceRows. If a row is found and
+ *   seasonRelevant === true, compares seasonalFamily (case-insensitive exact match)
+ *   with entry.name. In all other cases the function returns false.
  *
  * @param {string|{text: string, ingredientID?: string}} ingredientItem
  * @param {Object} entry - Season matrix entry
@@ -182,39 +177,22 @@ export function getIngredientSeasonStatus(entry, currentMonth) {
  * @returns {boolean}
  */
 export function matchIngredientToEntry(ingredientItem, entry, nutritionReferenceRows = []) {
-  const ingredientText = typeof ingredientItem === 'string' ? ingredientItem : (ingredientItem?.text || '');
   const ingredientID = typeof ingredientItem === 'string' ? undefined : (ingredientItem?.ingredientID || undefined);
+  if (!ingredientID) return false;
+  if (!Array.isArray(nutritionReferenceRows) || nutritionReferenceRows.length === 0) return false;
 
-  // Primary path: use nutritionReference lookup when ingredientID is available
-  if (ingredientID && Array.isArray(nutritionReferenceRows) && nutritionReferenceRows.length > 0) {
-    const nutritionRef = nutritionReferenceRows.find(
-      (row) => String(row?.ingredientID || '').trim() === ingredientID
-    );
-    if (nutritionRef && nutritionRef.seasonRelevant === true) {
-      const seasonalFamily = String(nutritionRef.seasonalFamily || '').trim();
-      const entryName = String(entry?.name || '').trim();
-      return (
-        seasonalFamily.length > 0 &&
-        entryName.length > 0 &&
-        seasonalFamily.toLowerCase() === entryName.toLowerCase()
-      );
-    }
-  }
+  const nutritionRef = nutritionReferenceRows.find(
+    (row) => String(row?.ingredientID || '').trim() === ingredientID
+  );
+  if (!nutritionRef || nutritionRef.seasonRelevant !== true) return false;
 
-  // Fallback: text-based matching (case-insensitive substring) – unchanged
-  const normalized = ingredientText.toLowerCase();
-  if (!normalized) return false;
-
-  if (entry?.name && normalized.includes(entry.name.toLowerCase())) return true;
-  if (entry?.id && normalized.includes(entry.id.toLowerCase())) return true;
-
-  if (Array.isArray(entry?.synonyms)) {
-    for (const synonym of entry.synonyms) {
-      if (synonym && normalized.includes(synonym.toLowerCase())) return true;
-    }
-  }
-
-  return false;
+  const seasonalFamily = String(nutritionRef.seasonalFamily || '').trim();
+  const entryName = String(entry?.name || '').trim();
+  return (
+    seasonalFamily.length > 0 &&
+    entryName.length > 0 &&
+    seasonalFamily.toLowerCase() === entryName.toLowerCase()
+  );
 }
 
 /**
