@@ -1568,6 +1568,7 @@ export async function saveFaviconImage(imageBase64) {
     // Update cache
     if (settingsCache) {
       settingsCache.faviconImage = imageBase64 || null;
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving favicon image:', error);
@@ -1597,6 +1598,7 @@ export async function saveAppLogoImage(imageBase64) {
     // Update cache
     if (settingsCache) {
       settingsCache.appLogoImage = imageBase64 || null;
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving app logo image:', error);
@@ -1626,6 +1628,7 @@ export async function saveAppLogoImageUrl(url) {
     // Update cache
     if (settingsCache) {
       settingsCache.appLogoImageUrl = url || null;
+      saveSettingsToLocalStorageCache(settingsCache);
     }
   } catch (error) {
     console.error('Error saving app logo image URL:', error);
