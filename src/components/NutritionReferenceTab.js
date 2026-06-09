@@ -85,6 +85,32 @@ const EMPTY_STATUS_DISPLAY_LABEL = '<leer>';
 const getStatusOptionLabel = (status) => (status || EMPTY_STATUS_DISPLAY_LABEL);
 const DEFAULT_HEADER_ROW_HEIGHT = 32;
 const formatConfidenceValue = (value) => (value == null ? '—' : `${value}%`);
+const getIngredientID = (row) => String(row?.ingredientID || row?.id || '').trim();
+const normalizeEditableNumber = (value) => {
+  if (value == null) return '';
+  if (typeof value === 'string' && value.trim() === '') return '';
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric >= 0) return numeric;
+  return String(value).trim();
+};
+const getEditableRowState = (row) => ({
+  ingredientID: getIngredientID(row),
+  displayName: String(row?.displayName || '').trim(),
+  nutritionFamily: String(row?.nutritionFamily || row?.family || '').trim(),
+  seasonalFamily: String(row?.seasonalFamily || '').trim(),
+  category: String(row?.category || '').trim(),
+  status: parseNutritionReferenceStatus(row || {}),
+  source: String(row?.source || '').trim(),
+  searchTerm: String(row?.searchTerm || '').trim(),
+  synonyms: parseNutritionReferenceSynonyms(row || {}),
+  possibleUnits: parseNutritionReferencePossibleUnits(row || {}),
+  defaultAmountG: normalizeEditableNumber(parseNutritionReferenceFallbackWeight(row || {})),
+  booleans: parseNutritionReferenceBooleanFields(row || {}),
+  manualNutrition: NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
+    acc[field] = normalizeEditableNumber(row?.[`${field}_manual`]);
+    return acc;
+  }, {}),
+});
 const getConfidenceInfoText = (diagnostics) => {
   const fieldBreakdown = NUTRITION_REFERENCE_FIELDS
     .map((field) => `${NUTRITION_FIELD_LABELS[field]}: ${formatConfidenceValue(diagnostics.confidenceByField[field])}`)
@@ -115,12 +141,17 @@ function NutritionReferenceTab({ currentUser }) {
   const [newBooleanValues, setNewBooleanValues] = useState({});
   const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
   const [refreshingRowId, setRefreshingRowId] = useState(null);
+  const [savingChanges, setSavingChanges] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [columnFilters, setColumnFilters] = useState({});
   const tableContainerRef = useRef(null);
   const tableHeaderRowRef = useRef(null);
   const [headerRowHeight, setHeaderRowHeight] = useState(null);
+  const persistedRowsById = useMemo(
+    () => new Map(cachedRows.map((row) => [row.id, row])),
+    [cachedRows]
+  );
 
   useEffect(() => {
     setRows(cachedRows);
@@ -177,7 +208,11 @@ function NutritionReferenceTab({ currentUser }) {
     setRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  const getIngredientID = (row) => String(row.ingredientID || row.id || '').trim();
+  const dirtyRows = useMemo(() => rows.filter((row) => {
+    const previousRow = persistedRowsById.get(row.id);
+    if (!previousRow) return false;
+    return JSON.stringify(getEditableRowState(row)) !== JSON.stringify(getEditableRowState(previousRow));
+  }), [persistedRowsById, rows]);
 
   const buildPayload = (
     row,
@@ -270,23 +305,25 @@ function NutritionReferenceTab({ currentUser }) {
     row.id !== ownRowId && getIngredientID(row).toLowerCase() === ingredientID.toLowerCase()
   ));
 
-  const saveRow = async (row) => {
+  const validateRow = (row) => {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
     if (!ingredientID) {
       alert('Bitte eine eindeutige ingredientID eingeben.');
-      return;
+      return null;
     }
     if (synonyms.length === 0) {
       alert('Bitte mindestens ein Synonym eingeben.');
-      return;
+      return null;
     }
     if (hasIngredientIDConflict(ingredientID, row.id)) {
       alert('Diese ingredientID existiert bereits.');
-      return;
+      return null;
     }
+    return ingredientID;
+  };
 
-    // Explicitly delete manual source-specific fields that were cleared by the user.
+  const getClearedNutritionFields = (row) => {
     const clearedManualNutritionValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
       const raw = row[`${field}_manual`];
       const isEmpty = raw == null || (typeof raw === 'string' && raw.trim() === '');
@@ -296,8 +333,6 @@ function NutritionReferenceTab({ currentUser }) {
       return acc;
     }, {});
 
-    // Explicitly delete the effective flat field when no source has a value
-    // (so the old value is removed from Firestore rather than staying stale).
     const clearedEffectiveFlatValues = NUTRITION_REFERENCE_FIELDS.reduce((acc, field) => {
       const hasValue = NUTRITION_SOURCE_PRIORITY.some((src) => {
         const fname = `${field}${NUTRITION_SOURCE_SUFFIX[src]}`;
@@ -310,23 +345,52 @@ function NutritionReferenceTab({ currentUser }) {
       return acc;
     }, {});
 
-    const previousRow = cachedRows.find((entry) => entry.id === row.id) || null;
-    await withPreservedTableScroll(async () => {
-      await setDoc(
-        doc(db, 'nutritionReferences', ingredientID),
-        {
-          ...buildPayload(row, row.source, { previousRow }),
-          ...clearedManualNutritionValues,
-          ...clearedEffectiveFlatValues,
-        },
-        { merge: true }
+    return {
+      ...clearedManualNutritionValues,
+      ...clearedEffectiveFlatValues,
+    };
+  };
+
+  const saveDirtyRows = async () => {
+    if (dirtyRows.length === 0) return;
+
+    const rowsToSave = [];
+    for (const row of dirtyRows) {
+      const ingredientID = validateRow(row);
+      if (!ingredientID) return;
+      rowsToSave.push({ row, ingredientID });
+    }
+
+    setSavingChanges(true);
+    try {
+      await withPreservedTableScroll(async () => {
+        for (const { row, ingredientID } of rowsToSave) {
+          const previousRow = persistedRowsById.get(row.id) || null;
+          await setDoc(
+            doc(db, 'nutritionReferences', ingredientID),
+            {
+              ...buildPayload(row, row.source, { previousRow }),
+              ...getClearedNutritionFields(row),
+            },
+            { merge: true }
+          );
+          if (row.id !== ingredientID) {
+            await deleteDoc(doc(db, 'nutritionReferences', row.id));
+          }
+        }
+        await reload();
+      });
+      setActionMessage(
+        rowsToSave.length === 1
+          ? `Eintrag ${rowsToSave[0].ingredientID} gespeichert.`
+          : `${rowsToSave.length} Einträge gespeichert.`
       );
-      if (row.id !== ingredientID) {
-        await deleteDoc(doc(db, 'nutritionReferences', row.id));
-      }
-      await reload();
-    });
-    setActionMessage(`Eintrag ${ingredientID} gespeichert.`);
+    } catch (error) {
+      console.error('Error saving nutrition reference changes:', error);
+      alert('Fehler beim Speichern der Nährwerttabelle. Bitte versuchen Sie es erneut.');
+    } finally {
+      setSavingChanges(false);
+    }
   };
 
   const addRow = async () => {
@@ -535,6 +599,14 @@ function NutritionReferenceTab({ currentUser }) {
       {lookupError && <p className="section-description">{lookupError}</p>}
 
       <div className="season-matrix-import-export-actions">
+        <button
+          type="button"
+          className="save-button"
+          onClick={saveDirtyRows}
+          disabled={savingChanges || dirtyRows.length === 0}
+        >
+          {savingChanges ? 'Speichert…' : (dirtyRows.length > 0 ? `Änderungen speichern (${dirtyRows.length})` : 'Änderungen speichern')}
+        </button>
         <button type="button" className="save-button" onClick={handleExportCsv}>
           CSV exportieren
         </button>
@@ -811,7 +883,6 @@ function NutritionReferenceTab({ currentUser }) {
                     </td>
                   ))}
                   <td className="conversion-table-actions">
-                    <button className="add-btn" onClick={() => saveRow(row)}>Speichern</button>
                     <button
                       className="add-btn"
                       onClick={() => refreshRowFromOpenFoodFacts(row)}
