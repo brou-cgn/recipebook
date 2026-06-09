@@ -170,7 +170,7 @@ describe('matchIngredientToEntry', () => {
   });
 
   test('returns false for plain string ingredient with non-matching synonym variant', () => {
-    expect(matchIngredientToEntry('2 Erdäpfel', entry)).toBe(false); // "Erdapfel" != "Erdäpfel"
+    expect(matchIngredientToEntry('2 Erdäpfel', entry)).toBe(false); // plain string ingredients are never matched
   });
 
   test('returns false for ingredient object without ingredientID', () => {
@@ -353,7 +353,7 @@ describe('calculateSaisonBonus', () => {
       )).toBe(false);
     });
 
-    test('returns false for recipes using legacy string ingredients format', () => {
+    test('returns false when recipe uses legacy string ingredients format', () => {
       const recipe = { ingredients: ['Asparagus mit Kartoffeln'] };
       expect(hasSeasonalIngredient(recipe, [seasonalEntry], 60, nutritionReferenceRows)).toBe(false);
     });
