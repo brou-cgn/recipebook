@@ -4,6 +4,7 @@ import { fuzzyFilter } from '../utils/fuzzySearch';
 import { getUserFavorites } from '../utils/userFavorites';
 import { expandCuisineSelection } from '../utils/customLists';
 import { hasHauptsaisonIngredient } from '../utils/recipeSortIndex';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 
 const DEBOUNCE_DELAY_MS = 200;
 // Delay in ms before auto-focusing the input – gives the slide-up animation
@@ -66,6 +67,7 @@ function computeTopCuisineTypes(recipes, cuisineTypes) {
 }
 
 function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearch, onClearSearch, currentUser, showFavoritesOnly: showFavoritesOnlyProp, showSeasonalOnly: showSeasonalOnlyProp, onFavoritesToggle, onSeasonalToggle, seasonMatrixEntries = [], cuisineTypes, cuisineGroups, onCuisineFilterChange, selectedCuisines: selectedCuisinesProp, availableAuthors, onAuthorFilterChange, selectedAuthors: selectedAuthorsProp, privateLists, onPrivateListFilterChange, selectedPrivateLists: selectedPrivateListsProp, searchTerm: searchTermProp, showPrivateListFilters = true }) {
+  const { rows: nutritionReferenceRows } = useNutritionReference();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -169,7 +171,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       list = list.filter((r) => favoriteIds.includes(r.id));
     }
     if (showSeasonalOnly) {
-      list = list.filter((r) => hasHauptsaisonIngredient(r, seasonMatrixEntries));
+      list = list.filter((r) => hasHauptsaisonIngredient(r, seasonMatrixEntries, undefined, nutritionReferenceRows));
     }
     if (selectedCuisines.length > 0) {
       const expanded = expandCuisineSelection(selectedCuisines, cuisineGroups || []);
@@ -191,7 +193,7 @@ function MobileSearchOverlay({ isOpen, onClose, recipes, onSelectRecipe, onSearc
       );
     }
     return list;
-  }, [recipes, showFavoritesOnly, showSeasonalOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters, seasonMatrixEntries]);
+  }, [recipes, showFavoritesOnly, showSeasonalOnly, favoriteIds, selectedCuisines, cuisineGroups, selectedAuthors, selectedPrivateLists, privateLists, showPrivateListFilters, seasonMatrixEntries, nutritionReferenceRows]);
 
   const filteredRecipes = fuzzyFilter(
     baseRecipes,

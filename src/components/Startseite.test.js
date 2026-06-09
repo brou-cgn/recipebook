@@ -2,6 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Startseite from './Startseite';
 
+const mockNutritionReferenceState = {
+  rows: [{ ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' }],
+  loading: false,
+};
+
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => mockNutritionReferenceState,
+}));
+
 jest.mock('../utils/recipeCallsFirestore', () => ({
   getRecentRecipeCalls: jest.fn(),
 }));
@@ -227,7 +236,7 @@ describe('Startseite', () => {
       ...Array.from({ length: 11 }, (_, i) => ({
         id: `seasonal-${i}`,
         title: `Saisonal ${i}`,
-        ingredients: [{ type: 'ingredient', text: '500g Spargel' }],
+        ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }],
       })),
       { id: 'regular', title: 'Nicht saisonal', ingredients: [{ type: 'ingredient', text: '500g Nudeln' }] },
     ];
@@ -297,9 +306,9 @@ describe('Startseite', () => {
     try {
       jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
       const recipes = [
-        { id: 'r1', title: 'Frisch gekocht', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r1', title: 'Frisch gekocht', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
         { id: 'r2', title: 'Liebling', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
-        { id: 'r3', title: 'Saisonhit', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r3', title: 'Saisonhit', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
       ];
       subscribeToSeasonMatrix.mockImplementation((callback) => {
         callback([{
@@ -724,9 +733,9 @@ describe('Startseite', () => {
     try {
       jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
       const alltagsRecipes = [
-        { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
         { id: 'r2', title: 'Liebling', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
-        { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
       ];
       subscribeToSeasonMatrix.mockImplementation((callback) => {
         callback([{
@@ -782,9 +791,9 @@ describe('Startseite', () => {
     try {
       jest.useFakeTimers().setSystemTime(new Date('2026-05-15T12:00:00.000Z'));
       const alltagsRecipes = [
-        { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r3', title: 'Saisonhit', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
         { id: 'r2', title: 'Liebling', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '200g Nudeln' }] },
-        { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
+        { id: 'r1', title: 'Frisch gekocht', groupId: 'g-classics', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
       ];
       subscribeToSeasonMatrix.mockImplementation((callback) => {
         callback([{

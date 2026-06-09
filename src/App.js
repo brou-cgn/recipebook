@@ -80,7 +80,7 @@ import {
   addRecipeToGroup as addRecipeToGroupInFirestore,
   removeRecipeFromGroup as removeRecipeFromGroupInFirestore
 } from './utils/groupFirestore';
-import { NutritionReferenceProvider } from './contexts/NutritionReferenceContext';
+import { NutritionReferenceProvider, useNutritionReference } from './contexts/NutritionReferenceContext';
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
@@ -205,9 +205,19 @@ function matchesPrivateListsFilter(recipe, selectedPrivateLists, groups) {
   });
 }
 
-function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) {
+function AppNutritionRowsSync({ onRows }) {
+  const { rows } = useNutritionReference();
+
+  useEffect(() => {
+    onRows(rows);
+  }, [rows, onRows]);
+
+  return null;
+}
+
+function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows) {
   if (!showSeasonalOnly) return true;
-  return hasHauptsaisonIngredient(recipe, seasonMatrixEntries);
+  return hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows);
 }
 
 const emptyPrivateListFilterHandler = () => {};
@@ -277,6 +287,7 @@ function App() {
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
+  const [nutritionReferenceRows, setNutritionReferenceRows] = useState([]);
   const [cookDatesMap, setCookDatesMap] = useState(new Map());
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
@@ -380,13 +391,13 @@ function App() {
     return selectedGroupUnfilteredRecipes.filter((recipe) =>
       matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
       matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
-      matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries) &&
+      matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows) &&
       (
         selectedGroup.type === 'private' ||
         matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
       )
     );
-  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups, showSeasonalOnly, seasonMatrixEntries]);
+  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows]);
 
   // Detect share URL: #share/:shareId or /share/:shareId (pathname)
   const getShareIdFromHash = () => {
@@ -1501,8 +1512,8 @@ function App() {
   const isPrivateListSearchContext = currentView === 'groups' && selectedGroup?.type === 'private';
   const isSeasonalRecipesView = currentView === 'seasonalRecipes';
   const seasonalTaggedRecipes = useMemo(
-    () => recipes.filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries)),
-    [recipes, seasonMatrixEntries]
+    () => recipes.filter((recipe) => hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows)),
+    [recipes, seasonMatrixEntries, nutritionReferenceRows]
   );
   const overlayRecipes = isPrivateListSearchContext
     ? selectedGroupUnfilteredRecipes
@@ -1667,6 +1678,7 @@ function App() {
 
   return (
     <NutritionReferenceProvider enabled={!!currentUser}>
+      <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
       <div className="App">
         <Header 
           ref={headerRef}
@@ -1836,7 +1848,7 @@ function App() {
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
               matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
               matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups) &&
-              matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries)
+              matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows)
             )}
             onSelectRecipe={handleSelectRecipe}
             onAddRecipe={handleAddRecipe}

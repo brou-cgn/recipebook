@@ -2,6 +2,19 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import MobileSearchOverlay from './MobileSearchOverlay';
 
+const mockNutritionReferenceState = {
+  rows: [
+    { ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' },
+    { ingredientID: 'ing-karotte', seasonRelevant: true, seasonalFamily: 'Karotte' },
+    { ingredientID: 'ing-tomate', seasonRelevant: true, seasonalFamily: 'Tomate' },
+  ],
+  loading: false,
+};
+
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => mockNutritionReferenceState,
+}));
+
 jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: jest.fn(() => Promise.resolve([])),
 }));
@@ -320,9 +333,9 @@ describe('MobileSearchOverlay – seasonal filter pill', () => {
     const currentMonth = new Date().getMonth() + 1;
     renderOverlay({
       recipes: [
-        { id: '1', title: 'Spargelsuppe', ingredients: [{ type: 'ingredient', text: '500g Spargel' }] },
-        { id: '2', title: 'Karottensuppe', ingredients: [{ type: 'ingredient', text: '300g Karotte' }] },
-        { id: '3', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '300g Tomate' }] },
+        { id: '1', title: 'Spargelsuppe', ingredients: [{ type: 'ingredient', text: '500g Spargel', ingredientID: 'ing-spargel' }] },
+        { id: '2', title: 'Karottensuppe', ingredients: [{ type: 'ingredient', text: '300g Karotte', ingredientID: 'ing-karotte' }] },
+        { id: '3', title: 'Tomatensuppe', ingredients: [{ type: 'ingredient', text: '300g Tomate', ingredientID: 'ing-tomate' }] },
       ],
       seasonMatrixEntries: [
         { id: 'spargel', name: 'Spargel', mainSeasonMonths: [currentMonth], secondarySeasonMonths: [], isActive: true },
