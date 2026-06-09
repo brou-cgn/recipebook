@@ -366,6 +366,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
     const pending = withNutrition.filter((recipe) => recipe.naehrwerte?.calcPending === true);
 
+    const toMs = (rd) => {
+      if (rd == null) return null;
+      if (rd?.toMillis) return rd.toMillis();
+      if (rd instanceof Date) return rd.getTime();
+      if (typeof rd === 'number') return rd;
+      return null;
+    };
+
     // Map von ingredientID -> recalcDateMs für alle References mit recalc === true
     const recalcDateMap = new Map(
       (nutritionReferenceRows || [])
@@ -373,12 +381,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         .map((row) => {
           const ingredientID = String(row?.ingredientID || '').trim();
           if (!ingredientID) return null;
-          const rd = row?.recalcDate;
-          const recalcDateMs = rd == null ? null :
-            (rd?.toMillis ? rd.toMillis() :
-            (rd instanceof Date ? rd.getTime() :
-            (typeof rd === 'number' ? rd : null)));
-          return [ingredientID, recalcDateMs];
+          return [ingredientID, toMs(row?.recalcDate)];
         })
         .filter(Boolean)
     );

@@ -4631,6 +4631,14 @@ function extractRecipeIngredientItems(recipeData = {}) {
       .filter((item) => item.text !== '');
 }
 
+function toMilliseconds(date) {
+  if (date == null) return null;
+  if (date?.toMillis) return date.toMillis();
+  if (date instanceof Date) return date.getTime();
+  if (typeof date === 'number') return date;
+  return null;
+}
+
 function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientMap = new Map()) {
   if (!recalcIngredientMap || recalcIngredientMap.size === 0) return false;
   const calcCompletedAt = recipeData?.naehrwerte?.calcCompletedAt ?? null;
@@ -4640,9 +4648,7 @@ function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientMap = new M
     if (!ingredientID || !recalcIngredientMap.has(ingredientID)) return false;
     const recalcDate = recalcIngredientMap.get(ingredientID);
     if (recalcDate == null) return true; // kein recalcDate → immer recalculieren
-    const recalcDateMs = recalcDate?.toMillis
-      ? recalcDate.toMillis()
-      : (recalcDate instanceof Date ? recalcDate.getTime() : (typeof recalcDate === 'number' ? recalcDate : null));
+    const recalcDateMs = toMilliseconds(recalcDate);
     if (recalcDateMs == null) return true;
     if (calcCompletedAt == null) return true; // noch nie berechnet
     return recalcDateMs > calcCompletedAt;
