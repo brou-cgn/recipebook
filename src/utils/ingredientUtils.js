@@ -507,7 +507,7 @@ export function scaleIngredient(ingredient, multiplier) {
 
   // Pass 1: Bereichsmengen erkennen und beide Grenzen skalieren
   // Beispiele: "3-4 Eier" × 2 → "6-8 Eier", "100-200 g Mehl" × 2 → "200-400 g Mehl"
-  const rangeRegex = /((?:^|\s))(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/g;
+  const rangeRegex = /(^|\s)(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/g;
   const scaledRange = ingredient.replace(rangeRegex, (match, prefix, lo, hi) => {
     const loVal = parseFloat(lo.replace(',', '.')) * multiplier;
     const hiVal = parseFloat(hi.replace(',', '.')) * multiplier;
