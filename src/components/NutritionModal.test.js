@@ -1,4 +1,6 @@
-import {
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import NutritionModal, {
   getRecipeCalcResult,
   buildNutritionCompositionRows,
   resolveIngredientNutritionByStatus,
@@ -20,6 +22,45 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn(),
   serverTimestamp: jest.fn(),
 }));
+
+describe('NutritionModal composition table recipe links', () => {
+  it('shows linked recipe names and opens linked recipes via click', () => {
+    const onOpenLinkedRecipe = jest.fn();
+    const recipe = {
+      id: 'main',
+      portionen: 1,
+      ingredients: ['1 Teil #recipe:abc:Verlinktes Rezept'],
+      naehrwerte: {
+        calcFoundCount: 1,
+        calcTotalCount: 1,
+        calcNotIncluded: [],
+        calcIngredientDetails: [{
+          ingredient: '1 Teil #recipe:abc:Verlinktes Rezept',
+          naehrwerte: { kalorien: 120, protein: 5, fett: 2, kohlenhydrate: 18, zucker: 2, ballaststoffe: 3, salz: 0.1 },
+        }],
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        allRecipes={[{ id: 'abc', title: 'Linsen Dal' }]}
+        onOpenLinkedRecipe={onOpenLinkedRecipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    expect(screen.queryByText('1 Teil #recipe:abc:Verlinktes Rezept')).not.toBeInTheDocument();
+    const linkedRecipeButton = screen.getByRole('button', { name: 'Linsen Dal' });
+    expect(linkedRecipeButton).toBeInTheDocument();
+
+    fireEvent.click(linkedRecipeButton);
+    expect(onOpenLinkedRecipe).toHaveBeenCalledWith('abc');
+  });
+});
 
 describe('getRecipeCalcResult', () => {
   it('returns null when calc counters and ingredient details are missing', () => {

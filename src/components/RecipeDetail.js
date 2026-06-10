@@ -2747,6 +2747,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         <NutritionModal
           recipe={recipe}
           allRecipes={allRecipes}
+          onOpenLinkedRecipe={handleRecipeLinkClick}
           onClose={() => setShowNutritionModal(false)}
           onSave={handleSaveNutrition}
           currentUser={currentUser}

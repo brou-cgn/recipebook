@@ -2066,6 +2066,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         <NutritionModal
           recipe={selectedNutritionRecipe}
           allRecipes={recipes}
+          onOpenLinkedRecipe={setSelectedNutritionRecipeId}
           currentUser={currentUser}
           onClose={() => setSelectedNutritionRecipeId(null)}
           onSave={(naehrwerte) => handleSaveNutrition(selectedNutritionRecipe.id, naehrwerte)}
