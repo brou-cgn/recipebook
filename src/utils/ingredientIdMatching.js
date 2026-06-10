@@ -427,6 +427,30 @@ export function parseIngredientNameAndUnit(ingredientText) {
   const raw = normalizeVulgarFractions(String(ingredientText || '').trim());
   if (!raw) return { quantity: null, name: '', unit: null };
 
+  // Bereichsmengen erkennen: "3-4 Schalotten", "3 - 4 EL Öl", "100-200 g Mehl"
+  // Muss vor der allgemeinen numericPrefixMatch-Logik stehen.
+  const rangePrefix = raw.match(
+    /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+/
+  );
+  if (rangePrefix) {
+    const afterRange = raw.slice(rangePrefix[0].length).trim();
+    const tokens = afterRange.split(/\s+/).filter(Boolean);
+    const firstToken = tokens[0] || '';
+    const normalizedFirst = normalizeNutritionReferenceId(firstToken);
+    let unit = null;
+    let name = afterRange;
+    if (firstToken && (COMMON_UNITS.has(normalizedFirst) || CUSTOM_UNITS.has(normalizedFirst))) {
+      unit = firstToken;
+      name = tokens.slice(1).join(' ').trim() || afterRange;
+    }
+    return {
+      quantity: parseFloat(rangePrefix[1].replace(',', '.')),
+      quantityMax: parseFloat(rangePrefix[2].replace(',', '.')),
+      name,
+      unit,
+    };
+  }
+
   const numericPrefixMatch = raw.match(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s*(\S+)?\s*(.*)$/);
   if (!numericPrefixMatch) {
     return { quantity: null, name: raw, unit: null };
