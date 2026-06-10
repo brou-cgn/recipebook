@@ -600,6 +600,35 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
       expect(result.amount).toBeNull();
     });
 
+    test('classifies range amount without unit', () => {
+      const result = classifyIngredientWords('3-4 Schalotten');
+      expect(result.amount).toBe('3-4');
+      expect(result.unit).toBeNull();
+      expect(result.ingredientWords).toEqual(['Schalotten']);
+      expect(result.ignoredWords).toEqual([]);
+    });
+
+    test('classifies range amount with unit', () => {
+      const result = classifyIngredientWords('3-4 EL Öl');
+      expect(result.amount).toBe('3-4');
+      expect(result.unit).toBe('EL');
+      expect(result.ingredientWords).toContain('Öl');
+    });
+
+    test('classifies range amount with spaces around dash', () => {
+      const result = classifyIngredientWords('3 - 4 Schalotten');
+      expect(result.amount).toBe('3');
+      expect(result.ingredientWords).toContain('Schalotten');
+      expect(result.ingredientWords).not.toContain('4');
+    });
+
+    test('classifies range with unit and ingredient', () => {
+      const result = classifyIngredientWords('100-200 g Mehl');
+      expect(result.amount).toBe('100-200');
+      expect(result.unit).toBe('g');
+      expect(result.ingredientWords).toContain('Mehl');
+    });
+
     test('handles empty input', () => {
       expect(classifyIngredientWords('')).toEqual({
         amount: null,
