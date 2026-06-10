@@ -231,12 +231,34 @@ function parseIngredientPartsSync(ingredient) {
     .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
 
+  // Match: range amount with unit (e.g. "3-4 EL Öl", "3 - 4 EL Öl")
+  const rangeWithUnitRegex = new RegExp(
+    `^(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    'i'
+  );
+  let m;
+  m = str.match(rangeWithUnitRegex);
+  if (m) {
+    const amount    = parseFloat(m[1].replace(',', '.'));
+    const amountMax = parseFloat(m[2].replace(',', '.'));
+    return { amount, amountMax, unit: m[3], name: m[4] };
+  }
+
+  // Match: range amount without unit (e.g. "3-4 Eier", "3 - 4 Eier")
+  const rangeNoUnitRegex = /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+(.+)$/;
+  m = str.match(rangeNoUnitRegex);
+  if (m) {
+    const amount    = parseFloat(m[1].replace(',', '.'));
+    const amountMax = parseFloat(m[2].replace(',', '.'));
+    return { amount, amountMax, unit: null, name: m[3] };
+  }
+
   // Match: number unit name (e.g. "200 g Mehl", "2EL Öl")
   const withUnitRegex = new RegExp(
     `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
-  let m = str.match(withUnitRegex);
+  m = str.match(withUnitRegex);
   if (m) {
     const raw = m[1];
     const amount = raw.includes('/')
@@ -278,11 +300,33 @@ export async function parseIngredientParts(ingredient) {
     .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
 
+  // Match: range amount with unit (e.g. "3-4 EL Öl", "3 - 4 EL Öl")
+  const rangeWithUnitRegex = new RegExp(
+    `^(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    'i'
+  );
+  let m;
+  m = str.match(rangeWithUnitRegex);
+  if (m) {
+    const amount    = parseFloat(m[1].replace(',', '.'));
+    const amountMax = parseFloat(m[2].replace(',', '.'));
+    return { amount, amountMax, unit: m[3], name: m[4] };
+  }
+
+  // Match: range amount without unit (e.g. "3-4 Eier", "3 - 4 Eier")
+  const rangeNoUnitRegex = /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+(.+)$/;
+  m = str.match(rangeNoUnitRegex);
+  if (m) {
+    const amount    = parseFloat(m[1].replace(',', '.'));
+    const amountMax = parseFloat(m[2].replace(',', '.'));
+    return { amount, amountMax, unit: null, name: m[3] };
+  }
+
   const withUnitRegex = new RegExp(
     `^(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
-  let m = str.match(withUnitRegex);
+  m = str.match(withUnitRegex);
   if (m) {
     const raw = m[1];
     const amount = raw.includes('/')
