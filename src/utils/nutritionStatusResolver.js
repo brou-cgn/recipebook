@@ -82,10 +82,6 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     amountG = referenceRow.defaultAmountG;
   }
 
-  if (amountG == null) {
-    return { found: false, error: 'Mengenangabe konnte nicht ermittelt werden' };
-  }
-
   const status = parseNutritionReferenceStatus(referenceRow);
   const source = String(referenceRow?.source || '').trim().toLowerCase();
   const shouldGenerateNutrition =
@@ -155,6 +151,21 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
 
   if (!hasAnyNutritionData(nutritionValues)) {
     return { found: false, error: 'Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)' };
+  }
+
+  if (amountG == null) {
+    return {
+      found: false,
+      noAmountG: true,
+      naehrwerte: nutritionValues,
+      source: rowToUse?.source || referenceRow?.source || '',
+      searchTerm: rowToUse?.searchTerm || null,
+      aiEstimated: String(rowToUse?.source || '').trim().toLowerCase() === 'ai-generiert',
+      fromReference: true,
+      wroteBackReference,
+      writebackError,
+      error: 'Mengenangabe konnte nicht ermittelt werden',
+    };
   }
 
   return {

@@ -1,4 +1,12 @@
-import { getRecipeCalcResult, buildNutritionCompositionRows, resolveIngredientNutritionByStatus, computeIngredientAmountG } from './NutritionModal';
+import {
+  getRecipeCalcResult,
+  buildNutritionCompositionRows,
+  resolveIngredientNutritionByStatus,
+  computeIngredientAmountG,
+  parseManualAmountG,
+  scaleNutritionByAmountG,
+  sumNutritionFromIngredientDetails,
+} from './NutritionModal';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 
 jest.mock('../firebase', () => ({
@@ -245,6 +253,64 @@ describe('getRecipeCalcResult', () => {
       }));
     });
 
+    it('converts per-100g values for noAmount ingredients when manual grams are provided', () => {
+      const recipe = {
+        ingredients: ['Eier'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [],
+          ingredientDetails: [{
+            ingredient: 'Eier',
+            noAmountG: true,
+            naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 },
+          }],
+        },
+        {},
+        [],
+        { Eier: '75' }
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: 'Eier',
+        requiresManualAmount: true,
+        amountG: 75,
+        detail: 'Aus Referenzwert je 100 g umgerechnet',
+      }));
+      expect(rows[0].naehrwerte.kalorien).toBeCloseTo(112.5);
+      expect(rows[0].naehrwerte.protein).toBeCloseTo(9);
+    });
+
+    it('shows manual amount hint for noAmount ingredients with available reference values', () => {
+      const recipe = {
+        ingredients: ['Eier'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [],
+          ingredientDetails: [{
+            ingredient: 'Eier',
+            noAmountG: true,
+            naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 },
+          }],
+        },
+        {},
+        [],
+        {}
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: 'Eier',
+        requiresManualAmount: true,
+        detail: 'Referenzwert je 100 g vorhanden – Menge eingeben',
+      }));
+      expect(rows[0].naehrwerte.kalorien).toBeCloseTo(150);
+    });
+
     it('includes naehrwerte for recipe-link ingredients', () => {
       const linkNaehrwerte = { kalorien: 50, protein: 3, fett: 0.5, kohlenhydrate: 8, zucker: 0.5, ballaststoffe: 1, salz: 0.05 };
       const recipe = {
@@ -268,6 +334,45 @@ describe('getRecipeCalcResult', () => {
         source: expect.stringContaining('Rezeptlink'),
         naehrwerte: linkNaehrwerte,
       }));
+    });
+
+    describe('manual amount conversion helpers', () => {
+      it('parses positive manual gram values and rejects invalid input', () => {
+        expect(parseManualAmountG('75')).toBe(75);
+        expect(parseManualAmountG('75,5')).toBe(75.5);
+        expect(parseManualAmountG('0')).toBeNull();
+        expect(parseManualAmountG('-5')).toBeNull();
+        expect(parseManualAmountG('abc')).toBeNull();
+      });
+
+      it('scales per-100g nutrition values to a given amount', () => {
+        const scaled = scaleNutritionByAmountG({ kalorien: 200, protein: 10, fett: 5, kohlenhydrate: 20, zucker: 4, ballaststoffe: 3, salz: 0.5 }, 50);
+        expect(scaled).toEqual({
+          kalorien: 100,
+          protein: 5,
+          fett: 2.5,
+          kohlenhydrate: 10,
+          zucker: 2,
+          ballaststoffe: 1.5,
+          salz: 0.25,
+        });
+      });
+
+      it('sums normal ingredient details and converted noAmountG details', () => {
+        const result = sumNutritionFromIngredientDetails(
+          [
+            { ingredient: 'Tomaten', naehrwerte: { kalorien: 40, protein: 2, fett: 0.2, kohlenhydrate: 8, zucker: 4, ballaststoffe: 2, salz: 0.02 } },
+            { ingredient: 'Eier', noAmountG: true, naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 } },
+          ],
+          { Eier: '50' }
+        );
+
+        expect(result.normalizedManualAmounts).toEqual({ Eier: 50 });
+        expect(result.totals.kalorien).toBeCloseTo(115);
+        expect(result.totals.protein).toBeCloseTo(8);
+        expect(result.totals.fett).toBeCloseTo(5.2);
+        expect(result.totals.kohlenhydrate).toBeCloseTo(8.5);
+      });
     });
   });
 });
@@ -612,11 +717,18 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result).toEqual({ found: false, error: 'Keine ingredientID zugeordnet' });
   });
 
-  it('returns not found when amount in grams cannot be determined', async () => {
+  it('returns reference nutrition with noAmountG flag when grams cannot be determined', async () => {
     const row = { ...referenceRow, ingredientID: 'ei2', source: 'manual', defaultAmountG: undefined };
     const ingredient = { text: '3 Stück Eier', ingredientID: 'ei2' };
     const result = await resolveIngredientNutritionByStatus(ingredient, row, deps);
-    expect(result).toEqual({ found: false, error: 'Mengenangabe konnte nicht ermittelt werden' });
+    expect(result).toEqual(expect.objectContaining({
+      found: false,
+      noAmountG: true,
+      source: 'manual',
+      fromReference: true,
+      error: 'Mengenangabe konnte nicht ermittelt werden',
+    }));
+    expect(result.naehrwerte.kalorien).toBeCloseTo(20);
   });
 
   it('sets wroteBackReference false and writebackError null when no generation is triggered', async () => {

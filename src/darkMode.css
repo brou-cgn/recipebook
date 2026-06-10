@@ -1292,6 +1292,16 @@
   color: #ffd27a;
 }
 
+[data-theme="dark"] .nutrition-composition-manual-amount-input {
+  background: #1f1f1f;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .nutrition-composition-manual-amount-error {
+  color: #ff8a80;
+}
+
 /* ---- Rating modal ---- */
 [data-theme="dark"] .rating-star {
   color: #555;

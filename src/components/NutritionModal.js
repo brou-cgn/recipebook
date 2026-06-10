@@ -11,6 +11,59 @@ import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
 const AMOUNT_G_DECIMALS = 1;
+const NUTRITION_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
+
+export function parseManualAmountG(value) {
+  if (value == null) return null;
+  const normalized = String(value).trim().replace(',', '.');
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+export function scaleNutritionByAmountG(naehrwerte, amountG) {
+  if (!naehrwerte || amountG == null) return null;
+  const factor = amountG / 100;
+  const scaled = {};
+  NUTRITION_FIELDS.forEach((field) => {
+    scaled[field] = (naehrwerte[field] || 0) * factor;
+  });
+  return scaled;
+}
+
+export function sumNutritionFromIngredientDetails(ingredientDetails = [], manualAmountsInput = {}) {
+  const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
+  const normalizedManualAmounts = {};
+  let hasValues = false;
+
+  ingredientDetails.forEach((detail) => {
+    if (!detail?.naehrwerte) return;
+
+    if (detail.noAmountG) {
+      const manualAmountG = parseManualAmountG(manualAmountsInput?.[detail.ingredient]);
+      if (manualAmountG == null) return;
+      normalizedManualAmounts[detail.ingredient] = manualAmountG;
+      const scaled = scaleNutritionByAmountG(detail.naehrwerte, manualAmountG);
+      if (!scaled) return;
+      NUTRITION_FIELDS.forEach((field) => {
+        totals[field] += scaled[field] || 0;
+      });
+      hasValues = true;
+      return;
+    }
+
+    NUTRITION_FIELDS.forEach((field) => {
+      totals[field] += detail.naehrwerte[field] || 0;
+    });
+    hasValues = true;
+  });
+
+  return {
+    totals: hasValues ? totals : null,
+    normalizedManualAmounts,
+  };
+}
 
 function loadStoredCalcResult(recipeId) {
   if (!recipeId) return null;
@@ -61,7 +114,7 @@ export function getRecipeCalcResult(recipe) {
   };
 }
 
-export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = []) {
+export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = [], manualAmountsInput = {}) {
   const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
   const ingredientTexts = rawIngredients
     .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
@@ -82,29 +135,37 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     const ingredientDetail = detailsByIngredient.get(ingredient);
     const searchTerm = ingredientDetail?.searchTerm || null;
     const noAmountG = ingredientDetail?.noAmountG === true;
+    const hasNaehrwerte = Boolean(ingredientDetail?.naehrwerte);
+    const manualAmountG = parseManualAmountG(manualAmountsInput?.[ingredient]);
+    const manualAmountApplied = noAmountG && hasNaehrwerte && manualAmountG != null;
+    const convertedNaehrwerte = manualAmountApplied ? scaleNutritionByAmountG(ingredientDetail.naehrwerte, manualAmountG) : null;
     let status = 'Berechnet';
     if (acceptedIngredients.has(ingredient)) {
       status = 'Akzeptiert';
     } else if (notIncludedItem) {
       status = 'Nicht enthalten';
     }
-    const hasNaehrwerte = Boolean(ingredientDetail?.naehrwerte);
     return {
       ingredient,
       source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
       status,
-      amountG: ingredientDetail?.amountG ?? null,
+      amountG: ingredientDetail?.amountG ?? (manualAmountApplied ? manualAmountG : null),
       detail: notIncludedItem?.error ||
         (reformulation
           ? `Umformulierung: ${reformulation}`
-          : (searchTerm
+          : (noAmountG
+            ? (manualAmountApplied
+            ? 'Aus Referenzwert je 100 g umgerechnet'
+            : (hasNaehrwerte
+              ? 'Referenzwert je 100 g vorhanden – Menge eingeben'
+              : 'Referenzquelle vorhanden, Menge nicht berechenbar'))
+            : (searchTerm
             ? `Suchbegriff: ${searchTerm}`
-            : (noAmountG
-              ? 'Referenzquelle vorhanden, Menge nicht berechenbar'
-              : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—')))),
-      naehrwerte: ingredientDetail?.naehrwerte || null,
+            : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—')))),
+      naehrwerte: convertedNaehrwerte || ingredientDetail?.naehrwerte || null,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,
+      requiresManualAmount: noAmountG && hasNaehrwerte,
     };
   });
 }
@@ -155,6 +216,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const abortControllerRef = useRef(null);
   const handleAutoCalculateRef = useRef(null);
   const [showCompositionTable, setShowCompositionTable] = useState(false);
+  const [manualAmounts, setManualAmounts] = useState(() => {
+    const stored = loadStoredCalcResult(recipe?.id);
+    return {
+      ...(stored?.manualAmountsG || {}),
+      ...(recipe?.naehrwerte?.calcManualAmountsG || {}),
+    };
+  });
+  const [manualAmountErrors, setManualAmountErrors] = useState({});
   const lastRetryAutoCalculateTokenRef = useRef(retryAutoCalculateToken);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
@@ -206,7 +275,38 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     return `${rounded} g`;
   };
 
+  const handleManualAmountChange = (ingredient, value) => {
+    setManualAmounts((prev) => {
+      const next = { ...prev };
+      if (String(value).trim()) {
+        next[ingredient] = value;
+      } else {
+        delete next[ingredient];
+      }
+      if (autoCalcResult) {
+        saveStoredCalcResult(recipe?.id, { ...autoCalcResult, manualAmountsG: next });
+      }
+      return next;
+    });
+
+    const parsed = parseManualAmountG(value);
+    setManualAmountErrors((prev) => {
+      const next = { ...prev };
+      if (String(value).trim() && parsed == null) {
+        next[ingredient] = 'Bitte eine gültige Grammzahl > 0 eingeben.';
+      } else {
+        delete next[ingredient];
+      }
+      return next;
+    });
+  };
+
   const handleSave = async () => {
+    if (Object.keys(manualAmountErrors).length > 0) {
+      alert('Bitte korrigieren Sie die ungültigen Mengenangaben in der Zusammensetzungstabelle.');
+      return;
+    }
+
     const portionen = recipe.portionen || 1;
     // Form fields hold per-portion values; multiply back to store totals
     const perPortion = {
@@ -218,6 +318,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ballaststoffe: parsePositiveNumber(ballaststoffe),
       salz: parsePositiveNumber(salz),
     };
+    const { totals: convertedTotals, normalizedManualAmounts } = sumNutritionFromIngredientDetails(
+      autoCalcResult?.ingredientDetails || [],
+      manualAmounts
+    );
+    const hasManualConversions = Object.keys(normalizedManualAmounts).length > 0 && convertedTotals;
+    const totalsForSave = hasManualConversions
+      ? convertedTotals
+      : naehrwerteToTotals(perPortion, portionen);
+
     // Preserve calc metadata so the error log remains visible after manual save
     const { calcError } = recipe?.naehrwerte || {};
     const calcFoundCount = autoCalcResult?.foundCount ?? recipe?.naehrwerte?.calcFoundCount;
@@ -228,8 +337,9 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ? [...acceptedIngredients]
       : recipe?.naehrwerte?.calcAcceptedIngredients;
     const calcIngredientDetails = autoCalcResult?.ingredientDetails ?? recipe?.naehrwerte?.calcIngredientDetails;
+    const calcManualAmountsG = Object.keys(normalizedManualAmounts).length > 0 ? normalizedManualAmounts : null;
     const naehrwerte = {
-      ...naehrwerteToTotals(perPortion, portionen),
+      ...totalsForSave,
       calcPending: false,
       calcCompletedAt: Date.now(),
       ...(calcFoundCount !== undefined && { calcFoundCount }),
@@ -238,6 +348,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(calcReformulations !== undefined && { calcReformulations }),
       ...(calcAcceptedIngredients !== undefined && { calcAcceptedIngredients }),
       ...(calcIngredientDetails !== undefined && { calcIngredientDetails }),
+      calcManualAmountsG,
       ...(calcError !== undefined && { calcError }),
     };
 
@@ -399,6 +510,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
+    setManualAmounts({});
+    setManualAmountErrors({});
     clearStoredCalcResult(recipe?.id);
     setCalcProgress({ done: 0, total: ingredients.length + recipeLinkItems.length, current: ingredients[0]?.text || (recipeLinkItems[0]?.link.recipeName) || '' });
 
@@ -470,6 +583,19 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           if (reformulations[ingredient]) {
             successfulReformulations[ingredient] = reformulations[ingredient];
           }
+          continue;
+        }
+        if (resolved.noAmountG && resolved.naehrwerte) {
+          ingredientDetails.push({
+            ingredient,
+            naehrwerte: resolved.naehrwerte,
+            amountG: null,
+            noAmountG: true,
+            searchTerm: resolved.searchTerm || null,
+            aiEstimated: Boolean(resolved.aiEstimated),
+            fromReference: resolved.fromReference,
+            source: resolved.source,
+          });
           continue;
         }
         const reform = reformulations[ingredient];
@@ -591,6 +717,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
       calcAcceptedIngredients: acceptedArray || null,
       calcIngredientDetails: ingredientDetails.length > 0 ? ingredientDetails : null,
+      calcManualAmountsG: null,
     };
     try {
       await onSave(finalNaehrwerte);
@@ -780,6 +907,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcTotalCount: prevTotalCount,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
       calcIngredientDetails: mergedIngredientDetails.length > 0 ? mergedIngredientDetails : null,
+      calcManualAmountsG: Object.keys(recipe?.naehrwerte?.calcManualAmountsG || {}).length > 0 ? recipe.naehrwerte.calcManualAmountsG : null,
     };
     try {
       await onSave(finalNaehrwerte);
@@ -796,8 +924,23 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     recipe,
     autoCalcResult,
     reformulations,
-    acceptedIngredients
-  ), [recipe, autoCalcResult, reformulations, acceptedIngredients]);
+    acceptedIngredients,
+    manualAmounts
+  ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts]);
+
+  useEffect(() => {
+    if (!Array.isArray(autoCalcResult?.ingredientDetails) || autoCalcResult.ingredientDetails.length === 0) return;
+    const { totals } = sumNutritionFromIngredientDetails(autoCalcResult.ingredientDetails, manualAmounts);
+    if (!totals) return;
+    const perPortion = naehrwertePerPortion(totals, recipe.portionen || 1);
+    setKalorien(perPortion.kalorien != null ? String(perPortion.kalorien) : '');
+    setProtein(perPortion.protein != null ? String(perPortion.protein) : '');
+    setFett(perPortion.fett != null ? String(perPortion.fett) : '');
+    setKohlenhydrate(perPortion.kohlenhydrate != null ? String(perPortion.kohlenhydrate) : '');
+    setZucker(perPortion.zucker != null ? String(perPortion.zucker) : '');
+    setBallaststoffe(perPortion.ballaststoffe != null ? String(perPortion.ballaststoffe) : '');
+    setSalz(perPortion.salz != null ? String(perPortion.salz) : '');
+  }, [autoCalcResult, manualAmounts, recipe.portionen]);
 
   return (
     <div className="nutrition-modal-overlay" onClick={onClose}>
@@ -871,7 +1014,26 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'fett')}</td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kohlenhydrate')}</td>
                           <td>{row.status}</td>
-                          <td className="nutrition-composition-num">{formatAmountG(row.amountG)}</td>
+                          <td className="nutrition-composition-num">
+                            {row.requiresManualAmount ? (
+                              <div className="nutrition-composition-manual-amount">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  className="nutrition-composition-manual-amount-input"
+                                  value={manualAmounts[row.ingredient] ?? ''}
+                                  onChange={(e) => handleManualAmountChange(row.ingredient, e.target.value)}
+                                  placeholder="g"
+                                  aria-label={`Menge in Gramm für ${row.ingredient}`}
+                                />
+                                {manualAmountErrors[row.ingredient] && (
+                                  <div className="nutrition-composition-manual-amount-error">
+                                    {manualAmountErrors[row.ingredient]}
+                                  </div>
+                                )}
+                              </div>
+                            ) : formatAmountG(row.amountG)}
+                          </td>
                           <td>{row.detail}</td>
                         </tr>
                       ))}
