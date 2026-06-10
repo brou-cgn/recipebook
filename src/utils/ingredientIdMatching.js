@@ -427,27 +427,36 @@ export function parseIngredientNameAndUnit(ingredientText) {
   const raw = normalizeVulgarFractions(String(ingredientText || '').trim());
   if (!raw) return { quantity: null, name: '', unit: null };
 
-  // Bereichsmengen erkennen: "3-4 Schalotten", "3 - 4 EL Öl", "100-200 g Mehl"
-  // Muss vor der allgemeinen numericPrefixMatch-Logik stehen.
+  // Match range prefix with mixed-number support, e.g. "3 3/4-5", "1 1/2-2", "3-4"
+  const QUANTITY_PATTERN_STR = '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)';
   const rangePrefix = raw.match(
-    /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+/
+    new RegExp(`^(${QUANTITY_PATTERN_STR})\\s*[-–]\\s*(${QUANTITY_PATTERN_STR})\\s+`)
   );
   if (rangePrefix) {
     const afterRange = raw.slice(rangePrefix[0].length).trim();
-    const tokens = afterRange.split(/\s+/).filter(Boolean);
-    const firstToken = tokens[0] || '';
+    const parseQty = (s) => {
+      s = s.trim();
+      const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+      if (mixed) return parseInt(mixed[1], 10) + parseInt(mixed[2], 10) / parseInt(mixed[3], 10);
+      const frac = s.match(/^(\d+)\/(\d+)$/);
+      if (frac) return parseInt(frac[1], 10) / parseInt(frac[2], 10);
+      return parseFloat(s.replace(',', '.'));
+    };
+    // Check if afterRange starts with a known unit (e.g. "TL Salz" → unit=TL, name=Salz)
+    const afterTokens = afterRange.split(/\s+/).filter(Boolean);
+    const firstToken = afterTokens[0] || '';
     const normalizedFirst = normalizeNutritionReferenceId(firstToken);
-    let unit = null;
-    let name = afterRange;
+    let unitVal = null;
+    let nameVal = afterRange;
     if (firstToken && (COMMON_UNITS.has(normalizedFirst) || CUSTOM_UNITS.has(normalizedFirst))) {
-      unit = firstToken;
-      name = tokens.slice(1).join(' ').trim() || afterRange;
+      unitVal = firstToken;
+      nameVal = afterTokens.slice(1).join(' ').trim() || firstToken;
     }
     return {
-      quantity: parseFloat(rangePrefix[1].replace(',', '.')),
-      quantityMax: parseFloat(rangePrefix[2].replace(',', '.')),
-      name,
-      unit,
+      quantity: parseQty(rangePrefix[1]),
+      quantityMax: parseQty(rangePrefix[2]),
+      name: nameVal,
+      unit: unitVal,
     };
   }
 

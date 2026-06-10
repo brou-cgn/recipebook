@@ -643,5 +643,18 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
         ignoredWords: [],
       });
     });
+
+    test('classifies mixed number range without unit: "3 3/4-5 Schalotten"', () => {
+      const result = classifyIngredientWords('3 3/4-5 Schalotten');
+      expect(result.unit).toBeNull();
+      expect(result.ingredientWords).toContain('Schalotten');
+      expect(result.ingredientWords).not.toContain('3/4-5');
+    });
+
+    test('classifies mixed number range with unit: "1 1/2-2 TL Salz"', () => {
+      const result = classifyIngredientWords('1 1/2-2 TL Salz');
+      expect(result.unit).toBe('TL');
+      expect(result.ingredientWords).toContain('Salz');
+    });
   });
 });

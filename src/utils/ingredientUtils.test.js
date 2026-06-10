@@ -548,6 +548,38 @@ describe('parseIngredientParts range amounts', () => {
     expect(result).toEqual({ amount: 200, unit: 'g', name: 'Mehl' });
     expect(result.amountMax).toBeUndefined();
   });
+
+  test('parses mixed number lower bound without unit: "3 3/4-5 Schalotten"', async () => {
+    const result = await parseIngredientParts('3 3/4-5 Schalotten');
+    expect(result.amount).toBeCloseTo(3.75);
+    expect(result.amountMax).toBe(5);
+    expect(result.unit).toBeNull();
+    expect(result.name).toBe('Schalotten');
+  });
+
+  test('parses mixed number range with unit: "1 1/2-2 TL Salz"', async () => {
+    const result = await parseIngredientParts('1 1/2-2 TL Salz');
+    expect(result.amount).toBeCloseTo(1.5);
+    expect(result.amountMax).toBe(2);
+    expect(result.unit).toBe('TL');
+    expect(result.name).toBe('Salz');
+  });
+
+  test('parses fraction lower bound: "3/4-1 TL Pfeffer"', async () => {
+    const result = await parseIngredientParts('3/4-1 TL Pfeffer');
+    expect(result.amount).toBeCloseTo(0.75);
+    expect(result.amountMax).toBe(1);
+    expect(result.unit).toBe('TL');
+    expect(result.name).toBe('Pfeffer');
+  });
+
+  test('existing simple range still works: "3-4 Eier"', async () => {
+    const result = await parseIngredientParts('3-4 Eier');
+    expect(result.amount).toBe(3);
+    expect(result.amountMax).toBe(4);
+    expect(result.unit).toBeNull();
+    expect(result.name).toBe('Eier');
+  });
 });
 
 describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () => {
