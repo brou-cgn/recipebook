@@ -505,6 +505,24 @@ export function expandSaltAndPepperIngredients(ingredients) {
 export function scaleIngredient(ingredient, multiplier) {
   if (!ingredient || typeof ingredient !== 'string' || multiplier === 1) return ingredient;
 
+  // Pass 1: Bereichsmengen erkennen und beide Grenzen skalieren
+  // Beispiele: "3-4 Eier" × 2 → "6-8 Eier", "100-200 g Mehl" × 2 → "200-400 g Mehl"
+  const rangeRegex = /((?:^|\s))(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/g;
+  const scaledRange = ingredient.replace(rangeRegex, (match, prefix, lo, hi) => {
+    const loVal = parseFloat(lo.replace(',', '.')) * multiplier;
+    const hiVal = parseFloat(hi.replace(',', '.')) * multiplier;
+    const fmt = (v) => {
+      if (v % 1 === 0) return v.toString();
+      const fraction = decimalToFraction(v);
+      return fraction !== null ? fraction : v.toFixed(1);
+    };
+    return `${prefix}${fmt(loVal)}-${fmt(hiVal)}`;
+  });
+
+  // Wenn ein Bereich ersetzt wurde: früh zurückgeben (kein zweiter Durchlauf)
+  if (scaledRange !== ingredient) return scaledRange;
+
+  // Pass 2: normale Einzelmengen (bisherige Logik unverändert)
   const regex = /(?:^|\s)(\d+\/\d+|\d+(?:[.,]\d+)?)\s*([a-zA-Z]+)?/g;
 
   return ingredient.replace(regex, (match, number, unit) => {

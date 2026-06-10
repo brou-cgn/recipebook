@@ -234,6 +234,30 @@ describe('scaleIngredient', () => {
   test('handles ingredients without numbers', () => {
     expect(scaleIngredient('Salz nach Geschmack', 2)).toBe('Salz nach Geschmack');
   });
+
+  test('scales both bounds of a range without unit', () => {
+    expect(scaleIngredient('3-4 Eier', 2)).toBe('6-8 Eier');
+  });
+
+  test('scales both bounds of a range with unit', () => {
+    expect(scaleIngredient('3-4 EL Öl', 2)).toBe('6-8 EL Öl');
+  });
+
+  test('scales range with spaces around dash', () => {
+    expect(scaleIngredient('3 - 4 Eier', 2)).toBe('6-8 Eier');
+  });
+
+  test('halves both bounds of a range', () => {
+    expect(scaleIngredient('4-6 Eier', 0.5)).toBe('2-3 Eier');
+  });
+
+  test('returns range unchanged when multiplier is 1', () => {
+    expect(scaleIngredient('3-4 Eier', 1)).toBe('3-4 Eier');
+  });
+
+  test('formats fractional range bounds', () => {
+    expect(scaleIngredient('3-4 Eier', 0.5)).toBe('1 1/2-2 Eier');
+  });
 });
 
 describe('combineIngredients', () => {
