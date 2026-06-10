@@ -462,6 +462,45 @@ describe('parseIngredientParts (async) with Teelöffel/Esslöffel', () => {
   });
 });
 
+describe('parseIngredientParts range amounts', () => {
+  test('parses "3-4 Eier" as range without unit', async () => {
+    const result = await parseIngredientParts('3-4 Eier');
+    expect(result).toEqual({ amount: 3, amountMax: 4, unit: null, name: 'Eier' });
+  });
+
+  test('parses "3 - 4 Eier" (spaced dash) as range without unit', async () => {
+    const result = await parseIngredientParts('3 - 4 Eier');
+    expect(result).toEqual({ amount: 3, amountMax: 4, unit: null, name: 'Eier' });
+  });
+
+  test('parses "3-4 EL Öl" as range with unit', async () => {
+    const result = await parseIngredientParts('3-4 EL Öl');
+    expect(result).toEqual({ amount: 3, amountMax: 4, unit: 'EL', name: 'Öl' });
+  });
+
+  test('parses "100-200 g Mehl" as range with unit', async () => {
+    const result = await parseIngredientParts('100-200 g Mehl');
+    expect(result).toEqual({ amount: 100, amountMax: 200, unit: 'g', name: 'Mehl' });
+  });
+
+  test('parses "0,5-1 TL Salz" (comma decimal) as range with unit', async () => {
+    const result = await parseIngredientParts('0,5-1 TL Salz');
+    expect(result).toEqual({ amount: 0.5, amountMax: 1, unit: 'TL', name: 'Salz' });
+  });
+
+  test('standalone "3-4" without ingredient name is not parsed as range', async () => {
+    const result = await parseIngredientParts('3-4');
+    expect(result.amount).toBeNull();
+    expect(result.name).toBe('3-4');
+  });
+
+  test('normal ingredient without range has no amountMax', async () => {
+    const result = await parseIngredientParts('200 g Mehl');
+    expect(result).toEqual({ amount: 200, unit: 'g', name: 'Mehl' });
+    expect(result.amountMax).toBeUndefined();
+  });
+});
+
 describe('convertIngredientUnits with Teelöffel/Esslöffel normalization', () => {
   const conversionTable = [
     { id: 'trueffeloel-tl', ingredient: 'Trüffelöl', unit: 'TL', grams: '', milliliters: '5' },
