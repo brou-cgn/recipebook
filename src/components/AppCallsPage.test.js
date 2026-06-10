@@ -1711,6 +1711,32 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     );
   });
 
+  test('moderator can start manual nutrition recalc job and gets summary feedback', async () => {
+    const runRecalc = jest.fn(() => Promise.resolve({
+      data: {
+        started: true,
+        message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+      },
+    }));
+    mockHttpsCallable.mockImplementation((_functions, fnName) => {
+      if (fnName === 'runNutritionRecalcForFlaggedRecipes') return runRecalc;
+      return jest.fn();
+    });
+
+    render(<AppCallsPage currentUser={moderatorUser} recipes={[]} onUpdateRecipe={jest.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nährwerte jetzt neu berechnen' }));
+
+    await waitFor(() => {
+      expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'runNutritionRecalcForFlaggedRecipes');
+      expect(runRecalc).toHaveBeenCalledWith({});
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.'
+    );
+  });
+
   test('shows an error message when manual nutrition recalc job fails', async () => {
     const runRecalc = jest.fn(() => Promise.reject(new Error('Cloud Function nicht erreichbar')));
     mockHttpsCallable.mockImplementation((_functions, fnName) => {
