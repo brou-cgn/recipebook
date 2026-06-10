@@ -520,20 +520,41 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const hasNutritionValues = Boolean(
     recipe.naehrwerte?.kalorien != null || recipe.naehrwerte?.calcError || recipe.naehrwerte?.calcNotIncluded
   );
-  const recalcIngredientIDs = useMemo(() => new Set(
-    (nutritionReferenceRows || [])
-      .filter((row) => row?.recalc === true)
-      .map((row) => String(row?.ingredientID || '').trim())
-      .filter(Boolean)
-  ), [nutritionReferenceRows]);
-  const hasNutritionRecalcIngredient = useMemo(() => (
-    Array.isArray(recipe.ingredients) &&
-    recipe.ingredients.some((item) => {
-      if (!item || typeof item !== 'object' || item.type === 'heading') return false;
-      const ingredientID = String(item.ingredientID || '').trim();
-      return ingredientID && recalcIngredientIDs.has(ingredientID);
-    })
-  ), [recipe.ingredients, recalcIngredientIDs]);
+  const recalcIngredientMap = useMemo(() => {
+    const toMs = (rd) => {
+      if (rd == null) return null;
+      if (rd?.toMillis) return rd.toMillis();
+      if (rd instanceof Date) return rd.getTime();
+      if (typeof rd === 'number') return rd;
+      return null;
+    };
+    return new Map(
+      (nutritionReferenceRows || [])
+        .filter((row) => row?.recalc === true)
+        .map((row) => {
+          const ingredientID = String(row?.ingredientID || '').trim();
+          if (!ingredientID) return null;
+          return [ingredientID, toMs(row?.recalcDate)];
+        })
+        .filter(Boolean)
+    );
+  }, [nutritionReferenceRows]);
+  const hasNutritionRecalcIngredient = useMemo(() => {
+    if (recalcIngredientMap.size === 0) return false;
+    const calcCompletedAt = recipe.naehrwerte?.calcCompletedAt ?? null;
+    return (
+      Array.isArray(recipe.ingredients) &&
+      recipe.ingredients.some((item) => {
+        if (!item || typeof item !== 'object' || item.type === 'heading') return false;
+        const ingredientID = String(item.ingredientID || '').trim();
+        if (!ingredientID || !recalcIngredientMap.has(ingredientID)) return false;
+        const recalcDateMs = recalcIngredientMap.get(ingredientID);
+        if (recalcDateMs == null) return true;
+        if (calcCompletedAt == null) return true;
+        return recalcDateMs > calcCompletedAt;
+      })
+    );
+  }, [recipe.ingredients, recipe.naehrwerte?.calcCompletedAt, recalcIngredientMap]);
   const showNutritionRecalcIcon = hasNutritionValues && hasNutritionRecalcIngredient;
   const nutritionButtonTitle = showNutritionRecalcIcon
     ? 'Nährwerte nachkalkulieren'

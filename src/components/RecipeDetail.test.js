@@ -999,47 +999,91 @@ describe('RecipeDetail - Nutrition recalc icon', () => {
     nachname: 'User',
   };
 
-  test('shows "Nährwerte nachkalkulieren" icon instead of filled icon when any ingredientID has recalc=true', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const renderRecipeDetailWithIcons = async (nutritionRows, naehrwerte = { kalorien: 200 }) => {
     const customLists = require('../utils/customLists');
-    const getButtonIconsSpy = jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
+    jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
       nutritionFilled: '🥦',
       nutritionRecalc: '♻️',
     });
 
     mockNutritionReferenceState = {
-      rows: [{ ingredientID: 'tomate', recalc: true }],
+      rows: nutritionRows,
       loading: false,
       reload: jest.fn(),
       lastUpdatedAt: null,
     };
 
-    try {
-      render(
-        <RecipeDetail
-          recipe={{
-            id: 'recipe-recalc-1',
-            title: 'Test Recipe',
-            authorId: 'user-1',
-            portionen: 2,
-            ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
-            steps: ['Mischen'],
-            naehrwerte: { kalorien: 200 },
-          }}
-          onBack={() => {}}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          currentUser={currentUser}
-        />
-      );
+    render(
+      <RecipeDetail
+        recipe={{
+          id: 'recipe-recalc-1',
+          title: 'Test Recipe',
+          authorId: 'user-1',
+          portionen: 2,
+          ingredients: [{ type: 'ingredient', text: '1 Tomate', ingredientID: 'tomate' }],
+          steps: ['Mischen'],
+          naehrwerte,
+        }}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+  };
 
-      await waitFor(() => {
-        expect(screen.getByLabelText('Nährwerte nachkalkulieren')).toBeInTheDocument();
-        expect(screen.getByText('♻️')).toBeInTheDocument();
-      });
-      expect(screen.queryByText('🥦')).not.toBeInTheDocument();
-    } finally {
-      getButtonIconsSpy.mockRestore();
-    }
+  test('shows "Nährwerte nachkalkulieren" icon when recalcDate is newer than calcCompletedAt', async () => {
+    await renderRecipeDetailWithIcons(
+      [{ ingredientID: 'tomate', recalc: true, recalcDate: 200 }],
+      { kalorien: 200, calcCompletedAt: 100 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Nährwerte nachkalkulieren')).toBeInTheDocument();
+      expect(screen.getByText('♻️')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('🥦')).not.toBeInTheDocument();
+  });
+
+  test('keeps filled nutrition icon when recalcDate is not newer than calcCompletedAt', async () => {
+    await renderRecipeDetailWithIcons(
+      [{ ingredientID: 'tomate', recalc: true, recalcDate: 100 }],
+      { kalorien: 200, calcCompletedAt: 100 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Nährwerte anzeigen')).toBeInTheDocument();
+      expect(screen.getByText('🥦')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('♻️')).not.toBeInTheDocument();
+  });
+
+  test('shows recalc icon when recalcDate is missing', async () => {
+    await renderRecipeDetailWithIcons(
+      [{ ingredientID: 'tomate', recalc: true }],
+      { kalorien: 200, calcCompletedAt: 100 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Nährwerte nachkalkulieren')).toBeInTheDocument();
+      expect(screen.getByText('♻️')).toBeInTheDocument();
+    });
+  });
+
+  test('shows recalc icon when nutrition was never calculated', async () => {
+    await renderRecipeDetailWithIcons(
+      [{ ingredientID: 'tomate', recalc: true, recalcDate: 100 }],
+      { kalorien: 200 }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Nährwerte nachkalkulieren')).toBeInTheDocument();
+      expect(screen.getByText('♻️')).toBeInTheDocument();
+    });
   });
 });
 
