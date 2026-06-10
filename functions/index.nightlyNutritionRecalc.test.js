@@ -206,7 +206,7 @@ test.beforeEach(() => {
         title: 'Tomatensuppe',
         portionen: 2,
         zutaten: [{ type: 'ingredient', text: '100 g tomate', ingredientID: 'tomate' }],
-        naehrwerte: {},
+        naehrwerte: { calcCompletedAt: 1700000000000 },
       },
     },
     adminUsers: [{ email: 'admin@example.com', isAdmin: true }],
@@ -294,12 +294,13 @@ test('manual recalc job recalculates recipe whose calcCompletedAt is before reca
   assert.equal(sentMails.length, 1);
 });
 
-test('manual recalc job recalculates recipe with no calcCompletedAt regardless of recalcDate', async () => {
+test('manual recalc job skips recipe with no calcCompletedAt', async () => {
   mockDbState.nutritionReferences.tomate.recalcDate = 1700000000000;
   mockDbState.recipes.r1.naehrwerte = {}; // no calcCompletedAt
 
   await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
+  assert.equal(sentMails.length, 1);
 });
