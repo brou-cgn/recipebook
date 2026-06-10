@@ -4952,9 +4952,13 @@ exports.runNutritionRecalcForFlaggedRecipes = onCall(
 
       const callerDoc = await admin.firestore().doc(`users/${callerUid}`).get();
       const callerData = callerDoc.exists ? (callerDoc.data() || {}) : {};
-      const isAdmin = callerData.role === 'admin' || callerData.isAdmin === true;
-      if (!isAdmin) {
-        throw new HttpsError('permission-denied', 'Admin role required.');
+      const canRunManualRecalc = (
+        callerData.role === 'admin' ||
+        callerData.role === 'moderator' ||
+        callerData.isAdmin === true
+      );
+      if (!canRunManualRecalc) {
+        throw new HttpsError('permission-denied', 'Admin or moderator role required.');
       }
 
       void runNutritionRecalcForFlaggedRecipesCore({triggeredBy: `manual:${callerUid}`})

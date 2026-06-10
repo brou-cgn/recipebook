@@ -212,6 +212,7 @@ test.beforeEach(() => {
     adminUsers: [{ email: 'admin@example.com', isAdmin: true }],
     userById: {
       'admin-1': { role: 'admin', isAdmin: true },
+      'moderator-1': { role: 'moderator', isAdmin: false },
       'user-1': { role: 'user', isAdmin: false },
     },
   };
@@ -257,7 +258,19 @@ test('manual recalc job keeps recalc flag when recalculation fails', async () =>
   assert.equal(sentMails.length, 1);
 });
 
-test('manual recalc job requires admin privileges', async () => {
+test('manual recalc job allows moderator privileges', async () => {
+  const result = await manualHandler({
+    auth: { uid: 'moderator-1' },
+    data: {},
+  });
+
+  assert.deepEqual(result, {
+    started: true,
+    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+  });
+});
+
+test('manual recalc job rejects users without required role', async () => {
   await assert.rejects(
     manualHandler({
       auth: { uid: 'user-1' },
