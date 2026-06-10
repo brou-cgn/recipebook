@@ -703,7 +703,7 @@ function NutritionReferenceTab({ currentUser }) {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => {
+              {visibleRows.map((row, rowIndex) => {
                 const diagnostics = calculateOpenFoodFactsDiagnostics(row);
                 const confidenceInfo = getConfidenceInfoText(diagnostics);
                 return (
@@ -847,7 +847,10 @@ function NutritionReferenceTab({ currentUser }) {
                     <div className="nutrition-source-row">KI</div>
                     <div className="nutrition-source-row">Man</div>
                   </td>
-                  {NUTRITION_REFERENCE_FIELDS.map((field) => (
+                  {NUTRITION_REFERENCE_FIELDS.map((field, fieldIndex) => {
+                    const F = NUTRITION_REFERENCE_FIELDS.length;
+                    const baseIndex = 1 + rowIndex * F * 3;
+                    return (
                     <td key={field} className="nutrition-source-cell">
                       <div className="nutrition-source-row">
                         <input
@@ -858,6 +861,7 @@ function NutritionReferenceTab({ currentUser }) {
                           readOnly
                           className="conversion-table-input nutrition-source-input-readonly"
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (OpenFoodFacts) ${row.id}`}
+                          tabIndex={baseIndex + fieldIndex}
                         />
                       </div>
                       <div className="nutrition-source-row">
@@ -869,6 +873,7 @@ function NutritionReferenceTab({ currentUser }) {
                           readOnly
                           className="conversion-table-input nutrition-source-input-readonly"
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (KI) ${row.id}`}
+                          tabIndex={baseIndex + F + fieldIndex}
                         />
                       </div>
                       <div className="nutrition-source-row">
@@ -880,10 +885,12 @@ function NutritionReferenceTab({ currentUser }) {
                           onChange={(e) => updateCell(row.id, `${field}_manual`, e.target.value)}
                           className="conversion-table-input"
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (Manuell) ${row.id}`}
+                          tabIndex={baseIndex + 2 * F + fieldIndex}
                         />
                       </div>
                     </td>
-                  ))}
+                    );
+                  })}
                   <td className="conversion-table-actions">
                     <button
                       className="add-btn"
