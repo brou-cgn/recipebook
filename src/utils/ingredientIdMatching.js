@@ -441,7 +441,7 @@ export function parseIngredientNameAndUnit(ingredientText) {
     let name = afterRange;
     if (firstToken && (COMMON_UNITS.has(normalizedFirst) || CUSTOM_UNITS.has(normalizedFirst))) {
       unit = firstToken;
-      name = tokens.slice(1).join(' ').trim() || firstToken;
+      name = tokens.slice(1).join(' ').trim() || afterRange;
     }
     return {
       quantity: parseFloat(rangePrefix[1].replace(',', '.')),
