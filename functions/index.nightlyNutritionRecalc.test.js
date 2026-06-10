@@ -199,7 +199,7 @@ test.beforeEach(() => {
   sentMails = [];
   mockDbState = {
     nutritionReferences: {
-      tomate: { ingredientID: 'tomate', recalc: true, source: 'openfoodfacts', kalorien: 18 },
+      tomate: { ingredientID: 'tomate', recalc: true, recalcDate: 1000000000000, source: 'openfoodfacts', kalorien: 18 },
     },
     recipes: {
       r1: {
@@ -294,7 +294,7 @@ test('manual recalc job recalculates recipe whose calcCompletedAt is before reca
   assert.equal(sentMails.length, 1);
 });
 
-test('manual recalc job recalculates recipe with no calcCompletedAt regardless of recalcDate', async () => {
+test('manual recalc job recalculates recipe with no calcCompletedAt when recalcDate is set', async () => {
   mockDbState.nutritionReferences.tomate.recalcDate = 1700000000000;
   mockDbState.recipes.r1.naehrwerte = {}; // no calcCompletedAt
 
@@ -302,4 +302,15 @@ test('manual recalc job recalculates recipe with no calcCompletedAt regardless o
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
+});
+
+test('manual recalc job skips recipe when recalcDate is missing', async () => {
+  delete mockDbState.nutritionReferences.tomate.recalcDate;
+  mockDbState.recipes.r1.naehrwerte = {};
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
+  assert.equal(sentMails.length, 1);
 });

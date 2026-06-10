@@ -549,7 +549,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         const ingredientID = String(item.ingredientID || '').trim();
         if (!ingredientID || !recalcIngredientMap.has(ingredientID)) return false;
         const recalcDateMs = recalcIngredientMap.get(ingredientID);
-        if (recalcDateMs == null) return true;
+        if (recalcDateMs == null) return false; // kein recalcDate → nicht recalculieren
         if (calcCompletedAt == null) return true;
         return recalcDateMs > calcCompletedAt;
       })

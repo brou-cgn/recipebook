@@ -397,7 +397,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         const ingredientID = String(item.ingredientID || '').trim();
         if (!ingredientID || !recalcDateMap.has(ingredientID)) return false;
         const recalcDateMs = recalcDateMap.get(ingredientID);
-        if (recalcDateMs == null) return true;
+        if (recalcDateMs == null) return false; // kein recalcDate → nicht recalculieren
         if (calcCompletedAt == null) return true;
         return recalcDateMs > calcCompletedAt;
       });

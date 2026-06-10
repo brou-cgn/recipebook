@@ -4647,9 +4647,9 @@ function recipeUsesRecalcIngredient(recipeData = {}, recalcIngredientMap = new M
     const ingredientID = String(item.ingredientID || '').trim();
     if (!ingredientID || !recalcIngredientMap.has(ingredientID)) return false;
     const recalcDate = recalcIngredientMap.get(ingredientID);
-    if (recalcDate == null) return true; // kein recalcDate → immer recalculieren
+    if (recalcDate == null) return false; // kein recalcDate → nicht recalculieren
     const recalcDateMs = toMilliseconds(recalcDate);
-    if (recalcDateMs == null) return true;
+    if (recalcDateMs == null) return false; // ungültiges recalcDate → nicht recalculieren
     if (calcCompletedAt == null) return true; // noch nie berechnet
     return recalcDateMs > calcCompletedAt;
   });
