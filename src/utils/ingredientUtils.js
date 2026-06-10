@@ -374,16 +374,18 @@ export function combineIngredients(ingredients) {
 
   for (const ingredient of ingredients) {
     if (!ingredient) continue;
-    const { amount, unit, name } = parseIngredientPartsSync(ingredient);
+    const { amount, amountMax, unit, name } = parseIngredientPartsSync(ingredient);
+    // Bei Bereichsmengen: obere Grenze für die Einkaufsliste verwenden
+    const effectiveAmount = amountMax !== undefined ? amountMax : amount;
     const key = `${name.toLowerCase()}|${(unit || '').toLowerCase()}`;
 
     if (combined.has(key)) {
       const existing = combined.get(key);
-      if (amount !== null && existing.amount !== null) {
-        existing.amount += amount;
+      if (effectiveAmount !== null && existing.amount !== null) {
+        existing.amount += effectiveAmount;
       }
     } else {
-      combined.set(key, { amount, unit, name });
+      combined.set(key, { amount: effectiveAmount, unit, name });
       order.push(key);
     }
   }
@@ -420,7 +422,9 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
   const table = Array.isArray(conversionTable) ? conversionTable : [];
 
   const converted = ingredients.map(ingredient => {
-    let { amount, unit, name } = parseIngredientPartsSync(ingredient);
+    let { amount, amountMax, unit, name } = parseIngredientPartsSync(ingredient);
+    // Bei Bereichsmengen: obere Grenze für Einheitenumrechnung verwenden
+    const effectiveAmount = amountMax !== undefined ? amountMax : amount;
 
     // Normalize unit variants for better table matching
     if (unit) {
@@ -437,20 +441,20 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
       return ingredient;
     }
 
-    if (amount !== null) {
+    if (effectiveAmount !== null) {
       // Standard metric conversions (no table entry needed)
       if (unit.toLowerCase() === 'kg') {
-        const result = amount * 1000;
+        const result = effectiveAmount * 1000;
         const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
         return `${formatted} g ${name}`;
       }
       if (unit.toLowerCase() === 'l') {
-        const result = amount * 1000;
+        const result = effectiveAmount * 1000;
         const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
         return `${formatted} ml ${name}`;
       }
       if (unit.toLowerCase() === 'cl') {
-        const result = amount * 10;
+        const result = effectiveAmount * 10;
         const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
         return `${formatted} ml ${name}`;
       }
@@ -466,12 +470,12 @@ export function convertIngredientUnits(ingredients, conversionTable = []) {
 
       if (entry) {
         if (entry.grams && parseFloat(entry.grams) > 0) {
-          const result = amount * parseFloat(entry.grams);
+          const result = effectiveAmount * parseFloat(entry.grams);
           const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
           return `${formatted} g ${name}`;
         }
         if (entry.milliliters && parseFloat(entry.milliliters) > 0) {
-          const result = amount * parseFloat(entry.milliliters);
+          const result = effectiveAmount * parseFloat(entry.milliliters);
           const formatted = result % 1 === 0 ? result.toString() : result.toFixed(1);
           return `${formatted} ml ${name}`;
         }

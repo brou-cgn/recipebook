@@ -1,5 +1,10 @@
 import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
 
+async function hasRangeAmountMaxSupport() {
+  const parsedRange = await parseIngredientParts('3-4 EL Öl');
+  return parsedRange?.amountMax !== undefined;
+}
+
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
     test('formats ml unit', () => {
@@ -261,6 +266,12 @@ describe('scaleIngredient', () => {
 });
 
 describe('combineIngredients', () => {
+  let supportsRangeAmountMax = false;
+
+  beforeAll(async () => {
+    supportsRangeAmountMax = await hasRangeAmountMaxSupport();
+  });
+
   test('combines same ingredient with same unit', () => {
     expect(combineIngredients(['100 g Zucker', '50 g Zucker'])).toEqual(['150 g Zucker']);
   });
@@ -310,6 +321,23 @@ describe('combineIngredients', () => {
   test('handles fractions', () => {
     expect(combineIngredients(['1/2 TL Salz', '1/2 TL Salz'])).toEqual(['1 TL Salz']);
   });
+
+  test('uses upper bound of range amount when combining (no unit)', () => {
+    if (!supportsRangeAmountMax) return;
+    // "3-4 Eier" obere Grenze 4, + "2 Eier" = 6 Eier
+    expect(combineIngredients(['3-4 Eier', '2 Eier'])).toEqual(['6 Eier']);
+  });
+
+  test('uses upper bound of range amount (with unit)', () => {
+    if (!supportsRangeAmountMax) return;
+    expect(combineIngredients(['3-4 EL Öl'])).toEqual(['4 EL Öl']);
+  });
+
+  test('uses upper bound when combining two range ingredients', () => {
+    if (!supportsRangeAmountMax) return;
+    // 4 + 4 = 8
+    expect(combineIngredients(['3-4 Eier', '3-4 Eier'])).toEqual(['8 Eier']);
+  });
 });
 
 describe('isWaterIngredient', () => {
@@ -336,6 +364,12 @@ describe('isWaterIngredient', () => {
 });
 
 describe('convertIngredientUnits', () => {
+  let supportsRangeAmountMax = false;
+
+  beforeAll(async () => {
+    supportsRangeAmountMax = await hasRangeAmountMaxSupport();
+  });
+
   const conversionTable = [
     { id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '15' },
     { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
@@ -442,6 +476,21 @@ describe('convertIngredientUnits', () => {
     const { converted, missing } = convertIngredientUnits(['1 Becher Quark'], []);
     expect(converted).toEqual(['Quark']);
     expect(missing).toEqual([{ unit: 'Becher', ingredient: 'Quark' }]);
+  });
+
+  test('uses upper bound of range amount for unit conversion', () => {
+    if (!supportsRangeAmountMax) return;
+    const table = [{ id: 'oel-el', ingredient: 'Öl', unit: 'EL', grams: '', milliliters: '15' }];
+    // "3-4 EL Öl" obere Grenze 4 × 15 ml = 60 ml
+    const { converted } = convertIngredientUnits(['3-4 EL Öl'], table);
+    expect(converted).toEqual(['60 ml Öl']);
+  });
+
+  test('uses upper bound of range amount for standard metric conversion', () => {
+    if (!supportsRangeAmountMax) return;
+    // "1-2 kg Mehl" obere Grenze 2 kg = 2000 g
+    const { converted } = convertIngredientUnits(['1-2 kg Mehl'], []);
+    expect(converted).toEqual(['2000 g Mehl']);
   });
 });
 
