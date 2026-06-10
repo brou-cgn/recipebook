@@ -211,6 +211,24 @@ export function formatIngredients(ingredients) {
 }
 
 /**
+ * Parses a quantity string that may be a mixed number ("3 3/4"), a simple
+ * fraction ("3/4"), or a decimal/integer ("3", "3.5", "3,5").
+ * @param {string} str
+ * @returns {number|null}
+ */
+function parseQuantityString(str) {
+  if (!str) return null;
+  str = str.trim();
+  const mixed = str.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) return parseInt(mixed[1], 10) + parseInt(mixed[2], 10) / parseInt(mixed[3], 10);
+  const frac = str.match(/^(\d+)\/(\d+)$/);
+  if (frac) return parseInt(frac[1], 10) / parseInt(frac[2], 10);
+  return parseFloat(str.replace(',', '.'));
+}
+
+const QUANTITY_PATTERN = '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)';
+
+/**
  * Parses an ingredient string into its amount, unit and name components.
  * Examples:
  *   "200 g Mehl"  -> { amount: 200, unit: 'g',  name: 'Mehl' }
@@ -231,25 +249,29 @@ function parseIngredientPartsSync(ingredient) {
     .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
 
-  // Match: range amount with unit (e.g. "3-4 EL Öl", "3 - 4 EL Öl")
+  // Match: range amount with unit, lower bound may be a mixed number
+  // e.g. "3 3/4-5 EL Öl", "3-4 EL Öl", "1 1/2-2 TL Salz"
   const rangeWithUnitRegex = new RegExp(
-    `^(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    `^(${QUANTITY_PATTERN})\\s*[-–]\\s*(${QUANTITY_PATTERN})\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
   let m;
   m = str.match(rangeWithUnitRegex);
   if (m) {
-    const amount    = parseFloat(m[1].replace(',', '.'));
-    const amountMax = parseFloat(m[2].replace(',', '.'));
+    const amount    = parseQuantityString(m[1]);
+    const amountMax = parseQuantityString(m[2]);
     return { amount, amountMax, unit: m[3], name: m[4] };
   }
 
-  // Match: range amount without unit (e.g. "3-4 Eier", "3 - 4 Eier")
-  const rangeNoUnitRegex = /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+(.+)$/;
+  // Match: range amount without unit, lower bound may be a mixed number
+  // e.g. "3 3/4-5 Schalotten", "3-4 Eier"
+  const rangeNoUnitRegex = new RegExp(
+    `^(${QUANTITY_PATTERN})\\s*[-–]\\s*(${QUANTITY_PATTERN})\\s+(.+)$`
+  );
   m = str.match(rangeNoUnitRegex);
   if (m) {
-    const amount    = parseFloat(m[1].replace(',', '.'));
-    const amountMax = parseFloat(m[2].replace(',', '.'));
+    const amount    = parseQuantityString(m[1]);
+    const amountMax = parseQuantityString(m[2]);
     return { amount, amountMax, unit: null, name: m[3] };
   }
 
@@ -300,25 +322,29 @@ export async function parseIngredientParts(ingredient) {
     .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|');
 
-  // Match: range amount with unit (e.g. "3-4 EL Öl", "3 - 4 EL Öl")
+  // Match: range amount with unit, lower bound may be a mixed number
+  // e.g. "3 3/4-5 EL Öl", "3-4 EL Öl", "1 1/2-2 TL Salz"
   const rangeWithUnitRegex = new RegExp(
-    `^(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*(${unitsPattern})\\s+(.+)$`,
+    `^(${QUANTITY_PATTERN})\\s*[-–]\\s*(${QUANTITY_PATTERN})\\s*(${unitsPattern})\\s+(.+)$`,
     'i'
   );
   let m;
   m = str.match(rangeWithUnitRegex);
   if (m) {
-    const amount    = parseFloat(m[1].replace(',', '.'));
-    const amountMax = parseFloat(m[2].replace(',', '.'));
+    const amount    = parseQuantityString(m[1]);
+    const amountMax = parseQuantityString(m[2]);
     return { amount, amountMax, unit: m[3], name: m[4] };
   }
 
-  // Match: range amount without unit (e.g. "3-4 Eier", "3 - 4 Eier")
-  const rangeNoUnitRegex = /^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s+(.+)$/;
+  // Match: range amount without unit, lower bound may be a mixed number
+  // e.g. "3 3/4-5 Schalotten", "3-4 Eier"
+  const rangeNoUnitRegex = new RegExp(
+    `^(${QUANTITY_PATTERN})\\s*[-–]\\s*(${QUANTITY_PATTERN})\\s+(.+)$`
+  );
   m = str.match(rangeNoUnitRegex);
   if (m) {
-    const amount    = parseFloat(m[1].replace(',', '.'));
-    const amountMax = parseFloat(m[2].replace(',', '.'));
+    const amount    = parseQuantityString(m[1]);
+    const amountMax = parseQuantityString(m[2]);
     return { amount, amountMax, unit: null, name: m[3] };
   }
 

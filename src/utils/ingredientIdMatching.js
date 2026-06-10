@@ -427,6 +427,39 @@ export function parseIngredientNameAndUnit(ingredientText) {
   const raw = normalizeVulgarFractions(String(ingredientText || '').trim());
   if (!raw) return { quantity: null, name: '', unit: null };
 
+  // Match range prefix with mixed-number support, e.g. "3 3/4-5", "1 1/2-2", "3-4"
+  const QUANTITY_PATTERN_STR = '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)';
+  const rangePrefix = raw.match(
+    new RegExp(`^(${QUANTITY_PATTERN_STR})\\s*[-–]\\s*(${QUANTITY_PATTERN_STR})\\s+`)
+  );
+  if (rangePrefix) {
+    const afterRange = raw.slice(rangePrefix[0].length).trim();
+    const parseQty = (s) => {
+      s = s.trim();
+      const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+      if (mixed) return parseInt(mixed[1], 10) + parseInt(mixed[2], 10) / parseInt(mixed[3], 10);
+      const frac = s.match(/^(\d+)\/(\d+)$/);
+      if (frac) return parseInt(frac[1], 10) / parseInt(frac[2], 10);
+      return parseFloat(s.replace(',', '.'));
+    };
+    // Check if afterRange starts with a known unit (e.g. "TL Salz" → unit=TL, name=Salz)
+    const afterTokens = afterRange.split(/\s+/).filter(Boolean);
+    const firstToken = afterTokens[0] || '';
+    const normalizedFirst = normalizeNutritionReferenceId(firstToken);
+    let unitVal = null;
+    let nameVal = afterRange;
+    if (firstToken && (COMMON_UNITS.has(normalizedFirst) || CUSTOM_UNITS.has(normalizedFirst))) {
+      unitVal = firstToken;
+      nameVal = afterTokens.slice(1).join(' ').trim() || firstToken;
+    }
+    return {
+      quantity: parseQty(rangePrefix[1]),
+      quantityMax: parseQty(rangePrefix[2]),
+      name: nameVal,
+      unit: unitVal,
+    };
+  }
+
   const numericPrefixMatch = raw.match(/^(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)\s*(\S+)?\s*(.*)$/);
   if (!numericPrefixMatch) {
     return { quantity: null, name: raw, unit: null };
