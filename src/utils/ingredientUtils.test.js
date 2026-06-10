@@ -1,5 +1,10 @@
 import { formatIngredientSpacing, formatIngredients, scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits, parseIngredientParts, decimalToFraction, formatIngredientAsFraction, isSaltAndPepperCombination, expandSaltAndPepperIngredients } from './ingredientUtils';
 
+async function hasRangeAmountMaxSupport() {
+  const parsedRange = await parseIngredientParts('3-4 EL Öl');
+  return parsedRange?.amountMax !== undefined;
+}
+
 describe('formatIngredientSpacing', () => {
   describe('basic unit formatting', () => {
     test('formats ml unit', () => {
@@ -240,8 +245,7 @@ describe('combineIngredients', () => {
   let supportsRangeAmountMax = false;
 
   beforeAll(async () => {
-    const parsedRange = await parseIngredientParts('3-4 EL Öl');
-    supportsRangeAmountMax = parsedRange?.amountMax !== undefined;
+    supportsRangeAmountMax = await hasRangeAmountMaxSupport();
   });
 
   test('combines same ingredient with same unit', () => {
@@ -339,8 +343,7 @@ describe('convertIngredientUnits', () => {
   let supportsRangeAmountMax = false;
 
   beforeAll(async () => {
-    const parsedRange = await parseIngredientParts('3-4 EL Öl');
-    supportsRangeAmountMax = parsedRange?.amountMax !== undefined;
+    supportsRangeAmountMax = await hasRangeAmountMaxSupport();
   });
 
   const conversionTable = [
