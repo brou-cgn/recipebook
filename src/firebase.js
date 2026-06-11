@@ -4,7 +4,12 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  getFirestore,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
@@ -34,8 +39,27 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
-const db = getFirestore(app);
+// Initialize Firestore with multi-tab persistent cache.
+// Falls back to memory cache if IndexedDB persistence is unavailable
+// (e.g. browser lock not released, unsupported browser).
+// This prevents the repeated page-reload loop caused by failed-precondition errors.
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+} catch (err) {
+  if (err.code === 'failed-precondition') {
+    console.warn('Firestore: Another tab already holds the persistence lock – falling back to memory cache.');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Firestore: This browser does not support IndexedDB persistence – falling back to memory cache.');
+  } else {
+    console.warn('Firestore: Could not enable persistent cache, falling back to memory cache.', err);
+  }
+  db = getFirestore(app);
+}
 
 // Initialize Firebase Authentication
 const auth = getAuth(app);
@@ -45,17 +69,6 @@ const functions = getFunctions(app);
 
 // Initialize Firebase Storage
 const storage = getStorage(app);
-
-// Enable offline persistence for PWA support
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time.
-    console.warn('Firebase persistence failed: Multiple tabs open');
-  } else if (err.code === 'unimplemented') {
-    // The current browser does not support offline persistence
-    console.warn('Firebase persistence not supported in this browser');
-  }
-});
 
 // Initialize Firebase Cloud Messaging (only in supported environments)
 // Exported as a Promise so consumers can await the resolved Messaging instance
