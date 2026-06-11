@@ -514,6 +514,24 @@ describe('nutritionReferenceUtils', () => {
       });
     });
 
+    test('populates nutritionSetActual on approval transition when previous actual is empty but values are present', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'ai-generiert',
+          nutritionSetActual: [],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 80 },
+        nextSource: 'ai-generiert',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'ai-generiert', kalorien: 80 }],
+        nutritionSetOutdated: [],
+        recalc: false,
+      });
+    });
+
     test('does not update sets when fromNutritionGeneration switches source to manual and preserveOnManualSourceChange is set', () => {
       expect(buildNutritionTrackingFields({
         previousData: {

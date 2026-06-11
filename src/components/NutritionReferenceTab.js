@@ -15,6 +15,7 @@ import {
   buildNutritionTrackingFields,
   buildSourceNutritionFields,
   computeEffectiveNutritionValues,
+  getNutritionValuesForSource,
   getStatusAfterNutritionFetch,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferenceStatus,
@@ -282,9 +283,12 @@ function NutritionReferenceTab({ currentUser }) {
     const isApprovalTransition =
       status === NUTRITION_REFERENCE_APPROVED_STATUS
       && previousStatus !== NUTRITION_REFERENCE_APPROVED_STATUS;
+    const trackingValues = Object.keys(sourceFields).length > 0
+      ? getNutritionValuesForSource({ ...row, ...sourceFields }, sourceValue)
+      : parseNutritionReferenceValues(row);
     const trackingFields = buildNutritionTrackingFields({
       previousData: previousRow || {},
-      nextValues: effectiveValues,
+      nextValues: trackingValues,
       nextSource: sourceValue,
       forceRecalc: isApprovalTransition,
       preserveOnManualSourceChange: true,
