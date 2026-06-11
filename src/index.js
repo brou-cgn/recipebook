@@ -16,7 +16,10 @@ root.render(
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
     if (registration && registration.waiting) {
+      if (document.getElementById('sw-update-banner')) return;
+
       const banner = document.createElement('div');
+      banner.id = 'sw-update-banner';
       banner.innerHTML = `
         <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
                     background:#402C1C;color:white;padding:14px 24px;
@@ -38,7 +41,7 @@ serviceWorkerRegistration.register({
         banner.remove();
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           window.location.reload();
-        });
+        }, { once: true });
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       });
     }
