@@ -460,6 +460,60 @@ describe('nutritionReferenceUtils', () => {
       });
     });
 
+    test('shifts actual to outdated on approval transition with no new values', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'manual',
+          nutritionSetActual: [{ source: 'manual', kalorien: 100 }],
+          nutritionSetOutdated: [],
+        },
+        nextValues: {},
+        nextSource: 'manual',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'manual', kalorien: 100 }],
+        nutritionSetOutdated: [{ source: 'manual', kalorien: 100 }],
+        recalc: false,
+      });
+    });
+
+    test('shifts actual to outdated on approval transition with no new values for openfoodfacts source', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 200, protein: 5 }],
+          nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 180 }],
+        },
+        nextValues: {},
+        nextSource: 'openfoodfacts',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 200, protein: 5 }],
+        nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 200, protein: 5 }],
+        recalc: false,
+      });
+    });
+
+    test('keeps both sets empty on approval transition when previous actual is empty and no new values', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'manual',
+          nutritionSetActual: [],
+          nutritionSetOutdated: [],
+        },
+        nextValues: {},
+        nextSource: 'manual',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [],
+        nutritionSetOutdated: [],
+        recalc: false,
+      });
+    });
+
     test('does not update sets when fromNutritionGeneration switches source to manual and preserveOnManualSourceChange is set', () => {
       expect(buildNutritionTrackingFields({
         previousData: {
