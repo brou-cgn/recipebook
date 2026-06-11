@@ -5199,3 +5199,74 @@ exports.onNutritionReferenceChanged = onDocumentWritten(
       }
     },
 );
+
+/**
+ * Scheduled Cloud Function: clean up expired calculated swipe flags across all
+ * lists once per night.
+ *
+ * For every document in `recipeSwipeFlags` whose `calculatedExpiresAt` timestamp
+ * is in the past the fields `flag` and `expiresAt` are reset to `null`, mirroring
+ * the lazy cleanup performed by `cleanupExpiredCalculatedFlagsForList` on write.
+ *
+ * Schedule: every day at 01:00 Europe/Berlin (MEZ/MESZ).
+ */
+exports.nightlySwipeFlagsCleanup = onSchedule(
+    {
+      schedule: '0 1 * * *',
+      timeZone: 'Europe/Berlin',
+    },
+    async (_event) => {
+      const db = admin.firestore();
+      const snapshot = await db.collection('recipeSwipeFlags').get();
+
+      if (snapshot.empty) {
+        console.log('nightlySwipeFlagsCleanup: no documents found, nothing to clean up');
+        return;
+      }
+
+      const now = Date.now();
+      const expiredDocs = [];
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        const calculatedExpiresAt = data.calculatedExpiresAt;
+        const calculatedExpiresAtMillis = calculatedExpiresAt?.toMillis?.();
+        const isExpired =
+          calculatedExpiresAt !== null &&
+          calculatedExpiresAt !== undefined &&
+          typeof calculatedExpiresAtMillis === 'number' &&
+          calculatedExpiresAtMillis <= now;
+
+        if (isExpired) {
+          expiredDocs.push(docSnap);
+        }
+      });
+
+      if (expiredDocs.length === 0) {
+        console.log('nightlySwipeFlagsCleanup: no expired documents found');
+        return;
+      }
+
+      let cleanedCount = 0;
+      let batch = db.batch();
+      let operationCount = 0;
+
+      for (const docSnap of expiredDocs) {
+        batch.update(docSnap.ref, {flag: null, expiresAt: null});
+        operationCount += 1;
+        if (operationCount >= 450) {
+          await batch.commit();
+          cleanedCount += operationCount;
+          batch = db.batch();
+          operationCount = 0;
+        }
+      }
+
+      if (operationCount > 0) {
+        await batch.commit();
+        cleanedCount += operationCount;
+      }
+
+      console.log(`nightlySwipeFlagsCleanup: cleaned up ${cleanedCount} expired swipe flag document(s)`);
+    },
+);
