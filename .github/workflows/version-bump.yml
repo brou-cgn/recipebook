@@ -132,15 +132,22 @@ jobs:
             git rebase --abort 2>/dev/null || true
             
             # Fetch and reset to the latest remote state to avoid rebase conflicts
-            git fetch origin ${{ github.ref_name }}
+            if ! git fetch origin ${{ github.ref_name }}; then
+              echo "Fetch failed on attempt $i, waiting..."
+              sleep 5
+              continue
+            fi
             git reset --hard origin/${{ github.ref_name }}
             
             # Re-apply the version bump on top of the latest remote state
-            npm version $BUMP_TYPE --no-git-tag-version
+            if ! npm version $BUMP_TYPE --no-git-tag-version; then
+              echo "npm version failed (BUMP_TYPE=$BUMP_TYPE), aborting"
+              exit 1
+            fi
             NEW_VERSION=$(node -p "require('./package.json').version")
             
             # Skip if this tag already exists on the remote (handles reruns)
-            if git ls-remote --tags origin "refs/tags/v$NEW_VERSION" | grep -q "refs/tags/v$NEW_VERSION"; then
+            if git ls-remote --tags origin "refs/tags/v$NEW_VERSION" | grep -q .; then
               echo "✅ Tag v$NEW_VERSION already exists on remote, nothing to push"
               exit 0
             fi
