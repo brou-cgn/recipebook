@@ -189,6 +189,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [expandedRecipeCallId, setExpandedRecipeCallId] = useState(null);
   const [now, setNow] = useState(() => Date.now());
   const [filterBenjaminRousselli, setFilterBenjaminRousselli] = useState(true);
+  const [filterNutritionCalculations, setFilterNutritionCalculations] = useState(true);
   const tabsRef = useRef(null);
   const ingredientMatchFromModalRef = useRef(false);
   const { rows: nutritionReferenceRows, reload: reloadNutritionReferences } = useNutritionReference();
@@ -403,9 +404,8 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       });
     };
 
-    const completed = withNutrition
+    const completedAll = withNutrition
       .filter((recipe) => recipe.naehrwerte?.calcPending !== true)
-      .filter((recipe) => needsRecalc(recipe) || hasNotIncludedNutritionIngredients(recipe))
       .sort((a, b) => {
         const aDate = a.naehrwerte?.calcCompletedAt ?? a.naehrwerte?.calcPendingAt ?? 0;
         const bDate = b.naehrwerte?.calcCompletedAt ?? b.naehrwerte?.calcPendingAt ?? 0;
@@ -414,8 +414,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         const bTitle = (b.title || b.id || '').toString();
         return aTitle.localeCompare(bTitle, 'de-DE');
       });
-    return { pending, completed };
+    const completed = completedAll
+      .filter((recipe) => needsRecalc(recipe) || hasNotIncludedNutritionIngredients(recipe));
+    return { pending, completed, completedAll };
   }, [recipes, nutritionReferenceRows]);
+
+  const completedNutritionCalculations = filterNutritionCalculations
+    ? nutritionListData.completed
+    : nutritionListData.completedAll;
 
   // Fehlende Zutaten-IDs tab state
   const [assigningIngredientIdRecipeId, setAssigningIngredientIdRecipeId] = useState(null);
@@ -1504,8 +1510,19 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                 </div>
               </>
             )}
+            <div className="app-calls-filter-row">
+              <label className="app-calls-filter-label">
+                <input
+                  type="checkbox"
+                  checked={filterNutritionCalculations}
+                  onChange={(e) => setFilterNutritionCalculations(e.target.checked)}
+                  className="app-calls-filter-checkbox"
+                />
+                Aktuelle Filterung anwenden
+              </label>
+            </div>
             <h3>Abgeschlossene Berechnungen</h3>
-            {nutritionListData.completed.length === 0 ? (
+            {completedNutritionCalculations.length === 0 ? (
               <div className="app-calls-empty">Keine abgeschlossenen Berechnungen vorhanden.</div>
             ) : (
               <>
@@ -1519,7 +1536,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                       </tr>
                     </thead>
                     <tbody>
-                      {nutritionListData.completed.map(recipe => (
+                      {completedNutritionCalculations.map(recipe => (
                         <tr key={recipe.id}>
                           <td>
                             <button
@@ -1560,7 +1577,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   </table>
                 </div>
                 <div className="app-calls-stats">
-                  Gesamt: <strong>{nutritionListData.completed.length}</strong> {nutritionListData.completed.length === 1 ? 'abgeschlossene Berechnung' : 'abgeschlossene Berechnungen'}
+                  Gesamt: <strong>{completedNutritionCalculations.length}</strong>{filterNutritionCalculations && completedNutritionCalculations.length !== nutritionListData.completedAll.length
+                    ? <> von {nutritionListData.completedAll.length} abgeschlossenen Berechnungen (gefiltert)</>
+                    : <> {completedNutritionCalculations.length === 1 ? 'abgeschlossene Berechnung' : 'abgeschlossene Berechnungen'}</>}
                 </div>
               </>
             )}
