@@ -172,7 +172,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0 }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -928,6 +928,28 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     manualAmounts
   ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts]);
 
+  const renderCompositionIngredient = (ingredientText) => {
+    const recipeLink = decodeRecipeLink(ingredientText);
+    if (!recipeLink) return ingredientText;
+
+    const linkedRecipe = allRecipes.find((item) => item.id === recipeLink.recipeId);
+    const displayName = linkedRecipe?.title || recipeLink.recipeName || ingredientText;
+
+    return (
+      <>
+        {recipeLink.quantityPrefix ? `${recipeLink.quantityPrefix} ` : ''}
+        <button
+          type="button"
+          className="nutrition-composition-recipe-link"
+          onClick={() => onOpenLinkedRecipe?.(recipeLink.recipeId)}
+          title={`Öffne Rezept: ${displayName}`}
+        >
+          {displayName}
+        </button>
+      </>
+    );
+  };
+
   useEffect(() => {
     if (!Array.isArray(autoCalcResult?.ingredientDetails) || autoCalcResult.ingredientDetails.length === 0) return;
     const { totals } = sumNutritionFromIngredientDetails(autoCalcResult.ingredientDetails, manualAmounts);
@@ -1004,7 +1026,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                          key={`${row.ingredient}-${index}`}
                          className={row.aiEstimated ? 'nutrition-composition-row--ai-estimated' : ''}
                         >
-                         <td>{row.ingredient}</td>
+                         <td>{renderCompositionIngredient(row.ingredient)}</td>
                          <td>
                            {row.source}
                            {row.aiEstimated && <span className="nutrition-ai-estimated-badge"> 🤖 KI-Schätzung</span>}
