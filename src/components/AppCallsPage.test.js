@@ -1689,7 +1689,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     const runRecalc = jest.fn(() => Promise.resolve({
       data: {
         started: true,
-        message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+        message: 'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.',
+        summary: { affectedRecipeCount: 3, updatedRecipes: 3, failedRecipes: 0, skippedRecipes: 0, resetRecalcCount: 1, fatalError: null },
       },
     }));
     mockHttpsCallable.mockImplementation((_functions, fnName) => {
@@ -1707,7 +1708,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
       expect(runRecalc).toHaveBeenCalledWith({});
     });
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.'
+      'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.'
     );
   });
 
@@ -1715,7 +1716,8 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
     const runRecalc = jest.fn(() => Promise.resolve({
       data: {
         started: true,
-        message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+        message: 'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.',
+        summary: { affectedRecipeCount: 1, updatedRecipes: 1, failedRecipes: 0, skippedRecipes: 0, resetRecalcCount: 1, fatalError: null },
       },
     }));
     mockHttpsCallable.mockImplementation((_functions, fnName) => {
@@ -1733,7 +1735,7 @@ describe('AppCallsPage – Fehlende Zutaten-IDs tab', () => {
       expect(runRecalc).toHaveBeenCalledWith({});
     });
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.'
+      'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.'
     );
   });
 
