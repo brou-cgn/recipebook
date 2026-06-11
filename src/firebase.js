@@ -43,23 +43,24 @@ const app = initializeApp(firebaseConfig);
 // Falls back to memory cache if IndexedDB persistence is unavailable
 // (e.g. browser lock not released, unsupported browser).
 // This prevents the repeated page-reload loop caused by failed-precondition errors.
-let db;
-try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
-  });
-} catch (err) {
-  if (err.code === 'failed-precondition') {
-    console.warn('Firestore: Another tab already holds the persistence lock – falling back to memory cache.');
-  } else if (err.code === 'unimplemented') {
-    console.warn('Firestore: This browser does not support IndexedDB persistence – falling back to memory cache.');
-  } else {
-    console.warn('Firestore: Could not enable persistent cache, falling back to memory cache.', err);
+const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch (err) {
+    if (err.code === 'failed-precondition') {
+      console.warn('Firestore: Another tab already holds the persistence lock -- falling back to memory cache.');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Firestore: This browser does not support IndexedDB persistence -- falling back to memory cache.');
+    } else {
+      console.warn('Firestore: Could not enable persistent cache, falling back to memory cache.', err);
+    }
+    return getFirestore(app);
   }
-  db = getFirestore(app);
-}
+})();
 
 // Initialize Firebase Authentication
 const auth = getAuth(app);
