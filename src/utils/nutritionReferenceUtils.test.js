@@ -404,6 +404,100 @@ describe('nutritionReferenceUtils', () => {
       expect(result.recalc).toBe(false);
       expect(result).not.toHaveProperty('recalcDate');
     });
+
+    test('shifts sets for approval transition with openfoodfacts source', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 110, protein: 2 },
+        nextSource: 'openfoodfacts',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 110, protein: 2 }],
+        nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        recalc: true,
+        recalcDate: fixedNow,
+      });
+    });
+
+    test('shifts sets for approval transition with ai-generiert source', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'ai-generiert',
+          nutritionSetActual: [{ source: 'ai-generiert', kalorien: 100, protein: 2 }],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 100, protein: 2 },
+        nextSource: 'ai-generiert',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'ai-generiert', kalorien: 100, protein: 2 }],
+        nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 100, protein: 2 }],
+        recalc: false,
+      });
+    });
+
+    test('shifts sets for approval transition with empty previous actual for openfoodfacts', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 100, protein: 2 },
+        nextSource: 'openfoodfacts',
+        forceRecalc: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        nutritionSetOutdated: [],
+        recalc: false,
+      });
+    });
+
+    test('does not update sets when fromNutritionGeneration switches source to manual and preserveOnManualSourceChange is set', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'ai-generiert',
+          nutritionSetActual: [{ source: 'ai-generiert', kalorien: 80 }],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 90 },
+        nextSource: 'manual',
+        fromNutritionGeneration: true,
+        preserveOnManualSourceChange: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'ai-generiert', kalorien: 80 }],
+        nutritionSetOutdated: [],
+        recalc: false,
+      });
+    });
+
+    test('updates sets when fromNutritionGeneration does not switch to manual', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 80 }],
+          nutritionSetOutdated: [],
+        },
+        nextValues: { kalorien: 90 },
+        nextSource: 'openfoodfacts',
+        fromNutritionGeneration: true,
+        preserveOnManualSourceChange: true,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 90 }],
+        nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 80 }],
+        recalc: true,
+        recalcDate: fixedNow,
+      });
+    });
   });
 
   describe('computeEffectiveNutritionValues', () => {

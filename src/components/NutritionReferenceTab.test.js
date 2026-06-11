@@ -406,6 +406,80 @@ describe('NutritionReferenceTab', () => {
     }));
   });
 
+  test('sets recalc and shifts nutrition sets on Freigegeben with openfoodfacts source', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            source: 'openfoodfacts',
+            synonyms: ['Tomate'],
+            kalorien_openfoodfacts: 110,
+            protein_openfoodfacts: 2,
+            nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+            nutritionSetOutdated: [],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      source: 'openfoodfacts',
+      recalc: true,
+      nutritionSetOutdated: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+      nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 110, protein: 2 }],
+    }));
+  });
+
+  test('shifts nutrition sets on Freigegeben with ai-generiert source without recalc when values unchanged', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            status: 'Prüfung ausstehend',
+            source: 'ai-generiert',
+            synonyms: ['Tomate'],
+            kalorien_ai: 95,
+            protein_ai: 3,
+            nutritionSetActual: [{ source: 'ai-generiert', kalorien: 95, protein: 3 }],
+            nutritionSetOutdated: [],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status tomate'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      source: 'ai-generiert',
+      recalc: false,
+      nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 95, protein: 3 }],
+      nutritionSetActual: [{ source: 'ai-generiert', kalorien: 95, protein: 3 }],
+    }));
+  });
+
   test('keeps nutrition sets unchanged when source is switched to manual', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [
