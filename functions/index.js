@@ -1882,6 +1882,7 @@ exports.parseIngredientAmountG = onCall(
 async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen = 1, callerLabel = 'system'} = {}) {
   const {
     parseIngredientForNutrition,
+    isSimpleIngredient = () => false,
     normalizeIngredientWithGemini,
     estimateNutritionWithGemini,
   } = createNutritionNormalizationUtils({
@@ -1942,11 +1943,23 @@ async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen =
 
     let parsed = null;
     const hasExplicitQuantity = hasExplicitQuantityInIngredient(ingredientStr);
-    try {
-      parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000});
-    } catch (geminiError) {
-      console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
+
+    if (isSimpleIngredient(ingredientStr)) {
+      parsed = parseIngredientForNutrition(ingredientStr);
+      if (parsed) {
+        console.log(`Fast path (regex) for simple ingredient: "${ingredientStr}"`);
+      }
     }
+
+    if (!parsed) {
+      try {
+        parsed = await normalizeIngredientWithGemini(ingredientStr, {timeoutMs: 5000});
+      } catch (geminiError) {
+        console.warn(`Gemini normalization failed for "${ingredientStr}", falling back to regex:`, geminiError.message);
+        parsed = parseIngredientForNutrition(ingredientStr);
+      }
+    }
+
     if (!parsed) {
       parsed = parseIngredientForNutrition(ingredientStr);
     }

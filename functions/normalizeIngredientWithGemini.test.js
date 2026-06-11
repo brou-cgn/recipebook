@@ -107,6 +107,19 @@ test('parseIngredientForNutrition removes unknown unit token from ingredient nam
   });
 });
 
+test('isSimpleIngredient returns true for simple quantity-unit ingredients', () => {
+  const utils = createNutritionNormalizationUtils();
+
+  assert.equal(utils.isSimpleIngredient('80 g Zucker'), true);
+  assert.equal(utils.isSimpleIngredient('6 Prisen Salz'), true);
+});
+
+test('isSimpleIngredient returns false for ingredients with modifiers', () => {
+  const utils = createNutritionNormalizationUtils();
+
+  assert.equal(utils.isSimpleIngredient('2 EL Olivenöl, kaltgepresst, bio'), false);
+});
+
 test('normalizeIngredientWithGemini returns null without an API key', async () => {
   const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
     amount: 1,

@@ -285,6 +285,88 @@ test('uses extended timeout for Gemini fallback after empty OpenFoodFacts result
   global.fetch = originalFetch;
 });
 
+test('uses regex fast path for simple ingredients without Gemini normalization call', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  let normalizeCalls = 0;
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 80, name: 'Zucker'}),
+    isSimpleIngredient: () => true,
+    normalizeIngredientWithGemini: async () => {
+      normalizeCalls++;
+      return {amountG: 80, name: 'Zucker', searchName: 'sugar'};
+    },
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Zucker',
+      kalorien: 400,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['80 g Zucker'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(normalizeCalls, 0);
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.details[0].amountG, 80);
+  assert.equal(response.naehrwerte.kalorien, 320);
+
+  global.fetch = originalFetch;
+});
+
+test('uses Gemini normalization for complex ingredients', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called when cache hit exists');
+  };
+
+  let normalizeCalls = 0;
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 30, name: 'Olivenöl, kaltgepresst'}),
+    isSimpleIngredient: () => false,
+    normalizeIngredientWithGemini: async () => {
+      normalizeCalls++;
+      return {amountG: 30, name: 'Olivenöl', searchName: 'olive oil'};
+    },
+    estimateNutritionWithGemini: async () => null,
+  });
+  firestoreDocGetStub = async () => ({
+    exists: true,
+    data: () => ({
+      name: 'Olivenöl',
+      kalorien: 884,
+    }),
+  });
+  loadWrappedFunction();
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['2 EL Olivenöl, kaltgepresst, bio'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(normalizeCalls, 1);
+  assert.equal(response.foundCount, 1);
+  assert.equal(response.details[0].amountG, 30);
+  assert.equal(response.naehrwerte.kalorien, 265);
+
+  global.fetch = originalFetch;
+});
+
 test('cleans parenthetical text from OpenFoodFacts search terms', async () => {
   const originalFetch = global.fetch;
   const fetchCalls = [];
