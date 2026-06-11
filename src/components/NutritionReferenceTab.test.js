@@ -480,6 +480,43 @@ describe('NutritionReferenceTab', () => {
     }));
   });
 
+  test('uses source-specific ai values (not openfoodfacts) for nutritionSetActual on Freigegeben with ai-generiert source', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'ingwer',
+          data: () => ({
+            ingredientID: 'ingwer',
+            status: 'Prüfung ausstehend',
+            source: 'ai-generiert',
+            synonyms: ['Ingwer'],
+            kalorien_openfoodfacts: 41,
+            kalorien_ai: 80,
+            nutritionSetActual: [],
+            nutritionSetOutdated: [],
+            recalc: false,
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('ingwer')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Status ingwer'), { target: { value: 'Freigegeben' } });
+    fireEvent.click(screen.getByRole('button', { name: /Änderungen speichern/ }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      status: 'Freigegeben',
+      source: 'ai-generiert',
+      recalc: false,
+      nutritionSetOutdated: [],
+      nutritionSetActual: [{ source: 'ai-generiert', kalorien: 80 }],
+    }));
+  });
+
   test('keeps nutrition sets unchanged when source is switched to manual', async () => {
     mockGetDocs.mockResolvedValueOnce({
       docs: [

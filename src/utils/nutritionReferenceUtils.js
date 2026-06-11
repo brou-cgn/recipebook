@@ -218,6 +218,8 @@ export function buildNutritionTrackingFields({
         getCaloriesFromNutritionSet(nextOutdated),
         getCaloriesFromNutritionSet(nextActual)
       );
+    } else {
+      nextActual = previousActual;
     }
   } else if (hasNextSet && fromNutritionGeneration && !(preserveOnManualSourceChange && switchedToManual)) {
     nextOutdated = previousActual;
