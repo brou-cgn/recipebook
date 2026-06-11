@@ -933,10 +933,35 @@ export async function getSettings() {
     return settingsCache;
   }
 
-  // Check localStorage cache before hitting Firestore
+  // Check localStorage cache before hitting Firestore.
+  // Image fields are always excluded from localStorage (large binary data), so even
+  // when the text-settings cache is fresh we must still fetch settings/images from
+  // Firestore.  Skipping this fetch was the cause of images disappearing after a
+  // hard reload (Ctrl+Shift+R) that clears the in-memory settingsCache.
   const lsCache = getSettingsFromLocalStorageCache();
   if (lsCache) {
-    settingsCache = lsCache;
+    try {
+      const imagesDoc = await getDoc(doc(db, 'settings', 'images'));
+      const imagesData = imagesDoc.exists() ? imagesDoc.data() : {};
+      const buttonIcons = await getButtonIcons();
+      settingsCache = {
+        ...lsCache,
+        faviconImage: imagesData.faviconImage || null,
+        appLogoImage: imagesData.appLogoImage || null,
+        appLogoImageUrl: imagesData.appLogoImageUrl || null,
+        buttonIcons,
+        timelineBubbleIcon: imagesData.timelineBubbleIcon || null,
+        timelineMenuBubbleIcon: imagesData.timelineMenuBubbleIcon || null,
+        timelineCookEventBubbleIcon: imagesData.timelineCookEventBubbleIcon || null,
+        timelineRecipeDefaultImage: imagesData.timelineRecipeDefaultImage || null,
+        timelineMenuDefaultImage: imagesData.timelineMenuDefaultImage || null,
+        timelineCookEventDefaultImage: imagesData.timelineCookEventDefaultImage || null,
+      };
+    } catch (error) {
+      // If the image fetch fails, fall back to the text-only cache so the app
+      // remains usable (images will simply not be shown).
+      settingsCache = lsCache;
+    }
     return settingsCache;
   }
   

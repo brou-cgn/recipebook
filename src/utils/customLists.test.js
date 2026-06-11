@@ -73,6 +73,10 @@ beforeEach(() => {
   doc.mockImplementation((...args) => ({ path: args.slice(1).join('/') }));
   // Default: getDocs returns an empty snapshot (no icons in collection)
   getDocs.mockResolvedValue({ forEach: jest.fn() });
+  // Default: getDoc returns a non-existent document so tests that do not
+  // explicitly mock getDoc (e.g. those that rely on the localStorage cache
+  // path) still get a well-defined value and do not throw.
+  getDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
   clearSettingsCache();
   clearButtonIconsLocalStorageCache();
 });
@@ -817,6 +821,44 @@ describe('getSettings – settings/images document split', () => {
     expect(updateDoc).not.toHaveBeenCalled();
     expect(settings.faviconImage).toBeNull();
   });
+
+  test('loads images from Firestore even when text-settings localStorage cache is fresh (hard-reload regression)', async () => {
+    // Simulate the state after a hard reload (Ctrl+Shift+R):
+    // – in-memory settingsCache is cleared (done by clearSettingsCache() in beforeEach)
+    // – localStorage still holds a fresh text-settings cache (no image fields)
+    localStorage.setItem('appSettingsCache', JSON.stringify({ maxKandidatenSchwelle: 5 }));
+    localStorage.setItem('appSettingsCacheTimestamp', String(Date.now()));
+
+    // settings/images contains real image data in Firestore
+    getDoc.mockImplementation((docRef) => {
+      if (docRef.path === 'settings/images') {
+        return Promise.resolve({
+          exists: () => true,
+          data: () => ({
+            timelineBubbleIcon: 'data:image/png;base64,icon123',
+            timelineMenuDefaultImage: 'data:image/png;base64,menu456',
+            appLogoImage: 'data:image/png;base64,logo789',
+          }),
+        });
+      }
+      return Promise.resolve({ exists: () => false, data: () => ({}) });
+    });
+
+    const settings = await getSettings();
+
+    // Image fields must be loaded from Firestore, not returned as null
+    expect(settings.timelineBubbleIcon).toBe('data:image/png;base64,icon123');
+    expect(settings.timelineMenuDefaultImage).toBe('data:image/png;base64,menu456');
+    expect(settings.appLogoImage).toBe('data:image/png;base64,logo789');
+    // Text settings from localStorage cache should still be present
+    expect(settings.maxKandidatenSchwelle).toBe(5);
+    // settings/app must NOT have been fetched (localStorage cache was used)
+    const appDocCalls = getDoc.mock.calls.filter(call => call[0]?.path === 'settings/app');
+    expect(appDocCalls).toHaveLength(0);
+    // settings/images MUST have been fetched
+    const imagesDocCalls = getDoc.mock.calls.filter(call => call[0]?.path === 'settings/images');
+    expect(imagesDocCalls).toHaveLength(1);
+  });
 });
 
 describe('button icons localStorage cache', () => {
@@ -887,25 +929,26 @@ describe('button icons localStorage cache', () => {
     expect(localStorage.getItem('buttonIconsCacheTimestamp')).toBeNull();
   });
 
-  test('falls through to button icons localStorage cache when settingsCache exists but has no buttonIcons', async () => {
-    // Simulate a page-reload scenario: settings are restored from localStorage cache
-    // (which excludes buttonIcons per SETTINGS_LOCALSTORAGE_EXCLUDED_FIELDS), so
-    // settingsCache is populated but settingsCache.buttonIcons is undefined.
-    localStorage.setItem('appSettingsCache', JSON.stringify({ maxKandidatenSchwelle: 5 }));
-    localStorage.setItem('appSettingsCacheTimestamp', String(Date.now()));
-    // Populate settingsCache from the localStorage settings cache (no buttonIcons inside)
-    await getSettings();
-
-    // Now set a fresh button icons localStorage cache
+  test('uses button icons localStorage cache during getSettings when text-settings localStorage cache is active', async () => {
+    // Simulate a hard-reload scenario: in-memory settingsCache is cleared (done by
+    // clearSettingsCache() in beforeEach), but both localStorage caches are still warm.
+    // The button icons cache must be set BEFORE getSettings() is called so that
+    // getButtonIcons() — now invoked internally by getSettings() on the localStorage
+    // path — can serve them without hitting Firestore.
     const cachedIcons = { cookingMode: '🧑‍🍳' };
     localStorage.setItem('buttonIconsCache', JSON.stringify(cachedIcons));
     localStorage.setItem('buttonIconsCacheTimestamp', String(Date.now()));
 
+    localStorage.setItem('appSettingsCache', JSON.stringify({ maxKandidatenSchwelle: 5 }));
+    localStorage.setItem('appSettingsCacheTimestamp', String(Date.now()));
+
+    const settings = await getSettings();
     const icons = await getButtonIcons();
 
-    // Must return the button icons localStorage cache, not DEFAULT_BUTTON_ICONS
+    // Button icons must come from the localStorage cache, not DEFAULT_BUTTON_ICONS
     expect(icons).toEqual(expect.objectContaining({ cookingMode: '🧑‍🍳' }));
-    // Must not hit Firestore
+    expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: '🧑‍🍳' }));
+    // Must not hit Firestore for button icons
     expect(getDocs).not.toHaveBeenCalled();
   });
 });
