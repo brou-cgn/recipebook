@@ -637,17 +637,33 @@
   border-bottom-color: #3d3d3d;
 }
 
+[data-theme="dark"] .settings-sidebar {
+  background: #1e1e1e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .sidebar-toggle {
+  color: #c08060;
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .sidebar-toggle:hover {
+  background: #2a2a2a;
+}
+
 [data-theme="dark"] .tab-button {
   color: #aaa;
 }
 
 [data-theme="dark"] .tab-button:hover {
   color: #e8e8e8;
+  background: #2a2a2a;
 }
 
 [data-theme="dark"] .tab-button.active {
   color: #c08060;
-  border-bottom-color: #c08060;
+  border-left-color: #c08060;
+  background: #252525;
 }
 
 [data-theme="dark"] .settings-content {

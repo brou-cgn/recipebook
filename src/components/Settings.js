@@ -237,6 +237,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newConversionMl, setNewConversionMl] = useState('');
   const [headerSlogan, setHeaderSlogan] = useState('');
   const [activeTab, setActiveTab] = useState(currentUser?.role === ROLES.MODERATOR ? 'lists' : 'general'); // 'general', 'lists', 'druck', or 'users'
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const isAdmin = isCurrentUserAdmin();
   const isModerator = currentUser?.role === ROLES.MODERATOR;
 
@@ -1363,6 +1364,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     { label: 'Zeitleisten-Icon (Kochereignisse)', icon: timelineCookEventBubbleIcon, uploading: uploadingTimelineCookEventBubbleIcon, onChange: handleTimelineCookEventBubbleIconUpload, onRemove: handleRemoveTimelineCookEventBubbleIcon, fileId: 'timelineCookEventBubbleIconFile' },
   ];
 
+  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte'].includes(activeTab);
+
   return (
     <div className="settings-container">
       <div className="settings-header">
@@ -1372,82 +1375,95 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         <h2>Einstellungen</h2>
       </div>
 
-      {(isAdmin || isModerator) && (
-        <div className="settings-tabs">
-          {isAdmin && (
+      <div className="settings-body">
+        {(isAdmin || isModerator) && (
+          <aside className={`settings-sidebar${sidebarOpen ? ' settings-sidebar--open' : ' settings-sidebar--collapsed'}`}>
             <button
-              className={`tab-button ${activeTab === 'general' ? 'active' : ''}`}
-              onClick={() => setActiveTab('general')}
+              className="sidebar-toggle"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? 'Menü einklappen' : 'Menü ausklappen'}
             >
-              Allgemein
+              {sidebarOpen ? '‹' : '›'}
             </button>
-          )}
-          <button
-            className={`tab-button ${activeTab === 'lists' ? 'active' : ''}`}
-            onClick={() => setActiveTab('lists')}
-          >
-            Listen & Kategorien
-          </button>
-          {isAdmin && (
-            <button
-              className={`tab-button ${activeTab === 'druck' ? 'active' : ''}`}
-              onClick={() => setActiveTab('druck')}
-            >
-              Drucklayout
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className={`tab-button ${activeTab === 'tagesmenu' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tagesmenu')}
-            >
-              Tagesmenü
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              Benutzerverwaltung
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className={`tab-button ${activeTab === 'ai' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ai')}
-            >
-              KI-Einstellungen
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
-              onClick={() => setActiveTab('faq')}
-            >
-              Kochschule
-            </button>
-          )}
-          {canAccessSeasonMatrix && (
-            <button
-              className={`tab-button ${activeTab === 'saisonmatrix' ? 'active' : ''}`}
-              onClick={() => setActiveTab('saisonmatrix')}
-            >
-              Saisonmatrix
-            </button>
-          )}
-          {canAccessSeasonMatrix && (
-            <button
-              className={`tab-button ${activeTab === 'naehrwerte' ? 'active' : ''}`}
-              onClick={() => setActiveTab('naehrwerte')}
-            >
-              Nährwerte
-            </button>
-          )}
-        </div>
-      )}
+            {sidebarOpen && (
+              <nav className="settings-nav">
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'general' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('general')}
+                  >
+                    Allgemein
+                  </button>
+                )}
+                <button
+                  className={`tab-button ${activeTab === 'lists' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('lists')}
+                >
+                  Listen & Kategorien
+                </button>
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'druck' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('druck')}
+                  >
+                    Drucklayout
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'tagesmenu' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('tagesmenu')}
+                  >
+                    Kochatelier
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('users')}
+                  >
+                    Benutzerverwaltung
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'ai' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('ai')}
+                  >
+                    KI-Einstellungen
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    className={`tab-button ${activeTab === 'faq' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('faq')}
+                  >
+                    Kochschule
+                  </button>
+                )}
+                {canAccessSeasonMatrix && (
+                  <button
+                    className={`tab-button ${activeTab === 'saisonmatrix' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('saisonmatrix')}
+                  >
+                    Saisonmatrix
+                  </button>
+                )}
+                {canAccessSeasonMatrix && (
+                  <button
+                    className={`tab-button ${activeTab === 'naehrwerte' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('naehrwerte')}
+                  >
+                    Nährwerte
+                  </button>
+                )}
+              </nav>
+            )}
+          </aside>
+        )}
 
-      <div className="settings-content">
+        <div className={`settings-main${isFullWidthTab ? ' settings-main--full' : ''}`}>
+          <div className={`settings-content${isFullWidthTab ? ' settings-content--full' : ''}`}>
         {activeTab === 'general' ? (
           <>
             <div className="settings-section">
@@ -3180,6 +3196,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}
+          </div>
+        </div>
       </div>
     </div>
   );
