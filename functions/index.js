@@ -1718,13 +1718,15 @@ function buildNutritionTrackingFields({
   const sourceChanged = hasSourceChanged(normalizedNextSource, normalizedPreviousSource);
   const switchedToManual = sourceChanged && normalizedNextSource === 'manual';
 
-  if (hasNextSet && forceRecalc) {
+  if (forceRecalc) {
     nextOutdated = previousActual;
-    nextActual = normalizedNextSet;
-    nextRecalc = nextRecalc || shouldTriggerRecalc(
-        getCaloriesFromNutritionSet(nextOutdated),
-        getCaloriesFromNutritionSet(nextActual),
-    );
+    if (hasNextSet) {
+      nextActual = normalizedNextSet;
+      nextRecalc = nextRecalc || shouldTriggerRecalc(
+          getCaloriesFromNutritionSet(nextOutdated),
+          getCaloriesFromNutritionSet(nextActual),
+      );
+    }
   } else if (hasNextSet && fromNutritionGeneration && !(preserveOnManualSourceChange && switchedToManual)) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
