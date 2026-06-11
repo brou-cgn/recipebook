@@ -53,6 +53,26 @@ function parseIngredientForNutrition(ingredientStr) {
 }
 
 /**
+ * Returns true if an ingredient follows a simple quantity+unit+name pattern
+ * without descriptive modifiers.
+ *
+ * @param {string} ingredientStr
+ * @return {boolean}
+ */
+function isSimpleIngredient(ingredientStr) {
+  if (!ingredientStr || typeof ingredientStr !== 'string') return false;
+
+  const str = ingredientStr.trim();
+  if (!str) return false;
+
+  const simplePattern = /^[\d.,]+\s*(?:g|kg|mg|ml|l|dl|cl|EL|el|TL|tl|Esslöffel|esslöffel|Teelöffel|teelöffel|Prise|prise|Prisen|prisen|Tasse|tasse|Tassen|tassen|Bund|bund)\.?\s+[^\s,]+$/u;
+  if (!simplePattern.test(str)) return false;
+
+  const hasModifiers = /,|\b(?:kaltgepresst|gehackt|getrocknet|bio|frisch|tiefgekühlt)\b/i.test(str);
+  return !hasModifiers;
+}
+
+/**
  * @param {string} ingredientStr
  * @return {string}
  */
@@ -396,6 +416,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
 
   return {
     parseIngredientForNutrition,
+    isSimpleIngredient,
     normalizeIngredientWithGemini,
     estimateNutritionWithGemini,
     generateSearchTermWithGemini,
@@ -407,6 +428,7 @@ module.exports = {
   buildReferenceSearchTermPrompt,
   createNutritionNormalizationUtils,
   extractJsonObject,
+  isSimpleIngredient,
   normalizeGeminiPayload,
   parseIngredientForNutrition,
 };
