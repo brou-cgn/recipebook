@@ -226,12 +226,16 @@ test('manual recalc job updates impacted recipes, resets recalc flags and sends 
     data: {},
   });
 
-  assert.deepEqual(result, {
-    started: true,
-    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+  assert.equal(result.started, true);
+  assert.equal(result.message, 'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.');
+  assert.deepEqual(result.summary, {
+    affectedRecipeCount: 1,
+    updatedRecipes: 1,
+    failedRecipes: 0,
+    skippedRecipes: 0,
+    resetRecalcCount: 1,
+    fatalError: null,
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 50));
 
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, false);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, 1);
@@ -246,12 +250,16 @@ test('manual recalc job keeps recalc flag when recalculation fails', async () =>
     data: {},
   });
 
-  assert.deepEqual(result, {
-    started: true,
-    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
+  assert.equal(result.started, true);
+  assert.equal(result.message, 'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.');
+  assert.deepEqual(result.summary, {
+    affectedRecipeCount: 1,
+    updatedRecipes: 0,
+    failedRecipes: 1,
+    skippedRecipes: 0,
+    resetRecalcCount: 0,
+    fatalError: null,
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 50));
 
   assert.equal(mockDbState.nutritionReferences.tomate.recalc, true);
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcError, 'Simulierter Schreibfehler');
@@ -264,10 +272,8 @@ test('manual recalc job allows moderator privileges', async () => {
     data: {},
   });
 
-  assert.deepEqual(result, {
-    started: true,
-    message: 'Recalc-Job gestartet. Ergebnis wird per E-Mail gesendet.',
-  });
+  assert.equal(result.started, true);
+  assert.equal(result.message, 'Recalc-Job abgeschlossen. Ergebnis wird per E-Mail gesendet.');
 });
 
 test('manual recalc job rejects users without required role', async () => {
