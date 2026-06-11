@@ -8,7 +8,7 @@ import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix } 
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
-import { updateFavicon, updatePageTitle, updateAppLogo } from '../utils/faviconUtils';
+import { updateFavicon, updatePageTitle, updateAppLogo, applyFaviconSettings } from '../utils/faviconUtils';
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import SeasonMatrixTab from './SeasonMatrixTab';
@@ -696,28 +696,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       // Propagate meal category deletions to all affected recipes
       await propagateDeletes(pendingCategoryDeletes, 'speisekategorie', setPendingCategoryDeletes);
 
-      // Apply favicon changes immediately
-      updateFavicon(faviconImage);
-      updatePageTitle(faviconText);
-      updateAppLogo(appLogoImage);
+      // Apply favicon settings immediately (includes DOM updates, service worker notification, and manifest update)
+      await applyFaviconSettings();
 
       // Apply tile size immediately
       applyTileSizePreference(tileSize);
 
       // Apply dark mode immediately
       applyDarkModePreference(darkMode);
-
-      // Notify service worker about settings update for PWA manifest/icons
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'UPDATE_APP_SETTINGS',
-          settings: {
-            faviconText: faviconText,
-            headerSlogan: headerSlogan,
-            appLogoImage: appLogoImage
-          }
-        });
-      }
 
       alert('Einstellungen erfolgreich gespeichert!');
     } catch (error) {
