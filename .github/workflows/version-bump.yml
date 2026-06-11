@@ -121,35 +121,54 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           
-          # Skip if this version tag already exists (handles workflow re-runs)
-          if git tag -l "v$NEW_VERSION" | grep -q .; then
-            echo "⚠️  Tag v$NEW_VERSION already exists, skipping version bump"
-            git checkout -- package.json
-            if [ -f "package-lock.json" ]; then
-              git checkout -- package-lock.json
-            fi
-            exit 0
-          fi
-          
-          # Commit the version change
-          git add package.json
-          if [ -f "package-lock.json" ]; then
-            git add package-lock.json
-          fi
-          
-          git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
-          
-          # Create and push tag
-          git tag "v$NEW_VERSION"
-          
-          echo "✅ Version bumped from $CURRENT_VERSION to $NEW_VERSION"
+          echo "✅ Version will be bumped from $CURRENT_VERSION to $NEW_VERSION"
       
       - name: Push changes
         run: |
+          BUMP_TYPE="${{ steps.determine-bump.outputs.bump_type }}"
+          
           for i in 1 2 3; do
-            git pull --rebase origin ${{ github.ref_name }} && \
-            git push origin HEAD:${{ github.ref_name }} && \
-            git push origin --tags && exit 0
+            # Abort any in-progress rebase from a previous failed attempt
+            git rebase --abort 2>/dev/null || true
+            
+            # Fetch and reset to the latest remote state to avoid rebase conflicts
+            if ! git fetch origin ${{ github.ref_name }}; then
+              echo "Fetch failed on attempt $i, waiting..."
+              sleep 5
+              continue
+            fi
+            git reset --hard origin/${{ github.ref_name }}
+            
+            # Re-apply the version bump on top of the latest remote state
+            if ! npm version $BUMP_TYPE --no-git-tag-version; then
+              echo "npm version failed (BUMP_TYPE=$BUMP_TYPE), aborting"
+              exit 1
+            fi
+            NEW_VERSION=$(node -p "require('./package.json').version")
+            
+            # Skip if this tag already exists on the remote (handles reruns)
+            if git ls-remote --tags origin "refs/tags/v$NEW_VERSION" | grep -q .; then
+              echo "✅ Tag v$NEW_VERSION already exists on remote, nothing to push"
+              exit 0
+            fi
+            
+            # Commit the version change
+            git add package.json
+            if [ -f "package-lock.json" ]; then
+              git add package-lock.json
+            fi
+            git commit -m "chore: bump version to v$NEW_VERSION [skip ci]"
+            
+            # Remove any local tag from a previous attempt and recreate
+            git tag -d "v$NEW_VERSION" 2>/dev/null || true
+            git tag "v$NEW_VERSION"
+            
+            # Push commit and tag
+            if git push origin HEAD:${{ github.ref_name }} && git push origin --tags; then
+              echo "✅ Successfully pushed version v$NEW_VERSION"
+              exit 0
+            fi
+            
             echo "Retry $i failed, waiting..."
             sleep 5
           done
