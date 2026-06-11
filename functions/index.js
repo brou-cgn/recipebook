@@ -1703,6 +1703,7 @@ function buildNutritionTrackingFields({
   nextSource = '',
   forceRecalc = false,
   preserveOnManualSourceChange = false,
+  fromNutritionGeneration = false,
 } = {}) {
   const previousActual = normalizeNutritionSet(previousData.nutritionSetActual);
   let nextActual = previousActual;
@@ -1724,11 +1725,7 @@ function buildNutritionTrackingFields({
         getCaloriesFromNutritionSet(nextOutdated),
         getCaloriesFromNutritionSet(nextActual),
     );
-  } else if (
-    hasNextSet &&
-    !(preserveOnManualSourceChange && switchedToManual) &&
-    sourceChanged
-  ) {
+  } else if (hasNextSet && fromNutritionGeneration) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
     nextRecalc = nextRecalc || shouldTriggerRecalc(
@@ -2510,6 +2507,7 @@ exports.generateNutritionFromReference = onCall(
         nextValues: selectedValues,
         nextSource: nextSource || previousSource,
         preserveOnManualSourceChange: true,
+        fromNutritionGeneration: true,
       });
       if (trackingFields.recalcDate !== undefined) {
         trackingFields.recalcDate = admin.firestore.FieldValue.serverTimestamp();
