@@ -194,6 +194,7 @@ export function buildNutritionTrackingFields({
   nextSource = '',
   forceRecalc = false,
   preserveOnManualSourceChange = false,
+  fromNutritionGeneration = false,
   now = new Date(),
 } = {}) {
   const previousActual = normalizeNutritionSet(previousData.nutritionSetActual);
@@ -216,11 +217,7 @@ export function buildNutritionTrackingFields({
       getCaloriesFromNutritionSet(nextOutdated),
       getCaloriesFromNutritionSet(nextActual)
     );
-  } else if (
-    hasNextSet
-    && !(preserveOnManualSourceChange && switchedToManual)
-    && sourceChanged
-  ) {
+  } else if (hasNextSet && fromNutritionGeneration) {
     nextOutdated = previousActual;
     nextActual = normalizedNextSet;
     nextRecalc = nextRecalc || shouldTriggerRecalc(

@@ -282,6 +282,7 @@ describe('nutritionReferenceUtils', () => {
         },
         nextValues: { kalorien: 110, protein: 2.2 },
         nextSource: 'ai-generiert',
+        fromNutritionGeneration: true,
         now: fixedNow,
       })).toEqual({
         nutritionSetActual: [{ source: 'ai-generiert', kalorien: 110, protein: 2.2 }],
@@ -306,6 +307,23 @@ describe('nutritionReferenceUtils', () => {
       })).toEqual({
         nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100 }],
         nutritionSetOutdated: [{ source: 'ai-generiert', kalorien: 97 }],
+        recalc: false,
+      });
+    });
+
+    test('does not shift sets on manual source change without fromNutritionGeneration', () => {
+      expect(buildNutritionTrackingFields({
+        previousData: {
+          source: 'openfoodfacts',
+          nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        },
+        nextValues: { kalorien: 100, protein: 2 },
+        nextSource: 'ai-generiert',
+        fromNutritionGeneration: false,
+        now: fixedNow,
+      })).toEqual({
+        nutritionSetActual: [{ source: 'openfoodfacts', kalorien: 100, protein: 2 }],
+        nutritionSetOutdated: [],
         recalc: false,
       });
     });
@@ -369,6 +387,7 @@ describe('nutritionReferenceUtils', () => {
         },
         nextValues: { kalorien: 110 },
         nextSource: 'ai-generiert',
+        fromNutritionGeneration: true,
         now: customNow,
       });
       expect(result.recalc).toBe(true);

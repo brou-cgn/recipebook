@@ -288,6 +288,7 @@ function NutritionReferenceTab({ currentUser }) {
       nextSource: sourceValue,
       forceRecalc: isApprovalTransition,
       preserveOnManualSourceChange: true,
+      fromNutritionGeneration: false,
     });
     if (trackingFields.recalcDate !== undefined) {
       trackingFields.recalcDate = serverTimestamp();
@@ -491,6 +492,7 @@ function NutritionReferenceTab({ currentUser }) {
                 nextValues: parsedValues,
                 nextSource: source,
                 preserveOnManualSourceChange: true,
+                fromNutritionGeneration: true,
               }),
             },
             { merge: true }
@@ -784,6 +786,7 @@ function NutritionReferenceTab({ currentUser }) {
                       onChange={(e) => updateCell(row.id, 'source', e.target.value)}
                       className="conversion-table-input"
                       aria-label={`Quelle ${row.id}`}
+                      disabled={parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_APPROVED_STATUS}
                     >
                       {SOURCE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -886,6 +889,7 @@ function NutritionReferenceTab({ currentUser }) {
                           className="conversion-table-input"
                           aria-label={`${NUTRITION_FIELD_LABELS[field]} (Manuell) ${row.id}`}
                           tabIndex={baseIndex + 2 * F + fieldIndex}
+                          readOnly={parseNutritionReferenceStatus(row) === NUTRITION_REFERENCE_APPROVED_STATUS}
                         />
                       </div>
                     </td>

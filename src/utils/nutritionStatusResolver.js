@@ -121,6 +121,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
                   nextValues: parsedValues,
                   nextSource: returnedSource,
                   preserveOnManualSourceChange: true,
+                  fromNutritionGeneration: true,
                 }),
               },
               { merge: true }
