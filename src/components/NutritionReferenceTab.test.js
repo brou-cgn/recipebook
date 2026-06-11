@@ -954,4 +954,70 @@ describe('NutritionReferenceTab', () => {
     ]));
   });
 
+  test('shows ingredientID counts in status and source filter dropdowns', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'tomate',
+          data: () => ({
+            ingredientID: 'dummy-tomate',
+            displayName: 'Tomate',
+            status: 'Freigegeben',
+            source: 'manual',
+            synonyms: ['Tomate'],
+          }),
+        },
+        {
+          id: 'milch',
+          data: () => ({
+            ingredientID: 'dummy-milch',
+            displayName: 'Milch',
+            status: 'Freigegeben',
+            source: 'openfoodfacts',
+            synonyms: ['Milch'],
+          }),
+        },
+        {
+          id: 'haferflocken',
+          data: () => ({
+            ingredientID: 'dummy-haferflocken',
+            displayName: 'Haferflocken',
+            status: 'Datenerfassung ausstehend',
+            source: 'ai-generiert',
+            synonyms: ['Haferflocken'],
+          }),
+        },
+      ],
+    });
+    renderTab({ id: 'u1', role: 'moderator' });
+
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    const statusFilter = screen.getByLabelText('Filter Status');
+    const freigegebenOption = statusFilter.querySelector('option[value="Freigegeben"]');
+    expect(freigegebenOption).not.toBeNull();
+    expect(freigegebenOption.textContent).toBe('Freigegeben (2)');
+
+    const datenerfassungOption = statusFilter.querySelector('option[value="Datenerfassung ausstehend"]');
+    expect(datenerfassungOption).not.toBeNull();
+    expect(datenerfassungOption.textContent).toBe('Datenerfassung ausstehend (1)');
+
+    const neuOption = statusFilter.querySelector('option[value="Neu"]');
+    expect(neuOption).not.toBeNull();
+    expect(neuOption.textContent).toBe('Neu (0)');
+
+    const sourceFilter = screen.getByLabelText('Filter Quelle');
+    const manualOption = sourceFilter.querySelector('option[value="manual"]');
+    expect(manualOption).not.toBeNull();
+    expect(manualOption.textContent).toBe('Manuell (1)');
+
+    const openfoodfactsOption = sourceFilter.querySelector('option[value="openfoodfacts"]');
+    expect(openfoodfactsOption).not.toBeNull();
+    expect(openfoodfactsOption.textContent).toBe('OpenFoodFacts (1)');
+
+    const aiOption = sourceFilter.querySelector('option[value="ai-generiert"]');
+    expect(aiOption).not.toBeNull();
+    expect(aiOption.textContent).toBe('AI generiert (1)');
+  });
+
 });

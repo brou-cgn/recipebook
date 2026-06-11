@@ -579,6 +579,24 @@ function NutritionReferenceTab({ currentUser }) {
     setColumnFilters((prev) => ({ ...prev, [field]: value }));
   }, []);
 
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    rows.forEach((row) => {
+      const status = parseNutritionReferenceStatus(row) || '';
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [rows]);
+
+  const sourceCounts = useMemo(() => {
+    const counts = {};
+    rows.forEach((row) => {
+      const source = row.source || '';
+      counts[source] = (counts[source] || 0) + 1;
+    });
+    return counts;
+  }, [rows]);
+
   if (!canManage) {
     return (
       <div className="settings-section nutrition-reference-section">
@@ -673,9 +691,13 @@ function NutritionReferenceTab({ currentUser }) {
                         onChange={(e) => updateColumnFilter(column.key, e.target.value)}
                       >
                         <option value="all">Alle</option>
-                        {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => (
-                          <option key={opt || 'empty'} value={opt || EMPTY_STATUS_FILTER_VALUE}>{getStatusOptionLabel(opt)}</option>
-                        ))}
+                        {NUTRITION_REFERENCE_STATUS_OPTIONS.map((opt) => {
+                          const count = statusCounts[opt || ''] ?? 0;
+                          const label = getStatusOptionLabel(opt);
+                          return (
+                            <option key={opt || 'empty'} value={opt || EMPTY_STATUS_FILTER_VALUE}>{`${label} (${count})`}</option>
+                          );
+                        })}
                       </select>
                     ) : column.type === 'select' ? (
                       <select
@@ -685,11 +707,14 @@ function NutritionReferenceTab({ currentUser }) {
                         onChange={(e) => updateColumnFilter(column.key, e.target.value)}
                       >
                         <option value="all">Alle</option>
-                        {SOURCE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
+                        {SOURCE_OPTIONS.map((option) => {
+                          const count = sourceCounts[option.value] ?? 0;
+                          return (
+                            <option key={option.value} value={option.value}>
+                              {`${option.label} (${count})`}
+                            </option>
+                          );
+                        })}
                       </select>
                     ) : column.type === 'static' ? (
                       <span className="nutrition-static-filter-placeholder">—</span>
