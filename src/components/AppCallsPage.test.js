@@ -1073,6 +1073,54 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     expect(screen.getByText('Tomatensuppe')).toBeInTheDocument();
   });
 
+  test('nutrition filter is active by default and keeps completed list filtered', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Tomatensuppe',
+            ingredients: [{ type: 'ingredient', text: '100 g Tomate', ingredientID: 'tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1800000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    const checkbox = screen.getByLabelText('Aktuelle Filterung anwenden');
+    expect(checkbox).toBeChecked();
+    expect(screen.queryByText('Tomatensuppe')).not.toBeInTheDocument();
+    expect(await screen.findByText('Keine abgeschlossenen Berechnungen vorhanden.')).toBeInTheDocument();
+  });
+
+  test('disabling nutrition filter shows all completed calculations', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Tomatensuppe',
+            ingredients: [{ type: 'ingredient', text: '100 g Tomate', ingredientID: 'tomate' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1800000000000 },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+
+    fireEvent.click(screen.getByLabelText('Aktuelle Filterung anwenden'));
+    expect(await screen.findByText('Tomatensuppe')).toBeInTheDocument();
+  });
+
   test('does not show recipe in completed list when recalcDate is before calcCompletedAt', async () => {
     mockNutritionReferenceState = {
       rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: 1700000000000 }],
