@@ -275,6 +275,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     return `${rounded} g`;
   };
 
+  const formatLabelValue = (value, unit) => {
+    if (value === '' || value == null) return '—';
+    return `${String(value).replace('.', ',')} ${unit}`;
+  };
+
   const handleManualAmountChange = (ingredient, value) => {
     setManualAmounts((prev) => {
       const next = { ...prev };
@@ -928,6 +933,24 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     manualAmounts
   ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts]);
 
+  const ungeprüftCount = useMemo(() => {
+    const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
+    const refByID = new Map(
+      (nutritionReferenceRows || [])
+        .map(row => [String(row?.ingredientID || '').trim(), row])
+        .filter(([id]) => Boolean(id))
+    );
+    let count = 0;
+    for (const item of rawIngredients) {
+      if (typeof item === 'string' || !item || item.type === 'heading') continue;
+      const id = String(item.ingredientID || '').trim();
+      if (!id) continue;
+      const row = refByID.get(id);
+      if (row && row.status !== 'Freigegeben') count++;
+    }
+    return count;
+  }, [recipe, nutritionReferenceRows]);
+
   const renderCompositionIngredient = (ingredientText) => {
     const recipeLink = decodeRecipeLink(ingredientText);
     if (!recipeLink) return ingredientText;
@@ -975,14 +998,25 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       >
         <div className="nutrition-modal-header">
           <h2 className="nutrition-modal-title">Nährwerte</h2>
-          <button
-            ref={closeButtonRef}
-            className="nutrition-modal-close"
-            onClick={onClose}
-            aria-label="Nährwerte schließen"
-          >
-            ×
-          </button>
+          <div className="nutrition-modal-header-actions">
+            <button
+              className="nutrition-autocalc-header-btn"
+              onClick={handleAutoCalculate}
+              disabled={autoCalcLoading}
+              title="Nährwerte automatisch aus OpenFoodFacts berechnen"
+              aria-label="Nährwerte automatisch berechnen"
+            >
+              🧮
+            </button>
+            <button
+              ref={closeButtonRef}
+              className="nutrition-modal-close"
+              onClick={onClose}
+              aria-label="Nährwerte schließen"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="nutrition-modal-body">
@@ -995,6 +1029,40 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             Nährwerte pro Portion ({recipe.portionen || 1}{' '}
             {(recipe.portionen || 1) === 1 ? 'Portion' : 'Portionen'})
           </p>
+
+          <div className="nutrition-values-list">
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Kalorien (kcal)</span>
+              <span className="nutrition-value-amount">{formatLabelValue(kalorien, 'kcal')}</span>
+            </div>
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Fett (g)</span>
+              <span className="nutrition-value-amount">{formatLabelValue(fett, 'g')}</span>
+            </div>
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Kohlenhydrate (g)</span>
+              <span className="nutrition-value-amount">{formatLabelValue(kohlenhydrate, 'g')}</span>
+            </div>
+            <div className="nutrition-value-row nutrition-value-row--indented">
+              <span className="nutrition-value-label">davon Zucker (g)</span>
+              <span className="nutrition-value-amount">{formatLabelValue(zucker, 'g')}</span>
+            </div>
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Protein (g)</span>
+              <span className="nutrition-value-amount">{formatLabelValue(protein, 'g')}</span>
+            </div>
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Salz</span>
+              <span className="nutrition-value-amount">{formatLabelValue(salz, 'g')}</span>
+            </div>
+            <div className="nutrition-value-row">
+              <span className="nutrition-value-label">Ballaststoffe</span>
+              <span className="nutrition-value-amount">{formatLabelValue(ballaststoffe, 'g')}</span>
+            </div>
+          </div>
+
+          <hr className="nutrition-section-divider" />
+
           {compositionRows.length > 0 && (
             <div className="nutrition-composition-section">
               <button
@@ -1066,115 +1134,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             </div>
           )}
 
-          <div className="nutrition-field-grid">
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-kalorien">Kalorien (kcal)</label>
-              <input
-                id="nutrition-kalorien"
-                type="number"
-                min="0"
-                step="1"
-                value={kalorien}
-                onChange={(e) => setKalorien(e.target.value)}
-                placeholder="z.B. 350"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-protein">Protein (g)</label>
-              <input
-                id="nutrition-protein"
-                type="number"
-                min="0"
-                step="0.1"
-                value={protein}
-                onChange={(e) => setProtein(e.target.value)}
-                placeholder="z.B. 25"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-fett">Fett (g)</label>
-              <input
-                id="nutrition-fett"
-                type="number"
-                min="0"
-                step="0.1"
-                value={fett}
-                onChange={(e) => setFett(e.target.value)}
-                placeholder="z.B. 12"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-kohlenhydrate">Kohlenhydrate (g)</label>
-              <input
-                id="nutrition-kohlenhydrate"
-                type="number"
-                min="0"
-                step="0.1"
-                value={kohlenhydrate}
-                onChange={(e) => setKohlenhydrate(e.target.value)}
-                placeholder="z.B. 40"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field nutrition-field--indented">
-              <label htmlFor="nutrition-zucker">davon Zucker (g)</label>
-              <input
-                id="nutrition-zucker"
-                type="number"
-                min="0"
-                step="0.1"
-                value={zucker}
-                onChange={(e) => setZucker(e.target.value)}
-                placeholder="z.B. 5"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-ballaststoffe">Ballaststoffe (g)</label>
-              <input
-                id="nutrition-ballaststoffe"
-                type="number"
-                min="0"
-                step="0.1"
-                value={ballaststoffe}
-                onChange={(e) => setBallaststoffe(e.target.value)}
-                placeholder="z.B. 3"
-                className="nutrition-input"
-              />
-            </div>
-
-            <div className="nutrition-field">
-              <label htmlFor="nutrition-salz">Salz (g)</label>
-              <input
-                id="nutrition-salz"
-                type="number"
-                min="0"
-                step="0.01"
-                value={salz}
-                onChange={(e) => setSalz(e.target.value)}
-                placeholder="z.B. 0.8"
-                className="nutrition-input"
-              />
-            </div>
-          </div>
-
           <div className="nutrition-autocalc">
-            <button
-              className="nutrition-autocalc-button"
-              onClick={handleAutoCalculate}
-              disabled={autoCalcLoading}
-              title="Nährwerte automatisch aus OpenFoodFacts berechnen"
-            >
-              {autoCalcLoading ? 'Berechne…' : 'Automatisch berechnen (OpenFoodFacts)'}
-            </button>
             {!autoCalcLoading && recipe.naehrwerte?.calcPending && (
               <div className="nutrition-calc-progress">
                 <span>Hintergrundberechnung läuft…</span>
@@ -1215,15 +1175,20 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
               <>
                 <p className="nutrition-autocalc-info">
                   {autoCalcResult.foundCount} von {autoCalcResult.totalCount} Zutaten gefunden.
-                  {autoCalcResult.foundCount < autoCalcResult.totalCount &&
-                    ' Fehlende Werte bitte manuell ergänzen.'}
                 </p>
                 {(() => {
                   const aiEstimatedCount = (autoCalcResult.ingredientDetails || []).filter(item => item.aiEstimated).length;
-                  if (aiEstimatedCount <= 0) return null;
+                  const parts = [];
+                  if (ungeprüftCount > 0) {
+                    parts.push(`${ungeprüftCount} ${ungeprüftCount === 1 ? 'Zutat ist' : 'Zutaten sind'} noch nicht geprüft.`);
+                  }
+                  if (aiEstimatedCount > 0) {
+                    parts.push(`Für ${aiEstimatedCount} ${aiEstimatedCount === 1 ? 'Zutat wurde' : 'Zutaten wurden'} Nährwerte über KI geschätzt.`);
+                  }
+                  if (parts.length === 0) return null;
                   return (
                     <p className="nutrition-autocalc-info nutrition-autocalc-info-ai">
-                      ℹ️ Für {aiEstimatedCount} Zutaten wurden Nährwerte durch KI geschätzt. Diese werden bei der nächsten Berechnung erneut bei OpenFoodFacts abgefragt.
+                      {parts.join(' ')}
                     </p>
                   );
                 })()}

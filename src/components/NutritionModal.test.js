@@ -796,3 +796,271 @@ describe('hasMeaningfulGeneratedNutrition', () => {
     expect(hasMeaningfulGeneratedNutrition(undefined)).toBe(false);
   });
 });
+
+describe('NutritionModal UI layout', () => {
+  const baseRecipe = {
+    id: 'r1',
+    portionen: 4,
+    naehrwerte: {
+      kalorien: 1024,
+      protein: 48,
+      fett: 56.4,
+      kohlenhydrate: 108,
+      zucker: 48.4,
+      protein: 16,
+      ballaststoffe: 9.6,
+      salz: 2.44,
+      calcFoundCount: 4,
+      calcTotalCount: 4,
+      calcNotIncluded: [],
+      calcIngredientDetails: [],
+    },
+    ingredients: ['200 g Linsen', '1 Zwiebel', '2 EL Olivenöl'],
+  };
+
+  it('renders nutrition values as labels (not editable inputs)', () => {
+    render(
+      <NutritionModal
+        recipe={baseRecipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(screen.getByText('Kalorien (kcal)')).toBeInTheDocument();
+    expect(screen.getByText('Fett (g)')).toBeInTheDocument();
+    expect(screen.getByText('Kohlenhydrate (g)')).toBeInTheDocument();
+    expect(screen.getByText('Protein (g)')).toBeInTheDocument();
+    expect(screen.getByText('Salz')).toBeInTheDocument();
+    expect(screen.getByText('Ballaststoffe')).toBeInTheDocument();
+  });
+
+  it('shows the auto-calc header button', () => {
+    render(
+      <NutritionModal
+        recipe={baseRecipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Nährwerte automatisch berechnen' })).toBeInTheDocument();
+  });
+
+  it('displays value with unit directly (no parentheses around unit)', () => {
+    render(
+      <NutritionModal
+        recipe={baseRecipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    const kcalElements = screen.getAllByText(/kcal/);
+    expect(kcalElements.length).toBeGreaterThan(0);
+    const valueEl = kcalElements.find(el => /^\d/.test(el.textContent));
+    expect(valueEl).toBeTruthy();
+    expect(valueEl.textContent).not.toMatch(/\(kcal\)/);
+  });
+
+  it('shows "Zusammensetzung anzeigen" when composition rows are available', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcIngredientDetails: [
+              { ingredient: '200 g Linsen', naehrwerte: { kalorien: 800, protein: 60, fett: 10, kohlenhydrate: 100, zucker: 5, ballaststoffe: 30, salz: 0.5 } },
+            ],
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' })).toBeInTheDocument();
+  });
+
+  it('does not show "Fehlende Werte bitte manuell ergänzen" when some ingredients are missing', () => {
+    const recipeWithMissing = {
+      ...baseRecipe,
+      naehrwerte: {
+        ...baseRecipe.naehrwerte,
+        calcFoundCount: 2,
+        calcTotalCount: 3,
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipeWithMissing}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/Fehlende Werte bitte manuell ergänzen/)).not.toBeInTheDocument();
+  });
+
+  it('does not show ℹ️ emoji in info text', () => {
+    const recipeWithAI = {
+      ...baseRecipe,
+      naehrwerte: {
+        ...baseRecipe.naehrwerte,
+        calcIngredientDetails: [
+          { ingredient: '200 g Linsen', naehrwerte: { kalorien: 800, protein: 60, fett: 10, kohlenhydrate: 100, zucker: 5, ballaststoffe: 30, salz: 0.5 }, aiEstimated: true },
+        ],
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipeWithAI}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/ℹ️/)).not.toBeInTheDocument();
+  });
+});
+
+describe('NutritionModal ungeprüft count', () => {
+  it('shows "noch nicht geprüft" text when some ingredients have non-Freigegeben reference status', () => {
+    const recipe = {
+      id: 'r2',
+      portionen: 1,
+      naehrwerte: {
+        kalorien: 200,
+        calcFoundCount: 2,
+        calcTotalCount: 2,
+        calcNotIncluded: [],
+        calcIngredientDetails: [
+          { ingredient: '200 g Linsen', naehrwerte: { kalorien: 200, protein: 10, fett: 1, kohlenhydrate: 20, zucker: 2, ballaststoffe: 5, salz: 0.1 } },
+          { ingredient: '1 Zwiebel', naehrwerte: { kalorien: 40, protein: 1, fett: 0.1, kohlenhydrate: 8, zucker: 4, ballaststoffe: 1, salz: 0.01 } },
+        ],
+      },
+      ingredients: [
+        { text: '200 g Linsen', ingredientID: 'linsen' },
+        { text: '1 Zwiebel', ingredientID: 'zwiebel' },
+      ],
+    };
+
+    const nutritionReferenceRows = [
+      { ingredientID: 'linsen', status: 'Prüfung ausstehend' },
+      { ingredientID: 'zwiebel', status: 'Freigegeben' },
+    ];
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        nutritionReferenceRows={nutritionReferenceRows}
+      />
+    );
+
+    expect(screen.getByText(/noch nicht geprüft/)).toBeInTheDocument();
+    expect(screen.getByText(/1 Zutat ist noch nicht geprüft/)).toBeInTheDocument();
+  });
+
+  it('does not show "noch nicht geprüft" when all ingredients are Freigegeben', () => {
+    const recipe = {
+      id: 'r3',
+      portionen: 1,
+      naehrwerte: {
+        kalorien: 200,
+        calcFoundCount: 1,
+        calcTotalCount: 1,
+        calcNotIncluded: [],
+        calcIngredientDetails: [
+          { ingredient: '200 g Linsen', naehrwerte: { kalorien: 200, protein: 10, fett: 1, kohlenhydrate: 20, zucker: 2, ballaststoffe: 5, salz: 0.1 } },
+        ],
+      },
+      ingredients: [
+        { text: '200 g Linsen', ingredientID: 'linsen' },
+      ],
+    };
+
+    const nutritionReferenceRows = [
+      { ingredientID: 'linsen', status: 'Freigegeben' },
+    ];
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        nutritionReferenceRows={nutritionReferenceRows}
+      />
+    );
+
+    expect(screen.queryByText(/noch nicht geprüft/)).not.toBeInTheDocument();
+  });
+
+  it('counts ingredients without ingredientID as not "nicht geprüft"', () => {
+    const recipe = {
+      id: 'r4',
+      portionen: 1,
+      naehrwerte: {
+        kalorien: 200,
+        calcFoundCount: 1,
+        calcTotalCount: 1,
+        calcNotIncluded: [],
+        calcIngredientDetails: [],
+      },
+      ingredients: ['200 g Linsen'],
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        nutritionReferenceRows={[{ ingredientID: 'linsen', status: 'Prüfung ausstehend' }]}
+      />
+    );
+
+    expect(screen.queryByText(/noch nicht geprüft/)).not.toBeInTheDocument();
+  });
+
+  it('uses plural form for multiple ungeprüft ingredients', () => {
+    const recipe = {
+      id: 'r5',
+      portionen: 1,
+      naehrwerte: {
+        kalorien: 200,
+        calcFoundCount: 2,
+        calcTotalCount: 2,
+        calcNotIncluded: [],
+        calcIngredientDetails: [
+          { ingredient: '200 g Linsen', naehrwerte: { kalorien: 100, protein: 5, fett: 0.5, kohlenhydrate: 10, zucker: 1, ballaststoffe: 2, salz: 0.05 } },
+          { ingredient: '100 g Reis', naehrwerte: { kalorien: 100, protein: 2, fett: 0.2, kohlenhydrate: 22, zucker: 0, ballaststoffe: 0.5, salz: 0.01 } },
+        ],
+      },
+      ingredients: [
+        { text: '200 g Linsen', ingredientID: 'linsen' },
+        { text: '100 g Reis', ingredientID: 'reis' },
+      ],
+    };
+
+    const nutritionReferenceRows = [
+      { ingredientID: 'linsen', status: 'Neu' },
+      { ingredientID: 'reis', status: 'Datenerfassung ausstehend' },
+    ];
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        nutritionReferenceRows={nutritionReferenceRows}
+      />
+    );
+
+    expect(screen.getByText(/2 Zutaten sind noch nicht geprüft/)).toBeInTheDocument();
+  });
+});
