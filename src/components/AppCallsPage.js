@@ -961,6 +961,9 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       return false;
     }
   };
+  void standardUnits;
+  void standardAdjectives;
+  void saveStandardTerms;
 
   const ingredientContextSegmentOptions = useMemo(() => ([
     {

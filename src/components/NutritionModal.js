@@ -140,9 +140,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     .map(normalizeIngredientItem)
     .filter(item => Boolean(item.text));
   const notIncluded = calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
-  const acceptedIngredients = acceptedIngredientsInput instanceof Set
-    ? acceptedIngredientsInput
-    : new Set(acceptedIngredientsInput || []);
+  void acceptedIngredientsInput;
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
   const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
   const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d]));
@@ -962,6 +960,9 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const hasValues =
     kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
     zucker !== '' || ballaststoffe !== '' || salz !== '';
+  void saving;
+  void handleSave;
+  void hasValues;
 
   const linkedRecipeCalcCompletedAtMap = useMemo(() => {
     const map = {};

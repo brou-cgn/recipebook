@@ -4,7 +4,6 @@ import { db } from '../firebase';
 import {
   NUTRITION_REFERENCE_FIELDS,
   NUTRITION_SOURCE_SUFFIX,
-  NUTRITION_SOURCE_PRIORITY,
   parseNutritionReferenceBooleanFields,
   parseNutritionReferencePossibleUnits,
   parseNutritionReferenceStatus,
