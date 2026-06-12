@@ -8,6 +8,7 @@ import {
   computeIngredientAmountG,
 } from '../utils/nutritionStatusResolver';
 import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReferenceUtils';
+import { isBase64Image } from '../utils/imageUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -208,7 +209,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -1055,7 +1056,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
               title="Nährwerte automatisch aus OpenFoodFacts berechnen"
               aria-label="Nährwerte automatisch berechnen"
             >
-              🧮
+              {autoCalcIcon && isBase64Image(autoCalcIcon) ? (
+                <img src={autoCalcIcon} alt="Nährwerte berechnen" />
+              ) : (
+                autoCalcIcon || '+'
+              )}
             </button>
             <button
               ref={closeButtonRef}
@@ -1359,31 +1364,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                 Anpassungen zurücksetzen
               </button>
             )}
-            <p className="nutrition-autocalc-source">
-              Quelle:{' '}
-              <a
-                href="https://world.openfoodfacts.org"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                OpenFoodFacts
-              </a>{' '}
-              (Open Database License)
-            </p>
           </div>
-        </div>
-
-        <div className="nutrition-modal-footer">
-          <button className="nutrition-cancel-button" onClick={onClose}>
-            Abbrechen
-          </button>
-          <button
-            className="nutrition-save-button"
-            onClick={handleSave}
-            disabled={saving || !hasValues}
-          >
-            {saving ? 'Speichern…' : 'Speichern'}
-          </button>
         </div>
       </div>
     </div>

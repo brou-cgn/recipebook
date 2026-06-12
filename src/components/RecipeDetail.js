@@ -2755,6 +2755,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           onEnsureIngredientIDs={handleEnsureIngredientIDsForModal}
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
+          autoCalcIcon={nutritionEmptyIcon}
         />
       )}
 
