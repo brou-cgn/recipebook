@@ -22,6 +22,7 @@ jest.mock('../utils/recipeSwipeFlags', () => {
   return {
     setRecipeSwipeFlag: jest.fn(),
     bulkUpdateSwipeFlagsByListAndRecipe: jest.fn(() => Promise.resolve(true)),
+    deleteSwipeFlagsByListAndRecipe: jest.fn(() => Promise.resolve(true)),
     // getSwipeFlagDocsByRecipeForUser replaces getActiveSwipeFlags.
     // mockActiveFlagsValue is a { recipeId: flag } map (legacy format).
     // We convert it to the full doc format: flag=null means "open" (in stack),
@@ -2399,6 +2400,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
   });
 
   test('Option "Koche ich mal wieder" weist Rezept der Zielliste zu', async () => {
+    const { deleteSwipeFlagsByListAndRecipe } = require('../utils/recipeSwipeFlags');
     const interactiveListWithTarget = {
       ...list,
       targetListId: 'target-list-1',
@@ -2426,11 +2428,13 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-target');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-1', 'r-target');
+    expect(deleteSwipeFlagsByListAndRecipe).toHaveBeenCalledWith('list1', 'r-target');
     expect(updateRecipe).toHaveBeenCalledWith('r-target', { groupId: 'target-list-1' });
     expect(addFavorite).not.toHaveBeenCalled();
   });
 
   test('Option "Koche ich regelmäßig" setzt zusätzlich den Favoritenstatus', async () => {
+    const { deleteSwipeFlagsByListAndRecipe } = require('../utils/recipeSwipeFlags');
     const interactiveListWithTarget = {
       ...list,
       targetListId: 'target-list-2',
@@ -2458,6 +2462,7 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
 
     expect(removeRecipeFromGroup).toHaveBeenCalledWith('list1', 'r-fav');
     expect(addRecipeToGroup).toHaveBeenCalledWith('target-list-2', 'r-fav');
+    expect(deleteSwipeFlagsByListAndRecipe).toHaveBeenCalledWith('list1', 'r-fav');
     expect(updateRecipe).toHaveBeenCalledWith('r-fav', { groupId: 'target-list-2' });
     expect(addFavorite).toHaveBeenCalledWith('user1', 'r-fav');
   });
