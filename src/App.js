@@ -1176,11 +1176,17 @@ function App() {
       // Build the interactive list data, linking it to the target list
       const interactiveListData = { ...groupData };
       delete interactiveListData.newTargetListName;
+      delete interactiveListData.selfTargetList;
       if (targetListId) {
         interactiveListData.targetListId = targetListId;
       }
 
-      await addGroupToFirestore(interactiveListData, currentUser.id);
+      const newGroup = await addGroupToFirestore(interactiveListData, currentUser.id);
+
+      // When the list itself is chosen as its own target, update targetListId after creation
+      if (groupData.listKind === 'interactive' && groupData.selfTargetList) {
+        await updateGroupInFirestore(newGroup.id, { targetListId: newGroup.id });
+      }
     } catch (error) {
       console.error('Error creating group:', error);
       alert('Fehler beim Erstellen der Gruppe. Bitte versuchen Sie es erneut.');

@@ -236,19 +236,28 @@ describe('GroupEditDialog', () => {
     });
   });
 
-  describe('excludes current group from privateLists', () => {
-    it('does not show the current group itself as a target list option', () => {
+  describe('includes current group in privateLists', () => {
+    it('shows the current group itself as a target list option', () => {
       const groupWithSameId = { id: 'list1', name: 'Familienrezepte', type: 'private', listKind: 'interactive', targetListId: 'list2', ownerId: 'user1', memberIds: ['user1'] };
-      // Simulate what GroupDetail does: filter out the current group before passing privateLists
-      const filteredLists = mockPrivateLists.filter((l) => l.id !== groupWithSameId.id);
+      // GroupDetail now passes privateLists including the current group
       renderDialog({
         group: groupWithSameId,
-        privateLists: filteredLists,
+        privateLists: mockPrivateLists,
       });
 
-      // list1 has been filtered out, so only list2 (Freunde) should appear
-      expect(screen.queryByText('Familienrezepte')).not.toBeInTheDocument();
+      // list1 should appear with "(diese Liste)" label, list2 should also appear
+      expect(screen.getByText('Familienrezepte (diese Liste)')).toBeInTheDocument();
       expect(screen.getByText('Freunde')).toBeInTheDocument();
+    });
+
+    it('pre-selects the group itself when targetListId equals its own id', () => {
+      const selfTargetGroup = { id: 'list1', name: 'Familienrezepte', type: 'private', listKind: 'interactive', targetListId: 'list1', ownerId: 'user1', memberIds: ['user1'] };
+      renderDialog({
+        group: selfTargetGroup,
+        privateLists: mockPrivateLists,
+      });
+
+      expect(screen.getByLabelText('Bestehende Liste auswählen')).toHaveValue('list1');
     });
   });
 });

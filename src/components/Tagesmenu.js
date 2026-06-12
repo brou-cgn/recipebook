@@ -1113,36 +1113,38 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                     }
                   }}
                 >
-                  <div
-                    className="tagesmenu-kachel-menu-wrapper"
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
-                      {renderKachelContextIcon(orderedImages)}
-                    </span>
-                    <select
-                      onChange={(e) => {
-                        const item = e.target.value;
-                        if (item) {
-                          setContextMenuRecipeId(recipe.id);
-                          handleKachelMenuItemClick(item, recipe.id);
-                          e.target.value = '';
-                        }
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        try { e.target.showPicker(); } catch (_) {}
-                      }}
-                      value=""
-                      className="tagesmenu-kachel-context-select"
-                      aria-label="Kachel-Kontextmenü öffnen"
+                  {!(selectedList?.targetListId === selectedListId) && (
+                    <div
+                      className="tagesmenu-kachel-menu-wrapper"
+                      onPointerDown={(e) => e.stopPropagation()}
                     >
-                      <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
-                      {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
-                        <option key={item} value={item}>{item}</option>
-                      ))}
-                    </select>
-                  </div>
+                      <span className="tagesmenu-kachel-context-icon" aria-hidden="true">
+                        {renderKachelContextIcon(orderedImages)}
+                      </span>
+                      <select
+                        onChange={(e) => {
+                          const item = e.target.value;
+                          if (item) {
+                            setContextMenuRecipeId(recipe.id);
+                            handleKachelMenuItemClick(item, recipe.id);
+                            e.target.value = '';
+                          }
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try { e.target.showPicker(); } catch (_) {}
+                        }}
+                        value=""
+                        className="tagesmenu-kachel-context-select"
+                        aria-label="Kachel-Kontextmenü öffnen"
+                      >
+                        <option value="" disabled>{KACHEL_MENU_PROMPT_LABEL}</option>
+                        {TAGESMENU_KACHEL_MENU_ITEMS.map((item) => (
+                          <option key={item} value={item}>{item}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="tagesmenu-results-tile-image">
                     {orderedImages.length > 0 ? (
                       <img src={orderedImages[0].url} alt={recipe.title} />

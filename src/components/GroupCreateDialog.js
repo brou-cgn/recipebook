@@ -94,6 +94,8 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
           saveData.targetListId = targetListId;
         } else if (targetListMode === 'create') {
           saveData.newTargetListName = newTargetListName.trim();
+        } else if (targetListMode === 'self') {
+          saveData.selfTargetList = true;
         }
       }
       await onSave(saveData);
@@ -184,6 +186,16 @@ function GroupCreateDialog({ allUsers, currentUser, onSave, onCancel, privateLis
                     onChange={() => { setTargetListMode('create'); setTargetListId(''); }}
                   />
                   <span>Neue Liste anlegen</span>
+                </label>
+                <label className="group-target-list-option">
+                  <input
+                    type="radio"
+                    name="targetListMode"
+                    value="self"
+                    checked={targetListMode === 'self'}
+                    onChange={() => { setTargetListMode('self'); setTargetListId(''); setNewTargetListName(''); }}
+                  />
+                  <span>Diese Liste</span>
                 </label>
               </div>
 
