@@ -31,6 +31,34 @@
   flex-shrink: 0;
 }
 
+.nutrition-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nutrition-autocalc-header-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.nutrition-autocalc-header-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  opacity: 1;
+}
+
+.nutrition-autocalc-header-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .nutrition-modal-title {
   margin: 0;
   font-size: 1.25rem;
@@ -155,6 +183,48 @@
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
+}
+
+/* Read-only nutrition value list */
+.nutrition-values-list {
+  margin: 0 0 0 0;
+}
+
+.nutrition-value-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #f4f4f4;
+  font-size: 0.95rem;
+}
+
+.nutrition-value-row:last-child {
+  border-bottom: none;
+}
+
+.nutrition-value-label {
+  color: #444;
+  font-weight: 500;
+}
+
+.nutrition-value-amount {
+  color: #1a1a1a;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 0.75rem;
+}
+
+.nutrition-value-row--indented .nutrition-value-label::before {
+  content: '↳ ';
+  color: #aaa;
+}
+
+/* Divider between nutrition values and lower section */
+.nutrition-section-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 1rem 0;
 }
 
 .nutrition-field-grid {
@@ -328,9 +398,7 @@
 
 /* Auto-calculate section */
 .nutrition-autocalc {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px dashed #e0e0e0;
+  margin-top: 0;
 }
 
 .nutrition-autocalc-button {

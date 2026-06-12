@@ -1209,6 +1209,40 @@
   background: #333;
 }
 
+[data-theme="dark"] .nutrition-autocalc-header-btn {
+  color: #aaa;
+}
+
+[data-theme="dark"] .nutrition-autocalc-header-btn:hover:not(:disabled) {
+  color: #e8e8e8;
+  background: #333;
+}
+
+[data-theme="dark"] .nutrition-value-label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .nutrition-value-amount {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .nutrition-value-row {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-section-divider {
+  border-top-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-calc-progress {
+  background: #2a2a2a;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-calc-progress-header {
+  color: #ccc;
+}
+
 [data-theme="dark"] .group-dialog-field select {
   background: #2a2a2a;
   color: #e8e8e8;
@@ -2337,7 +2371,7 @@
 }
 
 [data-theme="dark"] .nutrition-autocalc {
-  border-top-color: #3d3d3d;
+  border-top-color: transparent;
 }
 
 /* ---- OcrScanModal additional ---- */

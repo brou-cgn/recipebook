@@ -25,6 +25,15 @@ describe('NutritionModal dark mode styles', () => {
     expect(headerRule).toContain('color: #ccc;');
   });
 
+  test('uses dark styles for calculation progress banner', () => {
+    const progressRule = getRuleBody(css, '[data-theme="dark"] .nutrition-calc-progress');
+    const headerRule = getRuleBody(css, '[data-theme="dark"] .nutrition-calc-progress-header');
+
+    expect(progressRule).toContain('background');
+    expect(progressRule).toContain('border');
+    expect(headerRule).toContain('color');
+  });
+
   test('uses a distinct readable highlight color for AI-estimated composition rows', () => {
     const rowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-row--ai-estimated td');
     const badgeRule = getRuleBody(css, '[data-theme="dark"] .nutrition-ai-estimated-badge');
