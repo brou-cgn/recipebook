@@ -7,6 +7,7 @@ import {
   resolveIngredientNutritionByStatus,
   computeIngredientAmountG,
 } from '../utils/nutritionStatusResolver';
+import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReferenceUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -114,12 +115,29 @@ export function getRecipeCalcResult(recipe) {
   };
 }
 
-export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = [], manualAmountsInput = {}) {
+const NUTRITION_SOURCE_DISPLAY_LABELS = {
+  openfoodfacts: 'OpenFoodFacts',
+  'ai-generiert': 'KI-Schätzung',
+  manual: 'Manuell',
+};
+
+function normalizeIngredientItem(item) {
+  if (typeof item === 'string') return { text: item, ingredientID: null };
+  return { text: item.text || '', ingredientID: item.ingredientID || null };
+}
+
+function resolveNonLinkSource(refRow, ingredientDetail) {
+  const refLabel = NUTRITION_SOURCE_DISPLAY_LABELS[refRow?.source];
+  if (refLabel) return refLabel;
+  return ingredientDetail?.aiEstimated ? 'KI-Schätzung' : '';
+}
+
+export function buildNutritionCompositionRows(recipe, calcResult, reformulationMap = {}, acceptedIngredientsInput = [], manualAmountsInput = {}, nutritionReferenceRows = [], linkedRecipeCalcCompletedAtMap = {}) {
   const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
-  const ingredientTexts = rawIngredients
+  const ingredientItems = rawIngredients
     .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
-    .map(item => typeof item === 'string' ? item : item.text)
-    .filter(Boolean);
+    .map(normalizeIngredientItem)
+    .filter(item => Boolean(item.text));
   const notIncluded = calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
   const acceptedIngredients = acceptedIngredientsInput instanceof Set
     ? acceptedIngredientsInput
@@ -127,8 +145,14 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
   const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
   const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d]));
+  const refByIngredientID = new Map(
+    (nutritionReferenceRows || [])
+      .map(row => [String(row?.ingredientID || '').trim(), row])
+      .filter(([id]) => Boolean(id))
+  );
+  const mainCalcCompletedAt = recipe?.naehrwerte?.calcCompletedAt ?? null;
 
-  return ingredientTexts.map((ingredient) => {
+  return ingredientItems.map(({ text: ingredient, ingredientID }) => {
     const link = decodeRecipeLink(ingredient);
     const notIncludedItem = notIncludedByIngredient.get(ingredient);
     const reformulation = reformulationMap?.[ingredient]?.text || notIncludedItem?.reformulation || null;
@@ -139,15 +163,27 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     const manualAmountG = parseManualAmountG(manualAmountsInput?.[ingredient]);
     const manualAmountApplied = noAmountG && hasNaehrwerte && manualAmountG != null;
     const convertedNaehrwerte = manualAmountApplied ? scaleNutritionByAmountG(ingredientDetail.naehrwerte, manualAmountG) : null;
-    let status = 'Berechnet';
-    if (acceptedIngredients.has(ingredient)) {
-      status = 'Akzeptiert';
-    } else if (notIncludedItem) {
-      status = 'Nicht enthalten';
+
+    let source;
+    let status;
+    if (link) {
+      source = 'Rezept';
+      const linkedCalcCompletedAt = linkedRecipeCalcCompletedAtMap?.[link.recipeId] ?? null;
+      if (mainCalcCompletedAt != null && linkedCalcCompletedAt != null) {
+        status = linkedCalcCompletedAt <= mainCalcCompletedAt ? 'Aktuell' : 'Veraltet';
+      } else {
+        status = 'Ungeprüft';
+      }
+    } else {
+      const refRow = ingredientID ? refByIngredientID.get(String(ingredientID).trim()) : null;
+      source = resolveNonLinkSource(refRow, ingredientDetail);
+      status = refRow?.status === NUTRITION_REFERENCE_APPROVED_STATUS ? 'Geprüft' : 'Ungeprüft';
     }
+
+    const isNotIncluded = Boolean(notIncludedItem);
     return {
       ingredient,
-      source: link ? `Rezeptlink: ${link.recipeName}` : 'Zutat',
+      source,
       status,
       amountG: ingredientDetail?.amountG ?? (manualAmountApplied ? manualAmountG : null),
       detail: notIncludedItem?.error ||
@@ -161,7 +197,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
               : 'Referenzquelle vorhanden, Menge nicht berechenbar'))
             : (searchTerm
             ? `Suchbegriff: ${searchTerm}`
-            : (!hasNaehrwerte && status === 'Berechnet' ? 'Neu berechnen' : '—')))),
+            : (!hasNaehrwerte && !isNotIncluded ? 'Neu berechnen' : '—')))),
       naehrwerte: convertedNaehrwerte || ingredientDetail?.naehrwerte || null,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,
@@ -925,13 +961,26 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const hasValues =
     kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
     zucker !== '' || ballaststoffe !== '' || salz !== '';
+
+  const linkedRecipeCalcCompletedAtMap = useMemo(() => {
+    const map = {};
+    for (const r of allRecipes) {
+      if (r.id != null && r.naehrwerte?.calcCompletedAt != null) {
+        map[r.id] = r.naehrwerte.calcCompletedAt;
+      }
+    }
+    return map;
+  }, [allRecipes]);
+
   const compositionRows = useMemo(() => buildNutritionCompositionRows(
     recipe,
     autoCalcResult,
     reformulations,
     acceptedIngredients,
-    manualAmounts
-  ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts]);
+    manualAmounts,
+    nutritionReferenceRows,
+    linkedRecipeCalcCompletedAtMap
+  ), [recipe, autoCalcResult, reformulations, acceptedIngredients, manualAmounts, nutritionReferenceRows, linkedRecipeCalcCompletedAtMap]);
 
   const ungeprüftCount = useMemo(() => {
     const rawIngredients = recipe?.zutaten || recipe?.ingredients || [];
@@ -1097,7 +1146,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                          <td>{renderCompositionIngredient(row.ingredient)}</td>
                          <td>
                            {row.source}
-                           {row.aiEstimated && <span className="nutrition-ai-estimated-badge"> 🤖 KI-Schätzung</span>}
                          </td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kalorien', 0)}</td>
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'protein')}</td>
