@@ -11,7 +11,6 @@ import {
   getCustomLists,
   saveCustomLists,
   getStandardIngredientTerms,
-  saveStandardIngredientTerms,
   getCommonAdjectives,
   saveCommonAdjectives,
   getIgnoredTerms,
@@ -206,8 +205,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   // Cuisine list management state
   const [newCuisineTypeName, setNewCuisineTypeName] = useState('');
   const [newCuisineGroupName, setNewCuisineGroupName] = useState('');
-  const [standardUnits, setStandardUnits] = useState([]);
-  const [standardAdjectives, setStandardAdjectives] = useState([]);
   const [commonAdjectives, setCommonAdjectives] = useState(getEmptyCommonAdjectiveGroups);
   const [ignoredTerms, setIgnoredTerms] = useState([]);
   const [newIgnoredTerm, setNewIgnoredTerm] = useState('');
@@ -264,16 +261,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       const loadedStandardAdjectives = Array.isArray(terms.standardAdjectives)
         ? terms.standardAdjectives
         : DEFAULT_STANDARD_INGREDIENT_ADJECTIVES;
-      setStandardUnits(loadedStandardUnits);
-      setStandardAdjectives(loadedStandardAdjectives);
       setCustomIngredientMatchingTerms({
         units: loadedStandardUnits,
         adjectives: loadedStandardAdjectives,
       });
     }).catch((error) => {
       console.error('Error loading standard ingredient terms:', error);
-      setStandardUnits(DEFAULT_STANDARD_INGREDIENT_UNITS);
-      setStandardAdjectives(DEFAULT_STANDARD_INGREDIENT_ADJECTIVES);
       setCustomIngredientMatchingTerms({
         units: DEFAULT_STANDARD_INGREDIENT_UNITS,
         adjectives: DEFAULT_STANDARD_INGREDIENT_ADJECTIVES,
@@ -933,37 +926,6 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     setCuisineGroups(updated);
     await saveCuisineLists(cuisineTypes, updated);
   };
-
-  const normalizeUniqueEntries = useCallback((entries = []) => (
-    entries
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean)
-      .filter((entry, index, arr) => arr.findIndex((other) => other.toLowerCase() === entry.toLowerCase()) === index)
-  ), []);
-
-  const saveStandardTerms = async (units, adjectives) => {
-    const normalizedUnits = normalizeUniqueEntries(units);
-    const normalizedAdjectives = normalizeUniqueEntries(adjectives);
-    setStandardUnits(normalizedUnits);
-    setStandardAdjectives(normalizedAdjectives);
-    setStandardTermsFeedback('');
-    setCustomIngredientMatchingTerms({
-      units: normalizedUnits,
-      adjectives: normalizedAdjectives,
-    });
-    try {
-      await saveStandardIngredientTerms(normalizedUnits, normalizedAdjectives, currentUser?.id);
-      setStandardTermsFeedback('Standard-Einheiten/-Adjektive gespeichert.');
-      return true;
-    } catch (err) {
-      console.error('Error saving standard units/adjectives:', err);
-      setStandardTermsFeedback('Fehler beim Speichern der Standard-Einheiten/-Adjektive.');
-      return false;
-    }
-  };
-  void standardUnits;
-  void standardAdjectives;
-  void saveStandardTerms;
 
   const ingredientContextSegmentOptions = useMemo(() => ([
     {
