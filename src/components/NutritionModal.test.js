@@ -133,7 +133,7 @@ describe('getRecipeCalcResult', () => {
   });
 
   describe('buildNutritionCompositionRows', () => {
-    it('builds composition rows with calculated, not included and accepted statuses', () => {
+    it('builds composition rows with source/status from nutritionReferences and Rezept source for recipe links', () => {
       const recipe = {
         ingredients: ['200 g Reis', '1 Teil #recipe:abc:Linsen', 'Salz'],
         naehrwerte: {
@@ -151,9 +151,9 @@ describe('getRecipeCalcResult', () => {
       );
 
       expect(rows).toEqual([
-        expect.objectContaining({ ingredient: '200 g Reis', status: 'Nicht enthalten', source: 'Zutat' }),
-        expect.objectContaining({ ingredient: '1 Teil #recipe:abc:Linsen', status: 'Berechnet', source: expect.stringContaining('Rezeptlink') }),
-        expect.objectContaining({ ingredient: 'Salz', status: 'Akzeptiert', source: 'Zutat' }),
+        expect.objectContaining({ ingredient: '200 g Reis', status: 'Ungeprüft', source: '' }),
+        expect.objectContaining({ ingredient: '1 Teil #recipe:abc:Linsen', status: 'Ungeprüft', source: 'Rezept' }),
+        expect.objectContaining({ ingredient: 'Salz', status: 'Ungeprüft', source: '' }),
       ]);
     });
 
@@ -176,7 +176,7 @@ describe('getRecipeCalcResult', () => {
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: 'Linsen',
-        status: 'Berechnet',
+        status: 'Ungeprüft',
         naehrwerte: ingredientNaehrwerte,
         amountG: 150,
         searchTerm: 'lentil',
@@ -185,7 +185,7 @@ describe('getRecipeCalcResult', () => {
       }));
       expect(rows[1]).toEqual(expect.objectContaining({
         ingredient: 'Salz',
-        status: 'Akzeptiert',
+        status: 'Ungeprüft',
         naehrwerte: null,
         aiEstimated: false,
       }));
@@ -209,7 +209,7 @@ describe('getRecipeCalcResult', () => {
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: '200 g Reis',
-        status: 'Nicht enthalten',
+        status: 'Ungeprüft',
         naehrwerte: null,
       }));
     });
@@ -267,7 +267,7 @@ describe('getRecipeCalcResult', () => {
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: 'Kartoffeln',
-        status: 'Berechnet',
+        status: 'Ungeprüft',
         detail: 'Neu berechnen',
         naehrwerte: null,
       }));
@@ -288,7 +288,7 @@ describe('getRecipeCalcResult', () => {
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: '3 Stück Eier',
-        status: 'Berechnet',
+        status: 'Ungeprüft',
         detail: 'Referenzquelle vorhanden, Menge nicht berechenbar',
         naehrwerte: null,
       }));
@@ -371,10 +371,85 @@ describe('getRecipeCalcResult', () => {
 
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: '1 Teil #recipe:abc:Linsen',
-        status: 'Berechnet',
-        source: expect.stringContaining('Rezeptlink'),
+        status: 'Ungeprüft',
+        source: 'Rezept',
         naehrwerte: linkNaehrwerte,
       }));
+    });
+
+    it('resolves source label from nutritionReferenceRows by ingredientID', () => {
+      const recipe = {
+        ingredients: [
+          { text: '200 g Tomaten', ingredientID: 'tomate' },
+          { text: '2 EL Öl', ingredientID: 'oel' },
+          { text: 'Salz', ingredientID: 'salz' },
+        ],
+        naehrwerte: {},
+      };
+      const nutritionReferenceRows = [
+        { ingredientID: 'tomate', source: 'openfoodfacts', status: 'Freigegeben' },
+        { ingredientID: 'oel', source: 'ai-generiert', status: 'Prüfung ausstehend' },
+        { ingredientID: 'salz', source: 'manual', status: 'Freigegeben' },
+      ];
+
+      const rows = buildNutritionCompositionRows(recipe, null, {}, [], {}, nutritionReferenceRows);
+
+      expect(rows[0]).toEqual(expect.objectContaining({ ingredient: '200 g Tomaten', source: 'OpenFoodFacts', status: 'Geprüft' }));
+      expect(rows[1]).toEqual(expect.objectContaining({ ingredient: '2 EL Öl', source: 'KI-Schätzung', status: 'Ungeprüft' }));
+      expect(rows[2]).toEqual(expect.objectContaining({ ingredient: 'Salz', source: 'Manuell', status: 'Geprüft' }));
+    });
+
+    it('falls back to KI-Schätzung source when no nutritionRef and ingredientDetail is aiEstimated', () => {
+      const recipe = { ingredients: ['Tofu'], naehrwerte: {} };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        { notIncluded: [], ingredientDetails: [{ ingredient: 'Tofu', aiEstimated: true }] },
+        {}, []
+      );
+      expect(rows[0]).toEqual(expect.objectContaining({ source: 'KI-Schätzung' }));
+    });
+
+    it('shows empty source when no nutritionRef and ingredient is not aiEstimated', () => {
+      const recipe = { ingredients: ['Tomaten'], naehrwerte: {} };
+      const rows = buildNutritionCompositionRows(recipe, null, {}, []);
+      expect(rows[0]).toEqual(expect.objectContaining({ source: '' }));
+    });
+
+    it('shows Aktuell for recipe link when linked recipe was calculated before main recipe', () => {
+      const recipe = {
+        ingredients: ['1 Teil #recipe:abc:Linsen'],
+        naehrwerte: { calcCompletedAt: 2000 },
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        { notIncluded: [], ingredientDetails: [] },
+        {}, [], {}, [],
+        { abc: 1000 }
+      );
+      expect(rows[0]).toEqual(expect.objectContaining({ source: 'Rezept', status: 'Aktuell' }));
+    });
+
+    it('shows Veraltet for recipe link when linked recipe was calculated after main recipe', () => {
+      const recipe = {
+        ingredients: ['1 Teil #recipe:abc:Linsen'],
+        naehrwerte: { calcCompletedAt: 1000 },
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        { notIncluded: [], ingredientDetails: [] },
+        {}, [], {}, [],
+        { abc: 2000 }
+      );
+      expect(rows[0]).toEqual(expect.objectContaining({ source: 'Rezept', status: 'Veraltet' }));
+    });
+
+    it('shows Ungeprüft for recipe link when calcCompletedAt timestamps are missing', () => {
+      const recipe = {
+        ingredients: ['#recipe:abc:Linsen'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(recipe, null, {}, []);
+      expect(rows[0]).toEqual(expect.objectContaining({ source: 'Rezept', status: 'Ungeprüft' }));
     });
 
     describe('manual amount conversion helpers', () => {

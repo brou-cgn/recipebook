@@ -179,10 +179,11 @@
   border: 0;
   padding: 0;
   background: none;
-  color: #1a73e8;
+  color: #ff9800;
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
+  text-align: left;
 }
 
 /* Read-only nutrition value list */
