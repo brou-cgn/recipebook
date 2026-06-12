@@ -814,7 +814,7 @@ function GroupDetail({
       {showEditDialog && (
         <GroupEditDialog
           group={group}
-          privateLists={privateLists.filter((l) => l.id !== group.id)}
+          privateLists={privateLists}
           onSave={handleEditSave}
           onCancel={() => setShowEditDialog(false)}
         />

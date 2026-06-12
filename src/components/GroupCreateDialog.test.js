@@ -143,6 +143,7 @@ describe('GroupCreateDialog', () => {
       expect(screen.getAllByText(/Ziel-Liste/).length).toBeGreaterThan(0);
       expect(screen.getByText('Bestehende Liste wählen')).toBeInTheDocument();
       expect(screen.getByText('Neue Liste anlegen')).toBeInTheDocument();
+      expect(screen.getByText('Diese Liste')).toBeInTheDocument();
     });
 
     it('shows error when submitting interactive list without selecting target list mode', async () => {
@@ -285,6 +286,34 @@ describe('GroupCreateDialog', () => {
 
       fireEvent.change(screen.getByLabelText('Art *'), { target: { value: 'classic' } });
       expect(screen.queryByText(/Ziel-Liste/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('interactive list – diese Liste als Ziel', () => {
+    it('shows "Diese Liste" radio option in target list section', () => {
+      renderDialog();
+      fireEvent.change(screen.getByLabelText('Art *'), { target: { value: 'interactive' } });
+      expect(screen.getByText('Diese Liste')).toBeInTheDocument();
+    });
+
+    it('calls onSave with selfTargetList when "Diese Liste" is selected', async () => {
+      const onSave = jest.fn().mockResolvedValue();
+      renderDialog({ onSave });
+
+      fireEvent.change(screen.getByLabelText('Listenname *'), { target: { value: 'Meine interaktive Liste' } });
+      fireEvent.change(screen.getByLabelText('Art *'), { target: { value: 'interactive' } });
+      fireEvent.click(screen.getByText('Diese Liste'));
+      fireEvent.click(screen.getByText('Liste erstellen'));
+
+      await waitFor(() => {
+        expect(onSave).toHaveBeenCalledWith({
+          name: 'Meine interaktive Liste',
+          memberIds: ['user1'],
+          memberRoles: {},
+          listKind: 'interactive',
+          selfTargetList: true,
+        });
+      });
     });
   });
 });

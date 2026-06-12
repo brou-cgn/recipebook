@@ -8,7 +8,7 @@ import { LIST_KIND_OPTIONS } from '../utils/groupFirestore';
  * @param {Object} props.group - The group to edit
  * @param {Function} props.onSave - Called with { name, description?, listKind, targetListId?, newTargetListName? } when saving
  * @param {Function} props.onCancel - Called when dialog is dismissed
- * @param {Array}  props.privateLists - Existing private lists available as target lists (excludes current group)
+ * @param {Array}  props.privateLists - Existing private lists available as target lists (includes the current group)
  */
 function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
   const [name, setName] = useState(group?.name || '');
@@ -174,7 +174,7 @@ function GroupEditDialog({ group, onSave, onCancel, privateLists = [] }) {
                   <option value="">– Bitte auswählen –</option>
                   {privateLists.map((list) => (
                     <option key={list.id} value={list.id}>
-                      {list.name}
+                      {list.id === group?.id ? `${list.name} (diese Liste)` : list.name}
                     </option>
                   ))}
                 </select>

@@ -2467,3 +2467,88 @@ describe('Tagesmenu – Kachel-Kontextmenü', () => {
     expect(addFavorite).toHaveBeenCalledWith('user1', 'r-fav');
   });
 });
+
+describe('Tagesmenu – Kochatelier: kein Kachel-Menü bei selbstreferenzieller Liste', () => {
+  const futureMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
+
+  beforeEach(() => {
+    mockMaxKandidatenSchwelle = 3;
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat' },
+      user2: { r1: 'kandidat' },
+    };
+    mockActiveFlagsValue = { r1: 'kandidat' };
+  });
+
+  test('blendet das Kachel-Menü aus, wenn die Liste sich selbst als Zielliste hat', async () => {
+    const selfTargetList = {
+      id: 'list1',
+      name: 'Test Liste',
+      listKind: 'interactive',
+      targetListId: 'list1',
+      recipeIds: [],
+      ownerId: 'user1',
+      memberIds: ['user2'],
+    };
+    const recipe = makeRecipe('r1', 'Rezept 1');
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[selfTargetList]}
+          recipes={[recipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+
+    // Kachel-Menü should NOT be visible for gemeinsame Kandidaten when list targets itself
+    expect(gemeinsameGroup.querySelector('.tagesmenu-kachel-context-select')).toBeNull();
+  });
+
+  test('zeigt das Kachel-Menü, wenn die Liste eine andere Zielliste hat', async () => {
+    const externalTargetList = {
+      id: 'list1',
+      name: 'Test Liste',
+      listKind: 'interactive',
+      targetListId: 'other-list',
+      recipeIds: [],
+      ownerId: 'user1',
+      memberIds: ['user2'],
+    };
+    const recipe = makeRecipe('r1', 'Rezept 1');
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[externalTargetList]}
+          recipes={[recipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    expect(document.querySelector('.tagesmenu-results')).not.toBeNull();
+    const gemeinsameGroup = document.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+
+    // Kachel-Menü SHOULD be visible when list has a different target list
+    expect(gemeinsameGroup.querySelector('.tagesmenu-kachel-context-select')).not.toBeNull();
+  });
+});
