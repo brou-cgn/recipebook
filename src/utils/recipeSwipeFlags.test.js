@@ -40,6 +40,7 @@ jest.mock('firebase/firestore', () => ({
 import {
   setRecipeSwipeFlag,
   bulkUpdateSwipeFlagsByListAndRecipe,
+  deleteSwipeFlagsByListAndRecipe,
   getActiveSwipeFlags,
   getSwipeFlagDocsByRecipeForUser,
   getAllMembersSwipeFlags,
@@ -120,6 +121,23 @@ describe('recipeSwipeFlags write operations', () => {
         expiresAt,
       })
     );
+  });
+
+  it('deletes all swipe flag docs for a recipe in a list', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      forEach: (cb) => {
+        cb({ ref: 'ref-1', data: () => ({ userID: 'u1', listID: 'l1', recipeID: 'r1' }) });
+        cb({ ref: 'ref-2', data: () => ({ userID: 'u2', listID: 'l1', recipeID: 'r1' }) });
+      },
+    });
+    mockDeleteDoc.mockResolvedValue();
+
+    const result = await deleteSwipeFlagsByListAndRecipe('l1', 'r1');
+
+    expect(result).toBe(true);
+    expect(mockDeleteDoc).toHaveBeenCalledTimes(2);
+    expect(mockDeleteDoc).toHaveBeenCalledWith('ref-1');
+    expect(mockDeleteDoc).toHaveBeenCalledWith('ref-2');
   });
 
   it('computes expiresAt from archiv validity days', async () => {

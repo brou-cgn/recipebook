@@ -6,7 +6,7 @@
  */
 
 import { db } from '../firebase';
-import { getDocs, collection, query, where, doc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, collection, query, where, doc, setDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { getStatusValiditySettings } from '../utils/customLists';
 
 const DEFAULT_GROUP_THRESHOLDS = {
@@ -270,6 +270,37 @@ export const bulkUpdateSwipeFlagsByListAndRecipe = async (listId, recipeId, flag
     return true;
   } catch (error) {
     console.error('Error bulk-updating recipe swipe flags for list and recipe:', error);
+    return false;
+  }
+};
+
+/**
+ * Delete all swipe flag documents for one recipe in one list.
+ *
+ * @param {string} listId
+ * @param {string} recipeId
+ * @returns {Promise<boolean>}
+ */
+export const deleteSwipeFlagsByListAndRecipe = async (listId, recipeId) => {
+  if (!listId || !recipeId) return false;
+
+  try {
+    const q = query(
+      collection(db, 'recipeSwipeFlags'),
+      where('listID', '==', listId),
+      where('recipeID', '==', recipeId)
+    );
+    const snapshot = await getDocs(q);
+    const deleteOperations = [];
+
+    snapshot.forEach((docSnap) => {
+      deleteOperations.push(deleteDoc(docSnap.ref));
+    });
+
+    await Promise.all(deleteOperations);
+    return true;
+  } catch (error) {
+    console.error('Error deleting recipe swipe flags for list and recipe:', error);
     return false;
   }
 };
