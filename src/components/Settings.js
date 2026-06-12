@@ -8,7 +8,7 @@ import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix } 
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
-import { updateFavicon, updatePageTitle, updateAppLogo, applyFaviconSettings } from '../utils/faviconUtils';
+import { applyFaviconSettings } from '../utils/faviconUtils';
 import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/storageUtils';
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import SeasonMatrixTab from './SeasonMatrixTab';

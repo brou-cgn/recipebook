@@ -140,9 +140,6 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     .map(normalizeIngredientItem)
     .filter(item => Boolean(item.text));
   const notIncluded = calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
-  const acceptedIngredients = acceptedIngredientsInput instanceof Set
-    ? acceptedIngredientsInput
-    : new Set(acceptedIngredientsInput || []);
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
   const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
   const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d]));
@@ -217,7 +214,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const [zucker, setZucker] = useState('');
   const [ballaststoffe, setBallaststoffe] = useState('');
   const [salz, setSalz] = useState('');
-  const [saving, setSaving] = useState(false);
   const [autoCalcLoading, setAutoCalcLoading] = useState(false);
   const [autoCalcResult, setAutoCalcResult] = useState(() => {
     const fromRecipe = getRecipeCalcResult(recipe);
@@ -341,69 +337,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       return next;
     });
-  };
-
-  const handleSave = async () => {
-    if (Object.keys(manualAmountErrors).length > 0) {
-      alert('Bitte korrigieren Sie die ungültigen Mengenangaben in der Zusammensetzungstabelle.');
-      return;
-    }
-
-    const portionen = recipe.portionen || 1;
-    // Form fields hold per-portion values; multiply back to store totals
-    const perPortion = {
-      kalorien: parsePositiveNumber(kalorien),
-      protein: parsePositiveNumber(protein),
-      fett: parsePositiveNumber(fett),
-      kohlenhydrate: parsePositiveNumber(kohlenhydrate),
-      zucker: parsePositiveNumber(zucker),
-      ballaststoffe: parsePositiveNumber(ballaststoffe),
-      salz: parsePositiveNumber(salz),
-    };
-    const { totals: convertedTotals, normalizedManualAmounts } = sumNutritionFromIngredientDetails(
-      autoCalcResult?.ingredientDetails || [],
-      manualAmounts
-    );
-    const hasManualConversions = Object.keys(normalizedManualAmounts).length > 0 && convertedTotals;
-    const totalsForSave = hasManualConversions
-      ? convertedTotals
-      : naehrwerteToTotals(perPortion, portionen);
-
-    // Preserve calc metadata so the error log remains visible after manual save
-    const { calcError } = recipe?.naehrwerte || {};
-    const calcFoundCount = autoCalcResult?.foundCount ?? recipe?.naehrwerte?.calcFoundCount;
-    const calcTotalCount = autoCalcResult?.totalCount ?? recipe?.naehrwerte?.calcTotalCount;
-    const calcNotIncluded = autoCalcResult?.notIncluded ?? recipe?.naehrwerte?.calcNotIncluded;
-    const calcReformulations = autoCalcResult?.calcReformulations ?? recipe?.naehrwerte?.calcReformulations;
-    const calcAcceptedIngredients = acceptedIngredients.size > 0
-      ? [...acceptedIngredients]
-      : recipe?.naehrwerte?.calcAcceptedIngredients;
-    const calcIngredientDetails = autoCalcResult?.ingredientDetails ?? recipe?.naehrwerte?.calcIngredientDetails;
-    const calcManualAmountsG = Object.keys(normalizedManualAmounts).length > 0 ? normalizedManualAmounts : null;
-    const naehrwerte = {
-      ...totalsForSave,
-      calcPending: false,
-      calcCompletedAt: Date.now(),
-      ...(calcFoundCount !== undefined && { calcFoundCount }),
-      ...(calcTotalCount !== undefined && { calcTotalCount }),
-      ...(calcNotIncluded !== undefined && { calcNotIncluded }),
-      ...(calcReformulations !== undefined && { calcReformulations }),
-      ...(calcAcceptedIngredients !== undefined && { calcAcceptedIngredients }),
-      ...(calcIngredientDetails !== undefined && { calcIngredientDetails }),
-      calcManualAmountsG,
-      ...(calcError !== undefined && { calcError }),
-    };
-
-    setSaving(true);
-    try {
-      await onSave(naehrwerte);
-      onClose();
-    } catch (err) {
-      console.error('Error saving nutritional values:', err);
-      alert('Fehler beim Speichern der Nährwerte. Bitte versuchen Sie es erneut.');
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleSaveReformulation = async (ingredient, newText) => {
@@ -958,10 +891,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       setAutoCalcResult(prev => prev ? { ...prev, saveError: true } : null);
     }
   };
-
-  const hasValues =
-    kalorien !== '' || protein !== '' || fett !== '' || kohlenhydrate !== '' ||
-    zucker !== '' || ballaststoffe !== '' || salz !== '';
 
   const linkedRecipeCalcCompletedAtMap = useMemo(() => {
     const map = {};
