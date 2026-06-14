@@ -79,7 +79,10 @@ function loadStoredCalcResult(recipeId) {
       typeof parsed.totalCount === 'number' &&
       Array.isArray(parsed.notIncluded)
     ) {
-      return parsed;
+      return {
+        ...parsed,
+        notIncluded: filterNotIncludedIngredients(parsed.notIncluded),
+      };
     }
     return null;
   } catch {
@@ -97,6 +100,11 @@ function clearStoredCalcResult(recipeId) {
   try { localStorage.removeItem(CALC_RESULT_STORAGE_KEY_PREFIX + recipeId); } catch { /* ignore */ }
 }
 
+function filterNotIncludedIngredients(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => !item?.isRecipeLink && !decodeRecipeLink(item?.ingredient || ''));
+}
+
 export function getRecipeCalcResult(recipe) {
   const fc = recipe?.naehrwerte?.calcFoundCount;
   const tc = recipe?.naehrwerte?.calcTotalCount;
@@ -109,7 +117,7 @@ export function getRecipeCalcResult(recipe) {
   return {
     foundCount: fc ?? 0,
     totalCount: tc ?? ingredientDetails?.length ?? 0,
-    notIncluded: recipe?.naehrwerte?.calcNotIncluded || [],
+    notIncluded: filterNotIncludedIngredients(recipe?.naehrwerte?.calcNotIncluded),
     ...(recipe?.naehrwerte?.calcReformulations && { calcReformulations: recipe.naehrwerte.calcReformulations }),
     ...(recipe?.naehrwerte?.calcAcceptedIngredients && { acceptedIngredients: recipe.naehrwerte.calcAcceptedIngredients }),
     ...(ingredientDetails && { ingredientDetails }),
@@ -139,7 +147,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
     .filter(item => typeof item === 'string' || (item && typeof item === 'object' && item.type !== 'heading'))
     .map(normalizeIngredientItem)
     .filter(item => Boolean(item.text));
-  const notIncluded = calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded || [];
+  const notIncluded = filterNotIncludedIngredients(calcResult?.notIncluded || recipe?.naehrwerte?.calcNotIncluded);
   const notIncludedByIngredient = new Map(notIncluded.map(item => [item.ingredient, item]));
   const ingredientDetails = calcResult?.ingredientDetails || recipe?.naehrwerte?.calcIngredientDetails || [];
   const detailsByIngredient = new Map(ingredientDetails.map(d => [d.ingredient, d]));
@@ -227,7 +235,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const [editingText, setEditingText] = useState('');
   const [reformulations, setReformulations] = useState(() => {
     const stored = loadStoredCalcResult(recipe?.id);
-    const notIncluded = recipe?.naehrwerte?.calcNotIncluded || stored?.notIncluded || [];
+    const notIncluded = filterNotIncludedIngredients(recipe?.naehrwerte?.calcNotIncluded || stored?.notIncluded);
     const persistedReformulations = {
       ...(stored?.calcReformulations || {}),
       ...(recipe?.naehrwerte?.calcReformulations || {}),
@@ -660,10 +668,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(autoCalcResult?.calcReformulations || {}),
       ...successfulReformulations,
     };
+    const filteredNotIncluded = filterNotIncludedIngredients(notIncluded);
     const result = {
       foundCount,
       totalCount,
-      notIncluded,
+      notIncluded: filteredNotIncluded,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(ingredientDetails.length > 0 && { ingredientDetails }),
@@ -686,7 +695,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcPending: false,
       calcCompletedAt: Date.now(),
       calcError: null,
-      calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
+      calcNotIncluded: filteredNotIncluded.length > 0 ? filteredNotIncluded : null,
       calcFoundCount: foundCount,
       calcTotalCount: totalCount,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
@@ -711,7 +720,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   }, [retryAutoCalculateToken]);
 
   const handleRecalcReformulated = async () => {
-    const notIncludedItems = autoCalcResult?.notIncluded || [];
+    const notIncludedItems = filterNotIncludedIngredients(autoCalcResult?.notIncluded);
     if (notIncludedItems.length === 0) return;
 
     const regularItems = notIncludedItems.filter(item => !item.isRecipeLink);
@@ -861,10 +870,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...newIngredientDetails,
     ];
 
+    const filteredStillNotIncluded = filterNotIncludedIngredients(stillNotIncluded);
     const updatedResult = {
       foundCount: prevFoundCount + newFoundCount,
       totalCount: prevTotalCount,
-      notIncluded: stillNotIncluded,
+      notIncluded: filteredStillNotIncluded,
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(mergedIngredientDetails.length > 0 && { ingredientDetails: mergedIngredientDetails }),
     };
@@ -877,7 +887,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcPending: false,
       calcCompletedAt: Date.now(),
       calcError: null,
-      calcNotIncluded: stillNotIncluded.length > 0 ? stillNotIncluded : null,
+      calcNotIncluded: filteredStillNotIncluded.length > 0 ? filteredStillNotIncluded : null,
       calcFoundCount: prevFoundCount + newFoundCount,
       calcTotalCount: prevTotalCount,
       calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
