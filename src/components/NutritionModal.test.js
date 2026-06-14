@@ -247,6 +247,7 @@ describe('getRecipeCalcResult', () => {
         []
       );
 
+      expect(rows).toHaveLength(1);
       expect(rows[0]).toEqual(expect.objectContaining({
         ingredient: '1 Teil #recipe:abc:Linsen',
         source: 'Rezept',

@@ -102,7 +102,7 @@ function clearStoredCalcResult(recipeId) {
 
 function filterNotIncludedIngredients(items) {
   if (!Array.isArray(items)) return [];
-  return items.filter((item) => !decodeRecipeLink(item?.ingredient || ''));
+  return items.filter((item) => !item?.isRecipeLink && !decodeRecipeLink(item?.ingredient || ''));
 }
 
 export function getRecipeCalcResult(recipe) {
