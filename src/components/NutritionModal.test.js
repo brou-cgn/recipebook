@@ -101,6 +101,23 @@ describe('getRecipeCalcResult', () => {
     });
   });
 
+  it('filters recipe-link entries from calcNotIncluded payload', () => {
+    const recipe = {
+      naehrwerte: {
+        calcFoundCount: 1,
+        calcTotalCount: 2,
+        calcNotIncluded: [
+          { ingredient: '200 g Reis', error: 'Nicht gefunden' },
+          { ingredient: '1 Teil #recipe:abc:Linsen', error: 'Verlinktes Rezept nicht gefunden', isRecipeLink: true },
+        ],
+      },
+    };
+
+    expect(getRecipeCalcResult(recipe)).toEqual(expect.objectContaining({
+      notIncluded: [{ ingredient: '200 g Reis', error: 'Nicht gefunden' }],
+    }));
+  });
+
   it('includes calcIngredientDetails from recipe naehrwerte', () => {
     const details = [
       { ingredient: 'Linsen', naehrwerte: { kalorien: 220, protein: 18, fett: 1, kohlenhydrate: 30, zucker: 1, ballaststoffe: 5, salz: 0.1 } },
@@ -211,6 +228,29 @@ describe('getRecipeCalcResult', () => {
         ingredient: '200 g Reis',
         status: 'Ungeprüft',
         naehrwerte: null,
+      }));
+    });
+
+    it('ignores recipe-link entries in notIncluded when building composition rows', () => {
+      const recipe = {
+        ingredients: ['1 Teil #recipe:abc:Linsen'],
+        naehrwerte: {},
+      };
+
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [{ ingredient: '1 Teil #recipe:abc:Linsen', error: 'Verlinktes Rezept nicht gefunden', isRecipeLink: true }],
+          ingredientDetails: [],
+        },
+        {},
+        []
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '1 Teil #recipe:abc:Linsen',
+        source: 'Rezept',
+        detail: 'Neu berechnen',
       }));
     });
 
