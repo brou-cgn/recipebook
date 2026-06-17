@@ -1493,10 +1493,14 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             </div>
           )}
           <table className="nutrition-values-table">
+            <colgroup>
+              <col className="nutrition-values-table__col nutrition-values-table__col--label" />
+              <col className="nutrition-values-table__col nutrition-values-table__col--portion" />
+              <col className="nutrition-values-table__col nutrition-values-table__col--per100g" />
+            </colgroup>
             <thead>
               <tr>
-                <th className="nutrition-values-table__label-col"></th>
-                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--portion">Nährwerte pro Portion</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--merged" colSpan={2}>Nährwerte pro Portion</th>
                 <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">pro 100 g</th>
               </tr>
             </thead>
