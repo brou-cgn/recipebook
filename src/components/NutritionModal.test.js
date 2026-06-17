@@ -1363,7 +1363,8 @@ describe('NutritionModal UI layout', () => {
       />
     );
 
-    expect(screen.getByText('Nährwerte pro Portion').closest('th')).toHaveClass('nutrition-values-table__amount-col--portion');
+    expect(screen.getByText('Nährwerte pro Portion').closest('th')).toHaveClass('nutrition-values-table__amount-col--merged');
+    expect(screen.getByText('Nährwerte pro Portion').closest('th')).toHaveAttribute('colspan', '2');
     expect(screen.getByText('pro 100 g').closest('th')).toHaveClass('nutrition-values-table__amount-col--per100g');
     expect(document.querySelectorAll('.nutrition-values-table__amount--portion')).toHaveLength(7);
     expect(document.querySelectorAll('.nutrition-values-table__amount--per100g')).toHaveLength(7);

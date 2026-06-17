@@ -242,9 +242,16 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
-.nutrition-values-table__label-col {
-  text-align: left;
+.nutrition-values-table__col--label {
   width: 44%;
+}
+
+.nutrition-values-table__col--portion {
+  width: 24%;
+}
+
+.nutrition-values-table__col--per100g {
+  width: 32%;
 }
 
 .nutrition-values-table__amount-col {
@@ -256,15 +263,12 @@
   white-space: nowrap;
 }
 
-.nutrition-values-table__amount-col--portion {
-  width: 24%;
+.nutrition-values-table__amount-col--merged {
   padding-right: 0.9rem;
   white-space: nowrap;
-  overflow: visible;
 }
 
 .nutrition-values-table__amount-col--per100g {
-  width: 32%;
   padding-left: 0.35rem;
 }
 
@@ -433,7 +437,7 @@
     font-size: 0.9rem;
   }
 
-  .nutrition-values-table__label-col {
+  .nutrition-values-table__col--label {
     width: 42%;
   }
 
@@ -441,7 +445,7 @@
     font-size: 0.78rem;
   }
 
-  .nutrition-values-table__amount-col--portion,
+  .nutrition-values-table__amount-col--merged,
   .nutrition-values-table__amount--portion {
     padding-right: 0.65rem;
   }
