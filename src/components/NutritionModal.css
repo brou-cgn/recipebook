@@ -264,12 +264,7 @@
 }
 
 .nutrition-values-table__amount-col--merged {
-  padding-right: 0.9rem;
   white-space: nowrap;
-}
-
-.nutrition-values-table__amount-col--per100g {
-  padding-left: 0.35rem;
 }
 
 .nutrition-values-table__row td {
@@ -445,12 +440,10 @@
     font-size: 0.78rem;
   }
 
-  .nutrition-values-table__amount-col--merged,
   .nutrition-values-table__amount--portion {
     padding-right: 0.65rem;
   }
 
-  .nutrition-values-table__amount-col--per100g,
   .nutrition-values-table__amount--per100g {
     padding-left: 0.25rem;
   }
