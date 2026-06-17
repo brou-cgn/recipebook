@@ -1071,7 +1071,7 @@ describe('NutritionModal UI layout', () => {
     expect(screen.queryByLabelText('Endgewicht nach Zubereitung (g)')).not.toBeInTheDocument();
   });
 
-  it('displays value with unit directly (no parentheses around unit)', () => {
+  it('displays units in value cells, not in row labels', () => {
     render(
       <NutritionModal
         recipe={baseRecipe}
@@ -1080,11 +1080,18 @@ describe('NutritionModal UI layout', () => {
       />
     );
 
+    // Units must appear on value cells (e.g. "30 kcal"), not on labels
     const kcalElements = screen.getAllByText(/kcal/);
     expect(kcalElements.length).toBeGreaterThan(0);
     const valueEl = kcalElements.find(el => /^\d/.test(el.textContent));
     expect(valueEl).toBeTruthy();
     expect(valueEl.textContent).not.toMatch(/\(kcal\)/);
+
+    // Row labels must not contain unit notation
+    expect(screen.queryByText(/Kalorien \(kcal\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Fett \(g\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Protein \(g\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Kohlenhydrate \(g\)/)).not.toBeInTheDocument();
   });
 
   it('shows "Zusammensetzung anzeigen" when composition rows are available', () => {
