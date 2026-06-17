@@ -84,6 +84,155 @@ function roundNutritionValue(key, value) {
   return Math.round(value * 10) / 10;
 }
 
+function normalizeHashToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function getIngredientText(item) {
+  if (typeof item === 'string') return item;
+  return item?.text || '';
+}
+
+export function findLinkedRecipeSelfWeightG(linkedRecipe, linkedRecipeName) {
+  const rawIngredients = linkedRecipe?.zutaten || linkedRecipe?.ingredients || [];
+  const nameTokens = [linkedRecipeName, linkedRecipe?.title]
+    .map(normalizeHashToken)
+    .filter(Boolean);
+  if (nameTokens.length === 0) return null;
+
+  for (const rawItem of rawIngredients) {
+    const ingredientText = getIngredientText(rawItem);
+    if (!ingredientText) continue;
+
+    const hashTokens = ingredientText.match(/#[^\s#]+/g) || [];
+    const hasSelfTag = hashTokens.some((token) => nameTokens.includes(normalizeHashToken(token.slice(1))));
+    if (!hasSelfTag) continue;
+
+    const amountG = computeIngredientAmountG(ingredientText);
+    if (amountG != null) return amountG;
+  }
+
+  return null;
+}
+
+export function deriveLinkedRecipePer100g(naehrwerte = {}) {
+  if (!naehrwerte || typeof naehrwerte !== 'object') return null;
+  const directPer100g = naehrwerte.calcPer100g;
+  if (directPer100g && typeof directPer100g === 'object') {
+    return directPer100g;
+  }
+
+  const finalWeightGrams = parseManualAmountG(naehrwerte.calcFinalWeightGrams ?? naehrwerte.calcYieldGrams);
+  if (finalWeightGrams == null) return null;
+
+  const per100g = {};
+  NUTRITION_FIELDS.forEach((field) => {
+    const value = naehrwerte[field];
+    if (value == null) return;
+    per100g[field] = (value / finalWeightGrams) * 100;
+  });
+
+  return Object.keys(per100g).length > 0 ? per100g : null;
+}
+
+function formatRoundedValue(value, decimals = 1) {
+  if (value == null) return '—';
+  const factor = Math.pow(10, decimals);
+  const rounded = Math.round(value * factor) / factor;
+  return String(rounded).replace('.', ',');
+}
+
+function buildLinkedRecipeDetail({ link, amountG, amountEstimated, naehrwerte }) {
+  if (!naehrwerte) return null;
+
+  const quantityLabel = link?.quantityPrefix || '1 Portion';
+  const amountLabel = amountG != null
+    ? ` (≈${formatRoundedValue(amountG, AMOUNT_G_DECIMALS)} g${amountEstimated ? ', geschätzt' : ''})`
+    : '';
+  return `${quantityLabel}${amountLabel} — Nährwerte: ${roundNutritionValue('kalorien', naehrwerte.kalorien || 0)} kcal, ${formatRoundedValue(roundNutritionValue('fett', naehrwerte.fett || 0))} g Fett, ${formatRoundedValue(roundNutritionValue('kohlenhydrate', naehrwerte.kohlenhydrate || 0))} g KH, ${formatRoundedValue(roundNutritionValue('protein', naehrwerte.protein || 0))} g Protein`;
+}
+
+async function estimateAmountG(parseIngredientAmountG, ingredientText) {
+  if (typeof parseIngredientAmountG !== 'function') return null;
+  try {
+    const result = await parseIngredientAmountG(ingredientText);
+    const amountG = parseManualAmountG(result?.data?.amountG ?? result?.amountG);
+    return amountG;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveLinkedRecipeAmountG({ link, linkedRecipe, parseIngredientAmountG } = {}) {
+  const quantityPrefix = String(link?.quantityPrefix || '').trim();
+  const linkedRecipeName = linkedRecipe?.title || link?.recipeName || '';
+
+  const directAmountG = computeIngredientAmountG(quantityPrefix);
+  if (directAmountG != null) {
+    return { amountG: directAmountG, amountEstimated: false };
+  }
+
+  if (quantityPrefix) {
+    const estimatedAmountFromPrefix = await estimateAmountG(parseIngredientAmountG, `${quantityPrefix} ${linkedRecipeName}`.trim());
+    if (estimatedAmountFromPrefix != null) {
+      return { amountG: estimatedAmountFromPrefix, amountEstimated: true };
+    }
+  }
+
+  const explicitSelfWeightG = findLinkedRecipeSelfWeightG(linkedRecipe, link?.recipeName);
+  const fallbackRecipeWeightG = parseManualAmountG(
+    linkedRecipe?.naehrwerte?.calcFinalWeightGrams ?? linkedRecipe?.naehrwerte?.calcYieldGrams
+  );
+  const referenceWeightG = explicitSelfWeightG ?? fallbackRecipeWeightG;
+  if (referenceWeightG != null) {
+    const linkedPortionen = Number(linkedRecipe?.portionen) > 0 ? Number(linkedRecipe.portionen) : 1;
+    const quantity = extractQuantityFromPrefix(quantityPrefix) ?? 1;
+    return { amountG: (quantity / linkedPortionen) * referenceWeightG, amountEstimated: false };
+  }
+
+  const fallbackEstimate = await estimateAmountG(
+    parseIngredientAmountG,
+    `${quantityPrefix || '1 Portion'} ${linkedRecipeName}`.trim()
+  );
+  if (fallbackEstimate != null) {
+    return { amountG: fallbackEstimate, amountEstimated: true };
+  }
+
+  return { amountG: null, amountEstimated: false };
+}
+
+export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIngredientAmountG } = {}) {
+  if (!linkedRecipe || !linkedRecipe.naehrwerte) {
+    return { found: false, error: linkedRecipe ? 'Nährwerte je 100 g fehlen für das verlinkte Rezept.' : 'Verlinktes Rezept nicht gefunden.' };
+  }
+
+  const per100g = deriveLinkedRecipePer100g(linkedRecipe.naehrwerte);
+  if (!per100g) {
+    return { found: false, error: 'Nährwerte je 100 g fehlen für das verlinkte Rezept.' };
+  }
+
+  const { amountG, amountEstimated } = await resolveLinkedRecipeAmountG({
+    link,
+    linkedRecipe,
+    parseIngredientAmountG,
+  });
+  if (amountG == null) {
+    return { found: false, error: 'Menge des verlinkten Rezepts konnte nicht in Gramm ermittelt werden.' };
+  }
+
+  const naehrwerte = scaleNutritionByAmountG(per100g, amountG);
+  if (!naehrwerte) {
+    return { found: false, error: 'Nährwerte des verlinkten Rezepts konnten nicht umgerechnet werden.' };
+  }
+
+  return { found: true, naehrwerte, amountG, amountEstimated };
+}
+
 function resolveFinalWeightGrams({ sumIngredientAmountsG, calcYieldGrams, calcYieldFactor, storedFinalWeightGrams } = {}) {
   const normalizedYieldGrams = parseManualAmountG(calcYieldGrams);
   if (normalizedYieldGrams != null) return normalizedYieldGrams;
@@ -254,13 +403,24 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
       };
     }
 
+    const amountForDisplay = ingredientDetail?.amountG ?? (manualAmountApplied ? manualAmountG : null);
+    const calculatedNaehrwerte = convertedNaehrwerte || ingredientDetail?.naehrwerte || null;
+    const linkDetail = link && !notIncludedItem && calculatedNaehrwerte
+      ? buildLinkedRecipeDetail({
+        link,
+        amountG: amountForDisplay,
+        amountEstimated: ingredientDetail?.amountEstimated === true,
+        naehrwerte: calculatedNaehrwerte,
+      })
+      : null;
     const isNotIncluded = Boolean(notIncludedItem);
     return {
       ingredient,
       source,
       status,
-      amountG: ingredientDetail?.amountG ?? (manualAmountApplied ? manualAmountG : null),
+      amountG: amountForDisplay,
       detail: notIncludedItem?.error ||
+        linkDetail ||
         (reformulation
           ? `Umformulierung: ${reformulation}`
           : (noAmountG
@@ -272,7 +432,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
             : (searchTerm
             ? `Suchbegriff: ${searchTerm}`
             : (!hasNaehrwerte && !isNotIncluded ? 'Neu berechnen' : '—')))),
-      naehrwerte: convertedNaehrwerte || ingredientDetail?.naehrwerte || null,
+      naehrwerte: calculatedNaehrwerte,
       searchTerm,
       aiEstimated: ingredientDetail?.aiEstimated || false,
       requiresManualAmount: noAmountG && hasNaehrwerte,
@@ -749,6 +909,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     let skippedCount = 0;
     let anyWritebackHappened = false;
     const writebackErrors = [];
+    const parseIngredientAmountGCallable = httpsCallable(functions, 'parseIngredientAmountG');
+    const parseLinkedRecipeAmountG = async (ingredientText) => {
+      if (typeof parseIngredientAmountGCallable !== 'function') return null;
+      return parseIngredientAmountGCallable({ ingredientText });
+    };
 
     // Process regular ingredients
     for (let i = 0; i < ingredients.length; i++) {
@@ -846,28 +1011,36 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       setCalcProgress({ done: ingredients.length + i, total: ingredients.length + recipeLinkItems.length, current: link.recipeName });
 
       const linkedRecipe = allRecipes.find(r => r.id === link.recipeId);
-      if (linkedRecipe && linkedRecipe.naehrwerte) {
-        const linkedPortionen = linkedRecipe.portionen || 1;
-        const parsedQuantity = extractQuantityFromPrefix(link.quantityPrefix);
-        if (parsedQuantity === null && link.quantityPrefix) {
-          console.warn(`Could not parse quantity prefix "${link.quantityPrefix}" for linked recipe "${link.recipeName}". Defaulting to 1.`);
-        }
-        const quantity = parsedQuantity || 1;
-        const multiplier = quantity / linkedPortionen;
-        const linkNaehrwerte = {};
-        Object.keys(totals).forEach(key => {
-          const val = (linkedRecipe.naehrwerte[key] || 0) * multiplier;
-          linkNaehrwerte[key] = val;
-          totals[key] += val;
+      if (linkedRecipe) {
+        const resolvedLink = await resolveLinkedRecipeNutrition({
+          link,
+          linkedRecipe,
+          parseIngredientAmountG: parseLinkedRecipeAmountG,
         });
-        ingredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte, searchTerm: null, aiEstimated: false });
-        foundCount++;
+        if (resolvedLink.found) {
+          Object.keys(totals).forEach((key) => {
+            totals[key] += resolvedLink.naehrwerte[key] || 0;
+          });
+          ingredientDetails.push({
+            ingredient,
+            naehrwerte: resolvedLink.naehrwerte,
+            amountG: resolvedLink.amountG,
+            amountEstimated: resolvedLink.amountEstimated,
+            searchTerm: null,
+            aiEstimated: false,
+          });
+          foundCount++;
+          continue;
+        }
+        notIncluded.push({
+          ingredient,
+          error: resolvedLink.error || `Verlinktes Rezept "${link.recipeName}" konnte nicht umgerechnet werden.`,
+          isRecipeLink: true,
+        });
       } else {
         notIncluded.push({
           ingredient,
-          error: linkedRecipe
-            ? `Verlinktes Rezept "${link.recipeName}" hat keine gespeicherten Nährwerte. Bitte berechnen Sie zuerst die Nährwerte für dieses Rezept.`
-            : `Verlinktes Rezept "${link.recipeName}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          error: `Verlinktes Rezept "${link.recipeName}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
           isRecipeLink: true,
         });
       }
@@ -985,6 +1158,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     const existingTotals = naehrwerteToTotals(existingPerPortion, portionen);
 
     const calculateNutrition = httpsCallable(functions, 'calculateNutritionFromOpenFoodFacts');
+    const parseIngredientAmountGCallable = httpsCallable(functions, 'parseIngredientAmountG');
+    const parseLinkedRecipeAmountG = async (ingredientText) => {
+      if (typeof parseIngredientAmountGCallable !== 'function') return null;
+      return parseIngredientAmountGCallable({ ingredientText });
+    };
     const newTotals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const stillNotIncluded = [];
     const newSuccessfulReformulations = {};
@@ -1044,28 +1222,36 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       setCalcProgress({ done: regularItems.length + i, total: totalToProcess, current: link?.recipeName || ingredient });
 
       const linkedRecipe = allRecipes.find(r => r.id === link?.recipeId);
-      if (linkedRecipe && linkedRecipe.naehrwerte) {
-        const linkedPortionen = linkedRecipe.portionen || 1;
-        const parsedQuantity = extractQuantityFromPrefix(link.quantityPrefix);
-        if (parsedQuantity === null && link.quantityPrefix) {
-          console.warn(`Could not parse quantity prefix "${link.quantityPrefix}" for linked recipe "${link.recipeName}". Defaulting to 1.`);
-        }
-        const quantity = parsedQuantity || 1;
-        const multiplier = quantity / linkedPortionen;
-        const linkNaehrwerte = {};
-        Object.keys(newTotals).forEach(key => {
-          const val = (linkedRecipe.naehrwerte[key] || 0) * multiplier;
-          linkNaehrwerte[key] = val;
-          newTotals[key] += val;
+      if (!linkedRecipe) {
+        stillNotIncluded.push({
+          ingredient,
+          error: `Verlinktes Rezept "${link?.recipeName || ingredient}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          isRecipeLink: true,
         });
-        newIngredientDetails.push({ ingredient, naehrwerte: linkNaehrwerte, searchTerm: null, aiEstimated: false });
+        continue;
+      }
+      const resolvedLink = await resolveLinkedRecipeNutrition({
+        link,
+        linkedRecipe,
+        parseIngredientAmountG: parseLinkedRecipeAmountG,
+      });
+      if (resolvedLink.found) {
+        Object.keys(newTotals).forEach((key) => {
+          newTotals[key] += resolvedLink.naehrwerte[key] || 0;
+        });
+        newIngredientDetails.push({
+          ingredient,
+          naehrwerte: resolvedLink.naehrwerte,
+          amountG: resolvedLink.amountG,
+          amountEstimated: resolvedLink.amountEstimated,
+          searchTerm: null,
+          aiEstimated: false,
+        });
         newFoundCount++;
       } else {
         stillNotIncluded.push({
           ingredient,
-          error: linkedRecipe
-            ? `Verlinktes Rezept "${link.recipeName}" hat keine gespeicherten Nährwerte. Bitte berechnen Sie zuerst die Nährwerte für dieses Rezept.`
-            : `Verlinktes Rezept "${link?.recipeName || ingredient}" nicht gefunden. Möglicherweise wurde das Rezept gelöscht.`,
+          error: resolvedLink.error || `Verlinktes Rezept "${link?.recipeName || ingredient}" konnte nicht umgerechnet werden.`,
           isRecipeLink: true,
         });
       }
