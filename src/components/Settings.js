@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
-import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
@@ -331,6 +331,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Configurable empty-state text for the Gemeinsame Kandidaten carousel on the Startseite
   const [startseitenKandidatenLeertext, setStartseitenKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
 
+  // Configurable empty-state text for the Alltagsklassiker carousel on the Startseite
+  const [alltagsklassikerLeertext, setAlltagsklassikerLeertext] = useState(DEFAULT_ALLTAGSKLASSIKER_LEERTEXT);
+
   // Configurable names and descriptions for the lists created by "Inspirationssammlung anlegen"
   const [inspirationListName, setInspirationListName] = useState(DEFAULT_INSPIRATION_LIST_NAME);
   const [inspirationListDescription, setInspirationListDescription] = useState(DEFAULT_INSPIRATION_LIST_DESCRIPTION);
@@ -380,6 +383,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const groupThresholds = await getGroupStatusThresholds();
       const maxSchwelle = await getMaxKandidatenSchwelle();
       const kandidatenLeertext = await getStartseitenKandidatenLeertext();
+      const alltagsklassikerLeertextValue = await getAlltagsklassikerLeertext();
       const inspirationSettings = await getInspirationListSettings();
       
       setLists(lists);
@@ -409,6 +413,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setGroupThresholdArchivMaxKandidat(groupThresholds.groupThresholdArchivMaxKandidat);
       setMaxKandidatenSchwelle(maxSchwelle != null ? String(maxSchwelle) : '');
       setStartseitenKandidatenLeertext(kandidatenLeertext);
+      setAlltagsklassikerLeertext(alltagsklassikerLeertextValue);
       setInspirationListName(inspirationSettings.inspirationListName);
       setInspirationListDescription(inspirationSettings.inspirationListDescription);
       setInspirationTargetListName(inspirationSettings.inspirationTargetListName);
@@ -680,6 +685,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       });
       await saveMaxKandidatenSchwelle(maxKandidatenSchwelle !== '' ? parseFloat(maxKandidatenSchwelle) : null);
       await saveStartseitenKandidatenLeertext(startseitenKandidatenLeertext);
+      await saveAlltagsklassikerLeertext(alltagsklassikerLeertext);
       await saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription });
 
       // Propagate cuisine type renames to all affected recipes
@@ -1450,6 +1456,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           <div className={`settings-content${isFullWidthTab ? ' settings-content--full' : ''}`}>
         {activeTab === 'general' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>Allgemein</h2>
+            </div>
             <div className="settings-section">
               <h3>Header-Slogan</h3>
               <p className="section-description">
@@ -1797,48 +1806,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               </div>
             </div>
 
-
-            <div className="settings-section">
-              <h3>Standardbild für Kochereignisse in der Zeitleiste</h3>
-              <p className="section-description">
-                Dieses Bild wird für Kochereigniskarten in der Zeitleiste "Kochbuch" verwendet, wenn kein Rezeptbild vorhanden ist.
-                Unterstützte Formate: JPEG, PNG, WebP. Empfohlen: 16:9 oder quadratisches Format.
-              </p>
-              <div className="favicon-image-section">
-                {timelineCookEventDefaultImage ? (
-                  <div className="favicon-preview">
-                    <img src={timelineCookEventDefaultImage} alt="Standardbild Kochereignisse" style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
-                    <div className="favicon-actions">
-                      <label htmlFor="timelineCookEventDefaultImageFile" className="favicon-change-btn">
-                        {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : 'Ändern'}
-                      </label>
-                      <button
-                        className="favicon-remove-btn"
-                        onClick={handleRemoveTimelineCookEventDefaultImage}
-                        disabled={uploadingTimelineCookEventDefaultImage}
-                      >
-                        × Entfernen
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="favicon-upload">
-                    <label htmlFor="timelineCookEventDefaultImageFile" className="image-upload-label">
-                      {uploadingTimelineCookEventDefaultImage ? 'Hochladen...' : 'Standardbild hochladen'}
-                    </label>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  id="timelineCookEventDefaultImageFile"
-                  accept="image/*"
-                  onChange={handleTimelineCookEventDefaultImageUpload}
-                  style={{ display: 'none' }}
-                  disabled={uploadingTimelineCookEventDefaultImage}
-                />
-              </div>
-            </div>
-
             <div className="settings-section">
               <h3>Kategoriebilder</h3>
               <p className="section-description">
@@ -1972,85 +1939,13 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                             onClick={() => handleEditImageCategories(img.id)}
                             title="Kategorien bearbeiten"
                           >
-                            Bearbeiten
+                           Bearbeiten
                           </button>
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Kachelgröße</h3>
-              <p className="section-description">
-                Passen Sie die Größe der Kacheln in allen Grid-Ansichten an. Diese Einstellung wirkt sich besonders auf mobilen Geräten aus.
-              </p>
-              <div className="tile-size-options">
-                <button
-                  type="button"
-                  className={`tile-size-btn${tileSize === TILE_SIZE_SMALL ? ' active' : ''}`}
-                  onClick={() => setTileSize(TILE_SIZE_SMALL)}
-                >
-                  <span className="tile-size-icon">⊞⊞⊞</span>
-                  <span className="tile-size-label">Klein</span>
-                  <span className="tile-size-desc">Mehr Kacheln pro Zeile</span>
-                </button>
-                <button
-                  type="button"
-                  className={`tile-size-btn${tileSize === TILE_SIZE_MEDIUM ? ' active' : ''}`}
-                  onClick={() => setTileSize(TILE_SIZE_MEDIUM)}
-                >
-                  <span className="tile-size-icon">⊞⊞</span>
-                  <span className="tile-size-label">Mittel</span>
-                  <span className="tile-size-desc">Standard</span>
-                </button>
-                <button
-                  type="button"
-                  className={`tile-size-btn${tileSize === TILE_SIZE_LARGE ? ' active' : ''}`}
-                  onClick={() => setTileSize(TILE_SIZE_LARGE)}
-                >
-                  <span className="tile-size-icon">⊞</span>
-                  <span className="tile-size-label">Groß</span>
-                  <span className="tile-size-desc">Weniger Kacheln pro Zeile</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Erscheinungsbild</h3>
-              <p className="section-description">
-                Wählen Sie zwischen hellem und dunklem Design oder übernehmen Sie die Systemeinstellung automatisch.
-              </p>
-              <div className="theme-options">
-                <button
-                  type="button"
-                  className={`theme-btn${darkMode === 'light' ? ' active' : ''}`}
-                  onClick={() => setDarkMode('light')}
-                >
-                  <span className="theme-btn-icon">Hell</span>
-                  <span className="theme-btn-label">Hell</span>
-                  <span className="theme-btn-desc">Helles Design</span>
-                </button>
-                <button
-                  type="button"
-                  className={`theme-btn${darkMode === 'dark' ? ' active' : ''}`}
-                  onClick={() => setDarkMode('dark')}
-                >
-                  <span className="theme-btn-icon">Dunkel</span>
-                  <span className="theme-btn-label">Dunkel</span>
-                  <span className="theme-btn-desc">Dunkles Design</span>
-                </button>
-                <button
-                  type="button"
-                  className={`theme-btn${darkMode === 'auto' ? ' active' : ''}`}
-                  onClick={() => setDarkMode('auto')}
-                >
-                  <span className="theme-btn-icon">Auto</span>
-                  <span className="theme-btn-label">Automatisch</span>
-                  <span className="theme-btn-desc">Systemeinstellung</span>
-                </button>
               </div>
             </div>
 
@@ -2138,8 +2033,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'druck' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>Drucklayout</h2>
+            </div>
             <div className="settings-section">
-              <h3>Druckformate</h3>
               <p className="section-description">
                 Konfigurieren Sie das Drucklayout für Rezepte. Platzieren Sie die Elemente per Drag &amp; Drop
                 frei auf der Seite und passen Sie ihre Größe durch Ziehen an den Rändern an.
@@ -2321,8 +2218,11 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'tagesmenu' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>Kochatelier</h2>
+            </div>
             <div className="settings-section">
-              <h3>Tagesmenü – Status-Gültigkeitsdauer</h3>
+              <h3>Kochatelier – Status-Gültigkeitsdauer</h3>
               <p className="section-description">
                 Konfigurieren Sie, wie lange ein Rezept nach dem Swipen in einer privaten Liste den jeweiligen Status behält. Leeres Feld bedeutet: Status bleibt permanent erhalten.
               </p>
@@ -2400,7 +2300,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Tagesmenü – Gemeinsame Statusermittlung</h3>
+              <h3>Kochatelier – Gemeinsame Statusermittlung</h3>
               <p className="section-description">
                 Konfigurieren Sie die Grenzwerte für die gemeinsame Statusermittlung in interaktiven Listen mit mehreren Mitgliedern. Fehlt der Swipe eines Mitglieds, wird dieser als "Kandidaten"-Swipe gewertet.
               </p>
@@ -2463,7 +2363,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Tagesmenü – Maximale Kandidaten-Schwelle</h3>
+              <h3>Kochatelier – Maximale Kandidaten-Schwelle</h3>
               <p className="section-description">
                 Steuern Sie, wann der Swipe-Stapel automatisch beendet wird. Sobald der Kandidaten-Score S den Grenzwert erreicht oder überschreitet, wird der Stapel abgeschlossen.
                 Der Score berechnet sich als S&nbsp;=&nbsp;∑&nbsp;1/(1+n<sub>i</sub>), wobei n<sub>i</sub> die Anzahl der offenen Votings des i-ten Rezepts ist.
@@ -2497,26 +2397,6 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
             </div>
 
             <div className="settings-section">
-              <h3>Startseite – Meine Kochideen</h3>
-              <p className="section-description">
-                Konfigurieren Sie den Hinweistext, der auf der Startseite im Karussell „Meine Kochideen" angezeigt wird, wenn keine gemeinsamen Kandidaten vorhanden sind.
-              </p>
-              <div className="sort-settings-grid">
-                <div className="sort-settings-group">
-                  <div className="sort-settings-field">
-                    <label htmlFor="startseitenKandidatenLeertext">Hinweistext bei leerer Liste:</label>
-                    <input
-                      id="startseitenKandidatenLeertext"
-                      type="text"
-                      value={startseitenKandidatenLeertext}
-                      onChange={(e) => setStartseitenKandidatenLeertext(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="settings-section">
               <h3>Inspirationssammlung anlegen – Listen-Namen</h3>
               <p className="section-description">
                 Konfigurieren Sie die Namen und Beschreibungen der Listen, die beim Klick auf „Inspirationssammlung anlegen" automatisch erstellt werden.
@@ -2544,6 +2424,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       onInput={(e) => resizeInspirationTextarea(e.target)}
                     />
                   </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="startseitenKandidatenLeertext">Hinweistext bei leerer Liste:</label>
+                    <input
+                      id="startseitenKandidatenLeertext"
+                      type="text"
+                      value={startseitenKandidatenLeertext}
+                      onChange={(e) => setStartseitenKandidatenLeertext(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="sort-settings-group">
                   <h4>Zielliste (klassisch)</h4>
@@ -2567,6 +2456,15 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                       onInput={(e) => resizeInspirationTextarea(e.target)}
                     />
                   </div>
+                  <div className="sort-settings-field">
+                    <label htmlFor="alltagsklassikerLeertext">Hinweistext bei leerer Liste:</label>
+                    <input
+                      id="alltagsklassikerLeertext"
+                      type="text"
+                      value={alltagsklassikerLeertext}
+                      onChange={(e) => setAlltagsklassikerLeertext(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2579,6 +2477,9 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'lists' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>Listen &amp; Kategorien</h2>
+            </div>
             <div className="settings-section">
           <h3>Kulinarik-Typen</h3>
           <div className="list-input">
@@ -2898,8 +2799,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       </>
         ) : activeTab === 'ai' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>KI-Einstellungen</h2>
+            </div>
             <div className="settings-section">
-              <h3>KI-Rezepterkennung (Prompt)</h3>
               <p className="prompt-help-text">
                 Dieser Prompt wird für die KI-Rezepterkennung (Fotoscan &amp; Web-Import) verwendet. Änderungen werden sofort aktiv.
               </p>
@@ -2944,8 +2847,10 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           </>
         ) : activeTab === 'faq' ? (
           <>
+            <div className="settings-tab-header">
+              <h2>Kochschule</h2>
+            </div>
             <div className="settings-section">
-              <h3>Kochschule-Einträge</h3>
               <p className="section-description">
                 Hier kannst du Kochschule-Einträge anlegen und pflegen. Einträge können optional als „nur für Administratoren sichtbar" markiert werden.
               </p>

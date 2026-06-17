@@ -412,6 +412,9 @@ export const DEFAULT_MAX_KANDIDATEN_SCHWELLE = 5;
 // Default empty-state text for the Meine Kochideen carousel on the Startseite
 export const DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT = 'Keine gemeinsamen Kandidaten vorhanden.';
 
+// Default empty-state text for the Alltagsklassiker carousel on the Startseite
+export const DEFAULT_ALLTAGSKLASSIKER_LEERTEXT = 'Keine Alltagsklassiker vorhanden.';
+
 // Default names and descriptions for the lists created by "Inspirationssammlung anlegen"
 export const DEFAULT_INSPIRATION_LIST_NAME = 'Inspirationen';
 export const DEFAULT_INSPIRATION_LIST_DESCRIPTION = '';
@@ -1076,6 +1079,7 @@ export async function getSettings() {
         groupThresholdArchivMaxKandidat: settings.groupThresholdArchivMaxKandidat ?? DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
         maxKandidatenSchwelle: settings.maxKandidatenSchwelle ?? DEFAULT_MAX_KANDIDATEN_SCHWELLE,
         startseitenKandidatenLeertext: settings.startseitenKandidatenLeertext ?? DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+        alltagsklassikerLeertext: settings.alltagsklassikerLeertext ?? DEFAULT_ALLTAGSKLASSIKER_LEERTEXT,
         inspirationListName: settings.inspirationListName ?? DEFAULT_INSPIRATION_LIST_NAME,
         inspirationListDescription: settings.inspirationListDescription ?? DEFAULT_INSPIRATION_LIST_DESCRIPTION,
         inspirationTargetListName: settings.inspirationTargetListName ?? DEFAULT_INSPIRATION_TARGET_LIST_NAME,
@@ -1124,6 +1128,7 @@ export async function getSettings() {
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
       startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+      alltagsklassikerLeertext: DEFAULT_ALLTAGSKLASSIKER_LEERTEXT,
       inspirationListName: DEFAULT_INSPIRATION_LIST_NAME,
       inspirationListDescription: DEFAULT_INSPIRATION_LIST_DESCRIPTION,
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
@@ -1189,6 +1194,7 @@ export async function getSettings() {
       groupThresholdArchivMaxKandidat: DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT,
       maxKandidatenSchwelle: DEFAULT_MAX_KANDIDATEN_SCHWELLE,
       startseitenKandidatenLeertext: DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT,
+      alltagsklassikerLeertext: DEFAULT_ALLTAGSKLASSIKER_LEERTEXT,
       inspirationListName: DEFAULT_INSPIRATION_LIST_NAME,
       inspirationListDescription: DEFAULT_INSPIRATION_LIST_DESCRIPTION,
       inspirationTargetListName: DEFAULT_INSPIRATION_TARGET_LIST_NAME,
@@ -2320,6 +2326,35 @@ export async function saveStartseitenKandidatenLeertext(text) {
     }
   } catch (error) {
     console.error('Error saving startseitenKandidatenLeertext:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get the configurable empty-state text for the Alltagsklassiker carousel on the Startseite.
+ * @returns {Promise<string>} Promise resolving to the text
+ */
+export async function getAlltagsklassikerLeertext() {
+  const settings = await getSettings();
+  return settings.alltagsklassikerLeertext ?? DEFAULT_ALLTAGSKLASSIKER_LEERTEXT;
+}
+
+/**
+ * Save the configurable empty-state text for the Alltagsklassiker carousel on the Startseite.
+ * @param {string} text - The text to display when no Alltagsklassiker recipes are available
+ * @returns {Promise<void>}
+ */
+export async function saveAlltagsklassikerLeertext(text) {
+  try {
+    const settingsRef = doc(db, 'settings', 'app');
+    await updateDoc(settingsRef, { alltagsklassikerLeertext: text });
+
+    // Update cache
+    if (settingsCache) {
+      settingsCache.alltagsklassikerLeertext = text;
+    }
+  } catch (error) {
+    console.error('Error saving alltagsklassikerLeertext:', error);
     throw error;
   }
 }

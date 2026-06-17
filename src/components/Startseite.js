@@ -5,7 +5,7 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { getUserFavorites } from '../utils/userFavorites';
 import TrendingCard from './TrendingCard';
 import StartseitenKarussell from './StartseitenKarussell';
-import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, DEFAULT_MAX_KANDIDATEN_SCHWELLE, getAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT } from '../utils/customLists';
 import { getAllMembersSwipeFlagDocsForList } from '../utils/recipeSwipeFlags';
 import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
@@ -44,6 +44,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [maxKandidatenSchwelle, setMaxKandidatenSchwelle] = useState(DEFAULT_MAX_KANDIDATEN_SCHWELLE);
   const [kandidatenLoading, setKandidatenLoading] = useState(true);
   const [kandidatenLeertext, setKandidatenLeertext] = useState(DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT);
+  const [alltagsklassikerLeertextValue, setAlltagsklassikerLeertextValue] = useState(DEFAULT_ALLTAGSKLASSIKER_LEERTEXT);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +86,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       }
     };
     loadIcons();
+  }, []);
+
+  // Load alltagsklassiker empty-state text on mount
+  useEffect(() => {
+    getAlltagsklassikerLeertext().then(setAlltagsklassikerLeertextValue).catch(() => {});
   }, []);
 
   // Listen for dark mode changes
@@ -548,7 +554,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
             timeIcon={getEffectiveIcon(buttonIcons, 'trendingTimeIcon', isDarkMode)}
           />
         )}
-        emptyText={showAlltagsklassikerSetupButton ? '' : 'Keine Alltagsklassiker vorhanden.'}
+        emptyText={showAlltagsklassikerSetupButton ? '' : alltagsklassikerLeertextValue}
         emptyContent={showAlltagsklassikerSetupButton ? (
           <div className="startseite-inspiration-setup">
             <button

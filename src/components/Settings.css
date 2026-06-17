@@ -125,6 +125,24 @@
   overflow-x: auto;
 }
 
+.settings-tab-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.settings-tab-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* For full-width tabs where the parent container has no padding */
+.settings-content--full .settings-tab-header {
+  padding: 20px 20px 0;
+}
+
 .settings-section {
   margin-bottom: 2rem;
   padding-bottom: 2rem;

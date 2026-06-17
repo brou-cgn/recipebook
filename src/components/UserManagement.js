@@ -204,9 +204,6 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
   return (
     <div className="user-management-container">
       <div className="user-management-header">
-        <button className="back-button" onClick={onBack}>
-          ← Zurück
-        </button>
         <h2>Benutzerverwaltung</h2>
       </div>
 

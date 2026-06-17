@@ -27,12 +27,14 @@ jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
   DEFAULT_BUTTON_ICONS: {},
   DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT: 'Keine gemeinsamen Kandidaten vorhanden.',
+  DEFAULT_ALLTAGSKLASSIKER_LEERTEXT: 'Keine Alltagsklassiker vorhanden.',
   DEFAULT_MAX_KANDIDATEN_SCHWELLE: 5,
   getButtonIcons: jest.fn(() => Promise.resolve({})),
   getEffectiveIcon: jest.fn((icons, key) => ''),
   getGroupStatusThresholds: jest.fn(() => Promise.resolve({})),
   getMaxKandidatenSchwelle: jest.fn(() => Promise.resolve(null)),
   getStartseitenKandidatenLeertext: jest.fn(() => Promise.resolve('Keine gemeinsamen Kandidaten vorhanden.')),
+  getAlltagsklassikerLeertext: jest.fn(() => Promise.resolve('Keine Alltagsklassiker vorhanden.')),
 }));
 
 jest.mock('../utils/recipeSwipeFlags', () => ({
@@ -69,10 +71,11 @@ beforeEach(() => {
   getUserFavorites.mockResolvedValue([]);
   const { getAllMembersSwipeFlagDocsForList } = require('../utils/recipeSwipeFlags');
   getAllMembersSwipeFlagDocsForList.mockResolvedValue({});
-  const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext } = require('../utils/customLists');
+  const { getGroupStatusThresholds, getMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, getAlltagsklassikerLeertext } = require('../utils/customLists');
   getGroupStatusThresholds.mockResolvedValue({});
   getMaxKandidatenSchwelle.mockResolvedValue(null);
   getStartseitenKandidatenLeertext.mockResolvedValue('Keine gemeinsamen Kandidaten vorhanden.');
+  getAlltagsklassikerLeertext.mockResolvedValue('Keine Alltagsklassiker vorhanden.');
   const { subscribeToSeasonMatrix } = require('../utils/seasonMatrix');
   subscribeToSeasonMatrix.mockImplementation((callback) => {
     callback([]);
