@@ -236,6 +236,19 @@
   margin: 1rem 0;
 }
 
+.nutrition-yield-field {
+  margin-top: 1rem;
+}
+
+.nutrition-yield-help {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.nutrition-yield-help--error {
+  color: #c62828;
+}
+
 .nutrition-field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1878,7 +1878,54 @@ exports.parseIngredientAmountG = onCall(
  * @param {{ingredients: Array, portionen?: number, callerLabel?: string}} params
  * @returns {Promise<{naehrwerte: object, details: Array, foundCount: number, totalCount: number}>}
  */
-async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen = 1, callerLabel = 'system'} = {}) {
+function normalizePositiveNutritionNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function roundNutritionValue(key, value) {
+  if (key === 'kalorien') {
+    return Math.round(value);
+  }
+  if (key === 'salz') {
+    return Math.round(value * 100) / 100;
+  }
+  return Math.round(value * 10) / 10;
+}
+
+function buildNutritionPer100g(totals = {}, finalWeightGrams) {
+  const weight = normalizePositiveNutritionNumber(finalWeightGrams);
+  if (weight == null) return null;
+
+  const per100g = {};
+  Object.entries(totals).forEach(([key, value]) => {
+    if (value == null) return;
+    per100g[key] = roundNutritionValue(key, (value / weight) * 100);
+  });
+
+  return Object.keys(per100g).length > 0 ? per100g : null;
+}
+
+function resolveNutritionFinalWeightGrams({sumIngredientAmounts, calcYieldGrams, calcYieldFactor} = {}) {
+  const yieldGrams = normalizePositiveNutritionNumber(calcYieldGrams);
+  if (yieldGrams != null) return yieldGrams;
+
+  const ingredientAmountSum = normalizePositiveNutritionNumber(sumIngredientAmounts);
+  const yieldFactor = normalizePositiveNutritionNumber(calcYieldFactor);
+  if (ingredientAmountSum != null && yieldFactor != null) {
+    return Math.round(ingredientAmountSum * yieldFactor * 10) / 10;
+  }
+
+  return ingredientAmountSum;
+}
+
+async function calculateNutritionFromOpenFoodFactsCore({
+  ingredients,
+  portionen = 1,
+  callerLabel = 'system',
+  calcYieldGrams = null,
+  calcYieldFactor = null,
+} = {}) {
   const {
     parseIngredientForNutrition,
     isSimpleIngredient = () => false,
@@ -1901,6 +1948,7 @@ async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen =
 
   const DEFAULT_SALT_PER_PORTION_G = 2;
   const details = [];
+  let sumIngredientAmounts = 0;
   let foundCount = 0;
   const BATCH_SIZE = 5;
   const ingredientEntries = ingredients.map((ingredient) => {
@@ -2192,6 +2240,9 @@ async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen =
         ...result.detail,
         found: result.found,
       });
+      if (typeof result.detail?.amountG === 'number' && result.detail.amountG > 0) {
+        sumIngredientAmounts += result.detail.amountG;
+      }
       if (result.found) {
         foundCount++;
       }
@@ -2201,17 +2252,28 @@ async function calculateNutritionFromOpenFoodFactsCore({ingredients, portionen =
   const naehrwerte = {};
   for (const [key, value] of Object.entries(totals)) {
     const perPortion = value / portionen;
-    naehrwerte[key] = key === 'kalorien'
-      ? Math.round(perPortion)
-      : Math.round(perPortion * 10) / 10;
+    naehrwerte[key] = roundNutritionValue(key, perPortion);
   }
+  const calcFinalWeightGrams = resolveNutritionFinalWeightGrams({
+    sumIngredientAmounts,
+    calcYieldGrams,
+    calcYieldFactor,
+  });
+  const calcPer100g = buildNutritionPer100g(totals, calcFinalWeightGrams);
 
   console.log(
       `Nutrition calculated for ${callerLabel}: ` +
       `${foundCount}/${ingredientEntries.length} ingredients found`
   );
 
-  return {naehrwerte, details, foundCount, totalCount: ingredientEntries.length};
+  return {
+    naehrwerte,
+    details,
+    foundCount,
+    totalCount: ingredientEntries.length,
+    calcFinalWeightGrams: calcFinalWeightGrams ?? null,
+    calcPer100g,
+  };
 }
 
 /**
@@ -2231,7 +2293,12 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         );
       }
 
-      const {ingredients, portionen = 1} = request.data || {};
+      const {
+        ingredients,
+        portionen = 1,
+        calcYieldGrams = null,
+        calcYieldFactor = null,
+      } = request.data || {};
       if (!Array.isArray(ingredients) || ingredients.length === 0) {
         throw new HttpsError(
             'invalid-argument',
@@ -2249,6 +2316,8 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
         ingredients,
         portionen,
         callerLabel: `user ${request.auth.uid}`,
+        calcYieldGrams,
+        calcYieldFactor,
       });
     }
 );
@@ -4875,6 +4944,8 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
           ingredients: regularIngredients,
           portionen: Number(recipeData.portionen) > 0 ? Number(recipeData.portionen) : 1,
           callerLabel: `nightly job (${recipeDoc.id})`,
+          calcYieldGrams: recipeData?.naehrwerte?.calcYieldGrams ?? null,
+          calcYieldFactor: recipeData?.naehrwerte?.calcYieldFactor ?? null,
         });
         const notIncluded = calcResult.details
             .filter((entry) => entry.found === false)
@@ -4900,6 +4971,10 @@ async function runNutritionRecalcForFlaggedRecipesCore({triggeredBy = 'schedule'
             calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
             calcFoundCount: calcResult.foundCount,
             calcTotalCount: calcResult.totalCount + skippedRecipeLinkIngredients.length,
+            calcYieldGrams: recipeData?.naehrwerte?.calcYieldGrams ?? null,
+            calcYieldFactor: recipeData?.naehrwerte?.calcYieldFactor ?? null,
+            calcFinalWeightGrams: calcResult.calcFinalWeightGrams ?? null,
+            calcPer100g: calcResult.calcPer100g ?? null,
           },
         }, {merge: true});
 
