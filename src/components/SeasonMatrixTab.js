@@ -334,11 +334,14 @@ function SeasonMatrixTab({ currentUser }) {
   };
 
   return (
-    <div className="settings-section season-matrix-tab">
-      <h3>Saisonmatrix</h3>
-      <p className="section-description">
-        Verwalte hier saisonale Zutaten-Einträge inklusive Score und Region.
-      </p>
+    <>
+      <div className="settings-tab-header">
+        <h2>Saisonmatrix</h2>
+      </div>
+      <div className="settings-section season-matrix-tab">
+        <p className="section-description">
+          Verwalte hier saisonale Zutaten-Einträge inklusive Score und Region.
+        </p>
 
       <div className="season-matrix-import-export">
         <div className="season-matrix-import-export-header">
@@ -687,6 +690,7 @@ function SeasonMatrixTab({ currentUser }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

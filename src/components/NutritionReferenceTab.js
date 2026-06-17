@@ -619,10 +619,13 @@ function NutritionReferenceTab({ currentUser }) {
   });
 
   return (
-    <div className="settings-section nutrition-reference-section">
-      <h3>Nährwerte je 100 g</h3>
-      {actionMessage && <p className="section-description">{actionMessage}</p>}
-      {lookupError && <p className="section-description">{lookupError}</p>}
+    <>
+      <div className="settings-tab-header">
+        <h2>Nährwerte</h2>
+      </div>
+      <div className="settings-section nutrition-reference-section">
+        {actionMessage && <p className="section-description">{actionMessage}</p>}
+        {lookupError && <p className="section-description">{lookupError}</p>}
 
       <div className="season-matrix-import-export-actions">
         <button
@@ -1077,7 +1080,8 @@ function NutritionReferenceTab({ currentUser }) {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
