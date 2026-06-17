@@ -54,6 +54,10 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
     return { found: false, error: 'Keine ingredientID zugeordnet' };
   }
 
+  if (referenceRow.nutritionRelevant === false) {
+    return { found: false, skipped: true, notNutritionRelevant: true };
+  }
+
   const ingredientText = ingredientObj?.text || '';
   const { quantity } = parseIngredientNameAndUnit(ingredientText);
   const hasExplicitQuantity = quantity != null;

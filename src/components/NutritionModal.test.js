@@ -493,6 +493,36 @@ describe('getRecipeCalcResult', () => {
       expect(rows[0]).toEqual(expect.objectContaining({ source: 'Rezept', status: 'Ungeprüft' }));
     });
 
+    it('shows "Nicht nährwertrelevant" status for ingredient with nutritionRelevant: false reference row', () => {
+      const recipe = {
+        ingredients: [
+          { text: '200 ml Wasser', ingredientID: 'wasser' },
+          { text: '100 g Tomaten', ingredientID: 'tomate' },
+        ],
+        naehrwerte: {},
+      };
+      const nutritionReferenceRows = [
+        { ingredientID: 'wasser', source: 'manual', status: 'Freigegeben', nutritionRelevant: false },
+        { ingredientID: 'tomate', source: 'openfoodfacts', status: 'Freigegeben', nutritionRelevant: true },
+      ];
+      const rows = buildNutritionCompositionRows(recipe, null, {}, [], {}, nutritionReferenceRows);
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '200 ml Wasser',
+        source: '—',
+        status: 'Nicht nährwertrelevant',
+        detail: 'Nicht nährwertrelevant',
+        naehrwerte: null,
+        amountG: null,
+        requiresManualAmount: false,
+      }));
+      // Regular ingredient remains unaffected
+      expect(rows[1]).toEqual(expect.objectContaining({
+        ingredient: '100 g Tomaten',
+        source: 'OpenFoodFacts',
+        status: 'Geprüft',
+      }));
+    });
+
     describe('manual amount conversion helpers', () => {
       it('parses positive manual gram values and rejects invalid input', () => {
         expect(parseManualAmountG('75')).toBe(75);
@@ -894,6 +924,34 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result.found).toBe(true);
     expect(result.wroteBackReference).toBe(false);
     expect(result.writebackError).toBeNull();
+  });
+
+  it('returns skipped result when referenceRow.nutritionRelevant is false', async () => {
+    const nonRelevantRow = { ...referenceRow, ingredientID: 'wasser', nutritionRelevant: false };
+    const ingredient = { text: '200 ml Wasser', ingredientID: 'wasser' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, nonRelevantRow, deps);
+    expect(result).toEqual({ found: false, skipped: true, notNutritionRelevant: true });
+    expect(mockGenerateNutritionCallable).not.toHaveBeenCalled();
+    expect(mockParseAmountCallable).not.toHaveBeenCalled();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('does not skip when referenceRow.nutritionRelevant is true', async () => {
+    const relevantRow = { ...referenceRow, ingredientID: 'tomate', nutritionRelevant: true };
+    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, relevantRow, deps);
+    expect(result.found).toBe(true);
+    expect(result.skipped).toBeUndefined();
+    expect(result.naehrwerte.kalorien).toBeCloseTo(100);
+  });
+
+  it('does not skip when referenceRow.nutritionRelevant is undefined', async () => {
+    const rowWithoutFlag = { ...referenceRow, ingredientID: 'tomate' };
+    delete rowWithoutFlag.nutritionRelevant;
+    const ingredient = { text: '500 g Tomaten', ingredientID: 'tomate' };
+    const result = await resolveIngredientNutritionByStatus(ingredient, rowWithoutFlag, deps);
+    expect(result.found).toBe(true);
+    expect(result.skipped).toBeUndefined();
   });
 });
 
