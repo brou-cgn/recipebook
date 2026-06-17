@@ -777,6 +777,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
     const notIncluded = [];
     let foundCount = 0;
+    let skippedCount = 0;
 
     for (let i = 0; i < ingredientItems.length; i++) {
       const ingredient = ingredientItems[i]?.text || '';
@@ -786,6 +787,10 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
         : null;
       try {
         const resolved = await resolveIngredientNutritionByStatus(ingredientItems[i], existingRow, { httpsCallable, functions, db });
+        if (resolved.skipped) {
+          skippedCount++;
+          continue;
+        }
         if (resolved.found) {
           const n = resolved.naehrwerte;
           Object.keys(totals).forEach(key => {
@@ -812,7 +817,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       calcError: null,
       calcNotIncluded: notIncluded.length > 0 ? notIncluded : null,
       calcFoundCount: foundCount,
-      calcTotalCount: ingredientItems.length,
+      calcTotalCount: ingredientItems.length - skippedCount,
       ingredientIDMatchingLog: ingredientIDMatchingLog.length > 0 ? ingredientIDMatchingLog : null,
       ingredientIDMatchingLoggedAt: ingredientIDMatchingLog.length > 0 ? Date.now() : null,
     };

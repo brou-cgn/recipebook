@@ -172,6 +172,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
     let source;
     let status;
+    let isNotNutritionRelevant = false;
     if (link) {
       source = 'Rezept';
       const linkedCalcCompletedAt = linkedRecipeCalcCompletedAtMap?.[link.recipeId] ?? null;
@@ -182,8 +183,28 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
       }
     } else {
       const refRow = ingredientID ? refByIngredientID.get(String(ingredientID).trim()) : null;
-      source = resolveNonLinkSource(refRow, ingredientDetail);
-      status = refRow?.status === NUTRITION_REFERENCE_APPROVED_STATUS ? 'Geprüft' : 'Ungeprüft';
+      if (refRow?.nutritionRelevant === false) {
+        isNotNutritionRelevant = true;
+        source = '—';
+        status = 'Nicht nährwertrelevant';
+      } else {
+        source = resolveNonLinkSource(refRow, ingredientDetail);
+        status = refRow?.status === NUTRITION_REFERENCE_APPROVED_STATUS ? 'Geprüft' : 'Ungeprüft';
+      }
+    }
+
+    if (isNotNutritionRelevant) {
+      return {
+        ingredient,
+        source,
+        status,
+        amountG: null,
+        detail: 'Nicht nährwertrelevant',
+        naehrwerte: null,
+        searchTerm: null,
+        aiEstimated: false,
+        requiresManualAmount: false,
+      };
     }
 
     const isNotIncluded = Boolean(notIncludedItem);
@@ -520,6 +541,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         .map(d => d.ingredient)
     );
     let foundCount = 0;
+    let skippedCount = 0;
     let anyWritebackHappened = false;
     const writebackErrors = [];
 
@@ -546,6 +568,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
       try {
         const resolved = await resolveIngredientNutritionByStatus(ingredientItem, existingRow, { httpsCallable, functions, db });
+        if (resolved.skipped) {
+          skippedCount++;
+          continue;
+        }
         if (resolved.wroteBackReference) anyWritebackHappened = true;
         if (resolved.writebackError) writebackErrors.push(resolved.writebackError);
         if (resolved.found) {
@@ -661,7 +687,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       return;
     }
 
-    const totalCount = ingredients.length + recipeLinkItems.length;
+    const totalCount = ingredients.length + recipeLinkItems.length - skippedCount;
     const acceptedArray = acceptedIngredients.size > 0 ? [...acceptedIngredients] : undefined;
     const mergedReformulations = {
       ...(recipe?.naehrwerte?.calcReformulations || {}),
