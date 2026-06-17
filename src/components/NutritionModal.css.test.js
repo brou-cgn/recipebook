@@ -28,7 +28,7 @@ describe('NutritionModal table spacing styles', () => {
     expect(labelRule).toContain('width: 44%;');
     expect(portionHeaderRule).toContain('width: 24%;');
     expect(portionHeaderRule).toContain('padding-right: 0.9rem;');
-    expect(portionHeaderRule).toContain('white-space: normal;');
+    expect(portionHeaderRule).toContain('white-space: nowrap;');
     expect(per100gHeaderRule).toContain('width: 32%;');
     expect(per100gHeaderRule).toContain('padding-left: 0.35rem;');
     expect(portionValueRule).toContain('padding-right: 0.9rem;');
