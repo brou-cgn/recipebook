@@ -259,6 +259,7 @@
 .nutrition-values-table__amount-col--portion {
   width: 24%;
   padding-right: 0.9rem;
+  white-space: normal;
 }
 
 .nutrition-values-table__amount-col--per100g {
