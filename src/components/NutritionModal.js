@@ -1259,45 +1259,45 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             <thead>
               <tr>
                 <th className="nutrition-values-table__label-col"></th>
-                <th className="nutrition-values-table__amount-col">Nährwerte pro Portion</th>
-                <th className="nutrition-values-table__amount-col">pro 100 g</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--portion">Nährwerte pro Portion</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">pro 100 g</th>
               </tr>
             </thead>
             <tbody>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Kalorien</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(kalorien, 'kcal')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(kalorien, 'kcal')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Fett</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(fett, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.fett, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(fett, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.fett, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Kohlenhydrate</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(kohlenhydrate, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(kohlenhydrate, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row nutrition-values-table__row--indented">
                 <td className="nutrition-values-table__label">davon Zucker</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(zucker, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.zucker, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(zucker, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.zucker, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Protein</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(protein, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.protein, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(protein, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.protein, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Salz</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(salz, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.salz, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(salz, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.salz, 'g') : '—'}</td>
               </tr>
               <tr className="nutrition-values-table__row">
                 <td className="nutrition-values-table__label">Ballaststoffe</td>
-                <td className="nutrition-values-table__amount">{formatLabelValue(ballaststoffe, 'g')}</td>
-                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g') : '—'}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--portion">{formatLabelValue(ballaststoffe, 'g')}</td>
+                <td className="nutrition-values-table__amount nutrition-values-table__amount--per100g">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g') : '—'}</td>
               </tr>
             </tbody>
           </table>

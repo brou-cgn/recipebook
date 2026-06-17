@@ -1059,6 +1059,37 @@ describe('NutritionModal UI layout', () => {
     expect(screen.getAllByText('128 kcal').length).toBeGreaterThan(0);
   });
 
+  it('marks the portion and per-100g columns with dedicated spacing classes', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcYieldGrams: 800,
+            calcFinalWeightGrams: 800,
+            calcPer100g: {
+              kalorien: 128,
+              protein: 2,
+              fett: 7.1,
+              kohlenhydrate: 13.5,
+              zucker: 6.1,
+              ballaststoffe: 1.2,
+              salz: 0.31,
+            },
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('Nährwerte pro Portion').closest('th')).toHaveClass('nutrition-values-table__amount-col--portion');
+    expect(screen.getByText('pro 100 g').closest('th')).toHaveClass('nutrition-values-table__amount-col--per100g');
+    expect(document.querySelectorAll('.nutrition-values-table__amount--portion')).toHaveLength(7);
+    expect(document.querySelectorAll('.nutrition-values-table__amount--per100g')).toHaveLength(7);
+  });
+
   it('does not show the yield grams input field', () => {
     render(
       <NutritionModal
