@@ -30,17 +30,18 @@ describe('NutritionModal table spacing styles', () => {
     expect(labelColRule).toContain('width: 44%;');
     expect(portionColRule).toContain('width: 24%;');
     expect(per100gColRule).toContain('width: 32%;');
-    expect(mergedHeaderRule).toContain('padding-right: 0.9rem;');
+    expect(mergedHeaderRule).not.toContain('padding-right:');
     expect(mergedHeaderRule).toContain('white-space: nowrap;');
-    expect(per100gHeaderRule).not.toContain('width:');
-    expect(per100gHeaderRule).toContain('padding-left: 0.35rem;');
+    expect(per100gHeaderRule).toBe('');
     expect(portionValueRule).toContain('padding-right: 0.9rem;');
     expect(per100gValueRule).toContain('padding-left: 0.35rem;');
   });
 
   test('reduces the added spacing slightly on small screens to keep headers readable', () => {
     expect(css).toContain('@media (max-width: 480px)');
-    expect(css).toContain('.nutrition-values-table__amount-col--merged,\n  .nutrition-values-table__amount--portion {\n    padding-right: 0.65rem;');
-    expect(css).toContain('.nutrition-values-table__amount-col--per100g,\n  .nutrition-values-table__amount--per100g {\n    padding-left: 0.25rem;');
+    expect(css).toContain('.nutrition-values-table__amount--portion {\n    padding-right: 0.65rem;');
+    expect(css).toContain('.nutrition-values-table__amount--per100g {\n    padding-left: 0.25rem;');
+    expect(css).not.toContain('.nutrition-values-table__amount-col--merged,\n  .nutrition-values-table__amount--portion');
+    expect(css).not.toContain('.nutrition-values-table__amount-col--per100g,\n  .nutrition-values-table__amount--per100g');
   });
 });
