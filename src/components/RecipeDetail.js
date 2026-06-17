@@ -2668,6 +2668,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
           autoCalcIcon={nutritionEmptyIcon}
+          portionUnits={portionUnits}
         />
       )}
 
