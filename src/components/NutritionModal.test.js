@@ -1009,10 +1009,10 @@ describe('NutritionModal UI layout', () => {
     );
 
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
-    expect(screen.getByText('Kalorien (kcal)')).toBeInTheDocument();
-    expect(screen.getByText('Fett (g)')).toBeInTheDocument();
-    expect(screen.getByText('Kohlenhydrate (g)')).toBeInTheDocument();
-    expect(screen.getByText('Protein (g)')).toBeInTheDocument();
+    expect(screen.getByText('Kalorien')).toBeInTheDocument();
+    expect(screen.getByText('Fett')).toBeInTheDocument();
+    expect(screen.getByText('Kohlenhydrate')).toBeInTheDocument();
+    expect(screen.getByText('Protein')).toBeInTheDocument();
     expect(screen.getByText('Salz')).toBeInTheDocument();
     expect(screen.getByText('Ballaststoffe')).toBeInTheDocument();
   });
@@ -1029,7 +1029,7 @@ describe('NutritionModal UI layout', () => {
     expect(screen.getByRole('button', { name: 'Nährwerte automatisch berechnen' })).toBeInTheDocument();
   });
 
-  it('shows per-100g values and the final weight input when available', () => {
+  it('shows per-100g values in the two-column table when available', () => {
     render(
       <NutritionModal
         recipe={{
@@ -1054,50 +1054,21 @@ describe('NutritionModal UI layout', () => {
       />
     );
 
-    expect(screen.getByLabelText('Endgewicht nach Zubereitung (g)')).toHaveValue('800');
-    expect(screen.getByText('Nährwerte pro 100 g')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Endgewicht nach Zubereitung (g)')).not.toBeInTheDocument();
+    expect(screen.getByText('pro 100 g')).toBeInTheDocument();
     expect(screen.getAllByText('128 kcal').length).toBeGreaterThan(0);
   });
 
-  it('persists manual final weight input with per-100g nutrition values', async () => {
-    const onSave = jest.fn().mockResolvedValue(undefined);
-
+  it('does not show the yield grams input field', () => {
     render(
       <NutritionModal
-        recipe={{
-          ...baseRecipe,
-          naehrwerte: {
-            ...baseRecipe.naehrwerte,
-            calcIngredientDetails: [
-              { ingredient: '200 g Linsen', amountG: 200, naehrwerte: { kalorien: 500, protein: 20, fett: 10, kohlenhydrate: 70, zucker: 2, ballaststoffe: 8, salz: 0.5 } },
-              { ingredient: '200 g Gemüse', amountG: 200, naehrwerte: { kalorien: 300, protein: 12, fett: 6, kohlenhydrate: 38, zucker: 10, ballaststoffe: 4, salz: 0.2 } },
-            ],
-          },
-        }}
+        recipe={baseRecipe}
         onClose={jest.fn()}
-        onSave={onSave}
+        onSave={jest.fn()}
       />
     );
 
-    const yieldInput = screen.getByLabelText('Endgewicht nach Zubereitung (g)');
-    fireEvent.change(yieldInput, { target: { value: '500' } });
-    fireEvent.blur(yieldInput);
-
-    await waitFor(() => {
-      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-        calcYieldGrams: 500,
-        calcFinalWeightGrams: 500,
-        calcPer100g: expect.objectContaining({
-          kalorien: 160,
-          protein: 6.4,
-          fett: 3.2,
-          kohlenhydrate: 21.6,
-          zucker: 2.4,
-          ballaststoffe: 2.4,
-          salz: 0.14,
-        }),
-      }));
-    });
+    expect(screen.queryByLabelText('Endgewicht nach Zubereitung (g)')).not.toBeInTheDocument();
   });
 
   it('displays value with unit directly (no parentheses around unit)', () => {

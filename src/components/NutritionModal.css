@@ -229,6 +229,61 @@
   color: #aaa;
 }
 
+/* 3-column nutrition values table */
+.nutrition-values-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.nutrition-values-table thead tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.nutrition-values-table__label-col {
+  text-align: left;
+  width: 45%;
+}
+
+.nutrition-values-table__amount-col {
+  text-align: right;
+  width: 27.5%;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #888;
+  padding-bottom: 0.4rem;
+  white-space: nowrap;
+}
+
+.nutrition-values-table__row td {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #f4f4f4;
+  vertical-align: baseline;
+}
+
+.nutrition-values-table__row:last-child td {
+  border-bottom: none;
+}
+
+.nutrition-values-table__label {
+  color: #444;
+  font-weight: 500;
+}
+
+.nutrition-values-table__row--indented .nutrition-values-table__label::before {
+  content: '↳ ';
+  color: #aaa;
+}
+
+.nutrition-values-table__amount {
+  text-align: right;
+  color: #1a1a1a;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-left: 0.5rem;
+}
+
 /* Divider between nutrition values and lower section */
 .nutrition-section-divider {
   border: none;

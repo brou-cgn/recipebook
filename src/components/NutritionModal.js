@@ -373,6 +373,26 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Lock body scroll while modal is open (iOS Safari safe)
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const prevOverflow = document.body.style.overflow;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   const parsePositiveNumber = (value) => {
     const n = parseFloat(value.replace(',', '.'));
     return isNaN(n) || n < 0 ? null : n;
@@ -1235,105 +1255,52 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
               ⚠️ Die Nährwertetabelle wurde seit der letzten Berechnung aktualisiert. Bitte Nährwerte neu berechnen.
             </div>
           )}
-          <p className="nutrition-modal-hint">
-            Nährwerte pro Portion ({recipe.portionen || 1}{' '}
-            {(recipe.portionen || 1) === 1 ? 'Portion' : 'Portionen'})
-          </p>
-
-          <div className="nutrition-values-list">
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Kalorien (kcal)</span>
-              <span className="nutrition-value-amount">{formatLabelValue(kalorien, 'kcal')}</span>
-            </div>
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Fett (g)</span>
-              <span className="nutrition-value-amount">{formatLabelValue(fett, 'g')}</span>
-            </div>
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Kohlenhydrate (g)</span>
-              <span className="nutrition-value-amount">{formatLabelValue(kohlenhydrate, 'g')}</span>
-            </div>
-            <div className="nutrition-value-row nutrition-value-row--indented">
-              <span className="nutrition-value-label">davon Zucker (g)</span>
-              <span className="nutrition-value-amount">{formatLabelValue(zucker, 'g')}</span>
-            </div>
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Protein (g)</span>
-              <span className="nutrition-value-amount">{formatLabelValue(protein, 'g')}</span>
-            </div>
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Salz</span>
-              <span className="nutrition-value-amount">{formatLabelValue(salz, 'g')}</span>
-            </div>
-            <div className="nutrition-value-row">
-              <span className="nutrition-value-label">Ballaststoffe</span>
-              <span className="nutrition-value-amount">{formatLabelValue(ballaststoffe, 'g')}</span>
-            </div>
-          </div>
-
-          <div className="nutrition-field nutrition-yield-field">
-            <label htmlFor="nutrition-yield-grams">Endgewicht nach Zubereitung (g)</label>
-            <input
-              id="nutrition-yield-grams"
-              type="text"
-              inputMode="decimal"
-              className="nutrition-input"
-              value={yieldGramsInput}
-              onChange={(e) => handleYieldGramsChange(e.target.value)}
-              onBlur={handleYieldGramsBlur}
-              placeholder={suggestedYieldGrams != null ? String(suggestedYieldGrams) : 'z. B. 950'}
-              disabled={autoCalcLoading}
-            />
-            {yieldGramsError && (
-              <div className="nutrition-yield-help nutrition-yield-help--error">{yieldGramsError}</div>
-            )}
-            {!yieldGramsError && suggestedYieldGrams != null && !String(yieldGramsInput).trim() && (
-              <div className="nutrition-yield-help">
-                Vorschlag basierend auf Zutatenmenge: ca. {formatAmountG(suggestedYieldGrams)}
-              </div>
-            )}
-            {calculatedNutritionState.finalWeightGrams != null && (
-              <div className="nutrition-yield-help">
-                Berechnetes Endgewicht: {formatAmountG(calculatedNutritionState.finalWeightGrams)}
-              </div>
-            )}
-          </div>
-
-          {calculatedNutritionState.per100g && (
-            <>
-              <p className="nutrition-modal-hint">Nährwerte pro 100 g</p>
-              <div className="nutrition-values-list">
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Kalorien (kcal)</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal')}</span>
-                </div>
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Fett (g)</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.fett, 'g')}</span>
-                </div>
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Kohlenhydrate (g)</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g')}</span>
-                </div>
-                <div className="nutrition-value-row nutrition-value-row--indented">
-                  <span className="nutrition-value-label">davon Zucker (g)</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.zucker, 'g')}</span>
-                </div>
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Protein (g)</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.protein, 'g')}</span>
-                </div>
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Salz</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.salz, 'g')}</span>
-                </div>
-                <div className="nutrition-value-row">
-                  <span className="nutrition-value-label">Ballaststoffe</span>
-                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g')}</span>
-                </div>
-              </div>
-            </>
-          )}
+          <table className="nutrition-values-table">
+            <thead>
+              <tr>
+                <th className="nutrition-values-table__label-col"></th>
+                <th className="nutrition-values-table__amount-col">Nährwerte pro Portion</th>
+                <th className="nutrition-values-table__amount-col">pro 100 g</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Kalorien</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(kalorien, 'kcal')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Fett</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(fett, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.fett, 'g') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Kohlenhydrate</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(kohlenhydrate, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row nutrition-values-table__row--indented">
+                <td className="nutrition-values-table__label">davon Zucker</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(zucker, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.zucker, 'g') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Protein</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(protein, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.protein, 'g') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Salz</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(salz, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.salz, 'g') : '—'}</td>
+              </tr>
+              <tr className="nutrition-values-table__row">
+                <td className="nutrition-values-table__label">Ballaststoffe</td>
+                <td className="nutrition-values-table__amount">{formatLabelValue(ballaststoffe, 'g')}</td>
+                <td className="nutrition-values-table__amount">{calculatedNutritionState.per100g ? formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g') : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
 
           <hr className="nutrition-section-divider" />
 
