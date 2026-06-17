@@ -376,8 +376,8 @@
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 48px;
+  height: 48px;
 }
 
 .share-copy-url-button:active {
