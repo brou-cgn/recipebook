@@ -992,6 +992,85 @@ describe('RecipeDetail - Close Button Icon', () => {
   });
 });
 
+describe('RecipeDetail - Desktop Close Button', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+    rolle: 'Familymember',
+  };
+
+  const mockRecipe = {
+    id: 'recipe-1',
+    title: 'Test Recipe',
+    authorId: 'user-1',
+    ingredients: ['Ingredient 1'],
+    steps: ['Step 1'],
+  };
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+    window.dispatchEvent(new Event('resize'));
+  });
+
+  test('renders close button in desktop header with aria-label Schließen', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const header = document.querySelector('.recipe-detail-header');
+    expect(header).toBeInTheDocument();
+
+    const closeBtn = header.querySelector('.recipe-detail__close');
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn).toHaveAttribute('aria-label', 'Schließen');
+  });
+
+  test('calls onBack when desktop close button is clicked', () => {
+    const onBack = jest.fn();
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={onBack}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const header = document.querySelector('.recipe-detail-header');
+    const closeBtn = header.querySelector('.recipe-detail__close');
+    expect(closeBtn).toBeInTheDocument();
+
+    fireEvent.click(closeBtn);
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  test('does not render desktop close button on mobile', () => {
+    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 400 });
+    window.dispatchEvent(new Event('resize'));
+
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const header = document.querySelector('.recipe-detail-header');
+    expect(header).not.toBeInTheDocument();
+  });
+});
+
 describe('RecipeDetail - Nutrition recalc icon', () => {
   const currentUser = {
     id: 'user-1',
