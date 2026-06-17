@@ -466,12 +466,13 @@
   background: white;
   border: 1px solid #DF7A00;
   padding: 0.75rem 1rem;
-  border-radius: 12px;
+  border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   color: #DF7A00;
+  heigh: 48px;
 }
 
 .bottom-action-buttons {
