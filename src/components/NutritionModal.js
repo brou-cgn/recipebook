@@ -222,7 +222,7 @@ export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIn
     parseIngredientAmountG,
   });
   if (amountG == null) {
-    return { found: false, error: 'Menge des verlinkten Rezepts konnte nicht in Gramm ermittelt werden.' };
+    return { found: true, noAmountG: true, naehrwerte: per100g, amountG: null };
   }
 
   const naehrwerte = scaleNutritionByAmountG(per100g, amountG);
@@ -405,7 +405,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
     const amountForDisplay = ingredientDetail?.amountG ?? (manualAmountApplied ? manualAmountG : null);
     const calculatedNaehrwerte = convertedNaehrwerte || ingredientDetail?.naehrwerte || null;
-    const linkDetail = link && !notIncludedItem && calculatedNaehrwerte
+    const linkDetail = link && !notIncludedItem && calculatedNaehrwerte && (!noAmountG || manualAmountApplied)
       ? buildLinkedRecipeDetail({
         link,
         amountG: amountForDisplay,
@@ -1018,6 +1018,17 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           parseIngredientAmountG: parseLinkedRecipeAmountG,
         });
         if (resolvedLink.found) {
+          if (resolvedLink.noAmountG) {
+            ingredientDetails.push({
+              ingredient,
+              naehrwerte: resolvedLink.naehrwerte,
+              amountG: null,
+              noAmountG: true,
+              searchTerm: null,
+              aiEstimated: false,
+            });
+            continue;
+          }
           Object.keys(totals).forEach((key) => {
             totals[key] += resolvedLink.naehrwerte[key] || 0;
           });

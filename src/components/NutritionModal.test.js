@@ -504,6 +504,60 @@ describe('getRecipeCalcResult', () => {
       expect(rows[0]).toEqual(expect.objectContaining({ source: 'Rezept', status: 'Ungeprüft' }));
     });
 
+    it('shows manual amount hint for linked recipe with noAmountG and available per-100g nutrition', () => {
+      const per100g = { kalorien: 300, protein: 10, fett: 8, kohlenhydrate: 40, zucker: 5, ballaststoffe: 2, salz: 0.3 };
+      const recipe = {
+        ingredients: ['#recipe:abc:Linsen'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [],
+          ingredientDetails: [{ ingredient: '#recipe:abc:Linsen', noAmountG: true, naehrwerte: per100g, amountG: null }],
+        },
+        {},
+        []
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '#recipe:abc:Linsen',
+        source: 'Rezept',
+        requiresManualAmount: true,
+        amountG: null,
+        detail: 'Referenzwert je 100 g vorhanden – Menge eingeben',
+      }));
+      expect(rows[0].naehrwerte).toEqual(per100g);
+    });
+
+    it('converts per-100g nutrition for linked recipe with noAmountG when manual grams are provided', () => {
+      const per100g = { kalorien: 300, protein: 10, fett: 8, kohlenhydrate: 40, zucker: 5, ballaststoffe: 2, salz: 0.3 };
+      const recipe = {
+        ingredients: ['#recipe:abc:Linsen'],
+        naehrwerte: {},
+      };
+      const rows = buildNutritionCompositionRows(
+        recipe,
+        {
+          notIncluded: [],
+          ingredientDetails: [{ ingredient: '#recipe:abc:Linsen', noAmountG: true, naehrwerte: per100g, amountG: null }],
+        },
+        {},
+        [],
+        { '#recipe:abc:Linsen': '150' }
+      );
+
+      expect(rows[0]).toEqual(expect.objectContaining({
+        ingredient: '#recipe:abc:Linsen',
+        source: 'Rezept',
+        requiresManualAmount: true,
+        amountG: 150,
+      }));
+      expect(rows[0].detail).toContain('150');
+      expect(rows[0].naehrwerte.kalorien).toBeCloseTo(450);
+      expect(rows[0].naehrwerte.protein).toBeCloseTo(15);
+    });
+
     it('shows "Nicht nährwertrelevant" status for ingredient with nutritionRelevant: false reference row', () => {
       const recipe = {
         ingredients: [
@@ -644,6 +698,26 @@ describe('getRecipeCalcResult', () => {
         amountEstimated: true,
       }));
       expect(result.naehrwerte.kalorien).toBeCloseTo(20);
+    });
+
+    it('returns noAmountG with per-100g nutrition when amount cannot be determined', async () => {
+      const per100g = { kalorien: 400, protein: 8, fett: 30, kohlenhydrate: 5, zucker: 2, ballaststoffe: 1, salz: 0.2 };
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Trüffelpaste', quantityPrefix: '' },
+        linkedRecipe: {
+          title: 'Trüffelpaste',
+          portionen: 1,
+          naehrwerte: { calcPer100g: per100g },
+        },
+        parseIngredientAmountG: async () => ({ data: { amountG: null } }),
+      });
+
+      expect(result).toEqual({
+        found: true,
+        noAmountG: true,
+        naehrwerte: expect.objectContaining({ kalorien: 400, protein: 8 }),
+        amountG: null,
+      });
     });
   });
 });
