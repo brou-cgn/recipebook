@@ -1935,77 +1935,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 Eigene Version erstellen
               </button>
             )}
-            {onToggleFavorite && (
-              <button 
-                className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
-                onClick={handleToggleFavorite}
-                title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                aria-label={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-                aria-pressed={isFavorite}
-                type="button"
-              >
-                {isFavorite ? (
-                  isBase64Image(favoritesButtonActiveIcon) ? (
-                    <img src={favoritesButtonActiveIcon} alt="Favorit aktiv" className="button-icon-image" draggable="false" />
-                  ) : (
-                    favoritesButtonActiveIcon
-                  )
-                ) : (
-                  isBase64Image(favoritesButtonIcon) ? (
-                    <img src={favoritesButtonIcon} alt="Favorit" className="button-icon-image" draggable="false" />
-                  ) : (
-                    favoritesButtonIcon
-                  )
-                )}
-              </button>
-            )}
-            <button
-              className="shopping-list-trigger-button"
-              onClick={handleShoppingListClick}
-              title="Einkaufsliste anzeigen"
-              aria-label="Einkaufsliste öffnen"
-            >
-              {isBase64Image(shoppingListIcon) ? (
-                <img src={shoppingListIcon} alt="Einkaufsliste" className="shopping-list-icon-img" />
-              ) : (
-                shoppingListIcon
-              )}
-            </button>
-            {currentUser && !currentUser.isGuest && (
-              <button
-                className="cook-date-button"
-                onClick={() => { setCookDateModalPrefillToday(false); setShowCookDateModal(true); }}
-                title="Kochdatum erfassen"
-                aria-label="Kochdatum erfassen"
-              >
-                {isBase64Image(cookDateIcon) ? (
-                  <img src={cookDateIcon} alt="Kochdatum" className="cook-date-icon-img" />
-                ) : (
-                  cookDateIcon
-                )}
-              </button>
-            )}
-            {currentUser?.printRecipe !== false && (
-              <button
-                className="cook-date-button print-recipe-button"
-                onClick={() => handlePrint()}
-                title="Rezept drucken"
-                aria-label="Rezept drucken"
-              >
-                {isBase64Image(printRecipeIcon) ? (
-                  <img src={printRecipeIcon} alt="Drucken" className="cook-date-icon-img" />
-                ) : (
-                  printRecipeIcon
-                )}
-              </button>
-            )}
-            <RecipeRating
-              recipeId={recipe.id}
-              ratingAvg={recipe.ratingAvg}
-              ratingCount={recipe.ratingCount}
-              currentUser={currentUser}
-              onOpenModal={() => setShowRatingModal(true)}
-            />
             {isRecipePublic && !recipe.shareId && (
               <button
                 className="share-button"
@@ -2043,36 +1972,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 title="WhatsApp-Thumbnail zurücksetzen"
               >
                 {resetThumbnailLoading ? '…' : 'Thumbnail zurücksetzen'}
-              </button>
-            )}
-            {recipe.shareId && (
-              <button
-                className="share-copy-url-button"
-                onClick={handleCopyShareUrl}
-                title="Share-Link kopieren"
-              >
-                {shareUrlCopied ? '✓' : (
-                  isBase64Image(copyLinkIcon) ? (
-                    <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
-                  ) : (
-                    copyLinkIcon
-                  )
-                )}
-              </button>
-            )}
-            {isSharedView && !isRecipePublic && (
-              <button
-                className="share-copy-url-button"
-                onClick={handleCopyShareUrl}
-                title="Share-Link kopieren"
-              >
-                {shareUrlCopied ? '✓' : (
-                  isBase64Image(copyLinkIcon) ? (
-                    <img src={copyLinkIcon} alt="Link kopieren" className="copy-link-icon-img" />
-                  ) : (
-                    copyLinkIcon
-                  )
-                )}
               </button>
             )}
             {onAddToMyRecipes && (
@@ -2354,8 +2253,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
               );
             })()}
 
-            {(isMobile || isTablet || isMobileLandscape) && (
-              <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
+            <div className="mobile-action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
                 {onToggleFavorite && (
                 <button
                   className={`favorite-button ${isFavorite ? 'favorite-button--active' : ''}`}
@@ -2481,7 +2379,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                   )
                 )}
               </div>
-            )}
 
             <div className="recipe-title-row">
               {hasMultipleVersions && (
