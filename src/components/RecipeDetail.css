@@ -1340,6 +1340,7 @@
     justify-content: center;
     flex-shrink: 0;
     margin-left: auto;
+    margin-right: 0;
   }
 
   .mobile-action-buttons .edit-button,
