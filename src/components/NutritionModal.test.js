@@ -8,6 +8,9 @@ import NutritionModal, {
   parseManualAmountG,
   scaleNutritionByAmountG,
   sumNutritionFromIngredientDetails,
+  findLinkedRecipeSelfWeightG,
+  deriveLinkedRecipePer100g,
+  resolveLinkedRecipeNutrition,
 } from './NutritionModal';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
 
@@ -410,7 +413,7 @@ describe('getRecipeCalcResult', () => {
         recipe,
         {
           notIncluded: [],
-          ingredientDetails: [{ ingredient: '1 Teil #recipe:abc:Linsen', naehrwerte: linkNaehrwerte }],
+          ingredientDetails: [{ ingredient: '1 Teil #recipe:abc:Linsen', naehrwerte: linkNaehrwerte, amountG: 5 }],
         },
         {},
         []
@@ -422,6 +425,8 @@ describe('getRecipeCalcResult', () => {
         source: 'Rezept',
         naehrwerte: linkNaehrwerte,
       }));
+      expect(rows[0].detail).toContain('1 Teil (≈5 g)');
+      expect(rows[0].detail).toContain('Nährwerte: 50 kcal');
     });
 
     it('resolves source label from nutritionReferenceRows by ingredientID', () => {
@@ -567,6 +572,78 @@ describe('getRecipeCalcResult', () => {
         expect(result.totals.fett).toBeCloseTo(5.2);
         expect(result.totals.kohlenhydrate).toBeCloseTo(8.5);
       });
+    });
+  });
+
+  describe('linked recipe weight + nutrition conversion helpers', () => {
+    it('finds explicit linked recipe self-weight from hashtag ingredient', () => {
+      const linkedRecipe = {
+        title: 'Trüffelpaste',
+        ingredients: ['100 g #Trüffelpaste', '10 g Salz'],
+      };
+      expect(findLinkedRecipeSelfWeightG(linkedRecipe, 'Trüffelpaste')).toBe(100);
+    });
+
+    it('derives per-100g values from totals and final weight when calcPer100g is missing', () => {
+      const per100g = deriveLinkedRecipePer100g({
+        kalorien: 240,
+        protein: 12,
+        fett: 10,
+        kohlenhydrate: 20,
+        zucker: 4,
+        ballaststoffe: 3,
+        salz: 0.4,
+        calcFinalWeightGrams: 200,
+      });
+      expect(per100g).toEqual(expect.objectContaining({
+        kalorien: 120,
+        protein: 6,
+        fett: 5,
+        kohlenhydrate: 10,
+      }));
+    });
+
+    it('converts linked recipe nutrition via explicit self-weight when prefix is portion-like', async () => {
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Trüffelpaste', quantityPrefix: '1 Teil' },
+        linkedRecipe: {
+          title: 'Trüffelpaste',
+          portionen: 1,
+          ingredients: ['100 g #Trüffelpaste'],
+          naehrwerte: {
+            calcPer100g: { kalorien: 400, protein: 8, fett: 30, kohlenhydrate: 5, zucker: 2, ballaststoffe: 1, salz: 0.2 },
+          },
+        },
+        parseIngredientAmountG: async () => ({ data: { amountG: null } }),
+      });
+
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 100,
+        amountEstimated: false,
+      }));
+      expect(result.naehrwerte.kalorien).toBeCloseTo(400);
+    });
+
+    it('uses estimated grams for linked recipe prefixes like Teelöffel', async () => {
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Trüffelpaste', quantityPrefix: '1 Teelöffel' },
+        linkedRecipe: {
+          title: 'Trüffelpaste',
+          portionen: 1,
+          naehrwerte: {
+            calcPer100g: { kalorien: 400, protein: 8, fett: 30, kohlenhydrate: 5, zucker: 2, ballaststoffe: 1, salz: 0.2 },
+          },
+        },
+        parseIngredientAmountG: async () => ({ data: { amountG: 5 } }),
+      });
+
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 5,
+        amountEstimated: true,
+      }));
+      expect(result.naehrwerte.kalorien).toBeCloseTo(20);
     });
   });
 });
