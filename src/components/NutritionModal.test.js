@@ -413,7 +413,7 @@ describe('getRecipeCalcResult', () => {
         recipe,
         {
           notIncluded: [],
-          ingredientDetails: [{ ingredient: '1 Teil #recipe:abc:Linsen', naehrwerte: linkNaehrwerte, amountG: 5 }],
+          ingredientDetails: [{ ingredient: '1 Teil #recipe:abc:Linsen', naehrwerte: linkNaehrwerte, amountG: 5.67 }],
         },
         {},
         []
@@ -425,7 +425,7 @@ describe('getRecipeCalcResult', () => {
         source: 'Rezept',
         naehrwerte: linkNaehrwerte,
       }));
-      expect(rows[0].detail).toContain('1 Teil (≈5 g)');
+      expect(rows[0].detail).toContain('1 Teil (≈5,7 g)');
       expect(rows[0].detail).toContain('Nährwerte: 50 kcal');
     });
 
