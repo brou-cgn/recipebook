@@ -719,6 +719,134 @@ describe('getRecipeCalcResult', () => {
         amountG: null,
       });
     });
+
+    it('uses unit matching with portionUnit to calculate weight before Gemini', async () => {
+      const geminiMock = jest.fn().mockResolvedValue({ data: { amountG: 999 } });
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Pizzateig', quantityPrefix: '1 Teil' },
+        linkedRecipe: {
+          title: 'Pizzateig',
+          portionen: 4,
+          portionUnitId: 'teil',
+          naehrwerte: {
+            calcFinalWeightGrams: 1000,
+            calcYieldFactor: 1,
+            calcPer100g: { kalorien: 200, protein: 6, fett: 4, kohlenhydrate: 36, zucker: 1, ballaststoffe: 2, salz: 0.5 },
+          },
+        },
+        portionUnits: [{ id: 'teil', singular: 'Teil', plural: 'Teile' }],
+        parseIngredientAmountG: geminiMock,
+      });
+
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 250,
+        amountEstimated: false,
+      }));
+      expect(geminiMock).not.toHaveBeenCalled();
+      expect(result.naehrwerte.kalorien).toBeCloseTo(500);
+    });
+
+    it('applies yieldFactor in unit matching calculation', async () => {
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Pizzateig', quantityPrefix: '1 Teil' },
+        linkedRecipe: {
+          title: 'Pizzateig',
+          portionen: 4,
+          portionUnitId: 'teil',
+          naehrwerte: {
+            calcFinalWeightGrams: 800,
+            calcYieldFactor: 0.8,
+            calcPer100g: { kalorien: 200, protein: 6, fett: 4, kohlenhydrate: 36, zucker: 1, ballaststoffe: 2, salz: 0.5 },
+          },
+        },
+        portionUnits: [{ id: 'teil', singular: 'Teil', plural: 'Teile' }],
+        parseIngredientAmountG: async () => ({ data: { amountG: null } }),
+      });
+
+      // amountG = 1 / (4 * 0.8) * 800 = 1 / 3.2 * 800 = 250
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountEstimated: false,
+      }));
+      expect(result.amountG).toBeCloseTo(250);
+    });
+
+    it('also matches plural unit form when portionUnits list is provided', async () => {
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Pizzateig', quantityPrefix: '2 Teile' },
+        linkedRecipe: {
+          title: 'Pizzateig',
+          portionen: 4,
+          portionUnitId: 'teil',
+          naehrwerte: {
+            calcFinalWeightGrams: 1000,
+            calcYieldFactor: 1,
+            calcPer100g: { kalorien: 200, protein: 6, fett: 4, kohlenhydrate: 36, zucker: 1, ballaststoffe: 2, salz: 0.5 },
+          },
+        },
+        portionUnits: [{ id: 'teil', singular: 'Teil', plural: 'Teile' }],
+        parseIngredientAmountG: async () => ({ data: { amountG: null } }),
+      });
+
+      // amountG = 2 / (4 * 1) * 1000 = 500
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 500,
+        amountEstimated: false,
+      }));
+    });
+
+    it('falls back to Gemini when unit does not match portionUnit', async () => {
+      const geminiMock = jest.fn().mockResolvedValue({ data: { amountG: 75 } });
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Pizzateig', quantityPrefix: '1 Teelöffel' },
+        linkedRecipe: {
+          title: 'Pizzateig',
+          portionen: 4,
+          portionUnitId: 'teil',
+          naehrwerte: {
+            calcFinalWeightGrams: 1000,
+            calcYieldFactor: 1,
+            calcPer100g: { kalorien: 200, protein: 6, fett: 4, kohlenhydrate: 36, zucker: 1, ballaststoffe: 2, salz: 0.5 },
+          },
+        },
+        portionUnits: [{ id: 'teil', singular: 'Teil', plural: 'Teile' }],
+        parseIngredientAmountG: geminiMock,
+      });
+
+      expect(geminiMock).toHaveBeenCalled();
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 75,
+        amountEstimated: true,
+      }));
+    });
+
+    it('matches portionUnitId directly when portionUnits list is empty', async () => {
+      const result = await resolveLinkedRecipeNutrition({
+        link: { recipeName: 'Pizzateig', quantityPrefix: '1 Teil' },
+        linkedRecipe: {
+          title: 'Pizzateig',
+          portionen: 4,
+          portionUnitId: 'teil',
+          naehrwerte: {
+            calcFinalWeightGrams: 1000,
+            calcYieldFactor: 1,
+            calcPer100g: { kalorien: 200, protein: 6, fett: 4, kohlenhydrate: 36, zucker: 1, ballaststoffe: 2, salz: 0.5 },
+          },
+        },
+        portionUnits: [],
+        parseIngredientAmountG: async () => ({ data: { amountG: null } }),
+      });
+
+      // Even without portionUnits list, "teil" === "teil" (lowercase match)
+      expect(result).toEqual(expect.objectContaining({
+        found: true,
+        amountG: 250,
+        amountEstimated: false,
+      }));
+    });
   });
 });
 
