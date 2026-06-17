@@ -379,6 +379,9 @@
   width: 48px;
   height: 48px;
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .share-copy-url-button:active {
