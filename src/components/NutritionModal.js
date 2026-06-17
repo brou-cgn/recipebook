@@ -14,6 +14,7 @@ import './NutritionModal.css';
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
 const AMOUNT_G_DECIMALS = 1;
 const NUTRITION_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
+const DEFAULT_YIELD_SUGGESTION_FACTOR = 0.95;
 
 export function parseManualAmountG(value) {
   if (value == null) return null;
@@ -430,7 +431,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
   const suggestedYieldGrams = useMemo(() => {
     if (calculatedNutritionState.totalAmountG == null) return null;
-    return Math.round(calculatedNutritionState.totalAmountG * 0.95 * 10) / 10;
+    return Math.round(calculatedNutritionState.totalAmountG * DEFAULT_YIELD_SUGGESTION_FACTOR * 10) / 10;
   }, [calculatedNutritionState.totalAmountG]);
 
   const buildCalculatedNutritionPayload = ({
