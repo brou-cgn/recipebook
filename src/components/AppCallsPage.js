@@ -197,6 +197,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const [cuisineProposals, setCuisineProposals] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
   const [cuisineGroups, setCuisineGroups] = useState([]);
+  const [portionUnits, setPortionUnits] = useState([]);
   const [editingProposalId, setEditingProposalId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [editingGroup, setEditingGroup] = useState('');
@@ -249,10 +250,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     getButtonIcons().then((icons) => {
       setAllButtonIcons(icons);
     });
-    // Load cuisine data (types + groups + proposals)
+    // Load cuisine data (types + groups + proposals) and portionUnits
     getCustomLists().then((lists) => {
       setCuisineTypes(lists.cuisineTypes || []);
       setCuisineGroups(lists.cuisineGroups || []);
+      setPortionUnits(lists.portionUnits || []);
     }).catch(() => {});
     Promise.resolve(getStandardIngredientTerms()).then((terms = {}) => {
       const loadedStandardUnits = Array.isArray(terms.standardUnits)
@@ -2058,6 +2060,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
           retryAutoCalculateToken={retryAutoCalculateToken}
+          portionUnits={portionUnits}
         />
       )}
       {ingredientMatchDialog && (

@@ -168,45 +168,82 @@ async function estimateAmountG(parseIngredientAmountG, ingredientText) {
   }
 }
 
-async function resolveLinkedRecipeAmountG({ link, linkedRecipe, parseIngredientAmountG } = {}) {
+function extractUnitFromPrefix(prefix) {
+  if (!prefix) return null;
+  const match = prefix.match(/^(?:\d+\/\d+|\d+(?:[.,]\d+)?)\s+(\S+)/);
+  if (match) return match[1].trim();
+  return null;
+}
+
+function portionUnitMatches(unit, portionUnitId, portionUnits = []) {
+  if (!unit || !portionUnitId) return false;
+  const normalizedUnit = unit.toLowerCase();
+  const portionUnit = portionUnits.find((u) => u.id === portionUnitId);
+  if (portionUnit) {
+    return (
+      normalizedUnit === (portionUnit.singular || '').toLowerCase() ||
+      normalizedUnit === (portionUnit.plural || '').toLowerCase()
+    );
+  }
+  return normalizedUnit === portionUnitId.toLowerCase();
+}
+
+async function resolveLinkedRecipeAmountG({ link, linkedRecipe, parseIngredientAmountG, portionUnits = [] } = {}) {
   const quantityPrefix = String(link?.quantityPrefix || '').trim();
   const linkedRecipeName = linkedRecipe?.title || link?.recipeName || '';
 
+  // Priority 1a: Direct gram amount in prefix (e.g. "100 g")
   const directAmountG = computeIngredientAmountG(quantityPrefix);
   if (directAmountG != null) {
     return { amountG: directAmountG, amountEstimated: false };
   }
 
-  if (quantityPrefix) {
-    const estimatedAmountFromPrefix = await estimateAmountG(parseIngredientAmountG, `${quantityPrefix} ${linkedRecipeName}`.trim());
-    if (estimatedAmountFromPrefix != null) {
-      return { amountG: estimatedAmountFromPrefix, amountEstimated: true };
-    }
+  // Priority 1b: Explicit self-weight tag in linked recipe (e.g. "100 g #Trüffelpaste")
+  const explicitSelfWeightG = findLinkedRecipeSelfWeightG(linkedRecipe, link?.recipeName);
+  if (explicitSelfWeightG != null) {
+    const linkedPortionen = Number(linkedRecipe?.portionen) > 0 ? Number(linkedRecipe.portionen) : 1;
+    const quantity = extractQuantityFromPrefix(quantityPrefix) ?? 1;
+    return { amountG: (quantity / linkedPortionen) * explicitSelfWeightG, amountEstimated: false };
   }
 
-  const explicitSelfWeightG = findLinkedRecipeSelfWeightG(linkedRecipe, link?.recipeName);
+  // Get stored total weight for unit matching and proportion fallback
   const fallbackRecipeWeightG = parseManualAmountG(
     linkedRecipe?.naehrwerte?.calcFinalWeightGrams ?? linkedRecipe?.naehrwerte?.calcYieldGrams
   );
-  const referenceWeightG = explicitSelfWeightG ?? fallbackRecipeWeightG;
-  if (referenceWeightG != null) {
-    const linkedPortionen = Number(linkedRecipe?.portionen) > 0 ? Number(linkedRecipe.portionen) : 1;
-    const quantity = extractQuantityFromPrefix(quantityPrefix) ?? 1;
-    return { amountG: (quantity / linkedPortionen) * referenceWeightG, amountEstimated: false };
+
+  // Priority 2 (NEW): Unit matching — if the prefix unit matches the portionUnit of the linked
+  // recipe, derive the weight via ratio (quantity / (portionen * yieldFactor)) * totalWeight.
+  if (fallbackRecipeWeightG != null) {
+    const unitWord = extractUnitFromPrefix(quantityPrefix);
+    const portionUnitId = linkedRecipe?.portionUnitId;
+    if (unitWord && portionUnitId && portionUnitMatches(unitWord, portionUnitId, portionUnits)) {
+      const quantity = extractQuantityFromPrefix(quantityPrefix) ?? 1;
+      const linkedPortionen = Number(linkedRecipe?.portionen) > 0 ? Number(linkedRecipe.portionen) : 1;
+      const yieldFactor = parseManualAmountG(linkedRecipe?.naehrwerte?.calcYieldFactor) ?? 1;
+      return { amountG: (quantity / (linkedPortionen * yieldFactor)) * fallbackRecipeWeightG, amountEstimated: false };
+    }
   }
 
-  const fallbackEstimate = await estimateAmountG(
-    parseIngredientAmountG,
-    `${quantityPrefix || '1 Portion'} ${linkedRecipeName}`.trim()
-  );
+  // Priority 3: Gemini estimation (fallback)
+  const geminiText = quantityPrefix
+    ? `${quantityPrefix} ${linkedRecipeName}`.trim()
+    : `1 Portion ${linkedRecipeName}`.trim();
+  const fallbackEstimate = await estimateAmountG(parseIngredientAmountG, geminiText);
   if (fallbackEstimate != null) {
     return { amountG: fallbackEstimate, amountEstimated: true };
+  }
+
+  // Last resort: stored total weight with simple proportion (no unit-match required)
+  if (fallbackRecipeWeightG != null) {
+    const linkedPortionen = Number(linkedRecipe?.portionen) > 0 ? Number(linkedRecipe.portionen) : 1;
+    const quantity = extractQuantityFromPrefix(quantityPrefix) ?? 1;
+    return { amountG: (quantity / linkedPortionen) * fallbackRecipeWeightG, amountEstimated: false };
   }
 
   return { amountG: null, amountEstimated: false };
 }
 
-export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIngredientAmountG } = {}) {
+export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIngredientAmountG, portionUnits = [] } = {}) {
   if (!linkedRecipe || !linkedRecipe.naehrwerte) {
     return { found: false, error: linkedRecipe ? 'Nährwerte je 100 g fehlen für das verlinkte Rezept.' : 'Verlinktes Rezept nicht gefunden.' };
   }
@@ -220,6 +257,7 @@ export async function resolveLinkedRecipeNutrition({ link, linkedRecipe, parseIn
     link,
     linkedRecipe,
     parseIngredientAmountG,
+    portionUnits,
   });
   if (amountG == null) {
     return { found: false, error: 'Menge des verlinkten Rezepts konnte nicht in Gramm ermittelt werden.' };
@@ -442,7 +480,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, portionUnits = [] }) {
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -1016,6 +1054,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           link,
           linkedRecipe,
           parseIngredientAmountG: parseLinkedRecipeAmountG,
+          portionUnits,
         });
         if (resolvedLink.found) {
           Object.keys(totals).forEach((key) => {
@@ -1234,6 +1273,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         link,
         linkedRecipe,
         parseIngredientAmountG: parseLinkedRecipeAmountG,
+        portionUnits,
       });
       if (resolvedLink.found) {
         Object.keys(newTotals).forEach((key) => {
