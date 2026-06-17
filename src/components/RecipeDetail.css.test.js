@@ -50,3 +50,22 @@ describe('RecipeDetail CSS mobile FAB clearance', () => {
     expect(found).toBe(true);
   });
 });
+
+describe('RecipeDetail CSS desktop close button', () => {
+  const getRuleBody = (css, selector) => {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = css.match(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, 'm'));
+    return match ? match[1] : '';
+  };
+
+  test('recipe-detail__close is transparent, borderless, with 1rem padding and auto left margin', () => {
+    const cssPath = path.join(__dirname, 'RecipeDetail.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '.recipe-detail__close');
+
+    expect(rule).toContain('background: transparent');
+    expect(rule).toContain('border: none');
+    expect(rule).toContain('padding: 1rem');
+    expect(rule).toContain('margin-left: auto');
+  });
+});
