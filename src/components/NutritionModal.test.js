@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import NutritionModal, {
   getRecipeCalcResult,
   buildNutritionCompositionRows,
@@ -89,6 +89,9 @@ describe('getRecipeCalcResult', () => {
         calcNotIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
         calcReformulations: { Milch: { text: 'Vollmilch' } },
         calcAcceptedIngredients: ['Salz'],
+        calcYieldGrams: 850,
+        calcFinalWeightGrams: 850,
+        calcPer100g: { kalorien: 120 },
       },
     };
 
@@ -98,6 +101,9 @@ describe('getRecipeCalcResult', () => {
       notIncluded: [{ ingredient: 'Milch', error: 'Nicht gefunden' }],
       calcReformulations: { Milch: { text: 'Vollmilch' } },
       acceptedIngredients: ['Salz'],
+      calcYieldGrams: 850,
+      calcFinalWeightGrams: 850,
+      calcPer100g: { kalorien: 120 },
     });
   });
 
@@ -548,13 +554,14 @@ describe('getRecipeCalcResult', () => {
       it('sums normal ingredient details and converted noAmountG details', () => {
         const result = sumNutritionFromIngredientDetails(
           [
-            { ingredient: 'Tomaten', naehrwerte: { kalorien: 40, protein: 2, fett: 0.2, kohlenhydrate: 8, zucker: 4, ballaststoffe: 2, salz: 0.02 } },
+            { ingredient: 'Tomaten', amountG: 100, naehrwerte: { kalorien: 40, protein: 2, fett: 0.2, kohlenhydrate: 8, zucker: 4, ballaststoffe: 2, salz: 0.02 } },
             { ingredient: 'Eier', noAmountG: true, naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 } },
           ],
           { Eier: '50' }
         );
 
         expect(result.normalizedManualAmounts).toEqual({ Eier: 50 });
+        expect(result.totalAmountG).toBe(150);
         expect(result.totals.kalorien).toBeCloseTo(115);
         expect(result.totals.protein).toBeCloseTo(8);
         expect(result.totals.fett).toBeCloseTo(5.2);
@@ -1020,6 +1027,77 @@ describe('NutritionModal UI layout', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Nährwerte automatisch berechnen' })).toBeInTheDocument();
+  });
+
+  it('shows per-100g values and the final weight input when available', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcYieldGrams: 800,
+            calcFinalWeightGrams: 800,
+            calcPer100g: {
+              kalorien: 128,
+              protein: 2,
+              fett: 7.1,
+              kohlenhydrate: 13.5,
+              zucker: 6.1,
+              ballaststoffe: 1.2,
+              salz: 0.31,
+            },
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('Endgewicht nach Zubereitung (g)')).toHaveValue('800');
+    expect(screen.getByText('Nährwerte pro 100 g')).toBeInTheDocument();
+    expect(screen.getAllByText('128 kcal').length).toBeGreaterThan(0);
+  });
+
+  it('persists manual final weight input with per-100g nutrition values', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcIngredientDetails: [
+              { ingredient: '200 g Linsen', amountG: 200, naehrwerte: { kalorien: 500, protein: 20, fett: 10, kohlenhydrate: 70, zucker: 2, ballaststoffe: 8, salz: 0.5 } },
+              { ingredient: '200 g Gemüse', amountG: 200, naehrwerte: { kalorien: 300, protein: 12, fett: 6, kohlenhydrate: 38, zucker: 10, ballaststoffe: 4, salz: 0.2 } },
+            ],
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={onSave}
+      />
+    );
+
+    const yieldInput = screen.getByLabelText('Endgewicht nach Zubereitung (g)');
+    fireEvent.change(yieldInput, { target: { value: '500' } });
+    fireEvent.blur(yieldInput);
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        calcYieldGrams: 500,
+        calcFinalWeightGrams: 500,
+        calcPer100g: expect.objectContaining({
+          kalorien: 160,
+          protein: 6.4,
+          fett: 3.2,
+          kohlenhydrate: 21.6,
+          zucker: 2.4,
+          ballaststoffe: 2.4,
+          salz: 0.14,
+        }),
+      }));
+    });
   });
 
   it('displays value with unit directly (no parentheses around unit)', () => {

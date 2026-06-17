@@ -674,3 +674,134 @@ test('does not create nutrition reference documents from OpenFoodFacts results',
 
   global.fetch = originalFetch;
 });
+
+test('calculates per-100g values from summed ingredient amounts by default', async () => {
+  const originalFetch = global.fetch;
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: (ingredient) => {
+      if (ingredient.includes('Reis')) {
+        return {amountG: 200, name: 'Rice', searchName: 'rice'};
+      }
+      return {amountG: 100, name: 'Beans', searchName: 'beans'};
+    },
+    normalizeIngredientWithGemini: async () => null,
+    estimateNutritionWithGemini: async () => null,
+  });
+  loadWrappedFunction();
+
+  global.fetch = async (url) => {
+    if (url.includes('search_terms=rice')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          products: [{
+            product_name: 'Rice',
+            nutriments: {
+              'energy-kcal_100g': 130,
+              'proteins_100g': 2.7,
+              'fat_100g': 0.3,
+              'carbohydrates_100g': 28,
+              'sugars_100g': 0.1,
+              'fiber_100g': 0.4,
+              'salt_100g': 0,
+            },
+          }],
+        }),
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        products: [{
+          product_name: 'Beans',
+          nutriments: {
+            'energy-kcal_100g': 100,
+            'proteins_100g': 8,
+            'fat_100g': 0.5,
+            'carbohydrates_100g': 15,
+            'sugars_100g': 1,
+            'fiber_100g': 7,
+            'salt_100g': 0.2,
+          },
+        }],
+      }),
+    };
+  };
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['200 g Reis', '100 g Bohnen'],
+      portionen: 1,
+    },
+  });
+
+  assert.equal(response.calcFinalWeightGrams, 300);
+  assert.deepEqual(response.calcPer100g, {
+    kalorien: 120,
+    protein: 4.5,
+    fett: 0.4,
+    kohlenhydrate: 23.7,
+    zucker: 0.4,
+    ballaststoffe: 2.6,
+    salz: 0.07,
+  });
+
+  global.fetch = originalFetch;
+});
+
+test('uses a manually supplied final weight for per-100g values', async () => {
+  const originalFetch = global.fetch;
+
+  createUtilsStub = () => ({
+    parseIngredientForNutrition: () => ({amountG: 200, name: 'Rice', searchName: 'rice'}),
+    normalizeIngredientWithGemini: async () => null,
+    estimateNutritionWithGemini: async () => null,
+  });
+  loadWrappedFunction();
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      products: [{
+        product_name: 'Rice',
+        nutriments: {
+          'energy-kcal_100g': 130,
+          'proteins_100g': 2.7,
+          'fat_100g': 0.3,
+          'carbohydrates_100g': 28,
+          'sugars_100g': 0.1,
+          'fiber_100g': 0.4,
+          'salt_100g': 0,
+        },
+      }],
+    }),
+  });
+
+  const response = await wrappedFunction({
+    auth: {uid: 'user-1'},
+    data: {
+      ingredients: ['200 g Reis'],
+      portionen: 1,
+      calcYieldGrams: 400,
+    },
+  });
+
+  assert.equal(response.calcFinalWeightGrams, 400);
+  assert.deepEqual(response.calcPer100g, {
+    kalorien: 65,
+    protein: 1.4,
+    fett: 0.2,
+    kohlenhydrate: 14,
+    zucker: 0.1,
+    ballaststoffe: 0.2,
+    salz: 0,
+  });
+
+  global.fetch = originalFetch;
+});

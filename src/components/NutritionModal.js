@@ -38,6 +38,8 @@ export function sumNutritionFromIngredientDetails(ingredientDetails = [], manual
   const totals = { kalorien: 0, protein: 0, fett: 0, kohlenhydrate: 0, zucker: 0, ballaststoffe: 0, salz: 0 };
   const normalizedManualAmounts = {};
   let hasValues = false;
+  let totalAmountG = 0;
+  let hasIncompleteAmountG = false;
 
   ingredientDetails.forEach((detail) => {
     if (!detail?.naehrwerte) return;
@@ -51,6 +53,7 @@ export function sumNutritionFromIngredientDetails(ingredientDetails = [], manual
       NUTRITION_FIELDS.forEach((field) => {
         totals[field] += scaled[field] || 0;
       });
+      totalAmountG += manualAmountG;
       hasValues = true;
       return;
     }
@@ -58,13 +61,53 @@ export function sumNutritionFromIngredientDetails(ingredientDetails = [], manual
     NUTRITION_FIELDS.forEach((field) => {
       totals[field] += detail.naehrwerte[field] || 0;
     });
+    if (typeof detail.amountG === 'number' && detail.amountG > 0) {
+      totalAmountG += detail.amountG;
+    } else {
+      hasIncompleteAmountG = true;
+    }
     hasValues = true;
   });
 
   return {
     totals: hasValues ? totals : null,
     normalizedManualAmounts,
+    totalAmountG: !hasIncompleteAmountG && totalAmountG > 0 ? totalAmountG : null,
   };
+}
+
+function roundNutritionValue(key, value) {
+  if (value == null) return null;
+  if (key === 'kalorien') return Math.round(value);
+  if (key === 'salz') return Math.round(value * 100) / 100;
+  return Math.round(value * 10) / 10;
+}
+
+function resolveFinalWeightGrams({ sumIngredientAmountsG, calcYieldGrams, calcYieldFactor, storedFinalWeightGrams } = {}) {
+  const normalizedYieldGrams = parseManualAmountG(calcYieldGrams);
+  if (normalizedYieldGrams != null) return normalizedYieldGrams;
+
+  const normalizedIngredientAmountSum = parseManualAmountG(sumIngredientAmountsG);
+  const normalizedYieldFactor = parseManualAmountG(calcYieldFactor);
+  if (normalizedIngredientAmountSum != null && normalizedYieldFactor != null) {
+    return Math.round(normalizedIngredientAmountSum * normalizedYieldFactor * 10) / 10;
+  }
+
+  if (normalizedIngredientAmountSum != null) return normalizedIngredientAmountSum;
+  return parseManualAmountG(storedFinalWeightGrams);
+}
+
+function buildPer100gNutrition(totals, finalWeightGrams) {
+  const weight = parseManualAmountG(finalWeightGrams);
+  if (!totals || weight == null) return null;
+
+  const per100g = {};
+  NUTRITION_FIELDS.forEach((field) => {
+    const value = totals[field];
+    if (value == null) return;
+    per100g[field] = roundNutritionValue(field, (value / weight) * 100);
+  });
+  return per100g;
 }
 
 function loadStoredCalcResult(recipeId) {
@@ -120,6 +163,9 @@ export function getRecipeCalcResult(recipe) {
     notIncluded: filterNotIncludedIngredients(recipe?.naehrwerte?.calcNotIncluded),
     ...(recipe?.naehrwerte?.calcReformulations && { calcReformulations: recipe.naehrwerte.calcReformulations }),
     ...(recipe?.naehrwerte?.calcAcceptedIngredients && { acceptedIngredients: recipe.naehrwerte.calcAcceptedIngredients }),
+    ...(recipe?.naehrwerte?.calcYieldGrams != null && { calcYieldGrams: recipe.naehrwerte.calcYieldGrams }),
+    ...(recipe?.naehrwerte?.calcFinalWeightGrams != null && { calcFinalWeightGrams: recipe.naehrwerte.calcFinalWeightGrams }),
+    ...(recipe?.naehrwerte?.calcPer100g && { calcPer100g: recipe.naehrwerte.calcPer100g }),
     ...(ingredientDetails && { ingredientDetails }),
   };
 }
@@ -286,6 +332,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     };
   });
   const [manualAmountErrors, setManualAmountErrors] = useState({});
+  const [yieldGramsInput, setYieldGramsInput] = useState(() => {
+    const stored = loadStoredCalcResult(recipe?.id);
+    const persistedYieldGrams = stored?.calcYieldGrams ?? recipe?.naehrwerte?.calcYieldGrams;
+    return persistedYieldGrams != null ? String(persistedYieldGrams) : '';
+  });
+  const [yieldGramsError, setYieldGramsError] = useState('');
   const lastRetryAutoCalculateTokenRef = useRef(retryAutoCalculateToken);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
@@ -298,6 +350,8 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     setZucker(n.zucker != null ? String(n.zucker) : '');
     setBallaststoffe(n.ballaststoffe != null ? String(n.ballaststoffe) : '');
     setSalz(n.salz != null ? String(n.salz) : '');
+    setYieldGramsInput(recipe?.naehrwerte?.calcYieldGrams != null ? String(recipe.naehrwerte.calcYieldGrams) : '');
+    setYieldGramsError('');
   }, [recipe]);
 
   // Focus close button when modal opens
@@ -340,6 +394,136 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const formatLabelValue = (value, unit) => {
     if (value === '' || value == null) return '—';
     return `${String(value).replace('.', ',')} ${unit}`;
+  };
+
+  const calculatedNutritionState = useMemo(() => {
+    const ingredientSummary = Array.isArray(autoCalcResult?.ingredientDetails) && autoCalcResult.ingredientDetails.length > 0
+      ? sumNutritionFromIngredientDetails(autoCalcResult.ingredientDetails, manualAmounts)
+      : null;
+    const recipeTotals = recipe?.naehrwerte
+      ? NUTRITION_FIELDS.reduce((acc, field) => {
+        if (recipe.naehrwerte[field] != null) {
+          acc[field] = recipe.naehrwerte[field];
+        }
+        return acc;
+      }, {})
+      : null;
+    const totals = ingredientSummary?.totals || (recipeTotals && Object.keys(recipeTotals).length > 0 ? recipeTotals : null);
+    const normalizedManualAmounts = ingredientSummary?.normalizedManualAmounts || {};
+    const finalWeightGrams = resolveFinalWeightGrams({
+      sumIngredientAmountsG: ingredientSummary?.totalAmountG,
+      calcYieldGrams: yieldGramsInput,
+      calcYieldFactor: recipe?.naehrwerte?.calcYieldFactor ?? autoCalcResult?.calcYieldFactor ?? null,
+      storedFinalWeightGrams: autoCalcResult?.calcFinalWeightGrams ?? recipe?.naehrwerte?.calcFinalWeightGrams ?? null,
+    });
+    return {
+      totals,
+      normalizedManualAmounts,
+      totalAmountG: ingredientSummary?.totalAmountG ?? null,
+      finalWeightGrams,
+      per100g: buildPer100gNutrition(totals, finalWeightGrams) ||
+        autoCalcResult?.calcPer100g ||
+        recipe?.naehrwerte?.calcPer100g ||
+        null,
+    };
+  }, [autoCalcResult, manualAmounts, recipe, yieldGramsInput]);
+
+  const suggestedYieldGrams = useMemo(() => {
+    if (calculatedNutritionState.totalAmountG == null) return null;
+    return Math.round(calculatedNutritionState.totalAmountG * 0.95 * 10) / 10;
+  }, [calculatedNutritionState.totalAmountG]);
+
+  const buildCalculatedNutritionPayload = ({
+    totals = calculatedNutritionState.totals,
+    notIncluded = autoCalcResult?.notIncluded ?? recipe?.naehrwerte?.calcNotIncluded ?? null,
+    foundCount = autoCalcResult?.foundCount ?? recipe?.naehrwerte?.calcFoundCount ?? null,
+    totalCount = autoCalcResult?.totalCount ?? recipe?.naehrwerte?.calcTotalCount ?? null,
+    ingredientDetails = autoCalcResult?.ingredientDetails ?? recipe?.naehrwerte?.calcIngredientDetails ?? null,
+    acceptedIngredientsInput = autoCalcResult?.acceptedIngredients ?? recipe?.naehrwerte?.calcAcceptedIngredients ?? null,
+    reformulationsInput = autoCalcResult?.calcReformulations ?? recipe?.naehrwerte?.calcReformulations ?? null,
+    manualAmountsInput = calculatedNutritionState.normalizedManualAmounts,
+    calcYieldGramsInput = yieldGramsInput,
+    calcPending = recipe?.naehrwerte?.calcPending ?? false,
+    calcCompletedAt = recipe?.naehrwerte?.calcCompletedAt ?? null,
+    calcError = recipe?.naehrwerte?.calcError ?? null,
+  } = {}) => {
+    const ingredientSummary = ingredientDetails && Array.isArray(ingredientDetails)
+      ? sumNutritionFromIngredientDetails(ingredientDetails, manualAmountsInput)
+      : null;
+    const normalizedManualAmounts = ingredientSummary?.normalizedManualAmounts || {};
+    const normalizedYieldGrams = parseManualAmountG(calcYieldGramsInput);
+    const finalWeightGrams = resolveFinalWeightGrams({
+      sumIngredientAmountsG: ingredientSummary?.totalAmountG ?? calculatedNutritionState.totalAmountG,
+      calcYieldGrams: normalizedYieldGrams,
+      calcYieldFactor: normalizedYieldGrams != null ? null : (recipe?.naehrwerte?.calcYieldFactor ?? autoCalcResult?.calcYieldFactor ?? null),
+      storedFinalWeightGrams: recipe?.naehrwerte?.calcFinalWeightGrams ?? autoCalcResult?.calcFinalWeightGrams ?? null,
+    });
+    const calcPer100g = buildPer100gNutrition(totals, finalWeightGrams);
+    return {
+      ...(recipe?.naehrwerte || {}),
+      ...(totals || {}),
+      calcPending,
+      calcCompletedAt,
+      calcError,
+      calcNotIncluded: notIncluded && notIncluded.length > 0 ? notIncluded : null,
+      calcFoundCount: foundCount,
+      calcTotalCount: totalCount,
+      calcReformulations: reformulationsInput && Object.keys(reformulationsInput).length > 0 ? reformulationsInput : null,
+      calcAcceptedIngredients: acceptedIngredientsInput && acceptedIngredientsInput.length > 0 ? acceptedIngredientsInput : null,
+      calcIngredientDetails: ingredientDetails && ingredientDetails.length > 0 ? ingredientDetails : null,
+      calcManualAmountsG: Object.keys(normalizedManualAmounts).length > 0 ? normalizedManualAmounts : null,
+      calcYieldGrams: normalizedYieldGrams,
+      calcYieldFactor: normalizedYieldGrams != null ? null : (recipe?.naehrwerte?.calcYieldFactor ?? autoCalcResult?.calcYieldFactor ?? null),
+      calcFinalWeightGrams: finalWeightGrams ?? null,
+      calcPer100g: calcPer100g ?? null,
+    };
+  };
+
+  const handleYieldGramsChange = (value) => {
+    setYieldGramsInput(value);
+    const parsed = parseManualAmountG(value);
+    if (String(value).trim() && parsed == null) {
+      setYieldGramsError('Bitte ein gültiges Endgewicht in Gramm > 0 eingeben.');
+    } else {
+      setYieldGramsError('');
+    }
+    if (autoCalcResult) {
+      saveStoredCalcResult(recipe?.id, {
+        ...autoCalcResult,
+        calcYieldGrams: String(value).trim() ? value : null,
+      });
+    }
+  };
+
+  const handleYieldGramsBlur = async () => {
+    const trimmedValue = String(yieldGramsInput || '').trim();
+    const normalizedYieldGrams = parseManualAmountG(trimmedValue);
+    if (trimmedValue && normalizedYieldGrams == null) {
+      setYieldGramsError('Bitte ein gültiges Endgewicht in Gramm > 0 eingeben.');
+      return;
+    }
+
+    const currentYieldGrams = parseManualAmountG(recipe?.naehrwerte?.calcYieldGrams);
+    if ((normalizedYieldGrams ?? null) === (currentYieldGrams ?? null)) {
+      return;
+    }
+
+    const payload = buildCalculatedNutritionPayload({ calcYieldGramsInput: normalizedYieldGrams });
+    try {
+      await onSave(payload);
+      if (autoCalcResult) {
+        const updatedResult = {
+          ...autoCalcResult,
+          calcYieldGrams: normalizedYieldGrams,
+          calcFinalWeightGrams: payload.calcFinalWeightGrams,
+          calcPer100g: payload.calcPer100g,
+        };
+        setAutoCalcResult(updatedResult);
+        saveStoredCalcResult(recipe?.id, { ...updatedResult, manualAmountsG: manualAmounts });
+      }
+    } catch (err) {
+      console.error('Could not save nutrition yield data:', err);
+    }
   };
 
   const handleManualAmountChange = (ingredient, value) => {
@@ -695,6 +879,19 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...successfulReformulations,
     };
     const filteredNotIncluded = filterNotIncludedIngredients(notIncluded);
+    const finalNaehrwerte = buildCalculatedNutritionPayload({
+      totals,
+      notIncluded: filteredNotIncluded,
+      foundCount,
+      totalCount,
+      ingredientDetails,
+      acceptedIngredientsInput: acceptedArray,
+      reformulationsInput: mergedReformulations,
+      manualAmountsInput: {},
+      calcPending: false,
+      calcCompletedAt: Date.now(),
+      calcError: null,
+    });
     const result = {
       foundCount,
       totalCount,
@@ -702,12 +899,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(ingredientDetails.length > 0 && { ingredientDetails }),
+      ...(finalNaehrwerte.calcYieldGrams != null && { calcYieldGrams: finalNaehrwerte.calcYieldGrams }),
+      ...(finalNaehrwerte.calcFinalWeightGrams != null && { calcFinalWeightGrams: finalNaehrwerte.calcFinalWeightGrams }),
+      ...(finalNaehrwerte.calcPer100g && { calcPer100g: finalNaehrwerte.calcPer100g }),
       ...(writebackErrors.length > 0 && {
         writebackError: writebackErrors[0]?.message || 'Nährwertreferenz-Aktualisierung fehlgeschlagen',
       }),
     };
     setAutoCalcResult(result);
-    saveStoredCalcResult(recipe?.id, result);
+    saveStoredCalcResult(recipe?.id, { ...result, manualAmountsG: {} });
 
     // Reload the NutritionReferenceContext when at least one reference was written back,
     // so the table "Nährwerte je 100 g" reflects the updated values immediately.
@@ -716,19 +916,6 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     }
 
     // Persist totals and per-ingredient errors to Firestore automatically
-    const finalNaehrwerte = {
-      ...totals,
-      calcPending: false,
-      calcCompletedAt: Date.now(),
-      calcError: null,
-      calcNotIncluded: filteredNotIncluded.length > 0 ? filteredNotIncluded : null,
-      calcFoundCount: foundCount,
-      calcTotalCount: totalCount,
-      calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
-      calcAcceptedIngredients: acceptedArray || null,
-      calcIngredientDetails: ingredientDetails.length > 0 ? ingredientDetails : null,
-      calcManualAmountsG: null,
-    };
     try {
       await onSave(finalNaehrwerte);
     } catch (saveErr) {
@@ -897,29 +1084,32 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     ];
 
     const filteredStillNotIncluded = filterNotIncludedIngredients(stillNotIncluded);
+    const finalNaehrwerte = buildCalculatedNutritionPayload({
+      totals: combinedTotals,
+      notIncluded: filteredStillNotIncluded,
+      foundCount: prevFoundCount + newFoundCount,
+      totalCount: prevTotalCount,
+      ingredientDetails: mergedIngredientDetails,
+      reformulationsInput: mergedReformulations,
+      manualAmountsInput: manualAmounts,
+      calcPending: false,
+      calcCompletedAt: Date.now(),
+      calcError: null,
+    });
     const updatedResult = {
       foundCount: prevFoundCount + newFoundCount,
       totalCount: prevTotalCount,
       notIncluded: filteredStillNotIncluded,
       ...(Object.keys(mergedReformulations).length > 0 && { calcReformulations: mergedReformulations }),
       ...(mergedIngredientDetails.length > 0 && { ingredientDetails: mergedIngredientDetails }),
+      ...(finalNaehrwerte.calcYieldGrams != null && { calcYieldGrams: finalNaehrwerte.calcYieldGrams }),
+      ...(finalNaehrwerte.calcFinalWeightGrams != null && { calcFinalWeightGrams: finalNaehrwerte.calcFinalWeightGrams }),
+      ...(finalNaehrwerte.calcPer100g && { calcPer100g: finalNaehrwerte.calcPer100g }),
     };
     setAutoCalcResult(updatedResult);
-    saveStoredCalcResult(recipe?.id, updatedResult);
+    saveStoredCalcResult(recipe?.id, { ...updatedResult, manualAmountsG: manualAmounts });
 
     // Persist combined totals and updated per-ingredient errors to Firestore
-    const finalNaehrwerte = {
-      ...combinedTotals,
-      calcPending: false,
-      calcCompletedAt: Date.now(),
-      calcError: null,
-      calcNotIncluded: filteredStillNotIncluded.length > 0 ? filteredStillNotIncluded : null,
-      calcFoundCount: prevFoundCount + newFoundCount,
-      calcTotalCount: prevTotalCount,
-      calcReformulations: Object.keys(mergedReformulations).length > 0 ? mergedReformulations : null,
-      calcIngredientDetails: mergedIngredientDetails.length > 0 ? mergedIngredientDetails : null,
-      calcManualAmountsG: Object.keys(recipe?.naehrwerte?.calcManualAmountsG || {}).length > 0 ? recipe.naehrwerte.calcManualAmountsG : null,
-    };
     try {
       await onSave(finalNaehrwerte);
     } catch (saveErr) {
@@ -1079,6 +1269,70 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
               <span className="nutrition-value-amount">{formatLabelValue(ballaststoffe, 'g')}</span>
             </div>
           </div>
+
+          <div className="nutrition-field nutrition-yield-field">
+            <label htmlFor="nutrition-yield-grams">Endgewicht nach Zubereitung (g)</label>
+            <input
+              id="nutrition-yield-grams"
+              type="text"
+              inputMode="decimal"
+              className="nutrition-input"
+              value={yieldGramsInput}
+              onChange={(e) => handleYieldGramsChange(e.target.value)}
+              onBlur={handleYieldGramsBlur}
+              placeholder={suggestedYieldGrams != null ? String(suggestedYieldGrams) : 'z. B. 950'}
+              disabled={autoCalcLoading}
+            />
+            {yieldGramsError && (
+              <div className="nutrition-yield-help nutrition-yield-help--error">{yieldGramsError}</div>
+            )}
+            {!yieldGramsError && suggestedYieldGrams != null && !String(yieldGramsInput).trim() && (
+              <div className="nutrition-yield-help">
+                Vorschlag basierend auf Zutatenmenge: ca. {formatAmountG(suggestedYieldGrams)}
+              </div>
+            )}
+            {calculatedNutritionState.finalWeightGrams != null && (
+              <div className="nutrition-yield-help">
+                Berechnetes Endgewicht: {formatAmountG(calculatedNutritionState.finalWeightGrams)}
+              </div>
+            )}
+          </div>
+
+          {calculatedNutritionState.per100g && (
+            <>
+              <p className="nutrition-modal-hint">Nährwerte pro 100 g</p>
+              <div className="nutrition-values-list">
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Kalorien (kcal)</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.kalorien, 'kcal')}</span>
+                </div>
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Fett (g)</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.fett, 'g')}</span>
+                </div>
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Kohlenhydrate (g)</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.kohlenhydrate, 'g')}</span>
+                </div>
+                <div className="nutrition-value-row nutrition-value-row--indented">
+                  <span className="nutrition-value-label">davon Zucker (g)</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.zucker, 'g')}</span>
+                </div>
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Protein (g)</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.protein, 'g')}</span>
+                </div>
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Salz</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.salz, 'g')}</span>
+                </div>
+                <div className="nutrition-value-row">
+                  <span className="nutrition-value-label">Ballaststoffe</span>
+                  <span className="nutrition-value-amount">{formatLabelValue(calculatedNutritionState.per100g.ballaststoffe, 'g')}</span>
+                </div>
+              </div>
+            </>
+          )}
 
           <hr className="nutrition-section-divider" />
 

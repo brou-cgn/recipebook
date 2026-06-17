@@ -317,3 +317,25 @@ test('manual recalc job skips recipe with no calcCompletedAt', async () => {
   assert.equal(mockDbState.recipes.r1.naehrwerte.calcFoundCount, undefined);
   assert.equal(sentMails.length, 1);
 });
+
+test('manual recalc job preserves yield fields and stores per-100g values', async () => {
+  mockDbState.recipes.r1.naehrwerte = {
+    calcCompletedAt: 1700000000000,
+    calcYieldGrams: 80,
+  };
+
+  await manualHandler({ auth: { uid: 'admin-1' }, data: {} });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcYieldGrams, 80);
+  assert.equal(mockDbState.recipes.r1.naehrwerte.calcFinalWeightGrams, 80);
+  assert.deepEqual(mockDbState.recipes.r1.naehrwerte.calcPer100g, {
+    kalorien: 23,
+    protein: 0,
+    fett: 0,
+    kohlenhydrate: 0,
+    zucker: 0,
+    ballaststoffe: 0,
+    salz: 0,
+  });
+});
