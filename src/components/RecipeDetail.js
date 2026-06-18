@@ -1916,10 +1916,6 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       
       {!isMobile && !isTablet && !isMobileLandscape && !cookingMode && (
         <div className="recipe-detail-header">
-          <button className="back-button" onClick={handleBackFromLinkedRecipe}>
-            ← Zurück
-          </button>
-          
           <div className="action-buttons" style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}>
             {userCanDirectlyEdit && !showShoppingListModal && !showPortionSelector && (
               <button
