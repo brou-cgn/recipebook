@@ -1313,6 +1313,38 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .nutrition-value-row {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-value-label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .nutrition-value-amount {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .nutrition-values-table thead tr {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-values-table__amount-col {
+  color: #888;
+}
+
+[data-theme="dark"] .nutrition-values-table__row td {
+  border-bottom-color: #3d3d3d;
+}
+
+[data-theme="dark"] .nutrition-values-table__label {
+  color: #ccc;
+}
+
+[data-theme="dark"] .nutrition-values-table__amount {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .nutrition-composition-toggle {
   background: #2a2a2a;
   color: #e8e8e8;
