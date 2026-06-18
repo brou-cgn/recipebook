@@ -118,6 +118,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('Nähr.');
   const [nutritionRecalcIcon, setNutritionRecalcIcon] = useState('↻');
+  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState('💾');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -196,6 +197,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
       setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
       setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
+      setNutritionManualSaveIcon(eff('nutritionManualSave') || '💾');
       setShoppingListIcon(eff('shoppingList') || 'Einkauf');
       setBringButtonIcon(eff('bringButton') || 'Bring');
       setTimerStartIcon(eff('timerStart') || '▶');
@@ -242,6 +244,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
     setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
+    setNutritionManualSaveIcon(eff('nutritionManualSave') || '💾');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setTimerStartIcon(eff('timerStart') || '▶');
@@ -2665,6 +2668,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
           autoCalcIcon={nutritionEmptyIcon}
+          manualSaveIcon={nutritionManualSaveIcon}
           portionUnits={portionUnits}
         />
       )}
