@@ -45,6 +45,7 @@ import {
   parseIngredientNameAndUnit,
   setCustomIngredientMatchingTerms,
 } from '../utils/ingredientIdMatching';
+import { normalizeNutritionEmptyIcon } from '../utils/nutritionIconUtils';
 import {
   NUTRITION_REFERENCE_NEW_STATUS,
   getNormalizedNutritionReferenceSynonyms,
@@ -176,6 +177,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
+  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [creatingShareIds, setCreatingShareIds] = useState({});
@@ -324,6 +326,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
 
   useEffect(() => {
     setCloseIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
+    setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
@@ -2060,6 +2063,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           nutritionReferenceRows={nutritionReferenceRows}
           onReloadNutritionReferences={reloadNutritionReferences}
           retryAutoCalculateToken={retryAutoCalculateToken}
+          autoCalcIcon={nutritionEmptyIcon}
           portionUnits={portionUnits}
         />
       )}

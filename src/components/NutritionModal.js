@@ -9,6 +9,7 @@ import {
 } from '../utils/nutritionStatusResolver';
 import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReferenceUtils';
 import { isBase64Image } from '../utils/imageUtils';
+import { normalizeNutritionEmptyIcon } from '../utils/nutritionIconUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -481,6 +482,7 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
 function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, portionUnits = [] }) {
+  const resolvedAutoCalcIcon = normalizeNutritionEmptyIcon(autoCalcIcon);
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -1469,10 +1471,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
               title="Nährwerte automatisch aus OpenFoodFacts berechnen"
               aria-label="Nährwerte automatisch berechnen"
             >
-              {autoCalcIcon && isBase64Image(autoCalcIcon) ? (
-                <img src={autoCalcIcon} alt="Nährwerte berechnen" />
+              {isBase64Image(resolvedAutoCalcIcon) ? (
+                <img src={resolvedAutoCalcIcon} alt="Nährwerte berechnen" />
               ) : (
-                autoCalcIcon || '+'
+                resolvedAutoCalcIcon
               )}
             </button>
             <button
