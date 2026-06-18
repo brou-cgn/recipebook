@@ -144,14 +144,8 @@
   background: #fafafa;
 }
 
-.nutrition-composition-row--ai-estimated td {
+.nutrition-composition-row--needs-review td {
   background: #fff8e1;
-}
-
-.nutrition-ai-estimated-badge {
-  font-size: 12px;
-  color: #8a5a00;
-  font-weight: 600;
 }
 
 .nutrition-composition-num {

@@ -1366,12 +1366,8 @@
   border-bottom-color: #3d3d3d;
 }
 
-[data-theme="dark"] .nutrition-composition-row--ai-estimated td {
+[data-theme="dark"] .nutrition-composition-row--needs-review td {
   background: #33280f;
-}
-
-[data-theme="dark"] .nutrition-ai-estimated-badge {
-  color: #ffd27a;
 }
 
 [data-theme="dark"] .nutrition-composition-manual-amount-input {

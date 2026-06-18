@@ -54,11 +54,9 @@ describe('NutritionModal dark mode styles', () => {
     expect(headerRule).toContain('color');
   });
 
-  test('uses a distinct readable highlight color for AI-estimated composition rows', () => {
-    const rowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-row--ai-estimated td');
-    const badgeRule = getRuleBody(css, '[data-theme="dark"] .nutrition-ai-estimated-badge');
+  test('uses a distinct readable highlight color for composition rows that need review', () => {
+    const rowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-composition-row--needs-review td');
 
     expect(rowRule).toContain('background: #33280f;');
-    expect(badgeRule).toContain('color: #ffd27a;');
   });
 });
