@@ -1449,6 +1449,108 @@ describe('NutritionModal UI layout', () => {
     expect(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' })).toBeInTheDocument();
   });
 
+  it('uses "Menge" as composition table header label', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcIngredientDetails: [
+              { ingredient: '200 g Linsen', naehrwerte: { kalorien: 800, protein: 60, fett: 10, kohlenhydrate: 100, zucker: 5, ballaststoffe: 30, salz: 0.5 } },
+            ],
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    expect(screen.getByRole('columnheader', { name: 'Menge' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Menge (g)' })).not.toBeInTheDocument();
+  });
+
+  it('saves manual amount and renders it read-only after successful save', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    const recipe = {
+      ...baseRecipe,
+      ingredients: ['Eier'],
+      naehrwerte: {
+        ...baseRecipe.naehrwerte,
+        calcFoundCount: 1,
+        calcTotalCount: 1,
+        calcNotIncluded: [],
+        calcIngredientDetails: [{
+          ingredient: 'Eier',
+          noAmountG: true,
+          naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 },
+          amountG: null,
+        }],
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    const input = screen.getByRole('textbox', { name: 'Menge in Gramm für Eier' });
+    fireEvent.change(input, { target: { value: '75' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Menge für Eier speichern' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        calcManualAmountsG: { Eier: 75 },
+      }));
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('textbox', { name: 'Menge in Gramm für Eier' })).not.toBeInTheDocument();
+      expect(screen.getByText('75 g')).toBeInTheDocument();
+    });
+  });
+
+  it('does not save invalid manual amount and shows validation error', () => {
+    const onSave = jest.fn();
+    const recipe = {
+      ...baseRecipe,
+      ingredients: ['Eier'],
+      naehrwerte: {
+        ...baseRecipe.naehrwerte,
+        calcFoundCount: 1,
+        calcTotalCount: 1,
+        calcNotIncluded: [],
+        calcIngredientDetails: [{
+          ingredient: 'Eier',
+          noAmountG: true,
+          naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 },
+          amountG: null,
+        }],
+      },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Menge in Gramm für Eier' }), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Menge für Eier speichern' }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Bitte eine gültige Grammzahl > 0 eingeben.')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Menge in Gramm für Eier' })).toBeInTheDocument();
+  });
+
   it('does not show "Fehlende Werte bitte manuell ergänzen" when some ingredients are missing', () => {
     const recipeWithMissing = {
       ...baseRecipe,

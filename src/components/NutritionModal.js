@@ -532,6 +532,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...(recipe?.naehrwerte?.calcManualAmountsG || {}),
     };
   });
+  const [savedManualAmounts, setSavedManualAmounts] = useState(() => {
+    const persisted = recipe?.naehrwerte?.calcManualAmountsG || {};
+    return Object.keys(persisted).reduce((acc, ingredient) => {
+      if (parseManualAmountG(persisted[ingredient]) !== null) {
+        acc[ingredient] = true;
+      }
+      return acc;
+    }, {});
+  });
   const [manualAmountErrors, setManualAmountErrors] = useState({});
   const [yieldGramsInput, setYieldGramsInput] = useState(() => {
     const stored = loadStoredCalcResult(recipe?.id);
@@ -760,6 +769,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       return next;
     });
+    setSavedManualAmounts((prev) => {
+      if (!prev[ingredient]) return prev;
+      const next = { ...prev };
+      delete next[ingredient];
+      return next;
+    });
 
     const parsed = parseManualAmountG(value);
     setManualAmountErrors((prev) => {
@@ -771,6 +786,44 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }
       return next;
     });
+  };
+
+  const handleSaveManualAmount = async (ingredient) => {
+    const rawValue = manualAmounts[ingredient];
+    const parsed = parseManualAmountG(rawValue);
+
+    if (parsed === null) {
+      setManualAmountErrors((prev) => ({
+        ...prev,
+        [ingredient]: 'Bitte eine gültige Grammzahl > 0 eingeben.',
+      }));
+      return;
+    }
+
+    const manualAmountsToSave = { ...manualAmounts, [ingredient]: parsed };
+    const payload = buildCalculatedNutritionPayload({ manualAmountsInput: manualAmountsToSave });
+
+    try {
+      await onSave(payload);
+      setManualAmounts(manualAmountsToSave);
+      setSavedManualAmounts((prev) => ({ ...prev, [ingredient]: true }));
+      setManualAmountErrors((prev) => {
+        const next = { ...prev };
+        delete next[ingredient];
+        return next;
+      });
+      if (autoCalcResult) {
+        const updatedResult = {
+          ...autoCalcResult,
+          calcFinalWeightGrams: payload.calcFinalWeightGrams,
+          calcPer100g: payload.calcPer100g,
+        };
+        setAutoCalcResult(updatedResult);
+        saveStoredCalcResult(recipe?.id, { ...updatedResult, manualAmountsG: manualAmountsToSave });
+      }
+    } catch (err) {
+      console.error('Could not save manual amount:', err);
+    }
   };
 
   const handleSaveReformulation = async (ingredient, newText) => {
@@ -920,6 +973,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
     setManualAmounts({});
+    setSavedManualAmounts({});
     setManualAmountErrors({});
     clearStoredCalcResult(recipe?.id);
     setCalcProgress({ done: 0, total: ingredients.length + recipeLinkItems.length, current: ingredients[0]?.text || (recipeLinkItems[0]?.link.recipeName) || '' });
@@ -1568,7 +1622,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                         <th className="nutrition-composition-num">Fett</th>
                         <th className="nutrition-composition-num">KH</th>
                         <th>Status</th>
-                        <th className="nutrition-composition-num">Menge (g)</th>
+                        <th className="nutrition-composition-num">Menge</th>
                         <th>Detail</th>
                       </tr>
                     </thead>
@@ -1588,17 +1642,27 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                          <td className="nutrition-composition-num">{formatNutritionValue(row.naehrwerte, 'kohlenhydrate')}</td>
                           <td>{row.status}</td>
                           <td className="nutrition-composition-num">
-                            {row.requiresManualAmount ? (
+                            {row.requiresManualAmount && !savedManualAmounts[row.ingredient] ? (
                               <div className="nutrition-composition-manual-amount">
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  className="nutrition-composition-manual-amount-input"
-                                  value={manualAmounts[row.ingredient] ?? ''}
-                                  onChange={(e) => handleManualAmountChange(row.ingredient, e.target.value)}
-                                  placeholder="g"
-                                  aria-label={`Menge in Gramm für ${row.ingredient}`}
-                                />
+                                <div className="nutrition-composition-manual-amount-controls">
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    className="nutrition-composition-manual-amount-input"
+                                    value={manualAmounts[row.ingredient] ?? ''}
+                                    onChange={(e) => handleManualAmountChange(row.ingredient, e.target.value)}
+                                    placeholder="g"
+                                    aria-label={`Menge in Gramm für ${row.ingredient}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="nutrition-composition-manual-amount-save"
+                                    onClick={() => handleSaveManualAmount(row.ingredient)}
+                                    aria-label={`Menge für ${row.ingredient} speichern`}
+                                  >
+                                    💾
+                                  </button>
+                                </div>
                                 {manualAmountErrors[row.ingredient] && (
                                   <div className="nutrition-composition-manual-amount-error">
                                     {manualAmountErrors[row.ingredient]}
