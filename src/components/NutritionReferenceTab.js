@@ -3,7 +3,7 @@ import { deleteDoc, deleteField, doc, serverTimestamp, setDoc } from 'firebase/f
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
 import { ROLES } from '../utils/userManagement';
-import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { clearNutritionReferenceCache, useNutritionReference } from '../contexts/NutritionReferenceContext';
 import {
   NUTRITION_REFERENCE_APPROVED_STATUS,
   NUTRITION_REFERENCE_BOOLEAN_FIELDS,
@@ -143,6 +143,7 @@ function NutritionReferenceTab({ currentUser }) {
   const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
   const [refreshingRowId, setRefreshingRowId] = useState(null);
   const [savingChanges, setSavingChanges] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [columnFilters, setColumnFilters] = useState({});
@@ -550,6 +551,21 @@ function NutritionReferenceTab({ currentUser }) {
     setActionMessage('CSV exportiert.');
   };
 
+  const handleClearCacheAndReload = async () => {
+    setActionMessage('');
+    setLookupError('');
+    setClearingCache(true);
+    try {
+      clearNutritionReferenceCache();
+      await reload({ throwOnError: true });
+      setActionMessage('Cache geleert und Nährwerte neu geladen.');
+    } catch (error) {
+      setLookupError(error?.message || 'Fehler beim Neu-Laden der Nährwerte.');
+    } finally {
+      setClearingCache(false);
+    }
+  };
+
   const columnTypeByKey = useMemo(() => NUTRITION_REFERENCE_TABLE_COLUMNS.reduce((acc, column) => {
     acc[column.key] = column.type || 'text';
     return acc;
@@ -638,6 +654,14 @@ function NutritionReferenceTab({ currentUser }) {
         </button>
         <button type="button" className="save-button" onClick={handleExportCsv}>
           CSV exportieren
+        </button>
+        <button
+          type="button"
+          className="save-button"
+          onClick={handleClearCacheAndReload}
+          disabled={clearingCache}
+        >
+          {clearingCache ? 'Lädt…' : 'Cache leeren & neu laden'}
         </button>
       </div>
 

@@ -1020,4 +1020,32 @@ describe('NutritionReferenceTab', () => {
     expect(aiOption.textContent).toBe('AI generiert (1)');
   });
 
+  test('clear cache and reload button shows success message on success', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    mockGetDocs.mockResolvedValueOnce({ docs: [] });
+    mockGetDocs.mockResolvedValueOnce({ docs: [] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cache leeren & neu laden' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Cache geleert und Nährwerte neu geladen.')).toBeInTheDocument();
+    });
+  });
+
+  test('clear cache and reload button shows error message on failure', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
+
+    mockGetDocs.mockRejectedValueOnce(new Error('Netzwerkfehler'));
+    mockGetDocs.mockRejectedValueOnce(new Error('Netzwerkfehler'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cache leeren & neu laden' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Netzwerkfehler')).toBeInTheDocument();
+    });
+  });
+
 });
