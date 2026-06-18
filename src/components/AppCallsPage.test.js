@@ -661,10 +661,13 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     expect(await screen.findByTestId('nutrition-modal-mock')).toBeInTheDocument();
     expect(screen.getByText('Nährwerte Mock Gemüsepfanne')).toBeInTheDocument();
-    expect(mockNutritionModalProps).toHaveBeenLastCalledWith(expect.objectContaining({
+    const modalProps = mockNutritionModalProps.mock.calls.at(-1)?.[0];
+    expect(modalProps).toEqual(expect.objectContaining({
       onEnsureIngredientIDs: expect.any(Function),
       nutritionReferenceRows: mockNutritionReferenceState.rows,
     }));
+    expect(modalProps.autoCalcIcon).toBeTruthy();
+    expect(modalProps.autoCalcIcon).not.toBe('+');
   });
 
   test('shows ingredientID dialog and persists manual selection when modal requests matching', async () => {

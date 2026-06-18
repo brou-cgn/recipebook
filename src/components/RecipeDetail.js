@@ -10,6 +10,7 @@ import { updateRecipe, enableRecipeSharing, disableRecipeSharing, resetRecipeThu
 import { mapNutritionCalcError } from '../utils/nutritionUtils';
 import { scaleIngredient as scaleIngredientUtil, combineIngredients, isWaterIngredient, convertIngredientUnits, formatIngredientAsFraction } from '../utils/ingredientUtils';
 import { buildPendingNutritionReferenceDraft, classifyIngredientWords, normalizeIngredientNameForIdMatching, parseIngredientNameAndUnit } from '../utils/ingredientIdMatching';
+import { normalizeNutritionEmptyIcon } from '../utils/nutritionIconUtils';
 import {
   NUTRITION_REFERENCE_NEW_STATUS,
   getNormalizedNutritionReferenceSynonyms,
@@ -114,7 +115,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   // Image carousel state
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
-  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState('+');
+  const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
   const [nutritionFilledIcon, setNutritionFilledIcon] = useState('Nähr.');
   const [nutritionRecalcIcon, setNutritionRecalcIcon] = useState('↻');
   const [showNutritionModal, setShowNutritionModal] = useState(false);
@@ -192,7 +193,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
       setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
       setCopyLinkIcon(eff('copyLink') || 'Link');
-      setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
+      setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
       setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
       setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
       setShoppingListIcon(eff('shoppingList') || 'Einkauf');
@@ -238,7 +239,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setCloseButtonAltIcon(eff('closeButtonAlt') || eff('closeButton') || '×');
     setCloseButtonDefaultImgIcon(eff('closeButtonDefaultImg') || eff('closeButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
-    setNutritionEmptyIcon(eff('nutritionEmpty') || '+');
+    setNutritionEmptyIcon(normalizeNutritionEmptyIcon(eff('nutritionEmpty')));
     setNutritionFilledIcon(eff('nutritionFilled') || 'Nähr.');
     setNutritionRecalcIcon(eff('nutritionRecalc') || '↻');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');

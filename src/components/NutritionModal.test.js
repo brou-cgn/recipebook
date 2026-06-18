@@ -13,6 +13,7 @@ import NutritionModal, {
   resolveLinkedRecipeNutrition,
 } from './NutritionModal';
 import { hasMeaningfulGeneratedNutrition } from '../utils/nutritionStatusResolver';
+import { DEFAULT_ADD_NUTRITION_ICON } from '../utils/nutritionIconUtils';
 
 jest.mock('../firebase', () => ({
   functions: {},
@@ -62,6 +63,29 @@ describe('NutritionModal composition table recipe links', () => {
 
     fireEvent.click(linkedRecipeButton);
     expect(onOpenLinkedRecipe).toHaveBeenCalledWith('abc');
+  });
+
+  describe('NutritionModal header add icon', () => {
+    it('uses the add nutrition icon instead of the legacy plus fallback when no autoCalcIcon prop is provided', () => {
+      render(
+        <NutritionModal
+          recipe={{
+            id: 'main',
+            title: 'Suppe',
+            ingredients: [],
+            naehrwerte: { calcFoundCount: 0, calcTotalCount: 0, calcNotIncluded: [] },
+          }}
+          onClose={jest.fn()}
+          onSave={jest.fn()}
+        />
+      );
+
+      const autoCalcButton = screen.getByRole('button', { name: 'Nährwerte automatisch berechnen' });
+      expect(autoCalcButton).not.toHaveTextContent('+');
+      const icon = autoCalcButton.querySelector('img');
+      expect(icon).not.toBeNull();
+      expect(icon).toHaveAttribute('src', DEFAULT_ADD_NUTRITION_ICON);
+    });
   });
 });
 
