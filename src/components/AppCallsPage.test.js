@@ -1095,10 +1095,42 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     fireEvent.click(await screen.findByText('Nährwertberechnungen'));
 
-    const checkbox = screen.getByLabelText('Aktuelle Filterung anwenden');
+    const checkbox = screen.getByLabelText('Fehlerfreie Nährwertberechnungen verbergen');
     expect(checkbox).toBeChecked();
     expect(screen.queryByText('Tomatensuppe')).not.toBeInTheDocument();
     expect(await screen.findByText('Keine abgeschlossenen Berechnungen vorhanden.')).toBeInTheDocument();
+  });
+
+  test('keeps recipes with pending manual amounts visible when nutrition filter is active', async () => {
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Brotsalat',
+            ingredients: [{ type: 'ingredient', text: '1 Scheibe Brot', ingredientID: 'brot' }],
+            naehrwerte: {
+              calcPending: false,
+              calcCompletedAt: 1800000000000,
+              calcNotIncluded: [],
+              calcIngredientDetails: [
+                {
+                  ingredient: '1 Scheibe Brot',
+                  noAmountG: true,
+                  naehrwerte: { kalorien: 250, protein: 7, fett: 2, kohlenhydrate: 49, zucker: 5, ballaststoffe: 4, salz: 1 },
+                },
+              ],
+            },
+          },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    expect(screen.getByText('Brotsalat')).toBeInTheDocument();
   });
 
   test('disabling nutrition filter shows all completed calculations', async () => {
@@ -1120,7 +1152,7 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
 
     fireEvent.click(await screen.findByText('Nährwertberechnungen'));
 
-    fireEvent.click(screen.getByLabelText('Aktuelle Filterung anwenden'));
+    fireEvent.click(screen.getByLabelText('Fehlerfreie Nährwertberechnungen verbergen'));
     expect(await screen.findByText('Tomatensuppe')).toBeInTheDocument();
   });
 

@@ -361,6 +361,25 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
   );
 
+  const parsePositiveAmount = (value) => {
+    if (value == null) return null;
+    const normalized = String(value).trim().replace(',', '.');
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const hasPendingManualAmountNutritionIngredients = (recipe) => {
+    const ingredientDetails = recipe?.naehrwerte?.calcIngredientDetails;
+    if (!Array.isArray(ingredientDetails) || ingredientDetails.length === 0) return false;
+    const manualAmounts = recipe?.naehrwerte?.calcManualAmountsG || {};
+    return ingredientDetails.some((detail) => {
+      if (detail?.noAmountG !== true) return false;
+      const ingredient = typeof detail?.ingredient === 'string' ? detail.ingredient : '';
+      return parsePositiveAmount(manualAmounts[ingredient]) == null;
+    });
+  };
+
   const nutritionListData = useMemo(() => {
     const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
     const pending = withNutrition.filter((recipe) => recipe.naehrwerte?.calcPending === true);
@@ -413,7 +432,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         return aTitle.localeCompare(bTitle, 'de-DE');
       });
     const completed = completedAll
-      .filter((recipe) => needsRecalc(recipe) || hasNotIncludedNutritionIngredients(recipe));
+      .filter((recipe) =>
+        needsRecalc(recipe) ||
+        hasNotIncludedNutritionIngredients(recipe) ||
+        hasPendingManualAmountNutritionIngredients(recipe)
+      );
     return { pending, completed, completedAll };
   }, [recipes, nutritionReferenceRows]);
 
@@ -1488,7 +1511,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                   onChange={(e) => setFilterNutritionCalculations(e.target.checked)}
                   className="app-calls-filter-checkbox"
                 />
-                Aktuelle Filterung anwenden
+                Fehlerfreie Nährwertberechnungen verbergen
               </label>
             </div>
             <h3>Abgeschlossene Berechnungen</h3>
