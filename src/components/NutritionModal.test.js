@@ -1593,6 +1593,73 @@ describe('NutritionModal UI layout', () => {
 
     expect(screen.queryByText(/ℹ️/)).not.toBeInTheDocument();
   });
+
+  it('adds needs-review class to rows with status Ungeprüft', () => {
+    render(
+      <NutritionModal
+        recipe={baseRecipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    const rows = document.querySelectorAll('.nutrition-composition-row--needs-review');
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it('adds needs-review class to rows with status Veraltet', () => {
+    const linkedRecipeId = 'linked-r1';
+    const recipe = {
+      ...baseRecipe,
+      naehrwerte: {
+        ...baseRecipe.naehrwerte,
+        calcCompletedAt: '2023-01-01T00:00:00Z',
+        calcIngredientDetails: [],
+      },
+      ingredients: [`1 Teil #recipe:${linkedRecipeId}:Linsensuppe`],
+    };
+    const linkedRecipe = {
+      id: linkedRecipeId,
+      naehrwerte: { calcCompletedAt: '2024-06-01T00:00:00Z' },
+    };
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        allRecipes={[linkedRecipe]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    const rows = document.querySelectorAll('.nutrition-composition-row--needs-review');
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it('does not add needs-review class to rows with status Geprüft', () => {
+    const recipe = {
+      ...baseRecipe,
+      ingredients: [{ text: '200 g Linsen', ingredientID: 'id-linsen' }],
+    };
+    const nutritionReferenceRows = [
+      { ingredientID: 'id-linsen', status: 'Freigegeben' },
+    ];
+
+    render(
+      <NutritionModal
+        recipe={recipe}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+        nutritionReferenceRows={nutritionReferenceRows}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+    const rows = document.querySelectorAll('.nutrition-composition-row--needs-review');
+    expect(rows.length).toBe(0);
+  });
 });
 
 describe('NutritionModal ungeprüft count', () => {

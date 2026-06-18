@@ -1664,7 +1664,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                       {compositionRows.map((row, index) => (
                         <tr
                          key={`${row.ingredient}-${index}`}
-                         className={row.aiEstimated ? 'nutrition-composition-row--ai-estimated' : ''}
+                         className={['Ungeprüft', 'Veraltet'].includes(row.status) ? 'nutrition-composition-row--needs-review' : ''}
                         >
                          <td>{renderCompositionIngredient(row.ingredient)}</td>
                          <td>
