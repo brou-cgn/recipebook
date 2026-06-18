@@ -9,7 +9,7 @@ import {
 } from '../utils/nutritionStatusResolver';
 import { NUTRITION_REFERENCE_APPROVED_STATUS } from '../utils/nutritionReferenceUtils';
 import { isBase64Image } from '../utils/imageUtils';
-import { normalizeNutritionEmptyIcon } from '../utils/nutritionIconUtils';
+import { normalizeNutritionEmptyIcon, normalizeNutritionSaveManualAmountIcon } from '../utils/nutritionIconUtils';
 import './NutritionModal.css';
 
 const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
@@ -481,8 +481,9 @@ export function buildNutritionCompositionRows(recipe, calcResult, reformulationM
 
 export { computeIngredientAmountG, resolveIngredientNutritionByStatus };
 
-function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, portionUnits = [] }) {
+function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser, isStale = false, onEnsureIngredientIDs, nutritionReferenceRows = [], onReloadNutritionReferences = null, retryAutoCalculateToken = 0, onOpenLinkedRecipe = null, autoCalcIcon = null, manualSaveIcon = null, portionUnits = [] }) {
   const resolvedAutoCalcIcon = normalizeNutritionEmptyIcon(autoCalcIcon);
+  const resolvedManualSaveIcon = normalizeNutritionSaveManualAmountIcon(manualSaveIcon);
   const [kalorien, setKalorien] = useState('');
   const [protein, setProtein] = useState('');
   const [fett, setFett] = useState('');
@@ -813,10 +814,15 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
         return next;
       });
       if (autoCalcResult) {
+        // Increment foundCount on first save of this ingredient (no double-counting on re-save)
+        const wasAlreadySaved = Boolean(savedManualAmounts[ingredient]);
         const updatedResult = {
           ...autoCalcResult,
           calcFinalWeightGrams: payload.calcFinalWeightGrams,
           calcPer100g: payload.calcPer100g,
+          ...(!wasAlreadySaved && autoCalcResult.foundCount !== null && autoCalcResult.foundCount !== undefined && {
+            foundCount: autoCalcResult.foundCount + 1,
+          }),
         };
         setAutoCalcResult(updatedResult);
         saveStoredCalcResult(recipe?.id, { ...updatedResult, manualAmountsG: manualAmountsToSave });
@@ -969,6 +975,10 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+
+    // Capture currently saved manual amounts before reset so they can be re-applied after recalculation
+    const prevManualAmounts = { ...manualAmounts };
+    const prevSavedIngredients = new Set(Object.keys(savedManualAmounts).filter(k => savedManualAmounts[k]));
 
     setAutoCalcLoading(true);
     setAutoCalcResult(null);
@@ -1179,21 +1189,41 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       ...successfulReformulations,
     };
     const filteredNotIncluded = filterNotIncludedIngredients(notIncluded);
+
+    // Re-apply previously saved manual amounts for noAmountG ingredients that are still present
+    const survivingManualAmountsG = {};
+    const survivingSavedAmounts = {};
+    let foundCountBonus = 0;
+    if (prevSavedIngredients.size > 0) {
+      for (const ingredient of prevSavedIngredients) {
+        const detail = ingredientDetails.find(d => d.ingredient === ingredient && d.noAmountG);
+        if (detail) {
+          const savedValue = prevManualAmounts[ingredient];
+          if (parseManualAmountG(savedValue) !== null) {
+            survivingManualAmountsG[ingredient] = savedValue;
+            survivingSavedAmounts[ingredient] = true;
+            foundCountBonus++;
+          }
+        }
+      }
+    }
+
+    const adjustedFoundCount = foundCount + foundCountBonus;
     const finalNaehrwerte = buildCalculatedNutritionPayload({
       totals,
       notIncluded: filteredNotIncluded,
-      foundCount,
+      foundCount: adjustedFoundCount,
       totalCount,
       ingredientDetails,
       acceptedIngredientsInput: acceptedArray,
       reformulationsInput: mergedReformulations,
-      manualAmountsInput: {},
+      manualAmountsInput: survivingManualAmountsG,
       calcPending: false,
       calcCompletedAt: Date.now(),
       calcError: null,
     });
     const result = {
-      foundCount,
+      foundCount: adjustedFoundCount,
       totalCount,
       notIncluded: filteredNotIncluded,
       ...(acceptedArray && { acceptedIngredients: acceptedArray }),
@@ -1207,7 +1237,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       }),
     };
     setAutoCalcResult(result);
-    saveStoredCalcResult(recipe?.id, { ...result, manualAmountsG: {} });
+    if (foundCountBonus > 0) {
+      setManualAmounts(survivingManualAmountsG);
+      setSavedManualAmounts(survivingSavedAmounts);
+    }
+    saveStoredCalcResult(recipe?.id, { ...result, manualAmountsG: survivingManualAmountsG });
 
     // Reload the NutritionReferenceContext when at least one reference was written back,
     // so the table "Nährwerte je 100 g" reflects the updated values immediately.
@@ -1660,7 +1694,11 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                                     onClick={() => handleSaveManualAmount(row.ingredient)}
                                     aria-label={`Menge für ${row.ingredient} speichern`}
                                   >
-                                    💾
+                                    {isBase64Image(resolvedManualSaveIcon) ? (
+                                      <img className="nutrition-composition-manual-amount-save-img" src={resolvedManualSaveIcon} alt="Speichern" />
+                                    ) : (
+                                      resolvedManualSaveIcon
+                                    )}
                                   </button>
                                 </div>
                                 {manualAmountErrors[row.ingredient] && (
