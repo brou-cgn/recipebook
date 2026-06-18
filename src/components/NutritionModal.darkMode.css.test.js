@@ -25,6 +25,26 @@ describe('NutritionModal dark mode styles', () => {
     expect(headerRule).toContain('color: #ccc;');
   });
 
+  test('uses readable dark-mode colors for nutrition value rows and table cells', () => {
+    const valueRowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-value-row');
+    const valueLabelRule = getRuleBody(css, '[data-theme="dark"] .nutrition-value-label');
+    const valueAmountRule = getRuleBody(css, '[data-theme="dark"] .nutrition-value-amount');
+    const tableHeaderRule = getRuleBody(css, '[data-theme="dark"] .nutrition-values-table thead tr');
+    const amountColRule = getRuleBody(css, '[data-theme="dark"] .nutrition-values-table__amount-col');
+    const tableRowRule = getRuleBody(css, '[data-theme="dark"] .nutrition-values-table__row td');
+    const tableLabelRule = getRuleBody(css, '[data-theme="dark"] .nutrition-values-table__label');
+    const tableAmountRule = getRuleBody(css, '[data-theme="dark"] .nutrition-values-table__amount');
+
+    expect(valueRowRule).toContain('border-bottom-color: #3d3d3d;');
+    expect(valueLabelRule).toContain('color: #ccc;');
+    expect(valueAmountRule).toContain('color: #e8e8e8;');
+    expect(tableHeaderRule).toContain('border-bottom-color: #3d3d3d;');
+    expect(amountColRule).toContain('color: #888;');
+    expect(tableRowRule).toContain('border-bottom-color: #3d3d3d;');
+    expect(tableLabelRule).toContain('color: #ccc;');
+    expect(tableAmountRule).toContain('color: #e8e8e8;');
+  });
+
   test('uses dark styles for calculation progress banner', () => {
     const progressRule = getRuleBody(css, '[data-theme="dark"] .nutrition-calc-progress');
     const headerRule = getRuleBody(css, '[data-theme="dark"] .nutrition-calc-progress-header');
