@@ -1052,6 +1052,28 @@ describe('RecipeDetail - Desktop Close Button', () => {
     expect(onBack).toHaveBeenCalled();
   });
 
+  test('keeps action buttons left and renders desktop close button outside action-buttons', () => {
+    render(
+      <RecipeDetail
+        recipe={mockRecipe}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        currentUser={currentUser}
+      />
+    );
+
+    const header = document.querySelector('.recipe-detail-header');
+    const actionButtons = header.querySelector('.action-buttons');
+    const closeBtn = header.querySelector('.recipe-detail__close');
+
+    expect(actionButtons).toBeInTheDocument();
+    expect(closeBtn).toBeInTheDocument();
+    expect(actionButtons.contains(closeBtn)).toBe(false);
+    expect(closeBtn.parentElement).toBe(header);
+    expect(actionButtons.compareDocumentPosition(closeBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   test('does not render desktop close button on mobile', () => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 400 });
     window.dispatchEvent(new Event('resize'));

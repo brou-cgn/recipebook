@@ -1984,17 +1984,17 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                 </button>
               )
             )}
-            <button
-              className="recipe-detail__close"
-              onClick={handleBackFromLinkedRecipe}
-              aria-label="Schließen"
-              title="Schließen"
-            >
-              {isBase64Image(closeButtonDefaultImgIcon)
-                ? <img src={closeButtonDefaultImgIcon} alt="Schließen" className="close-button-icon-img" />
-                : closeButtonDefaultImgIcon}
-            </button>
           </div>
+          <button
+            className="recipe-detail__close"
+            onClick={handleBackFromLinkedRecipe}
+            aria-label="Schließen"
+            title="Schließen"
+          >
+            {isBase64Image(closeButtonDefaultImgIcon)
+              ? <img src={closeButtonDefaultImgIcon} alt="Schließen" className="close-button-icon-img" />
+              : closeButtonDefaultImgIcon}
+          </button>
         </div>
       )}
 
