@@ -535,7 +535,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
   const [savedManualAmounts, setSavedManualAmounts] = useState(() => {
     const persisted = recipe?.naehrwerte?.calcManualAmountsG || {};
     return Object.keys(persisted).reduce((acc, ingredient) => {
-      if (parseManualAmountG(persisted[ingredient]) != null) {
+      if (parseManualAmountG(persisted[ingredient]) !== null) {
         acc[ingredient] = true;
       }
       return acc;
@@ -792,7 +792,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     const rawValue = manualAmounts[ingredient];
     const parsed = parseManualAmountG(rawValue);
 
-    if (parsed == null) {
+    if (parsed === null) {
       setManualAmountErrors((prev) => ({
         ...prev,
         [ingredient]: 'Bitte eine gültige Grammzahl > 0 eingeben.',
