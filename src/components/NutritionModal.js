@@ -820,7 +820,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
           ...autoCalcResult,
           calcFinalWeightGrams: payload.calcFinalWeightGrams,
           calcPer100g: payload.calcPer100g,
-          ...(!wasAlreadySaved && autoCalcResult.foundCount != null && {
+          ...(!wasAlreadySaved && autoCalcResult.foundCount !== null && autoCalcResult.foundCount !== undefined && {
             foundCount: autoCalcResult.foundCount + 1,
           }),
         };
