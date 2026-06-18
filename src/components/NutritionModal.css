@@ -166,13 +166,33 @@
   gap: 0.25rem;
 }
 
+.nutrition-composition-manual-amount-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .nutrition-composition-manual-amount-input {
   width: 88px;
   padding: 0.2rem 0.35rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 16px;
   text-align: right;
+}
+
+.nutrition-composition-manual-amount-save {
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0.2rem 0.3rem;
+}
+
+.nutrition-composition-manual-amount-save:hover {
+  background: #f5f5f5;
 }
 
 .nutrition-composition-manual-amount-error {
