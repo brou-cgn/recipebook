@@ -26,6 +26,7 @@ import {
   saveButtonIcons,
   saveButtonIcon,
   DEFAULT_BUTTON_ICONS,
+  getEffectiveIcon,
   DEFAULT_AI_RECIPE_PROMPT,
   DEFAULT_CUISINE_TYPES,
   DEFAULT_MEAL_CATEGORIES,
@@ -950,5 +951,29 @@ describe('button icons localStorage cache', () => {
     expect(settings.buttonIcons).toEqual(expect.objectContaining({ cookingMode: '🧑‍🍳' }));
     // Must not hit Firestore for button icons
     expect(getDocs).not.toHaveBeenCalled();
+  });
+});
+
+describe('button icon dark-mode resolution', () => {
+  test('includes a default entry for the nutrition manual-save icon and its dark variant', () => {
+    expect(DEFAULT_BUTTON_ICONS.nutritionManualSave).toBe('💾');
+    expect(DEFAULT_BUTTON_ICONS.nutritionManualSaveDark).toBe('');
+  });
+
+  test('prefers the dark variant for nutrition manual-save icons in dark mode and otherwise falls back to the normal icon', () => {
+    expect(getEffectiveIcon({
+      nutritionManualSave: '💽',
+      nutritionManualSaveDark: '🌙💽',
+    }, 'nutritionManualSave', true)).toBe('🌙💽');
+
+    expect(getEffectiveIcon({
+      nutritionManualSave: '💽',
+      nutritionManualSaveDark: '',
+    }, 'nutritionManualSave', true)).toBe('💽');
+
+    expect(getEffectiveIcon({
+      nutritionManualSave: '💽',
+      nutritionManualSaveDark: '🌙💽',
+    }, 'nutritionManualSave', false)).toBe('💽');
   });
 });
