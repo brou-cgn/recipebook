@@ -71,8 +71,11 @@ jest.mock('../utils/recipeFirestore', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: jest.fn(() => Promise.resolve({})),
-  DEFAULT_BUTTON_ICONS: { privateListBack: '✕' },
-  getEffectiveIcon: jest.fn((icons, key) => icons[key] ?? ''),
+  DEFAULT_BUTTON_ICONS: { privateListBack: '✕', nutritionManualSave: '💾' },
+  getEffectiveIcon: jest.fn((icons, key, isDarkMode) => {
+    if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
+    return icons[key] ?? '';
+  }),
   getDarkModePreference: jest.fn(() => false),
   getInspirationListSettings: jest.fn(() =>
     Promise.resolve({
@@ -162,8 +165,12 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
     mockGetIngredientIdSuggestions.mockReset();
     mockGetIngredientIdSuggestions.mockReturnValue([]);
     mockNutritionModalProps.mockReset();
-    const { getCustomLists, saveCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+    const { getCustomLists, saveCustomLists, getButtonIcons, getEffectiveIcon, getInspirationListSettings } = require('../utils/customLists');
     getButtonIcons.mockResolvedValue({});
+    getEffectiveIcon.mockImplementation((icons, key, isDarkMode) => {
+      if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
+      return icons[key] ?? '';
+    });
     getCustomLists.mockResolvedValue({
       cuisineTypes: ['Spanisch', 'Italienisch'],
       cuisineGroups: [],
@@ -668,6 +675,40 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     }));
     expect(modalProps.autoCalcIcon).toBeTruthy();
     expect(modalProps.autoCalcIcon).not.toBe('+');
+  });
+
+  test('passes the configured nutrition manual-save icon to the nutrition modal', async () => {
+    const { getButtonIcons, getEffectiveIcon } = require('../utils/customLists');
+    getButtonIcons.mockReset();
+    getButtonIcons.mockResolvedValue({});
+    getEffectiveIcon.mockImplementation((icons, key, isDarkMode) => {
+      if (key === 'nutritionManualSave') return '💽';
+      if (key === 'nutritionEmpty') return '🥗';
+      if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
+      return icons[key] ?? '';
+    });
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          { id: 'r1', title: 'Gemüsepfanne', naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: 'x', error: 'y' }] } },
+        ]}
+        onUpdateRecipe={jest.fn()}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+
+    await waitFor(() => expect(getButtonIcons).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(
+        mockNutritionModalProps.mock.calls.some(([props]) => props.manualSaveIcon === '💽')
+      ).toBe(true);
+    });
+    expect(getEffectiveIcon.mock.calls.some(([, key]) => key === 'nutritionManualSave')).toBe(true);
   });
 
   test('shows ingredientID dialog and persists manual selection when modal requests matching', async () => {

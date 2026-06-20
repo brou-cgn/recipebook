@@ -178,6 +178,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   };
   const [closeIcon, setCloseIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [nutritionEmptyIcon, setNutritionEmptyIcon] = useState(normalizeNutritionEmptyIcon());
+  const [nutritionManualSaveIcon, setNutritionManualSaveIcon] = useState(DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
   const [allButtonIcons, setAllButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [creatingShareIds, setCreatingShareIds] = useState({});
@@ -327,6 +328,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   useEffect(() => {
     setCloseIcon(getEffectiveIcon(allButtonIcons, 'privateListBack', isDarkMode) || DEFAULT_BUTTON_ICONS.privateListBack);
     setNutritionEmptyIcon(normalizeNutritionEmptyIcon(getEffectiveIcon(allButtonIcons, 'nutritionEmpty', isDarkMode)));
+    setNutritionManualSaveIcon(getEffectiveIcon(allButtonIcons, 'nutritionManualSave', isDarkMode) || DEFAULT_BUTTON_ICONS.nutritionManualSave || '💾');
   }, [allButtonIcons, isDarkMode]);
 
   useEffect(() => {
@@ -2087,6 +2089,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
           onReloadNutritionReferences={reloadNutritionReferences}
           retryAutoCalculateToken={retryAutoCalculateToken}
           autoCalcIcon={nutritionEmptyIcon}
+          manualSaveIcon={nutritionManualSaveIcon}
           portionUnits={portionUnits}
         />
       )}
