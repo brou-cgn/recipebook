@@ -2968,3 +2968,111 @@ describe('RecipeDetail - ingredientID matching for nutrition calculation', () =>
     expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
   });
 });
+
+describe('RecipeDetail - Nutrition manual save icon', () => {
+  const currentUser = {
+    id: 'user-1',
+    vorname: 'Test',
+    nachname: 'User',
+  };
+
+  const recipeWithNoAmountG = {
+    id: 'recipe-manual-save',
+    title: 'Eierrezept',
+    authorId: 'user-1',
+    portionen: 2,
+    ingredients: ['Eier'],
+    steps: ['Aufschlagen'],
+    naehrwerte: {
+      kalorien: 150,
+      calcFoundCount: 1,
+      calcTotalCount: 1,
+      calcNotIncluded: [],
+      calcIngredientDetails: [{
+        ingredient: 'Eier',
+        noAmountG: true,
+        naehrwerte: { kalorien: 150, protein: 12, fett: 10, kohlenhydrate: 1, zucker: 1, ballaststoffe: 0, salz: 0.2 },
+        amountG: null,
+      }],
+    },
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('uses configured nutritionManualSave icon on the save button in the NutritionModal composition table', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
+      nutritionManualSave: '💽',
+    });
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={recipeWithNoAmountG}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    fireEvent.click(screen.getByLabelText('Nährwerte anzeigen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    const saveBtn = screen.getByRole('button', { name: 'Menge für Eier speichern' });
+    expect(saveBtn).toHaveTextContent('💽');
+  });
+
+  test('uses dark variant of nutritionManualSave icon in dark mode when configured', async () => {
+    const customLists = require('../utils/customLists');
+    jest.spyOn(customLists, 'getButtonIcons').mockResolvedValue({
+      nutritionManualSave: '💽',
+      nutritionManualSaveDark: '🌙💽',
+    });
+    jest.spyOn(customLists, 'getDarkModePreference').mockReturnValue(true);
+    jest.spyOn(customLists, 'getEffectiveIcon').mockImplementation(
+      jest.requireActual('../utils/customLists').getEffectiveIcon
+    );
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={{ ...recipeWithNoAmountG, id: 'recipe-manual-save-dark' }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    fireEvent.click(screen.getByLabelText('Nährwerte anzeigen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    const saveBtn = screen.getByRole('button', { name: 'Menge für Eier speichern' });
+    expect(saveBtn).toHaveTextContent('🌙💽');
+  });
+
+  test('falls back to default 💾 icon when no custom nutritionManualSave icon is configured', async () => {
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={{ ...recipeWithNoAmountG, id: 'recipe-manual-save-default' }}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    fireEvent.click(screen.getByLabelText('Nährwerte anzeigen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Zusammensetzung anzeigen' }));
+
+    const saveBtn = screen.getByRole('button', { name: 'Menge für Eier speichern' });
+    expect(saveBtn).toHaveTextContent('💾');
+  });
+});
