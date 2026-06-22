@@ -84,7 +84,7 @@ beforeEach(() => {
 
 describe('getSettings – AI prompt migration', () => {
   test('keeps a valid prompt that already contains both placeholders', async () => {
-    const validPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here.';
+    const validPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here with imperiale conversion.';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: validPrompt }),
@@ -153,8 +153,28 @@ describe('getSettings – AI prompt migration', () => {
     );
   });
 
+  test('migrates when stored prompt is missing imperial conversion rule keyword', async () => {
+    const oldPrompt = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here.';
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ aiRecipePrompt: oldPrompt }),
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const settings = await getSettings();
+    warnSpy.mockRestore();
+
+    expect(settings.aiRecipePrompt).toBe(DEFAULT_AI_RECIPE_PROMPT);
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      { aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT }
+    );
+  });
+
   test('does not migrate a prompt that has both placeholders but is missing fraction-to-decimal rule', async () => {
-    const promptWithoutFractionRule = 'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here but no fraction rule';
+    const promptWithoutFractionRule =
+      'Use {{CUISINE_TYPES}} and {{MEAL_CATEGORIES}} here with imperiale conversion but no fraction rule';
     mockGetDoc.mockResolvedValue({
       exists: () => true,
       data: () => ({ aiRecipePrompt: promptWithoutFractionRule }),

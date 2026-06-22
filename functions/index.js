@@ -193,7 +193,8 @@ async function getRecipeExtractionPrompt() {
     // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
     if (
       !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-      !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}')
+      !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
+      !aiRecipePrompt.includes('imperiale')
     ) {
       console.warn('AI prompt in Firestore is outdated or missing placeholders – migrating to DEFAULT_AI_RECIPE_PROMPT');
       aiRecipePrompt = DEFAULT_AI_RECIPE_PROMPT;
