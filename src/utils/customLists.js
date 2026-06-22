@@ -1036,7 +1036,8 @@ export async function getSettings() {
       // Migration: if the stored prompt is missing required placeholders or outdated rules, reset to default
       const needsMigration =
         !aiRecipePrompt.includes('{{CUISINE_TYPES}}') ||
-        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}');
+        !aiRecipePrompt.includes('{{MEAL_CATEGORIES}}') ||
+        !aiRecipePrompt.includes('imperiale');
 
       if (needsMigration) {
         console.warn(
