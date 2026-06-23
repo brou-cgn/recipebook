@@ -402,6 +402,24 @@ export function normalizeIngredientNameForIdMatching(name) {
   return sanitizeIngredientNameForIdMatching(name);
 }
 
+function getIgnoredWordsConfidenceAdjustment({
+  ignoredWordCount = 0,
+  ingredientWordCount = 0,
+  exactMatch = false,
+  similarity = 0,
+}) {
+  if (!ignoredWordCount || exactMatch) return 0;
+
+  const safeIngredientWordCount = Math.max(1, ingredientWordCount);
+  const ignoredWordRatio = ignoredWordCount / (ignoredWordCount + safeIngredientWordCount);
+  const ambiguityPenalty = Math.min(0.08, ignoredWordRatio * 0.08);
+  const stabilityBonus = similarity >= 0.85
+    ? Math.min(0.04, ignoredWordCount * 0.02)
+    : 0;
+
+  return stabilityBonus - ambiguityPenalty;
+}
+
 function normalizeVulgarFractions(text) {
   if (!text || typeof text !== 'string') return text;
   let result = text.replace(
@@ -520,6 +538,9 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
   const normalizedIngredientName = normalizeNutritionReferenceId(normalizeIngredientNameForIdMatching(name));
   const normalizedIngredientUnit = normalizeNutritionReferenceId(unit || '');
   if (!normalizedIngredientName) return [];
+  const { ignoredWords, ingredientWords } = classifyIngredientWords(ingredientText);
+  const ignoredWordCount = ignoredWords.length;
+  const ingredientWordCount = ingredientWords.length;
 
   const candidates = nutritionReferenceRows
     .map((row) => {
@@ -556,6 +577,15 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
       let score = exactMatch ? 1 : similarity * 0.9;
       if (!exactMatch && unitMatch) {
         score = Math.min(0.99, score + 0.1);
+      }
+      const ignoredWordsAdjustment = getIgnoredWordsConfidenceAdjustment({
+        ignoredWordCount,
+        ingredientWordCount,
+        exactMatch,
+        similarity,
+      });
+      if (!exactMatch && ignoredWordsAdjustment !== 0) {
+        score = Math.max(0, Math.min(1, score + ignoredWordsAdjustment));
       }
 
       return {
