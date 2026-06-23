@@ -402,6 +402,32 @@ export function normalizeIngredientNameForIdMatching(name) {
   return sanitizeIngredientNameForIdMatching(name);
 }
 
+function getIgnoredWordsConfidenceAdjustment({
+  ignoredWordCount = 0,
+  ingredientWordCount = 0,
+  exactMatch = false,
+  similarity = 0,
+}) {
+  const MAX_AMBIGUITY_PENALTY = 0.08;
+  const STRONG_FUZZY_MATCH_THRESHOLD = 0.85;
+  const MAX_STABILITY_BONUS = 0.04;
+  const STABILITY_BONUS_PER_IGNORED_WORD = 0.02;
+
+  if (ignoredWordCount === 0 || exactMatch) return 0;
+
+  const minOneIngredientWordCount = Math.max(1, ingredientWordCount);
+  const ignoredWordDenominator = ignoredWordCount + minOneIngredientWordCount;
+  const ignoredWordRatio = ignoredWordCount / ignoredWordDenominator;
+  // Scale uncertainty from ignored words to a maximum penalty of 8 percentage points.
+  const ambiguityPenalty = ignoredWordRatio * MAX_AMBIGUITY_PENALTY;
+  // Add a small stability bonus for strong fuzzy matches despite ignored words.
+  const stabilityBonus = similarity >= STRONG_FUZZY_MATCH_THRESHOLD
+    ? Math.min(MAX_STABILITY_BONUS, ignoredWordCount * STABILITY_BONUS_PER_IGNORED_WORD)
+    : 0;
+
+  return stabilityBonus - ambiguityPenalty;
+}
+
 function normalizeVulgarFractions(text) {
   if (!text || typeof text !== 'string') return text;
   let result = text.replace(
@@ -520,6 +546,9 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
   const normalizedIngredientName = normalizeNutritionReferenceId(normalizeIngredientNameForIdMatching(name));
   const normalizedIngredientUnit = normalizeNutritionReferenceId(unit || '');
   if (!normalizedIngredientName) return [];
+  const { ignoredWords, ingredientWords } = classifyIngredientWords(ingredientText);
+  const ignoredWordCount = ignoredWords.length;
+  const ingredientWordCount = ingredientWords.length;
 
   const candidates = nutritionReferenceRows
     .map((row) => {
@@ -556,6 +585,15 @@ export function getIngredientIdSuggestions(ingredientText, nutritionReferenceRow
       let score = exactMatch ? 1 : similarity * 0.9;
       if (!exactMatch && unitMatch) {
         score = Math.min(0.99, score + 0.1);
+      }
+      const ignoredWordsAdjustment = getIgnoredWordsConfidenceAdjustment({
+        ignoredWordCount,
+        ingredientWordCount,
+        exactMatch,
+        similarity,
+      });
+      if (!exactMatch && ignoredWordsAdjustment !== 0) {
+        score = Math.max(0, Math.min(1, score + ignoredWordsAdjustment));
       }
 
       return {

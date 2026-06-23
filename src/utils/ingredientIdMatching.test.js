@@ -241,6 +241,49 @@ describe('ingredientIdMatching', () => {
     expect(suggestions[1].confidencePercent).toBeLessThan(100);
   });
 
+  test('keeps exact core matches at 100% confidence when no ignored words are present', () => {
+    const suggestions = getIngredientIdSuggestions('200 g Zucker', [
+      { ingredientID: 'zucker', synonyms: ['Zucker'] },
+    ]);
+
+    expect(suggestions[0]).toMatchObject({ ingredientID: 'zucker', confidencePercent: 100 });
+  });
+
+  test('applies ignored words directly as confidence factor for fuzzy matches', () => {
+    const nutritionRows = [
+      { ingredientID: 'tomate', synonyms: ['Tomate'] },
+    ];
+    const withoutIgnoredWords = getIngredientIdSuggestions('Tomata', nutritionRows)[0];
+    const withIgnoredWords = getIngredientIdSuggestions('warme Tomata', nutritionRows)[0];
+
+    expect(withoutIgnoredWords.ingredientID).toBe('tomate');
+    expect(withIgnoredWords.ingredientID).toBe('tomate');
+    expect(withIgnoredWords.confidencePercent).toBeLessThan(withoutIgnoredWords.confidencePercent);
+  });
+
+  test('keeps stable ordering in ambiguous suggestions while factoring ignored words', () => {
+    const nutritionRows = [
+      { ingredientID: 'petersilie', synonyms: ['Petersilie'], possibleUnits: ['Bund'] },
+      { ingredientID: 'petersilienwurzel', synonyms: ['Petersilienwurzel'], possibleUnits: ['Bund'] },
+    ];
+
+    const baseline = getIngredientIdSuggestions('1 Bund Petersili', nutritionRows);
+    const withIgnoredWords = getIngredientIdSuggestions('1 Bund frische Petersili', nutritionRows);
+
+    expect(withIgnoredWords[0].ingredientID).toBe('petersilie');
+    expect(withIgnoredWords[1].ingredientID).toBe('petersilienwurzel');
+    expect(withIgnoredWords[0].confidencePercent).toBeLessThan(baseline[0].confidencePercent);
+  });
+
+  test('keeps exact core match high even when adjective is ignored', () => {
+    const suggestions = getIngredientIdSuggestions('200 ml warme Milch', [
+      { ingredientID: 'milch', synonyms: ['Milch'] },
+    ]);
+
+    expect(suggestions[0].ingredientID).toBe('milch');
+    expect(suggestions[0].confidencePercent).toBeGreaterThanOrEqual(95);
+  });
+
   test('recognizes custom unit from settings', () => {
     setCustomIngredientMatchingTerms({ units: ['Päckchen'] });
     expect(parseIngredientNameAndUnit('1 Päckchen Backpulver')).toEqual({
