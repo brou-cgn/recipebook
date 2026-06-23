@@ -58,6 +58,49 @@ const RATE_LIMITS = {
 const REGISTRATION_RATE_LIMIT = 5;
 
 /**
+ * Validate that a URL does not target internal/private infrastructure (SSRF guard).
+ * Throws an HttpsError if the URL is blocked.
+ * @param {string} urlString - The URL to validate
+ */
+function assertPublicUrl(urlString) {
+  let urlObj;
+  try {
+    urlObj = new URL(urlString);
+  } catch (_) {
+    throw new HttpsError('invalid-argument', 'Invalid URL format');
+  }
+
+  if (!['http:', 'https:'].includes(urlObj.protocol)) {
+    throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
+  }
+
+  const hostname = urlObj.hostname.toLowerCase();
+
+  // Block loopback and link-local
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' ||
+      hostname === '0.0.0.0' || hostname === '::1') {
+    throw new HttpsError('invalid-argument', 'URL targets a disallowed host');
+  }
+
+  // Block cloud metadata endpoints
+  if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal' ||
+      hostname === 'metadata.internal' || hostname.endsWith('.internal')) {
+    throw new HttpsError('invalid-argument', 'URL targets a disallowed host');
+  }
+
+  // Block RFC-1918 private IP ranges
+  const privatePatterns = [
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
+    /^192\.168\.\d{1,3}\.\d{1,3}$/,
+    /^fc[\da-f]{2}:/i,
+  ];
+  if (privatePatterns.some((re) => re.test(hostname))) {
+    throw new HttpsError('invalid-argument', 'URL targets a disallowed host');
+  }
+}
+
+/**
  * Input validation constants
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
@@ -1309,19 +1352,11 @@ exports.fetchRecipeHtml = onCall(
       const isAuthenticated = auth.token.firebase?.sign_in_provider !== 'anonymous';
       const isAdmin = auth.token.admin === true;
 
-      // Validate URL
+      // Validate URL (includes SSRF guard for private/internal hosts)
       if (!url || typeof url !== 'string') {
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
       }
-      try {
-        const urlObj = new URL(url);
-        if (!['http:', 'https:'].includes(urlObj.protocol)) {
-          throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
-        }
-      } catch (error) {
-        if (error instanceof HttpsError) throw error;
-        throw new HttpsError('invalid-argument', 'Invalid URL format');
-      }
+      assertPublicUrl(url);
 
       // Rate limiting (shared with other AI endpoints)
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
@@ -1408,20 +1443,11 @@ exports.captureWebsiteScreenshot = onCall(
 
       console.log(`Screenshot request from user ${userId} for URL: ${url}`);
 
-      // Validate URL first (before rate limiting)
+      // Validate URL first (before rate limiting), includes SSRF guard
       if (!url || typeof url !== 'string') {
         throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
       }
-
-      // Basic URL validation
-      try {
-        const urlObj = new URL(url);
-        if (!['http:', 'https:'].includes(urlObj.protocol)) {
-          throw new HttpsError('invalid-argument', 'URL must use HTTP or HTTPS protocol');
-        }
-      } catch (error) {
-        throw new HttpsError('invalid-argument', 'Invalid URL format');
-      }
+      assertPublicUrl(url);
 
       // Rate limiting
       const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
@@ -3500,14 +3526,17 @@ exports.createRecipeImportFromText = onRequest(
         return;
       }
 
-      const validApiKey = process.env.SHORTCUT_API_KEY;
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('createRecipeImportFromText: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({success: false, error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set'});
+        return;
+      }
       let isValidKey = false;
-      if (validApiKey) {
-        try {
-          isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
-        } catch (_) {
-          isValidKey = false;
-        }
+      try {
+        isValidKey = crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(validApiKey));
+      } catch (_) {
+        isValidKey = false;
       }
       if (!isValidKey) {
         console.warn('createRecipeImportFromText: invalid API key attempt');

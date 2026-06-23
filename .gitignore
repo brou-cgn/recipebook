@@ -27,5 +27,7 @@ yarn-error.log*
 # Backups
 /backups
 
-# Firebase service account key (sensitive)
+# Firebase service account keys (sensitive – never commit)
 serviceAccountKey.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json

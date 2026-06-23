@@ -217,9 +217,6 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
         }, 300);
       }
 
-      console.log('DEBUG sending to CF - cuisineTypes:', cuisineTypes);
-      console.log('DEBUG sending to CF - mealCategories:', mealCategories);
-      
       const result = await scanRecipeWithAI({
         imageBase64: imageBase64,
         language: lang,

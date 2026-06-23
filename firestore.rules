@@ -57,8 +57,12 @@ service cloud.firestore {
       // can remove any rating regardless of its raterKey (admin moderation).
       match /ratings/{raterKey} {
         allow read: if true;
-        allow create, update: if (request.auth != null && raterKey == request.auth.uid)
-                              || raterKey.matches('guest_[a-zA-Z0-9\\-]+');
+        // Authenticated users may create and update their own rating (keyed by UID).
+        // Unauthenticated guests may only CREATE a rating under a guest_ key; they
+        // cannot UPDATE to prevent iterative manipulation of existing guest ratings.
+        allow create: if (request.auth != null && raterKey == request.auth.uid)
+                      || raterKey.matches('guest_[a-zA-Z0-9\\-]+');
+        allow update: if request.auth != null && raterKey == request.auth.uid;
         allow delete: if (request.auth != null && raterKey == request.auth.uid)
                       || raterKey.matches('guest_[a-zA-Z0-9\\-]+')
                       || isEditOrAdmin();
@@ -127,8 +131,13 @@ service cloud.firestore {
                     && request.auth.uid == userId
                     && !('isAdmin' in request.resource.data)
                     && request.resource.data.role == 'read';
-      // Any authenticated user may update their own document; admin may update any.
-      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Admins may update any field. Authenticated users may update only their own
+      // document, but may NOT change privilege fields (role, isAdmin).
+      allow update: if isAdmin()
+                    || (isAuthenticated()
+                        && request.auth.uid == userId
+                        && !request.resource.data.diff(resource.data).affectedKeys()
+                             .hasAny(['role', 'isAdmin']));
       allow delete: if isAdmin();
     }
 
