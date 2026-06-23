@@ -411,8 +411,11 @@ function getIgnoredWordsConfidenceAdjustment({
   if (!ignoredWordCount || exactMatch) return 0;
 
   const safeIngredientWordCount = Math.max(1, ingredientWordCount);
-  const ignoredWordRatio = ignoredWordCount / (ignoredWordCount + safeIngredientWordCount);
+  const ignoredWordDenominator = ignoredWordCount + safeIngredientWordCount;
+  const ignoredWordRatio = ignoredWordCount / ignoredWordDenominator;
+  // Cap the uncertainty penalty from ignored words at 8 percentage points.
   const ambiguityPenalty = Math.min(0.08, ignoredWordRatio * 0.08);
+  // Add a small stability bonus for strong fuzzy matches despite ignored words.
   const stabilityBonus = similarity >= 0.85
     ? Math.min(0.04, ignoredWordCount * 0.02)
     : 0;
