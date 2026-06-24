@@ -281,6 +281,7 @@ function App() {
   const headerRef = useRef(null);
   const [kuecheOpenPersonalData, setKuecheOpenPersonalData] = useState(false);
   const [appCallsActiveTab, setAppCallsActiveTab] = useState('app');
+  const [appCallsVisibleTabs, setAppCallsVisibleTabs] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -973,7 +974,15 @@ function App() {
     }
   };
 
-  const handleViewChange = (view) => {
+  const handleViewChange = (view, options = {}) => {
+    if (view === 'appCalls') {
+      setAppCallsVisibleTabs(Array.isArray(options.visibleTabs) ? options.visibleTabs : null);
+      if (options.activeTab) {
+        setAppCallsActiveTab(options.activeTab);
+      }
+    } else if (currentView === 'appCalls') {
+      setAppCallsVisibleTabs(null);
+    }
     if (view === 'groups') {
       setGroupsOpenedFromStartseite(currentView === 'startseite');
     } else {
@@ -1771,6 +1780,7 @@ function App() {
           onSelectRecipe={handleSelectRecipe}
           activeTab={appCallsActiveTab}
           onActiveTabChange={setAppCallsActiveTab}
+          visibleTabs={appCallsVisibleTabs}
         />
         ) : currentView === 'meineKuechenstars' ? (
         <MeineKuechenstarsPage

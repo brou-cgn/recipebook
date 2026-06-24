@@ -2,11 +2,25 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
-import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } from '../utils/customLists';
+import {
+  getTimelineBubbleIcon,
+  getTimelineMenuBubbleIcon,
+  getTimelineMenuDefaultImage,
+  getTimelineCookEventBubbleIcon,
+  getTimelineCookEventDefaultImage,
+  getButtonIcons,
+  DEFAULT_BUTTON_ICONS,
+  getEffectiveIcon,
+  getDarkModePreference,
+} from '../utils/customLists';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { isBase64Image } from '../utils/imageUtils';
+import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
+import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -151,6 +165,7 @@ function RecipeBarChart({ recipes }) {
 }
 
 function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened }) {
+  const { rows: nutritionReferenceRows } = useNutritionReference();
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -165,6 +180,10 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const prevOpenPersonalData = React.useRef(false);
   const kuecheScrollPositionRef = React.useRef(0);
   const hadPersonalDataOpenRef = React.useRef(false);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [fabPressed, setFabPressed] = useState(false);
+  const [cuisineProposals, setCuisineProposals] = useState([]);
 
   useEffect(() => {
     if (showPersonalData) {
@@ -205,6 +224,18 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   }, []);
 
   useEffect(() => {
+    getButtonIcons().then((icons) => {
+      setButtonIcons(icons);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
+  useEffect(() => {
     if (!currentUser?.appCalls) return;
     getAppCalls().then(calls => setAppCalls(calls)).catch(() => {});
   }, [currentUser]);
@@ -212,6 +243,18 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   useEffect(() => {
     if (!currentUser) return;
     getRecipeCalls().then(calls => setRecipeCalls(calls)).catch(() => {});
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.kuecheFab) {
+      setCuisineProposals([]);
+      return;
+    }
+    getCuisineProposals().then((proposals) => {
+      setCuisineProposals(proposals);
+    }).catch(() => {
+      setCuisineProposals([]);
+    });
   }, [currentUser]);
 
   const filteredRecipes = useMemo(
@@ -306,6 +349,19 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const chefkochName = currentUser
     ? [currentUser.vorname, currentUser.nachname].filter(Boolean).join(' ')
     : null;
+
+  const kuechenbetriebFabConfig = useMemo(
+    () => getKuechenbetriebFabConfig({ recipes, nutritionReferenceRows, cuisineProposals }),
+    [recipes, nutritionReferenceRows, cuisineProposals]
+  );
+
+  const handleKuecheFabClick = () => {
+    if (!kuechenbetriebFabConfig.showFab || !kuechenbetriebFabConfig.activeTab) return;
+    onViewChange?.('appCalls', {
+      visibleTabs: kuechenbetriebFabConfig.visibleTabs,
+      activeTab: kuechenbetriebFabConfig.activeTab,
+    });
+  };
 
   return (
     <div className="kueche-container">
@@ -440,6 +496,26 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
               defaultImage={timelineMenuDefaultImage}
               timelineCookEventDefaultImage={timelineCookEventDefaultImage}
             />
+          )}
+          {currentUser?.kuecheFab && kuechenbetriebFabConfig.showFab && (
+            <button
+              className={`kueche-fab-button${fabPressed ? ' pressed' : ''}`}
+              onClick={handleKuecheFabClick}
+              onTouchStart={() => setFabPressed(true)}
+              onTouchEnd={() => setFabPressed(false)}
+              onTouchCancel={() => setFabPressed(false)}
+              onMouseDown={() => setFabPressed(true)}
+              onMouseUp={() => setFabPressed(false)}
+              onMouseLeave={() => setFabPressed(false)}
+              title="Küche-Aktion"
+              aria-label="Küche-Aktion"
+            >
+              {isBase64Image(getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)) ? (
+                <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt="Küche-Aktion" className="kueche-fab-button__icon" draggable="false" />
+              ) : (
+                getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)
+              )}
+            </button>
           )}
         </>
       )}

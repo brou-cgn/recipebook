@@ -61,6 +61,12 @@ import {
   INGREDIENT_MATCH_IGNORE_OPTION,
   useIngredientIDMatching,
 } from '../hooks/useIngredientIDMatching';
+import {
+  hasNotIncludedNutritionIngredients,
+  hasPendingManualAmountNutritionIngredients,
+  KUECHENBETRIEB_TABS,
+  needsNutritionRecalc,
+} from '../utils/kuechenbetriebTabs';
 
 const mergeUniqueNormalizedValues = (existingValues = [], valuesToAdd = []) => {
   const merged = [];
@@ -162,7 +168,18 @@ function CuisineTypeListItem({ label, onRemove, onRename }) {
   );
 }
 
-function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange }) {
+const APP_CALLS_TAB_ORDER = [
+  KUECHENBETRIEB_TABS.APP,
+  KUECHENBETRIEB_TABS.RECIPE,
+  KUECHENBETRIEB_TABS.NOLINK,
+  KUECHENBETRIEB_TABS.NAEHRWERT,
+  KUECHENBETRIEB_TABS.MISSING_INGREDIENT_IDS,
+  KUECHENBETRIEB_TABS.KULINARIKTYPEN,
+  KUECHENBETRIEB_TABS.STANDARDEINHEITEN,
+  KUECHENBETRIEB_TABS.KOCHATELIER,
+];
+
+function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange, visibleTabs }) {
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -359,69 +376,15 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     [appCalls, filterBenjaminRousselli]
   );
 
-  const hasNotIncludedNutritionIngredients = (recipe) => (
-    Array.isArray(recipe?.naehrwerte?.calcNotIncluded) && recipe.naehrwerte.calcNotIncluded.length > 0
-  );
-
-  const parsePositiveAmount = (value) => {
-    if (value == null) return null;
-    const normalized = String(value).trim().replace(',', '.');
-    if (!normalized) return null;
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  };
-
-  const hasPendingManualAmountNutritionIngredients = (recipe) => {
-    const ingredientDetails = recipe?.naehrwerte?.calcIngredientDetails;
-    if (!Array.isArray(ingredientDetails) || ingredientDetails.length === 0) return false;
-    const manualAmounts = recipe?.naehrwerte?.calcManualAmountsG || {};
-    return ingredientDetails.some((detail) => {
-      if (detail?.noAmountG !== true) return false;
-      const ingredient = typeof detail?.ingredient === 'string' ? detail.ingredient : '';
-      return parsePositiveAmount(manualAmounts[ingredient]) == null;
-    });
-  };
+  const restrictedVisibleTabs = Array.isArray(visibleTabs) ? visibleTabs : null;
+  const visibleTabIds = restrictedVisibleTabs && restrictedVisibleTabs.length > 0
+    ? APP_CALLS_TAB_ORDER.filter((tabId) => restrictedVisibleTabs.includes(tabId))
+    : APP_CALLS_TAB_ORDER;
+  const effectiveActiveTab = visibleTabIds.includes(activeTab) ? activeTab : visibleTabIds[0];
 
   const nutritionListData = useMemo(() => {
     const withNutrition = recipes.filter((recipe) => recipe.naehrwerte);
     const pending = withNutrition.filter((recipe) => recipe.naehrwerte?.calcPending === true);
-
-    const toMs = (rd) => {
-      if (rd == null) return null;
-      if (rd?.toMillis) return rd.toMillis();
-      if (rd instanceof Date) return rd.getTime();
-      if (typeof rd === 'number') return rd;
-      return null;
-    };
-
-    // Map von ingredientID -> recalcDateMs für alle References mit recalc === true
-    const recalcDateMap = new Map(
-      (nutritionReferenceRows || [])
-        .filter((row) => row?.recalc === true)
-        .map((row) => {
-          const ingredientID = String(row?.ingredientID || '').trim();
-          if (!ingredientID) return null;
-          return [ingredientID, toMs(row?.recalcDate)];
-        })
-        .filter(Boolean)
-    );
-
-    const needsRecalc = (recipe) => {
-      if (recalcDateMap.size === 0) return false;
-      const calcCompletedAt = recipe.naehrwerte?.calcCompletedAt ?? null;
-      const rawIngredients = Array.isArray(recipe.zutaten)
-        ? recipe.zutaten
-        : (Array.isArray(recipe.ingredients) ? recipe.ingredients : []);
-      return rawIngredients.some((item) => {
-        if (!item || typeof item !== 'object' || item.type === 'heading') return false;
-        const ingredientID = String(item.ingredientID || '').trim();
-        if (!ingredientID || !recalcDateMap.has(ingredientID)) return false;
-        const recalcDateMs = recalcDateMap.get(ingredientID);
-        if (recalcDateMs == null) return true;
-        if (calcCompletedAt == null) return true;
-        return recalcDateMs > calcCompletedAt;
-      });
-    };
 
     const completedAll = withNutrition
       .filter((recipe) => recipe.naehrwerte?.calcPending !== true)
@@ -435,7 +398,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       });
     const completed = completedAll
       .filter((recipe) =>
-        needsRecalc(recipe) ||
+        needsNutritionRecalc(recipe, nutritionReferenceRows) ||
         hasNotIncludedNutritionIngredients(recipe) ||
         hasPendingManualAmountNutritionIngredients(recipe)
       );
@@ -1115,7 +1078,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         <React.Fragment key={`${word}-${index}`}>
           <span className="ingredient-word-context-trigger">
             {word}
-            {trimmedWord && activeTab === 'missingIngredientIDs' && (
+            {trimmedWord && effectiveActiveTab === 'missingIngredientIDs' && (
               <select
                 className="ingredient-word-context-select"
                 value=""
@@ -1162,7 +1125,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  if (!currentUser?.appCalls) {
+  if (!currentUser?.appCalls && !restrictedVisibleTabs) {
     return (
       <div className="app-calls-container">
         <div className="app-calls-header">
@@ -1207,57 +1170,73 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
         </button>
       </div>
       <div className="app-calls-tabs" ref={tabsRef}>
-        <button
-          className={`app-calls-tab${activeTab === 'app' ? ' active' : ''}`}
-          onClick={() => setActiveTab('app')}
-        >
-          App-Aufrufe
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'recipe' ? ' active' : ''}`}
-          onClick={() => setActiveTab('recipe')}
-        >
-          Rezeptaufrufe
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'nolink' ? ' active' : ''}`}
-          onClick={() => setActiveTab('nolink')}
-        >
-          Rezepte ohne Link
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'naehrwert' ? ' active' : ''}`}
-          onClick={() => setActiveTab('naehrwert')}
-        >
-          Nährwertberechnungen
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'missingIngredientIDs' ? ' active' : ''}`}
-          onClick={() => setActiveTab('missingIngredientIDs')}
-        >
-          Fehlende Zutaten-IDs
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'kulinariktypen' ? ' active' : ''}`}
-          onClick={() => setActiveTab('kulinariktypen')}
-        >
-          Kulinariktypen
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'standardeinheiten' ? ' active' : ''}`}
-          onClick={() => setActiveTab('standardeinheiten')}
-        >
-          Standardeinheiten/-adjektive
-        </button>
-        <button
-          className={`app-calls-tab${activeTab === 'kochatelier' ? ' active' : ''}`}
-          onClick={() => setActiveTab('kochatelier')}
-        >
-          Kochateliereinstellungen
-        </button>
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.APP) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.APP ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.APP)}
+          >
+            App-Aufrufe
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.RECIPE) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.RECIPE ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.RECIPE)}
+          >
+            Rezeptaufrufe
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.NOLINK) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.NOLINK ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.NOLINK)}
+          >
+            Rezepte ohne Link
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.NAEHRWERT) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.NAEHRWERT ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.NAEHRWERT)}
+          >
+            Nährwertberechnungen
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.MISSING_INGREDIENT_IDS) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.MISSING_INGREDIENT_IDS ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.MISSING_INGREDIENT_IDS)}
+          >
+            Fehlende Zutaten-IDs
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.KULINARIKTYPEN) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.KULINARIKTYPEN ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.KULINARIKTYPEN)}
+          >
+            Kulinariktypen
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.STANDARDEINHEITEN) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.STANDARDEINHEITEN ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.STANDARDEINHEITEN)}
+          >
+            Standardeinheiten/-adjektive
+          </button>
+        )}
+        {visibleTabIds.includes(KUECHENBETRIEB_TABS.KOCHATELIER) && (
+          <button
+            className={`app-calls-tab${effectiveActiveTab === KUECHENBETRIEB_TABS.KOCHATELIER ? ' active' : ''}`}
+            onClick={() => setActiveTab(KUECHENBETRIEB_TABS.KOCHATELIER)}
+          >
+            Kochateliereinstellungen
+          </button>
+        )}
       </div>
       <div className="app-calls-content">
-        {activeTab === 'app' ? (
+        {effectiveActiveTab === 'app' ? (
           <>
             <p className="app-calls-info-text">
               Hier sind alle Appaufrufe gemeinsam mit den zugehörigen Anwendern dokumentiert.
@@ -1338,7 +1317,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </>
             )}
           </>
-        ) : activeTab === 'recipe' ? (
+        ) : effectiveActiveTab === 'recipe' ? (
           <>
             <p className="app-calls-info-text">
               Hier werden alle Rezeptaufrufe mit den zugehörigen Anwendern und Rezepten protokolliert.
@@ -1409,7 +1388,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </>
             )}
           </>
-        ) : activeTab === 'nolink' ? (
+        ) : effectiveActiveTab === 'nolink' ? (
           <>
             <p className="app-calls-info-text">
               Hier sind alle öffentlichen Rezepte aufgelistet, die noch keinen Shared Link besitzen.
@@ -1454,7 +1433,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </>
             )}
           </>
-        ) : activeTab === 'naehrwert' ? (
+        ) : effectiveActiveTab === 'naehrwert' ? (
           <>
             <p className="app-calls-info-text">
               Übersicht aktiver und abgeschlossener Nährwertberechnungen. Laufende Berechnungen können abgebrochen werden, abgeschlossene Berechnungen lassen sich direkt öffnen.
@@ -1579,7 +1558,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </>
             )}
           </>
-        ) : activeTab === 'missingIngredientIDs' ? (
+        ) : effectiveActiveTab === 'missingIngredientIDs' ? (
           <>
             <p className="app-calls-info-text">
               Hier werden alle Rezepte aufgelistet, bei denen mindestens eine Zutat noch keine oder keine gültige ingredientID besitzt.
@@ -1656,7 +1635,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </>
             )}
           </>
-        ) : activeTab === 'kulinariktypen' ? (
+        ) : effectiveActiveTab === 'kulinariktypen' ? (
           <>
             {/* Offene Vorschläge section */}
             <div className="settings-section">
@@ -1861,7 +1840,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
               </div>
             </div>
           </>
-        ) : activeTab === 'standardeinheiten' ? (
+        ) : effectiveActiveTab === 'standardeinheiten' ? (
           <>
             {COMMON_ADJECTIVE_GROUPS.map((group) => (
               <div key={group} className="settings-section">

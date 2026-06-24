@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import Kueche from './Kueche';
 
 const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
+let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 
 jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
@@ -10,6 +11,13 @@ jest.mock('../utils/customLists', () => ({
   getTimelineMenuDefaultImage: () => Promise.resolve(DEFAULT_MENU_IMAGE),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
+  getButtonIcons: () => Promise.resolve({}),
+  DEFAULT_BUTTON_ICONS: { kuecheFab: '+' },
+  getEffectiveIcon: jest.fn((icons, key, isDarkMode) => {
+    if (isDarkMode && icons[`${key}Dark`]) return icons[`${key}Dark`];
+    return icons[key] ?? '';
+  }),
+  getDarkModePreference: jest.fn(() => false),
   getDarkModeMode: () => 'auto',
   getAlarmSoundPreference: () => 'default',
   saveAlarmSoundPreference: () => {},
@@ -26,6 +34,10 @@ jest.mock('../utils/categoryImages', () => ({
   getCategoryImages: () => Promise.resolve([]),
 }));
 
+jest.mock('../utils/imageUtils', () => ({
+  isBase64Image: jest.fn(() => false),
+}));
+
 jest.mock('../utils/appCallsFirestore', () => ({
   getAppCalls: jest.fn(),
 }));
@@ -38,6 +50,14 @@ jest.mock('../utils/userManagement', () => ({
   updateUserProfile: jest.fn(() => Promise.resolve({ success: true, message: 'Profil erfolgreich aktualisiert.' })),
 }));
 
+jest.mock('../utils/cuisineProposalsFirestore', () => ({
+  getCuisineProposals: jest.fn(() => Promise.resolve([])),
+}));
+
+jest.mock('../contexts/NutritionReferenceContext', () => ({
+  useNutritionReference: () => mockNutritionReferenceState,
+}));
+
 describe('Kueche', () => {
   beforeEach(() => {
     const { getAppCalls } = require('../utils/appCallsFirestore');
@@ -46,6 +66,9 @@ describe('Kueche', () => {
     getRecipeCalls.mockResolvedValue([]);
     const { getAllCookDates } = require('../utils/recipeCookDates');
     getAllCookDates.mockResolvedValue([]);
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValue([]);
+    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
   });
 
   const mockRecipes = [
@@ -819,7 +842,7 @@ describe('Kueche', () => {
     expect(kuechenstarsTile.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  test('FAB button is not rendered on Kueche even when currentUser has kuecheFab permission', async () => {
+  test('FAB button is hidden on Kueche when no relevant Küchenbetrieb tabs are available', async () => {
     await act(async () => {
       render(
         <Kueche
@@ -833,5 +856,77 @@ describe('Kueche', () => {
     });
 
     expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
+  });
+
+  test('FAB button is rendered on Kueche for open cuisine proposals and opens Küchenbetrieb with the matching tab', async () => {
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
+    const handleViewChange = jest.fn();
+
+    await act(async () => {
+      render(
+        <Kueche
+          recipes={[]}
+          menus={[]}
+          onSelectRecipe={() => {}}
+          allUsers={mockUsers}
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          onViewChange={handleViewChange}
+        />
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+
+    expect(handleViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['kulinariktypen'],
+      activeTab: 'kulinariktypen',
+    });
+  });
+
+  test('FAB button prioritizes missing ingredient IDs over nutrition issues and cuisine proposals', async () => {
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
+    mockNutritionReferenceState = {
+      rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: { toMillis: () => 2000 } }],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    const handleViewChange = jest.fn();
+
+    await act(async () => {
+      render(
+        <Kueche
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Gemüsepfanne',
+              ingredients: [
+                { type: 'ingredient', text: '1 Tomate' },
+                { type: 'ingredient', text: '200 g Reis', ingredientID: 'tomate' },
+              ],
+              naehrwerte: {
+                calcPending: false,
+                calcCompletedAt: 1000,
+                calcNotIncluded: [{ ingredient: '1 Tomate', error: 'Nicht gefunden' }],
+              },
+            },
+          ]}
+          menus={[]}
+          onSelectRecipe={() => {}}
+          allUsers={mockUsers}
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          onViewChange={handleViewChange}
+        />
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+
+    expect(handleViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['naehrwert', 'missingIngredientIDs', 'kulinariktypen'],
+      activeTab: 'missingIngredientIDs',
+    });
   });
 });

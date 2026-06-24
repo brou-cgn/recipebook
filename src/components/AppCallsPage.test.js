@@ -2062,6 +2062,71 @@ describe('AppCallsPage – tab preservation', () => {
     });
   });
 
+  describe('AppCallsPage – kuecheFAB tab restriction', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+      mockGetIngredientIdSuggestions.mockReset();
+      mockGetIngredientIdSuggestions.mockReturnValue([]);
+      mockNutritionModalProps.mockReset();
+      const { getCustomLists, getButtonIcons, getInspirationListSettings } = require('../utils/customLists');
+      const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+      const { getAppCalls } = require('../utils/appCallsFirestore');
+      const { getRecipeCalls } = require('../utils/recipeCallsFirestore');
+      getButtonIcons.mockResolvedValue({});
+      getCustomLists.mockResolvedValue({ cuisineTypes: [], cuisineGroups: [] });
+      getCuisineProposals.mockResolvedValue([{ id: 'proposal-1', name: 'Fusion', released: false }]);
+      getAppCalls.mockResolvedValue([]);
+      getRecipeCalls.mockResolvedValue([]);
+      getInspirationListSettings.mockResolvedValue({
+        inspirationListName: 'Inspirationen',
+        inspirationListDescription: '',
+        inspirationTargetListName: 'Für jeden Tag',
+        inspirationTargetListDescription: '',
+      });
+    });
+
+    test('shows only the tabs passed from the FAB and keeps the requested tab active', async () => {
+      render(
+        <AppCallsPage
+          currentUser={{ id: 'fab-user', kuecheFab: true }}
+          recipes={[]}
+          onUpdateRecipe={jest.fn()}
+          activeTab="kulinariktypen"
+          visibleTabs={['kulinariktypen']}
+        />
+      );
+
+      const kulinarikBtn = await screen.findByRole('button', { name: 'Kulinariktypen' });
+      expect(kulinarikBtn.className).toContain('active');
+      expect(screen.queryByRole('button', { name: 'App-Aufrufe' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Fehlende Zutaten-IDs' })).not.toBeInTheDocument();
+      expect(screen.getByText('Offene Vorschläge')).toBeInTheDocument();
+    });
+
+    test('falls back to the first visible FAB tab when the provided activeTab is hidden', async () => {
+      render(
+        <AppCallsPage
+          currentUser={{ id: 'fab-user', kuecheFab: true }}
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Salat',
+              ingredients: [{ type: 'ingredient', text: '1 Tomate' }],
+            },
+          ]}
+          onUpdateRecipe={jest.fn()}
+          activeTab="app"
+          visibleTabs={['missingIngredientIDs', 'kulinariktypen']}
+        />
+      );
+
+      const missingBtn = await screen.findByRole('button', { name: 'Fehlende Zutaten-IDs' });
+      expect(missingBtn.className).toContain('active');
+      expect(screen.getByRole('button', { name: 'IDs zuordnen' })).toBeInTheDocument();
+    });
+  });
+
   test('renders with the tab specified by activeTab prop', async () => {
     render(
       <AppCallsPage
