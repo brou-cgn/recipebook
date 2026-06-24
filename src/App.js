@@ -240,6 +240,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     printRecipe: rolePerms.printRecipe ?? true,
     recipeIndex: rolePerms.recipeIndex ?? ROLE_PERMISSIONS_DEFAULT[user.role]?.recipeIndex ?? false,
     startseite: rolePerms.startseite ?? false,
+    kuecheFab: rolePerms.kuecheFab ?? false,
   };
 }
 
