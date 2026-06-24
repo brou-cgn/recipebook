@@ -11,6 +11,8 @@ import { isBase64Image } from '../utils/imageUtils';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex, hasHauptsaisonIngredient, buildNutritionReferenceIndex } from '../utils/recipeSortIndex';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
+import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
+import { getKuechenbetriebFabConfig } from '../utils/kuechenbetriebTabs';
 
 const TRENDING_DAYS = 7;
 const TRENDING_TOP = 10;
@@ -20,7 +22,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe, onKuecheFabClick }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const nutritionReferenceIndex = useMemo(
     () => buildNutritionReferenceIndex(nutritionReferenceRows),
@@ -39,6 +41,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [lastOwnCookDateByRecipeId, setLastOwnCookDateByRecipeId] = useState({});
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
+  const [cuisineProposals, setCuisineProposals] = useState([]);
 
   // State for Gemeinsame Kandidaten carousel
   const [allMembersFlagDocs, setAllMembersFlagDocs] = useState({});
@@ -132,6 +135,18 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.kuecheFab) {
+      setCuisineProposals([]);
+      return;
+    }
+    getCuisineProposals().then((proposals) => {
+      setCuisineProposals(proposals);
+    }).catch(() => {
+      setCuisineProposals([]);
+    });
+  }, [currentUser]);
 
   // Load settings and swipe flags for Gemeinsame Kandidaten carousel in parallel.
   // Settings are fetched unconditionally; swipe flags require defaultWebImportList.
@@ -286,6 +301,19 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
       // sessionStorage might be unavailable in some environments
     }
     onViewChange?.('neueRezepte');
+  };
+
+  const kuechenbetriebFabConfig = useMemo(
+    () => getKuechenbetriebFabConfig({ recipes, nutritionReferenceRows, cuisineProposals }),
+    [recipes, nutritionReferenceRows, cuisineProposals]
+  );
+
+  const handleKuecheFabClick = () => {
+    if (!kuechenbetriebFabConfig.showFab || !kuechenbetriebFabConfig.activeTab) return;
+    onViewChange?.('appCalls', {
+      visibleTabs: kuechenbetriebFabConfig.visibleTabs,
+      activeTab: kuechenbetriebFabConfig.activeTab,
+    });
   };
 
   const handleSaisonaleRezepteMehrClick = () => {
@@ -642,11 +670,11 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
       />
-      {currentUser?.kuecheFab && (
+      {currentUser?.kuecheFab && kuechenbetriebFabConfig.showFab && (
         <button
           className={`startseite-fab-button${fabPressed ? ' pressed' : ''}`}
           style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
-          onClick={onKuecheFabClick}
+          onClick={handleKuecheFabClick}
           onTouchStart={() => setFabPressed(true)}
           onTouchEnd={() => setFabPressed(false)}
           onTouchCancel={() => setFabPressed(false)}

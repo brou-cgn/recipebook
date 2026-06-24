@@ -85,7 +85,11 @@ export function hasProblematicCompletedNutritionCalculation(recipe, nutritionRef
 
 export function getKuechenbetriebFabConfig({ recipes = [], nutritionReferenceRows = [], cuisineProposals = [] } = {}) {
   const hasNutritionIssues = recipes.some((recipe) => hasProblematicCompletedNutritionCalculation(recipe, nutritionReferenceRows));
-  const hasMissingIngredientIds = recipes.some((recipe) => hasMissingIngredientIDs(recipe, nutritionReferenceRows));
+  const hasLoadedNutritionReferenceRows = Array.isArray(nutritionReferenceRows) && nutritionReferenceRows.length > 0;
+  const hasMissingIngredientIds = recipes.some((recipe) => hasMissingIngredientIDs(
+    recipe,
+    hasLoadedNutritionReferenceRows ? nutritionReferenceRows : []
+  ));
   const hasOpenCuisineProposals = Array.isArray(cuisineProposals) && cuisineProposals.length > 0;
 
   const visibleTabs = [
