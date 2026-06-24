@@ -143,7 +143,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
     }
     getCuisineProposals().then((proposals) => {
       setCuisineProposals(proposals);
-    }).catch(() => {
+    }).catch((error) => {
+      console.error('Fehler beim Laden der Kulinariktypen-Vorschläge', error);
       setCuisineProposals([]);
     });
   }, [currentUser]);
@@ -309,7 +310,7 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   );
 
   const handleKuecheFabClick = () => {
-    if (!kuechenbetriebFabConfig.showFab || !kuechenbetriebFabConfig.activeTab) return;
+    if (!kuechenbetriebFabConfig.activeTab) return;
     onViewChange?.('appCalls', {
       visibleTabs: kuechenbetriebFabConfig.visibleTabs,
       activeTab: kuechenbetriebFabConfig.activeTab,

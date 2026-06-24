@@ -1124,7 +1124,7 @@ describe('Startseite', () => {
     });
   });
 
-  test('FAB active-tab priority stays missingIngredientIDs > naehrwert > kulinariktypen', async () => {
+  test('FAB keeps active-tab priority (missingIngredientIDs first) while preserving visible tab order', async () => {
     const onViewChange = jest.fn();
     const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
     getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
