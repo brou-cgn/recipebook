@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Startseite from './Startseite';
 
 const mockNutritionReferenceState = {
@@ -25,12 +25,12 @@ jest.mock('../utils/userFavorites', () => ({
 
 jest.mock('../utils/customLists', () => ({
   getDarkModePreference: jest.fn(() => false),
-  DEFAULT_BUTTON_ICONS: {},
+  DEFAULT_BUTTON_ICONS: { kuecheFab: '+', kuecheFabDark: '' },
   DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT: 'Keine gemeinsamen Kandidaten vorhanden.',
   DEFAULT_ALLTAGSKLASSIKER_LEERTEXT: 'Keine Alltagsklassiker vorhanden.',
   DEFAULT_MAX_KANDIDATEN_SCHWELLE: 5,
-  getButtonIcons: jest.fn(() => Promise.resolve({})),
-  getEffectiveIcon: jest.fn((icons, key) => ''),
+  getButtonIcons: jest.fn(() => Promise.resolve({ kuecheFab: '+', kuecheFabDark: '' })),
+  getEffectiveIcon: jest.fn((icons, key) => icons[key] ?? ''),
   getGroupStatusThresholds: jest.fn(() => Promise.resolve({})),
   getMaxKandidatenSchwelle: jest.fn(() => Promise.resolve(null)),
   getStartseitenKandidatenLeertext: jest.fn(() => Promise.resolve('Keine gemeinsamen Kandidaten vorhanden.')),
@@ -992,5 +992,56 @@ describe('Startseite', () => {
     const btn = screen.getByRole('button', { name: /Meine Rezeptsammlungen/i });
     expect(alltagsSection.compareDocumentPosition(btn)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(btn.compareDocumentPosition(trendSection)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  test('FAB button is rendered on Startseite when currentUser has kuecheFab permission', async () => {
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          recipes={[]}
+        />
+      );
+    });
+
+    expect(screen.getByRole('button', { name: /Küche-Aktion/i })).toBeInTheDocument();
+  });
+
+  test('FAB button is not rendered on Startseite when kuecheFab permission is false', async () => {
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: false }}
+          recipes={[]}
+        />
+      );
+    });
+
+    expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
+  });
+
+  test('FAB button is not rendered on Startseite when currentUser is not provided', async () => {
+    await act(async () => {
+      render(<Startseite recipes={[]} />);
+    });
+
+    expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
+  });
+
+  test('FAB button calls onKuecheFabClick when clicked on Startseite', async () => {
+    const handleFabClick = jest.fn();
+
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          recipes={[]}
+          onKuecheFabClick={handleFabClick}
+        />
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Küche-Aktion/i }));
+    expect(handleFabClick).toHaveBeenCalledTimes(1);
   });
 });

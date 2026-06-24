@@ -10,10 +10,6 @@ jest.mock('../utils/customLists', () => ({
   getTimelineMenuDefaultImage: () => Promise.resolve(DEFAULT_MENU_IMAGE),
   getTimelineCookEventBubbleIcon: () => Promise.resolve(null),
   getTimelineCookEventDefaultImage: () => Promise.resolve(null),
-  getButtonIcons: () => Promise.resolve({ kuecheFab: '+', kuecheFabDark: '' }),
-  DEFAULT_BUTTON_ICONS: { kuecheFab: '+', kuecheFabDark: '' },
-  getEffectiveIcon: (icons, key) => icons[key] ?? '+',
-  getDarkModePreference: () => false,
   getDarkModeMode: () => 'auto',
   getAlarmSoundPreference: () => 'default',
   saveAlarmSoundPreference: () => {},
@@ -823,7 +819,7 @@ describe('Kueche', () => {
     expect(kuechenstarsTile.compareDocumentPosition(kochbuchTile)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  test('FAB button is rendered when currentUser has kuecheFab permission', async () => {
+  test('FAB button is not rendered on Kueche even when currentUser has kuecheFab permission', async () => {
     await act(async () => {
       render(
         <Kueche
@@ -836,57 +832,6 @@ describe('Kueche', () => {
       );
     });
 
-    expect(screen.getByRole('button', { name: /Küche-Aktion/i })).toBeInTheDocument();
-  });
-
-  test('FAB button is not rendered when currentUser does not have kuecheFab permission', async () => {
-    await act(async () => {
-      render(
-        <Kueche
-          recipes={[]}
-          menus={[]}
-          onSelectRecipe={() => {}}
-          allUsers={mockUsers}
-          currentUser={{ id: 'user-1', kuecheFab: false }}
-        />
-      );
-    });
-
     expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
-  });
-
-  test('FAB button is not rendered when currentUser is not provided', async () => {
-    await act(async () => {
-      render(
-        <Kueche
-          recipes={[]}
-          menus={[]}
-          onSelectRecipe={() => {}}
-          allUsers={mockUsers}
-        />
-      );
-    });
-
-    expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
-  });
-
-  test('FAB button calls onKuecheFabClick when clicked', async () => {
-    const handleFabClick = jest.fn();
-
-    await act(async () => {
-      render(
-        <Kueche
-          recipes={[]}
-          menus={[]}
-          onSelectRecipe={() => {}}
-          allUsers={mockUsers}
-          currentUser={{ id: 'user-1', kuecheFab: true }}
-          onKuecheFabClick={handleFabClick}
-        />
-      );
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Küche-Aktion/i }));
-    expect(handleFabClick).toHaveBeenCalledTimes(1);
   });
 });

@@ -2,12 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './Kueche.css';
 import RecipeTimeline from './RecipeTimeline';
 import PersonalDataPage from './PersonalDataPage';
-import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { getTimelineBubbleIcon, getTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage } from '../utils/customLists';
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getAppCalls } from '../utils/appCallsFirestore';
 import { getRecipeCalls } from '../utils/recipeCallsFirestore';
-import { isBase64Image } from '../utils/imageUtils';
 
 function getLastSixMonthsRecipeCounts(recipes) {
   const now = new Date();
@@ -151,7 +150,7 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
-function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onKuecheFabClick }) {
+function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened }) {
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
   const [timelineMenuBubbleIcon, setTimelineMenuBubbleIcon] = useState(null);
@@ -163,11 +162,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [appCalls, setAppCalls] = useState([]);
   const [recipeCalls, setRecipeCalls] = useState([]);
   const [cookDates, setCookDates] = useState([]);
-  const [fabPressed, setFabPressed] = useState(false);
-  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
-  const [buttonIconsLoaded, setButtonIconsLoaded] = useState(false);
-
   const prevOpenPersonalData = React.useRef(false);
   const kuecheScrollPositionRef = React.useRef(0);
   const hadPersonalDataOpenRef = React.useRef(false);
@@ -208,21 +202,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
       setTimelineCookEventBubbleIcon(cookEventIcon);
       setTimelineCookEventDefaultImage(cookEventImg);
     }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    getButtonIcons().then(icons => {
-      setButtonIcons(icons);
-      setButtonIconsLoaded(true);
-    }).catch(() => {
-      setButtonIconsLoaded(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => setIsDarkMode(e.detail.isDark);
-    window.addEventListener('darkModeChange', handler);
-    return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
   useEffect(() => {
@@ -463,27 +442,6 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
             />
           )}
         </>
-      )}
-      {currentUser?.kuecheFab && (
-        <button
-          className={`kueche-fab-button${fabPressed ? ' pressed' : ''}`}
-          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
-          onClick={onKuecheFabClick}
-          onTouchStart={() => setFabPressed(true)}
-          onTouchEnd={() => setFabPressed(false)}
-          onTouchCancel={() => setFabPressed(false)}
-          onMouseDown={() => setFabPressed(true)}
-          onMouseUp={() => setFabPressed(false)}
-          onMouseLeave={() => setFabPressed(false)}
-          title="Küche-Aktion"
-          aria-label="Küche-Aktion"
-        >
-          {isBase64Image(getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)) ? (
-            <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt="Küche-Aktion" className="kueche-fab-button__icon" draggable="false" />
-          ) : (
-            getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)
-          )}
-        </button>
       )}
     </div>
   );
