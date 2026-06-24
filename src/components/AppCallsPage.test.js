@@ -2125,6 +2125,21 @@ describe('AppCallsPage – tab preservation', () => {
       expect(missingBtn.className).toContain('active');
       expect(screen.getByRole('button', { name: 'IDs zuordnen' })).toBeInTheDocument();
     });
+
+    test('does not grant restricted access without kuecheFab permission', async () => {
+      render(
+        <AppCallsPage
+          currentUser={{ id: 'regular-user', appCalls: false }}
+          recipes={[]}
+          onUpdateRecipe={jest.fn()}
+          activeTab="kulinariktypen"
+          visibleTabs={['kulinariktypen']}
+        />
+      );
+
+      expect(await screen.findByText('Sie haben keine Berechtigung, diese Seite aufzurufen.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Kulinariktypen' })).not.toBeInTheDocument();
+    });
   });
 
   test('renders with the tab specified by activeTab prop', async () => {

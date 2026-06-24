@@ -178,6 +178,11 @@ const APP_CALLS_TAB_ORDER = [
   KUECHENBETRIEB_TABS.STANDARDEINHEITEN,
   KUECHENBETRIEB_TABS.KOCHATELIER,
 ];
+const KUECHE_FAB_TAB_ORDER = [
+  KUECHENBETRIEB_TABS.NAEHRWERT,
+  KUECHENBETRIEB_TABS.MISSING_INGREDIENT_IDS,
+  KUECHENBETRIEB_TABS.KULINARIKTYPEN,
+];
 
 function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSelectRecipe, activeTab: activeTabProp, onActiveTabChange, visibleTabs }) {
   const [appCalls, setAppCalls] = useState([]);
@@ -376,9 +381,12 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     [appCalls, filterBenjaminRousselli]
   );
 
-  const restrictedVisibleTabs = Array.isArray(visibleTabs) ? visibleTabs : null;
+  const restrictedVisibleTabs = currentUser?.kuecheFab && Array.isArray(visibleTabs)
+    ? KUECHE_FAB_TAB_ORDER.filter((tabId) => visibleTabs.includes(tabId))
+    : [];
+  const hasRestrictedTabAccess = restrictedVisibleTabs.length > 0;
   const visibleTabIds = (() => {
-    if (!restrictedVisibleTabs || restrictedVisibleTabs.length === 0) return APP_CALLS_TAB_ORDER;
+    if (!hasRestrictedTabAccess) return APP_CALLS_TAB_ORDER;
     const filteredTabIds = APP_CALLS_TAB_ORDER.filter((tabId) => restrictedVisibleTabs.includes(tabId));
     return filteredTabIds.length > 0 ? filteredTabIds : APP_CALLS_TAB_ORDER;
   })();
@@ -1127,7 +1135,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
     }
   };
 
-  if (!currentUser?.appCalls && !restrictedVisibleTabs) {
+  if (!currentUser?.appCalls && !hasRestrictedTabAccess) {
     return (
       <div className="app-calls-container">
         <div className="app-calls-header">

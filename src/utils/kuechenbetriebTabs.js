@@ -58,7 +58,7 @@ export function needsNutritionRecalc(recipe, nutritionReferenceRows = []) {
 
   if (recalcDateMap.size === 0) return false;
 
-  const calcCompletedAt = recipe?.naehrwerte?.calcCompletedAt ?? null;
+  const calcCompletedAtMs = toMs(recipe?.naehrwerte?.calcCompletedAt ?? null);
   const rawIngredients = Array.isArray(recipe?.zutaten)
     ? recipe.zutaten
     : (Array.isArray(recipe?.ingredients) ? recipe.ingredients : []);
@@ -69,8 +69,8 @@ export function needsNutritionRecalc(recipe, nutritionReferenceRows = []) {
     if (!ingredientID || !recalcDateMap.has(ingredientID)) return false;
     const recalcDateMs = recalcDateMap.get(ingredientID);
     if (recalcDateMs == null) return true;
-    if (calcCompletedAt == null) return true;
-    return recalcDateMs > calcCompletedAt;
+    if (calcCompletedAtMs == null) return true;
+    return recalcDateMs > calcCompletedAtMs;
   });
 }
 

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import Kueche from './Kueche';
 
 const DEFAULT_MENU_IMAGE = 'data:image/png;base64,defaultmenuimage';
-let mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+let mockNutritionReferenceStateHolder = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
 
 jest.mock('../utils/customLists', () => ({
   getTimelineBubbleIcon: () => Promise.resolve(null),
@@ -55,7 +55,7 @@ jest.mock('../utils/cuisineProposalsFirestore', () => ({
 }));
 
 jest.mock('../contexts/NutritionReferenceContext', () => ({
-  useNutritionReference: () => mockNutritionReferenceState,
+  useNutritionReference: () => mockNutritionReferenceStateHolder,
 }));
 
 describe('Kueche', () => {
@@ -68,7 +68,7 @@ describe('Kueche', () => {
     getAllCookDates.mockResolvedValue([]);
     const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
     getCuisineProposals.mockResolvedValue([]);
-    mockNutritionReferenceState = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
+    mockNutritionReferenceStateHolder = { rows: [], loading: false, reload: jest.fn(), lastUpdatedAt: null };
   });
 
   const mockRecipes = [
@@ -887,7 +887,7 @@ describe('Kueche', () => {
   test('FAB button prioritizes missing ingredient IDs over nutrition issues and cuisine proposals', async () => {
     const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
     getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
-    mockNutritionReferenceState = {
+    mockNutritionReferenceStateHolder = {
       rows: [{ ingredientID: 'tomate', recalc: true, recalcDate: { toMillis: () => 2000 } }],
       loading: false,
       reload: jest.fn(),
