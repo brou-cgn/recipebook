@@ -377,9 +377,11 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   );
 
   const restrictedVisibleTabs = Array.isArray(visibleTabs) ? visibleTabs : null;
-  const visibleTabIds = restrictedVisibleTabs && restrictedVisibleTabs.length > 0
-    ? APP_CALLS_TAB_ORDER.filter((tabId) => restrictedVisibleTabs.includes(tabId))
-    : APP_CALLS_TAB_ORDER;
+  const visibleTabIds = (() => {
+    if (!restrictedVisibleTabs || restrictedVisibleTabs.length === 0) return APP_CALLS_TAB_ORDER;
+    const filteredTabIds = APP_CALLS_TAB_ORDER.filter((tabId) => restrictedVisibleTabs.includes(tabId));
+    return filteredTabIds.length > 0 ? filteredTabIds : APP_CALLS_TAB_ORDER;
+  })();
   const effectiveActiveTab = visibleTabIds.includes(activeTab) ? activeTab : visibleTabIds[0];
 
   const nutritionListData = useMemo(() => {

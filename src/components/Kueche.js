@@ -181,7 +181,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const kuecheScrollPositionRef = React.useRef(0);
   const hadPersonalDataOpenRef = React.useRef(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
-  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
   const [fabPressed, setFabPressed] = useState(false);
   const [cuisineProposals, setCuisineProposals] = useState([]);
 
