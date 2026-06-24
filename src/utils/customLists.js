@@ -714,6 +714,7 @@ export const DEFAULT_BUTTON_ICONS = {
   addImage: '🖼',
   trendingDifficultyIcon: '★',
   trendingTimeIcon: '⏱',
+  kuecheFab: '+',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
   trendingDifficultyIconDark: '',
   trendingTimeIconDark: '',
@@ -775,6 +776,7 @@ export const DEFAULT_BUTTON_ICONS = {
   resetThumbnailDark: '',
   recipeCardSwipeRightDark: '',
   addImageDark: '',
+  kuecheFabDark: '',
 };
 
 /**

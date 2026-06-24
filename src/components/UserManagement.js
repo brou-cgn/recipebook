@@ -231,7 +231,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
 
         <div className="role-permissions-section">
           <h3>Funktionen nach Berechtigung</h3>
-          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild, Rezept drucken, Rezeptindex und Startseite haben.</p>
+          <p className="info-text">Legen Sie hier fest, welche Berechtigungsgruppen Zugriff auf Einstellungen, Fotoscan, Webimport, App-Aufrufe (Daten), App-Aufrufe (Menüpunkt), Rezepteimport, Bewertungs-Löschen, Nährwert-Abbruch, Sortier-Karussell, Listen bearbeiten, Testmodus Tagesmenü, Erscheinungsbild, Rezept drucken, Rezeptindex, Startseite und Küche-FAB haben.</p>
           <p className="info-text">Damit das Indexfeld im Rezept sichtbar ist, muss die Berechtigung „Rezeptindex“ für die jeweilige Rolle aktiviert sein.</p>
           <div className="role-permissions-table-container">
             <table className="role-permissions-table">
@@ -253,6 +253,7 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                   <th>Drucken</th>
                   <th>Rezeptindex</th>
                   <th>Startseite</th>
+                  <th>Küche-FAB</th>
                 </tr>
               </thead>
               <tbody>
@@ -398,6 +399,15 @@ function UserManagement({ onBack, currentUser, allUsers = [] }) {
                           title={perms.startseite ? 'Startseite deaktivieren' : 'Startseite aktivieren'}
                         >
                           {perms.startseite ? '✓' : '✗'}
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className={`permission-toggle ${perms.kuecheFab ? 'active' : ''}`}
+                          onClick={() => handleToggleRolePermission(role, 'kuecheFab', perms.kuecheFab)}
+                          title={perms.kuecheFab ? 'Küche-FAB deaktivieren' : 'Küche-FAB aktivieren'}
+                        >
+                          {perms.kuecheFab ? '✓' : '✗'}
                         </button>
                       </td>
                     </tr>

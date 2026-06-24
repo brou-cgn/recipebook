@@ -212,6 +212,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'addImage', label: 'Bild hinzufügen (neben Titel)' },
   { key: 'trendingDifficultyIcon', label: 'Trend-Kachel: Icon vor Schwierigkeitsgrad' },
   { key: 'trendingTimeIcon', label: 'Trend-Kachel: Icon vor Zubereitungszeit' },
+  { key: 'kuecheFab', label: 'Küche-FAB-Button' },
 ];
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {
