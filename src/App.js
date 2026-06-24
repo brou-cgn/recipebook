@@ -1843,7 +1843,7 @@ function App() {
           allUsers={allUsers}
         />
         ) : currentView === 'startseite' ? (
-        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} />
+        <Startseite currentUser={currentUser} onViewChange={handleViewChange} onSelectRecipe={handleSelectRecipe} recipes={recipes} groups={groups} groupsLoading={groupsLoading} onCreateInspirationList={handleCreateInspirationList} onSelectExistingInspirationList={handleSelectExistingInspirationList} onAssignEverydayClassicsList={handleAssignEverydayClassicsList} onOpenPrivateListRecipes={handleOpenPrivateListRecipes} onOpenSeasonalRecipes={handleOpenSeasonalRecipes} onAddRecipe={handleAddRecipe} onKuecheFabClick={() => {}} />
         ) : (
         // Recipe views
         <>

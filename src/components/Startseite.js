@@ -20,7 +20,7 @@ const ALLTAGSKLASSIKER_TOP = 10;
 const KOCHIDEEN_KARUSSELL_MAX = 6;
 const SORT_STORAGE_KEY = 'recipebook_active_sort';
 
-function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe }) {
+function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], groups = [], groupsLoading = false, onCreateInspirationList, onSelectExistingInspirationList, onAssignEverydayClassicsList, onOpenPrivateListRecipes, onOpenSeasonalRecipes, onAddRecipe, onKuecheFabClick }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const nutritionReferenceIndex = useMemo(
     () => buildNutritionReferenceIndex(nutritionReferenceRows),
@@ -31,6 +31,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [isCreatingInspiration, setIsCreatingInspiration] = useState(false);
+  const [fabPressed, setFabPressed] = useState(false);
+  const [buttonIconsLoaded, setButtonIconsLoaded] = useState(false);
   const [showInspirationPicker, setShowInspirationPicker] = useState(false);
   const [showAlltagsklassikerPicker, setShowAlltagsklassikerPicker] = useState(false);
   const [isAssigningAlltagsklassiker, setIsAssigningAlltagsklassiker] = useState(false);
@@ -83,6 +85,8 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         setButtonIcons(icons);
       } catch (error) {
         // Keep default values if loading fails
+      } finally {
+        setButtonIconsLoaded(true);
       }
     };
     loadIcons();
@@ -638,6 +642,27 @@ function Startseite({ currentUser, onViewChange, onSelectRecipe, recipes = [], g
         emptyText="Keine Rezepte vorhanden."
         onMehr={handleNeueRezepteMehrClick}
       />
+      {currentUser?.kuecheFab && (
+        <button
+          className={`startseite-fab-button${fabPressed ? ' pressed' : ''}`}
+          style={{ visibility: buttonIconsLoaded ? 'visible' : 'hidden' }}
+          onClick={onKuecheFabClick}
+          onTouchStart={() => setFabPressed(true)}
+          onTouchEnd={() => setFabPressed(false)}
+          onTouchCancel={() => setFabPressed(false)}
+          onMouseDown={() => setFabPressed(true)}
+          onMouseUp={() => setFabPressed(false)}
+          onMouseLeave={() => setFabPressed(false)}
+          title="Küche-Aktion"
+          aria-label="Küche-Aktion"
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)} alt="Küche-Aktion" className="startseite-fab-button__icon" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'kuecheFab', isDarkMode)
+          )}
+        </button>
+      )}
     </div>
   );
 }
