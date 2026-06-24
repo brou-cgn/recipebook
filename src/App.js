@@ -977,11 +977,10 @@ function App() {
   const handleViewChange = (view, options = {}) => {
     if (view === 'appCalls') {
       setAppCallsVisibleTabs(Array.isArray(options.visibleTabs) ? options.visibleTabs : null);
-      if (options.activeTab) {
-        setAppCallsActiveTab(options.activeTab);
-      }
+      setAppCallsActiveTab(options.activeTab || 'app');
     } else if (currentView === 'appCalls') {
       setAppCallsVisibleTabs(null);
+      setAppCallsActiveTab('app');
     }
     if (view === 'groups') {
       setGroupsOpenedFromStartseite(currentView === 'startseite');

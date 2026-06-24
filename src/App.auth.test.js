@@ -45,6 +45,10 @@ jest.mock('./components/Header', () => {
       <div ref={ref} data-testid="header" data-current-view={props.currentView}>
         <button type="button" onClick={() => props.onViewChange?.('recipes')}>go-recipes</button>
         <button type="button" onClick={() => props.onViewChange?.('groups')}>go-groups</button>
+        <button type="button" onClick={() => props.onViewChange?.('appCalls')}>go-appcalls</button>
+        {props.onChefkochClick && (
+          <button type="button" onClick={() => props.onChefkochClick()}>go-kueche</button>
+        )}
         {props.startseiteEnabled && (
           <button type="button" onClick={() => props.onViewChange?.('startseite')}>go-startseite</button>
         )}
@@ -89,8 +93,21 @@ jest.mock('./components/PasswordChangeModal', () => function MockPasswordChangeM
   return null;
 });
 
-jest.mock('./components/Kueche', () => function MockKueche() {
-  return <div data-testid="kueche-view">Kueche</div>;
+jest.mock('./components/Kueche', () => function MockKueche(props) {
+  return (
+    <div data-testid="kueche-view">
+      Kueche
+      <button
+        type="button"
+        onClick={() => props.onViewChange?.('appCalls', {
+          visibleTabs: ['kulinariktypen'],
+          activeTab: 'kulinariktypen',
+        })}
+      >
+        kueche-open-restricted-appcalls
+      </button>
+    </div>
+  );
 });
 
 jest.mock('./components/SharePage', () => function MockSharePage() {
@@ -141,8 +158,16 @@ jest.mock('./components/GroupDetail', () => function MockGroupDetail(props) {
   );
 });
 
-jest.mock('./components/AppCallsPage', () => function MockAppCallsPage() {
-  return null;
+jest.mock('./components/AppCallsPage', () => function MockAppCallsPage(props) {
+  return (
+    <div
+      data-testid="app-calls-view"
+      data-active-tab={props.activeTab || ''}
+      data-visible-tabs={JSON.stringify(props.visibleTabs ?? null)}
+    >
+      <button type="button" onClick={() => props.onBack?.()}>appcalls-back</button>
+    </div>
+  );
 });
 
 jest.mock('./components/MeineKuechenstarsPage', () => function MockMeineKuechenstarsPage() {
@@ -540,5 +565,66 @@ describe('App authentication view handling', () => {
     expect(recipeForm).toHaveAttribute('data-initial-author', 'user-99');
     expect(sessionStorage.getItem('pendingWebimportUrl')).toBeNull();
     expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
+  });
+
+  test('clicking the Küche FAB opens appCalls and passes the restricted tab state through', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-10',
+        vorname: 'Kueche',
+        nachname: 'Fab',
+        email: 'kueche-fab@example.com',
+        role: 'user',
+        appCalls: true,
+        kuecheFab: true,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
+    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'kueche-open-restricted-appcalls' }));
+
+    const appCallsView = await screen.findByTestId('app-calls-view');
+    expect(appCallsView).toHaveAttribute('data-active-tab', 'kulinariktypen');
+    expect(appCallsView).toHaveAttribute('data-visible-tabs', '["kulinariktypen"]');
+  });
+
+  test('leaving restricted appCalls clears the restricted tab state before a normal reopen', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-11',
+        vorname: 'Reset',
+        nachname: 'Tabs',
+        email: 'reset-tabs@example.com',
+        role: 'user',
+        appCalls: true,
+        kuecheFab: true,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
+    fireEvent.click(screen.getByRole('button', { name: 'kueche-open-restricted-appcalls' }));
+
+    expect(await screen.findByTestId('app-calls-view')).toHaveAttribute('data-visible-tabs', '["kulinariktypen"]');
+
+    fireEvent.click(screen.getByRole('button', { name: 'appcalls-back' }));
+    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-appcalls' }));
+
+    const appCallsView = await screen.findByTestId('app-calls-view');
+    expect(appCallsView).toHaveAttribute('data-active-tab', 'app');
+    expect(appCallsView).toHaveAttribute('data-visible-tabs', 'null');
   });
 });
