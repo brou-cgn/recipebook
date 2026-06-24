@@ -17,6 +17,15 @@ jest.mock('./components/Startseite', () => function MockStartseite(props) {
       Startseite
       <button type="button" onClick={() => props.onViewChange?.('groups')}>startseite-go-groups</button>
       <button type="button" onClick={() => props.onOpenSeasonalRecipes?.()}>startseite-go-seasonal</button>
+      <button
+        type="button"
+        onClick={() => props.onViewChange?.('appCalls', {
+          visibleTabs: ['kulinariktypen'],
+          activeTab: 'kulinariktypen',
+        })}
+      >
+        startseite-open-restricted-appcalls
+      </button>
     </div>
   );
 });
@@ -567,11 +576,11 @@ describe('App authentication view handling', () => {
     expect(sessionStorage.getItem('pendingWebimportAuthor')).toBeNull();
   });
 
-  test('clicking the Küche FAB opens appCalls and passes the restricted tab state through', async () => {
+  test('clicking the Startseite Küche FAB opens appCalls and passes the restricted tab state through', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
-    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true } });
+    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true, startseite: true } });
 
     await act(async () => {
       mockAuthStateCallback({
@@ -585,10 +594,8 @@ describe('App authentication view handling', () => {
       });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
-    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'kueche-open-restricted-appcalls' }));
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'startseite-open-restricted-appcalls' }));
 
     const appCallsView = await screen.findByTestId('app-calls-view');
     expect(appCallsView).toHaveAttribute('data-active-tab', 'kulinariktypen');
@@ -599,7 +606,7 @@ describe('App authentication view handling', () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
 
-    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true } });
+    mockGetRolePermissions.mockResolvedValue({ user: { appCalls: true, startseite: true } });
 
     await act(async () => {
       mockAuthStateCallback({
@@ -613,8 +620,8 @@ describe('App authentication view handling', () => {
       });
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
-    fireEvent.click(screen.getByRole('button', { name: 'kueche-open-restricted-appcalls' }));
+    expect(await screen.findByTestId('startseite-view')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'startseite-open-restricted-appcalls' }));
 
     expect(await screen.findByTestId('app-calls-view')).toHaveAttribute('data-visible-tabs', '["kulinariktypen"]');
 

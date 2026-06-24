@@ -52,6 +52,10 @@ jest.mock('../utils/seasonMatrix', () => ({
   }),
 }));
 
+jest.mock('../utils/cuisineProposalsFirestore', () => ({
+  getCuisineProposals: jest.fn(() => Promise.resolve([])),
+}));
+
 jest.mock('./TrendingCard', () => ({ recipe, onSelectRecipe, difficultyIcon, timeIcon }) => (
   <div data-testid="trending-card" onClick={() => onSelectRecipe?.(recipe)}>{recipe.title}</div>
 ));
@@ -81,6 +85,9 @@ beforeEach(() => {
     callback([]);
     return jest.fn();
   });
+  const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+  getCuisineProposals.mockResolvedValue([]);
+  mockNutritionReferenceState.rows = [{ ingredientID: 'ing-spargel', seasonRelevant: true, seasonalFamily: 'Spargel' }];
 });
 
 describe('Startseite', () => {
@@ -994,17 +1001,29 @@ describe('Startseite', () => {
     expect(btn.compareDocumentPosition(trendSection)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  test('FAB button is rendered on Startseite when currentUser has kuecheFab permission', async () => {
+  test('FAB button is hidden on Startseite when no actionable Küchenbetrieb work exists', async () => {
+    mockNutritionReferenceState.rows = [{ ingredientID: 'ing-valid' }];
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValueOnce([]);
     await act(async () => {
       render(
         <Startseite
           currentUser={{ id: 'user-1', kuecheFab: true }}
-          recipes={[]}
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Valid recipe',
+              ingredients: [{ type: 'ingredient', text: '1 Zutat', ingredientID: 'ing-valid' }],
+              naehrwerte: { calcPending: false, calcCompletedAt: 1000, calcNotIncluded: [], calcIngredientDetails: [] },
+            },
+          ]}
         />
       );
     });
 
-    expect(screen.getByRole('button', { name: /Küche-Aktion/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
+    });
   });
 
   test('FAB button is not rendered on Startseite when kuecheFab permission is false', async () => {
@@ -1028,20 +1047,113 @@ describe('Startseite', () => {
     expect(screen.queryByRole('button', { name: /Küche-Aktion/i })).not.toBeInTheDocument();
   });
 
-  test('FAB button calls onKuecheFabClick when clicked on Startseite', async () => {
-    const handleFabClick = jest.fn();
+  test('FAB button opens restricted appCalls tab for open cuisine proposals', async () => {
+    const onViewChange = jest.fn();
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
 
     await act(async () => {
       render(
         <Startseite
           currentUser={{ id: 'user-1', kuecheFab: true }}
           recipes={[]}
-          onKuecheFabClick={handleFabClick}
+          onViewChange={onViewChange}
         />
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Küche-Aktion/i }));
-    expect(handleFabClick).toHaveBeenCalledTimes(1);
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+    expect(onViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['kulinariktypen'],
+      activeTab: 'kulinariktypen',
+    });
+  });
+
+  test('FAB button opens missing ingredient IDs tab when reference data is loaded and IDs are invalid', async () => {
+    const onViewChange = jest.fn();
+    mockNutritionReferenceState.rows = [{ ingredientID: 'ing-valid' }];
+
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Recipe with invalid ID',
+              ingredients: [{ type: 'ingredient', text: '1 Zutat', ingredientID: 'ing-missing' }],
+            },
+          ]}
+          onViewChange={onViewChange}
+        />
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+    expect(onViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['missingIngredientIDs'],
+      activeTab: 'missingIngredientIDs',
+    });
+  });
+
+  test('FAB button opens nutrition tab for problematic completed nutrition calculations', async () => {
+    const onViewChange = jest.fn();
+    mockNutritionReferenceState.rows = [{ ingredientID: 'ing-recalc', recalc: true, recalcDate: { toMillis: () => 2000 } }];
+
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Recipe with recalculation issue',
+              ingredients: [{ type: 'ingredient', text: '1 Zutat', ingredientID: 'ing-recalc' }],
+              naehrwerte: { calcPending: false, calcCompletedAt: 1000 },
+            },
+          ]}
+          onViewChange={onViewChange}
+        />
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+    expect(onViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['naehrwert'],
+      activeTab: 'naehrwert',
+    });
+  });
+
+  test('FAB keeps active-tab priority (missingIngredientIDs first) while preserving visible tab order', async () => {
+    const onViewChange = jest.fn();
+    const { getCuisineProposals } = require('../utils/cuisineProposalsFirestore');
+    getCuisineProposals.mockResolvedValueOnce([{ id: 'proposal-1', name: 'Fusion', released: false }]);
+    mockNutritionReferenceState.rows = [{ ingredientID: 'ing-recalc', recalc: true, recalcDate: { toMillis: () => 2000 } }];
+
+    await act(async () => {
+      render(
+        <Startseite
+          currentUser={{ id: 'user-1', kuecheFab: true }}
+          recipes={[
+            {
+              id: 'recipe-1',
+              title: 'Recipe with all issues',
+              ingredients: [
+                { type: 'ingredient', text: '1 Zutat ohne ID' },
+                { type: 'ingredient', text: '1 Zutat mit recalc ID', ingredientID: 'ing-recalc' },
+              ],
+              naehrwerte: { calcPending: false, calcCompletedAt: 1000 },
+            },
+          ]}
+          onViewChange={onViewChange}
+        />
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /Küche-Aktion/i }));
+    expect(onViewChange).toHaveBeenCalledWith('appCalls', {
+      visibleTabs: ['naehrwert', 'missingIngredientIDs', 'kulinariktypen'],
+      activeTab: 'missingIngredientIDs',
+    });
   });
 });
