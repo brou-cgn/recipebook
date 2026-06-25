@@ -16,7 +16,6 @@ const CALC_RESULT_STORAGE_KEY_PREFIX = 'nutrition_calc_result_';
 const AMOUNT_G_DECIMALS = 1;
 const NUTRITION_FIELDS = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
 const DEFAULT_YIELD_SUGGESTION_FACTOR = 0.95;
-const VALID_KI_CONFIDENCE_LEVELS = new Set(['high', 'medium', 'low']);
 
 export function parseManualAmountG(value) {
   if (value == null) return null;
@@ -149,42 +148,9 @@ function formatRoundedValue(value, decimals = 1) {
   return String(rounded).replace('.', ',');
 }
 
-function normalizeOpenFoodFactsConfidence(value) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-}
-
-function normalizeKiConfidence(value) {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : null;
-  return VALID_KI_CONFIDENCE_LEVELS.has(normalized) ? normalized : null;
-}
-
-function normalizePer100gConfidence(confidence) {
-  const openFoodFacts = normalizeOpenFoodFactsConfidence(confidence?.openFoodFacts);
-  const ki = normalizeKiConfidence(confidence?.ki);
-  if (openFoodFacts == null && ki == null) return null;
-  return {
-    ...(openFoodFacts != null ? { openFoodFacts } : {}),
-    ...(ki != null ? { ki } : {}),
-  };
-}
-
-function getPer100gConfidence(...sources) {
-  for (const source of sources) {
-    const normalized = normalizePer100gConfidence(source?.confidence);
-    if (normalized) return normalized;
-  }
-  return null;
-}
-
 function formatOffConfidence(value) {
-  const normalized = normalizeOpenFoodFactsConfidence(value);
-  if (normalized == null) return 'nicht verfügbar';
-  return `${Math.round(normalized * 100)} %`;
-}
-
-function formatKiConfidence(value) {
-  return normalizeKiConfidence(value) ?? 'nicht verfügbar';
+  if (value == null) return 'nicht verfügbar';
+  return `${Math.round(value * 100)} %`;
 }
 
 function buildLinkedRecipeDetail({ link, amountG, amountEstimated, naehrwerte }) {
@@ -325,7 +291,7 @@ function resolveFinalWeightGrams({ sumIngredientAmountsG, calcYieldGrams, calcYi
   return parseManualAmountG(storedFinalWeightGrams);
 }
 
-function buildPer100gNutrition(totals, finalWeightGrams, confidence = null) {
+function buildPer100gNutrition(totals, finalWeightGrams) {
   const weight = parseManualAmountG(finalWeightGrams);
   if (!totals || weight == null) return null;
 
@@ -335,8 +301,7 @@ function buildPer100gNutrition(totals, finalWeightGrams, confidence = null) {
     if (value == null) return;
     per100g[field] = roundNutritionValue(field, (value / weight) * 100);
   });
-  const normalizedConfidence = normalizePer100gConfidence(confidence);
-  return normalizedConfidence ? { ...per100g, confidence: normalizedConfidence } : per100g;
+  return per100g;
 }
 
 function loadStoredCalcResult(recipeId) {
@@ -688,16 +653,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcYieldFactor: recipe?.naehrwerte?.calcYieldFactor ?? autoCalcResult?.calcYieldFactor ?? null,
       storedFinalWeightGrams: autoCalcResult?.calcFinalWeightGrams ?? recipe?.naehrwerte?.calcFinalWeightGrams ?? null,
     });
-    const inheritedPer100gConfidence = getPer100gConfidence(
-      autoCalcResult?.calcPer100g,
-      recipe?.naehrwerte?.calcPer100g
-    );
     return {
       totals,
       normalizedManualAmounts,
       totalAmountG: ingredientSummary?.totalAmountG ?? null,
       finalWeightGrams,
-      per100g: buildPer100gNutrition(totals, finalWeightGrams, inheritedPer100gConfidence) ||
+      per100g: buildPer100gNutrition(totals, finalWeightGrams) ||
         autoCalcResult?.calcPer100g ||
         recipe?.naehrwerte?.calcPer100g ||
         null,
@@ -734,12 +695,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
       calcYieldFactor: normalizedYieldGrams != null ? null : (recipe?.naehrwerte?.calcYieldFactor ?? autoCalcResult?.calcYieldFactor ?? null),
       storedFinalWeightGrams: recipe?.naehrwerte?.calcFinalWeightGrams ?? autoCalcResult?.calcFinalWeightGrams ?? null,
     });
-    const inheritedPer100gConfidence = getPer100gConfidence(
-      calculatedNutritionState.per100g,
-      autoCalcResult?.calcPer100g,
-      recipe?.naehrwerte?.calcPer100g
-    );
-    const calcPer100g = buildPer100gNutrition(totals, finalWeightGrams, inheritedPer100gConfidence);
+    const calcPer100g = buildPer100gNutrition(totals, finalWeightGrams);
     return {
       ...(recipe?.naehrwerte || {}),
       ...(totals || {}),
@@ -1647,18 +1603,12 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                     type="button"
                     className="per100g-info-btn"
                     aria-label="Verlässlichkeit der Nährwerte je 100 g"
-                    aria-controls="per100g-confidence-tooltip"
-                    aria-expanded={showPer100gInfo}
                     onClick={() => setShowPer100gInfo((prev) => !prev)}
                   >
                     &#9432;
                   </button>
                   {showPer100gInfo && (
-                    <div
-                      id="per100g-confidence-tooltip"
-                      className="per100g-confidence-tooltip"
-                      role="tooltip"
-                    >
+                    <div className="per100g-confidence-tooltip" role="tooltip">
                       <button
                         type="button"
                         className="per100g-confidence-tooltip__close"
@@ -1676,7 +1626,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                       <div className="per100g-confidence-tooltip__row">
                         <span className="per100g-confidence-tooltip__label">KI-Schätzung:</span>
                         <span className="per100g-confidence-tooltip__value">
-                          {formatKiConfidence(calculatedNutritionState.per100g?.confidence?.ki)}
+                          {calculatedNutritionState.per100g?.confidence?.ki ?? 'nicht verfügbar'}
                         </span>
                       </div>
                     </div>

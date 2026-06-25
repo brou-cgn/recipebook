@@ -65,18 +65,10 @@ function isSimpleIngredient(ingredientStr) {
   const str = ingredientStr.trim();
   if (!str) return false;
 
-  const simplePattern = new RegExp(
-      [
-        String.raw`^[\d.,]+\s*(?:g|kg|mg|ml|l|dl|cl|EL|el|TL|tl|Esslöffel|`,
-        String.raw`esslöffel|Teelöffel|teelöffel|Prise|prise|Prisen|prisen|`,
-        String.raw`Tasse|tasse|Tassen|tassen|Bund|bund)\.?\s+[^\s,]+$`,
-      ].join(''),
-      'u',
-  );
+  const simplePattern = /^[\d.,]+\s*(?:g|kg|mg|ml|l|dl|cl|EL|el|TL|tl|Esslöffel|esslöffel|Teelöffel|teelöffel|Prise|prise|Prisen|prisen|Tasse|tasse|Tassen|tassen|Bund|bund)\.?\s+[^\s,]+$/u;
   if (!simplePattern.test(str)) return false;
 
-  const hasModifiers =
-    /,|\b(?:kaltgepresst|gehackt|getrocknet|bio|frisch|tiefgekühlt)\b/i.test(str);
+  const hasModifiers = /,|\b(?:kaltgepresst|gehackt|getrocknet|bio|frisch|tiefgekühlt)\b/i.test(str);
   return !hasModifiers;
 }
 
@@ -233,22 +225,22 @@ const VALID_KI_CONFIDENCE_LEVELS = new Set(['high', 'medium', 'low']);
 
 /**
  * @param {object} data
- * @return {{per100g: Object<string, number>, kiConfidence: (string|null)}|null}
+ * @return {{
+ *   per100g: {
+ *     kalorien: number,
+ *     protein: number,
+ *     fett: number,
+ *     kohlenhydrate: number,
+ *     zucker: number,
+ *     ballaststoffe: number,
+ *     salz: number
+ *   },
+ *   kiConfidence: string|null
+ * }|null}
  */
 function normalizeGeminiNutritionEstimate(data) {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return null;
-  }
-
   const fields = ['kalorien', 'protein', 'fett', 'kohlenhydrate', 'zucker', 'ballaststoffe', 'salz'];
   const per100g = {};
-  const hasNutritionField = fields.some(
-      (field) => Object.prototype.hasOwnProperty.call(data, field),
-  );
-
-  if (!hasNutritionField) {
-    return null;
-  }
 
   for (const field of fields) {
     const normalized = normalizeNonNegativeNumber(data?.[field]);
@@ -412,12 +404,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
    * @param {object} [options]
    * @return {Promise<string|null>}
    */
-  async function generateSearchTermWithGemini(
-      ingredientID,
-      nutritionFamily,
-      category,
-      options = {},
-  ) {
+  async function generateSearchTermWithGemini(ingredientID, nutritionFamily, category, options = {}) {
     const apiKey = options.apiKey ?? env.GEMINI_API_KEY;
     if (!apiKey || !GoogleGenerativeAI) return null;
 
@@ -430,10 +417,8 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
 
     try {
       const result = await withTimeout(
-          model.generateContent(
-              buildReferenceSearchTermPrompt(ingredientID, nutritionFamily, category),
-          ),
-          options.timeoutMs ?? 15000,
+        model.generateContent(buildReferenceSearchTermPrompt(ingredientID, nutritionFamily, category)),
+        options.timeoutMs ?? 15000,
       );
       const text = await result.response.text();
       const jsonText = extractJsonObject(text);

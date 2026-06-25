@@ -776,7 +776,7 @@ function NutritionReferenceTab({ currentUser }) {
                       aria-label={`Confidence-Berechnung ${row.id}`}
                       title={confidenceInfo}
                     >
-                      &#9432;
+                      (i)
                     </button>
                   </td>
                   <td>
