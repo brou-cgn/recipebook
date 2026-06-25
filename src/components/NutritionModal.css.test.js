@@ -32,7 +32,7 @@ describe('NutritionModal table spacing styles', () => {
     expect(per100gColRule).toContain('width: 32%;');
     expect(mergedHeaderRule).not.toContain('padding-right:');
     expect(mergedHeaderRule).toContain('white-space: nowrap;');
-    expect(per100gHeaderRule).toContain('position: relative;');
+    expect(per100gHeaderRule).toBe('');
     expect(portionValueRule).toContain('padding-right: 0.9rem;');
     expect(per100gValueRule).toContain('padding-left: 0.35rem;');
   });

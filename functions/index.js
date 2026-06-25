@@ -1933,23 +1933,6 @@ function buildNutritionPer100g(totals = {}, finalWeightGrams) {
   return Object.keys(per100g).length > 0 ? per100g : null;
 }
 
-/**
- * Returns the lowest confidence level among AI estimates.
- * Priority order (most uncertain first): low < medium < high.
- * Returns null if no AI estimates were used.
- *
- * @param {Array<string|null>} levels
- * @return {string|null}
- */
-function aggregateKiConfidence(levels) {
-  const filtered = levels.filter((v) => v != null);
-  if (filtered.length === 0) return null;
-  const priority = {low: 0, medium: 1, high: 2};
-  return filtered.reduce((worst, c) => {
-    return (priority[c] ?? 1) < (priority[worst] ?? 1) ? c : worst;
-  });
-}
-
 function resolveNutritionFinalWeightGrams({sumIngredientAmounts, calcYieldGrams, calcYieldFactor} = {}) {
   const yieldGrams = normalizePositiveNutritionNumber(calcYieldGrams);
   if (yieldGrams != null) return yieldGrams;
@@ -1994,8 +1977,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
   const details = [];
   let sumIngredientAmounts = 0;
   let foundCount = 0;
-  let offFoundCount = 0;
-  const aiKiConfidenceLevels = [];
   const BATCH_SIZE = 5;
   const ingredientEntries = ingredients.map((ingredient) => {
     if (ingredient && typeof ingredient === 'object' && ingredient.type === 'heading') {
@@ -2024,7 +2005,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
       ingredientTotals.salz += saltAmountG;
       return {
         found: true,
-        offFound: true,
         detail: {
           ingredient: ingredientStr,
           name: 'Salz',
@@ -2099,7 +2079,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
             });
             return {
               found: true,
-              offFound: true,
               detail: {
                 ingredient: ingredientStr,
                 name,
@@ -2194,7 +2173,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
         return {
           found: true,
           aiEstimated: true,
-          kiConfidence: geminiEstimate.kiConfidence ?? null,
           detail: {
             ingredient: ingredientStr,
             name,
@@ -2224,7 +2202,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
 
       return {
         found: true,
-        offFound: true,
         detail: {
           ingredient: ingredientStr,
           name,
@@ -2250,7 +2227,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
             return {
               found: true,
               aiEstimated: true,
-              kiConfidence: geminiEstimate.kiConfidence ?? null,
               detail: {
                 ingredient: ingredientStr,
                 name,
@@ -2296,11 +2272,6 @@ async function calculateNutritionFromOpenFoodFactsCore({
       }
       if (result.found) {
         foundCount++;
-        if (result.offFound) {
-          offFoundCount++;
-        } else if (result.aiEstimated) {
-          aiKiConfidenceLevels.push(result.kiConfidence ?? null);
-        }
       }
     }
   }
@@ -2315,17 +2286,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
     calcYieldGrams,
     calcYieldFactor,
   });
-  const calcPer100gBase = buildNutritionPer100g(totals, calcFinalWeightGrams);
-  const totalIngredients = ingredientEntries.length;
-  const calcPer100g = calcPer100gBase ? {
-    ...calcPer100gBase,
-    confidence: {
-      openFoodFacts: totalIngredients > 0
-        ? Number((offFoundCount / totalIngredients).toFixed(2))
-        : null,
-      ki: aggregateKiConfidence(aiKiConfidenceLevels),
-    },
-  } : null;
+  const calcPer100g = buildNutritionPer100g(totals, calcFinalWeightGrams);
 
   console.log(
       `Nutrition calculated for ${callerLabel}: ` +

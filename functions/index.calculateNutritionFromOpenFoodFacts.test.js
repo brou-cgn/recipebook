@@ -749,7 +749,6 @@ test('calculates per-100g values from summed ingredient amounts by default', asy
     zucker: 0.4,
     ballaststoffe: 2.6,
     salz: 0.07,
-    confidence: {openFoodFacts: 1, ki: null},
   });
 
   global.fetch = originalFetch;
@@ -802,7 +801,6 @@ test('uses a manually supplied final weight for per-100g values', async () => {
     zucker: 0.1,
     ballaststoffe: 0.2,
     salz: 0,
-    confidence: {openFoodFacts: 1, ki: null},
   });
 
   global.fetch = originalFetch;

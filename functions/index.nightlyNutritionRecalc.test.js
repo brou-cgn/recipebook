@@ -337,6 +337,5 @@ test('manual recalc job preserves yield fields and stores per-100g values', asyn
     zucker: 0,
     ballaststoffe: 0,
     salz: 0,
-    confidence: {openFoodFacts: 1, ki: null},
   });
 });
