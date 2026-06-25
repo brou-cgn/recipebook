@@ -139,7 +139,7 @@ function NutritionReferenceTab({ currentUser }) {
   const [newSynonyms, setNewSynonyms] = useState('');
   const [newPossibleUnits, setNewPossibleUnits] = useState('');
   const [newValues, setNewValues] = useState({});
-  const [newBooleanValues, setNewBooleanValues] = useState({});
+  const [newBooleanValues, setNewBooleanValues] = useState({ nutritionRelevant: true });
   const [newDefaultAmountG, setNewDefaultAmountG] = useState('');
   const [refreshingRowId, setRefreshingRowId] = useState(null);
   const [savingChanges, setSavingChanges] = useState(false);
@@ -224,7 +224,7 @@ function NutritionReferenceTab({ currentUser }) {
     const ingredientID = getIngredientID(row);
     const synonyms = parseNutritionReferenceSynonyms(row);
     const possibleUnits = parseNutritionReferencePossibleUnits(row);
-    const sourceValue = String(source || '').trim();
+    const sourceValue = source ? String(source).trim() || null : null;
     const status = parseNutritionReferenceStatus(row);
 
     // Collect all source-specific nutrition fields present in the row.
@@ -447,7 +447,7 @@ function NutritionReferenceTab({ currentUser }) {
     setNewSynonyms('');
     setNewPossibleUnits('');
     setNewValues({});
-    setNewBooleanValues({});
+    setNewBooleanValues({ nutritionRelevant: true });
     setNewDefaultAmountG('');
     await reload();
     setActionMessage(`Eintrag ${ingredientID} hinzugefügt.`);
