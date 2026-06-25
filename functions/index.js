@@ -2523,6 +2523,7 @@ exports.generateNutritionFromReference = onCall(
 
       // 3. Estimate with Gemini when AI fields are empty
       let aiValues = null;
+      let kiConfidence = null;
       if (!hasAiValues) {
         const estimated = await estimateNutritionWithGemini(
             ingredientID,
@@ -2533,10 +2534,18 @@ exports.generateNutritionFromReference = onCall(
           aiValues = parseNutritionReferenceValues(estimated.per100g);
           if (Object.keys(aiValues).length > 0) {
             hasAiValues = true;
+            kiConfidence = estimated.confidence ?? null;
           } else {
             aiValues = null;
           }
         }
+      }
+
+      // Compute OFF completeness confidence (fraction of non-null fields, 0–1)
+      let offConfidence = null;
+      if (offValues) {
+        const nonNullCount = NUTRITION_REFERENCE_FIELDS.filter((f) => offValues[f] != null).length;
+        offConfidence = Math.round(nonNullCount / NUTRITION_REFERENCE_FIELDS.length * 100) / 100;
       }
 
       const offFields = (offValues || {});
@@ -2621,6 +2630,15 @@ exports.generateNutritionFromReference = onCall(
         updatePayload.source = nextSource;
       }
       updatePayload.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+
+      // Persist dual-confidence: openFoodFacts completeness + KI estimate confidence
+      const existingConfidence = referenceData.confidence || {};
+      const confidenceData = {...existingConfidence};
+      if (offConfidence != null) confidenceData.openFoodFacts = offConfidence;
+      if (kiConfidence != null) confidenceData.ki = kiConfidence;
+      if (Object.keys(confidenceData).length > 0) {
+        updatePayload.confidence = confidenceData;
+      }
 
       await referenceRef.set(updatePayload, {merge: true});
 
