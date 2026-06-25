@@ -17,6 +17,7 @@ import {
   setCustomIngredientMatchingTerms,
   initializeCommonAdjectivesFromFirebase,
   initializeIgnoredMarkersFromFirebase,
+  buildPendingNutritionReferenceDraft,
 } from './ingredientIdMatching';
 import {
   parseNutritionReferencePossibleUnits,
@@ -698,6 +699,43 @@ describe('normalizeIngredientNameForIdMatching with adjectives', () => {
       const result = classifyIngredientWords('1 1/2-2 TL Salz');
       expect(result.unit).toBe('TL');
       expect(result.ingredientWords).toContain('Salz');
+    });
+  });
+
+  describe('buildPendingNutritionReferenceDraft', () => {
+    test('extracts ingredient name as synonym from plain ingredient string', () => {
+      const draft = buildPendingNutritionReferenceDraft('Tomate');
+      expect(draft).not.toBeNull();
+      expect(draft.synonyms).toEqual(['Tomate']);
+      expect(draft.possibleUnits).toEqual([]);
+    });
+
+    test('extracts unit from quantity+unit+ingredient string', () => {
+      const draft = buildPendingNutritionReferenceDraft('200 g Mehl');
+      expect(draft).not.toBeNull();
+      expect(draft.synonyms).toEqual(['Mehl']);
+      expect(draft.possibleUnits).toEqual(['g']);
+    });
+
+    test('extracts ingredient name after stripping amount, unit and adjectives', () => {
+      setCustomIngredientMatchingTerms({ adjectives: ['gestrichener'] });
+      const draft = buildPendingNutritionReferenceDraft('1 gestrichener Esslöffel Zucker');
+      setCustomIngredientMatchingTerms();
+      expect(draft).not.toBeNull();
+      expect(draft.synonyms).toEqual(['Zucker']);
+      expect(draft.possibleUnits).toEqual(['Esslöffel']);
+    });
+
+    test('returns unique ingredientID avoiding conflicts with existing rows', () => {
+      const existing = [{ ingredientID: 'mehl' }, { ingredientID: 'mehl-2' }];
+      const draft = buildPendingNutritionReferenceDraft('200 g Mehl', existing);
+      expect(draft).not.toBeNull();
+      expect(draft.ingredientID).toBe('mehl-3');
+    });
+
+    test('returns null for empty ingredient text', () => {
+      expect(buildPendingNutritionReferenceDraft('')).toBeNull();
+      expect(buildPendingNutritionReferenceDraft('   ')).toBeNull();
     });
   });
 });

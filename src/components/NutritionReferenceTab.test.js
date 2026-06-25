@@ -86,8 +86,8 @@ describe('NutritionReferenceTab', () => {
   test('loads rows and allows adding a nutrition reference', async () => {
     renderTab({ id: 'u1', role: 'moderator' });
 
-    const section = screen.getByText('Nährwerte je 100 g').closest('.settings-section');
-    expect(section).toHaveClass('nutrition-reference-section');
+    const section = document.querySelector('.settings-section.nutrition-reference-section');
+    expect(section).not.toBeNull();
 
     expect(await screen.findByDisplayValue('dummy-tomate')).toBeInTheDocument();
     expect(screen.getByLabelText('Anzeigename tomate')).toHaveValue('Tomate');
@@ -121,10 +121,43 @@ describe('NutritionReferenceTab', () => {
       ingredientID: 'dummy-haferflocken',
       displayName: 'Haferflocken',
       status: 'Neu',
-      source: '',
+      source: null,
+      nutritionRelevant: true,
       synonyms: ['Haferflocken'],
     }));
     expect(mockSetDoc.mock.calls[0][2]).toEqual({ merge: true });
+  });
+
+  test('new row has nutritionRelevant checkbox pre-checked by default', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    await screen.findByDisplayValue('dummy-tomate');
+
+    const checkbox = screen.getByLabelText('Nährwertrelevant neu');
+    expect(checkbox).toBeChecked();
+  });
+
+  test('new row defaults: nutritionRelevant resets to true after adding a row', async () => {
+    renderTab({ id: 'u1', role: 'moderator' });
+    await screen.findByDisplayValue('dummy-tomate');
+
+    fireEvent.change(screen.getByPlaceholderText('dummy-zutat'), { target: { value: 'dummy-petersilie' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. Tomate'), { target: { value: 'Petersilie' } });
+    fireEvent.change(screen.getByPlaceholderText('z. B. Tomate, Paradeiser'), { target: { value: 'Petersilie' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+    });
+
+    expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
+      nutritionRelevant: true,
+      source: null,
+      status: 'Neu',
+    }));
+
+    // After submission the checkbox should still be pre-checked for the next row
+    const checkbox = screen.getByLabelText('Nährwertrelevant neu');
+    expect(checkbox).toBeChecked();
   });
 
   test('supports column filters for table headers', async () => {
@@ -569,7 +602,7 @@ describe('NutritionReferenceTab', () => {
     });
 
     const payload = mockSetDoc.mock.calls[0][1];
-    expect(payload.source).toBe('');
+    expect(payload.source).toBeNull();
     expect(Object.prototype.hasOwnProperty.call(payload, 'kalorien')).toBe(true);
     expect(payload.kalorien).toBeUndefined();
     expect(mockDeleteField).toHaveBeenCalled();
