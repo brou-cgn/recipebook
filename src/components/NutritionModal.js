@@ -148,6 +148,11 @@ function formatRoundedValue(value, decimals = 1) {
   return String(rounded).replace('.', ',');
 }
 
+function formatOffConfidence(value) {
+  if (value == null) return 'nicht verfügbar';
+  return `${Math.round(value * 100)} %`;
+}
+
 function buildLinkedRecipeDetail({ link, amountG, amountEstimated, naehrwerte }) {
   if (!naehrwerte) return null;
 
@@ -1615,11 +1620,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
                       <div className="per100g-confidence-tooltip__row">
                         <span className="per100g-confidence-tooltip__label">OpenFoodFacts:</span>
                         <span className="per100g-confidence-tooltip__value">
-                          {(() => {
-                            const off = calculatedNutritionState.per100g?.confidence?.openFoodFacts;
-                            if (off == null) return 'nicht verfügbar';
-                            return `${Math.round(off * 100)} %`;
-                          })()}
+                          {formatOffConfidence(calculatedNutritionState.per100g?.confidence?.openFoodFacts)}
                         </span>
                       </div>
                       <div className="per100g-confidence-tooltip__row">

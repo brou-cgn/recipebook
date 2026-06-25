@@ -2321,7 +2321,7 @@ async function calculateNutritionFromOpenFoodFactsCore({
     ...calcPer100gBase,
     confidence: {
       openFoodFacts: totalIngredients > 0
-        ? Math.round((offFoundCount / totalIngredients) * 100) / 100
+        ? Number((offFoundCount / totalIngredients).toFixed(2))
         : null,
       ki: aggregateKiConfidence(aiKiConfidenceLevels),
     },
