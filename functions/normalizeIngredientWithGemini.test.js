@@ -270,6 +270,7 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
     },
     amountG: 30,
     name: 'Olivenöl',
+    kiConfidence: null,
   });
 });
 
@@ -401,6 +402,7 @@ test('estimateNutritionWithGemini maps null nutrient fields to zero', async () =
     },
     amountG: 100,
     name: 'Apfelessig',
+    kiConfidence: null,
   });
 });
 
@@ -458,6 +460,7 @@ test('estimateNutritionWithGemini retries once after timeout and reuses the same
     },
     amountG: 5,
     name: 'Zwiebelpulver',
+    kiConfidence: null,
   });
 });
 
