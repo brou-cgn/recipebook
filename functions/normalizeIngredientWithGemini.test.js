@@ -270,6 +270,7 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
     },
     amountG: 30,
     name: 'Olivenöl',
+    confidence: null,
   });
 });
 
@@ -401,6 +402,7 @@ test('estimateNutritionWithGemini maps null nutrient fields to zero', async () =
     },
     amountG: 100,
     name: 'Apfelessig',
+    confidence: null,
   });
 });
 
@@ -458,6 +460,7 @@ test('estimateNutritionWithGemini retries once after timeout and reuses the same
     },
     amountG: 5,
     name: 'Zwiebelpulver',
+    confidence: null,
   });
 });
 
@@ -502,4 +505,112 @@ test('generateSearchTermWithGemini returns null without an API key', async () =>
   const result = await utils.generateSearchTermWithGemini('dummy-mehl', 'Getreide', 'Mehlprodukte');
 
   assert.equal(result, null);
+});
+
+test('estimateNutritionWithGemini parses valid confidence field from Gemini response', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 364,
+    protein: 10,
+    fett: 1,
+    kohlenhydrate: 76,
+    zucker: 1,
+    ballaststoffe: 3,
+    salz: 0,
+    confidence: 'high',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('500 g Mehl', {
+    amountG: 500,
+    name: 'Mehl',
+    searchName: 'wheat flour',
+  });
+
+  assert.equal(result?.confidence, 'high');
+});
+
+test('estimateNutritionWithGemini normalizes confidence to lowercase', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 364,
+    protein: 10,
+    fett: 1,
+    kohlenhydrate: 76,
+    zucker: 1,
+    ballaststoffe: 3,
+    salz: 0,
+    confidence: 'Medium',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('500 g Mehl', {
+    amountG: 500,
+    name: 'Mehl',
+    searchName: 'wheat flour',
+  });
+
+  assert.equal(result?.confidence, 'medium');
+});
+
+test('estimateNutritionWithGemini returns null confidence for invalid confidence value', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 364,
+    protein: 10,
+    fett: 1,
+    kohlenhydrate: 76,
+    zucker: 1,
+    ballaststoffe: 3,
+    salz: 0,
+    confidence: 'unknown',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('500 g Mehl', {
+    amountG: 500,
+    name: 'Mehl',
+    searchName: 'wheat flour',
+  });
+
+  assert.equal(result?.confidence, null);
+});
+
+test('estimateNutritionWithGemini handles partial null nutrient fields with confidence without crashing', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    kalorien: 52,
+    protein: null,
+    fett: 0.2,
+    kohlenhydrate: 14,
+    zucker: null,
+    ballaststoffe: null,
+    salz: null,
+    confidence: 'low',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('1 Apfel', {
+    amountG: 100,
+    name: 'Apfel',
+    searchName: 'apple',
+  });
+
+  assert.ok(result !== null);
+  assert.equal(result?.confidence, 'low');
+  assert.equal(result?.per100g.kalorien, 52);
+  assert.equal(result?.per100g.protein, 0);
+  assert.equal(result?.per100g.zucker, 0);
 });

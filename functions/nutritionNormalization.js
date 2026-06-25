@@ -130,22 +130,29 @@ Rules:
 function buildNutritionEstimationPrompt(ingredientStr, parsed) {
   const canonicalName =
     normalizeName(parsed?.searchName) || normalizeName(parsed?.name) || ingredientStr;
-  return `You are a food nutrition expert. Estimate the nutritional values per 100g for the following ingredient.
-Return ONLY a JSON object (no markdown, no explanation):
+  return `You are a food nutrition expert. Estimate nutritional values per 100g for the ingredient below.
+
+Rules:
+- Use canonicalName as primary identifier; originalString is context only.
+- Return values for the RAW, UNCOOKED state unless the name explicitly implies otherwise.
+- All values must be non-negative numbers. Use null for individually unknown fields.
+- Return null for the entire object only if the ingredient is entirely unidentifiable.
+- Prefer values consistent with established food databases (USDA FoodData Central, Bundeslebensmittelschlüssel).
+- Return ONLY a JSON object — no markdown, no explanation.
+
 {
-  "kalorien": <number - kcal per 100g>,
-  "protein": <number - grams per 100g>,
-  "fett": <number - grams per 100g>,
-  "kohlenhydrate": <number - grams per 100g>,
-  "zucker": <number - grams per 100g>,
-  "ballaststoffe": <number - grams per 100g>,
-  "salz": <number - grams per 100g>
+  "kalorien": <kcal per 100g>,
+  "protein": <g per 100g>,
+  "fett": <g per 100g>,
+  "kohlenhydrate": <g per 100g>,
+  "zucker": <g per 100g>,
+  "ballaststoffe": <g per 100g>,
+  "salz": <g NaCl-equivalent per 100g>,
+  "confidence": "high" | "medium" | "low"
 }
-Ingredient: ${canonicalName}
-Original string: ${ingredientStr}
-Use typical/average values for this food.
-All values must be non-negative numbers.
-If completely unknown, return null.`;
+
+canonicalName: ${canonicalName}
+originalString: ${ingredientStr}`;
 }
 
 /**
@@ -196,6 +203,20 @@ function normalizeNonNegativeNumber(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) return null;
   return numeric;
+}
+
+/**
+ * Validates and normalizes a KI confidence value from Gemini.
+ *
+ * @param {*} value
+ * @return {'high'|'medium'|'low'|null}
+ */
+function normalizeKiConfidence(value) {
+  if (typeof value === 'string') {
+    const lower = value.trim().toLowerCase();
+    if (lower === 'high' || lower === 'medium' || lower === 'low') return lower;
+  }
+  return null;
 }
 
 /**
@@ -356,7 +377,8 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
           return null;
         }
         const jsonText = extractJsonObject(text);
-        const per100g = normalizeGeminiNutritionEstimate(JSON.parse(jsonText));
+        const parsedData = JSON.parse(jsonText);
+        const per100g = normalizeGeminiNutritionEstimate(parsedData);
         if (!per100g) {
           return null;
         }
@@ -364,6 +386,7 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
           per100g,
           amountG: parsed.amountG,
           name: parsed.name,
+          confidence: normalizeKiConfidence(parsedData?.confidence),
         };
       } catch (error) {
         const isTimeout = /timeout/i.test(String(error?.message || ''));
@@ -425,10 +448,12 @@ function createNutritionNormalizationUtils({GoogleGenerativeAI, env = process.en
 
 module.exports = {
   buildIngredientNormalizationPrompt,
+  buildNutritionEstimationPrompt,
   buildReferenceSearchTermPrompt,
   createNutritionNormalizationUtils,
   extractJsonObject,
   isSimpleIngredient,
   normalizeGeminiPayload,
+  normalizeKiConfidence,
   parseIngredientForNutrition,
 };

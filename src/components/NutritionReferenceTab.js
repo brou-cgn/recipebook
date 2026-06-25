@@ -112,11 +112,18 @@ const getEditableRowState = (row) => ({
     return acc;
   }, {}),
 });
-const getConfidenceInfoText = (diagnostics) => {
+const getConfidenceInfoText = (diagnostics, row) => {
+  const offConfidence = row?.confidence?.openFoodFacts;
+  const kiConfidence = row?.confidence?.ki;
+  const offText = offConfidence != null ? `${Math.round(offConfidence * 100)}%` : 'nicht verfügbar';
+  const kiText = kiConfidence || 'nicht verfügbar';
   const fieldBreakdown = NUTRITION_REFERENCE_FIELDS
     .map((field) => `${NUTRITION_FIELD_LABELS[field]}: ${formatConfidenceValue(diagnostics.confidenceByField[field])}`)
     .join('\n');
   return [
+    `OpenFoodFacts-Confidence: ${offText}`,
+    `KI-Confidence: ${kiText}`,
+    '',
     'Gesamt-Confidence = Durchschnitt der Feld-Confidencewerte (OFf vs. KI).',
     'Feld-Confidence = 100 - (|OFf - KI| / max((|OFf| + |KI|) / 2, 1)) * 100, begrenzt auf 0–100 und gerundet.',
     '',
@@ -763,7 +770,7 @@ function NutritionReferenceTab({ currentUser }) {
             <tbody>
               {visibleRows.map((row, rowIndex) => {
                 const diagnostics = calculateOpenFoodFactsDiagnostics(row);
-                const confidenceInfo = getConfidenceInfoText(diagnostics);
+                const confidenceInfo = getConfidenceInfoText(diagnostics, row);
                 return (
                   <tr key={row.id}>
                   <td className="nutrition-confidence-cell">
@@ -776,7 +783,7 @@ function NutritionReferenceTab({ currentUser }) {
                       aria-label={`Confidence-Berechnung ${row.id}`}
                       title={confidenceInfo}
                     >
-                      (i)
+                      ⓘ
                     </button>
                   </td>
                   <td>

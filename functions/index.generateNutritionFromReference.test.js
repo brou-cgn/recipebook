@@ -215,3 +215,121 @@ test('never changes source for approved status', async () => {
 
   global.fetch = originalFetch;
 });
+
+test('stores ki confidence from Gemini estimate in the confidence field', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async () => 'wheat flour',
+    estimateNutritionWithGemini: async () => ({
+      per100g: {kalorien: 364, protein: 10, fett: 1, kohlenhydrate: 76, zucker: 1, ballaststoffe: 3, salz: 0},
+      confidence: 'high',
+    }),
+  });
+  referenceData = {status: 'Prüfung ausstehend', source: 'ai-generiert'};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'mehl'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.deepEqual(setCalls[0].payload.confidence, {ki: 'high'});
+
+  global.fetch = originalFetch;
+});
+
+test('stores openFoodFacts confidence based on OFF field completeness', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async () => 'tomato',
+    estimateNutritionWithGemini: async () => null,
+  });
+  referenceData = {status: 'Prüfung ausstehend', source: ''};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      products: [{
+        nutriments: {
+          'energy-kcal_100g': 20,
+          'proteins_100g': 1.1,
+          'fat_100g': 0.2,
+          'carbohydrates_100g': 3.5,
+        },
+      }],
+    }),
+  });
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'tomate'}});
+
+  assert.ok(setCalls.length > 0);
+  // 4 of 7 fields present → 4/7 ≈ 0.57
+  assert.ok(setCalls[0].payload.confidence?.openFoodFacts != null);
+  assert.equal(setCalls[0].payload.confidence.openFoodFacts, 0.57);
+
+  global.fetch = originalFetch;
+});
+
+test('stores dual confidence when both OFF and KI are available', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async () => 'tomato',
+    estimateNutritionWithGemini: async () => ({
+      per100g: {kalorien: 18, protein: 0.8, fett: 0.2, kohlenhydrate: 3.9, zucker: 0, ballaststoffe: 0, salz: 0},
+      confidence: 'medium',
+    }),
+  });
+  referenceData = {status: 'Prüfung ausstehend', source: ''};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      products: [{
+        nutriments: {
+          'energy-kcal_100g': 20,
+          'proteins_100g': 1.1,
+          'fat_100g': 0.2,
+          'carbohydrates_100g': 3.5,
+          'sugars_100g': 0.5,
+          'fiber_100g': 0.8,
+          'salt_100g': 0.01,
+        },
+      }],
+    }),
+  });
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'tomate'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.deepEqual(setCalls[0].payload.confidence, {openFoodFacts: 1, ki: 'medium'});
+
+  global.fetch = originalFetch;
+});
+
+test('does not overwrite existing confidence fields not updated in this call', async () => {
+  createUtilsStub = () => ({
+    generateSearchTermWithGemini: async () => 'mehl',
+    estimateNutritionWithGemini: async () => ({
+      per100g: {kalorien: 364, protein: 10, fett: 1, kohlenhydrate: 76, zucker: 1, ballaststoffe: 3, salz: 0},
+      confidence: 'low',
+    }),
+  });
+  referenceData = {
+    status: 'Prüfung ausstehend',
+    source: 'ai-generiert',
+    confidence: {openFoodFacts: 0.86},
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'mehl'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.deepEqual(setCalls[0].payload.confidence, {openFoodFacts: 0.86, ki: 'low'});
+
+  global.fetch = originalFetch;
+});
