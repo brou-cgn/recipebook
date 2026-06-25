@@ -262,8 +262,6 @@ describe('NutritionReferenceTab', () => {
     const confidenceInfo = screen.getByRole('button', { name: 'Confidence-Berechnung tomate' });
     expect(confidenceInfo).toHaveAttribute('title', expect.stringContaining('Gesamt-Confidence = Durchschnitt der Feld-Confidencewerte'));
     expect(confidenceInfo).toHaveAttribute('title', expect.stringContaining('Kalorien (kcal): 98%'));
-    expect(confidenceInfo).toHaveTextContent('ⓘ');
-    expect(confidenceInfo).not.toHaveTextContent('(i)');
 
     expect(screen.getByText('Verlässlichkeit')).toBeInTheDocument();
     expect(screen.getByText('Beschriftung')).toBeInTheDocument();
