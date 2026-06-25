@@ -549,6 +549,7 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
     return persistedYieldGrams != null ? String(persistedYieldGrams) : '';
   });
   const [yieldGramsError, setYieldGramsError] = useState('');
+  const [showPer100gInfo, setShowPer100gInfo] = useState(false);
   const lastRetryAutoCalculateTokenRef = useRef(retryAutoCalculateToken);
 
   // Initialise fields from existing recipe data (stored as totals; display per portion)
@@ -1591,7 +1592,45 @@ function NutritionModal({ recipe, onClose, onSave, allRecipes = [], currentUser,
             <thead>
               <tr>
                 <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--merged" colSpan={2}>Nährwerte pro Portion</th>
-                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">pro 100 g</th>
+                <th className="nutrition-values-table__amount-col nutrition-values-table__amount-col--per100g">
+                  pro 100 g
+                  <button
+                    type="button"
+                    className="per100g-info-btn"
+                    aria-label="Verlässlichkeit der Nährwerte je 100 g"
+                    onClick={() => setShowPer100gInfo((prev) => !prev)}
+                  >
+                    &#9432;
+                  </button>
+                  {showPer100gInfo && (
+                    <div className="per100g-confidence-tooltip" role="tooltip">
+                      <button
+                        type="button"
+                        className="per100g-confidence-tooltip__close"
+                        aria-label="Schließen"
+                        onClick={() => setShowPer100gInfo(false)}
+                      >
+                        &#x2715;
+                      </button>
+                      <div className="per100g-confidence-tooltip__row">
+                        <span className="per100g-confidence-tooltip__label">OpenFoodFacts:</span>
+                        <span className="per100g-confidence-tooltip__value">
+                          {(() => {
+                            const off = calculatedNutritionState.per100g?.confidence?.openFoodFacts;
+                            if (off == null) return 'nicht verfügbar';
+                            return `${Math.round(off * 100)} %`;
+                          })()}
+                        </span>
+                      </div>
+                      <div className="per100g-confidence-tooltip__row">
+                        <span className="per100g-confidence-tooltip__label">KI-Schätzung:</span>
+                        <span className="per100g-confidence-tooltip__value">
+                          {calculatedNutritionState.per100g?.confidence?.ki ?? 'nicht verfügbar'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
