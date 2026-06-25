@@ -66,9 +66,11 @@ function isSimpleIngredient(ingredientStr) {
   if (!str) return false;
 
   const simplePattern = new RegExp(
-      String.raw`^[\d.,]+\s*(?:g|kg|mg|ml|l|dl|cl|EL|el|TL|tl|Esslöffel|` +
-      String.raw`esslöffel|Teelöffel|teelöffel|Prise|prise|Prisen|prisen|` +
-      String.raw`Tasse|tasse|Tassen|tassen|Bund|bund)\.?\s+[^\s,]+$`,
+      [
+        String.raw`^[\d.,]+\s*(?:g|kg|mg|ml|l|dl|cl|EL|el|TL|tl|Esslöffel|`,
+        String.raw`esslöffel|Teelöffel|teelöffel|Prise|prise|Prisen|prisen|`,
+        String.raw`Tasse|tasse|Tassen|tassen|Bund|bund)\.?\s+[^\s,]+$`,
+      ].join(''),
       'u',
   );
   if (!simplePattern.test(str)) return false;

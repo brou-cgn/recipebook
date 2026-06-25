@@ -1948,9 +1948,7 @@ function buildNutritionPer100g(totals = {}, finalWeightGrams) {
  * @return {string|null}
  */
 function aggregateKiConfidence(levels) {
-  const filtered = levels
-      .map((value) => normalizeKiConfidenceLevel(value))
-      .filter((value) => value != null);
+  const filtered = levels.map(normalizeKiConfidenceLevel).filter((value) => value != null);
   if (filtered.length === 0) return null;
   const priority = {low: 0, medium: 1, high: 2};
   return filtered.reduce((worst, c) => {
