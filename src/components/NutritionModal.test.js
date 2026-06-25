@@ -1362,6 +1362,79 @@ describe('NutritionModal UI layout', () => {
     expect(screen.getAllByText('128 kcal').length).toBeGreaterThan(0);
   });
 
+  it('shows available per-100g confidence details in the tooltip', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcYieldGrams: 800,
+            calcFinalWeightGrams: 800,
+            calcPer100g: {
+              kalorien: 128,
+              protein: 2,
+              fett: 7.1,
+              kohlenhydrate: 13.5,
+              zucker: 6.1,
+              ballaststoffe: 1.2,
+              salz: 0.31,
+              confidence: {
+                openFoodFacts: 0.67,
+                ki: 'medium',
+              },
+            },
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verlässlichkeit der Nährwerte je 100 g' }));
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent('OpenFoodFacts:');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('67 %');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('KI-Schätzung:');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('medium');
+  });
+
+  it('shows "nicht verfügbar" fallbacks for legacy per-100g confidence data', () => {
+    render(
+      <NutritionModal
+        recipe={{
+          ...baseRecipe,
+          naehrwerte: {
+            ...baseRecipe.naehrwerte,
+            calcYieldGrams: 800,
+            calcFinalWeightGrams: 800,
+            calcPer100g: {
+              kalorien: 128,
+              protein: 2,
+              fett: 7.1,
+              kohlenhydrate: 13.5,
+              zucker: 6.1,
+              ballaststoffe: 1.2,
+              salz: 0.31,
+              confidence: {
+                openFoodFacts: 'kaputt',
+                ki: 'unsure',
+              },
+            },
+          },
+        }}
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verlässlichkeit der Nährwerte je 100 g' }));
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent('OpenFoodFacts:');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('KI-Schätzung:');
+    expect(screen.getAllByText('nicht verfügbar')).toHaveLength(2);
+  });
+
   it('marks the portion and per-100g columns with dedicated spacing classes', () => {
     render(
       <NutritionModal
@@ -1481,6 +1554,19 @@ describe('NutritionModal UI layout', () => {
         calcFoundCount: 1,
         calcTotalCount: 1,
         calcNotIncluded: [],
+        calcPer100g: {
+          kalorien: 150,
+          protein: 12,
+          fett: 10,
+          kohlenhydrate: 1,
+          zucker: 1,
+          ballaststoffe: 0,
+          salz: 0.2,
+          confidence: {
+            openFoodFacts: 0.4,
+            ki: 'medium',
+          },
+        },
         calcIngredientDetails: [{
           ingredient: 'Eier',
           noAmountG: true,
@@ -1507,6 +1593,12 @@ describe('NutritionModal UI layout', () => {
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
         calcManualAmountsG: { Eier: 75 },
+        calcPer100g: expect.objectContaining({
+          confidence: {
+            openFoodFacts: 0.4,
+            ki: 'medium',
+          },
+        }),
       }));
     });
     await waitFor(() => {

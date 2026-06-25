@@ -1920,6 +1920,12 @@ function roundNutritionValue(key, value) {
   return Math.round(value * 10) / 10;
 }
 
+function normalizeKiConfidenceLevel(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return ['low', 'medium', 'high'].includes(normalized) ? normalized : null;
+}
+
 function buildNutritionPer100g(totals = {}, finalWeightGrams) {
   const weight = normalizePositiveNutritionNumber(finalWeightGrams);
   if (weight == null) return null;
@@ -1942,7 +1948,7 @@ function buildNutritionPer100g(totals = {}, finalWeightGrams) {
  * @return {string|null}
  */
 function aggregateKiConfidence(levels) {
-  const filtered = levels.filter((v) => v != null);
+  const filtered = levels.map(normalizeKiConfidenceLevel).filter((value) => value != null);
   if (filtered.length === 0) return null;
   const priority = {low: 0, medium: 1, high: 2};
   return filtered.reduce((worst, c) => {
@@ -2190,11 +2196,12 @@ async function calculateNutritionFromOpenFoodFactsCore({
         NUTRITION_REFERENCE_FIELDS.forEach((key) => {
           ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
         });
+        const kiConfidence = normalizeKiConfidenceLevel(geminiEstimate.kiConfidence);
 
         return {
           found: true,
           aiEstimated: true,
-          kiConfidence: geminiEstimate.kiConfidence ?? null,
+          kiConfidence,
           detail: {
             ingredient: ingredientStr,
             name,
@@ -2246,11 +2253,12 @@ async function calculateNutritionFromOpenFoodFactsCore({
             NUTRITION_REFERENCE_FIELDS.forEach((key) => {
               ingredientTotals[key] += (geminiEstimate.per100g[key] || 0) * scale;
             });
+            const kiConfidence = normalizeKiConfidenceLevel(geminiEstimate.kiConfidence);
 
             return {
               found: true,
               aiEstimated: true,
-              kiConfidence: geminiEstimate.kiConfidence ?? null,
+              kiConfidence,
               detail: {
                 ingredient: ingredientStr,
                 name,

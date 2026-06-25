@@ -245,6 +245,7 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
     zucker: 0,
     ballaststoffe: 0,
     salz: 0,
+    confidence: ' High ',
   }));
 
   const utils = createNutritionNormalizationUtils({
@@ -270,7 +271,7 @@ test('estimateNutritionWithGemini returns full nutrition object on valid Gemini 
     },
     amountG: 30,
     name: 'Olivenöl',
-    kiConfidence: null,
+    kiConfidence: 'high',
   });
 });
 
@@ -404,6 +405,25 @@ test('estimateNutritionWithGemini maps null nutrient fields to zero', async () =
     name: 'Apfelessig',
     kiConfidence: null,
   });
+});
+
+test('estimateNutritionWithGemini returns null for malformed nutrition payloads without nutrient fields', async () => {
+  const FakeGoogleGenerativeAI = createFakeGoogleGenerativeAI(async () => JSON.stringify({
+    confidence: 'medium',
+  }));
+
+  const utils = createNutritionNormalizationUtils({
+    GoogleGenerativeAI: FakeGoogleGenerativeAI,
+    env: {GEMINI_API_KEY: 'test-key'},
+  });
+
+  const result = await utils.estimateNutritionWithGemini('Unbekannte Zutat', {
+    amountG: 100,
+    name: 'Unbekannte Zutat',
+    searchName: 'unknown ingredient',
+  });
+
+  assert.equal(result, null);
 });
 
 test('estimateNutritionWithGemini retries once after timeout and reuses the same model', async () => {
