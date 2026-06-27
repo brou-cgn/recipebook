@@ -22,6 +22,7 @@ import Tagesmenu from './components/Tagesmenu';
 import UniversalImportModal from './components/UniversalImportModal';
 import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
+import BottomNavigation from './components/BottomNavigation';
 import { 
   loginUser, 
   logoutUser, 
@@ -84,6 +85,14 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
+const BOTTOM_NAV_HEIGHT = 'calc(64px + env(safe-area-inset-bottom, 0px))';
+const BOTTOM_NAV_TABS = [
+  { key: 'home', label: 'Küche', view: 'startseite' },
+  { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
+  { key: 'menus', label: 'Festtafel', view: 'menus' },
+  { key: 'atelier', label: 'Atelier', view: 'tagesmenu' },
+  { key: 'chef', label: 'Chefkoch', view: 'kueche' },
+];
 
 // IndexedDB helpers to read/clear shared data written by the service worker
 function readSharedDataFromDB() {
@@ -252,6 +261,21 @@ function getInitialViewForUser(user) {
   return user?.startseite ? 'startseite' : 'recipes';
 }
 
+function getBottomNavActiveKey(currentView) {
+  if (currentView === 'startseite') return 'home';
+  if (currentView === 'menus') return 'menus';
+  if (currentView === 'tagesmenu' || currentView === 'groups') return 'atelier';
+  if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'chef';
+  return 'recipes';
+}
+
+function getBottomNavBehavior(currentView) {
+  if (currentView === 'startseite') return 'visible';
+  if (currentView === 'tagesmenu') return 'hidden';
+  if (['recipes', 'seasonalRecipes', 'trendingRecipes', 'menus', 'groups'].includes(currentView)) return 'auto';
+  return 'visible';
+}
+
 function App() {
   const [recipes, setRecipes] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -279,6 +303,8 @@ function App() {
   const [allUsers, setAllUsers] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
   const headerRef = useRef(null);
+  const bottomNavTimeoutRef = useRef(null);
+  const bottomNavLastScrollYRef = useRef(0);
   const [kuecheOpenPersonalData, setKuecheOpenPersonalData] = useState(false);
   const [appCallsActiveTab, setAppCallsActiveTab] = useState('app');
   const [appCallsVisibleTabs, setAppCallsVisibleTabs] = useState(null);
@@ -303,6 +329,7 @@ function App() {
   const shouldRestoreRecipeListScrollRef = useRef(false);
   const [sharedData, setSharedData] = useState({ images: [], title: '', text: '', url: '' });
   const [showUniversalImport, setShowUniversalImport] = useState(false);
+  const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
@@ -368,6 +395,18 @@ function App() {
     }
     return undefined;
   }, [groups, recipeFilters.selectedGroup, recipeFilters.selectedPrivateLists]);
+
+  const bottomNavActiveKey = useMemo(() => getBottomNavActiveKey(currentView), [currentView]);
+  const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
+  const showBottomNav = Boolean(currentUser?.startseite);
+  const bottomNavTabs = useMemo(
+    () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
+    [currentUser?.startseite]
+  );
+  const appBottomNavStyle = useMemo(() => ({
+    '--bottom-nav-offset': showBottomNav && isBottomNavVisible ? BOTTOM_NAV_HEIGHT : '0px',
+    '--app-bottom-nav-padding': showBottomNav ? BOTTOM_NAV_HEIGHT : '0px',
+  }), [showBottomNav, isBottomNavVisible]);
 
   // Recipes belonging to the currently selected group before cuisine/author/list filters
   const selectedGroupUnfilteredRecipes = useMemo(() => {
@@ -1003,6 +1042,77 @@ function App() {
     setKuecheOpenPersonalData(true);
   };
 
+  useEffect(() => {
+    if (!showBottomNav) return undefined;
+
+    if (bottomNavTimeoutRef.current) {
+      clearTimeout(bottomNavTimeoutRef.current);
+      bottomNavTimeoutRef.current = null;
+    }
+
+    if (bottomNavBehavior === 'hidden') {
+      setIsBottomNavVisible(false);
+      return undefined;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (bottomNavBehavior === 'visible' || prefersReducedMotion) {
+      setIsBottomNavVisible(true);
+      return undefined;
+    }
+
+    const showBottomNavAfterPause = () => {
+      if (bottomNavTimeoutRef.current) {
+        clearTimeout(bottomNavTimeoutRef.current);
+      }
+      bottomNavTimeoutRef.current = setTimeout(() => {
+        setIsBottomNavVisible(true);
+      }, 2000);
+    };
+
+    bottomNavLastScrollYRef.current = window.scrollY;
+    setIsBottomNavVisible(true);
+    showBottomNavAfterPause();
+
+    const handleScroll = () => {
+      const nextScrollY = Math.max(window.scrollY, 0);
+      const delta = nextScrollY - bottomNavLastScrollYRef.current;
+
+      if (nextScrollY <= 0 || delta < 0) {
+        setIsBottomNavVisible(true);
+      } else if (delta > 10) {
+        setIsBottomNavVisible(false);
+      }
+
+      bottomNavLastScrollYRef.current = nextScrollY;
+      showBottomNavAfterPause();
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (bottomNavTimeoutRef.current) {
+        clearTimeout(bottomNavTimeoutRef.current);
+        bottomNavTimeoutRef.current = null;
+      }
+    };
+  }, [bottomNavBehavior, showBottomNav]);
+
+  const handleBottomNavSelect = (tab) => {
+    if (!tab) return;
+
+    if (tab.key === bottomNavActiveKey) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setIsBottomNavVisible(true);
+      return;
+    }
+
+    setIsBottomNavVisible(getBottomNavBehavior(tab.view) !== 'hidden');
+    handleViewChange(tab.view);
+    window.scrollTo(0, 0);
+  };
+
   const handleOpenPrivateListRecipes = (groupId) => {
     handleViewChange('recipes');
     setRecipeFilters({
@@ -1601,7 +1711,7 @@ function App() {
   // Show loading state while checking auth
   if (authLoading) {
     return (
-      <div className="App">
+      <div className="App" style={appBottomNavStyle}>
         <Header />
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           Laden...
@@ -1937,6 +2047,14 @@ function App() {
           selectedPrivateLists={isPrivateListSearchContext ? [] : recipeFilters.selectedPrivateLists}
           showPrivateListFilters={!isPrivateListSearchContext}
         />
+        {showBottomNav && (
+          <BottomNavigation
+            tabs={bottomNavTabs}
+            activeKey={bottomNavActiveKey}
+            isVisible={isBottomNavVisible}
+            onSelect={handleBottomNavSelect}
+          />
+        )}
       </div>
     </NutritionReferenceProvider>
   );

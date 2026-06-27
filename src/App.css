@@ -2,3 +2,46 @@
   min-height: 100vh;
   background: #f5f5f5;
 }
+
+@media (max-width: 768px) {
+  .App {
+    padding-bottom: var(--app-bottom-nav-padding, 0px);
+  }
+
+  .App .startseite-fab-button,
+  .App .kueche-fab-button,
+  .App .add-menu-fab-button,
+  .App .menu-favorites-filter-button,
+  .App .filter-button,
+  .App .tagesmenu-filter-btn,
+  .App .tagesmenu-meine-auswahl-btn,
+  .App .tagesmenu-zum-tagesMenu-btn {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
+    transition:
+      bottom 250ms ease-in-out,
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+}
+
+@media (max-width: 480px) {
+  .App .sort-carousel {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
+    transition: bottom 250ms ease-in-out, box-shadow 0.25s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .App .startseite-fab-button,
+  .App .kueche-fab-button,
+  .App .add-menu-fab-button,
+  .App .menu-favorites-filter-button,
+  .App .filter-button,
+  .App .sort-carousel,
+  .App .tagesmenu-filter-btn,
+  .App .tagesmenu-meine-auswahl-btn,
+  .App .tagesmenu-zum-tagesMenu-btn {
+    transition: none;
+  }
+}
