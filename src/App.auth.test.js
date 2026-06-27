@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import App from './App';
 
 let mockAuthStateCallback;
@@ -71,7 +71,7 @@ jest.mock('./components/Settings', () => function MockSettings() {
 });
 
 jest.mock('./components/MenuList', () => function MockMenuList() {
-  return null;
+  return <div data-testid="menu-list-view">Menu List</div>;
 });
 
 jest.mock('./components/MenuDetail', () => function MockMenuDetail() {
@@ -184,7 +184,7 @@ jest.mock('./components/MeineKuechenstarsPage', () => function MockMeineKuechens
 });
 
 jest.mock('./components/Tagesmenu', () => function MockTagesmenu() {
-  return null;
+  return <div data-testid="tagesmenu-view">Tagesmenu</div>;
 });
 
 jest.mock('./components/UniversalImportModal', () => function MockUniversalImportModal() {
@@ -293,6 +293,21 @@ describe('App authentication view handling', () => {
     localStorage.clear();
     sessionStorage.clear();
     window.history.pushState({}, '', '/');
+    window.scrollTo = jest.fn();
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      writable: true,
+      value: 0,
+    });
+    window.matchMedia = jest.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
   });
 
   test('resets to login view after authentication from the register screen', async () => {
@@ -368,6 +383,114 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
     expect(screen.queryByTestId('startseite-view')).not.toBeInTheDocument();
+  });
+
+  test('bottom navigation renders all primary tabs and switches between top-level views', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-1',
+        vorname: 'Bottom',
+        nachname: 'Nav',
+        email: 'bottom-nav@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const navQueries = within(nav);
+
+    expect(navQueries.getByRole('button', { name: 'Küche' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(navQueries.getByRole('button', { name: 'Kochbuch' }));
+    expect(screen.getByTestId('recipe-list-view')).toBeInTheDocument();
+
+    fireEvent.click(navQueries.getByRole('button', { name: 'Festtafel' }));
+    expect(screen.getByTestId('menu-list-view')).toBeInTheDocument();
+
+    fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+
+    fireEvent.click(navQueries.getByRole('button', { name: 'Chefkoch' }));
+    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+  });
+
+  test('clicking the active bottom navigation tab scrolls back to the top', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-2',
+        vorname: 'Scroll',
+        nachname: 'Top',
+        email: 'scroll-top@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Küche' }));
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  test('bottom navigation auto-hides on recipe scrolling and hides immediately in atelier mode', async () => {
+    jest.useFakeTimers();
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-3',
+        vorname: 'Auto',
+        nachname: 'Hide',
+        email: 'auto-hide@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const navQueries = within(nav);
+
+    fireEvent.click(navQueries.getByRole('button', { name: 'Kochbuch' }));
+    expect(nav).toHaveAttribute('data-visible', 'true');
+
+    await act(async () => {
+      window.scrollY = 24;
+      window.dispatchEvent(new Event('scroll'));
+    });
+    expect(nav).toHaveAttribute('data-visible', 'false');
+
+    await act(async () => {
+      window.scrollY = 10;
+      window.dispatchEvent(new Event('scroll'));
+    });
+    expect(nav).toHaveAttribute('data-visible', 'true');
+
+    await act(async () => {
+      window.scrollY = 30;
+      window.dispatchEvent(new Event('scroll'));
+      jest.advanceTimersByTime(2000);
+    });
+    expect(nav).toHaveAttribute('data-visible', 'true');
+
+    fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(nav).toHaveAttribute('data-visible', 'false');
+
+    jest.useRealTimers();
   });
 
   test('seasonal startseite navigation opens the seasonal recipe overview', async () => {
