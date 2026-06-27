@@ -87,11 +87,11 @@ const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
 const BOTTOM_NAV_HEIGHT = 'calc(64px + env(safe-area-inset-bottom, 0px))';
 const BOTTOM_NAV_TABS = [
-  { key: 'startseite', label: 'Küche', view: 'startseite' },
+  { key: 'home', label: 'Küche', view: 'startseite' },
   { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
   { key: 'menus', label: 'Festtafel', view: 'menus' },
   { key: 'atelier', label: 'Atelier', view: 'tagesmenu' },
-  { key: 'kueche', label: 'Chefkoch', view: 'kueche' },
+  { key: 'chef', label: 'Chefkoch', view: 'kueche' },
 ];
 
 // IndexedDB helpers to read/clear shared data written by the service worker
@@ -262,10 +262,10 @@ function getInitialViewForUser(user) {
 }
 
 function getBottomNavActiveKey(currentView) {
-  if (currentView === 'startseite') return 'startseite';
+  if (currentView === 'startseite') return 'home';
   if (currentView === 'menus') return 'menus';
   if (currentView === 'tagesmenu' || currentView === 'groups') return 'atelier';
-  if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'kueche';
+  if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'chef';
   return 'recipes';
 }
 
@@ -1108,7 +1108,7 @@ function App() {
       return;
     }
 
-    setIsBottomNavVisible(tab.key !== 'atelier');
+    setIsBottomNavVisible(getBottomNavBehavior(tab.view) !== 'hidden');
     handleViewChange(tab.view);
     window.scrollTo(0, 0);
   };

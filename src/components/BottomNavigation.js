@@ -64,19 +64,19 @@ function AtelierIcon() {
 function ProfileIcon() {
   return (
     <NavIcon>
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M3.5 18.5C4.45674 15.9163 6.92914 14 9.85 14H10.15C13.0709 14 15.5433 15.9163 16.5 18.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="16.5" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5 18.5C6.05034 15.9462 8.53583 14.25 11.2975 14.25H12.7025C15.4642 14.25 17.9497 15.9462 19 18.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M17.25 6.25C18.2165 6.25 19 7.0335 19 8C19 8.9665 18.2165 9.75 17.25 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </NavIcon>
   );
 }
 
 const ICONS = {
-  startseite: KitchenIcon,
+  home: KitchenIcon,
   recipes: BookIcon,
   menus: TableIcon,
   atelier: AtelierIcon,
-  kueche: ProfileIcon,
+  chef: ProfileIcon,
 };
 
 function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
