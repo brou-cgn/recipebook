@@ -88,7 +88,8 @@ jobs:
         run: |
           firebase functions:delete getSharedMenu --region us-central1 --force --project broubook || true
           firebase functions:delete getSharedRecipe --region us-central1 --force --project broubook || true
-          firebase functions:delete processGroupInvitationsOnUserRegistration --region us-central1 --force --project broubook || true
+          firebase functions:delete processGroupInvitationsOnUserRegistration --region europe-west10 --force --project broubook || true
+          firebase functions:delete notifyAdminsOnUserRegistration --region us-central1 --force --project broubook || true
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
