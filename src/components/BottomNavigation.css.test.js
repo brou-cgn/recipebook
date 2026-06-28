@@ -15,4 +15,21 @@ describe('BottomNavigation CSS sizing', () => {
 
     expect(navRule).toContain('min-height: 77px;');
   });
+
+  test('uses larger icon sizing', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const iconRule = getRuleBody(css, '.bottom-navigation__icon svg');
+
+    expect(iconRule).toContain('width: 28px;');
+    expect(iconRule).toContain('height: 28px;');
+  });
+
+  test('uses dark background in dark mode', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const darkRule = getRuleBody(css, '[data-theme="dark"] .bottom-navigation');
+
+    expect(darkRule).toContain('background: #1E1E1C;');
+  });
 });

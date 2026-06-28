@@ -213,6 +213,11 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'trendingDifficultyIcon', label: 'Trend-Kachel: Icon vor Schwierigkeitsgrad' },
   { key: 'trendingTimeIcon', label: 'Trend-Kachel: Icon vor Zubereitungszeit' },
   { key: 'kuecheFab', label: 'Küche-FAB-Button' },
+  { key: 'bottomNavHome', label: 'Bottom Navigation: Küche' },
+  { key: 'bottomNavRecipes', label: 'Bottom Navigation: Kochbuch' },
+  { key: 'bottomNavMenus', label: 'Bottom Navigation: Festtafel' },
+  { key: 'bottomNavAtelier', label: 'Bottom Navigation: Atelier' },
+  { key: 'bottomNavChef', label: 'Bottom Navigation: Chefkoch' },
 ];
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {

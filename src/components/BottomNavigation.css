@@ -55,6 +55,23 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  min-height: 28px;
+}
+
+.bottom-navigation__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.bottom-navigation__icon-image {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.bottom-navigation__icon-text {
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .bottom-navigation__label {
@@ -74,6 +91,15 @@
   .bottom-navigation__tab {
     flex-direction: column;
   }
+}
+
+[data-theme="dark"] .bottom-navigation {
+  background: #1E1E1C;
+  border-top: 1px solid #3B3B38;
+}
+
+[data-theme="dark"] .bottom-navigation__tab {
+  color: #CFCFCD;
 }
 
 @media (prefers-reduced-motion: reduce) {

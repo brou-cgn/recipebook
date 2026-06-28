@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './BottomNavigation.css';
+import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function NavIcon({ children }) {
   return (
@@ -79,7 +81,36 @@ const ICONS = {
   chef: ProfileIcon,
 };
 
+const NAV_ICON_KEYS = {
+  home: 'bottomNavHome',
+  recipes: 'bottomNavRecipes',
+  menus: 'bottomNavMenus',
+  atelier: 'bottomNavAtelier',
+  chef: 'bottomNavChef',
+};
+
 function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+
+  useEffect(() => {
+    let cancelled = false;
+    getButtonIcons()
+      .then((icons) => {
+        if (!cancelled) setButtonIcons(icons);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
+
   return (
     <nav
       className={`bottom-navigation${isVisible ? '' : ' bottom-navigation--hidden'}`}
@@ -89,6 +120,8 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
     >
       {tabs.map((tab) => {
         const Icon = ICONS[tab.key];
+        const iconKey = NAV_ICON_KEYS[tab.key];
+        const iconValue = iconKey ? getEffectiveIcon(buttonIcons, iconKey, isDarkMode) : '';
         const isActive = tab.key === activeKey;
 
         return (
@@ -100,7 +133,15 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
           >
-            <Icon />
+            {isBase64Image(iconValue) ? (
+              <span className="bottom-navigation__icon" aria-hidden="true">
+                <img src={iconValue} alt="" className="bottom-navigation__icon-image" draggable="false" />
+              </span>
+            ) : iconValue ? (
+              <span className="bottom-navigation__icon bottom-navigation__icon-text" aria-hidden="true">{iconValue}</span>
+            ) : (
+              Icon ? <Icon /> : null
+            )}
             <span className="bottom-navigation__label">{tab.label}</span>
           </button>
         );

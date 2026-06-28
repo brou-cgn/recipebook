@@ -980,6 +980,19 @@ describe('button icon dark-mode resolution', () => {
     expect(DEFAULT_BUTTON_ICONS.nutritionManualSaveDark).toBe('');
   });
 
+  test('includes configurable default entries for bottom navigation icons and their dark variants', () => {
+    expect(DEFAULT_BUTTON_ICONS.bottomNavHome).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavRecipes).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavMenus).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavAtelier).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavChef).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavHomeDark).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavRecipesDark).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavMenusDark).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavAtelierDark).toBe('');
+    expect(DEFAULT_BUTTON_ICONS.bottomNavChefDark).toBe('');
+  });
+
   test('prefers the dark variant for nutrition manual-save icons in dark mode and otherwise falls back to the normal icon', () => {
     expect(getEffectiveIcon({
       nutritionManualSave: '💽',
