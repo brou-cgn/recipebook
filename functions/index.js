@@ -2959,6 +2959,7 @@ exports.sendGroupInvitationEmail = onCall(
 exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
     {
       document: 'users/{userId}',
+      region: 'us-central1',
     },
     async (event) => {
       const userId = event.params.userId;
@@ -3030,6 +3031,7 @@ exports.processGroupInvitationsOnUserRegistration = onDocumentCreated(
 exports.notifyAdminsOnUserRegistration = onDocumentCreated(
     {
       document: 'users/{userId}',
+      region: 'us-central1',
       secrets: [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom],
     },
     async (event) => {
