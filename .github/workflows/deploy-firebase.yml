@@ -84,15 +84,6 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Delete stuck/obsolete Firebase Functions (pre-deploy cleanup)
-        run: |
-          firebase functions:delete getSharedMenu --region us-central1 --force --project broubook || true
-          firebase functions:delete getSharedRecipe --region us-central1 --force --project broubook || true
-          firebase functions:delete processGroupInvitationsOnUserRegistration --region europe-west10 --force --project broubook || true
-          firebase functions:delete notifyAdminsOnUserRegistration --region us-central1 --force --project broubook || true
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: firebase deploy --only hosting,functions,firestore:rules --project broubook --force
         env:
