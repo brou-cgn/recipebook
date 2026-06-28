@@ -87,9 +87,7 @@ jobs:
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
           max_attempts=3
-          attempt=1
-
-          while [ "$attempt" -le "$max_attempts" ]; do
+          for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
             set +e
             deploy_output=$(firebase deploy --only hosting,functions,firestore:rules --project broubook --force 2>&1)
@@ -101,12 +99,15 @@ jobs:
               exit 0
             fi
 
-            if echo "$deploy_output" | grep -q "HTTP Error: 503"; then
+            if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
               if [ "$attempt" -lt "$max_attempts" ]; then
-                sleep_seconds=$((attempt * 20))
+                case "$attempt" in
+                  1) sleep_seconds=10 ;;
+                  2) sleep_seconds=20 ;;
+                  *) sleep_seconds=40 ;;
+                esac
                 echo "Firebase API returned 503. Retrying in ${sleep_seconds}s..."
                 sleep "$sleep_seconds"
-                attempt=$((attempt + 1))
                 continue
               fi
             fi
