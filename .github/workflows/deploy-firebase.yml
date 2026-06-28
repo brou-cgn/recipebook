@@ -87,6 +87,7 @@ jobs:
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
           max_attempts=3
+          migration_retry_done=0
           for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
             set +e
@@ -97,6 +98,13 @@ jobs:
 
             if [ "$deploy_exit_code" -eq 0 ]; then
               exit 0
+            fi
+
+            if [ "$migration_retry_done" -eq 0 ] && echo "$deploy_output" | grep -Eq "\[onNutritionReferenceChanged\(europe-west10\)\] Changing from an HTTPS function to a background triggered function is not allowed"; then
+              echo "Detected trigger migration conflict for onNutritionReferenceChanged. Deleting legacy function and retrying deploy..."
+              firebase functions:delete onNutritionReferenceChanged --region europe-west10 --project broubook --force
+              migration_retry_done=1
+              continue
             fi
 
             if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
