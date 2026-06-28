@@ -87,16 +87,38 @@ jobs:
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
           max_attempts=3
+          migration_retry_attempted=false
+          migration_function="onNutritionReferenceChanged"
+          migration_region="europe-west10"
+          firebase_project="broubook"
           for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
             set +e
-            deploy_output=$(firebase deploy --only hosting,functions,firestore:rules --project broubook --force 2>&1)
+            deploy_output=$(firebase deploy --only hosting,functions,firestore:rules --project "$firebase_project" --force 2>&1)
             deploy_exit_code=$?
             set -e
             echo "$deploy_output"
 
             if [ "$deploy_exit_code" -eq 0 ]; then
               exit 0
+            fi
+
+            if [ "$migration_retry_attempted" = "false" ] \
+              && echo "$deploy_output" | grep -Fq "$migration_function" \
+              && echo "$deploy_output" | grep -Fq "$migration_region" \
+              && echo "$deploy_output" | grep -Fq "HTTPS function to a background triggered function is not allowed"; then
+              echo "Detected trigger migration conflict for $migration_function. Deleting legacy function and retrying deploy..."
+              set +e
+              delete_output=$(firebase functions:delete "$migration_function" --region "$migration_region" --project "$firebase_project" --force 2>&1)
+              delete_exit_code=$?
+              set -e
+              echo "$delete_output"
+              if [ "$delete_exit_code" -ne 0 ]; then
+                echo "Failed to delete legacy function $migration_function before retry (exit code: $delete_exit_code). See output above for details."
+                exit "$delete_exit_code"
+              fi
+              migration_retry_attempted=true
+              continue
             fi
 
             if echo "$deploy_output" | grep -Eiq "HTTP Error: 503|Service Unavailable"; then
