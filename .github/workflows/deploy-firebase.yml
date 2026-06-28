@@ -87,7 +87,7 @@ jobs:
       - name: Deploy to Firebase (Hosting, Functions, Firestore Rules)
         run: |
           max_attempts=3
-          migration_retry_attempted=0
+          migration_retry_attempted=false
           migration_function="onNutritionReferenceChanged"
           migration_region="europe-west10"
           firebase_project="broubook"
@@ -103,7 +103,10 @@ jobs:
               exit 0
             fi
 
-            if [ "$migration_retry_attempted" -eq 0 ] && echo "$deploy_output" | grep -Eq "$migration_function.*$migration_region.*HTTPS function to a background triggered function is not allowed"; then
+            if [ "$migration_retry_attempted" = "false" ] \
+              && echo "$deploy_output" | grep -Fq "$migration_function" \
+              && echo "$deploy_output" | grep -Fq "$migration_region" \
+              && echo "$deploy_output" | grep -Fq "HTTPS function to a background triggered function is not allowed"; then
               echo "Detected trigger migration conflict for $migration_function. Deleting legacy function and retrying deploy..."
               set +e
               delete_output=$(firebase functions:delete "$migration_function" --region "$migration_region" --project "$firebase_project" --force 2>&1)
@@ -111,10 +114,10 @@ jobs:
               set -e
               echo "$delete_output"
               if [ "$delete_exit_code" -ne 0 ]; then
-                echo "Failed to delete legacy function $migration_function before retry."
+                echo "Failed to delete legacy function $migration_function before retry (exit code: $delete_exit_code). See output above for details."
                 exit "$delete_exit_code"
               fi
-              migration_retry_attempted=1
+              migration_retry_attempted=true
               continue
             fi
 
