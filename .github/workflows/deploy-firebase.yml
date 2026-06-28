@@ -103,7 +103,8 @@ jobs:
               exit 0
             fi
 
-            if echo "$deploy_output" | grep -Fq "is the current active version."; then
+            if echo "$deploy_output" | grep -Fq "Can't release to" \
+              && echo "$deploy_output" | grep -Fq "is the current active version."; then
               echo "Hosting release version is already active. Treating deploy as successful."
               exit 0
             fi
