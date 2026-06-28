@@ -85,7 +85,7 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
-const BOTTOM_NAV_HEIGHT = 'calc(64px + env(safe-area-inset-bottom, 0px))';
+const BOTTOM_NAV_HEIGHT = 'calc(77px + env(safe-area-inset-bottom, 0px))';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
   { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
