@@ -88,6 +88,8 @@ jobs:
         run: |
           max_attempts=3
           migration_retry_done=0
+          migration_function="onNutritionReferenceChanged"
+          migration_region="europe-west10"
           for attempt in $(seq 1 "$max_attempts"); do
             echo "Firebase deploy attempt $attempt/$max_attempts"
             set +e
@@ -100,9 +102,9 @@ jobs:
               exit 0
             fi
 
-            if [ "$migration_retry_done" -eq 0 ] && echo "$deploy_output" | grep -Eq "\[onNutritionReferenceChanged\(europe-west10\)\] Changing from an HTTPS function to a background triggered function is not allowed"; then
-              echo "Detected trigger migration conflict for onNutritionReferenceChanged. Deleting legacy function and retrying deploy..."
-              firebase functions:delete onNutritionReferenceChanged --region europe-west10 --project broubook --force
+            if [ "$migration_retry_done" -eq 0 ] && echo "$deploy_output" | grep -Eq "\[$migration_function\($migration_region\)\] Changing from an HTTPS function to a background triggered function is not allowed"; then
+              echo "Detected trigger migration conflict for $migration_function. Deleting legacy function and retrying deploy..."
+              firebase functions:delete "$migration_function" --region "$migration_region" --project broubook --force
               migration_retry_done=1
               continue
             fi
