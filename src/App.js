@@ -333,6 +333,7 @@ function App() {
   const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
+  const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
   const initialWebimportAuthorRef = useRef('');
   // Store pending webimport URL read synchronously on mount, before Firebase loads the user
@@ -399,7 +400,13 @@ function App() {
 
   const bottomNavActiveKey = useMemo(() => getBottomNavActiveKey(currentView), [currentView]);
   const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
-  const showBottomNav = Boolean(currentUser?.startseite) && !isFormOpen && !isMenuFormOpen && !isPrivateListSettingsTabOpen;
+  const showBottomNav = Boolean(currentUser?.startseite)
+    && !isFormOpen
+    && !isMenuFormOpen
+    && !isPrivateListSettingsTabOpen
+    && !selectedRecipe
+    && !selectedMenu
+    && !isKuechePersonalDataOpen;
   const bottomNavTabs = useMemo(
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
@@ -1035,6 +1042,7 @@ function App() {
     setIsMenuFormOpen(false);
     setIsSettingsOpen(false);
     setIsPrivateListSettingsTabOpen(false);
+    setIsKuechePersonalDataOpen(false);
     // Reset filters when switching views
     setCategoryFilter('');
   };
@@ -1921,6 +1929,7 @@ function App() {
           onViewChange={handleViewChange}
           openPersonalData={kuecheOpenPersonalData}
           onPersonalDataOpened={() => setKuecheOpenPersonalData(false)}
+          onPersonalDataVisibilityChange={setIsKuechePersonalDataOpen}
         />
         ) : currentView === 'groups' ? (
         selectedGroup ? (

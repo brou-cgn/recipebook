@@ -12,6 +12,7 @@ jest.mock('./components/RecipeList', () => function MockRecipeList(props) {
     <div data-testid="recipe-list-view">
       Recipe List
       <button type="button" onClick={() => props.onAddRecipe?.()}>add-recipe</button>
+      <button type="button" onClick={() => props.onSelectRecipe?.({ id: 'recipe-1', title: 'Recipe 1' })}>open-recipe</button>
     </div>
   );
 });
@@ -35,8 +36,13 @@ jest.mock('./components/Startseite', () => function MockStartseite(props) {
   );
 });
 
-jest.mock('./components/RecipeDetail', () => function MockRecipeDetail() {
-  return null;
+jest.mock('./components/RecipeDetail', () => function MockRecipeDetail(props) {
+  return (
+    <div data-testid="recipe-detail-view">
+      Recipe Detail
+      <button type="button" onClick={() => props.onBack?.()}>back-from-recipe</button>
+    </div>
+  );
 });
 
 jest.mock('./components/RecipeForm', () => function MockRecipeForm(props) {
@@ -80,12 +86,18 @@ jest.mock('./components/MenuList', () => function MockMenuList(props) {
     <div data-testid="menu-list-view">
       Menu List
       <button type="button" onClick={() => props.onAddMenu?.()}>add-menu</button>
+      <button type="button" onClick={() => props.onSelectMenu?.({ id: 'menu-1', title: 'Menu 1' })}>open-menu</button>
     </div>
   );
 });
 
-jest.mock('./components/MenuDetail', () => function MockMenuDetail() {
-  return null;
+jest.mock('./components/MenuDetail', () => function MockMenuDetail(props) {
+  return (
+    <div data-testid="menu-detail-view">
+      Menu Detail
+      <button type="button" onClick={() => props.onBack?.()}>back-from-menu</button>
+    </div>
+  );
 });
 
 jest.mock('./components/MenuForm', () => function MockMenuForm() {
@@ -125,6 +137,8 @@ jest.mock('./components/Kueche', () => function MockKueche(props) {
       >
         kueche-open-restricted-appcalls
       </button>
+      <button type="button" onClick={() => props.onPersonalDataVisibilityChange?.(true)}>open-personal-data</button>
+      <button type="button" onClick={() => props.onPersonalDataVisibilityChange?.(false)}>close-personal-data</button>
     </div>
   );
 });
@@ -801,6 +815,32 @@ describe('App authentication view handling', () => {
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 
+  test('bottom navigation is hidden when the recipe detail view is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-detail-recipe',
+        vorname: 'Detail',
+        nachname: 'Recipe',
+        email: 'detail-recipe@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-recipe' }));
+
+    expect(screen.getByTestId('recipe-detail-view')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+  });
+
   test('bottom navigation is hidden when the menu form is open', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
@@ -824,6 +864,60 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('menu-form-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+  });
+
+  test('bottom navigation is hidden when the menu detail view is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-detail-menu',
+        vorname: 'Detail',
+        nachname: 'Menu',
+        email: 'detail-menu@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Festtafel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'open-menu' }));
+
+    expect(screen.getByTestId('menu-detail-view')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+  });
+
+  test('bottom navigation is hidden when chef personal data is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-personal-data',
+        vorname: 'Chef',
+        nachname: 'Data',
+        email: 'personal-data@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-kueche' }));
+    expect(screen.getByTestId('kueche-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-personal-data' }));
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'close-personal-data' }));
+    expect(screen.getByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
   });
 
   test('bottom navigation is hidden when the private list settings tab is open', async () => {
