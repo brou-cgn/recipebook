@@ -184,6 +184,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
   const [fabPressed, setFabPressed] = useState(false);
   const [cuisineProposals, setCuisineProposals] = useState([]);
+  const personalDataVisibilityChangeRef = React.useRef(onPersonalDataVisibilityChange);
 
   useEffect(() => {
     if (showPersonalData) {
@@ -206,11 +207,16 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   }, [openPersonalData, onPersonalDataOpened]);
 
   useEffect(() => {
+    personalDataVisibilityChangeRef.current = onPersonalDataVisibilityChange;
+  }, [onPersonalDataVisibilityChange]);
+
+  useEffect(() => {
     onPersonalDataVisibilityChange?.(showPersonalData);
-    return () => {
-      onPersonalDataVisibilityChange?.(false);
-    };
   }, [showPersonalData, onPersonalDataVisibilityChange]);
+
+  useEffect(() => () => {
+    personalDataVisibilityChangeRef.current?.(false);
+  }, []);
 
   useEffect(() => {
     Promise.all([
