@@ -398,7 +398,7 @@ function App() {
 
   const bottomNavActiveKey = useMemo(() => getBottomNavActiveKey(currentView), [currentView]);
   const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
-  const showBottomNav = Boolean(currentUser?.startseite);
+  const showBottomNav = Boolean(currentUser?.startseite) && !isFormOpen && !isMenuFormOpen;
   const bottomNavTabs = useMemo(
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
