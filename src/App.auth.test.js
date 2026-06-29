@@ -524,6 +524,48 @@ describe('App authentication view handling', () => {
     jest.useRealTimers();
   });
 
+  test('bottom spacing custom property follows bottom navigation visibility', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-spacing',
+        vorname: 'Bottom',
+        nachname: 'Spacing',
+        email: 'bottom-spacing@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const app = nav.closest('.App');
+    expect(app).toBeTruthy();
+    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('var(--bottom-nav-height)');
+    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('calc(var(--bottom-nav-height) + 16px)');
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Kochbuch' }));
+
+    await act(async () => {
+      window.scrollY = 24;
+      window.dispatchEvent(new Event('scroll'));
+    });
+
+    expect(nav).toHaveAttribute('data-visible', 'false');
+    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('0px');
+    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('0px');
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(nav).toHaveAttribute('data-visible', 'false');
+    expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('0px');
+    expect(app.style.getPropertyValue('--bottom-spacing')).toBe('0px');
+  });
+
   test('seasonal startseite navigation opens the seasonal recipe overview', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
