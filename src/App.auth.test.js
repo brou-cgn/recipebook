@@ -8,7 +8,12 @@ const mockRecipeFormProps = jest.fn();
 
 jest.mock('./components/RecipeList', () => function MockRecipeList(props) {
   mockRecipeListRender(props);
-  return <div data-testid="recipe-list-view">Recipe List</div>;
+  return (
+    <div data-testid="recipe-list-view">
+      Recipe List
+      <button type="button" onClick={() => props.onAddRecipe?.()}>add-recipe</button>
+    </div>
+  );
 });
 
 jest.mock('./components/Startseite', () => function MockStartseite(props) {
@@ -70,8 +75,13 @@ jest.mock('./components/Settings', () => function MockSettings() {
   return null;
 });
 
-jest.mock('./components/MenuList', () => function MockMenuList() {
-  return <div data-testid="menu-list-view">Menu List</div>;
+jest.mock('./components/MenuList', () => function MockMenuList(props) {
+  return (
+    <div data-testid="menu-list-view">
+      Menu List
+      <button type="button" onClick={() => props.onAddMenu?.()}>add-menu</button>
+    </div>
+  );
 });
 
 jest.mock('./components/MenuDetail', () => function MockMenuDetail() {
@@ -79,7 +89,7 @@ jest.mock('./components/MenuDetail', () => function MockMenuDetail() {
 });
 
 jest.mock('./components/MenuForm', () => function MockMenuForm() {
-  return null;
+  return <div data-testid="menu-form-view">Menu Form</div>;
 });
 
 jest.mock('./components/Login', () => function MockLogin({ onSwitchToRegister }) {
@@ -246,6 +256,11 @@ jest.mock('./utils/customLists', () => ({
     mealCategories: [],
     units: [],
   }),
+  DEFAULT_BUTTON_ICONS: {},
+  getDarkModePreference: () => false,
+  getButtonIcons: () => Promise.resolve({}),
+  getEffectiveIcon: () => '',
+  getInspirationListSettings: () => Promise.resolve({}),
 }));
 
 jest.mock('./utils/recipeCallsFirestore', () => ({
@@ -756,5 +771,56 @@ describe('App authentication view handling', () => {
     const appCallsView = await screen.findByTestId('app-calls-view');
     expect(appCallsView).toHaveAttribute('data-active-tab', 'app');
     expect(appCallsView).toHaveAttribute('data-visible-tabs', 'null');
+  });
+
+  test('bottom navigation is hidden when the recipe form is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-form-recipe',
+        vorname: 'Form',
+        nachname: 'Recipe',
+        email: 'form-recipe@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    expect(await screen.findByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-recipes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-recipe' }));
+
+    expect(screen.getByTestId('recipe-form-view')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+  });
+
+  test('bottom navigation is hidden when the menu form is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-form-menu',
+        vorname: 'Form',
+        nachname: 'Menu',
+        email: 'form-menu@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Festtafel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-menu' }));
+
+    expect(screen.getByTestId('menu-form-view')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
   });
 });
