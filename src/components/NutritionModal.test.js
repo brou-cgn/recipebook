@@ -1263,6 +1263,68 @@ describe('resolveIngredientNutritionByStatus', () => {
     expect(result.found).toBe(true);
     expect(result.skipped).toBeUndefined();
   });
+
+  it('falls back to referenceRow nutrition when generateNutritionFromReference throws', async () => {
+    const aiRow = {
+      ...referenceRow,
+      ingredientID: 'holunderbluetenlikoer',
+      source: 'ai-generiert',
+      status: 'Prüfung ausstehend',
+      kalorien: 250,
+      protein: 0.1,
+      fett: 0,
+      kohlenhydrate: 30,
+      defaultAmountG: null,
+    };
+    const generateError = new Error('functions/internal');
+    mockGenerateNutritionCallable.mockRejectedValue(generateError);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await resolveIngredientNutritionByStatus(
+        { text: '100 g Holunderblütenlikör', ingredientID: 'holunderbluetenlikoer' },
+        aiRow,
+        deps
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"holunderbluetenlikoer"'),
+        generateError
+      );
+      expect(result.found).toBe(true);
+      expect(result.source).toBe('ai-generiert');
+      expect(result.naehrwerte.kalorien).toBeCloseTo(250);
+      expect(result.fromReference).toBe(true);
+      expect(result.wroteBackReference).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('returns not found when generateNutritionFromReference throws and referenceRow has no nutrition data', async () => {
+    const emptyAiRow = {
+      ingredientID: 'unbekannt',
+      source: 'ai-generiert',
+      status: 'Datenerfassung ausstehend',
+      kalorien: 0,
+      protein: 0,
+      fett: 0,
+      kohlenhydrate: 0,
+    };
+    mockGenerateNutritionCallable.mockRejectedValue(new Error('functions/internal'));
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = await resolveIngredientNutritionByStatus(
+        { text: '100 g Unbekannt', ingredientID: 'unbekannt' },
+        emptyAiRow,
+        deps
+      );
+      expect(result.found).toBe(false);
+      expect(result.error).toBe('Nährwerte konnten nicht ermittelt werden (Datenerfassung ausstehend)');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 describe('hasMeaningfulGeneratedNutrition', () => {

@@ -101,53 +101,58 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
   if (shouldGenerateNutrition) {
     const generateNutrition = callableFactory(callableFunctions, 'generateNutritionFromReference');
     if (typeof generateNutrition === 'function') {
-      const result = await generateNutrition({
-        ingredientID,
-        nutritionFamily: referenceRow?.nutritionFamily || '',
-        category: referenceRow?.category || '',
-      });
-      const { values, searchTerm: returnedSearchTerm, source: returnedSource } = result?.data || {};
-      if (hasMeaningfulGeneratedNutrition(values)) {
-        const parsedValues = parseNutritionReferenceValues(values || {});
-        const nextStatus = getStatusAfterNutritionFetch(status);
-        if (firestoreDb && typeof setDocFn === 'function') {
-          try {
-            await setDocFn(
-              docFn(firestoreDb, 'nutritionReferences', ingredientID),
-              {
-                source: String(returnedSource || '').trim(),
-                status: nextStatus,
-                ...(returnedSearchTerm ? { searchTerm: returnedSearchTerm } : {}),
-                ...parsedValues,
-                ...buildSourceNutritionFields(parsedValues, returnedSource),
-                ...buildNutritionTrackingFields({
-                  previousData: referenceRow || {},
-                  nextValues: parsedValues,
-                  nextSource: returnedSource,
-                  preserveOnManualSourceChange: true,
-                  fromNutritionGeneration: true,
-                }),
-              },
-              { merge: true }
-            );
-            wroteBackReference = true;
-          } catch (error) {
-            console.warn(`nutrition writeback failed for "${ingredientID}"`, error);
-            writebackError = error;
+      try {
+        const result = await generateNutrition({
+          ingredientID,
+          nutritionFamily: referenceRow?.nutritionFamily || '',
+          category: referenceRow?.category || '',
+        });
+        const { values, searchTerm: returnedSearchTerm, source: returnedSource } = result?.data || {};
+        if (hasMeaningfulGeneratedNutrition(values)) {
+          const parsedValues = parseNutritionReferenceValues(values || {});
+          const nextStatus = getStatusAfterNutritionFetch(status);
+          if (firestoreDb && typeof setDocFn === 'function') {
+            try {
+              await setDocFn(
+                docFn(firestoreDb, 'nutritionReferences', ingredientID),
+                {
+                  source: String(returnedSource || '').trim(),
+                  status: nextStatus,
+                  ...(returnedSearchTerm ? { searchTerm: returnedSearchTerm } : {}),
+                  ...parsedValues,
+                  ...buildSourceNutritionFields(parsedValues, returnedSource),
+                  ...buildNutritionTrackingFields({
+                    previousData: referenceRow || {},
+                    nextValues: parsedValues,
+                    nextSource: returnedSource,
+                    preserveOnManualSourceChange: true,
+                    fromNutritionGeneration: true,
+                  }),
+                },
+                { merge: true }
+              );
+              wroteBackReference = true;
+            } catch (error) {
+              console.warn(`nutrition writeback failed for "${ingredientID}"`, error);
+              writebackError = error;
+            }
+          }
+          rowToUse = {
+            ...parsedValues,
+            ingredientID,
+            searchTerm: returnedSearchTerm,
+            source: returnedSource,
+          };
+        } else if (firestoreDb) {
+          // Fallback: read from Firestore (for backward compatibility)
+          const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
+          if (refreshedSnapshot.exists()) {
+            rowToUse = { ...refreshedSnapshot.data(), ingredientID };
           }
         }
-        rowToUse = {
-          ...parsedValues,
-          ingredientID,
-          searchTerm: returnedSearchTerm,
-          source: returnedSource,
-        };
-      } else if (firestoreDb) {
-        // Fallback: read from Firestore (for backward compatibility)
-        const refreshedSnapshot = await getDocFn(docFn(firestoreDb, 'nutritionReferences', ingredientID));
-        if (refreshedSnapshot.exists()) {
-          rowToUse = { ...refreshedSnapshot.data(), ingredientID };
-        }
+      } catch (generateError) {
+        console.warn(`generateNutritionFromReference failed for "${ingredientID}", falling back to existing referenceRow data`, generateError);
+        rowToUse = referenceRow;
       }
     }
   }
