@@ -218,6 +218,11 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'bottomNavMenus', label: 'Bottom Navigation: Festtafel' },
   { key: 'bottomNavAtelier', label: 'Bottom Navigation: Atelier' },
   { key: 'bottomNavChef', label: 'Bottom Navigation: Chefkoch' },
+  { key: 'bottomNavHomeActive', label: 'Bottom Navigation: Küche (aktiv)' },
+  { key: 'bottomNavRecipesActive', label: 'Bottom Navigation: Kochbuch (aktiv)' },
+  { key: 'bottomNavMenusActive', label: 'Bottom Navigation: Festtafel (aktiv)' },
+  { key: 'bottomNavAtelierActive', label: 'Bottom Navigation: Atelier (aktiv)' },
+  { key: 'bottomNavChefActive', label: 'Bottom Navigation: Chefkoch (aktiv)' },
 ];
 
 function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdateRecipe }) {

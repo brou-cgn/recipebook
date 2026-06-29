@@ -32,4 +32,12 @@ describe('BottomNavigation CSS sizing', () => {
 
     expect(darkRule).toContain('background: #1E1E1C;');
   });
+
+  test('uses updated dark mode tab color', () => {
+    const cssPath = path.join(__dirname, 'BottomNavigation.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const darkTabRule = getRuleBody(css, '[data-theme="dark"] .bottom-navigation__tab');
+
+    expect(darkTabRule).toContain('color: #E0D5C7;');
+  });
 });
