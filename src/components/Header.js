@@ -168,18 +168,42 @@ const Header = forwardRef(function Header({
     setMenuOpen(false);
   };
 
+  const handleLogoClick = () => {
+    if (onViewChange) {
+      onViewChange('startseite');
+    }
+    setMenuOpen(false);
+  };
+
+  const headerTitleContent = (
+    <>
+      {appLogoImage && (
+        <img src={appLogoImage} alt="Logo" className="header-logo" />
+      )}
+      <div className="header-title-text">
+        <h1>brouBook</h1>
+        <p className="tagline">{headerSlogan}</p>
+      </div>
+    </>
+  );
+
   return (
     <>
     <header className={`header ${!visible ? 'header-hidden' : ''}`}> 
       <div className="header-content">
         <div className="header-title">
-          {appLogoImage && (
-            <img src={appLogoImage} alt="Logo" className="header-logo" />
+          {onViewChange ? (
+            <button
+              type="button"
+              className="header-title-link"
+              onClick={handleLogoClick}
+              aria-label="Zur Startseite"
+            >
+              {headerTitleContent}
+            </button>
+          ) : (
+            headerTitleContent
           )}
-          <div className="header-title-text">
-            <h1>brouBook</h1>
-            <p className="tagline">{headerSlogan}</p>
-          </div>
         </div>
         <div className="header-actions">
           {currentUser && currentView === 'recipes' && (

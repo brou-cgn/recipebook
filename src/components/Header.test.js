@@ -201,6 +201,26 @@ describe('Header - Hamburger Menu Visibility', () => {
     expect(onViewChange).toHaveBeenCalledWith('startseite');
   });
 
+  test.each(['recipes', 'menus', 'kueche'])(
+    'clicking the header logo area navigates to startseite from %s view',
+    (currentView) => {
+      const onViewChange = jest.fn();
+
+      render(
+        <Header
+          currentView={currentView}
+          currentUser={mockCurrentUser}
+          onViewChange={onViewChange}
+          onLogout={() => {}}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Zur Startseite' }));
+
+      expect(onViewChange).toHaveBeenCalledWith('startseite');
+    }
+  );
+
   test('pressing Enter in the search input blurs it (dismisses keyboard)', () => {
     render(
       <Header
