@@ -1,11 +1,36 @@
 .App {
   min-height: 100vh;
   background: #f5f5f5;
+  --bottom-nav-min-height: 77px;
+  --bottom-nav-vertical-padding: 0.4rem;
+  --bottom-nav-total-vertical-padding: 0.8rem;
+  --bottom-nav-height: calc(
+    var(--bottom-nav-min-height) +
+    var(--bottom-nav-total-vertical-padding) +
+    env(safe-area-inset-bottom, 0px)
+  );
+  --bottom-nav-offset: 0px;
+  --bottom-spacing: 0px;
 }
 
 @media (max-width: 768px) {
-  .App {
-    padding-bottom: var(--app-bottom-nav-padding, 0px);
+  .App .startseite-container,
+  .App .app-calls-container,
+  .App .meine-kuechenstars-container {
+    padding-bottom: calc(20px + var(--bottom-spacing, 0px));
+  }
+
+  .App .recipe-list-container,
+  .App .menu-list-container,
+  .App .group-list-container,
+  .App .group-detail-container,
+  .App .settings-container {
+    padding-bottom: calc(1rem + var(--bottom-spacing, 0px));
+  }
+
+  .App .kueche-container,
+  .App .personal-data-page {
+    padding-bottom: calc(1.5rem + var(--bottom-spacing, 0px));
   }
 
   .App .startseite-fab-button,

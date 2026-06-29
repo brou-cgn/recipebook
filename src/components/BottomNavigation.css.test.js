@@ -8,12 +8,14 @@ describe('BottomNavigation CSS sizing', () => {
     return match ? match[1] : '';
   };
 
-  test('uses increased minimum height', () => {
+  test('uses shared custom properties for navigation height and safe-area padding', () => {
     const cssPath = path.join(__dirname, 'BottomNavigation.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const navRule = getRuleBody(css, '.bottom-navigation');
 
-    expect(navRule).toContain('min-height: 77px;');
+    expect(navRule).toContain('min-height: var(--bottom-nav-min-height, 77px);');
+    expect(navRule).toContain('var(--bottom-nav-vertical-padding, 0.4rem)');
+    expect(navRule).toContain('env(safe-area-inset-bottom, 0px)');
   });
 
   test('uses larger icon sizing', () => {

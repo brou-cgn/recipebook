@@ -16,6 +16,37 @@ describe('App CSS FAB bottom offset selectors', () => {
     return css.slice(braceStart + 1, i - 1);
   };
 
+  test('defines shared bottom navigation sizing custom properties on the app root', () => {
+    const cssPath = path.join(__dirname, 'App.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toContain('--bottom-nav-min-height: 77px;');
+    expect(css).toContain('--bottom-nav-vertical-padding: 0.4rem;');
+    expect(css).toContain('--bottom-nav-total-vertical-padding: 0.8rem;');
+    expect(css).toContain('--bottom-nav-height: calc(');
+    expect(css).toContain('--bottom-spacing: 0px;');
+  });
+
+  test('applies bottom spacing to mobile page containers via a shared custom property', () => {
+    const cssPath = path.join(__dirname, 'App.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
+
+    expect(mobileBlock).toContain('.App .startseite-container,');
+    expect(mobileBlock).toContain('.App .recipe-list-container,');
+    expect(mobileBlock).toContain('.App .menu-list-container,');
+    expect(mobileBlock).toContain('.App .group-list-container,');
+    expect(mobileBlock).toContain('.App .group-detail-container,');
+    expect(mobileBlock).toContain('.App .kueche-container,');
+    expect(mobileBlock).toContain('.App .app-calls-container,');
+    expect(mobileBlock).toContain('.App .meine-kuechenstars-container');
+    expect(mobileBlock).toContain('.App .settings-container');
+    expect(mobileBlock).toContain('.App .personal-data-page');
+    expect(mobileBlock).toContain('padding-bottom: calc(20px + var(--bottom-spacing, 0px));');
+    expect(mobileBlock).toContain('padding-bottom: calc(1rem + var(--bottom-spacing, 0px));');
+    expect(mobileBlock).toContain('padding-bottom: calc(1.5rem + var(--bottom-spacing, 0px));');
+  });
+
   test('applies bottom-nav offset to recipe and recipe-detail FAB buttons in mobile media query', () => {
     const cssPath = path.join(__dirname, 'App.css');
     const css = fs.readFileSync(cssPath, 'utf8');

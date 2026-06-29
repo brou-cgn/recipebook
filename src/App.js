@@ -85,7 +85,6 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
-const BOTTOM_NAV_HEIGHT = 'calc(77px + env(safe-area-inset-bottom, 0px))';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
   { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
@@ -412,8 +411,8 @@ function App() {
     [currentUser?.startseite]
   );
   const appBottomNavStyle = useMemo(() => ({
-    '--bottom-nav-offset': showBottomNav && isBottomNavVisible ? BOTTOM_NAV_HEIGHT : '0px',
-    '--app-bottom-nav-padding': showBottomNav ? BOTTOM_NAV_HEIGHT : '0px',
+    '--bottom-nav-offset': showBottomNav && isBottomNavVisible ? 'var(--bottom-nav-height)' : '0px',
+    '--bottom-spacing': showBottomNav && isBottomNavVisible ? 'calc(var(--bottom-nav-height) + 16px)' : '0px',
   }), [showBottomNav, isBottomNavVisible]);
 
   // Recipes belonging to the currently selected group before cuisine/author/list filters
@@ -1743,7 +1742,7 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <div className="App">
+      <div className="App" style={appBottomNavStyle}>
         <Header />
         <SharePage
           shareId={sharePageId}
@@ -1766,7 +1765,7 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <div className="App">
+      <div className="App" style={appBottomNavStyle}>
         <Header />
         <MenuSharePage
           shareId={menuSharePageId}
@@ -1815,7 +1814,7 @@ function App() {
   return (
     <NutritionReferenceProvider enabled={!!currentUser}>
       <AppNutritionRowsSync onRows={setNutritionReferenceRows} />
-      <div className="App">
+      <div className="App" style={appBottomNavStyle}>
         <Header 
           ref={headerRef}
           onSettingsClick={handleOpenSettings}
