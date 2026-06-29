@@ -173,6 +173,8 @@ jest.mock('./components/GroupDetail', () => function MockGroupDetail(props) {
       >
         edit-group-properties
       </button>
+      <button type="button" onClick={() => props.onActiveTabChange?.('einstellungen')}>open-settings-tab</button>
+      <button type="button" onClick={() => props.onActiveTabChange?.('rezepte')}>close-settings-tab</button>
     </div>
   );
 });
@@ -822,5 +824,38 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('menu-form-view')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+  });
+
+  test('bottom navigation is hidden when the private list settings tab is open', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true } });
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-settings',
+        vorname: 'Nav',
+        nachname: 'Settings',
+        email: 'nav-settings@example.com',
+        role: 'user',
+        startseite: true,
+      });
+    });
+
+    await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'go-groups' }));
+    expect(screen.getByTestId('group-list-view')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-group' }));
+    expect(screen.getByTestId('group-detail-view')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'open-settings-tab' }));
+    expect(screen.queryByRole('navigation', { name: 'Hauptnavigation' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'close-settings-tab' }));
+    expect(screen.getByRole('navigation', { name: 'Hauptnavigation' })).toBeInTheDocument();
   });
 });

@@ -63,10 +63,15 @@ function GroupDetail({
   onClearAllFilters,
   activeFilters,
   showFavoritesOnly = false,
-  showSeasonalOnly = false
+  showSeasonalOnly = false,
+  onActiveTabChange
 }) {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (onActiveTabChange) onActiveTabChange(tab);
+  };
   const [backIcon, setBackIcon] = useState(DEFAULT_BUTTON_ICONS.privateListBack);
   const [shoppingListIcon, setShoppingListIcon] = useState(DEFAULT_BUTTON_ICONS.shoppingList || 'Einkauf');
   const [listSettingsIcon, setListSettingsIcon] = useState(DEFAULT_BUTTON_ICONS.listSettings || DEFAULT_LIST_SETTINGS_ICON);
@@ -547,7 +552,7 @@ function GroupDetail({
           {!isPublic && (
             <button
               className="list-settings-trigger-button"
-              onClick={() => setActiveTab(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
+              onClick={() => handleTabChange(activeTab === TAB_SETTINGS ? TAB_RECIPES : TAB_SETTINGS)}
               title="Einstellungen anzeigen"
               aria-label="Einstellungen öffnen"
             >

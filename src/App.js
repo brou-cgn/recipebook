@@ -293,6 +293,7 @@ function App() {
   const [groupsLoading, setGroupsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [activeGroupId, setActiveGroupId] = useState(null);
+  const [isPrivateListSettingsTabOpen, setIsPrivateListSettingsTabOpen] = useState(false);
   const [publicGroupId, setPublicGroupId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [recipesLoaded, setRecipesLoaded] = useState(false);
@@ -398,7 +399,7 @@ function App() {
 
   const bottomNavActiveKey = useMemo(() => getBottomNavActiveKey(currentView), [currentView]);
   const bottomNavBehavior = useMemo(() => getBottomNavBehavior(currentView), [currentView]);
-  const showBottomNav = Boolean(currentUser?.startseite) && !isFormOpen && !isMenuFormOpen;
+  const showBottomNav = Boolean(currentUser?.startseite) && !isFormOpen && !isMenuFormOpen && !isPrivateListSettingsTabOpen;
   const bottomNavTabs = useMemo(
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
@@ -1033,6 +1034,7 @@ function App() {
     setIsFormOpen(false);
     setIsMenuFormOpen(false);
     setIsSettingsOpen(false);
+    setIsPrivateListSettingsTabOpen(false);
     // Reset filters when switching views
     setCategoryFilter('');
   };
@@ -1271,6 +1273,7 @@ function App() {
 
   const handleBackToGroupList = () => {
     setSelectedGroup(null);
+    setIsPrivateListSettingsTabOpen(false);
   };
 
   const handleCreateGroup = async (groupData) => {
@@ -1939,6 +1942,7 @@ function App() {
             activeFilters={recipeFilters}
             showFavoritesOnly={showFavoritesOnly}
             showSeasonalOnly={showSeasonalOnly}
+            onActiveTabChange={(tab) => setIsPrivateListSettingsTabOpen(tab === 'einstellungen')}
           />
         ) : (
           <GroupList
