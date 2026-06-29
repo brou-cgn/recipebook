@@ -208,14 +208,16 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
 
   useEffect(() => {
     personalDataVisibilityChangeRef.current = onPersonalDataVisibilityChange;
-  });
+  }, [onPersonalDataVisibilityChange]);
 
   useEffect(() => {
     personalDataVisibilityChangeRef.current?.(showPersonalData);
   }, [showPersonalData]);
 
-  useEffect(() => () => {
-    personalDataVisibilityChangeRef.current?.(false);
+  useEffect(() => {
+    return () => {
+      personalDataVisibilityChangeRef.current?.(false);
+    };
   }, []);
 
   useEffect(() => {
