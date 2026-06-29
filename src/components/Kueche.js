@@ -164,7 +164,7 @@ function RecipeBarChart({ recipes }) {
   );
 }
 
-function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened }) {
+function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu, allUsers, currentUser, onProfileUpdated, onViewChange, openPersonalData, onPersonalDataOpened, onPersonalDataVisibilityChange }) {
   const { rows: nutritionReferenceRows } = useNutritionReference();
   const [showTimeline, setShowTimeline] = useState(false);
   const [timelineBubbleIcon, setTimelineBubbleIcon] = useState(null);
@@ -184,6 +184,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
   const [isDarkMode, setIsDarkMode] = useState(() => getDarkModePreference());
   const [fabPressed, setFabPressed] = useState(false);
   const [cuisineProposals, setCuisineProposals] = useState([]);
+  const personalDataVisibilityChangeRef = React.useRef(onPersonalDataVisibilityChange);
 
   useEffect(() => {
     if (showPersonalData) {
@@ -204,6 +205,20 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
     }
     prevOpenPersonalData.current = openPersonalData;
   }, [openPersonalData, onPersonalDataOpened]);
+
+  useEffect(() => {
+    personalDataVisibilityChangeRef.current = onPersonalDataVisibilityChange;
+  }, [onPersonalDataVisibilityChange]);
+
+  useEffect(() => {
+    personalDataVisibilityChangeRef.current?.(showPersonalData);
+  }, [showPersonalData]);
+
+  useEffect(() => {
+    return () => {
+      personalDataVisibilityChangeRef.current?.(false);
+    };
+  }, []);
 
   useEffect(() => {
     Promise.all([
