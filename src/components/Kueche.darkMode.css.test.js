@@ -8,7 +8,7 @@ describe('Kueche dark mode styles', () => {
     return match ? match[1] : '';
   };
 
-  test('styles the Küche-Aktion FAB button for dark mode', () => {
+  test('styles the Küche FAB button for dark mode', () => {
     const cssPath = path.join(__dirname, '..', 'darkMode.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const rule = getRuleBody(css, '[data-theme="dark"] .kueche-fab-button');
