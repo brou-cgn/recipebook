@@ -152,6 +152,7 @@ export async function resolveIngredientNutritionByStatus(ingredientObj, referenc
         }
       } catch (generateError) {
         console.warn(`generateNutritionFromReference failed for "${ingredientID}", falling back to existing referenceRow data`, generateError);
+        rowToUse = referenceRow;
       }
     }
   }
