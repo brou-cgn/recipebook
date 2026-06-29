@@ -89,6 +89,14 @@ const NAV_ICON_KEYS = {
   chef: 'bottomNavChef',
 };
 
+const NAV_ICON_KEYS_ACTIVE = {
+  home: 'bottomNavHomeActive',
+  recipes: 'bottomNavRecipesActive',
+  menus: 'bottomNavMenusActive',
+  atelier: 'bottomNavAtelierActive',
+  chef: 'bottomNavChefActive',
+};
+
 function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -120,9 +128,14 @@ function BottomNavigation({ tabs, activeKey, isVisible, onSelect }) {
     >
       {tabs.map((tab) => {
         const Icon = ICONS[tab.key];
-        const iconKey = NAV_ICON_KEYS[tab.key];
-        const iconValue = iconKey ? getEffectiveIcon(buttonIcons, iconKey, isDarkMode) : '';
         const isActive = tab.key === activeKey;
+        const iconKey = NAV_ICON_KEYS[tab.key];
+        const activeIconKey = NAV_ICON_KEYS_ACTIVE[tab.key];
+        const normalIconValue = iconKey ? getEffectiveIcon(buttonIcons, iconKey, isDarkMode) : '';
+        const activeIconValue = isActive && activeIconKey
+          ? getEffectiveIcon(buttonIcons, activeIconKey, isDarkMode)
+          : '';
+        const iconValue = activeIconValue || normalIconValue;
 
         return (
           <button

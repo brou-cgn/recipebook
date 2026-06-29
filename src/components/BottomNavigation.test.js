@@ -55,4 +55,18 @@ describe('BottomNavigation icon rendering', () => {
 
     expect(container.querySelector('.bottom-navigation__icon-image').getAttribute('src')).toBe(iconData);
   });
+
+  test('renders configured active icon for the active tab', async () => {
+    getButtonIcons.mockResolvedValue({
+      bottomNavHome: '🍳',
+      bottomNavHomeActive: '🔥',
+      bottomNavRecipes: '📖',
+    });
+
+    render(<BottomNavigation tabs={tabs} activeKey="home" isVisible onSelect={() => {}} />);
+
+    expect(await screen.findByText('🔥')).toBeInTheDocument();
+    expect(screen.getByText('📖')).toBeInTheDocument();
+    expect(screen.queryByText('🍳')).not.toBeInTheDocument();
+  });
 });

@@ -720,6 +720,11 @@ export const DEFAULT_BUTTON_ICONS = {
   bottomNavMenus: '',
   bottomNavAtelier: '',
   bottomNavChef: '',
+  bottomNavHomeActive: '',
+  bottomNavRecipesActive: '',
+  bottomNavMenusActive: '',
+  bottomNavAtelierActive: '',
+  bottomNavChefActive: '',
   // Dark mode alternative icons (empty string = use normal icon in dark mode)
   trendingDifficultyIconDark: '',
   trendingTimeIconDark: '',
@@ -787,6 +792,11 @@ export const DEFAULT_BUTTON_ICONS = {
   bottomNavMenusDark: '',
   bottomNavAtelierDark: '',
   bottomNavChefDark: '',
+  bottomNavHomeActiveDark: '',
+  bottomNavRecipesActiveDark: '',
+  bottomNavMenusActiveDark: '',
+  bottomNavAtelierActiveDark: '',
+  bottomNavChefActiveDark: '',
 };
 
 /**
