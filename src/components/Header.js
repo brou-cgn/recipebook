@@ -197,7 +197,7 @@ const Header = forwardRef(function Header({
               type="button"
               className="header-title-link"
               onClick={handleLogoClick}
-              aria-label="Zur Küche"
+              aria-label="Zur Startseite"
             >
               {headerTitleContent}
             </button>
