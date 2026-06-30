@@ -35,8 +35,6 @@
 
   .App .startseite-fab-button,
   .App .kueche-fab-button,
-  .App .add-icon-button,
-  .App .add-menu-fab-button,
   .App .menu-favorites-filter-button,
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
@@ -54,11 +52,20 @@
       background 0.15s ease,
       box-shadow 0.15s ease;
   }
+
+  .App .add-icon-button,
+  .App .add-menu-fab-button {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+  }
 }
 
 @media (max-width: 480px) {
   .App .sort-carousel {
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transition: bottom 250ms ease-in-out, box-shadow 0.25s ease;
   }
 }
