@@ -105,6 +105,14 @@
   color: #E0D5C7;
 }
 
+[data-theme="dark"] .bottom-navigation__label {
+  color: #E0D5C7;
+}
+
+[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__label {
+  color: #D4820A;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bottom-navigation {
     transition: none;
