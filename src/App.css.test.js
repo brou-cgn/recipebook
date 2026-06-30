@@ -47,12 +47,14 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(mobileBlock).toContain('padding-bottom: calc(1.5rem + var(--bottom-spacing, 0px));');
   });
 
-  test('applies bottom-nav offset to recipe and recipe-detail FAB buttons in mobile media query', () => {
+  test('applies bottom-nav offset to shared and recipe-detail FAB buttons in mobile media query', () => {
     const cssPath = path.join(__dirname, 'App.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
     const requiredSelectors = [
-      '.App .add-icon-button,',
+      '.App .startseite-fab-button,',
+      '.App .kueche-fab-button,',
+      '.App .menu-favorites-filter-button,',
       '.App .recipe-detail-container .edit-fab-button,',
       '.App .recipe-detail-container .new-version-fab-button,',
       '.App .recipe-detail-container .delete-fab-button,',
@@ -64,6 +66,25 @@ describe('App CSS FAB bottom offset selectors', () => {
       expect(mobileBlock).toContain(selector);
     });
     expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px) + var(--bottom-nav-offset, 0px));');
+  });
+
+  test('keeps recipe and menu overview FAB buttons at fixed hidden-nav position', () => {
+    const cssPath = path.join(__dirname, 'App.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
+
+    expect(mobileBlock).toContain('.App .add-icon-button,');
+    expect(mobileBlock).toContain('.App .add-menu-fab-button {');
+    expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
+  });
+
+  test('keeps recipe overview carousel at fixed hidden-nav position', () => {
+    const cssPath = path.join(__dirname, 'App.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const smallMobileBlock = getMediaBlock(css, '(max-width: 480px)');
+
+    expect(smallMobileBlock).toContain('.App .sort-carousel {');
+    expect(smallMobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
   });
 
   test('keeps reduced-motion selector coverage for recipe and recipe-detail FAB buttons', () => {
