@@ -54,7 +54,6 @@ describe('App CSS FAB bottom offset selectors', () => {
     const requiredSelectors = [
       '.App .startseite-fab-button,',
       '.App .kueche-fab-button,',
-      '.App .menu-favorites-filter-button,',
       '.App .recipe-detail-container .edit-fab-button,',
       '.App .recipe-detail-container .new-version-fab-button,',
       '.App .recipe-detail-container .delete-fab-button,',
@@ -74,6 +73,8 @@ describe('App CSS FAB bottom offset selectors', () => {
     const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
 
     expect(mobileBlock).toContain('.App .add-icon-button,');
+    expect(mobileBlock).toContain('.App .filter-button,');
+    expect(mobileBlock).toContain('.App .menu-favorites-filter-button,');
     expect(mobileBlock).toContain('.App .add-menu-fab-button {');
     expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
   });
