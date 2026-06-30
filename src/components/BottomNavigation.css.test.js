@@ -43,16 +43,16 @@ describe('BottomNavigation CSS sizing', () => {
     expect(darkTabRule).toContain('color: #E0D5C7;');
   });
 
-  test('uses dark mode label color override and preserves active label color', () => {
+  test('uses unified label color for active and inactive tabs in dark mode', () => {
     const cssPath = path.join(__dirname, 'BottomNavigation.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const darkLabelRule = getRuleBody(css, '[data-theme="dark"] .bottom-navigation__label');
-    const darkActiveLabelRule = getRuleBody(
+    const darkActiveTabRule = getRuleBody(
       css,
-      '[data-theme="dark"] .bottom-navigation__tab--active .bottom-navigation__label'
+      '[data-theme="dark"] .bottom-navigation__tab--active'
     );
 
     expect(darkLabelRule).toContain('color: #E0D5C7;');
-    expect(darkActiveLabelRule).toContain('color: #D4820A;');
+    expect(darkActiveTabRule).toContain('color: #E0D5C7;');
   });
 });
