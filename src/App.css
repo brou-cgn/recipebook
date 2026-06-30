@@ -35,13 +35,11 @@
 
   .App .startseite-fab-button,
   .App .kueche-fab-button,
-  .App .menu-favorites-filter-button,
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
   .App .recipe-detail-container .delete-fab-button,
   .App .recipe-detail-container .publish-fab-button,
   .App .recipe-detail-container .reset-thumbnail-fab-button,
-  .App .filter-button,
   .App .tagesmenu-filter-btn,
   .App .tagesmenu-meine-auswahl-btn,
   .App .tagesmenu-zum-tagesMenu-btn {
@@ -54,6 +52,8 @@
   }
 
   .App .add-icon-button,
+  .App .filter-button,
+  .App .menu-favorites-filter-button,
   .App .add-menu-fab-button {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transition:
