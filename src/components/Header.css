@@ -161,6 +161,7 @@
   font: inherit;
   cursor: pointer;
   text-align: left;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .header-logo {
