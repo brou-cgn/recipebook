@@ -161,6 +161,56 @@ test(
     },
 );
 
+test(
+    'allows preflight for broubook.web.app and returns strict CORS headers',
+    async () => {
+      const req = {
+        method: 'OPTIONS',
+        headers: {origin: 'https://broubook.web.app'},
+      };
+      const res = createRes();
+
+      await bringRecipeExport(req, res);
+
+      assert.equal(res.statusCode, 204);
+      assert.equal(
+          res.headers['Access-Control-Allow-Origin'],
+          'https://broubook.web.app',
+      );
+      assert.equal(
+          res.headers['Access-Control-Allow-Methods'],
+          'GET, POST, OPTIONS',
+      );
+      assert.equal(res.headers['Access-Control-Allow-Headers'], 'Content-Type');
+      assert.equal(res.headers.Vary, 'Origin');
+    },
+);
+
+test(
+    'allows preflight for broubook.firebaseapp.com and returns strict CORS headers',
+    async () => {
+      const req = {
+        method: 'OPTIONS',
+        headers: {origin: 'https://broubook.firebaseapp.com'},
+      };
+      const res = createRes();
+
+      await bringRecipeExport(req, res);
+
+      assert.equal(res.statusCode, 204);
+      assert.equal(
+          res.headers['Access-Control-Allow-Origin'],
+          'https://broubook.firebaseapp.com',
+      );
+      assert.equal(
+          res.headers['Access-Control-Allow-Methods'],
+          'GET, POST, OPTIONS',
+      );
+      assert.equal(res.headers['Access-Control-Allow-Headers'], 'Content-Type');
+      assert.equal(res.headers.Vary, 'Origin');
+    },
+);
+
 test('rejects preflight for disallowed origin', async () => {
   const req = {
     method: 'OPTIONS',
