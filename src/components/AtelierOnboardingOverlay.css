@@ -51,7 +51,7 @@
 .atelier-onboarding-bubble__arrow {
   position: absolute;
   bottom: -9px;
-  left: 50%;
+  left: var(--arrow-left, 50%);
   transform: translateX(-50%) rotate(45deg);
   width: 18px;
   height: 18px;
