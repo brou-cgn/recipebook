@@ -1131,10 +1131,12 @@ function App() {
   };
 
   const handleAtelierOnboardingConfirm = () => {
+    const atelierTab = BOTTOM_NAV_TABS.find((t) => t.key === 'atelier');
+    const atelierView = atelierTab?.view || 'tagesmenu';
     localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
     setShowAtelierOnboarding(false);
-    setIsBottomNavVisible(getBottomNavBehavior('tagesmenu') !== 'hidden');
-    handleViewChange('tagesmenu');
+    setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
+    handleViewChange(atelierView);
     window.scrollTo(0, 0);
   };
 
