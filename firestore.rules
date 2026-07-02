@@ -120,6 +120,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // App-wide settings collection (e.g. appSettings/onboarding stores the global
+    // onboarding test-mode flag). All authenticated users may read; only admins may write.
+    match /appSettings/{docId} {
+      allow read: if isAnyUser();
+      allow write: if isAdmin();
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAnyUser();

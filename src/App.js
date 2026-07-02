@@ -1128,18 +1128,6 @@ function App() {
   const handleBottomNavSelect = (tab) => {
     if (!tab) return;
 
-    // TEMP DEBUG (onboarding testmode diagnosis) – vor Merge wieder entfernen
-    // eslint-disable-next-line no-console
-    console.log('[Onboarding-Debug]', {
-      tabKey: tab.key,
-      onboardingTestmodeActive,
-      userOnboardingTestmode: currentUser?.onboardingTestmode,
-      userRole: currentUser?.role,
-      userId: currentUser?.id,
-      onboardingSeen: localStorage.getItem(ATELIER_ONBOARDING_KEY),
-      shouldShow: shouldShowOnboardingOverlay(currentUser, onboardingTestmodeActive),
-    });
-
     const onboardingSeen = localStorage.getItem(ATELIER_ONBOARDING_KEY);
     if (
       tab.key === 'atelier'
