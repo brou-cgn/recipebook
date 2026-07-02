@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, act, within, waitFor } from '@testing-library/react';
 import App from './App';
 
 let mockAuthStateCallback;
@@ -328,6 +328,7 @@ describe('App authentication view handling', () => {
     mockAuthStateCallback = null;
     mockGetRolePermissions.mockResolvedValue({});
     mockGetOnboardingTestmodeActive.mockResolvedValue(false);
+    mockGetOnboardingTestmodeActive.mockClear();
     mockRecipeListRender.mockClear();
     mockRecipeFormProps.mockClear();
     localStorage.clear();
@@ -559,6 +560,28 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
+  });
+
+  test('loads onboarding testmode only after login', async () => {
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+    expect(mockGetOnboardingTestmodeActive).not.toHaveBeenCalled();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-load',
+        vorname: 'Atelier',
+        nachname: 'Load',
+        email: 'atelier-load@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockGetOnboardingTestmodeActive).toHaveBeenCalledTimes(1);
+    });
   });
 
   test('atelier shows onboarding overlay when global onboarding testmode and user permission are enabled', async () => {

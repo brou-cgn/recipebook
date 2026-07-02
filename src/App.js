@@ -585,6 +585,7 @@ function App() {
   }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
+    if (!currentUser?.id) return undefined;
     let cancelled = false;
     const loadOnboardingSettings = async () => {
       const active = await getOnboardingTestmodeActive();
@@ -592,7 +593,7 @@ function App() {
     };
     loadOnboardingSettings();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentUser?.id]);
 
   // Apply favicon settings on mount
   useEffect(() => {
