@@ -1128,9 +1128,10 @@ function App() {
   const handleBottomNavSelect = (tab) => {
     if (!tab) return;
 
+    const onboardingSeen = localStorage.getItem(ATELIER_ONBOARDING_KEY);
     if (
       tab.key === 'atelier'
-      && !localStorage.getItem(ATELIER_ONBOARDING_KEY)
+      && (onboardingTestmodeActive || !onboardingSeen)
       && shouldShowOnboardingOverlay(currentUser, onboardingTestmodeActive)
     ) {
       setShowAtelierOnboarding(true);
