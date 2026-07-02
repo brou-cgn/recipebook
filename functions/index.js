@@ -38,11 +38,16 @@ const smtpFrom = defineSecret('SMTP_FROM');
  * Trusted origins allowed for CORS on API endpoints.
  * Server-to-server callers (e.g. Apple Shortcuts) send no Origin header and
  * are therefore unaffected by this list.
+ * Localhost origins are included for local development.
  */
 const ALLOWED_ORIGINS = [
   'https://brou-cgn.github.io',
   'https://broubook.web.app',
   'https://broubook.firebaseapp.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
 ];
 
 /**
@@ -2313,6 +2318,8 @@ exports.calculateNutritionFromOpenFoodFacts = onCall(
       maxInstances: 5,
       timeoutSeconds: 540,
       secrets: [geminiApiKey],
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
     },
     async (request) => {
       if (!request.auth) {
@@ -2443,7 +2450,7 @@ const sendBringHtml = (res, title, recipeIngredients) => {
  * 3. Falling back to Gemini nutrition estimation if OpenFoodFacts returns no results
  */
 exports.generateNutritionFromReference = onCall(
-    {maxInstances: 5, timeoutSeconds: 60, secrets: [geminiApiKey]},
+    {maxInstances: 5, timeoutSeconds: 60, secrets: [geminiApiKey], cors: ALLOWED_ORIGINS, invoker: 'public'},
     async (request) => {
       if (!request.auth) {
         throw new HttpsError('unauthenticated', 'You must be logged in to generate nutrition data');
@@ -2630,6 +2637,11 @@ exports.generateNutritionFromReference = onCall(
       };
       if (nextSource && status !== 'Freigegeben') {
         updatePayload.source = nextSource;
+      }
+      // Advance status to 'Prüfung ausstehend' for entries that still need review.
+      // 'Neu' is left unchanged (merge will preserve it); 'Freigegeben' is never touched.
+      if (status !== 'Neu' && status !== 'Freigegeben') {
+        updatePayload.status = 'Prüfung ausstehend';
       }
       updatePayload.updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
