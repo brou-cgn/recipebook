@@ -610,6 +610,62 @@ describe('App authentication view handling', () => {
     expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
   });
 
+  test('atelier shows onboarding overlay again when testmode is active even if localStorage key is already set', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(true);
+
+    localStorage.setItem('atelierOnboardingSeen', 'true');
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-repeat',
+        vorname: 'Atelier',
+        nachname: 'Repeat',
+        email: 'atelier-repeat@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    expect(screen.getByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
+    expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
+  });
+
+  test('atelier does not show onboarding overlay when testmode is disabled and localStorage key is set', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(false);
+
+    localStorage.setItem('atelierOnboardingSeen', 'true');
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-suppressed',
+        vorname: 'Atelier',
+        nachname: 'Suppressed',
+        email: 'atelier-suppressed@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
+  });
+
   test('bottom spacing custom property follows bottom navigation visibility', async () => {
     render(<App />);
     expect(await screen.findByTestId('login-view')).toBeInTheDocument();
