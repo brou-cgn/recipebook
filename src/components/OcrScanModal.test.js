@@ -778,6 +778,32 @@ describe('OcrScanModal', () => {
     }, { timeout: OCR_TIMEOUT });
   });
 
+  test('shows clear callable auth error and keeps standard OCR fallback button', async () => {
+    const { fileToBase64 } = require('../utils/imageUtils');
+    const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
+
+    fileToBase64.mockResolvedValue('data:image/png;base64,test');
+    recognizeRecipeWithAI.mockRejectedValue(
+      new Error('Die OCR-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.')
+    );
+
+    render(<OcrScanModal onImport={mockOnImport} onCancel={mockOnCancel} />);
+
+    const fileInput = screen.getByLabelText('Bild(er) hochladen');
+    const file = new File(['test'], 'test.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Analyse starten \(1\)/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText(/Analyse starten \(1\)/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/nicht korrekt freigeschaltet/i)).toBeInTheDocument();
+      expect(screen.getByText(/Mit Standard-OCR fortfahren/i)).toBeInTheDocument();
+    }, { timeout: OCR_TIMEOUT });
+  });
+
   test('displays remaining scans info when AI scan succeeds', async () => {
     const { fileToBase64 } = require('../utils/imageUtils');
     const { recognizeRecipeWithAI } = require('../utils/aiOcrService');
