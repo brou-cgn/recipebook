@@ -33,23 +33,31 @@ describe('AtelierOnboardingOverlay', () => {
   });
 
   test('shows spotlight when Atelier button is in the DOM', () => {
+    const bubbleHorizontalInset = 16;
+    const buttonLeft = 100;
+    const buttonWidth = 60;
+    const viewportWidth = 300;
+
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
-      value: 300,
+      value: viewportWidth,
     });
 
     // Create a mock Atelier button in the document
     const mockBtn = document.createElement('button');
     mockBtn.setAttribute('aria-label', 'Atelier');
     mockBtn.getBoundingClientRect = () => ({
-      left: 100, top: 700, width: 60, height: 60, right: 160, bottom: 760,
+      left: buttonLeft, top: 700, width: buttonWidth, height: 60, right: buttonLeft + buttonWidth, bottom: 760,
     });
     document.body.appendChild(mockBtn);
 
     const { container } = render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
     const bubble = container.querySelector('[data-testid="atelier-onboarding-bubble"]');
-    const expectedArrowLeft = ((100 + 60 / 2 - 16) / (300 - 32)) * 100;
+    const expectedArrowLeft = (
+      (buttonLeft + buttonWidth / 2 - bubbleHorizontalInset) /
+      (viewportWidth - bubbleHorizontalInset * 2)
+    ) * 100;
 
     expect(container.querySelector('[data-testid="atelier-onboarding-spotlight"]')).toBeTruthy();
     expect(parseFloat(bubble.style.getPropertyValue('--arrow-left'))).toBeCloseTo(expectedArrowLeft, 4);
