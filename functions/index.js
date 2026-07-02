@@ -41,6 +41,8 @@ const smtpFrom = defineSecret('SMTP_FROM');
  */
 const ALLOWED_ORIGINS = [
   'https://brou-cgn.github.io',
+  'https://broubook.web.app',
+  'https://broubook.firebaseapp.com',
 ];
 
 /**

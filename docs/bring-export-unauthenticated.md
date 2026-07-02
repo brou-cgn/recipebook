@@ -61,7 +61,7 @@ Erwartung:
 - Stattdessen `400 Missing shareId or items` aus der Funktion
 
 3. Browser-Checks (Hardening):
-- erlaubte Origin (`ALLOWED_ORIGINS`) -> normaler Ablauf
+- erlaubte Origins (`ALLOWED_ORIGINS`): `https://brou-cgn.github.io`, `https://broubook.web.app`, `https://broubook.firebaseapp.com` -> normaler Ablauf
 - fremde Origin -> `403 Forbidden origin`
 
 ## Rollback
