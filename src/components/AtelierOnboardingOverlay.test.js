@@ -49,9 +49,10 @@ describe('AtelierOnboardingOverlay', () => {
 
     const { container } = render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
     const bubble = container.querySelector('[data-testid="atelier-onboarding-bubble"]');
+    const expectedArrowLeft = ((100 + 60 / 2 - 16) / (300 - 32)) * 100;
 
     expect(container.querySelector('[data-testid="atelier-onboarding-spotlight"]')).toBeTruthy();
-    expect(parseFloat(bubble.style.getPropertyValue('--arrow-left'))).toBeCloseTo(42.5373, 4);
+    expect(parseFloat(bubble.style.getPropertyValue('--arrow-left'))).toBeCloseTo(expectedArrowLeft, 4);
 
     document.body.removeChild(mockBtn);
   });
