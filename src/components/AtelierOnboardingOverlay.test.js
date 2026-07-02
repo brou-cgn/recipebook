@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import AtelierOnboardingOverlay from './AtelierOnboardingOverlay';
+import AtelierOnboardingOverlay, { BUBBLE_HORIZONTAL_INSET } from './AtelierOnboardingOverlay';
 
 describe('AtelierOnboardingOverlay', () => {
   const originalInnerWidth = window.innerWidth;
@@ -33,7 +33,6 @@ describe('AtelierOnboardingOverlay', () => {
   });
 
   test('shows spotlight when Atelier button is in the DOM', () => {
-    const bubbleHorizontalInset = 16;
     const buttonLeft = 100;
     const buttonWidth = 60;
     const viewportWidth = 300;
@@ -55,8 +54,8 @@ describe('AtelierOnboardingOverlay', () => {
     const { container } = render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
     const bubble = container.querySelector('[data-testid="atelier-onboarding-bubble"]');
     const expectedArrowLeft = (
-      (buttonLeft + buttonWidth / 2 - bubbleHorizontalInset) /
-      (viewportWidth - bubbleHorizontalInset * 2)
+      (buttonLeft + buttonWidth / 2 - BUBBLE_HORIZONTAL_INSET) /
+      (viewportWidth - BUBBLE_HORIZONTAL_INSET * 2)
     ) * 100;
 
     expect(container.querySelector('[data-testid="atelier-onboarding-spotlight"]')).toBeTruthy();

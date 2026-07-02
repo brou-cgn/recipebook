@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import './AtelierOnboardingOverlay.css';
 
 const PADDING = 6;
-const BUBBLE_HORIZONTAL_INSET = 16;
+const ARROW_LEFT_MIN = 0;
+const ARROW_LEFT_MAX = 100;
+export const BUBBLE_HORIZONTAL_INSET = 16;
 
 function AtelierOnboardingOverlay({ onConfirm }) {
   const [spotlightStyle, setSpotlightStyle] = useState(null);
@@ -16,7 +18,10 @@ function AtelierOnboardingOverlay({ onConfirm }) {
       const buttonCenterX = rect.left + rect.width / 2;
       const bubbleWidth = window.innerWidth - BUBBLE_HORIZONTAL_INSET * 2;
       const relativeArrowLeft = ((buttonCenterX - BUBBLE_HORIZONTAL_INSET) / bubbleWidth) * 100;
-      const clampedArrowLeft = Math.min(Math.max(relativeArrowLeft, 0), 100);
+      const clampedArrowLeft = Math.min(
+        Math.max(relativeArrowLeft, ARROW_LEFT_MIN),
+        ARROW_LEFT_MAX,
+      );
 
       setSpotlightStyle({
         left: rect.left - PADDING,
