@@ -23,6 +23,7 @@ import UniversalImportModal from './components/UniversalImportModal';
 import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
+import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
 import { 
   loginUser, 
   logoutUser, 
@@ -85,6 +86,7 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
+const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
   { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
@@ -333,6 +335,7 @@ function App() {
   const [webimportDeeplink, setWebimportDeeplink] = useState('');
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
+  const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
   const initialWebimportAuthorRef = useRef('');
   // Store pending webimport URL read synchronously on mount, before Firebase loads the user
@@ -1111,6 +1114,11 @@ function App() {
   const handleBottomNavSelect = (tab) => {
     if (!tab) return;
 
+    if (tab.key === 'atelier' && !localStorage.getItem(ATELIER_ONBOARDING_KEY)) {
+      setShowAtelierOnboarding(true);
+      return;
+    }
+
     if (tab.key === bottomNavActiveKey) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setIsBottomNavVisible(true);
@@ -1119,6 +1127,14 @@ function App() {
 
     setIsBottomNavVisible(getBottomNavBehavior(tab.view) !== 'hidden');
     handleViewChange(tab.view);
+    window.scrollTo(0, 0);
+  };
+
+  const handleAtelierOnboardingConfirm = () => {
+    localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
+    setShowAtelierOnboarding(false);
+    setIsBottomNavVisible(getBottomNavBehavior('tagesmenu') !== 'hidden');
+    handleViewChange('tagesmenu');
     window.scrollTo(0, 0);
   };
 
@@ -2066,6 +2082,9 @@ function App() {
             isVisible={isBottomNavVisible}
             onSelect={handleBottomNavSelect}
           />
+        )}
+        {showAtelierOnboarding && (
+          <AtelierOnboardingOverlay onConfirm={handleAtelierOnboardingConfirm} />
         )}
       </div>
     </NutritionReferenceProvider>

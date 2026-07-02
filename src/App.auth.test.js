@@ -443,6 +443,7 @@ describe('App authentication view handling', () => {
     fireEvent.click(navQueries.getByRole('button', { name: 'Festtafel' }));
     expect(screen.getByTestId('menu-list-view')).toBeInTheDocument();
 
+    localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
 
@@ -517,6 +518,7 @@ describe('App authentication view handling', () => {
     });
     expect(nav).toHaveAttribute('data-visible', 'true');
 
+    localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(navQueries.getByRole('button', { name: 'Atelier' }));
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(nav).toHaveAttribute('data-visible', 'false');
@@ -558,6 +560,7 @@ describe('App authentication view handling', () => {
     expect(app.style.getPropertyValue('--bottom-nav-offset')).toBe('0px');
     expect(app.style.getPropertyValue('--bottom-spacing')).toBe('0px');
 
+    localStorage.setItem('atelierOnboardingSeen', 'true');
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
