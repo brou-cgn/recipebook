@@ -9,6 +9,8 @@ import {
   getAiOcrProviders,
   compareOcrMethods,
 } from './aiOcrService';
+import { httpsCallable } from 'firebase/functions';
+import { getCustomLists } from './customLists';
 
 // Mock Firebase Functions
 jest.mock('../firebase', () => ({
@@ -23,10 +25,8 @@ jest.mock('firebase/functions', () => ({
 jest.mock('./customLists', () => ({
   getCustomLists: jest.fn(),
   getAIRecipePrompt: jest.fn(),
+  clearSettingsCache: jest.fn(),
 }));
-
-import { httpsCallable } from 'firebase/functions';
-import { getCustomLists } from './customLists';
 
 // Mock environment variables
 const originalEnv = process.env;
@@ -177,7 +177,37 @@ describe('AI OCR Service', () => {
       const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'logged in'
+        'Bitte melde dich an'
+      );
+    });
+
+    test('handles invoker authorization error with clear admin message', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'internal',
+        message: 'The request was not authorized to invoke this service. The access token could not be verified. (401)'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'nicht korrekt freigeschaltet'
+      );
+    });
+
+    test('handles permission denied as invoker/auth setup issue', async () => {
+      const mockCallable = jest.fn().mockRejectedValue({
+        code: 'permission-denied',
+        message: 'Permission denied'
+      });
+
+      httpsCallable.mockReturnValue(mockCallable);
+
+      const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
+
+      await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
+        'Bitte Administrator kontaktieren'
       );
     });
 

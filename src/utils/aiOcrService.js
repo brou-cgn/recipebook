@@ -23,6 +23,30 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function getCallableErrorDetails(error) {
+  const rawCode = error?.code ? String(error.code) : '';
+  const code = rawCode.replace(/^functions\//, '').toLowerCase();
+  const message = error?.message ? String(error.message) : '';
+  const lowerMessage = message.toLowerCase();
+
+  return { code, message, lowerMessage };
+}
+
+function isInvokerAuthFailure(errorDetails) {
+  const { lowerMessage } = errorDetails;
+  const patterns = [
+    'not authorized to invoke',
+    'request was not authorized to invoke',
+    'access token could not be verified',
+    'token could not be verified',
+    'could not be verified',
+    '401',
+    'unauthorized',
+  ];
+
+  return patterns.some((pattern) => lowerMessage.includes(pattern));
+}
+
 /**
  * Check if AI OCR is available and configured
  * @param {string} provider - The AI provider to check ('gemini' or 'openai')
@@ -143,10 +167,13 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
   if (onProgress) onProgress(0);
 
   const error = lastError;
-  const errorCode = error.code;
+  const errorDetails = getCallableErrorDetails(error);
+  const { code: errorCode } = errorDetails;
 
-  if (errorCode === 'unauthenticated') {
+  if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
     throw new Error('Bitte melde dich an, um den HTML-Import zu nutzen.');
+  } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
+    throw new Error('Die KI-Import-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.');
   } else if (errorCode === 'resource-exhausted') {
     throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut.');
   } else if (errorCode === 'invalid-argument') {
@@ -259,10 +286,13 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   if (onProgress) onProgress(0);
 
   const error = lastError;
-  const errorCode = error.code;
+  const errorDetails = getCallableErrorDetails(error);
+  const { code: errorCode } = errorDetails;
 
-  if (errorCode === 'unauthenticated') {
-    throw new Error('Bitte melde dich an, um AI-Scan zu nutzen. You must be logged in to use AI recipe scanning.');
+  if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
+    throw new Error('Bitte melde dich an, um AI-Scan zu nutzen.');
+  } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
+    throw new Error('Die OCR-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.');
   } else if (errorCode === 'resource-exhausted') {
     throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.');
   } else if (errorCode === 'invalid-argument') {

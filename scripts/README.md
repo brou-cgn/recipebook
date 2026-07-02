@@ -38,3 +38,22 @@ One-time migration for `nutritionReferences`: sets `approvedAt` for entries with
 ```bash
 node scripts/migrateNutritionReferenceApprovedAt.js [--dry-run]
 ```
+
+## audit-functions-invoker.sh
+
+Auditiert Gen2 Functions, zugehörige Cloud-Run-Services und `roles/run.invoker` Bindings.
+
+**Usage:**
+```bash
+./scripts/audit-functions-invoker.sh <PROJECT_ID> [REGION]
+```
+
+## fix-callable-invoker.sh
+
+Nicht-destruktiver IAM-Fix für callable (`onCall`) Functions in Gen2.
+Ergänzt fehlende Invoker-Principal(s), ohne bestehende Bindings zu löschen.
+
+**Usage:**
+```bash
+./scripts/fix-callable-invoker.sh <PROJECT_ID> [REGION] [FUNCTIONS|all-callables]
+```
