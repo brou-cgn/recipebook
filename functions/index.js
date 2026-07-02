@@ -1870,7 +1870,7 @@ async function fetchWithRetry(url, options, maxAttempts = 3) {
  * Cloud Function: Parse ingredient text to amount in grams with Gemini.
  */
 exports.parseIngredientAmountG = onCall(
-    {maxInstances: 5, timeoutSeconds: 10, secrets: [geminiApiKey]},
+    {maxInstances: 5, timeoutSeconds: 10, secrets: [geminiApiKey], cors: ALLOWED_ORIGINS, invoker: 'public'},
     async (request) => {
       if (!request.auth) {
         throw new HttpsError('unauthenticated', 'You must be logged in to parse ingredient amounts');
