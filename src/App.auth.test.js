@@ -315,6 +315,13 @@ jest.mock('./utils/groupFirestore', () => ({
   removeRecipeFromGroup: jest.fn(),
 }));
 
+jest.mock('./hooks/useAtelierOnboarding', () => () => ({
+  showOnboarding: false,
+  loading: false,
+  triggerOnboarding: jest.fn(),
+  completeOnboarding: jest.fn(),
+}));
+
 describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
