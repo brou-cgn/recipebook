@@ -333,3 +333,192 @@ test('does not overwrite existing confidence fields not updated in this call', a
 
   global.fetch = originalFetch;
 });
+
+// ─── Status transition tests ────────────────────────────────────────────────
+
+test('advances status from empty string to Prüfung ausstehend', async () => {
+  referenceData = {status: '', source: 'ai-generiert', kalorien_ai: 18};
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');
+
+  global.fetch = originalFetch;
+});
+
+test('advances status from Datenerfassung ausstehend to Prüfung ausstehend', async () => {
+  referenceData = {
+    status: 'Datenerfassung ausstehend',
+    source: 'ai-generiert',
+    kalorien_ai: 364,
+    protein_ai: 10,
+    fett_ai: 1,
+    kohlenhydrate_ai: 76,
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');
+
+  global.fetch = originalFetch;
+});
+
+test('keeps status as Neu when current status is Neu', async () => {
+  referenceData = {
+    status: 'Neu',
+    source: 'ai-generiert',
+    kalorien_ai: 18,
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  // 'Neu' entries are left untouched: status key must not be present in the
+  // update payload so Firestore's merge preserves the existing 'Neu' value.
+  assert.equal(Object.hasOwn(setCalls[0].payload, 'status'), false);
+
+  global.fetch = originalFetch;
+});
+
+test('does not change status for Freigegeben entries', async () => {
+  referenceData = {
+    status: 'Freigegeben',
+    source: 'manual',
+    kalorien_manual: 110,
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.equal(Object.hasOwn(setCalls[0].payload, 'status'), false);
+
+  global.fetch = originalFetch;
+});
+
+test('keeps status as Prüfung ausstehend when already in that state', async () => {
+  referenceData = {
+    status: 'Prüfung ausstehend',
+    source: 'ai-generiert',
+    kalorien_ai: 18,
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  assert.equal(setCalls[0].payload.status, 'Prüfung ausstehend');
+
+  global.fetch = originalFetch;
+});
+
+// ─── CORS / invoker configuration test ──────────────────────────────────────
+
+test('generateNutritionFromReference is registered with cors and invoker:public options', () => {
+  delete require.cache[require.resolve('./index')];
+
+  const Module = require('module');
+  const originalLoad = Module._load;
+
+  let capturedOpts = null;
+
+  Module._load = function(request, parent, isMain, ...args) {
+    if (request === 'firebase-functions/v2/https') {
+      class MockHttpsError extends Error {
+        constructor(code, message) {
+          super(message);
+          this.code = code;
+        }
+      }
+      return {
+        onCall: (opts, handler) => {
+          if (typeof opts === 'object' && opts !== null && typeof handler === 'function') {
+            // Capture the opts of the LAST onCall registration that has cors defined
+            // (generateNutritionFromReference is the one we care about for this test)
+            if (opts.cors !== undefined) {
+              capturedOpts = opts;
+            }
+          }
+          return handler;
+        },
+        onRequest: (_opts, handler) => handler,
+        HttpsError: MockHttpsError,
+      };
+    }
+
+    if (request === 'firebase-functions/v2/firestore') {
+      return {
+        onDocumentCreated: (_opts, handler) => handler,
+        onDocumentWritten: (_opts, handler) => handler,
+      };
+    }
+
+    if (request === 'firebase-functions/v2/scheduler') {
+      return {onSchedule: (_opts, handler) => handler};
+    }
+
+    if (request === 'firebase-functions/params') {
+      return {defineSecret: () => ({value: () => 'test-secret'})};
+    }
+
+    if (request === 'firebase-admin') {
+      const ff = () => ({collection: () => ({doc: () => ({get: async () => ({exists: false, data: () => ({})})})})});
+      ff.FieldValue = {serverTimestamp: () => ({})};
+      return {initializeApp: () => {}, firestore: ff};
+    }
+
+    if (request === './nutritionNormalization') {
+      return {createNutritionNormalizationUtils: () => ({
+        generateSearchTermWithGemini: async () => '',
+        estimateNutritionWithGemini: async () => null,
+      })};
+    }
+
+    if (request === '@google/generative-ai') return {GoogleGenerativeAI: class {}};
+    if (request === 'nodemailer') return {createTransport: () => ({sendMail: async () => ({})})};
+    if (request === 'sharp') {
+      const chain = {rotate: () => chain, resize: () => chain, png: () => chain, toBuffer: async () => Buffer.from('')};
+      return () => chain;
+    }
+
+    return originalLoad.call(this, request, parent, isMain, ...args);
+  };
+
+  require('./index');
+  Module._load = originalLoad;
+
+  assert.ok(capturedOpts !== null, 'onCall with cors option was not registered');
+  assert.ok(
+      Array.isArray(capturedOpts.cors) && capturedOpts.cors.length > 0,
+      'cors option should be a non-empty array of allowed origins'
+  );
+  assert.ok(
+      capturedOpts.cors.some((o) => o === 'https://broubook.web.app'),
+      'cors should contain https://broubook.web.app as an exact entry'
+  );
+  assert.ok(
+      capturedOpts.cors.some((o) => o === 'http://localhost:3000' || o === 'http://127.0.0.1:3000'),
+      'cors should contain http://localhost:3000 or http://127.0.0.1:3000 for local development'
+  );
+  assert.equal(capturedOpts.invoker, 'public', 'invoker should be public');
+});
