@@ -2659,15 +2659,35 @@ exports.generateNutritionFromReference = onCall(
 const BRING_EXPORT_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 exports.bringRecipeExport = onRequest(
-    {cors: true, region: 'us-central1'},
+    {region: 'us-central1'},
     async (req, res) => {
+      const origin = req.headers.origin;
+      const hasOrigin = typeof origin === 'string' && origin.length > 0;
+      const isAllowedOrigin = hasOrigin && ALLOWED_ORIGINS.includes(origin);
+
       // Handle CORS preflight
       if (req.method === 'OPTIONS') {
-        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Vary', 'Origin');
         res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.set('Access-Control-Allow-Headers', 'Content-Type');
+        if (hasOrigin && !isAllowedOrigin) {
+          res.status(403).send('Forbidden origin');
+          return;
+        }
+        if (isAllowedOrigin) {
+          res.set('Access-Control-Allow-Origin', origin);
+        }
         res.status(204).send('');
         return;
+      }
+
+      if (hasOrigin) {
+        if (!isAllowedOrigin) {
+          res.status(403).send('Forbidden origin');
+          return;
+        }
+        res.set('Vary', 'Origin');
+        res.set('Access-Control-Allow-Origin', origin);
       }
 
       // Handle POST: save pre-resolved items to Firestore, return exportId.
