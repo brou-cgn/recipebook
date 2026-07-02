@@ -1,0 +1,125 @@
+.atelier-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  pointer-events: all;
+}
+
+.atelier-onboarding-spotlight {
+  position: fixed;
+  border: 2.5px solid rgba(212, 130, 10, 0.95);
+  background: transparent;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
+  animation: atelier-onboarding-glow 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes atelier-onboarding-glow {
+  0%, 100% {
+    border-color: rgba(212, 130, 10, 0.85);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
+  }
+  50% {
+    border-color: rgba(212, 130, 10, 1);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62), 0 0 0 5px rgba(212, 130, 10, 0.18);
+  }
+}
+
+.atelier-onboarding-bubble {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px 18px 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  animation: atelier-onboarding-pop-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+
+@keyframes atelier-onboarding-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.atelier-onboarding-bubble__arrow {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.atelier-onboarding-bubble__tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D4820A;
+  margin-bottom: 5px;
+}
+
+.atelier-onboarding-bubble__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1A1A18;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.atelier-onboarding-bubble__body {
+  font-size: 13px;
+  font-weight: 300;
+  color: #6B6B65;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.atelier-onboarding-bubble__body strong {
+  color: #1A1A18;
+  font-weight: 600;
+}
+
+.atelier-onboarding-overlay__btn {
+  width: 100%;
+  padding: 14px;
+  background: #D4820A;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.atelier-onboarding-overlay__btn:active {
+  transform: scale(0.98);
+  background: #c07508;
+}
+
+[data-theme="dark"] .atelier-onboarding-bubble {
+  background: #2A2A28;
+}
+
+[data-theme="dark"] .atelier-onboarding-bubble__title {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-onboarding-bubble__body {
+  color: #B0A898;
+}
+
+[data-theme="dark"] .atelier-onboarding-bubble__arrow {
+  background: #2A2A28;
+}
