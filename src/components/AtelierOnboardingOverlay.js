@@ -2,15 +2,22 @@ import React, { useEffect, useState } from 'react';
 import './AtelierOnboardingOverlay.css';
 
 const PADDING = 6;
+const BUBBLE_HORIZONTAL_INSET = 16;
 
 function AtelierOnboardingOverlay({ onConfirm }) {
   const [spotlightStyle, setSpotlightStyle] = useState(null);
   const [bubbleBottom, setBubbleBottom] = useState(120);
+  const [arrowLeft, setArrowLeft] = useState('50%');
 
   useEffect(() => {
     const btn = document.querySelector('[aria-label="Atelier"]');
     if (btn) {
       const rect = btn.getBoundingClientRect();
+      const buttonCenterX = rect.left + rect.width / 2;
+      const bubbleWidth = window.innerWidth - BUBBLE_HORIZONTAL_INSET * 2;
+      const relativeArrowLeft = ((buttonCenterX - BUBBLE_HORIZONTAL_INSET) / bubbleWidth) * 100;
+      const clampedArrowLeft = Math.min(Math.max(relativeArrowLeft, 0), 100);
+
       setSpotlightStyle({
         left: rect.left - PADDING,
         top: rect.top - PADDING,
@@ -18,6 +25,7 @@ function AtelierOnboardingOverlay({ onConfirm }) {
         height: rect.height + PADDING * 2,
       });
       setBubbleBottom(window.innerHeight - rect.top + 16);
+      setArrowLeft(`${clampedArrowLeft}%`);
     }
   }, []);
 
@@ -32,7 +40,7 @@ function AtelierOnboardingOverlay({ onConfirm }) {
       )}
       <div
         className="atelier-onboarding-bubble"
-        style={{ bottom: bubbleBottom }}
+        style={{ bottom: bubbleBottom, '--arrow-left': arrowLeft }}
         data-testid="atelier-onboarding-bubble"
       >
         <div className="atelier-onboarding-bubble__arrow" />

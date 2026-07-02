@@ -3,6 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import AtelierOnboardingOverlay from './AtelierOnboardingOverlay';
 
 describe('AtelierOnboardingOverlay', () => {
+  const originalInnerWidth = window.innerWidth;
+
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: originalInnerWidth,
+    });
+  });
+
   test('renders the overlay with title, body text and Weiter button', () => {
     render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
 
@@ -23,6 +33,12 @@ describe('AtelierOnboardingOverlay', () => {
   });
 
   test('shows spotlight when Atelier button is in the DOM', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 300,
+    });
+
     // Create a mock Atelier button in the document
     const mockBtn = document.createElement('button');
     mockBtn.setAttribute('aria-label', 'Atelier');
@@ -32,8 +48,10 @@ describe('AtelierOnboardingOverlay', () => {
     document.body.appendChild(mockBtn);
 
     const { container } = render(<AtelierOnboardingOverlay onConfirm={() => {}} />);
+    const bubble = container.querySelector('[data-testid="atelier-onboarding-bubble"]');
 
     expect(container.querySelector('[data-testid="atelier-onboarding-spotlight"]')).toBeTruthy();
+    expect(parseFloat(bubble.style.getPropertyValue('--arrow-left'))).toBeCloseTo(42.5373, 4);
 
     document.body.removeChild(mockBtn);
   });
