@@ -2670,13 +2670,15 @@ exports.bringRecipeExport = onRequest(
         res.set('Vary', 'Origin');
         res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.set('Access-Control-Allow-Headers', 'Content-Type');
+        if (!hasOrigin) {
+          res.status(204).send('');
+          return;
+        }
         if (hasOrigin && !isAllowedOrigin) {
           res.status(403).send('Forbidden origin');
           return;
         }
-        if (isAllowedOrigin) {
-          res.set('Access-Control-Allow-Origin', origin);
-        }
+        res.set('Access-Control-Allow-Origin', origin);
         res.status(204).send('');
         return;
       }

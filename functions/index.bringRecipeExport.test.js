@@ -174,6 +174,19 @@ test('rejects preflight for disallowed origin', async () => {
   assert.equal(res.body, 'Forbidden origin');
 });
 
+test('allows preflight without origin header', async () => {
+  const req = {
+    method: 'OPTIONS',
+    headers: {},
+  };
+  const res = createRes();
+
+  await bringRecipeExport(req, res);
+
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers['Access-Control-Allow-Origin'], undefined);
+});
+
 test('rejects non-preflight request for disallowed origin', async () => {
   const req = {
     method: 'POST',
