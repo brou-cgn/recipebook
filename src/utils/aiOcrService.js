@@ -14,6 +14,8 @@ import { getAIRecipePrompt, getCustomLists, clearSettingsCache } from './customL
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = process.env.NODE_ENV === 'test' ? [0, 0, 0] : [1000, 2000, 4000];
 const RETRYABLE_CODES = ['unavailable', 'deadline-exceeded'];
+const INVOKER_ERROR_MESSAGE_OCR = 'Die OCR-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.';
+const INVOKER_ERROR_MESSAGE_HTML = 'Die KI-Import-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.';
 
 /**
  * Sleep helper for retry delays
@@ -39,7 +41,6 @@ function isInvokerAuthFailure(errorDetails) {
     'request was not authorized to invoke',
     'access token could not be verified',
     'token could not be verified',
-    'could not be verified',
     '401',
     'unauthorized',
   ];
@@ -173,7 +174,7 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
   if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
     throw new Error('Bitte melde dich an, um den HTML-Import zu nutzen.');
   } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
-    throw new Error('Die KI-Import-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.');
+    throw new Error(INVOKER_ERROR_MESSAGE_HTML);
   } else if (errorCode === 'resource-exhausted') {
     throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut.');
   } else if (errorCode === 'invalid-argument') {
@@ -292,7 +293,7 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   if (errorCode === 'unauthenticated' && !isInvokerAuthFailure(errorDetails)) {
     throw new Error('Bitte melde dich an, um AI-Scan zu nutzen.');
   } else if (errorCode === 'permission-denied' || isInvokerAuthFailure(errorDetails)) {
-    throw new Error('Die OCR-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.');
+    throw new Error(INVOKER_ERROR_MESSAGE_OCR);
   } else if (errorCode === 'resource-exhausted') {
     throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut oder nutze Standard-OCR.');
   } else if (errorCode === 'invalid-argument') {

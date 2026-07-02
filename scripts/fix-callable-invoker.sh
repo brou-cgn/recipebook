@@ -33,7 +33,7 @@ if [[ "${FUNCTIONS_ARG}" == "all-callables" ]]; then
   fi
 
   mapfile -t FUNCTIONS < <(
-    sed -n 's/^exports\.\([A-Za-z0-9_]*\)[[:space:]]*=[[:space:]]*onCall(.*/\1/p' "${FUNCTIONS_INDEX}" | sort -u
+    sed -n 's/^exports\.\([A-Za-z0-9_]*\)[[:space:]]*=[[:space:]]*onCall\(.*/\1/p' "${FUNCTIONS_INDEX}" | sort -u
   )
 else
   IFS=',' read -r -a FUNCTIONS <<< "${FUNCTIONS_ARG}"

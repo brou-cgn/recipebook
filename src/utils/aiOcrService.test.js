@@ -10,7 +10,7 @@ import {
   compareOcrMethods,
 } from './aiOcrService';
 import { httpsCallable } from 'firebase/functions';
-import { getCustomLists } from './customLists';
+import { clearSettingsCache, getCustomLists } from './customLists';
 
 // Mock Firebase Functions
 jest.mock('../firebase', () => ({
@@ -129,6 +129,7 @@ describe('AI OCR Service', () => {
       const result = await recognizeRecipeWithGemini(imageBase64, 'de');
 
       expect(httpsCallable).toHaveBeenCalledWith(expect.anything(), 'scanRecipeWithAI');
+      expect(clearSettingsCache).toHaveBeenCalledTimes(1);
       expect(mockCallable).toHaveBeenCalledWith({
         imageBase64: imageBase64,
         language: 'de',
@@ -177,7 +178,7 @@ describe('AI OCR Service', () => {
       const imageBase64 = 'data:image/jpeg;base64,' + 'A'.repeat(150);
       
       await expect(recognizeRecipeWithGemini(imageBase64, 'de')).rejects.toThrow(
-        'Bitte melde dich an'
+        'Bitte melde dich an, um AI-Scan zu nutzen.'
       );
     });
 
