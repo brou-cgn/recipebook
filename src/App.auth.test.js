@@ -257,6 +257,14 @@ jest.mock('./utils/menuFavorites', () => ({
   toggleMenuFavorite: jest.fn(),
 }));
 
+jest.mock('./utils/onboardingSettings', () => ({
+  getOnboardingTestmodeActive: jest.fn(() => Promise.resolve(false)),
+  saveOnboardingTestmodeActive: jest.fn(),
+  shouldShowOnboardingOverlay: (currentUser, onboardingTestmodeActive) => Boolean(onboardingTestmodeActive && currentUser?.onboardingTestmode),
+}));
+
+const { getOnboardingTestmodeActive: mockGetOnboardingTestmodeActive } = jest.requireMock('./utils/onboardingSettings');
+
 jest.mock('./utils/faviconUtils', () => ({
   applyFaviconSettings: () => Promise.resolve(),
 }));
@@ -319,6 +327,7 @@ describe('App authentication view handling', () => {
   beforeEach(() => {
     mockAuthStateCallback = null;
     mockGetRolePermissions.mockResolvedValue({});
+    mockGetOnboardingTestmodeActive.mockResolvedValue(false);
     mockRecipeListRender.mockClear();
     mockRecipeFormProps.mockClear();
     localStorage.clear();
@@ -524,6 +533,58 @@ describe('App authentication view handling', () => {
     expect(nav).toHaveAttribute('data-visible', 'false');
 
     jest.useRealTimers();
+  });
+
+  test('atelier opens directly without onboarding overlay when global onboarding testmode is disabled', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(false);
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-disabled',
+        vorname: 'Atelier',
+        nachname: 'Off',
+        email: 'atelier-off@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
+  });
+
+  test('atelier shows onboarding overlay when global onboarding testmode and user permission are enabled', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(true);
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-enabled',
+        vorname: 'Atelier',
+        nachname: 'On',
+        email: 'atelier-on@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    expect(screen.getByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
+    expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
   });
 
   test('bottom spacing custom property follows bottom navigation visibility', async () => {

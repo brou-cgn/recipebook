@@ -49,6 +49,7 @@ import {
   migrateGlobalFavorites
 } from './utils/userFavorites';
 import { toggleMenuFavorite } from './utils/menuFavorites';
+import { getOnboardingTestmodeActive, shouldShowOnboardingOverlay } from './utils/onboardingSettings';
 import { applyFaviconSettings } from './utils/faviconUtils';
 import { applyTileSizePreference, applyDarkModePreference, getCustomLists, expandCuisineSelection, getInspirationListSettings } from './utils/customLists';
 import { logRecipeCall } from './utils/recipeCallsFirestore';
@@ -251,6 +252,7 @@ function applyRolePermissionsToUser(user, permissionsMap = {}) {
     recipeIndex: rolePerms.recipeIndex ?? ROLE_PERMISSIONS_DEFAULT[user.role]?.recipeIndex ?? false,
     startseite: rolePerms.startseite ?? false,
     kuecheFab: rolePerms.kuecheFab ?? false,
+    onboardingTestmode: rolePerms.onboardingTestmode ?? false,
   };
 }
 
@@ -336,6 +338,7 @@ function App() {
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
+  const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
   const initialWebimportAuthorRef = useRef('');
   // Store pending webimport URL read synchronously on mount, before Firebase loads the user
@@ -580,6 +583,16 @@ function App() {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id, currentUser?.role]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadOnboardingSettings = async () => {
+      const active = await getOnboardingTestmodeActive();
+      if (!cancelled) setOnboardingTestmodeActive(active);
+    };
+    loadOnboardingSettings();
+    return () => { cancelled = true; };
+  }, []);
 
   // Apply favicon settings on mount
   useEffect(() => {
@@ -1114,7 +1127,11 @@ function App() {
   const handleBottomNavSelect = (tab) => {
     if (!tab) return;
 
-    if (tab.key === 'atelier' && !localStorage.getItem(ATELIER_ONBOARDING_KEY)) {
+    if (
+      tab.key === 'atelier'
+      && !localStorage.getItem(ATELIER_ONBOARDING_KEY)
+      && shouldShowOnboardingOverlay(currentUser, onboardingTestmodeActive)
+    ) {
       setShowAtelierOnboarding(true);
       return;
     }

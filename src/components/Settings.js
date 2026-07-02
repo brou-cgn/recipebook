@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Settings.css';
 import { getCustomLists, saveCustomLists, resetCustomLists, getHeaderSlogan, saveHeaderSlogan, getFaviconImage, saveFaviconImage, getFaviconText, saveFaviconText, getAppLogoImage, saveAppLogoImage, getAppLogoImageUrl, saveAppLogoImageUrl, getButtonIcons, saveButtonIcon, DEFAULT_BUTTON_ICONS, getTimelineBubbleIcon, saveTimelineBubbleIcon, getTimelineMenuBubbleIcon, saveTimelineMenuBubbleIcon, getTimelineMenuDefaultImage, saveTimelineMenuDefaultImage, getTimelineCookEventBubbleIcon, saveTimelineCookEventBubbleIcon, getTimelineCookEventDefaultImage, saveTimelineCookEventDefaultImage, getAIRecipePrompt, saveAIRecipePrompt, resetAIRecipePrompt, DEFAULT_AI_RECIPE_PROMPT, getTileSizePreference, saveTileSizePreference, applyTileSizePreference, TILE_SIZE_SMALL, TILE_SIZE_MEDIUM, TILE_SIZE_LARGE, getDarkModeMode, saveDarkModePreference, applyDarkModePreference, getSortSettings, saveSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES, getStatusValiditySettings, saveStatusValiditySettings, getGroupStatusThresholds, saveGroupStatusThresholds, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MIN_KANDIDAT, DEFAULT_GROUP_THRESHOLD_KANDIDAT_MAX_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MIN_ARCHIV, DEFAULT_GROUP_THRESHOLD_ARCHIV_MAX_KANDIDAT, getMaxKandidatenSchwelle, saveMaxKandidatenSchwelle, getStartseitenKandidatenLeertext, saveStartseitenKandidatenLeertext, DEFAULT_STARTSEITEN_KANDIDATEN_LEERTEXT, getAlltagsklassikerLeertext, saveAlltagsklassikerLeertext, DEFAULT_ALLTAGSKLASSIKER_LEERTEXT, getInspirationListSettings, saveInspirationListSettings, DEFAULT_INSPIRATION_LIST_NAME, DEFAULT_INSPIRATION_LIST_DESCRIPTION, DEFAULT_INSPIRATION_TARGET_LIST_NAME, DEFAULT_INSPIRATION_TARGET_LIST_DESCRIPTION, getPrintFormats, savePrintFormats, DEFAULT_PRINT_FORMATS, DEFAULT_PRINT_ELEMENTS_PORTRAIT, PRINT_FORMAT_LAYOUT_VERSION, selectPrintFormat } from '../utils/customLists';
+import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../utils/onboardingSettings';
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
@@ -362,6 +363,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
 
   // Role permissions state (for abortCalc and editLists permission checks)
   const [rolePermissions, setRolePermissions] = useState(null);
+  const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
 
   // Whether the current user can rename cuisine types and meal categories
   const canEditLists = isAdmin || rolePermissions?.[currentUser?.role]?.editLists === true;
@@ -397,6 +399,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       const kandidatenLeertext = await getStartseitenKandidatenLeertext();
       const alltagsklassikerLeertextValue = await getAlltagsklassikerLeertext();
       const inspirationSettings = await getInspirationListSettings();
+      const onboardingTestmode = await getOnboardingTestmodeActive();
       
       setLists(lists);
       setHeaderSlogan(slogan);
@@ -430,6 +433,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       setInspirationListDescription(inspirationSettings.inspirationListDescription);
       setInspirationTargetListName(inspirationSettings.inspirationTargetListName);
       setInspirationTargetListDescription(inspirationSettings.inspirationTargetListDescription);
+      setOnboardingTestmodeActive(onboardingTestmode);
       const formats = await getPrintFormats();
       setPrintFormats(formats && formats.length > 0 ? formats : DEFAULT_PRINT_FORMATS);
     };
@@ -699,6 +703,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
       await saveStartseitenKandidatenLeertext(startseitenKandidatenLeertext);
       await saveAlltagsklassikerLeertext(alltagsklassikerLeertext);
       await saveInspirationListSettings({ inspirationListName, inspirationListDescription, inspirationTargetListName, inspirationTargetListDescription });
+      await saveOnboardingTestmodeActive(onboardingTestmodeActive);
 
       // Propagate cuisine type renames to all affected recipes
       await propagateRenames(pendingCuisineRenames, 'kulinarik', setPendingCuisineRenames);
@@ -1484,6 +1489,21 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                   placeholder="Header-Slogan eingeben..."
                 />
               </div>
+            </div>
+
+            <div className="settings-section">
+              <h3>Onboarding</h3>
+              <p className="section-description">
+                Aktiviert den generischen Onboarding-Testmodus. Onboarding-Overlays werden nur angezeigt, wenn dieser Schalter aktiv ist und die jeweilige Rolle zusätzlich die Berechtigung „Onboarding-Testmodus“ besitzt.
+              </p>
+              <label className="faq-admin-only-label">
+                <input
+                  type="checkbox"
+                  checked={onboardingTestmodeActive}
+                  onChange={(e) => setOnboardingTestmodeActive(e.target.checked)}
+                />
+                Onboarding-Testmodus aktiv
+              </label>
             </div>
 
             <div className="settings-section">
