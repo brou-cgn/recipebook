@@ -1161,21 +1161,21 @@ export const removeFcmToken = async (userId, token) => {
 };
 
 /**
- * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite and kuecheFab features.
+ * Default role permissions for settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab and onboardingTestmode features.
  * Admins get all features enabled by default; printRecipe is enabled for all roles by default; recipeIndex defaults to true for admin/moderator; all other features start with all disabled for non-admin roles.
  */
 export const ROLE_PERMISSIONS_DEFAULT = {
-  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false },
-  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false },
-  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false },
-  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false },
-  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false },
+  [ROLES.ADMIN]: { settingsAccess: true, fotoscan: true, webimport: true, appCalls: true, appCallsMenu: true, recipeImport: true, deleteRating: true, abortCalc: true, sortCarousel: true, editLists: true, tagesmenuTestmode: true, themeToggle: true, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: true },
+  [ROLES.MODERATOR]: { settingsAccess: true, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: true, startseite: false, kuecheFab: false, onboardingTestmode: false },
+  [ROLES.EDIT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false },
+  [ROLES.COMMENT]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false },
+  [ROLES.READ]: { settingsAccess: false, fotoscan: false, webimport: false, appCalls: false, appCallsMenu: false, recipeImport: false, deleteRating: false, abortCalc: false, sortCarousel: false, editLists: false, tagesmenuTestmode: false, themeToggle: false, printRecipe: true, recipeIndex: false, startseite: false, kuecheFab: false, onboardingTestmode: false },
 };
 
 /**
- * Get role-based feature permissions (settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab) from Firestore.
+ * Get role-based feature permissions (settingsAccess, fotoscan, webimport, appCalls, appCallsMenu, recipeImport, deleteRating, abortCalc, sortCarousel, editLists, tagesmenuTestmode, themeToggle, printRecipe, recipeIndex, startseite, kuecheFab, onboardingTestmode) from Firestore.
  * Falls back to ROLE_PERMISSIONS_DEFAULT if no Firestore data exists.
- * @returns {Promise<Object>} Map of role -> { settingsAccess: boolean, fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean, tagesmenuTestmode: boolean, themeToggle: boolean, printRecipe: boolean, recipeIndex: boolean, startseite: boolean, kuecheFab: boolean }
+ * @returns {Promise<Object>} Map of role -> { settingsAccess: boolean, fotoscan: boolean, webimport: boolean, appCalls: boolean, appCallsMenu: boolean, recipeImport: boolean, deleteRating: boolean, abortCalc: boolean, sortCarousel: boolean, editLists: boolean, tagesmenuTestmode: boolean, themeToggle: boolean, printRecipe: boolean, recipeIndex: boolean, startseite: boolean, kuecheFab: boolean, onboardingTestmode: boolean }
  */
 export const getRolePermissions = async () => {
   try {
@@ -1198,7 +1198,7 @@ export const getRolePermissions = async () => {
 /**
  * Update a feature permission for a specific role.
  * @param {string} role - Role constant (from ROLES, excluding GUEST)
- * @param {string} feature - Feature name ('settingsAccess', 'fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel', 'editLists', 'tagesmenuTestmode', 'themeToggle', 'printRecipe', 'recipeIndex', 'startseite' or 'kuecheFab')
+ * @param {string} feature - Feature name ('settingsAccess', 'fotoscan', 'webimport', 'appCalls', 'appCallsMenu', 'recipeImport', 'deleteRating', 'abortCalc', 'sortCarousel', 'editLists', 'tagesmenuTestmode', 'themeToggle', 'printRecipe', 'recipeIndex', 'startseite', 'kuecheFab' or 'onboardingTestmode')
  * @param {boolean} value - New boolean value
  * @returns {Promise<{success: boolean, message: string}>} Result object
  */

@@ -82,6 +82,7 @@ In addition to the role hierarchy, individual features can be enabled or disable
 | **Sortier-Karussell** | Shows the sort carousel button in the recipe overview      |
 | **Listen bearbeiten** | Allows editing interactive lists                           |
 | **Testmodus Tagesmenü** | When enabled, shows the "Meine Auswahl" section in the Tagesmenü results view. When disabled, the section is completely hidden. |
+| **Onboarding-Testmodus** | Wenn aktiviert und der globale Testmodus in den Einstellungen eingeschaltet ist, werden Onboarding-Overlays für den Benutzer angezeigt. |
 
 By default, all features are enabled for the Administrator role and disabled for all other roles.
 

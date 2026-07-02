@@ -978,6 +978,14 @@ describe("User Management Utilities", () => {
         expect(ROLE_PERMISSIONS_DEFAULT[role].recipeIndex).toBe(false);
       });
     });
+    test("should have onboardingTestmode enabled for admin", () => {
+      expect(ROLE_PERMISSIONS_DEFAULT[ROLES.ADMIN].onboardingTestmode).toBe(true);
+    });
+    test("should have onboardingTestmode disabled for non-admin roles", () => {
+      [ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
+        expect(ROLE_PERMISSIONS_DEFAULT[role].onboardingTestmode).toBe(false);
+      });
+    });
     test("should include all assignable roles", () => {
       [ROLES.ADMIN, ROLES.MODERATOR, ROLES.EDIT, ROLES.COMMENT, ROLES.READ].forEach((role) => {
         expect(ROLE_PERMISSIONS_DEFAULT).toHaveProperty(role);
