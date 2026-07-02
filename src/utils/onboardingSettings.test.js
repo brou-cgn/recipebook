@@ -55,5 +55,6 @@ describe('onboardingSettings', () => {
     expect(shouldShowOnboardingOverlay({ onboardingTestmode: true }, true)).toBe(true);
     expect(shouldShowOnboardingOverlay({ onboardingTestmode: false }, true)).toBe(false);
     expect(shouldShowOnboardingOverlay({ onboardingTestmode: true }, false)).toBe(false);
+    expect(shouldShowOnboardingOverlay({ onboardingTestmode: false }, false)).toBe(false);
   });
 });

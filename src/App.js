@@ -592,7 +592,7 @@ function App() {
     };
     loadOnboardingSettings();
     return () => { cancelled = true; };
-  }, [currentUser?.id]);
+  }, []);
 
   // Apply favicon settings on mount
   useEffect(() => {
