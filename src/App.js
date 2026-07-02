@@ -23,6 +23,8 @@ import UniversalImportModal from './components/UniversalImportModal';
 import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
+import OnboardingFlow from './components/OnboardingFlow';
+import useAtelierOnboarding from './hooks/useAtelierOnboarding';
 import { 
   loginUser, 
   logoutUser, 
@@ -410,6 +412,7 @@ function App() {
     () => BOTTOM_NAV_TABS.filter((tab) => tab.view !== 'startseite' || currentUser?.startseite),
     [currentUser?.startseite]
   );
+  const { showOnboarding, triggerOnboarding, completeOnboarding } = useAtelierOnboarding(currentUser);
   const appBottomNavStyle = useMemo(() => ({
     '--bottom-nav-offset': showBottomNav && isBottomNavVisible ? 'var(--bottom-nav-height)' : '0px',
     '--bottom-spacing': showBottomNav && isBottomNavVisible ? 'calc(var(--bottom-nav-height) + 16px)' : '0px',
@@ -1120,6 +1123,10 @@ function App() {
     setIsBottomNavVisible(getBottomNavBehavior(tab.view) !== 'hidden');
     handleViewChange(tab.view);
     window.scrollTo(0, 0);
+
+    if (tab.key === 'atelier') {
+      triggerOnboarding();
+    }
   };
 
   const handleOpenPrivateListRecipes = (groupId) => {
@@ -2067,6 +2074,7 @@ function App() {
             onSelect={handleBottomNavSelect}
           />
         )}
+        {showOnboarding && <OnboardingFlow onComplete={completeOnboarding} />}
       </div>
     </NutritionReferenceProvider>
   );
