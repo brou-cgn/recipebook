@@ -213,6 +213,15 @@ jest.mock('./components/Tagesmenu', () => function MockTagesmenu() {
   return <div data-testid="tagesmenu-view">Tagesmenu</div>;
 });
 
+jest.mock('./components/AtelierSwipeTrainer', () => function MockAtelierSwipeTrainer(props) {
+  return (
+    <div data-testid="atelier-swipe-trainer-view">
+      Atelier Swipe Trainer
+      <button type="button" onClick={() => props.onComplete?.()}>complete-atelier-swipe-trainer</button>
+    </div>
+  );
+});
+
 jest.mock('./components/UniversalImportModal', () => function MockUniversalImportModal() {
   return null;
 });
@@ -636,6 +645,40 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByRole('dialog', { name: 'Atelier Onboarding' })).toBeInTheDocument();
     expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
+  });
+
+  test('atelier onboarding opens swipe trainer before continuing to atelier', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(true);
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-onboarding-trainer',
+        vorname: 'Atelier',
+        nachname: 'Trainer',
+        email: 'atelier-trainer@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+    fireEvent.click(screen.getByRole('button', { name: /Weiter/i }));
+
+    expect(screen.getByTestId('atelier-swipe-trainer-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
+    expect(localStorage.getItem('atelierOnboardingSeen')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'complete-atelier-swipe-trainer' }));
+
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(localStorage.getItem('atelierOnboardingSeen')).toBe('true');
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
   test('atelier does not show onboarding overlay when testmode is disabled and localStorage key is set', async () => {

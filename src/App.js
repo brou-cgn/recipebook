@@ -24,6 +24,7 @@ import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
+import AtelierSwipeTrainer from './components/AtelierSwipeTrainer';
 import { 
   loginUser, 
   logoutUser, 
@@ -88,6 +89,7 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
 const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
+const ATELIER_ONBOARDING_TRAINER_VIEW = 'atelierSwipeTrainer';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
   { key: 'recipes', label: 'Kochbuch', view: 'recipes' },
@@ -267,14 +269,14 @@ function getInitialViewForUser(user) {
 function getBottomNavActiveKey(currentView) {
   if (currentView === 'startseite') return 'home';
   if (currentView === 'menus') return 'menus';
-  if (currentView === 'tagesmenu' || currentView === 'groups') return 'atelier';
+  if (currentView === 'tagesmenu' || currentView === 'groups' || currentView === ATELIER_ONBOARDING_TRAINER_VIEW) return 'atelier';
   if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'chef';
   return 'recipes';
 }
 
 function getBottomNavBehavior(currentView) {
   if (currentView === 'startseite') return 'visible';
-  if (currentView === 'tagesmenu') return 'hidden';
+  if (currentView === 'tagesmenu' || currentView === ATELIER_ONBOARDING_TRAINER_VIEW) return 'hidden';
   if (['recipes', 'seasonalRecipes', 'trendingRecipes', 'menus', 'groups'].includes(currentView)) return 'auto';
   return 'visible';
 }
@@ -1150,10 +1152,16 @@ function App() {
   };
 
   const handleAtelierOnboardingConfirm = () => {
+    setShowAtelierOnboarding(false);
+    setIsBottomNavVisible(getBottomNavBehavior(ATELIER_ONBOARDING_TRAINER_VIEW) !== 'hidden');
+    handleViewChange(ATELIER_ONBOARDING_TRAINER_VIEW);
+    window.scrollTo(0, 0);
+  };
+
+  const handleAtelierSwipeTrainerComplete = () => {
     const atelierTab = BOTTOM_NAV_TABS.find((t) => t.key === 'atelier');
     const atelierView = atelierTab?.view || 'tagesmenu';
     localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
-    setShowAtelierOnboarding(false);
     setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
     handleViewChange(atelierView);
     window.scrollTo(0, 0);
@@ -1944,6 +1952,8 @@ function App() {
           currentUser={currentUser}
           recipes={recipes}
         />
+        ) : currentView === ATELIER_ONBOARDING_TRAINER_VIEW ? (
+        <AtelierSwipeTrainer onComplete={handleAtelierSwipeTrainerComplete} />
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
           interactiveLists={interactiveLists}
