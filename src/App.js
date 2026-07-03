@@ -1152,18 +1152,22 @@ function App() {
   };
 
   const handleAtelierOnboardingConfirm = () => {
-    setShowAtelierOnboarding(false);
-    setIsBottomNavVisible(getBottomNavBehavior(ATELIER_ONBOARDING_TRAINER_VIEW) !== 'hidden');
-    handleViewChange(ATELIER_ONBOARDING_TRAINER_VIEW);
-    window.scrollTo(0, 0);
+    navigateToAtelierOnboardingView(ATELIER_ONBOARDING_TRAINER_VIEW);
   };
 
   const handleAtelierSwipeTrainerComplete = () => {
     const atelierTab = BOTTOM_NAV_TABS.find((t) => t.key === 'atelier');
     const atelierView = atelierTab?.view || 'tagesmenu';
-    localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
-    setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
-    handleViewChange(atelierView);
+    navigateToAtelierOnboardingView(atelierView, { markOnboardingSeen: true });
+  };
+
+  const navigateToAtelierOnboardingView = (view, options = {}) => {
+    if (options.markOnboardingSeen) {
+      localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
+    }
+    setShowAtelierOnboarding(false);
+    setIsBottomNavVisible(getBottomNavBehavior(view) !== 'hidden');
+    handleViewChange(view);
     window.scrollTo(0, 0);
   };
 

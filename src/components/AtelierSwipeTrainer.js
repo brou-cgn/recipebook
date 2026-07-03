@@ -108,7 +108,6 @@ function AtelierSwipeTrainer({ onComplete }) {
             </div>
           ))}
           <article
-            key={`${activeCard.title}-${completedGestures.length}`}
             className={[
               'atelier-swipe-trainer__card',
               lastGestureKey ? `atelier-swipe-trainer__card--${lastGestureKey}` : '',
