@@ -89,7 +89,7 @@ function CardContent({ step }) {
     // card3: result of left-swipe (from S3 card3 HTML)
     return (
       <div className="card-body" style={{ paddingTop: '24px' }}>
-        <div className="c-tag">I don&#39;t feel it</div>
+        <div className="c-tag">I don't feel it</div>
         <div className="card-name" style={{ marginTop: '6px' }}>Rezept warm-, Überblick behalten</div>
       </div>
     );
@@ -97,7 +97,7 @@ function CardContent({ step }) {
   // card4: final card – "It's a Match" with three swipe options (from S3 card4 HTML)
   return (
     <div className="card-body" style={{ paddingTop: '16px' }}>
-      <div className="c-tag">It&#39;s a Match</div>
+      <div className="c-tag">It's a Match</div>
       <div className="card-name" style={{ marginTop: '6px', marginBottom: '10px' }}>Ein Rezept, ein Koch</div>
       <div style={{ height: '1px', background: '#f0f0ee', marginBottom: '12px' }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
