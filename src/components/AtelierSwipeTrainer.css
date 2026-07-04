@@ -1,342 +1,261 @@
-/* ── CSS variables from docs/broubook-onboarding-s3.html ── */
-:root {
-  --amber: #D4820A;
-  --bg:    #EFEFED;
-  --ink:   #1A1A18;
-  --muted: #6B6B65;
+.atelier-swipe-trainer {
+  min-height: 100vh;
+  padding: 24px 16px 40px;
+  background: #efefed;
+  color: #1a1a18;
 }
 
-/* ── Trainer slide (from S3 .trainer-slide) ── */
-.trainer-slide {
-  min-height: 100vh;
-  background: var(--bg);
+.atelier-swipe-trainer__content {
+  width: min(100%, 420px);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 28px 16px 48px;
 }
 
-/* ── Header labels (from S3 .t-tag / .t-title / .t-instr) ── */
-.t-tag {
+.atelier-swipe-trainer__tag,
+.atelier-swipe-trainer__result-tag {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 4px;
+  color: #d4820a;
+}
+
+.atelier-swipe-trainer__title {
+  margin: 4px 0 12px;
+  font-size: 28px;
+  line-height: 1.15;
   text-align: center;
 }
 
-.t-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink);
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.t-instr {
+.atelier-swipe-trainer__intro {
+  margin: 0 0 20px;
   font-size: 15px;
-  color: var(--muted);
+  line-height: 1.6;
+  color: #6b6b65;
   text-align: center;
-  line-height: 1.5;
-  margin-bottom: 12px;
-  min-height: 44px;
-  padding: 0 12px;
 }
 
-.t-instr strong {
-  color: var(--ink);
+.atelier-swipe-trainer__intro strong {
+  color: #1a1a18;
 }
 
-/* ── Card stack (from S3 .card-stack) ── */
-.card-stack {
+.atelier-swipe-trainer__stack {
   position: relative;
-  width: min(100%, 360px);
-  height: 550px;
-  flex-shrink: 0;
-  margin-bottom: 14px;
+  width: min(100%, 340px);
+  height: 455px;
+  margin-bottom: 18px;
 }
 
-/* ── Ghost cards (from S3 .card-ghost / .ghost-1 / .ghost-2) ── */
-.card-ghost {
+.atelier-swipe-trainer__ghost,
+.atelier-swipe-trainer__card {
   position: absolute;
-  width: 310px;
-  height: 430px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   left: 50%;
+  width: 100%;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.atelier-swipe-trainer__ghost {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
   transform: translateX(-50%);
 }
 
-.ghost-1 {
-  bottom: -8px;
-  opacity: 0.45;
+.atelier-swipe-trainer__ghost--first {
+  top: 12px;
+  height: 420px;
+  opacity: 0.42;
 }
 
-.ghost-2 {
-  bottom: -16px;
+.atelier-swipe-trainer__ghost--second {
+  top: 24px;
+  height: 408px;
   opacity: 0.2;
 }
 
-/* ── Drag labels (from S3 .drag-lbl / .lbl-r / .lbl-l / .lbl-u) ── */
-.drag-lbl {
+.atelier-swipe-trainer__overlay-label {
   position: absolute;
   top: 16px;
   left: 50%;
-  transform: translateX(-50%);
-  padding: 7px 16px;
-  border-radius: 100px;
+  z-index: 2;
+  padding: 8px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s;
-  z-index: 100;
+  transform: translateX(-50%);
+  opacity: 0.22;
+  transition: opacity 0.2s ease;
 }
 
-.lbl-r {
-  background: #FDF3E3;
-  color: var(--amber);
-  border: 1.5px solid var(--amber);
+.atelier-swipe-trainer__overlay-label--active {
+  opacity: 1;
 }
 
-.lbl-l {
-  background: #f0f0ee;
-  color: #888;
-  border: 1.5px solid #ccc;
+.atelier-swipe-trainer__overlay-label--amber {
+  border-color: #d4820a;
+  background: #fdf3e3;
+  color: #d4820a;
 }
 
-.lbl-u {
-  background: #EDF2EE;
-  color: #5A8A6A;
-  border: 1.5px solid #5A8A6A;
+.atelier-swipe-trainer__overlay-label--stone {
+  border-color: #c9c7c2;
+  background: #f5f4f1;
+  color: #6b6b65;
 }
 
-/* ── Swipe card (from S3 .swipe-card) ── */
-.swipe-card {
-  position: absolute;
-  width: 340px;
-  height: 520px;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.14);
-  left: 50%;
+.atelier-swipe-trainer__overlay-label--sage {
+  border-color: #5a8a6a;
+  background: #edf2ee;
+  color: #5a8a6a;
+}
+
+.atelier-swipe-trainer__card {
   top: 0;
-  transform: translateX(-50%);
-  cursor: grab;
-  touch-action: none;
   overflow: hidden;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14);
+  transform: translateX(-50%);
+  transition: transform 0.25s ease;
 }
 
-.swipe-card:active {
-  cursor: grabbing;
+.atelier-swipe-trainer__card--right {
+  transform: translateX(calc(-50% + 14px)) rotate(4deg);
 }
 
-/* ── Card photo placeholder ── */
-.ast-card-photo {
-  width: 100%;
-  height: 180px;
-  background: #F5F0E8;
+.atelier-swipe-trainer__card--left {
+  transform: translateX(calc(-50% - 14px)) rotate(-4deg);
+}
+
+.atelier-swipe-trainer__card--up {
+  transform: translate(-50%, -12px);
+}
+
+.atelier-swipe-trainer__card-visual {
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  background: linear-gradient(180deg, #f7edd9 0%, #f3e4c8 100%);
+  font-size: 88px;
 }
 
-/* ── Card body (from S3 .card-body / .card-name / .card-author / .card-tags / .card-tag) ── */
-.card-body {
-  padding: 14px 16px;
+.atelier-swipe-trainer__card-body {
+  padding: 18px 18px 22px;
 }
 
-.card-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 3px;
+.atelier-swipe-trainer__card-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  line-height: 1.2;
 }
 
-.card-author {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 300;
-  margin-bottom: 8px;
-}
-
-.card-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.card-tag {
-  padding: 3px 10px;
-  border: 1px solid #ddd;
-  border-radius: 100px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* ── Result callout tag (from S3 .c-tag) ── */
-.c-tag {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 3px;
-}
-
-/* ── Final card option rows ── */
-.ast-option-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.atelier-swipe-trainer__card-author {
+  margin: 0 0 14px;
   font-size: 13px;
-  flex-shrink: 0;
+  color: #6b6b65;
 }
 
-.ast-option-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.ast-option-hint {
-  font-size: 10px;
-  color: var(--muted);
-  font-weight: 300;
-}
-
-/* ── Progress row (from S3 .prog-row / .prog-pill / .done / .dim) ── */
-.prog-row {
+.atelier-swipe-trainer__card-tags {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
-  flex-shrink: 0;
+}
+
+.atelier-swipe-trainer__card-tag {
+  padding: 5px 10px;
+  border: 1px solid #dedcd7;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #6b6b65;
+}
+
+.atelier-swipe-trainer__progress {
+  display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
-.prog-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 100px;
-  border: 1.5px solid #ddd;
-  background: white;
+.atelier-swipe-trainer__pill {
+  padding: 8px 12px;
+  border: 1.5px solid #dedcd7;
+  border-radius: 999px;
+  background: #fff;
   font-size: 12px;
   font-weight: 500;
-  color: var(--muted);
-  transition: all 0.35s;
+  color: #6b6b65;
 }
 
-.prog-pill.done {
-  border-color: var(--amber);
-  background: #FDF3E3;
-  color: var(--ink);
+.atelier-swipe-trainer__pill--done {
+  border-color: #d4820a;
+  background: #fdf3e3;
+  color: #1a1a18;
 }
 
-.prog-pill.dim {
-  opacity: 0.3;
+.atelier-swipe-trainer__pill--dim {
+  opacity: 0.45;
 }
 
-/* ── Result overlay (from S3 .result-ov / .r-title / .r-body) ── */
-.result-ov {
-  position: absolute;
-  inset: 0;
-  background: rgba(239, 239, 237, 0.97);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s;
-  text-align: center;
-  padding: 36px;
-  z-index: 30;
+.atelier-swipe-trainer__result {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 18px;
   border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
 }
 
-.result-ov.show {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.r-title {
+.atelier-swipe-trainer__result-title {
+  margin: 6px 0 8px;
   font-size: 22px;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 10px;
-  margin-top: 6px;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
-.r-title em {
-  color: var(--amber);
-  font-style: normal;
-}
-
-.r-body {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.65;
+.atelier-swipe-trainer__result-body {
   margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #6b6b65;
 }
 
-/* ── Accessible gesture buttons ── */
-.ast-gesture-btns {
-  width: min(100%, 360px);
-  display: flex;
-  flex-direction: column;
+.atelier-swipe-trainer__actions {
+  width: 100%;
+  display: grid;
   gap: 10px;
 }
 
-.ast-gesture-btn {
+.atelier-swipe-trainer__action-button,
+.atelier-swipe-trainer__primary-button {
   width: 100%;
-  padding: 14px 16px;
-  border: 1.5px solid #ddd;
+  padding: 15px 16px;
+  border: none;
   border-radius: 16px;
-  background: white;
-  color: var(--ink);
   font: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.2s, border-color 0.2s;
 }
 
-.ast-gesture-btn:disabled {
-  opacity: 0.38;
+.atelier-swipe-trainer__action-button {
+  background: #fff;
+  color: #1a1a18;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.atelier-swipe-trainer__action-button--active,
+.atelier-swipe-trainer__primary-button {
+  background: #d4820a;
+  color: #fff;
+}
+
+.atelier-swipe-trainer__action-button:disabled {
   cursor: default;
-}
-
-.ast-gesture-btn--active {
-  border-color: var(--amber);
-  background: #FDF3E3;
-  color: var(--ink);
-}
-
-.ast-gesture-btn--primary {
-  border-color: var(--amber);
-  background: var(--amber);
-  color: white;
-  font-weight: 700;
-  text-align: center;
+  opacity: 0.45;
 }
 
 @media (min-width: 768px) {
-  .trainer-slide {
-    padding-top: 40px;
+  .atelier-swipe-trainer {
+    padding-top: 32px;
   }
 }
-
