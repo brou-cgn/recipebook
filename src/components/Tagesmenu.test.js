@@ -1425,11 +1425,11 @@ describe('Tagesmenu – Speisekategorien-Filter', () => {
       screen.getByRole('button', { name: /filter öffnen/i }).click();
     });
 
-    const categorySelect = screen.getByRole('combobox', { name: /nach speisekategorie filtern/i });
-    expect(categorySelect).toBeInTheDocument();
+    const dessertPill = screen.getByRole('button', { name: 'Dessert' });
+    expect(dessertPill).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.change(categorySelect, { target: { value: 'Dessert' } });
+      dessertPill.click();
     });
 
     expect(container.querySelector('.tagesmenu-card-top')).toHaveTextContent('Süßspeise');
@@ -1464,10 +1464,7 @@ describe('Tagesmenu – Speisekategorien-Filter', () => {
       screen.getByRole('button', { name: /filter öffnen/i }).click();
     });
     await act(async () => {
-      fireEvent.change(
-        screen.getByRole('combobox', { name: /nach speisekategorie filtern/i }),
-        { target: { value: 'Dessert' } }
-      );
+      screen.getByRole('button', { name: 'Dessert' }).click();
     });
 
     const gemeinsameGroup = container.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
@@ -1502,16 +1499,45 @@ describe('Tagesmenu – Speisekategorien-Filter', () => {
       screen.getByRole('button', { name: /filter öffnen/i }).click();
     });
     await act(async () => {
-      fireEvent.change(
-        screen.getByRole('combobox', { name: /nach speisekategorie filtern/i }),
-        { target: { value: 'Dessert' } }
-      );
+      screen.getByRole('button', { name: 'Dessert' }).click();
     });
     await act(async () => {
-      container.querySelectorAll('.mobile-search-filter-pill')[1].click();
+      screen.getByRole('button', { name: 'Liste 2' }).click();
     });
 
     expect(container.querySelector('.tagesmenu-card-top')).toHaveTextContent('Liste 2 Dessert');
+  });
+
+  test('Mehrfachauswahl: Rezepte mit mindestens einer der gewählten Kategorien werden angezeigt (OR-Logik)', async () => {
+    const categoryRecipes = [
+      { ...makeRecipe('r1', 'Hauptspeise'), speisekategorie: ['Hauptspeisen'] },
+      { ...makeRecipe('r2', 'Dessert'), speisekategorie: ['Dessert'] },
+      { ...makeRecipe('r3', 'Suppe'), speisekategorie: ['Suppen'] },
+    ];
+
+    const { container } = await act(async () => renderMenu(categoryRecipes));
+
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+
+    // Select both Hauptspeisen and Dessert
+    await act(async () => {
+      screen.getByRole('button', { name: 'Dessert' }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: 'Hauptspeisen' }).click();
+    });
+
+    // Close the overlay
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+
+    // Only the first card in the swipe stack is visible as .tagesmenu-card-top;
+    // verify it belongs to one of the selected categories (not Suppe)
+    const topCard = container.querySelector('.tagesmenu-card-top');
+    expect(topCard).not.toHaveTextContent('Suppe');
   });
 });
 

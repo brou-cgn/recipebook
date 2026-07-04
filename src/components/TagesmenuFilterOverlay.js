@@ -17,9 +17,9 @@ const FOCUS_DELAY_MS = 120;
  * @param {Array}    props.interactiveLists - The available interactive lists
  * @param {string}   props.selectedListId   - The currently selected list id
  * @param {Function} props.onSelectList     - Called with a list id when a pill is tapped
- * @param {Array}    props.categoryOptions  - Available meal categories
- * @param {string}   props.selectedCategory - The currently selected meal category
- * @param {Function} props.onSelectCategory - Called when the category filter changes
+ * @param {Array}    props.categoryOptions   - Available meal categories
+ * @param {Array}    props.selectedCategories - The currently selected meal categories
+ * @param {Function} props.onSelectCategory  - Called with new categories array when toggled
  */
 function TagesmenuFilterOverlay({
   isOpen,
@@ -28,7 +28,7 @@ function TagesmenuFilterOverlay({
   selectedListId,
   onSelectList,
   categoryOptions = [],
-  selectedCategory = '',
+  selectedCategories = [],
   onSelectCategory,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,6 +108,21 @@ function TagesmenuFilterOverlay({
     onClose();
   };
 
+  const handleCategoryPillClick = (categoryName) => {
+    const isSelected = selectedCategories.includes(categoryName);
+    const newValue = isSelected
+      ? selectedCategories.filter((c) => c !== categoryName)
+      : [...selectedCategories, categoryName];
+    onSelectCategory?.(newValue);
+  };
+
+  // Active (selected) category pills are shown first
+  const orderedCategoryPills = useMemo(() => {
+    const active = categoryOptions.filter((name) => selectedCategories.includes(name));
+    const inactive = categoryOptions.filter((name) => !selectedCategories.includes(name));
+    return [...active, ...inactive];
+  }, [categoryOptions, selectedCategories]);
+
   const handleClear = () => {
     setSearchTerm('');
     setDebouncedTerm('');
@@ -126,20 +141,18 @@ function TagesmenuFilterOverlay({
     >
       <div className="mobile-search-panel" style={{ bottom: panelBottom }}>
         {categoryOptions.length > 0 && (
-          <div className="mobile-search-bar-row">
-            <div className="mobile-search-input-wrapper">
-              <select
-                className="mobile-search-input"
-                value={selectedCategory}
-                onChange={(e) => onSelectCategory?.(e.target.value)}
-                aria-label="Nach Speisekategorie filtern"
+          <div className="mobile-search-cuisine-grid">
+            {orderedCategoryPills.map((category) => (
+              <button
+                key={category}
+                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(category) ? ' active' : ''}`}
+                onClick={() => handleCategoryPillClick(category)}
+                aria-pressed={selectedCategories.includes(category)}
+                title={selectedCategories.includes(category) ? 'Filter aufheben' : `Nach ${category} filtern`}
               >
-                <option value="">Alle Speisekategorien</option>
-                {categoryOptions.map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
+                {category}
+              </button>
+            ))}
           </div>
         )}
 
