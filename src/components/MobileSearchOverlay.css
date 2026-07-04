@@ -366,3 +366,12 @@
 .tagesmenu-filter-overlay .mobile-search-private-list-grid {
   padding-top: 12px;
 }
+
+.tagesmenu-filter-overlay .mobile-search-cuisine-grid {
+  flex-direction: row;
+  flex-wrap: wrap;
+  max-height: none;
+  overflow-x: visible;
+  overflow-y: visible;
+  padding-top: 16px;
+}
