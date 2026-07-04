@@ -17,8 +17,20 @@ const FOCUS_DELAY_MS = 120;
  * @param {Array}    props.interactiveLists - The available interactive lists
  * @param {string}   props.selectedListId   - The currently selected list id
  * @param {Function} props.onSelectList     - Called with a list id when a pill is tapped
+ * @param {Array}    props.categoryOptions  - Available meal categories
+ * @param {string}   props.selectedCategory - The currently selected meal category
+ * @param {Function} props.onSelectCategory - Called when the category filter changes
  */
-function TagesmenuFilterOverlay({ isOpen, onClose, interactiveLists, selectedListId, onSelectList }) {
+function TagesmenuFilterOverlay({
+  isOpen,
+  onClose,
+  interactiveLists,
+  selectedListId,
+  onSelectList,
+  categoryOptions = [],
+  selectedCategory = '',
+  onSelectCategory,
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   // panelBottom tracks how far from the bottom of the screen the panel sits
@@ -109,10 +121,28 @@ function TagesmenuFilterOverlay({ isOpen, onClose, interactiveLists, selectedLis
       className="mobile-search-overlay tagesmenu-filter-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Interaktive Listen filtern"
+      aria-label="Kochatelier filtern"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="mobile-search-panel" style={{ bottom: panelBottom }}>
+        {categoryOptions.length > 0 && (
+          <div className="mobile-search-bar-row">
+            <div className="mobile-search-input-wrapper">
+              <select
+                className="mobile-search-input"
+                value={selectedCategory}
+                onChange={(e) => onSelectCategory?.(e.target.value)}
+                aria-label="Nach Speisekategorie filtern"
+              >
+                <option value="">Alle Speisekategorien</option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         {/* Interactive list pills */}
         {orderedListPills.length > 0 ? (
           <div className="mobile-search-private-list-grid">

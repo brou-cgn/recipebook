@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, act, fireEvent } from '@testing-library/react';
+import { render, act, fireEvent, screen } from '@testing-library/react';
 import Tagesmenu from './Tagesmenu';
 import { updateRecipe } from '../utils/recipeFirestore';
 import { addRecipeToGroup, removeRecipeFromGroup } from '../utils/groupFirestore';
@@ -1409,6 +1409,109 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
     await act(async () => { pills2[1].click(); });
 
     expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+  });
+});
+
+describe('Tagesmenu – Speisekategorien-Filter', () => {
+  test('zeigt den Speisekategorien-Filter auch bei nur einer Liste und filtert den Swipekarten-Stapel', async () => {
+    const categoryRecipes = [
+      { ...makeRecipe('r1', 'Herzhaft'), speisekategorie: ['Hauptspeisen'] },
+      { ...makeRecipe('r2', 'Süßspeise'), speisekategorie: ['Dessert'] },
+    ];
+
+    const { container } = await act(async () => renderMenu(categoryRecipes));
+
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+
+    const categorySelect = screen.getByRole('combobox', { name: /nach speisekategorie filtern/i });
+    expect(categorySelect).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(categorySelect, { target: { value: 'Dessert' } });
+    });
+
+    expect(container.querySelector('.tagesmenu-card-top')).toHaveTextContent('Süßspeise');
+  });
+
+  test('lässt gemeinsame Kandidaten trotz aktivem Speisekategorien-Filter unverändert', async () => {
+    const futureMs = Date.now() + 60_000;
+    mockMaxKandidatenSchwelle = 2;
+    mockAllMembersFlagsValue = {
+      user1: { r1: 'kandidat', r2: 'kandidat' },
+      user2: { r1: 'kandidat', r2: 'kandidat' },
+    };
+    mockAllMembersFlagDocsValue = {
+      user1: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+      user2: {
+        r1: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+        r2: { flag: 'kandidat', explicitFlag: 'kandidat', expiresAtMillis: futureMs, isExpired: false },
+      },
+    };
+
+    const { container } = await act(async () => renderMenuWithListOverrides([
+      { ...makeRecipe('r1', 'Herzhaft'), speisekategorie: ['Hauptspeisen'] },
+      { ...makeRecipe('r2', 'Süßspeise'), speisekategorie: ['Dessert'] },
+    ], { ownerId: 'user1', memberIds: ['user2'] }));
+
+    expect(container.querySelector('.tagesmenu-results')).not.toBeNull();
+
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+    await act(async () => {
+      fireEvent.change(
+        screen.getByRole('combobox', { name: /nach speisekategorie filtern/i }),
+        { target: { value: 'Dessert' } }
+      );
+    });
+
+    const gemeinsameGroup = container.querySelector('.tagesmenu-results-group--gemeinsame-kandidaten');
+    expect(gemeinsameGroup).not.toBeNull();
+    expect(gemeinsameGroup).toHaveTextContent('Herzhaft');
+    expect(gemeinsameGroup).toHaveTextContent('Süßspeise');
+  });
+
+  test('arbeitet unabhängig vom Listenfilter weiter', async () => {
+    const list1 = { id: 'list1', name: 'Liste 1', listKind: 'interactive', recipeIds: [] };
+    const list2 = { id: 'list2', name: 'Liste 2', listKind: 'interactive', recipeIds: [] };
+    const recipeList = [
+      { id: 'r1', title: 'Liste 1 Dessert', groupId: 'list1', speisekategorie: ['Dessert'] },
+      { id: 'r2', title: 'Liste 1 Herzhaft', groupId: 'list1', speisekategorie: ['Hauptspeisen'] },
+      { id: 'r3', title: 'Liste 2 Dessert', groupId: 'list2', speisekategorie: ['Dessert'] },
+      { id: 'r4', title: 'Liste 2 Herzhaft', groupId: 'list2', speisekategorie: ['Hauptspeisen'] },
+    ];
+
+    const { container } = await act(async () =>
+      render(
+        <Tagesmenu
+          interactiveLists={[list1, list2]}
+          recipes={recipeList}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      )
+    );
+
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+    await act(async () => {
+      fireEvent.change(
+        screen.getByRole('combobox', { name: /nach speisekategorie filtern/i }),
+        { target: { value: 'Dessert' } }
+      );
+    });
+    await act(async () => {
+      container.querySelectorAll('.mobile-search-filter-pill')[1].click();
+    });
+
+    expect(container.querySelector('.tagesmenu-card-top')).toHaveTextContent('Liste 2 Dessert');
   });
 });
 

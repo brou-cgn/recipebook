@@ -50,6 +50,14 @@ const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
   [COOK_REGULARLY_MENU_ITEM]: { markAsFavorite: true },
 };
 
+function matchesMealCategoryFilter(recipe, selectedCategory) {
+  if (!selectedCategory) return true;
+  if (Array.isArray(recipe?.speisekategorie)) {
+    return recipe.speisekategorie.includes(selectedCategory);
+  }
+  return recipe?.speisekategorie === selectedCategory;
+}
+
 function getKachelMenuAltIconValue(eff) {
   return eff('tagesmenuKachelMenuAlt') || eff('tagesmenuKachelMenu');
 }
@@ -59,6 +67,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     interactiveLists.length > 0 ? interactiveLists[0].id : null
   );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
 
   const selectedList = interactiveLists.find((l) => l.id === selectedListId) ?? null;
 
@@ -147,10 +156,39 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     );
   }, [recipes, selectedList]);
 
+  const availableMealCategories = useMemo(() => {
+    const interactiveListIds = new Set(interactiveLists.map((list) => list.id));
+    const interactiveListRecipeIds = new Set(
+      interactiveLists.flatMap((list) => Array.isArray(list.recipeIds) ? list.recipeIds : [])
+    );
+    const categories = new Set();
+
+    recipes.forEach((recipe) => {
+      if (!interactiveListIds.has(recipe.groupId) && !interactiveListRecipeIds.has(recipe.id)) {
+        return;
+      }
+      const recipeCategories = Array.isArray(recipe.speisekategorie)
+        ? recipe.speisekategorie
+        : recipe.speisekategorie
+        ? [recipe.speisekategorie]
+        : [];
+      recipeCategories
+        .map((category) => typeof category === 'string' ? category.trim() : '')
+        .filter(Boolean)
+        .forEach((category) => categories.add(category));
+    });
+
+    return Array.from(categories).sort((a, b) => a.localeCompare(b, 'de'));
+  }, [interactiveLists, recipes]);
+
+  const stackRecipes = useMemo(() => {
+    return allListRecipes.filter((recipe) => matchesMealCategoryFilter(recipe, selectedCategoryFilter));
+  }, [allListRecipes, selectedCategoryFilter]);
+
   // Recipes still available for swiping: no doc, or doc with flag=null and expiresAt=null
   const availableRecipes = useMemo(() => {
-    return allListRecipes.filter((r) => isRecipeAvailableForStack(currentUserSwipeDocs[r.id]));
-  }, [allListRecipes, currentUserSwipeDocs]);
+    return stackRecipes.filter((r) => isRecipeAvailableForStack(currentUserSwipeDocs[r.id]));
+  }, [stackRecipes, currentUserSwipeDocs]);
 
   const prevListIdRef = useRef(selectedListId);
   useEffect(() => {
@@ -1466,16 +1504,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         </div>
       )}
 
-      {/* Filter button – bottom left, only shown when there are multiple interactive lists */}
-      {interactiveLists.length > 1 && (
+      {(interactiveLists.length > 1 || availableMealCategories.length > 0) && (
         <button
           className="tagesmenu-filter-btn"
           onClick={() => setIsFilterOpen(true)}
-          aria-label="Listen filtern"
-          title="Listen filtern"
+          aria-label="Filter öffnen"
+          title="Filter öffnen"
         >
           {isBase64Image(filterButtonIcon) ? (
-            <img src={filterButtonIcon} alt="Listen filtern" className="button-icon-image" draggable="false" />
+            <img src={filterButtonIcon} alt="Filter öffnen" className="button-icon-image" draggable="false" />
           ) : (
             <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{filterButtonIcon}</span>
           )}
@@ -1520,6 +1557,9 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         interactiveLists={interactiveLists}
         selectedListId={selectedListId}
         onSelectList={(id) => setSelectedListId(id)}
+        categoryOptions={availableMealCategories}
+        selectedCategory={selectedCategoryFilter}
+        onSelectCategory={setSelectedCategoryFilter}
       />
 
     </div>
