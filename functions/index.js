@@ -2673,7 +2673,7 @@ exports.generateNutritionFromReference = onCall(
 const BRING_EXPORT_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 exports.bringRecipeExport = onRequest(
-    {region: 'us-central1'},
+    {region: 'us-central1', invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       const hasOrigin = typeof origin === 'string' && origin.length > 0;
@@ -3398,7 +3398,7 @@ function validateAndNormaliseRecipeInput(body) {
  *   500 { success: false, error: string }
  */
 exports.addRecipeViaAPI = onRequest(
-    {maxInstances: 10, secrets: [shortcutApiKey]},
+    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -3548,7 +3548,7 @@ const RECIPE_IMPORT_TTL_MS = 10 * 60 * 1000;
  *   500 { success: false, error: string }
  */
 exports.createRecipeImportFromText = onRequest(
-    {maxInstances: 10, secrets: [shortcutApiKey]},
+    {maxInstances: 10, secrets: [shortcutApiKey], invoker: 'public'},
     async (req, res) => {
       const origin = req.headers.origin;
       if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -3677,7 +3677,7 @@ exports.createRecipeImportFromText = onRequest(
  * Returns 404 if not found, 410 if expired.
  */
 exports.recipeImportPage = onRequest(
-    {maxInstances: 10, cors: true},
+    {maxInstances: 10, cors: true, invoker: 'public'},
     async (req, res) => {
       if (req.method !== 'GET') {
         res.status(405).send('Method not allowed. Use GET.');
@@ -4034,7 +4034,7 @@ function generateRecipeShareHtml(recipe, shareId, functionUrl, defaultLogoUrl = 
  * the form: https://<project>.web.app/share/<shareId>
  */
 exports.shareRecipe = onRequest(
-    {cors: false, region: 'us-central1'},
+    {cors: false, region: 'us-central1', invoker: 'public'},
     async (req, res) => {
       // Extract shareId from the URL path (/share/<shareId>) or query string.
       const pathParts = req.path.replace(/^\/+/, '').split('/');
