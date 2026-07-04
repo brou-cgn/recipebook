@@ -62,9 +62,9 @@ function getRecipeMealCategories(recipe) {
     .filter(Boolean);
 }
 
-function matchesMealCategoryFilter(recipe, selectedCategory) {
-  if (!selectedCategory) return true;
-  return getRecipeMealCategories(recipe).includes(selectedCategory);
+function matchesMealCategoryFilter(recipe, selectedCategories) {
+  if (!selectedCategories || selectedCategories.length === 0) return true;
+  return getRecipeMealCategories(recipe).some((cat) => selectedCategories.includes(cat));
 }
 
 function getKachelMenuAltIconValue(eff) {
@@ -76,7 +76,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
     interactiveLists.length > 0 ? interactiveLists[0].id : null
   );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState([]);
 
   const selectedList = interactiveLists.find((l) => l.id === selectedListId) ?? null;
 
@@ -1559,7 +1559,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         selectedListId={selectedListId}
         onSelectList={(id) => setSelectedListId(id)}
         categoryOptions={availableMealCategories}
-        selectedCategory={selectedCategoryFilter}
+        selectedCategories={selectedCategoryFilter}
         onSelectCategory={setSelectedCategoryFilter}
       />
 
