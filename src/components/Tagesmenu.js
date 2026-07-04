@@ -50,12 +50,20 @@ const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
   [COOK_REGULARLY_MENU_ITEM]: { markAsFavorite: true },
 };
 
+function getRecipeMealCategories(recipe) {
+  const categories = Array.isArray(recipe?.speisekategorie)
+    ? recipe.speisekategorie
+    : recipe?.speisekategorie
+    ? [recipe.speisekategorie]
+    : [];
+  return categories
+    .map((category) => typeof category === 'string' ? category.trim() : '')
+    .filter(Boolean);
+}
+
 function matchesMealCategoryFilter(recipe, selectedCategory) {
   if (!selectedCategory) return true;
-  if (Array.isArray(recipe?.speisekategorie)) {
-    return recipe.speisekategorie.includes(selectedCategory);
-  }
-  return recipe?.speisekategorie === selectedCategory;
+  return getRecipeMealCategories(recipe).includes(selectedCategory);
 }
 
 function getKachelMenuAltIconValue(eff) {
@@ -167,15 +175,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
       if (!interactiveListIds.has(recipe.groupId) && !interactiveListRecipeIds.has(recipe.id)) {
         return;
       }
-      const recipeCategories = Array.isArray(recipe.speisekategorie)
-        ? recipe.speisekategorie
-        : recipe.speisekategorie
-        ? [recipe.speisekategorie]
-        : [];
-      recipeCategories
-        .map((category) => typeof category === 'string' ? category.trim() : '')
-        .filter(Boolean)
-        .forEach((category) => categories.add(category));
+      getRecipeMealCategories(recipe).forEach((category) => categories.add(category));
     });
 
     return Array.from(categories).sort((a, b) => a.localeCompare(b, 'de'));
