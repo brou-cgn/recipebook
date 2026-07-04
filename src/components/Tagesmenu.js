@@ -51,11 +51,12 @@ const TAGESMENU_ASSIGN_TO_TARGET_LIST_ITEMS = {
 };
 
 function getRecipeMealCategories(recipe) {
-  const categories = Array.isArray(recipe?.speisekategorie)
-    ? recipe.speisekategorie
-    : recipe?.speisekategorie
-    ? [recipe.speisekategorie]
-    : [];
+  let categories = [];
+  if (Array.isArray(recipe?.speisekategorie)) {
+    categories = recipe.speisekategorie;
+  } else if (recipe?.speisekategorie) {
+    categories = [recipe.speisekategorie];
+  }
   return categories
     .map((category) => typeof category === 'string' ? category.trim() : '')
     .filter(Boolean);
