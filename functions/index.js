@@ -4176,12 +4176,22 @@ exports.shareRecipe = onRequest(
     },
 );
 
+/**
+ * Validate shareId format for public share endpoints.
+ * @param {string} shareId - Share UUID to validate
+ * @throws {HttpsError} Throws invalid-argument when shareId is missing/invalid
+ */
 function assertValidShareId(shareId) {
   if (!shareId || !SHARE_ID_REGEX.test(shareId)) {
     throw new HttpsError('invalid-argument', 'Ungültige shareId');
   }
 }
 
+/**
+ * Collect all recipe IDs referenced by a menu (sections + legacy recipeIds).
+ * @param {Object} menuData - Menu document data
+ * @return {Set<string>} Unique recipe IDs referenced by the menu
+ */
 function collectRecipeIdsFromMenu(menuData) {
   const recipeIds = new Set();
 

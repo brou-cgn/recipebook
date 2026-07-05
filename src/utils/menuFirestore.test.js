@@ -1,8 +1,8 @@
 import { isValidGridImage, getMenuByShareId } from './menuFirestore';
 
 // Mock Firebase modules
-var mockAuth = { currentUser: { uid: 'user-1' } };
-var mockFunctions = {};
+let mockAuth = { currentUser: { uid: 'user-1' } };
+let mockFunctions = {};
 jest.mock('../firebase', () => ({
   db: {},
   get auth() {

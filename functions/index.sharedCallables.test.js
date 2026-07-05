@@ -152,7 +152,7 @@ test('shared callable functions are public and have CORS', () => {
     assert.equal(mod[name].__opts.invoker, 'public');
     assert.equal(mod[name].__opts.region, 'us-central1');
     assert.ok(Array.isArray(mod[name].__opts.cors));
-    assert.ok(mod[name].__opts.cors.includes('https://broubook.web.app'));
+    assert.ok(mod[name].__opts.cors.some((origin) => origin === 'https://broubook.web.app'));
   });
 });
 
