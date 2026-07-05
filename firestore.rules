@@ -212,7 +212,8 @@ service cloud.firestore {
 
     // Custom lists collection
     match /customLists/{listId} {
-      allow read: if isAnyUser();
+      // Public read is required so unauthenticated share-link viewers can load list settings.
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 

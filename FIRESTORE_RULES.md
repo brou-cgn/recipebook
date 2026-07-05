@@ -92,7 +92,7 @@ The following helper functions are defined in `firestore.rules`:
 
 | Operation | Who |
 |-----------|-----|
-| Read | All authenticated users |
+| Read | Anyone (public) |
 | Create / Update / Delete | `admin` only |
 
 ### FAQs (`/faqs/{faqId}`)
