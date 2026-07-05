@@ -162,10 +162,11 @@ service cloud.firestore {
 
     // Settings collection
     match /settings/{settingId} {
-      // settings/app is publicly readable so unauthenticated share-link viewers
-      // can load app configuration (units, cuisines, etc.) needed to render a recipe.
+      // settings/app and settings/images are publicly readable so unauthenticated
+      // share-link viewers can load app configuration and image metadata (favicon,
+      // logo, etc.) needed to render a recipe preview.
       // All other settings documents require authentication.
-      allow read: if isAnyUser() || settingId == 'app';
+      allow read: if isAnyUser() || settingId == 'app' || settingId == 'images';
       allow create: if isAdmin()
                     || (
                          isEditOrAdmin()
