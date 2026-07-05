@@ -1779,14 +1779,16 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <div className="App" style={appBottomNavStyle}>
-        <Header />
-        <SharePage
-          shareId={sharePageId}
-          currentUser={currentUser}
-          onClose={handleSharePageClose}
-        />
-      </div>
+      <NutritionReferenceProvider>
+        <div className="App" style={appBottomNavStyle}>
+          <Header />
+          <SharePage
+            shareId={sharePageId}
+            currentUser={currentUser}
+            onClose={handleSharePageClose}
+          />
+        </div>
+      </NutritionReferenceProvider>
     );
   }
 
@@ -1802,14 +1804,16 @@ function App() {
       setCurrentView('recipes');
     };
     return (
-      <div className="App" style={appBottomNavStyle}>
-        <Header />
-        <MenuSharePage
-          shareId={menuSharePageId}
-          currentUser={currentUser}
-          onClose={handleMenuSharePageClose}
-        />
-      </div>
+      <NutritionReferenceProvider>
+        <div className="App" style={appBottomNavStyle}>
+          <Header />
+          <MenuSharePage
+            shareId={menuSharePageId}
+            currentUser={currentUser}
+            onClose={handleMenuSharePageClose}
+          />
+        </div>
+      </NutritionReferenceProvider>
     );
   }
 
