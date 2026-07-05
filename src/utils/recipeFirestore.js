@@ -3,7 +3,7 @@
  * Handles recipe data storage and real-time sync with Firestore
  */
 
-import { db } from '../firebase';
+import { db, auth, functions } from '../firebase';
 import {
   collection,
   doc,
@@ -19,6 +19,7 @@ import {
   where,
   deleteField
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { removeUndefinedFields } from './firestoreUtils';
 import { deleteRecipeImage } from './storageUtils';
 
@@ -212,9 +213,15 @@ export const deleteRecipe = async (recipeId) => {
  * @param {string[]} recipeIds - Array of recipe IDs
  * @returns {Promise<Array>} Promise resolving to array of recipes (only those that exist and are accessible)
  */
-export const getRecipesByIds = async (recipeIds) => {
+export const getRecipesByIds = async (recipeIds, { shareId } = {}) => {
   if (!recipeIds || recipeIds.length === 0) return [];
   try {
+    if (!auth.currentUser && shareId) {
+      const getSharedRecipes = httpsCallable(functions, 'getSharedRecipesByIds');
+      const result = await getSharedRecipes({ shareId, recipeIds });
+      return Array.isArray(result?.data?.recipes) ? result.data.recipes : [];
+    }
+
     const promises = recipeIds.map(id => getDoc(doc(db, 'recipes', id)));
     const snaps = await Promise.all(promises);
     return snaps
@@ -233,6 +240,12 @@ export const getRecipesByIds = async (recipeIds) => {
  */
 export const getRecipeByShareId = async (shareId) => {
   try {
+    if (!auth.currentUser) {
+      const getSharedRecipe = httpsCallable(functions, 'getSharedRecipeByShareId');
+      const result = await getSharedRecipe({ shareId });
+      return result?.data?.recipe || null;
+    }
+
     const recipesRef = collection(db, 'recipes');
     const q = query(recipesRef, where('shareId', '==', shareId));
     const snapshot = await getDocs(q);
@@ -240,6 +253,9 @@ export const getRecipeByShareId = async (shareId) => {
     const recipeDoc = snapshot.docs[0];
     return { id: recipeDoc.id, ...recipeDoc.data() };
   } catch (error) {
+    if (error?.code === 'functions/not-found') {
+      return null;
+    }
     console.error('Error getting recipe by shareId:', error);
     return null;
   }

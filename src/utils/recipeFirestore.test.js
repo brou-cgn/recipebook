@@ -4,8 +4,16 @@
  */
 
 // Mock Firebase
+var mockAuth = { currentUser: { uid: 'user-1' } };
+var mockFunctions = {};
 jest.mock('../firebase', () => ({
-  db: {}
+  db: {},
+  get auth() {
+    return mockAuth;
+  },
+  get functions() {
+    return mockFunctions;
+  }
 }));
 
 // Mock Firestore functions
@@ -19,6 +27,7 @@ const mockIncrement = jest.fn((val) => ({ __increment: val }));
 const mockQuery = jest.fn((...args) => args);
 const mockWhere = jest.fn((...args) => args);
 const mockDeleteField = jest.fn(() => ({ __deleteField: true }));
+const mockHttpsCallable = jest.fn();
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -36,6 +45,10 @@ jest.mock('firebase/firestore', () => ({
   deleteField: () => mockDeleteField()
 }));
 
+jest.mock('firebase/functions', () => ({
+  httpsCallable: (...args) => mockHttpsCallable(...args)
+}));
+
 // Mock Storage Utils
 jest.mock('./storageUtils', () => ({
   deleteRecipeImage: jest.fn()
@@ -46,7 +59,18 @@ jest.mock('./firestoreUtils', () => ({
   removeUndefinedFields: jest.fn((obj) => obj)
 }));
 
-import { subscribeToRecipes, getRecipes, addRecipe, updateRecipe, deleteRecipe, initializeRecipeCounts, getRecipeByShareId, enableRecipeSharing, disableRecipeSharing } from './recipeFirestore';
+import {
+  subscribeToRecipes,
+  getRecipes,
+  addRecipe,
+  updateRecipe,
+  deleteRecipe,
+  initializeRecipeCounts,
+  getRecipeByShareId,
+  getRecipesByIds,
+  enableRecipeSharing,
+  disableRecipeSharing
+} from './recipeFirestore';
 
 // Reference to the mocked doc function (set up implementation in beforeEach)
 const { doc: mockDoc } = jest.requireMock('firebase/firestore');
@@ -478,6 +502,7 @@ describe('Recipe Firestore - Recipe Count', () => {
 describe('Recipe Firestore - Share Functionality', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuth.currentUser = { uid: 'user-1' };
     mockDoc.mockImplementation((_db, ...path) => path.join('/'));
     mockUpdateDoc.mockResolvedValue(undefined);
     mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
@@ -486,6 +511,31 @@ describe('Recipe Firestore - Share Functionality', () => {
   });
 
   describe('getRecipeByShareId', () => {
+    it('should use callable function for anonymous users', async () => {
+      mockAuth.currentUser = null;
+      const callable = jest.fn().mockResolvedValue({
+        data: { recipe: { id: 'recipe-callable', title: 'Shared Callable Recipe' } }
+      });
+      mockHttpsCallable.mockReturnValue(callable);
+
+      const result = await getRecipeByShareId('test-share-id');
+
+      expect(mockHttpsCallable).toHaveBeenCalledWith(mockFunctions, 'getSharedRecipeByShareId');
+      expect(callable).toHaveBeenCalledWith({ shareId: 'test-share-id' });
+      expect(result).toEqual({ id: 'recipe-callable', title: 'Shared Callable Recipe' });
+      expect(mockGetDocs).not.toHaveBeenCalled();
+    });
+
+    it('should return null on callable not-found error for anonymous users', async () => {
+      mockAuth.currentUser = null;
+      const callable = jest.fn().mockRejectedValue({ code: 'functions/not-found' });
+      mockHttpsCallable.mockReturnValue(callable);
+
+      const result = await getRecipeByShareId('missing-share-id');
+
+      expect(result).toBeNull();
+    });
+
     it('should return the recipe with a matching shareId', async () => {
       const mockRecipeDoc = {
         id: 'recipe-shared',
@@ -517,6 +567,38 @@ describe('Recipe Firestore - Share Functionality', () => {
 
       expect(result).toBeNull();
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('getRecipesByIds', () => {
+    it('should use callable for anonymous users when shareId context exists', async () => {
+      mockAuth.currentUser = null;
+      const callable = jest.fn().mockResolvedValue({
+        data: { recipes: [{ id: 'r1', title: 'Recipe 1' }] }
+      });
+      mockHttpsCallable.mockReturnValue(callable);
+
+      const result = await getRecipesByIds(['r1', 'r2'], { shareId: 'share-id-1' });
+
+      expect(mockHttpsCallable).toHaveBeenCalledWith(mockFunctions, 'getSharedRecipesByIds');
+      expect(callable).toHaveBeenCalledWith({ shareId: 'share-id-1', recipeIds: ['r1', 'r2'] });
+      expect(result).toEqual([{ id: 'r1', title: 'Recipe 1' }]);
+      expect(mockGetDoc).not.toHaveBeenCalled();
+    });
+
+    it('should keep direct getDoc path for authenticated users', async () => {
+      mockAuth.currentUser = { uid: 'user-1' };
+      mockGetDoc.mockResolvedValueOnce({
+        exists: () => true,
+        id: 'recipe-1',
+        data: () => ({ title: 'Recipe 1' })
+      });
+
+      const result = await getRecipesByIds(['recipe-1'], { shareId: 'share-id-1' });
+
+      expect(result).toEqual([{ id: 'recipe-1', title: 'Recipe 1' }]);
+      expect(mockHttpsCallable).not.toHaveBeenCalled();
+      expect(mockGetDoc).toHaveBeenCalled();
     });
   });
 

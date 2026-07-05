@@ -3886,6 +3886,7 @@ const CRAWLER_UA_REGEX =
  * and other injection attempts before the value reaches Firestore or HTML output.
  */
 const SHARE_ID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_SHARED_RECIPE_IDS = 100;
 
 /** Fallback OG image URL used when no recipe thumbnail and no custom app logo exist. */
 const STATIC_FALLBACK_LOGO_URL = 'https://brou-cgn.github.io/recipebook/logo512.png';
@@ -4172,6 +4173,147 @@ exports.shareRecipe = onRequest(
         console.error('shareRecipe: error loading recipe:', error);
         res.status(500).send('Fehler beim Laden des Rezepts');
       }
+    },
+);
+
+function assertValidShareId(shareId) {
+  if (!shareId || !SHARE_ID_REGEX.test(shareId)) {
+    throw new HttpsError('invalid-argument', 'Ungültige shareId');
+  }
+}
+
+function collectRecipeIdsFromMenu(menuData) {
+  const recipeIds = new Set();
+
+  if (Array.isArray(menuData?.sections)) {
+    menuData.sections.forEach((section) => {
+      if (Array.isArray(section?.recipeIds)) {
+        section.recipeIds.forEach((recipeId) => {
+          if (typeof recipeId === 'string' && recipeId.trim()) {
+            recipeIds.add(recipeId.trim());
+          }
+        });
+      }
+    });
+  }
+
+  if (Array.isArray(menuData?.recipeIds)) {
+    menuData.recipeIds.forEach((recipeId) => {
+      if (typeof recipeId === 'string' && recipeId.trim()) {
+        recipeIds.add(recipeId.trim());
+      }
+    });
+  }
+
+  return recipeIds;
+}
+
+exports.getSharedRecipeByShareId = onCall(
+    {region: 'us-central1', cors: ALLOWED_ORIGINS, invoker: 'public'},
+    async (request) => {
+      const shareId = typeof request.data?.shareId === 'string' ?
+        request.data.shareId.trim() : '';
+      assertValidShareId(shareId);
+
+      const snapshot = await admin.firestore()
+          .collection('recipes')
+          .where('shareId', '==', shareId)
+          .limit(1)
+          .get();
+
+      if (snapshot.empty) {
+        throw new HttpsError('not-found', 'Rezept nicht gefunden');
+      }
+
+      const recipeDoc = snapshot.docs[0];
+      return {recipe: {id: recipeDoc.id, ...recipeDoc.data()}};
+    },
+);
+
+exports.getSharedMenuByShareId = onCall(
+    {region: 'us-central1', cors: ALLOWED_ORIGINS, invoker: 'public'},
+    async (request) => {
+      const shareId = typeof request.data?.shareId === 'string' ?
+        request.data.shareId.trim() : '';
+      assertValidShareId(shareId);
+
+      const snapshot = await admin.firestore()
+          .collection('menus')
+          .where('shareId', '==', shareId)
+          .limit(1)
+          .get();
+
+      if (snapshot.empty) {
+        throw new HttpsError('not-found', 'Menü nicht gefunden');
+      }
+
+      const menuDoc = snapshot.docs[0];
+      return {menu: {id: menuDoc.id, ...menuDoc.data()}};
+    },
+);
+
+exports.getSharedRecipesByIds = onCall(
+    {region: 'us-central1', cors: ALLOWED_ORIGINS, invoker: 'public'},
+    async (request) => {
+      const shareId = typeof request.data?.shareId === 'string' ?
+        request.data.shareId.trim() : '';
+      assertValidShareId(shareId);
+
+      const requestedRecipeIds = request.data?.recipeIds;
+      if (!Array.isArray(requestedRecipeIds)) {
+        throw new HttpsError('invalid-argument', 'recipeIds muss ein Array sein');
+      }
+
+      if (requestedRecipeIds.length > MAX_SHARED_RECIPE_IDS) {
+        throw new HttpsError(
+            'invalid-argument',
+            `Maximal ${MAX_SHARED_RECIPE_IDS} recipeIds erlaubt`,
+        );
+      }
+
+      const invalidRecipeId = requestedRecipeIds.find(
+          (recipeId) => typeof recipeId !== 'string' || !recipeId.trim(),
+      );
+      if (invalidRecipeId !== undefined) {
+        throw new HttpsError(
+            'invalid-argument',
+            'recipeIds muss ein Array aus nicht-leeren Strings sein',
+        );
+      }
+
+      const uniqueRequestedRecipeIds = [...new Set(
+          requestedRecipeIds.map((recipeId) => recipeId.trim()),
+      )];
+      if (uniqueRequestedRecipeIds.length === 0) {
+        return {recipes: []};
+      }
+
+      const db = admin.firestore();
+      const menuSnapshot = await db
+          .collection('menus')
+          .where('shareId', '==', shareId)
+          .limit(1)
+          .get();
+      if (menuSnapshot.empty) {
+        throw new HttpsError('not-found', 'Menü nicht gefunden');
+      }
+
+      const allowedRecipeIds = collectRecipeIdsFromMenu(menuSnapshot.docs[0].data());
+      const authorizedRecipeIds = uniqueRequestedRecipeIds.filter(
+          (recipeId) => allowedRecipeIds.has(recipeId),
+      );
+      if (authorizedRecipeIds.length === 0) {
+        return {recipes: []};
+      }
+
+      const recipeSnaps = await Promise.all(
+          authorizedRecipeIds.map((recipeId) => db.collection('recipes').doc(recipeId).get()),
+      );
+      const recipes = recipeSnaps
+          .filter((snap) => snap.exists)
+          .map((snap) => ({id: snap.id, ...snap.data()}));
+
+      return {recipes};
     },
 );
 
