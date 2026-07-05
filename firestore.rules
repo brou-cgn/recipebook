@@ -84,14 +84,16 @@ service cloud.firestore {
     }
 
     // Nutrition reference values (stored per 100g from OpenFoodFacts lookups)
+    // Public read is required so unauthenticated share-link viewers can render nutrition data.
     match /nutritionReferences/{entryId} {
-      allow read: if isAnyUser();
+      allow read: if true;
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
     // Common terms collection (e.g. grouped ingredient adjectives)
+    // Public read is required so unauthenticated share-link viewers can use ingredient matching.
     match /commonTerms/{termId} {
-      allow read: if isAnyUser();
+      allow read: if true;
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
@@ -160,7 +162,10 @@ service cloud.firestore {
 
     // Settings collection
     match /settings/{settingId} {
-      allow read: if isAnyUser();
+      // settings/app is publicly readable so unauthenticated share-link viewers
+      // can load app configuration (units, cuisines, etc.) needed to render a recipe.
+      // All other settings documents require authentication.
+      allow read: if isAnyUser() || settingId == 'app';
       allow create: if isAdmin()
                     || (
                          isEditOrAdmin()
