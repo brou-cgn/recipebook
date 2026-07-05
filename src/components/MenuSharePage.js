@@ -31,7 +31,7 @@ function MenuSharePage({ shareId, currentUser, onClose }) {
         }
         // Fetch the associated recipes (deduplicated)
         if (recipeIds.length > 0) {
-          const fetchedRecipes = await getRecipesByIds([...new Set(recipeIds)]);
+          const fetchedRecipes = await getRecipesByIds([...new Set(recipeIds)], { shareId });
           setRecipes(fetchedRecipes);
         }
       } else {

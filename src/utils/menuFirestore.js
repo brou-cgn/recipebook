@@ -3,7 +3,7 @@
  * Handles menu data storage and real-time sync with Firestore
  */
 
-import { db } from '../firebase';
+import { db, auth, functions } from '../firebase';
 import {
   collection,
   doc,
@@ -17,6 +17,7 @@ import {
   where,
   deleteField
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { removeUndefinedFields } from './firestoreUtils';
 
 /**
@@ -188,6 +189,12 @@ export const deleteMenu = async (menuId) => {
  */
 export const getMenuByShareId = async (shareId) => {
   try {
+    if (!auth.currentUser) {
+      const getSharedMenu = httpsCallable(functions, 'getSharedMenuByShareId');
+      const result = await getSharedMenu({ shareId });
+      return result?.data?.menu || null;
+    }
+
     const menusRef = collection(db, 'menus');
     const q = query(menusRef, where('shareId', '==', shareId));
     const snapshot = await getDocs(q);
@@ -195,6 +202,9 @@ export const getMenuByShareId = async (shareId) => {
     const menuDoc = snapshot.docs[0];
     return { id: menuDoc.id, ...menuDoc.data() };
   } catch (error) {
+    if (error?.code === 'functions/not-found') {
+      return null;
+    }
     console.error('Error getting menu by shareId:', error);
     return null;
   }
