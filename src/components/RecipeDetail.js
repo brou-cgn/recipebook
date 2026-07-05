@@ -178,7 +178,8 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       const [lists, icons, catImages] = await Promise.all([
         getCustomLists(),
         getButtonIcons(),
-        Promise.resolve(getCategoryImages()).catch((err) => { console.error('Error loading category images:', err); return []; }),
+        // Skip category image load in shared view – anonymous users lack Firestore access
+        isSharedView ? Promise.resolve([]) : Promise.resolve(getCategoryImages()).catch((err) => { console.error('Error loading category images:', err); return []; }),
       ]);
       // Pre-compute individual icon states using the current dark mode preference so
       // that all icon state updates land in the same React batch as setButtonIconsLoaded(true).
@@ -352,13 +353,14 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return () => { cancelled = true; };
   }, [selectedRecipe?.id, currentUser?.id]);
 
-  // Subscribe to season matrix for sort index calculation
+  // Subscribe to season matrix for sort index calculation (skip in shared view – anonymous users lack access)
   useEffect(() => {
+    if (isSharedView) return;
     const unsubscribe = subscribeToSeasonMatrix((entries) => {
       setSeasonMatrixEntries(entries);
     });
     return () => unsubscribe();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update selected recipe when initial recipe changes
   useEffect(() => {

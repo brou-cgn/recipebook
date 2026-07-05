@@ -36,7 +36,11 @@ export const subscribeToSeasonMatrix = (callback) => {
     });
     callback(entries);
   }, (error) => {
-    console.error('Error subscribing to season matrix:', error);
+    if (error?.code === 'permission-denied') {
+      console.warn('Season matrix subscription skipped: permission denied');
+    } else {
+      console.error('Error subscribing to season matrix:', error);
+    }
     callback([]);
   });
 };

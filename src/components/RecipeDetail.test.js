@@ -3076,3 +3076,97 @@ describe('RecipeDetail - Nutrition manual save icon', () => {
     expect(saveBtn).toHaveTextContent('💾');
   });
 });
+
+describe('RecipeDetail - Shared-View optional-loader guards', () => {
+  const currentUser = { id: 'anonymous', vorname: 'Gast', nachname: '' };
+
+  const sharedRecipe = {
+    id: 'recipe-shared-1',
+    title: 'Shared Recipe',
+    authorId: 'user-owner',
+    portionen: 2,
+    ingredients: ['100 g Mehl'],
+    steps: ['Backen'],
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('does not call subscribeToSeasonMatrix when isSharedView is true', async () => {
+    const seasonMatrix = require('../utils/seasonMatrix');
+    const spy = jest.spyOn(seasonMatrix, 'subscribeToSeasonMatrix');
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={sharedRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+          isSharedView={true}
+        />
+      );
+    });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('calls subscribeToSeasonMatrix when isSharedView is false', async () => {
+    const seasonMatrix = require('../utils/seasonMatrix');
+    const spy = jest.spyOn(seasonMatrix, 'subscribeToSeasonMatrix');
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={sharedRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={{ id: 'user-1', vorname: 'Test', nachname: 'User' }}
+          isSharedView={false}
+        />
+      );
+    });
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  test('does not call getCategoryImages when isSharedView is true', async () => {
+    const categoryImages = require('../utils/categoryImages');
+    const spy = jest.spyOn(categoryImages, 'getCategoryImages');
+
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={sharedRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+          isSharedView={true}
+        />
+      );
+    });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  test('renders shared recipe title without permission errors when isSharedView is true', async () => {
+    await act(async () => {
+      render(
+        <RecipeDetail
+          recipe={sharedRecipe}
+          onBack={() => {}}
+          onEdit={() => {}}
+          onDelete={() => {}}
+          currentUser={currentUser}
+          isSharedView={true}
+        />
+      );
+    });
+
+    expect(screen.getByText('Shared Recipe')).toBeInTheDocument();
+  });
+});
