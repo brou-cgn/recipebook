@@ -133,7 +133,11 @@ export async function getCategoryImages() {
     const migratedFromLocalStorage = await migrateFromLocalStorage();
     return migratedFromLocalStorage;
   } catch (error) {
-    console.error('Error getting category images from Firestore:', error);
+    if (error?.code === 'permission-denied') {
+      console.warn('Category images skipped: permission denied');
+    } else {
+      console.error('Error getting category images from Firestore:', error);
+    }
     
     // Fallback to localStorage on error
     const stored = localStorage.getItem(CATEGORY_IMAGES_KEY);
