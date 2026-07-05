@@ -353,7 +353,9 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     return () => { cancelled = true; };
   }, [selectedRecipe?.id, currentUser?.id]);
 
-  // Subscribe to season matrix for sort index calculation (skip in shared view – anonymous users lack access)
+  // Subscribe to season matrix for sort index calculation (skip in shared view – anonymous users lack access).
+  // isSharedView is intentionally omitted from deps: it is a stable mount-time prop that never changes
+  // during the component's lifetime, so re-subscribing on change is not needed.
   useEffect(() => {
     if (isSharedView) return;
     const unsubscribe = subscribeToSeasonMatrix((entries) => {
