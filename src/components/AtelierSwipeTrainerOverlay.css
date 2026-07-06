@@ -1,0 +1,272 @@
+.atelier-swipe-trainer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: #EFEFED;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.atelier-swipe-trainer-stack {
+  position: relative;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 590px;
+  flex-shrink: 0;
+}
+
+.atelier-swipe-trainer-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.atelier-swipe-trainer-label--visible {
+  opacity: 1;
+}
+
+.atelier-swipe-trainer-label--r {
+  background: #FDF3E3;
+  color: #D4820A;
+  border: 1.5px solid #D4820A;
+}
+
+.atelier-swipe-trainer-label--l {
+  background: #f0f0ee;
+  color: #888;
+  border: 1.5px solid #ccc;
+}
+
+.atelier-swipe-trainer-label--u {
+  background: #EDF2EE;
+  color: #5A8A6A;
+  border: 1.5px solid #5A8A6A;
+}
+
+.atelier-swipe-trainer-ghost,
+.atelier-swipe-trainer-card {
+  position: absolute;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  height: 520px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.14);
+  left: 50%;
+  top: 0;
+  overflow: hidden;
+}
+
+.atelier-swipe-trainer-ghost {
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.atelier-swipe-trainer-card {
+  z-index: 10;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.atelier-swipe-trainer-card:active {
+  cursor: grabbing;
+}
+
+.atelier-swipe-trainer-photo {
+  width: 100%;
+  height: 180px;
+  background: #F5F0E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.atelier-swipe-trainer-photo img {
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.atelier-swipe-trainer-body--recipe {
+  padding: 16px 18px;
+}
+
+.atelier-swipe-trainer-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1A1A18;
+  margin-bottom: 3px;
+}
+
+.atelier-swipe-trainer-author {
+  font-size: 12px;
+  color: #6B6B65;
+  margin-bottom: 10px;
+}
+
+.atelier-swipe-trainer-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.atelier-swipe-trainer-tag {
+  font-size: 11px;
+  color: #6B6B65;
+  border: 1px solid #ddd;
+  border-radius: 100px;
+  padding: 3px 10px;
+}
+
+.atelier-swipe-trainer-body--note {
+  padding: 14px 16px;
+}
+
+.atelier-swipe-trainer-note-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D4820A;
+  margin-bottom: 5px;
+}
+
+.atelier-swipe-trainer-note-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A1A18;
+  margin-bottom: 8px;
+}
+
+.atelier-swipe-trainer-note-body {
+  font-size: 12px;
+  font-weight: 300;
+  color: #6B6B65;
+  line-height: 1.6;
+}
+
+.atelier-swipe-trainer-note-body strong {
+  color: #1A1A18;
+  font-weight: 600;
+}
+
+.atelier-swipe-trainer-body--final {
+  padding: 12px 16px 14px;
+}
+
+.atelier-swipe-trainer-final-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D4820A;
+  margin-bottom: 4px;
+}
+
+.atelier-swipe-trainer-final-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1A1A18;
+  margin-bottom: 6px;
+}
+
+.atelier-swipe-trainer-final-body {
+  font-size: 11px;
+  font-weight: 300;
+  color: #6B6B65;
+  line-height: 1.55;
+  margin-bottom: 10px;
+}
+
+.atelier-swipe-trainer-final-body strong {
+  color: #1A1A18;
+  font-weight: 600;
+}
+
+.atelier-swipe-trainer-final-divider {
+  height: 1px;
+  background: #f0f0ee;
+  margin-bottom: 10px;
+}
+
+.atelier-swipe-trainer-final-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.atelier-swipe-trainer-final-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.atelier-swipe-trainer-final-legend-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.atelier-swipe-trainer-final-legend-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1A1A18;
+}
+
+.atelier-swipe-trainer-final-legend-sub {
+  font-size: 10px;
+  color: #6B6B65;
+  font-weight: 300;
+}
+
+.atelier-swipe-trainer-dots-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.atelier-swipe-trainer-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.atelier-swipe-trainer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C8C7C2;
+  transition: all 0.3s;
+}
+
+.atelier-swipe-trainer-dot--active {
+  width: 22px;
+  border-radius: 3px;
+  background: #D4820A;
+}

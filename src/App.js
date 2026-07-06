@@ -24,6 +24,7 @@ import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
+import AtelierSwipeTrainerOverlay from './components/AtelierSwipeTrainerOverlay';
 import { 
   loginUser, 
   logoutUser, 
@@ -338,6 +339,7 @@ function App() {
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
+  const [showAtelierSwipeTrainer, setShowAtelierSwipeTrainer] = useState(false);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
   const initialWebimportAuthorRef = useRef('');
@@ -1150,10 +1152,15 @@ function App() {
   };
 
   const handleAtelierOnboardingConfirm = () => {
+    setShowAtelierOnboarding(false);
+    setShowAtelierSwipeTrainer(true);
+  };
+
+  const handleAtelierSwipeTrainerComplete = () => {
     const atelierTab = BOTTOM_NAV_TABS.find((t) => t.key === 'atelier');
     const atelierView = atelierTab?.view || 'tagesmenu';
     localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
-    setShowAtelierOnboarding(false);
+    setShowAtelierSwipeTrainer(false);
     setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
     handleViewChange(atelierView);
     window.scrollTo(0, 0);
@@ -2110,6 +2117,9 @@ function App() {
         )}
         {showAtelierOnboarding && (
           <AtelierOnboardingOverlay onConfirm={handleAtelierOnboardingConfirm} />
+        )}
+        {showAtelierSwipeTrainer && (
+          <AtelierSwipeTrainerOverlay onComplete={handleAtelierSwipeTrainerComplete} />
         )}
       </div>
     </NutritionReferenceProvider>
