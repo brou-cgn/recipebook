@@ -201,7 +201,7 @@ function AtelierSwipeTrainerOverlay({ onComplete }) {
         setCardPhase('snap');
         return;
       }
-      pendingOutcomeRef.current = det === 'r' ? 'restart' : 'complete';
+      pendingOutcomeRef.current = det === 'r' ? 'restart' : `complete:${det}`;
       setRotationDeg(0);
       setDragOffset({
         x: det === 'r' ? FLY_DISTANCE_H : det === 'l' ? -FLY_DISTANCE_H : 0,
@@ -237,8 +237,8 @@ function AtelierSwipeTrainerOverlay({ onComplete }) {
     if (cardPhase === 'flying') {
       const outcome = pendingOutcomeRef.current;
       pendingOutcomeRef.current = null;
-      if (outcome === 'complete') {
-        onComplete();
+      if (typeof outcome === 'string' && outcome.startsWith('complete:')) {
+        onComplete(outcome.split(':')[1]);
         return;
       }
       setDragOffset({ x: 0, y: 0 });

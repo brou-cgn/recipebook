@@ -109,6 +109,7 @@ describe('AtelierSwipeTrainerOverlay', () => {
     swipeUp(); // finish
 
     expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith('u');
   });
 
   test('swiping left on the final card also completes the trainer', () => {
@@ -121,5 +122,6 @@ describe('AtelierSwipeTrainerOverlay', () => {
     swipeLeft(); // finish
 
     expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledWith('l');
   });
 });

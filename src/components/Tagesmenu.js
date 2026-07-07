@@ -72,12 +72,34 @@ function getKachelMenuAltIconValue(eff) {
   return eff('tagesmenuKachelMenuAlt') || eff('tagesmenuKachelMenu');
 }
 
-function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, currentUser }) {
+function Tagesmenu({
+  interactiveLists,
+  recipes,
+  allUsers,
+  onSelectRecipe,
+  currentUser,
+  selectedCategories,
+  onSelectedCategoriesChange,
+}) {
   const [selectedListId, setSelectedListId] = useState(
     interactiveLists.length > 0 ? interactiveLists[0].id : null
   );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState([]);
+  const [internalSelectedCategoryFilter, setInternalSelectedCategoryFilter] = useState([]);
+  const selectedCategoryFilter = Array.isArray(selectedCategories)
+    ? selectedCategories
+    : internalSelectedCategoryFilter;
+
+  useEffect(() => {
+    if (Array.isArray(selectedCategories)) {
+      setInternalSelectedCategoryFilter(selectedCategories);
+    }
+  }, [selectedCategories]);
+
+  const handleSelectedCategoryFilterChange = useCallback((nextCategories) => {
+    setInternalSelectedCategoryFilter(nextCategories);
+    onSelectedCategoriesChange?.(nextCategories);
+  }, [onSelectedCategoriesChange]);
 
   const selectedList = interactiveLists.find((l) => l.id === selectedListId) ?? null;
 
@@ -1569,7 +1591,7 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
         onSelectList={(id) => setSelectedListId(id)}
         categoryOptions={availableMealCategories}
         selectedCategories={selectedCategoryFilter}
-        onSelectCategory={setSelectedCategoryFilter}
+        onSelectCategory={handleSelectedCategoryFilterChange}
       />
 
     </div>
