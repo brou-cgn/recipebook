@@ -624,6 +624,18 @@
   border-color: #DF7A00;
 }
 
+[data-theme="dark"] .atelier-category-selection__pill {
+  background: #2A2623;
+  color: #E6DED6;
+  border-color: #3A342F;
+}
+
+[data-theme="dark"] .atelier-category-selection__pill.active {
+  background: #DF7A00;
+  color: white;
+  border-color: #DF7A00;
+}
+
 /* ---- Settings ---- */
 [data-theme="dark"] .settings-container {
   background: #121212;
