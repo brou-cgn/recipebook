@@ -2681,3 +2681,87 @@ describe('Tagesmenu – Kochatelier: kein Kachel-Menü bei selbstreferenzieller 
     expect(gemeinsameGroup.querySelector('.tagesmenu-kachel-context-select')).not.toBeNull();
   });
 });
+
+describe('Tagesmenu – Zutatenliste: Rezeptlinks zeigen Rezeptnamen an', () => {
+  test('zeigt den Rezeptnamen statt der kodierten ID für Zutaten mit Rezeptlink', async () => {
+    const linkedRecipe = makeRecipe('linked1', 'Hähnchen Marinieren');
+    const mainRecipe = {
+      ...makeRecipe('main1', 'Hauptrezept'),
+      ingredients: [
+        { type: 'ingredient', text: '#recipe:linked1:Hähnchen Marinieren' },
+      ],
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={[mainRecipe, linkedRecipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    expect(topCard).not.toBeNull();
+    // Should show the linked recipe title, not the raw encoded text or ID
+    expect(topCard).toHaveTextContent('Hähnchen Marinieren');
+    expect(topCard).not.toHaveTextContent('#recipe:linked1');
+  });
+
+  test('zeigt den Namen aus dem kodierten Link, wenn das verlinkte Rezept nicht gefunden wird', async () => {
+    const mainRecipe = {
+      ...makeRecipe('main1', 'Hauptrezept'),
+      ingredients: [
+        { type: 'ingredient', text: '#recipe:unknown-id:Fallback Rezeptname' },
+      ],
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={[mainRecipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    expect(topCard).not.toBeNull();
+    // Should show the name from the encoded link when linked recipe is not in recipes list
+    expect(topCard).toHaveTextContent('Fallback Rezeptname');
+    expect(topCard).not.toHaveTextContent('#recipe:unknown-id');
+  });
+
+  test('zeigt Mengenangabe und Rezeptnamen für Rezeptlinks mit Mengenprefix', async () => {
+    const linkedRecipe = makeRecipe('sauce1', 'Tomatensoße');
+    const mainRecipe = {
+      ...makeRecipe('main1', 'Hauptrezept'),
+      ingredients: [
+        { type: 'ingredient', text: '2 EL #recipe:sauce1:Tomatensoße' },
+      ],
+    };
+
+    await act(async () => {
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={[mainRecipe, linkedRecipe]}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+        />
+      );
+    });
+
+    const topCard = document.querySelector('.tagesmenu-card-top');
+    expect(topCard).not.toBeNull();
+    expect(topCard).toHaveTextContent('2 EL Tomatensoße');
+    expect(topCard).not.toHaveTextContent('#recipe:sauce1');
+  });
+});
