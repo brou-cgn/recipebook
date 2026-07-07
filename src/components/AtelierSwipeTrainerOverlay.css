@@ -270,3 +270,102 @@
   border-radius: 3px;
   background: #D4820A;
 }
+
+/* ── Darkmode ────────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .atelier-swipe-trainer-overlay {
+  background: #1A1A18;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-ghost,
+[data-theme="dark"] .atelier-swipe-trainer-card {
+  background: #2A2A28;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-photo {
+  background: #2F2A22;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-name {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-author {
+  color: #B0A898;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-tag {
+  color: #B0A898;
+  border-color: #4A4A45;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-note-tag {
+  color: #E89422;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-note-title {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-note-body {
+  color: #B0A898;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-note-body strong {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-tag {
+  color: #E89422;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-title {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-body {
+  color: #B0A898;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-body strong {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-divider {
+  background: #3A3A35;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-legend-title {
+  color: #F0EAE0;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-final-legend-sub {
+  color: #B0A898;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-label--r {
+  background: #3A2E1A;
+  color: #E89422;
+  border-color: #D4820A;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-label--l {
+  background: #2A2A28;
+  color: #B0A898;
+  border-color: #4A4A45;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-label--u {
+  background: #1F2A22;
+  color: #7FB08F;
+  border-color: #5A8A6A;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-dot {
+  background: #4A4A45;
+}
+
+[data-theme="dark"] .atelier-swipe-trainer-dot--active {
+  background: #D4820A;
+}
