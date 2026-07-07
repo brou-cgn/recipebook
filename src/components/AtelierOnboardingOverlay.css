@@ -123,3 +123,7 @@
 [data-theme="dark"] .atelier-onboarding-bubble__arrow {
   background: #2A2A28;
 }
+
+[data-theme="dark"] .atelier-onboarding-bubble__body strong {
+  color: #F0EAE0;
+}
