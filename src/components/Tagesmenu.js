@@ -9,6 +9,7 @@ import { getAllCookDates } from '../utils/recipeCookDates';
 import { subscribeToSeasonMatrix } from '../utils/seasonMatrix';
 import { calculateRecipeSortIndex } from '../utils/recipeSortIndex';
 import { isBase64Image } from '../utils/imageUtils';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 import TagesmenuFilterOverlay from './TagesmenuFilterOverlay';
 
 /**
@@ -1475,7 +1476,15 @@ function Tagesmenu({ interactiveLists, recipes, allUsers, onSelectRecipe, curren
                               </li>
                             );
                           }
-                          return <li key={`i-${i}`}>{getItemText(item)}</li>;
+                          const text = getItemText(item);
+                          const recipeLink = decodeRecipeLink(text);
+                          if (recipeLink) {
+                            const linkedRecipe = recipes.find(r => r.id === recipeLink.recipeId);
+                            const displayName = linkedRecipe ? linkedRecipe.title : recipeLink.recipeName;
+                            const displayText = recipeLink.quantityPrefix ? `${recipeLink.quantityPrefix} ${displayName}` : displayName;
+                            return <li key={`i-${i}`}>{displayText}</li>;
+                          }
+                          return <li key={`i-${i}`}>{text}</li>;
                         })}
                       </ul>
                     </div>
