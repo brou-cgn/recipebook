@@ -25,6 +25,7 @@ import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
 import AtelierSwipeTrainerOverlay from './components/AtelierSwipeTrainerOverlay';
+import AtelierCategorySelectionPage from './components/AtelierCategorySelectionPage';
 import { 
   loginUser, 
   logoutUser, 
@@ -232,6 +233,32 @@ function matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nu
   return hasHauptsaisonIngredient(recipe, seasonMatrixEntries, undefined, nutritionReferenceRows);
 }
 
+function getAtelierMealCategories(interactiveLists, recipes) {
+  const interactiveListIds = new Set(interactiveLists.map((list) => list.id));
+  const interactiveListRecipeIds = new Set(
+    interactiveLists.flatMap((list) => Array.isArray(list.recipeIds) ? list.recipeIds : [])
+  );
+  const categories = new Set();
+
+  recipes.forEach((recipe) => {
+    if (!interactiveListIds.has(recipe.groupId) && !interactiveListRecipeIds.has(recipe.id)) {
+      return;
+    }
+    const rawCategories = Array.isArray(recipe?.speisekategorie)
+      ? recipe.speisekategorie
+      : recipe?.speisekategorie
+        ? [recipe.speisekategorie]
+        : [];
+
+    rawCategories
+      .map((category) => typeof category === 'string' ? category.trim() : '')
+      .filter(Boolean)
+      .forEach((category) => categories.add(category));
+  });
+
+  return Array.from(categories).sort((a, b) => a.localeCompare(b, 'de'));
+}
+
 const emptyPrivateListFilterHandler = () => {};
 
 function applyRolePermissionsToUser(user, permissionsMap = {}) {
@@ -268,14 +295,14 @@ function getInitialViewForUser(user) {
 function getBottomNavActiveKey(currentView) {
   if (currentView === 'startseite') return 'home';
   if (currentView === 'menus') return 'menus';
-  if (currentView === 'tagesmenu' || currentView === 'groups') return 'atelier';
+  if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection' || currentView === 'groups') return 'atelier';
   if (currentView === 'kueche' || currentView === 'appCalls' || currentView === 'meineKuechenstars') return 'chef';
   return 'recipes';
 }
 
 function getBottomNavBehavior(currentView) {
   if (currentView === 'startseite') return 'visible';
-  if (currentView === 'tagesmenu') return 'hidden';
+  if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection') return 'hidden';
   if (['recipes', 'seasonalRecipes', 'trendingRecipes', 'menus', 'groups'].includes(currentView)) return 'auto';
   return 'visible';
 }
@@ -340,6 +367,7 @@ function App() {
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
   const [showAtelierSwipeTrainer, setShowAtelierSwipeTrainer] = useState(false);
+  const [atelierSelectedCategories, setAtelierSelectedCategories] = useState([]);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
   const initialWebimportAuthorRef = useRef('');
@@ -1156,14 +1184,29 @@ function App() {
     setShowAtelierSwipeTrainer(true);
   };
 
-  const handleAtelierSwipeTrainerComplete = () => {
+  const handleOpenAtelier = () => {
     const atelierTab = BOTTOM_NAV_TABS.find((t) => t.key === 'atelier');
     const atelierView = atelierTab?.view || 'tagesmenu';
-    localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
-    setShowAtelierSwipeTrainer(false);
     setIsBottomNavVisible(getBottomNavBehavior(atelierView) !== 'hidden');
     handleViewChange(atelierView);
     window.scrollTo(0, 0);
+  };
+
+  const handleOpenAtelierCategorySelection = () => {
+    const atelierSelectionView = 'atelierCategorySelection';
+    setIsBottomNavVisible(getBottomNavBehavior(atelierSelectionView) !== 'hidden');
+    handleViewChange(atelierSelectionView);
+    window.scrollTo(0, 0);
+  };
+
+  const handleAtelierSwipeTrainerComplete = (finalSwipeDirection) => {
+    localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
+    setShowAtelierSwipeTrainer(false);
+    if (finalSwipeDirection === 'l') {
+      handleOpenAtelierCategorySelection();
+      return;
+    }
+    handleOpenAtelier();
   };
 
   const handleOpenPrivateListRecipes = (groupId) => {
@@ -1687,7 +1730,6 @@ function App() {
     ),
     [groups, currentUser]
   );
-
   const isPrivateListSearchContext = currentView === 'groups' && selectedGroup?.type === 'private';
   const isSeasonalRecipesView = currentView === 'seasonalRecipes';
   const seasonalTaggedRecipes = useMemo(
@@ -1744,6 +1786,16 @@ function App() {
     ),
     [groups, currentUser]
   );
+  const atelierCategoryOptions = useMemo(
+    () => getAtelierMealCategories(interactiveLists, recipes),
+    [interactiveLists, recipes]
+  );
+
+  useEffect(() => {
+    setAtelierSelectedCategories((previous) =>
+      previous.filter((category) => atelierCategoryOptions.includes(category))
+    );
+  }, [atelierCategoryOptions]);
 
   const handleUniversalImport = (recipe) => {
     setShowUniversalImport(false);
@@ -1962,6 +2014,15 @@ function App() {
           allUsers={allUsers}
           onSelectRecipe={handleSelectRecipe}
           currentUser={currentUser}
+          selectedCategories={atelierSelectedCategories}
+          onSelectedCategoriesChange={setAtelierSelectedCategories}
+        />
+        ) : currentView === 'atelierCategorySelection' ? (
+        <AtelierCategorySelectionPage
+          categoryOptions={atelierCategoryOptions}
+          selectedCategories={atelierSelectedCategories}
+          onSelectedCategoriesChange={setAtelierSelectedCategories}
+          onContinue={handleOpenAtelier}
         />
         ) : currentView === 'kueche' ? (
         <Kueche

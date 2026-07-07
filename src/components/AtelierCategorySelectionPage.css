@@ -1,0 +1,65 @@
+.atelier-category-selection {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.atelier-category-selection__content {
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.atelier-category-selection__eyebrow {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6e6a65;
+}
+
+.atelier-category-selection__title {
+  margin: 0;
+}
+
+.atelier-category-selection__body,
+.atelier-category-selection__empty {
+  margin: 0;
+  color: #4f4a45;
+  line-height: 1.5;
+}
+
+.atelier-category-selection__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.atelier-category-selection__pill {
+  border: 1px solid #d8d2cb;
+  border-radius: 999px;
+  background: #fff;
+  color: #2f2b27;
+  padding: 10px 16px;
+  font: inherit;
+}
+
+.atelier-category-selection__pill.active {
+  background: #2f2b27;
+  border-color: #2f2b27;
+  color: #fff;
+}
+
+.atelier-category-selection__continue {
+  border: none;
+  border-radius: 999px;
+  background: #2f2b27;
+  color: #fff;
+  padding: 14px 20px;
+  font: inherit;
+  font-weight: 600;
+}

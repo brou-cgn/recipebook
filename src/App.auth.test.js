@@ -5,6 +5,7 @@ import App from './App';
 let mockAuthStateCallback;
 const mockRecipeListRender = jest.fn();
 const mockRecipeFormProps = jest.fn();
+const mockTagesmenuProps = jest.fn();
 
 jest.mock('./components/RecipeList', () => function MockRecipeList(props) {
   mockRecipeListRender(props);
@@ -209,7 +210,8 @@ jest.mock('./components/MeineKuechenstarsPage', () => function MockMeineKuechens
   return null;
 });
 
-jest.mock('./components/Tagesmenu', () => function MockTagesmenu() {
+jest.mock('./components/Tagesmenu', () => function MockTagesmenu(props) {
+  mockTagesmenuProps(props);
   return <div data-testid="tagesmenu-view">Tagesmenu</div>;
 });
 
@@ -241,6 +243,8 @@ jest.mock('./utils/userManagement', () => ({
 }));
 
 const { getRolePermissions: mockGetRolePermissions } = jest.requireMock('./utils/userManagement');
+const { subscribeToRecipes: mockSubscribeToRecipes } = jest.requireMock('./utils/recipeFirestore');
+const { subscribeToGroups: mockSubscribeToGroups } = jest.requireMock('./utils/groupFirestore');
 
 jest.mock('./utils/pushNotifications', () => ({
   requestNotificationPermission: () => Promise.resolve('default'),
@@ -296,7 +300,7 @@ jest.mock('./utils/storageUtils', () => ({
 }));
 
 jest.mock('./utils/recipeFirestore', () => ({
-  subscribeToRecipes: () => () => {},
+  subscribeToRecipes: jest.fn(() => () => {}),
   addRecipe: jest.fn(),
   updateRecipe: jest.fn(),
   deleteRecipe: jest.fn(),
@@ -314,7 +318,7 @@ jest.mock('./utils/menuFirestore', () => ({
 }));
 
 jest.mock('./utils/groupFirestore', () => ({
-  subscribeToGroups: () => () => {},
+  subscribeToGroups: jest.fn(() => () => {}),
   addGroup: jest.fn(),
   updateGroup: jest.fn(),
   deleteGroup: jest.fn(),
@@ -324,6 +328,32 @@ jest.mock('./utils/groupFirestore', () => ({
 }));
 
 describe('App authentication view handling', () => {
+  function getReactProps(element) {
+    const key = Object.keys(element).find((value) => value.startsWith('__reactProps$'));
+    return key ? element[key] : null;
+  }
+
+  function dragTrainer(dx, dy) {
+    const card = screen.getByTestId('atelier-swipe-trainer-card');
+    const props = getReactProps(card);
+    act(() => {
+      props.onPointerDown({ clientX: 0, clientY: 0, pointerId: 1, currentTarget: card });
+    });
+    act(() => {
+      props.onPointerMove({ clientX: dx, clientY: dy, pointerId: 1, currentTarget: card });
+    });
+    act(() => {
+      props.onPointerUp({ clientX: dx, clientY: dy, pointerId: 1, currentTarget: card });
+    });
+    act(() => {
+      getReactProps(screen.getByTestId('atelier-swipe-trainer-card')).onTransitionEnd?.({ propertyName: 'transform' });
+    });
+  }
+
+  const swipeTrainerRight = () => dragTrainer(120, 0);
+  const swipeTrainerLeft = () => dragTrainer(-120, 0);
+  const swipeTrainerUp = () => dragTrainer(0, -120);
+
   beforeEach(() => {
     mockAuthStateCallback = null;
     mockGetRolePermissions.mockResolvedValue({});
@@ -331,6 +361,9 @@ describe('App authentication view handling', () => {
     mockGetOnboardingTestmodeActive.mockClear();
     mockRecipeListRender.mockClear();
     mockRecipeFormProps.mockClear();
+    mockTagesmenuProps.mockClear();
+    mockSubscribeToRecipes.mockImplementation(() => () => {});
+    mockSubscribeToGroups.mockImplementation(() => () => {});
     localStorage.clear();
     sessionStorage.clear();
     window.history.pushState({}, '', '/');
@@ -664,6 +697,65 @@ describe('App authentication view handling', () => {
 
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
+  });
+
+  test('linksswipe auf der vierten atelier-karte öffnet die kategorien-auswahl vor dem kochatelier und übernimmt die auswahl', async () => {
+    mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
+    mockGetOnboardingTestmodeActive.mockResolvedValue(true);
+    mockSubscribeToGroups.mockImplementation((_userId, callback) => {
+      callback([
+        {
+          id: 'interactive-1',
+          type: 'private',
+          listKind: 'interactive',
+          ownerId: 'user-nav-categories',
+          recipeIds: [],
+        },
+      ]);
+      return () => {};
+    });
+    mockSubscribeToRecipes.mockImplementation((_userId, _isAdmin, callback) => {
+      callback([
+        { id: 'recipe-1', title: 'Tiramisu', groupId: 'interactive-1', speisekategorie: ['Dessert'] },
+        { id: 'recipe-2', title: 'Suppe', groupId: 'interactive-1', speisekategorie: ['Suppen'] },
+      ]);
+      return () => {};
+    });
+
+    render(<App />);
+    expect(await screen.findByTestId('login-view')).toBeInTheDocument();
+
+    await act(async () => {
+      mockAuthStateCallback({
+        id: 'user-nav-categories',
+        vorname: 'Atelier',
+        nachname: 'Kategorie',
+        email: 'atelier-categories@example.com',
+        role: 'user',
+        startseite: true,
+      });
+      await Promise.resolve();
+    });
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+    expect(screen.getByRole('dialog', { name: 'Swipe-Training' })).toBeInTheDocument();
+
+    swipeTrainerRight();
+    swipeTrainerLeft();
+    swipeTrainerUp();
+    swipeTrainerLeft();
+
+    expect(screen.getByTestId('atelier-category-selection-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dessert' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kochatelier öffnen' }));
+
+    expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
+    expect(mockTagesmenuProps.mock.lastCall[0].selectedCategories).toEqual(['Dessert']);
   });
 
   test('bottom spacing custom property follows bottom navigation visibility', async () => {

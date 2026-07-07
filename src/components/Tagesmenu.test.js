@@ -1413,6 +1413,35 @@ describe('Tagesmenu – candidate score threshold (maxKandidatenSchwelle)', () =
 });
 
 describe('Tagesmenu – Speisekategorien-Filter', () => {
+  test('übernimmt vorausgewählte Kategorien in den Kochatelier-Filter', async () => {
+    const categoryRecipes = [
+      { ...makeRecipe('r1', 'Herzhaft'), speisekategorie: ['Hauptspeisen'] },
+      { ...makeRecipe('r2', 'Süßspeise'), speisekategorie: ['Dessert'] },
+    ];
+
+    const { container } = await act(async () =>
+      render(
+        <Tagesmenu
+          interactiveLists={[list]}
+          recipes={categoryRecipes}
+          allUsers={[]}
+          onSelectRecipe={() => {}}
+          currentUser={currentUser}
+          selectedCategories={['Dessert']}
+          onSelectedCategoriesChange={() => {}}
+        />
+      )
+    );
+
+    expect(container.querySelector('.tagesmenu-card-top')).toHaveTextContent('Süßspeise');
+
+    await act(async () => {
+      screen.getByRole('button', { name: /filter öffnen/i }).click();
+    });
+
+    expect(screen.getByRole('button', { name: 'Dessert' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('zeigt den Speisekategorien-Filter auch bei nur einer Liste und filtert den Swipekarten-Stapel', async () => {
     const categoryRecipes = [
       { ...makeRecipe('r1', 'Herzhaft'), speisekategorie: ['Hauptspeisen'] },
