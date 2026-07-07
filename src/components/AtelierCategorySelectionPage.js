@@ -24,10 +24,10 @@ function AtelierCategorySelectionPage({
     <section className="atelier-category-selection" data-testid="atelier-category-selection-view">
       <div className="atelier-category-selection__content">
         <p className="atelier-category-selection__eyebrow">Kochatelier vorbereiten</p>
-        <h1 className="atelier-category-selection__title">Speisekategorien auswählen</h1>
+        <h1 className="atelier-category-selection__title">Wonach suchst du heute?</h1>
         <p className="atelier-category-selection__body">
-          Wähle aus, was heute in deinen Swipestapel soll. Ohne Auswahl werden alle Kategorien
-          angezeigt.
+          Wähle aus, wie du inspiriert werden möchtest. Lass dich überraschen indem du einfach
+          keine Kategorie auswählst.
         </p>
 
         {orderedCategoryOptions.length > 0 ? (
