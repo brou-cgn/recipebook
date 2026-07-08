@@ -1181,6 +1181,10 @@ function App() {
 
   const handleAtelierOnboardingConfirm = () => {
     setShowAtelierOnboarding(false);
+    handleOpenAtelierCategorySelection();
+  };
+
+  const handleAtelierCategorySelectionContinue = () => {
     setShowAtelierSwipeTrainer(true);
   };
 
@@ -1199,13 +1203,9 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleAtelierSwipeTrainerComplete = (finalSwipeDirection) => {
+  const handleAtelierSwipeTrainerComplete = () => {
     localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
     setShowAtelierSwipeTrainer(false);
-    if (finalSwipeDirection === 'l') {
-      handleOpenAtelierCategorySelection();
-      return;
-    }
     handleOpenAtelier();
   };
 
@@ -2022,7 +2022,7 @@ function App() {
           categoryOptions={atelierCategoryOptions}
           selectedCategories={atelierSelectedCategories}
           onSelectedCategoriesChange={setAtelierSelectedCategories}
-          onContinue={handleOpenAtelier}
+          onContinue={handleAtelierCategorySelectionContinue}
         />
         ) : currentView === 'kueche' ? (
         <Kueche

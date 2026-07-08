@@ -699,7 +699,7 @@ describe('App authentication view handling', () => {
     expect(screen.queryByRole('dialog', { name: 'Atelier Onboarding' })).not.toBeInTheDocument();
   });
 
-  test('linksswipe auf der vierten atelier-karte öffnet die kategorien-auswahl vor dem kochatelier und übernimmt die auswahl', async () => {
+  test('kategorien-auswahl erscheint nach dem onboarding-overlay vor dem swipe-training und übernimmt die auswahl', async () => {
     mockGetRolePermissions.mockResolvedValue({ user: { startseite: true, onboardingTestmode: true } });
     mockGetOnboardingTestmodeActive.mockResolvedValue(true);
     mockSubscribeToGroups.mockImplementation((_userId, callback) => {
@@ -741,18 +741,19 @@ describe('App authentication view handling', () => {
     fireEvent.click(within(nav).getByRole('button', { name: 'Atelier' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+
+    expect(screen.getByTestId('atelier-category-selection-view')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Swipe-Training' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dessert' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kochatelier öffnen' }));
+
     expect(screen.getByRole('dialog', { name: 'Swipe-Training' })).toBeInTheDocument();
 
     swipeTrainerRight();
     swipeTrainerLeft();
     swipeTrainerUp();
     swipeTrainerLeft();
-
-    expect(screen.getByTestId('atelier-category-selection-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('tagesmenu-view')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Dessert' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Kochatelier öffnen' }));
 
     expect(screen.getByTestId('tagesmenu-view')).toBeInTheDocument();
     expect(mockTagesmenuProps.mock.lastCall[0].selectedCategories).toEqual(['Dessert']);
