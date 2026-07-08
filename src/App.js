@@ -24,6 +24,7 @@ import Startseite from './components/Startseite';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
+import AtelierCategoryOverlay from './components/AtelierCategoryOverlay';
 import AtelierSwipeTrainerOverlay from './components/AtelierSwipeTrainerOverlay';
 import { 
   loginUser, 
@@ -339,6 +340,7 @@ function App() {
   const [webimportAuthorId, setWebimportAuthorId] = useState('');
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
+  const [showAtelierCategory, setShowAtelierCategory] = useState(false);
   const [showAtelierSwipeTrainer, setShowAtelierSwipeTrainer] = useState(false);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
@@ -1153,6 +1155,11 @@ function App() {
 
   const handleAtelierOnboardingConfirm = () => {
     setShowAtelierOnboarding(false);
+    setShowAtelierCategory(true);
+  };
+
+  const handleAtelierCategoryContinue = () => {
+    setShowAtelierCategory(false);
     setShowAtelierSwipeTrainer(true);
   };
 
@@ -2117,6 +2124,9 @@ function App() {
         )}
         {showAtelierOnboarding && (
           <AtelierOnboardingOverlay onConfirm={handleAtelierOnboardingConfirm} />
+        )}
+        {showAtelierCategory && (
+          <AtelierCategoryOverlay onContinue={handleAtelierCategoryContinue} />
         )}
         {showAtelierSwipeTrainer && (
           <AtelierSwipeTrainerOverlay onComplete={handleAtelierSwipeTrainerComplete} />

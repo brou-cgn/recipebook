@@ -1,0 +1,165 @@
+.atelier-category-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: #EFEFED;
+  overflow: hidden;
+}
+
+.atelier-category-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 24px 32px;
+  overflow: hidden;
+}
+
+.atelier-category-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #D4820A;
+  margin-bottom: 10px;
+}
+
+.atelier-category-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1A1A18;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.atelier-category-body {
+  font-size: 15px;
+  font-weight: 300;
+  color: #6B6B65;
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+.atelier-category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: auto;
+  overflow-y: auto;
+}
+
+.atelier-category-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.atelier-category-chip {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1A1A18;
+  border: 1.5px solid #D0CFC9;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.atelier-category-checkbox:checked + .atelier-category-chip {
+  background: #D4820A;
+  border-color: #D4820A;
+  color: #fff;
+  font-weight: 500;
+}
+
+.atelier-category-chip:active {
+  opacity: 0.85;
+}
+
+.atelier-category-btn-wrap {
+  padding-top: 24px;
+}
+
+.atelier-category-btn {
+  width: 100%;
+  padding: 15px;
+  background: #D4820A;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.atelier-category-btn:active {
+  transform: scale(0.98);
+  background: #c07508;
+}
+
+.atelier-category-dots-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.atelier-category-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.atelier-category-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C8C7C2;
+  transition: all 0.3s;
+}
+
+.atelier-category-dot--active {
+  width: 22px;
+  border-radius: 3px;
+  background: #D4820A;
+}
+
+/* Dark mode */
+[data-theme="dark"] .atelier-category-overlay {
+  background: #1A1A18;
+}
+
+[data-theme="dark"] .atelier-category-title {
+  color: #EFEFED;
+}
+
+[data-theme="dark"] .atelier-category-body {
+  color: #9A9A94;
+}
+
+[data-theme="dark"] .atelier-category-chip {
+  background: #2A2A28;
+  border-color: #3A3A38;
+  color: #EFEFED;
+}
+
+[data-theme="dark"] .atelier-category-checkbox:checked + .atelier-category-chip {
+  background: #D4820A;
+  border-color: #D4820A;
+  color: #fff;
+}
+
+[data-theme="dark"] .atelier-category-dot {
+  background: #3A3A38;
+}
