@@ -290,6 +290,12 @@ const Header = forwardRef(function Header({
                       >
                         Chefkoch & mehr
                       </button>
+                      <button
+                        className={`menu-item ${currentView === 'events' ? 'active' : ''}`}
+                        onClick={() => handleViewChangeInternal('events')}
+                      >
+                        Events
+                      </button>
                     </div>
                   )}
                   {visibleFaqs.length > 0 && (
