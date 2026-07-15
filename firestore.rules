@@ -161,6 +161,20 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Event drink-calculation planning (Menüpunkt "Events")
+    match /users/{userId}/events/{eventId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Per-user calibrated consumption rates used by calculateEventDrinks.
+    // Only writable via the submitConsumption Cloud Function (Admin SDK
+    // bypasses these rules) so a manipulated client can't inject bogus
+    // rates that would corrupt future calculations.
+    match /users/{userId}/erfahrungswerte/{kategorie} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Settings collection
     match /settings/{settingId} {
       // settings/app and settings/images are publicly readable so unauthenticated

@@ -79,19 +79,33 @@ self.addEventListener('message', (event) => {
 });
 
 // ── Notification click – bring the app to the foreground ──────────────────────
+/**
+ * Build the in-app URL a notification should deep-link to, based on its data payload.
+ */
+function buildNotificationTargetUrl(data) {
+  if (data?.type === 'consumption_reminder' && data.eventId) {
+    return `/?eventReminder=${encodeURIComponent(data.eventId)}`;
+  }
+  return '/';
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = buildNotificationTargetUrl(event.notification.data);
 
   event.waitUntil(
       clients.matchAll({type: 'window', includeUncontrolled: true}).then(
           (clientList) => {
             for (const client of clientList) {
               if (client.url && 'focus' in client) {
+                if ('navigate' in client) {
+                  return client.navigate(targetUrl).then((c) => c.focus());
+                }
                 return client.focus();
               }
             }
             if (clients.openWindow) {
-              return clients.openWindow('/');
+              return clients.openWindow(targetUrl);
             }
           },
       ),

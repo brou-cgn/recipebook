@@ -5583,3 +5583,8 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
       console.log(`nightlySwipeFlagsCleanup: cleaned up ${cleanedCount} expired swipe flag document(s)`);
     },
 );
+
+// Getränke-Kalkulation für Events (Menüpunkt "Events" im Hamburger-Menü).
+exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;
+exports.submitConsumption = require('./submitConsumption').submitConsumption;
+exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;

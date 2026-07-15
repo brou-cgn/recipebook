@@ -3686,3 +3686,107 @@
   color: #e8e8e8;
   border-color: #555;
 }
+
+/* ---- Events (Getränke-Kalkulation) ---- */
+[data-theme="dark"] .events-page-header h2,
+[data-theme="dark"] .events-card-main h3,
+[data-theme="dark"] .events-result-card h3 {
+  color: #7fb8a3;
+}
+
+[data-theme="dark"] .events-close-btn {
+  color: #ccc;
+}
+
+[data-theme="dark"] .events-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+[data-theme="dark"] .events-empty-state,
+[data-theme="dark"] .events-card-meta,
+[data-theme="dark"] .events-info-text,
+[data-theme="dark"] .events-detail-meta,
+[data-theme="dark"] .events-changes-list {
+  color: #bbb;
+}
+
+[data-theme="dark"] .events-empty-hint {
+  color: #888;
+}
+
+[data-theme="dark"] .events-card,
+[data-theme="dark"] .events-form,
+[data-theme="dark"] .events-result-card {
+  background: #1e1e1e;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .events-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .events-form-field > span:first-child {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .events-form-field,
+[data-theme="dark"] .events-category-checkbox {
+  color: #ccc;
+}
+
+[data-theme="dark"] .events-form-field input,
+[data-theme="dark"] .events-form-field select {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .events-secondary-btn {
+  background: #333;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .events-delete-btn {
+  background: #4a2323;
+  color: #f0a0a0;
+}
+
+[data-theme="dark"] .events-status-badge {
+  background: #333;
+  color: #ccc;
+}
+
+[data-theme="dark"] .events-status-geplant {
+  background: #4a3f1a;
+  color: #e8c766;
+}
+
+[data-theme="dark"] .events-status-berechnet {
+  background: #1a3350;
+  color: #8fb8e8;
+}
+
+[data-theme="dark"] .events-status-verbrauchErfasst {
+  background: #1a3a2a;
+  color: #7fd9a8;
+}
+
+[data-theme="dark"] .events-warnings {
+  background: #3a3320;
+  border-color: #6b5b1f;
+}
+
+[data-theme="dark"] .events-warning-text {
+  color: #e8c766;
+}
+
+[data-theme="dark"] .events-table th,
+[data-theme="dark"] .events-table td {
+  border-bottom-color: #333;
+}
+
+[data-theme="dark"] .events-table th {
+  background: #262626;
+  color: #ccc;
+}

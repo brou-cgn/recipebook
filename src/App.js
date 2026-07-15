@@ -18,6 +18,7 @@ import GroupList from './components/GroupList';
 import GroupDetail from './components/GroupDetail';
 import AppCallsPage from './components/AppCallsPage';
 import MeineKuechenstarsPage from './components/MeineKuechenstarsPage';
+import EventsPage from './components/EventsPage';
 import Tagesmenu from './components/Tagesmenu';
 import UniversalImportModal from './components/UniversalImportModal';
 import Startseite from './components/Startseite';
@@ -89,6 +90,7 @@ import { NutritionReferenceProvider, useNutritionReference } from './contexts/Nu
 
 const PENDING_WEBIMPORT_URL_STORAGE_KEY = 'pendingWebimportUrl';
 const PENDING_WEBIMPORT_AUTHOR_STORAGE_KEY = 'pendingWebimportAuthor';
+const PENDING_EVENT_REMINDER_STORAGE_KEY = 'pendingEventReminderId';
 const ATELIER_ONBOARDING_KEY = 'atelierOnboardingSeen';
 const BOTTOM_NAV_TABS = [
   { key: 'home', label: 'Küche', view: 'startseite' },
@@ -413,6 +415,33 @@ function App() {
     return null;
   });
 
+  // Store a pending event-reminder deep link (from a consumption-reminder push
+  // notification tap) read synchronously on mount, before Firebase loads the user.
+  const [pendingEventReminderId, setPendingEventReminderId] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventReminderId = urlParams.get('eventReminder');
+    if (eventReminderId) {
+      try {
+        sessionStorage.setItem(PENDING_EVENT_REMINDER_STORAGE_KEY, eventReminderId);
+      } catch {
+        // Ignore storage errors (e.g. restricted environments)
+      }
+      urlParams.delete('eventReminder');
+      const remainingSearch = urlParams.toString();
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + (remainingSearch ? '?' + remainingSearch : '') + window.location.hash
+      );
+      return eventReminderId;
+    }
+    try {
+      return sessionStorage.getItem(PENDING_EVENT_REMINDER_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
   // IDs of groups the current user belongs to – used to filter group-scoped recipes
   const userGroupIds = useMemo(() => groups.map((g) => g.id), [groups]);
 
@@ -725,6 +754,14 @@ function App() {
     setIsCreatingVersion(false);
     setIsFormOpen(true);
   }, [currentUser, pendingWebimportUrl]);
+
+  // Once currentUser is loaded, jump to the Events view so the pending
+  // event-reminder ID (read on mount) can be resolved to the consumption form.
+  useEffect(() => {
+    if (!pendingEventReminderId) return;
+    if (!currentUser) return; // wait for login
+    setCurrentView('events');
+  }, [currentUser, pendingEventReminderId]);
 
   // Ensure the system-wide public group exists and store its ID
   useEffect(() => {
@@ -2006,6 +2043,20 @@ function App() {
           onBack={() => handleViewChange('kueche')}
           currentUser={currentUser}
           recipes={recipes}
+        />
+        ) : currentView === 'events' ? (
+        <EventsPage
+          onBack={() => handleViewChange('recipes')}
+          currentUser={currentUser}
+          pendingEventReminderId={pendingEventReminderId}
+          onPendingEventReminderHandled={() => {
+            setPendingEventReminderId(null);
+            try {
+              sessionStorage.removeItem(PENDING_EVENT_REMINDER_STORAGE_KEY);
+            } catch {
+              // Ignore storage errors (e.g. restricted environments)
+            }
+          }}
         />
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
