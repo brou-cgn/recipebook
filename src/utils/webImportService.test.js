@@ -29,10 +29,54 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramUrl, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText } from './webImportService';
+import { captureWebsiteScreenshot, isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramUrl, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText } from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 import { httpsCallable } from 'firebase/functions';
+
+// --------------------------------------------------------------------------
+// captureWebsiteScreenshot
+// --------------------------------------------------------------------------
+
+describe('captureWebsiteScreenshot', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  test('returns the screenshot from a successful Cloud Function call', async () => {
+    const mockCallable = jest.fn().mockResolvedValue({
+      data: { screenshot: 'data:image/jpeg;base64,screen' },
+    });
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(captureWebsiteScreenshot('https://example.com/rezept')).resolves.toBe('data:image/jpeg;base64,screen');
+    expect(httpsCallable).toHaveBeenCalledWith({}, 'captureWebsiteScreenshot');
+    expect(mockCallable).toHaveBeenCalledWith({ url: 'https://example.com/rezept' });
+  });
+
+  test('maps prefixed Firebase internal errors to a user-friendly message', async () => {
+    const error = Object.assign(new Error('internal'), { code: 'functions/internal' });
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(captureWebsiteScreenshot('https://example.com/rezept')).rejects.toThrow(
+      'Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.',
+    );
+  });
+
+  test('maps DNS-related internal errors to a website-unreachable message', async () => {
+    const error = Object.assign(
+      new Error('Failed to capture screenshot: net::ERR_NAME_NOT_RESOLVED'),
+      { code: 'functions/internal' },
+    );
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(captureWebsiteScreenshot('https://example.com/rezept')).rejects.toThrow(
+      'Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.',
+    );
+  });
+});
 
 // --------------------------------------------------------------------------
 // isRecipeImportPageUrl
@@ -671,6 +715,14 @@ describe('importInstagramReel', () => {
 
   test('throws a user-friendly error when the Cloud Function returns unauthenticated', async () => {
     const error = Object.assign(new Error('not logged in'), { code: 'unauthenticated' });
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(importInstagramReel(validReelUrl)).rejects.toThrow(/melde dich an/i);
+  });
+
+  test('accepts prefixed Firebase error codes from production callables', async () => {
+    const error = Object.assign(new Error('not logged in'), { code: 'functions/unauthenticated' });
     const mockCallable = jest.fn().mockRejectedValue(error);
     httpsCallable.mockReturnValue(mockCallable);
 

@@ -10,6 +10,22 @@ import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 
 /**
+ * Normalize Firebase callable errors so callers can handle both local test
+ * stubs and production `functions/...` error codes consistently.
+ *
+ * @param {Error & {code?: string}} error - Error thrown by a callable function
+ * @returns {{code: string, message: string, lowerMessage: string}}
+ */
+function getCallableErrorDetails(error) {
+  const rawCode = error?.code ? String(error.code) : '';
+  const code = rawCode.replace(/^functions\//, '').toLowerCase();
+  const message = error?.message ? String(error.message).trim() : '';
+  const lowerMessage = message.toLowerCase();
+
+  return { code, message, lowerMessage };
+}
+
+/**
  * Capture a screenshot of a website
  * @param {string} url - The URL to capture
  * @param {Function} onProgress - Optional progress callback (0-100)
@@ -65,22 +81,33 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
   } catch (error) {
     clearInterval(progressInterval);
     if (onProgress) onProgress(0);
-    
+
+    const { code, message, lowerMessage } = getCallableErrorDetails(error);
+
     // Enhance error messages based on Firebase error codes
-    if (error.code === 'unauthenticated') {
+    if (code === 'unauthenticated') {
       throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.');
-    } else if (error.code === 'resource-exhausted') {
-      throw new Error(error.message || 'Rate-Limit erreicht. Bitte versuchen Sie es später erneut.');
-    } else if (error.code === 'invalid-argument') {
-      throw new Error(error.message || 'Ungültige URL angegeben.');
-    } else if (error.code === 'failed-precondition') {
+    } else if (code === 'resource-exhausted') {
+      throw new Error(message || 'Rate-Limit erreicht. Bitte versuchen Sie es später erneut.');
+    } else if (code === 'invalid-argument') {
+      throw new Error(message || 'Ungültige URL angegeben.');
+    } else if (code === 'failed-precondition') {
       throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.');
-    } else if (error.code === 'deadline-exceeded') {
+    } else if (code === 'deadline-exceeded') {
       throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.');
-    } else if (error.message) {
-      throw new Error(error.message);
+    } else if (code === 'internal') {
+      if (
+        lowerMessage.includes('name_not_resolved') ||
+        lowerMessage.includes('enotfound') ||
+        lowerMessage.includes('dns')
+      ) {
+        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.');
+      }
+      throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.');
+    } else if (message) {
+      throw new Error(message);
     }
-    
+
     throw new Error('Fehler beim Erfassen der Website. Bitte versuchen Sie es erneut.');
   }
 }
@@ -201,22 +228,24 @@ export async function importInstagramReel(url, onProgress = null) {
     progressInterval = null;
     if (onProgress) onProgress(0);
 
-    const errorCode = error.code;
-    if (errorCode === 'unauthenticated') {
+    const { code, message } = getCallableErrorDetails(error);
+    if (code === 'unauthenticated') {
       throw new Error('Bitte melde dich an, um den Instagram-Import zu nutzen.');
-    } else if (errorCode === 'resource-exhausted') {
-      throw new Error(error.message || 'Tageslimit erreicht. Versuche es morgen erneut.');
-    } else if (errorCode === 'not-found') {
+    } else if (code === 'resource-exhausted') {
+      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.');
+    } else if (code === 'not-found') {
       throw new Error(
-        error.message ||
+        message ||
         'Kein Rezept auf der Instagram-Seite gefunden. Der Beitrag ist möglicherweise privat.',
       );
-    } else if (errorCode === 'invalid-argument') {
-      throw new Error(error.message || 'Ungültige Instagram-URL.');
-    } else if (errorCode === 'deadline-exceeded') {
+    } else if (code === 'invalid-argument') {
+      throw new Error(message || 'Ungültige Instagram-URL.');
+    } else if (code === 'deadline-exceeded') {
       throw new Error('Die Instagram-Seite hat zu lange gebraucht. Bitte versuche es erneut.');
-    } else if (error.message) {
-      throw new Error(error.message);
+    } else if (code === 'internal') {
+      throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.');
+    } else if (message) {
+      throw new Error(message);
     }
     throw new Error('Instagram-Import fehlgeschlagen. Bitte versuche es erneut.');
   }
