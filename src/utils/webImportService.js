@@ -9,6 +9,13 @@ import { httpsCallable } from 'firebase/functions';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 
+/**
+ * Normalize Firebase callable errors so callers can handle both local test
+ * stubs and production `functions/...` error codes consistently.
+ *
+ * @param {Error & {code?: string}} error - Error thrown by a callable function
+ * @returns {{code: string, message: string, lowerMessage: string}}
+ */
 function getCallableErrorDetails(error) {
   const rawCode = error?.code ? String(error.code) : '';
   const code = rawCode.replace(/^functions\//, '').toLowerCase();

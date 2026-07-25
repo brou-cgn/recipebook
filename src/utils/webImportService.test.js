@@ -50,6 +50,8 @@ describe('captureWebsiteScreenshot', () => {
     httpsCallable.mockReturnValue(mockCallable);
 
     await expect(captureWebsiteScreenshot('https://example.com/rezept')).resolves.toBe('data:image/jpeg;base64,screen');
+    expect(httpsCallable).toHaveBeenCalledWith({}, 'captureWebsiteScreenshot');
+    expect(mockCallable).toHaveBeenCalledWith({ url: 'https://example.com/rezept' });
   });
 
   test('maps prefixed Firebase internal errors to a user-friendly message', async () => {
