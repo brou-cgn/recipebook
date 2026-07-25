@@ -18,6 +18,10 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
   const [progress, setProgress] = useState(0);
   const [aiResult, setAiResult] = useState(null);
 
+  useEffect(() => {
+    setUrl(normalizeImportedUrl(initialUrl));
+  }, [initialUrl]);
+
   // Validate URL
   const isValidUrl = (urlString) => {
     try {
@@ -41,10 +45,6 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
     if (!isValidUrl(normalizedUrl)) {
       setError('Bitte geben Sie eine gültige URL ein (z.B. https://example.com)');
       return;
-    }
-
-    if (normalizedUrl !== url) {
-      setUrl(normalizedUrl);
     }
 
     setStep('loading');

@@ -29,7 +29,19 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { captureWebsiteScreenshot, isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramUrl, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText, normalizeImportedUrl } from './webImportService';
+import {
+  captureWebsiteScreenshot,
+  isRecipeImportPageUrl,
+  parseRecipeImportPage,
+  extractTextFromHtml,
+  isInstagramUrl,
+  isInstagramReelUrl,
+  importInstagramReel,
+  parseJsonLdRecipe,
+  importRecipeFromUrl,
+  jsonLdToText,
+  normalizeImportedUrl,
+} from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 import { httpsCallable } from 'firebase/functions';

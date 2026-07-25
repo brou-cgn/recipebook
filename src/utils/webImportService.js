@@ -25,6 +25,10 @@ function getCallableErrorDetails(error) {
   return { code, message, lowerMessage };
 }
 
+const SINGLE_SLASH_PROTOCOL_RE = /^([a-z][a-z0-9+.-]*):\/(?!\/)/i;
+const HAS_PROTOCOL_RE = /^[a-z][a-z0-9+.-]*:\/\//i;
+const BARE_HOST_RE = /^[\w.-]+\.[a-z]{2,}(?::\d+)?(?:[/?#][^\s]*)?$/i;
+
 /**
  * Normalize user-provided recipe URLs so common mobile/share variants still
  * parse as regular HTTP(S) URLs.
@@ -37,18 +41,21 @@ export function normalizeImportedUrl(url) {
     return '';
   }
 
+  // Some mobile share/clipboard flows insert zero-width spaces into pasted URLs.
   let normalizedUrl = url.trim().replace(/\u200B/g, '');
   if (!normalizedUrl) {
     return '';
   }
 
-  if (/^https?:\/(?!\/)/i.test(normalizedUrl)) {
-    normalizedUrl = normalizedUrl.replace(/^([a-z][a-z0-9+.-]*):\/(?!\/)/i, '$1://');
+  // Repair inputs like "https:/example.com" where mobile share/paste lost one slash.
+  if (SINGLE_SLASH_PROTOCOL_RE.test(normalizedUrl)) {
+    normalizedUrl = normalizedUrl.replace(SINGLE_SLASH_PROTOCOL_RE, '$1://');
   } else if (normalizedUrl.startsWith('//')) {
     normalizedUrl = `https:${normalizedUrl}`;
   } else if (
-    !/^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedUrl) &&
-    /^[\w.-]+\.[a-z]{2,}(?:[/?#:][^\s]*)?$/i.test(normalizedUrl)
+    // Accept bare host/path inputs like "www.example.com/rezept" and default to HTTPS.
+    !HAS_PROTOCOL_RE.test(normalizedUrl) &&
+    BARE_HOST_RE.test(normalizedUrl)
   ) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
