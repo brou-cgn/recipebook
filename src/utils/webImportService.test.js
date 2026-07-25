@@ -29,7 +29,19 @@ HTMLCanvasElement.prototype.getContext = jest.fn().mockReturnValue({
 });
 HTMLCanvasElement.prototype.toDataURL = jest.fn().mockReturnValue('data:image/png;base64,mockcanvas');
 
-import { captureWebsiteScreenshot, isRecipeImportPageUrl, parseRecipeImportPage, extractTextFromHtml, isInstagramUrl, isInstagramReelUrl, importInstagramReel, parseJsonLdRecipe, importRecipeFromUrl, jsonLdToText } from './webImportService';
+import {
+  captureWebsiteScreenshot,
+  isRecipeImportPageUrl,
+  parseRecipeImportPage,
+  extractTextFromHtml,
+  isInstagramUrl,
+  isInstagramReelUrl,
+  importInstagramReel,
+  parseJsonLdRecipe,
+  importRecipeFromUrl,
+  jsonLdToText,
+  normalizeImportedUrl,
+} from './webImportService';
 import { recognizeRecipeWithAI, processHtmlWithGemini } from './aiOcrService';
 import { parseOcrText } from './ocrParser';
 import { httpsCallable } from 'firebase/functions';
@@ -37,6 +49,18 @@ import { httpsCallable } from 'firebase/functions';
 // --------------------------------------------------------------------------
 // captureWebsiteScreenshot
 // --------------------------------------------------------------------------
+
+describe('normalizeImportedUrl', () => {
+  test('adds https to bare host recipe URLs', () => {
+    expect(normalizeImportedUrl('www.lecker.de/zucchini-kartoffel-puffer-127503.html'))
+      .toBe('https://www.lecker.de/zucchini-kartoffel-puffer-127503.html');
+  });
+
+  test('repairs https URLs that are missing one slash', () => {
+    expect(normalizeImportedUrl('https:/www.lecker.de/zucchini-kartoffel-puffer-127503.html'))
+      .toBe('https://www.lecker.de/zucchini-kartoffel-puffer-127503.html');
+  });
+});
 
 describe('captureWebsiteScreenshot', () => {
   beforeEach(() => {
@@ -52,6 +76,18 @@ describe('captureWebsiteScreenshot', () => {
     await expect(captureWebsiteScreenshot('https://example.com/rezept')).resolves.toBe('data:image/jpeg;base64,screen');
     expect(httpsCallable).toHaveBeenCalledWith({}, 'captureWebsiteScreenshot');
     expect(mockCallable).toHaveBeenCalledWith({ url: 'https://example.com/rezept' });
+  });
+
+  test('normalizes recipe URLs before calling the Cloud Function', async () => {
+    const mockCallable = jest.fn().mockResolvedValue({
+      data: { screenshot: 'data:image/jpeg;base64,screen' },
+    });
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(captureWebsiteScreenshot('www.lecker.de/zucchini-kartoffel-puffer-127503.html')).resolves.toBe('data:image/jpeg;base64,screen');
+    expect(mockCallable).toHaveBeenCalledWith({
+      url: 'https://www.lecker.de/zucchini-kartoffel-puffer-127503.html',
+    });
   });
 
   test('maps prefixed Firebase internal errors to a user-friendly message', async () => {
@@ -1229,5 +1265,16 @@ describe('importRecipeFromUrl', () => {
     expect(result.cookTime).toBe('20 min');
     expect(result.cuisine).toBe('Italienisch');
     expect(result.tags).toEqual([]);
+  });
+
+  test('normalizes recipe URLs before fetching HTML', async () => {
+    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
+    httpsCallable.mockReturnValue(mockFetchCallable);
+
+    await importRecipeFromUrl('www.lecker.de/zucchini-kartoffel-puffer-127503.html');
+
+    expect(mockFetchCallable).toHaveBeenCalledWith({
+      url: 'https://www.lecker.de/zucchini-kartoffel-puffer-127503.html',
+    });
   });
 });
