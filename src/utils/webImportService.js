@@ -26,19 +26,52 @@ function getCallableErrorDetails(error) {
 }
 
 /**
+ * Normalize user-provided recipe URLs so common mobile/share variants still
+ * parse as regular HTTP(S) URLs.
+ *
+ * @param {string} url - Raw user input
+ * @returns {string} Normalized URL candidate
+ */
+export function normalizeImportedUrl(url) {
+  if (typeof url !== 'string') {
+    return '';
+  }
+
+  let normalizedUrl = url.trim().replace(/\u200B/g, '');
+  if (!normalizedUrl) {
+    return '';
+  }
+
+  if (/^https?:\/(?!\/)/i.test(normalizedUrl)) {
+    normalizedUrl = normalizedUrl.replace(/^([a-z][a-z0-9+.-]*):\/(?!\/)/i, '$1://');
+  } else if (normalizedUrl.startsWith('//')) {
+    normalizedUrl = `https:${normalizedUrl}`;
+  } else if (
+    !/^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedUrl) &&
+    /^[\w.-]+\.[a-z]{2,}(?:[/?#:][^\s]*)?$/i.test(normalizedUrl)
+  ) {
+    normalizedUrl = `https://${normalizedUrl}`;
+  }
+
+  return normalizedUrl;
+}
+
+/**
  * Capture a screenshot of a website
  * @param {string} url - The URL to capture
  * @param {Function} onProgress - Optional progress callback (0-100)
  * @returns {Promise<string>} Base64 encoded screenshot
  */
 export async function captureWebsiteScreenshot(url, onProgress = null) {
+  const normalizedUrl = normalizeImportedUrl(url);
+
   // Validate URL
-  if (!url || typeof url !== 'string') {
+  if (!normalizedUrl) {
     throw new Error('Invalid URL provided');
   }
 
   try {
-    new URL(url); // This will throw if URL is invalid
+    new URL(normalizedUrl); // This will throw if URL is invalid
   } catch {
     throw new Error('Ungültige URL. Bitte geben Sie eine vollständige URL ein (z.B. https://example.com)');
   }
@@ -61,7 +94,7 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
     }
 
     const result = await captureScreenshot({
-      url: url,
+      url: normalizedUrl,
     });
 
     clearInterval(progressInterval);
@@ -122,7 +155,7 @@ export async function captureWebsiteScreenshot(url, onProgress = null) {
  */
 export function isRecipeImportPageUrl(url) {
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(normalizeImportedUrl(url));
     return urlObj.pathname === '/recipeImportPage' && urlObj.searchParams.has('token');
   } catch {
     return false;
@@ -139,7 +172,7 @@ export function isRecipeImportPageUrl(url) {
  */
 export function isInstagramUrl(url) {
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(normalizeImportedUrl(url));
     return (
       (urlObj.hostname === 'www.instagram.com' || urlObj.hostname === 'instagram.com') &&
       /^\/(reel|p|tv)\/[A-Za-z0-9_-]+\/?$/.test(urlObj.pathname)
@@ -163,7 +196,9 @@ export const isInstagramReelUrl = isInstagramUrl;
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function importInstagramReel(url, onProgress = null) {
-  if (!isInstagramUrl(url)) {
+  const normalizedUrl = normalizeImportedUrl(url);
+
+  if (!isInstagramUrl(normalizedUrl)) {
     throw new Error('Ungültige Instagram-URL');
   }
 
@@ -197,7 +232,7 @@ export async function importInstagramReel(url, onProgress = null) {
     }
 
     const result = await scrapeInstagramReel({
-      url,
+      url: normalizedUrl,
       language: 'de',
       cuisineTypes,
       mealCategories,
@@ -745,13 +780,15 @@ async function fetchRecipeHtml(url) {
  * @returns {Promise<Object>} Structured recipe data
  */
 export async function importRecipeFromUrl(url, onProgress = null) {
+  const normalizedUrl = normalizeImportedUrl(url);
+
   if (onProgress) onProgress(10);
 
   // ── Step 1 & 2: Try to fetch HTML and parse structured data ───────────────
   let html = null;
   try {
     if (onProgress) onProgress(15);
-    html = await fetchRecipeHtml(url);
+    html = await fetchRecipeHtml(normalizedUrl);
   } catch (fetchErr) {
     console.warn('fetchRecipeHtml failed, falling back to screenshot:', fetchErr.message);
   }
@@ -825,7 +862,7 @@ export async function importRecipeFromUrl(url, onProgress = null) {
 
   // ── Step 3: Screenshot + Vision API fallback ─────────────────────────────
   if (onProgress) onProgress(70);
-  const screenshotBase64 = await captureWebsiteScreenshot(url, (prog) => {
+  const screenshotBase64 = await captureWebsiteScreenshot(normalizedUrl, (prog) => {
     if (onProgress) onProgress(70 + Math.round(prog * 0.3));
   });
   return await recognizeRecipeWithAI(screenshotBase64, {

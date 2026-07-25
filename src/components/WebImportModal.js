@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './WebImportModal.css';
 import {
+  normalizeImportedUrl,
   isRecipeImportPageUrl,
   parseRecipeImportPage,
   isInstagramUrl,
@@ -12,7 +13,7 @@ import { extractKulinarikFromTags } from '../utils/ocrParser';
 
 function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) {
   const [step, setStep] = useState('url'); // 'url', 'loading', 'result'
-  const [url, setUrl] = useState(initialUrl);
+  const [url, setUrl] = useState(() => normalizeImportedUrl(initialUrl));
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
   const [aiResult, setAiResult] = useState(null);
@@ -29,16 +30,21 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
 
   // Core submission logic – works with an explicit URL argument
   const submitUrl = async (urlToSubmit) => {
+    const normalizedUrl = normalizeImportedUrl(urlToSubmit);
     setError('');
 
-    if (!urlToSubmit || !urlToSubmit.trim()) {
+    if (!normalizedUrl) {
       setError('Bitte geben Sie eine URL ein');
       return;
     }
 
-    if (!isValidUrl(urlToSubmit.trim())) {
+    if (!isValidUrl(normalizedUrl)) {
       setError('Bitte geben Sie eine gültige URL ein (z.B. https://example.com)');
       return;
+    }
+
+    if (normalizedUrl !== url) {
+      setUrl(normalizedUrl);
     }
 
     setStep('loading');
@@ -47,15 +53,15 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
     try {
       let result;
 
-      if (isInstagramUrl(urlToSubmit.trim())) {
+      if (isInstagramUrl(normalizedUrl)) {
         // Instagram path (post, reel, or IGTV) – extract caption and page text with Puppeteer + Gemini
-        result = await importInstagramReel(urlToSubmit.trim(), setProgress);
-      } else if (isRecipeImportPageUrl(urlToSubmit.trim())) {
+        result = await importInstagramReel(normalizedUrl, setProgress);
+      } else if (isRecipeImportPageUrl(normalizedUrl)) {
         // Direct HTML parsing path – no screenshot or AI needed
-        result = await parseRecipeImportPage(urlToSubmit.trim(), setProgress);
+        result = await parseRecipeImportPage(normalizedUrl, setProgress);
       } else {
         // Multi-step import: JSON-LD → Text+Gemini → Screenshot+Vision
-        result = await importRecipeFromUrl(urlToSubmit.trim(), setProgress);
+        result = await importRecipeFromUrl(normalizedUrl, setProgress);
       }
 
       setProgress(100);
@@ -121,8 +127,9 @@ function WebImportModal({ onImport, onCancel, initialUrl = '', authorId = '' }) 
 
   // Auto-submit when initialUrl is provided and valid
   useEffect(() => {
-    if (initialUrl && isValidUrl(initialUrl)) {
-      submitUrl(initialUrl);
+    const normalizedInitialUrl = normalizeImportedUrl(initialUrl);
+    if (normalizedInitialUrl && isValidUrl(normalizedInitialUrl)) {
+      submitUrl(normalizedInitialUrl);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
