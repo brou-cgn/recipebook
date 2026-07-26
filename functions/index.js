@@ -112,7 +112,8 @@ function assertPublicUrl(urlString) {
  */
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB in bytes (Gemini API limit)
 const MAX_REEL_VIDEO_SIZE = 20 * 1024 * 1024; // 20 MB for optional Instagram video transcription
-const MAX_HTML_SIZE = 500000; // 500 KB in characters
+const MAX_HTML_SIZE = 500000; // 500 KB in characters – used by processHtmlWithAI input validation
+const MAX_FETCH_HTML_SIZE = 1000000; // 1 MB – higher limit for raw HTML fetch to avoid truncating JSON-LD on large pages
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',
@@ -1381,8 +1382,14 @@ exports.fetchRecipeHtml = onCall(
         const response = await fetch(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+            'Cache-Control': 'max-age=0',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
           },
           redirect: 'follow',
           signal: AbortSignal.timeout(20000),
@@ -1404,8 +1411,9 @@ exports.fetchRecipeHtml = onCall(
         }
 
         const html = await response.text();
-        // Limit size to avoid payload issues
-        return {html: html.slice(0, MAX_HTML_SIZE)};
+        // Use a larger limit for raw HTML fetch so JSON-LD scripts near the bottom
+        // of large pages (e.g. heavy Next.js sites like lecker.de) are not truncated.
+        return {html: html.slice(0, MAX_FETCH_HTML_SIZE)};
       } catch (error) {
         if (error instanceof HttpsError) throw error;
         console.error(`fetchRecipeHtml failed for user ${userId}:`, error);
@@ -1480,6 +1488,7 @@ exports.captureWebsiteScreenshot = onCall(
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
+            '--disable-blink-features=AutomationControlled',
           ]),
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
@@ -1488,6 +1497,15 @@ exports.captureWebsiteScreenshot = onCall(
 
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 800 });
+
+        // Hide automation fingerprint before any page scripts run
+        await page.evaluateOnNewDocument(() => {
+          Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+          // Remove the automation-related property from the chrome object
+          if (window.chrome && window.chrome.csi) {
+            delete window.chrome.csi;
+          }
+        });
 
         // Set a realistic browser User-Agent to avoid bot detection
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -1510,9 +1528,22 @@ exports.captureWebsiteScreenshot = onCall(
         // Wait a bit for dynamic content to render
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Dismiss cookie/DSGVO consent banner if present (supports multiple CMPs)
+        // Dismiss cookie/DSGVO consent banner if present
+        // First try the Usercentrics JavaScript API (works even with shadow DOM)
+        try {
+          await page.evaluate(() => {
+            if (window.UC_UI && typeof window.UC_UI.acceptAllConsents === 'function') {
+              window.UC_UI.acceptAllConsents();
+            }
+          });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (_) {
+          // UC_UI not available – fall through to CSS selector approach
+        }
+
+        // Then try CSS selectors for other CMPs and Usercentrics shadow DOM
         const cookieSelectors = [
-          'button[data-testid="uc-accept-all-button"]',           // Usercentrics
+          'button[data-testid="uc-accept-all-button"]',           // Usercentrics (regular DOM)
           '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll', // Cookiebot
           '.borlabs-cookie-btn-accept-all',                         // Borlabs Cookie
           'button[id*="accept"][id*="cookie"]',                     // Generic
@@ -1528,6 +1559,20 @@ exports.captureWebsiteScreenshot = onCall(
           } catch (_) {
             // Selector not found – try next
           }
+        }
+
+        // Usercentrics v3 renders inside a shadow root – try piercing it
+        try {
+          await page.evaluate(() => {
+            const host = document.querySelector('#usercentrics-root');
+            if (host && host.shadowRoot) {
+              const btn = host.shadowRoot.querySelector('button[data-testid="uc-accept-all-button"]');
+              if (btn) btn.click();
+            }
+          });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (_) {
+          // Shadow root access failed or element not present
         }
 
         // If URL has a fragment (e.g. #recipe), scroll to that element
@@ -1566,13 +1611,25 @@ exports.captureWebsiteScreenshot = onCall(
           // No h1 found – take screenshot anyway
         }
 
-        // Take screenshot
-        const screenshot = await page.screenshot({ 
-          encoding: 'base64',
-          fullPage: true,
-          type: 'jpeg',
-          quality: 80,
-        });
+        // Take screenshot – try full-page first, fall back to viewport if it fails
+        // (fullPage can cause memory/crash issues on pages with infinite scroll)
+        let screenshot;
+        try {
+          screenshot = await page.screenshot({ 
+            encoding: 'base64',
+            fullPage: true,
+            type: 'jpeg',
+            quality: 80,
+          });
+        } catch (fullPageErr) {
+          console.warn(`fullPage screenshot failed for ${url}, falling back to viewport:`, fullPageErr.message);
+          screenshot = await page.screenshot({ 
+            encoding: 'base64',
+            fullPage: false,
+            type: 'jpeg',
+            quality: 80,
+          });
+        }
 
         await browser.close();
 
