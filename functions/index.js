@@ -1500,7 +1500,7 @@ exports.captureWebsiteScreenshot = onCall(
 
         // Hide automation fingerprint before any page scripts run
         await page.evaluateOnNewDocument(() => {
-          Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+          Object.defineProperty(navigator, 'webdriver', {get: () => false});
         });
 
         // Set a realistic browser User-Agent to avoid bot detection
@@ -1534,7 +1534,7 @@ exports.captureWebsiteScreenshot = onCall(
           });
           await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (ucErr) {
-          console.warn(`UC_UI consent API failed for ${url}:`, ucErr.message);
+          console.warn(`UC_UI consent API failed for ${url}:`, ucErr?.message);
         }
 
         // Then try CSS selectors for other CMPs and Usercentrics shadow DOM
