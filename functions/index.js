@@ -1779,10 +1779,10 @@ function jsonLdCandidateToText(candidate) {
 function extractPlainTextFromHtml(html) {
   return html
     // Remove block-level non-content elements including all whitespace before
-    // the closing tag to handle variants like </script > (CodeQL js/bad-tag-filter)
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ' ')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, ' ')
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')
+    // the closing tag to handle variants like </script > or </script\n> (CodeQL js/bad-tag-filter)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ')
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg[^>]*>/gi, ' ')
     // Strip remaining tags
     .replace(/<[^>]+>/g, ' ')
     // Decode a safe, bounded set of HTML entities.
@@ -1791,7 +1791,7 @@ function extractPlainTextFromHtml(html) {
     // characters that look like HTML markup (avoids double-unescaping).
     .replace(/&nbsp;/g, ' ')
     .replace(/&#\d{1,6};/g, ' ')
-    .replace(/&[a-zA-Z]{2,8};/g, ' ')
+    .replace(/&[a-zA-Z]{2,32};/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim()
     .slice(0, 80000);
@@ -2350,10 +2350,14 @@ exports.importRecipeShortcut = onRequest(
         });
         res.status(200).json({success: true, recipe});
       } catch (err) {
-        const statusCode =
-          err instanceof HttpsError && err.code === 'deadline-exceeded' ? 504
-            : err instanceof HttpsError && err.code === 'invalid-argument' ? 400
-              : 500;
+        let statusCode = 500;
+        if (err instanceof HttpsError) {
+          if (err.code === 'deadline-exceeded') {
+            statusCode = 504;
+          } else if (err.code === 'invalid-argument') {
+            statusCode = 400;
+          }
+        }
         console.error(`importRecipeShortcut: import failed for user ${userId}:`, err);
         res.status(statusCode).json({success: false, error: err.message});
       }
