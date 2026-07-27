@@ -1769,22 +1769,29 @@ function jsonLdCandidateToText(candidate) {
 
 /**
  * Strip HTML tags and decode common entities (Node-safe, no DOMParser).
+ * The tag-removal passes run first so that the entity-decoding step only
+ * operates on surviving text content and cannot be confused by entity-encoded
+ * tag characters.
  *
  * @param {string} html
  * @returns {string} Plain text (max 80,000 chars)
  */
 function extractPlainTextFromHtml(html) {
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ' ')
+    // Remove block-level non-content elements including all whitespace before
+    // the closing tag to handle variants like </script > (CodeQL js/bad-tag-filter)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, ' ')
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')
+    // Strip remaining tags
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    // Decode a safe, bounded set of HTML entities.
+    // Named entities are replaced with a space rather than decoded to the
+    // corresponding character so that decoded output can never re-introduce
+    // characters that look like HTML markup (avoids double-unescaping).
     .replace(/&nbsp;/g, ' ')
-    .replace(/&#\d+;/g, ' ')
-    .replace(/&[a-z]+;/g, ' ')
+    .replace(/&#\d{1,6};/g, ' ')
+    .replace(/&[a-zA-Z]{2,8};/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim()
     .slice(0, 80000);
