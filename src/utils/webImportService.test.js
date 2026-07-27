@@ -1096,7 +1096,7 @@ describe('jsonLdToText', () => {
 // --------------------------------------------------------------------------
 
 describe('importRecipeFromUrl', () => {
-  const mockAiResult = {
+  const mockRecipeData = {
     title: 'Spaghetti Carbonara',
     ingredients: ['400g Spaghetti', '200g Pancetta'],
     steps: ['Nudeln kochen', 'Sauce zubereiten'],
@@ -1109,139 +1109,52 @@ describe('importRecipeFromUrl', () => {
     tags: [],
   };
 
-  const recipeJsonLd = {
-    '@type': 'Recipe',
-    name: 'Veganes Naan',
-    recipeIngredient: ['300 g Mehl', '200 ml Kokosjoghurt'],
-    recipeInstructions: ['Teig kneten.', 'In der Pfanne backen.'],
-    recipeYield: '4',
-    prepTime: 'PT15M',
-  };
-
-  const htmlWithJsonLd = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<title>Veganes Naan</title>
-<script type="application/ld+json">${JSON.stringify(recipeJsonLd)}</script>
-</head>
-<body><h1>Veganes Naan</h1></body>
-</html>`;
-
-  const htmlWithoutJsonLd = `<!DOCTYPE html>
-<html lang="de">
-<head><title>Rezept</title></head>
-<body><h1>Pasta</h1><p>Kochwasser salzen. Nudeln 8 Minuten kochen.</p></body>
-</html>`;
-
   beforeEach(() => {
     jest.resetAllMocks();
-    recognizeRecipeWithAI.mockResolvedValue(mockAiResult);
-    processHtmlWithGemini.mockResolvedValue(mockAiResult);
-    HTMLCanvasElement.prototype.getContext.mockReturnValue({
-      fillStyle: '', fillRect: jest.fn(), fillText: jest.fn(),
-      measureText: jest.fn().mockReturnValue({ width: 0 }), font: '',
-    });
-    HTMLCanvasElement.prototype.toDataURL.mockReturnValue('data:image/png;base64,mockcanvas');
   });
 
-  test('sends JSON-LD data through Gemini AI for formatting when a Schema.org Recipe is found', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
-    processHtmlWithGemini.mockResolvedValue({
-      title: 'Veganes Naan',
-      ingredients: ['300 g Mehl', '200 ml Kokosjoghurt'],
-      steps: ['Teig kneten.', 'In der Pfanne backen.'],
-      servings: 4,
-      prepTime: '15 min',
-      cookTime: null,
-      difficulty: 1,
-      cuisine: 'Indisch',
-      category: 'Brot',
-      tags: ['vegan'],
-    });
+  test('calls importRecipeCallable with normalized URL and returns structured recipe', async () => {
+    const mockCallable = jest.fn().mockResolvedValue({ data: mockRecipeData });
+    httpsCallable.mockReturnValue(mockCallable);
 
     const result = await importRecipeFromUrl('https://example.com/rezept');
 
-    expect(httpsCallable).toHaveBeenCalledWith({}, 'fetchRecipeHtml');
-    // JSON-LD text should be passed to Gemini for AI-prompt formatting
-    expect(processHtmlWithGemini).toHaveBeenCalledWith(
-      expect.stringContaining('Veganes Naan'),
-      'de',
-      null,
-    );
-    expect(result.title).toBe('Veganes Naan');
-    expect(result.cuisine).toBe('Indisch');
-    expect(result.tags).toEqual(['vegan']);
-    // prepTime is used as cookTime fallback (consistent with text+Gemini path)
-    expect(result.cookTime).toBe('15 min');
-    // Should NOT fall back to screenshot when JSON-LD+Gemini succeeds
-    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
-  });
-
-  test('falls back to direct JSON-LD mapping when JSON-LD+Gemini fails', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
-    processHtmlWithGemini.mockRejectedValue(new Error('AI unavailable'));
-
-    const result = await importRecipeFromUrl('https://example.com/rezept');
-
-    // Should have tried Gemini
-    expect(processHtmlWithGemini).toHaveBeenCalled();
-    // Should fall back to direct JSON-LD mapping (not screenshot)
-    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
-    expect(result.title).toBe('Veganes Naan');
-    expect(result.ingredients).toEqual(['300 g Mehl', '200 ml Kokosjoghurt']);
-  });
-
-  test('falls back to text+Gemini when no JSON-LD Recipe is present', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
-
-    const result = await importRecipeFromUrl('https://example.com/rezept');
-
-    expect(processHtmlWithGemini).toHaveBeenCalledWith(
-      expect.any(String),
-      'de',
-      null,
+    expect(httpsCallable).toHaveBeenCalledWith({}, 'importRecipeCallable');
+    expect(mockCallable).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://example.com/rezept' }),
     );
     expect(result.title).toBe('Spaghetti Carbonara');
-    // Should NOT call screenshot
-    expect(recognizeRecipeWithAI).not.toHaveBeenCalled();
+    expect(result.ingredients).toEqual(['400g Spaghetti', '200g Pancetta']);
+    expect(result.cookTime).toBe('30 min');
+    expect(result.cuisine).toBe('Italienisch');
   });
 
-  test('falls back to screenshot+vision when both HTML steps fail', async () => {
-    // fetchRecipeHtml fails
-    const mockFetchCallable = jest.fn().mockRejectedValue(new Error('Network error'));
-    httpsCallable.mockImplementation((_, name) => {
-      if (name === 'fetchRecipeHtml') return mockFetchCallable;
-      // captureWebsiteScreenshot CF
-      return jest.fn().mockResolvedValue({ data: { screenshot: 'data:image/jpeg;base64,screen' } });
-    });
+  test('normalizes recipe URLs before calling importRecipeCallable', async () => {
+    const mockCallable = jest.fn().mockResolvedValue({ data: mockRecipeData });
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await importRecipeFromUrl('www.lecker.de/zucchini-kartoffel-puffer-127503.html');
+
+    expect(mockCallable).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://www.lecker.de/zucchini-kartoffel-puffer-127503.html',
+      }),
+    );
+  });
+
+  test('uses prepTime as cookTime when cookTime is absent', async () => {
+    const dataWithPrepTime = { ...mockRecipeData, prepTime: '20 min', cookTime: null };
+    const mockCallable = jest.fn().mockResolvedValue({ data: dataWithPrepTime });
+    httpsCallable.mockReturnValue(mockCallable);
 
     const result = await importRecipeFromUrl('https://example.com/rezept');
 
-    expect(recognizeRecipeWithAI).toHaveBeenCalled();
-    expect(result.title).toBe('Spaghetti Carbonara');
+    expect(result.cookTime).toBe('20 min');
   });
 
-  test('falls back to screenshot+vision when text+Gemini also fails', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
-    processHtmlWithGemini.mockRejectedValue(new Error('AI error'));
-
-    httpsCallable.mockImplementation((_, name) => {
-      if (name === 'fetchRecipeHtml') return mockFetchCallable;
-      return jest.fn().mockResolvedValue({ data: { screenshot: 'data:image/jpeg;base64,screen' } });
-    });
-
-    const result = await importRecipeFromUrl('https://example.com/rezept');
-
-    expect(recognizeRecipeWithAI).toHaveBeenCalled();
-    expect(result.title).toBe('Spaghetti Carbonara');
-  });
-
-  test('reports progress during JSON-LD import', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
+  test('reports progress during import', async () => {
+    const mockCallable = jest.fn().mockResolvedValue({ data: mockRecipeData });
+    httpsCallable.mockReturnValue(mockCallable);
 
     const progressValues = [];
     await importRecipeFromUrl('https://example.com/rezept', (p) => progressValues.push(p));
@@ -1251,30 +1164,50 @@ describe('importRecipeFromUrl', () => {
     expect(progressValues[progressValues.length - 1]).toBe(100);
   });
 
-  test('maps aiResult fields correctly when using text+Gemini path', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
-    processHtmlWithGemini.mockResolvedValue({
-      ...mockAiResult,
-      prepTime: '20 min',
-      cookTime: null,
-    });
+  test('maps unauthenticated error to German user message', async () => {
+    const error = Object.assign(new Error('unauthenticated'), { code: 'functions/unauthenticated' });
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
 
-    const result = await importRecipeFromUrl('https://example.com/rezept');
-
-    expect(result.cookTime).toBe('20 min');
-    expect(result.cuisine).toBe('Italienisch');
-    expect(result.tags).toEqual([]);
+    await expect(importRecipeFromUrl('https://example.com/rezept')).rejects.toThrow(
+      'Sie müssen angemeldet sein',
+    );
   });
 
-  test('normalizes recipe URLs before fetching HTML', async () => {
-    const mockFetchCallable = jest.fn().mockResolvedValue({ data: { html: htmlWithoutJsonLd } });
-    httpsCallable.mockReturnValue(mockFetchCallable);
-
-    await importRecipeFromUrl('www.lecker.de/zucchini-kartoffel-puffer-127503.html');
-
-    expect(mockFetchCallable).toHaveBeenCalledWith({
-      url: 'https://www.lecker.de/zucchini-kartoffel-puffer-127503.html',
+  test('maps resource-exhausted error to German rate-limit message', async () => {
+    const error = Object.assign(new Error(''), {
+      code: 'functions/resource-exhausted',
     });
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(importRecipeFromUrl('https://example.com/rezept')).rejects.toThrow(
+      'Tageslimit erreicht',
+    );
+  });
+
+  test('maps deadline-exceeded error to timeout message', async () => {
+    const error = Object.assign(new Error('functions/deadline-exceeded'), {
+      code: 'functions/deadline-exceeded',
+    });
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(importRecipeFromUrl('https://example.com/rezept')).rejects.toThrow(
+      'Zeitüberschreitung',
+    );
+  });
+
+  test('maps internal DNS error to unreachable-host message', async () => {
+    const error = Object.assign(
+      new Error('Failed to fetch: name_not_resolved'),
+      { code: 'functions/internal' },
+    );
+    const mockCallable = jest.fn().mockRejectedValue(error);
+    httpsCallable.mockReturnValue(mockCallable);
+
+    await expect(importRecipeFromUrl('https://example.com/rezept')).rejects.toThrow(
+      'nicht erreicht werden',
+    );
   });
 });

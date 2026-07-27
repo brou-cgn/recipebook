@@ -775,12 +775,9 @@ async function fetchRecipeHtml(url) {
 }
 
 /**
- * Import a recipe from any regular URL using a multi-step fallback chain:
- *
- *  1. Fetch page HTML and parse Schema.org Recipe JSON-LD → convert to text → Gemini Text API
- *     (Fallback: return JSON-LD mapped directly if Gemini fails)
- *  2. If no JSON-LD → extract plain text and send to Gemini Text API
- *  3. If both fail → capture screenshot and run Gemini Vision API (existing flow)
+ * Import a recipe from any regular URL by delegating the full pipeline to the
+ * `importRecipeCallable` Cloud Function (HTML fetch → JSON-LD → text → screenshot).
+ * All processing happens server-side, eliminating browser CORS issues.
  *
  * @param {string} url - The recipe URL to import
  * @param {Function} [onProgress] - Optional progress callback (0–100)
@@ -791,92 +788,86 @@ export async function importRecipeFromUrl(url, onProgress = null) {
 
   if (onProgress) onProgress(10);
 
-  // ── Step 1 & 2: Try to fetch HTML and parse structured data ───────────────
-  let html = null;
+  // Load configured cuisine/category lists for the AI prompt
+  let cuisineTypes;
+  let mealCategories;
   try {
-    if (onProgress) onProgress(15);
-    html = await fetchRecipeHtml(normalizedUrl);
-  } catch (fetchErr) {
-    console.warn('fetchRecipeHtml failed, falling back to screenshot:', fetchErr.message);
+    const { getCustomLists } = await import('./customLists');
+    const lists = await getCustomLists();
+    cuisineTypes = lists.cuisineTypes;
+    mealCategories = lists.mealCategories;
+  } catch (e) {
+    console.warn('Failed to load custom lists for web import:', e);
   }
 
-  if (html) {
-    // Step 1: JSON-LD → convert to readable text → Gemini Text API
-    if (onProgress) onProgress(30);
-    try {
-      const jsonLdCandidate = findJsonLdRecipeCandidate(html);
-      if (jsonLdCandidate) {
-        const jsonLdText = jsonLdToText(jsonLdCandidate);
-        try {
-          const aiResult = await processHtmlWithGemini(
-            jsonLdText,
-            'de',
-            onProgress ? (p) => onProgress(30 + Math.round(p * 0.65)) : null,
-          );
-          if (onProgress) onProgress(100);
-          return {
-            title: aiResult.title || '',
-            ingredients: aiResult.ingredients || [],
-            steps: aiResult.steps || [],
-            servings: aiResult.servings || null,
-            cookTime: aiResult.prepTime || aiResult.cookTime || null,
-            difficulty: aiResult.difficulty || null,
-            cuisine: aiResult.cuisine || null,
-            category: aiResult.category || null,
-            tags: aiResult.tags || [],
-          };
-        } catch (jsonLdAiErr) {
-          console.warn('JSON-LD+Gemini failed, falling back to direct JSON-LD mapping:', jsonLdAiErr.message);
-          // Fallback: return JSON-LD parsed directly without AI formatting
-          const jsonLdResult = parseJsonLdRecipe(html);
-          if (jsonLdResult) {
-            if (onProgress) onProgress(100);
-            return jsonLdResult;
-          }
-        }
-      }
-    } catch (jsonLdErr) {
-      console.warn('JSON-LD extraction error:', jsonLdErr.message);
-    }
+  if (onProgress) onProgress(20);
 
-    // Step 2: Text + Gemini Text API
-    if (onProgress) onProgress(40);
-    try {
-      const cleanedText = extractTextFromHtml(html);
-      if (cleanedText && cleanedText.trim()) {
-        const aiResult = await processHtmlWithGemini(
-          cleanedText,
-          'de',
-          onProgress ? (p) => onProgress(40 + Math.round(p * 0.55)) : null,
-        );
-        if (onProgress) onProgress(100);
-        return {
-          title: aiResult.title || '',
-          ingredients: aiResult.ingredients || [],
-          steps: aiResult.steps || [],
-          servings: aiResult.servings || null,
-          cookTime: aiResult.prepTime || aiResult.cookTime || null,
-          difficulty: aiResult.difficulty || null,
-          cuisine: aiResult.cuisine || null,
-          category: aiResult.category || null,
-          tags: aiResult.tags || [],
-        };
-      }
-    } catch (textAiErr) {
-      console.warn('Text+Gemini failed, falling back to screenshot:', textAiErr.message);
-    }
+  const importRecipe = httpsCallable(functions, 'importRecipeCallable');
+
+  let simulatedProgress = 25;
+  let progressInterval = null;
+  if (onProgress) {
+    onProgress(25);
+    progressInterval = setInterval(() => {
+      simulatedProgress = Math.min(85, simulatedProgress + 1);
+      onProgress(simulatedProgress);
+    }, 500);
   }
 
-  // ── Step 3: Screenshot + Vision API fallback ─────────────────────────────
-  if (onProgress) onProgress(70);
-  const screenshotBase64 = await captureWebsiteScreenshot(normalizedUrl, (prog) => {
-    if (onProgress) onProgress(70 + Math.round(prog * 0.3));
-  });
-  return await recognizeRecipeWithAI(screenshotBase64, {
-    language: 'de',
-    provider: 'gemini',
-    onProgress: onProgress ? (p) => onProgress(70 + Math.round(p * 0.3)) : null,
-  });
+  try {
+    const result = await importRecipe({
+      url: normalizedUrl,
+      cuisineTypes,
+      mealCategories,
+    });
+
+    clearInterval(progressInterval);
+    progressInterval = null;
+    if (onProgress) onProgress(100);
+
+    const data = result.data;
+    return {
+      title: data.title || '',
+      ingredients: data.ingredients || [],
+      steps: data.steps || [],
+      servings: data.servings || null,
+      cookTime: data.prepTime || data.cookTime || null,
+      difficulty: data.difficulty || null,
+      cuisine: data.cuisine || null,
+      category: data.category || null,
+      tags: data.tags || [],
+    };
+  } catch (error) {
+    clearInterval(progressInterval);
+    if (onProgress) onProgress(0);
+
+    const { code, message, lowerMessage } = getCallableErrorDetails(error);
+
+    if (code === 'unauthenticated') {
+      throw new Error('Sie müssen angemeldet sein, um den Webimport zu verwenden.');
+    } else if (code === 'resource-exhausted') {
+      throw new Error(message || 'Tageslimit erreicht. Versuche es morgen erneut.');
+    } else if (code === 'invalid-argument') {
+      throw new Error(message || 'Ungültige URL angegeben.');
+    } else if (code === 'failed-precondition') {
+      throw new Error('Webimport-Service nicht konfiguriert. Bitte kontaktieren Sie den Administrator.');
+    } else if (code === 'deadline-exceeded') {
+      throw new Error('Zeitüberschreitung beim Laden der Website. Bitte versuchen Sie es erneut.');
+    } else if (code === 'internal') {
+      if (
+        lowerMessage.includes('name_not_resolved') ||
+        lowerMessage.includes('enotfound') ||
+        lowerMessage.includes('dns')
+      ) {
+        throw new Error('Die Website konnte nicht erreicht werden. Bitte prüfe die URL und versuche es erneut.');
+      }
+      throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.');
+    } else if (message) {
+      throw new Error(message);
+    }
+
+    throw new Error('Fehler beim Importieren des Rezepts. Bitte versuchen Sie es erneut.');
+  }
 }
 
 /**
