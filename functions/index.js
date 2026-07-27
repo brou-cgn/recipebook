@@ -1343,6 +1343,8 @@ exports.fetchRecipeHtml = onCall(
       maxInstances: 10,
       memory: '256MiB',
       timeoutSeconds: 30,
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
     },
     async (request) => {
       const {url} = request.data;
@@ -1439,6 +1441,8 @@ exports.captureWebsiteScreenshot = onCall(
       maxInstances: 10,
       memory: '2GiB',
       timeoutSeconds: 120,
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
     },
     async (request) => {
       const {url} = request.data;
@@ -1653,6 +1657,703 @@ exports.captureWebsiteScreenshot = onCall(
       }
     }
 );
+
+// ─── Hybrid Import Architecture ───────────────────────────────────────────────
+// Shared server-side helpers and the consolidated import pipeline that powers
+// both importRecipeCallable (web app) and importRecipeShortcut (Apple Shortcut).
+
+/**
+ * Extract the first Schema.org Recipe JSON-LD candidate from raw HTML.
+ * Node-safe regex alternative to the browser-side findJsonLdRecipeCandidate.
+ *
+ * @param {string} html
+ * @returns {Object|null}
+ */
+function extractJsonLdRecipeCandidateFromHtml(html) {
+  const scriptPattern =
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while ((match = scriptPattern.exec(html)) !== null) {
+    let json;
+    try {
+      json = JSON.parse(match[1]);
+    } catch {
+      continue;
+    }
+    const candidates = [];
+    if (Array.isArray(json)) {
+      candidates.push(...json);
+    } else if (json['@graph'] && Array.isArray(json['@graph'])) {
+      candidates.push(...json['@graph']);
+    } else {
+      candidates.push(json);
+    }
+    for (const candidate of candidates) {
+      const type = candidate['@type'];
+      const isRecipe =
+        type === 'Recipe' || (Array.isArray(type) && type.includes('Recipe'));
+      if (!isRecipe) continue;
+      const hasIngredients =
+        Array.isArray(candidate.recipeIngredient) &&
+        candidate.recipeIngredient.length > 0;
+      const hasInstructions =
+        Array.isArray(candidate.recipeInstructions) &&
+        candidate.recipeInstructions.length > 0;
+      if (!hasIngredients && !hasInstructions) continue;
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Convert a Schema.org Recipe JSON-LD object to human-readable text.
+ * Server-side equivalent of the browser-side jsonLdToText function.
+ *
+ * @param {Object} candidate
+ * @returns {string}
+ */
+function jsonLdCandidateToText(candidate) {
+  let text = `Rezept: ${candidate.name || ''}\n\n`;
+  if (candidate.recipeYield) {
+    const yieldVal = Array.isArray(candidate.recipeYield)
+      ? candidate.recipeYield[0]
+      : candidate.recipeYield;
+    text += `Portionen: ${yieldVal}\n`;
+  }
+  if (candidate.prepTime) text += `Zubereitungszeit: ${candidate.prepTime}\n`;
+  if (candidate.cookTime) text += `Kochzeit: ${candidate.cookTime}\n`;
+  if (candidate.totalTime) text += `Gesamtzeit: ${candidate.totalTime}\n`;
+  if (candidate.recipeCuisine) {
+    const cuisine = Array.isArray(candidate.recipeCuisine)
+      ? candidate.recipeCuisine.join(', ')
+      : candidate.recipeCuisine;
+    text += `Küche: ${cuisine}\n`;
+  }
+  if (candidate.recipeCategory) {
+    const category = Array.isArray(candidate.recipeCategory)
+      ? candidate.recipeCategory.join(', ')
+      : candidate.recipeCategory;
+    text += `Kategorie: ${category}\n`;
+  }
+  text += '\nZutaten:\n';
+  for (const ingredient of candidate.recipeIngredient || []) {
+    text += `- ${ingredient}\n`;
+  }
+  text += '\nZubereitung:\n';
+  const instructions = Array.isArray(candidate.recipeInstructions)
+    ? candidate.recipeInstructions
+    : [];
+  for (const step of instructions) {
+    if (typeof step === 'string') {
+      text += `- ${step}\n`;
+    } else if (
+      step['@type'] === 'HowToSection' &&
+      Array.isArray(step.itemListElement)
+    ) {
+      for (const s of step.itemListElement) {
+        const sText =
+          s['@type'] === 'HowToStep' ? s.text || s.name || '' : '';
+        if (sText) text += `- ${sText}\n`;
+      }
+    } else {
+      const stepText = step.text || step.name || '';
+      if (stepText) text += `- ${stepText}\n`;
+    }
+  }
+  if (candidate.description) {
+    text += `\nBeschreibung: ${candidate.description}\n`;
+  }
+  return text;
+}
+
+/**
+ * Strip HTML tags and decode common entities (Node-safe, no DOMParser).
+ *
+ * @param {string} html
+ * @returns {string} Plain text (max 80,000 chars)
+ */
+function extractPlainTextFromHtml(html) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#\d+;/g, ' ')
+    .replace(/&[a-z]+;/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 80000);
+}
+
+/**
+ * Shared import pipeline: HTML fetch → JSON-LD → plain text → screenshot/vision.
+ *
+ * @param {string} url - Validated public URL to import from
+ * @param {Object} opts
+ * @param {string}   opts.apiKey         - Gemini API key value
+ * @param {string[]|undefined} opts.cuisineTypes
+ * @param {string[]|undefined} opts.mealCategories
+ * @param {string}   [opts.source]       - 'callable' | 'shortcut' (for log context)
+ * @param {string}   [opts.userId]       - User ID (for log context)
+ * @returns {Promise<Object>} Structured recipe data (same shape as callGeminiTextAPI)
+ */
+async function runImportFromUrl(url, {apiKey, cuisineTypes, mealCategories, source = 'unknown', userId = 'unknown'} = {}) {
+  let hostname;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    hostname = url;
+  }
+  const startMs = Date.now();
+  console.log(`[importRecipe:start] source=${source} user=${userId} host=${hostname}`);
+
+  // ── Phase 1: Fetch HTML ──────────────────────────────────────────────────
+  let html = null;
+  try {
+    console.log(`[importRecipe:fetch_html:start] host=${hostname}`);
+    const fetchResponse = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,' +
+          'image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(20000),
+    });
+    if (fetchResponse.ok) {
+      html = (await fetchResponse.text()).slice(0, MAX_FETCH_HTML_SIZE);
+      console.log(
+          `[importRecipe:fetch_html:ok] host=${hostname} ` +
+          `size=${html.length} elapsed=${Date.now() - startMs}ms`,
+      );
+    } else {
+      console.warn(
+          `[importRecipe:fetch_html:fail] host=${hostname} ` +
+          `status=${fetchResponse.status} elapsed=${Date.now() - startMs}ms`,
+      );
+    }
+  } catch (fetchErr) {
+    console.warn(
+        `[importRecipe:fetch_html:error] host=${hostname} ` +
+        `err=${fetchErr.message} elapsed=${Date.now() - startMs}ms`,
+    );
+  }
+
+  if (html) {
+    // ── Phase 2: JSON-LD extraction ────────────────────────────────────────
+    try {
+      console.log(`[importRecipe:jsonld:start] host=${hostname}`);
+      const candidate = extractJsonLdRecipeCandidateFromHtml(html);
+      if (candidate) {
+        console.log(`[importRecipe:jsonld:found] host=${hostname}`);
+        const jsonLdText = jsonLdCandidateToText(candidate);
+        try {
+          const result = await callGeminiTextAPI(
+              jsonLdText, 'de', apiKey, cuisineTypes, mealCategories,
+          );
+          console.log(
+              `[importRecipe:jsonld:ai_ok] host=${hostname} ` +
+              `elapsed=${Date.now() - startMs}ms`,
+          );
+          return result;
+        } catch (aiErr) {
+          console.warn(
+              `[importRecipe:jsonld:ai_fail] host=${hostname} ` +
+              `err=${aiErr.message}`,
+          );
+        }
+      } else {
+        console.log(`[importRecipe:jsonld:not_found] host=${hostname}`);
+      }
+    } catch (jsonLdErr) {
+      console.warn(
+          `[importRecipe:jsonld:error] host=${hostname} ` +
+          `err=${jsonLdErr.message}`,
+      );
+    }
+
+    // ── Phase 3: Plain text extraction ────────────────────────────────────
+    try {
+      console.log(`[importRecipe:text:start] host=${hostname}`);
+      const plainText = extractPlainTextFromHtml(html);
+      if (plainText && plainText.trim()) {
+        const result = await callGeminiTextAPI(
+            plainText, 'de', apiKey, cuisineTypes, mealCategories,
+        );
+        console.log(
+            `[importRecipe:text:ok] host=${hostname} ` +
+            `elapsed=${Date.now() - startMs}ms`,
+        );
+        return result;
+      }
+    } catch (textErr) {
+      console.warn(
+          `[importRecipe:text:error] host=${hostname} ` +
+          `err=${textErr.message}`,
+      );
+    }
+  }
+
+  // ── Phase 4: Screenshot + Gemini Vision fallback ──────────────────────────
+  console.log(`[importRecipe:screenshot:start] host=${hostname}`);
+  const puppeteer = require('puppeteer');
+  const chromium = require('@sparticuz/chromium');
+
+  let browser;
+  let hasFragment = false;
+  let fragmentHash = '';
+  try {
+    browser = await puppeteer.launch({
+      args: chromium.args.concat([
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+      ]),
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+
+    const page = await browser.newPage();
+    await page.setViewport({width: 1280, height: 800});
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {get: () => false});
+    });
+    await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    );
+    await page.setExtraHTTPHeaders({'Accept-Language': 'de-DE,de;q=0.9'});
+
+    try {
+      await page.goto(url, {waitUntil: 'domcontentloaded', timeout: 30000});
+    } catch (navError) {
+      console.warn(`[importRecipe:screenshot:nav_warn] host=${hostname}: ${navError.message}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Dismiss consent banners (Usercentrics JS API)
+    try {
+      await page.evaluate(() => {
+        if (window.UC_UI && typeof window.UC_UI.acceptAllConsents === 'function') {
+          window.UC_UI.acceptAllConsents();
+        }
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log(`[importRecipe:consent:uc_api] host=${hostname}`);
+    } catch (_) {
+      // ignore
+    }
+
+    // CSS selector consent dismissal
+    const cookieSelectors = [
+      'button[data-testid="uc-accept-all-button"]',
+      '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+      '.borlabs-cookie-btn-accept-all',
+      'button[id*="accept"][id*="cookie"]',
+      'button[class*="accept-all"]',
+      'a.cmplz-btn.cmplz-accept',
+    ];
+    for (const selector of cookieSelectors) {
+      try {
+        await page.waitForSelector(selector, {timeout: 800});
+        await page.click(selector);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        console.log(`[importRecipe:consent:selector] host=${hostname} sel=${selector}`);
+        break;
+      } catch (_) {
+        // try next
+      }
+    }
+
+    // Usercentrics shadow DOM
+    try {
+      await page.evaluate(() => {
+        const host = document.querySelector('#usercentrics-root');
+        if (host && host.shadowRoot) {
+          const btn = host.shadowRoot.querySelector(
+              'button[data-testid="uc-accept-all-button"]',
+          );
+          if (btn) btn.click();
+        }
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (_) {
+      // ignore
+    }
+
+    // Scroll to fragment if present
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.hash) {
+        hasFragment = true;
+        fragmentHash = urlObj.hash;
+        const elementId = urlObj.hash.substring(1);
+        const scrollSuccess = await page.evaluate((id) => {
+          const el =
+            document.getElementById(id) ||
+            document.querySelector(`[name="${id}"]`);
+          if (el) {
+            el.scrollIntoView({behavior: 'auto', block: 'start'});
+            return true;
+          }
+          return false;
+        }, elementId);
+        if (!scrollSuccess) {
+          console.warn(
+              `[importRecipe:screenshot:fragment_miss] ` +
+              `host=${hostname} id=${elementId} – falling back to full-page`,
+          );
+          hasFragment = false;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    } catch (_) {
+      // ignore
+    }
+
+    try {
+      await page.waitForSelector('h1', {timeout: 3000});
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (_) {
+      // no h1 – proceed anyway
+    }
+
+    // Take screenshot (full-page → viewport fallback)
+    let screenshot;
+    try {
+      screenshot = await page.screenshot({
+        encoding: 'base64',
+        fullPage: true,
+        type: 'jpeg',
+        quality: 80,
+      });
+    } catch (fullPageErr) {
+      console.warn(
+          `[importRecipe:screenshot:fullpage_fallback] ` +
+          `host=${hostname}: ${fullPageErr.message}`,
+      );
+      screenshot = await page.screenshot({
+        encoding: 'base64',
+        fullPage: false,
+        type: 'jpeg',
+        quality: 80,
+      });
+    }
+
+    await browser.close();
+    console.log(
+        `[importRecipe:screenshot:ok] host=${hostname} ` +
+        `elapsed=${Date.now() - startMs}ms`,
+    );
+
+    // Gemini Vision API
+    const {mimeType: _mime, base64Data} = validateImageData(
+        `data:image/jpeg;base64,${screenshot}`,
+    );
+    const result = await callGeminiAPI(
+        base64Data, 'image/jpeg', 'de', apiKey, cuisineTypes, mealCategories,
+    );
+    console.log(
+        `[importRecipe:vision:ok] host=${hostname} ` +
+        `elapsed=${Date.now() - startMs}ms`,
+    );
+    return result;
+  } catch (error) {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {
+        // ignore close error
+      }
+    }
+    console.error(
+        `[importRecipe:screenshot:fail] host=${hostname} ` +
+        `err=${error.message} elapsed=${Date.now() - startMs}ms`,
+    );
+    const context = hasFragment ? ` (fragment: ${fragmentHash})` : '';
+    if (error instanceof HttpsError) throw error;
+    if (error.message && error.message.includes('timeout')) {
+      throw new HttpsError(
+          'deadline-exceeded',
+          `Website took too long to load${context}`,
+      );
+    }
+    throw new HttpsError(
+        'internal',
+        `Import failed after all phases${context}: ${error.message}`,
+    );
+  }
+}
+
+/**
+ * Cloud Function: importRecipeCallable
+ * Web-app callable that runs the full import pipeline server-side and returns
+ * structured recipe data. Replaces separate fetchRecipeHtml + screenshot calls
+ * from the browser.
+ *
+ * Input data:
+ * - url {string}            Required – public recipe URL
+ * - cuisineTypes {string[]} Optional – configured cuisine type list
+ * - mealCategories {string[]} Optional – configured meal category list
+ *
+ * Returns: Structured recipe data (title, ingredients, steps, …)
+ */
+exports.importRecipeCallable = onCall(
+    {
+      secrets: [geminiApiKey],
+      maxInstances: 10,
+      memory: '2GiB',
+      timeoutSeconds: 120,
+      cors: ALLOWED_ORIGINS,
+      invoker: 'public',
+    },
+    async (request) => {
+      const {url, cuisineTypes, mealCategories} = request.data;
+
+      const auth = request.auth;
+      if (!auth) {
+        throw new HttpsError(
+            'unauthenticated',
+            'You must be logged in to use web import',
+        );
+      }
+
+      const userId = auth.uid;
+      const isAuthenticated =
+        auth.token.firebase?.sign_in_provider !== 'anonymous';
+      const isAdmin = auth.token.admin === true;
+
+      if (!url || typeof url !== 'string') {
+        throw new HttpsError('invalid-argument', 'URL must be a non-empty string');
+      }
+      assertPublicUrl(url);
+
+      const rateLimitResult = await checkRateLimit(userId, isAuthenticated, isAdmin);
+      if (!rateLimitResult.allowed) {
+        const limit = getRateLimit(isAdmin, isAuthenticated);
+        throw new HttpsError(
+            'resource-exhausted',
+            `Rate limit exceeded: maximum ${limit} requests per day`,
+        );
+      }
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        throw new HttpsError(
+            'failed-precondition',
+            'AI service not configured. Please contact administrator.',
+        );
+      }
+
+      try {
+        return await runImportFromUrl(url, {
+          apiKey,
+          cuisineTypes,
+          mealCategories,
+          source: 'callable',
+          userId,
+        });
+      } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        console.error(`importRecipeCallable failed for user ${userId}:`, error);
+        throw new HttpsError('internal', 'Import failed: ' + error.message);
+      }
+    },
+);
+
+/**
+ * Cloud Function: importRecipeShortcut
+ * HTTP endpoint for Apple Shortcut deep-link imports.
+ * Authenticates via SHORTCUT_API_KEY (same mechanism as addRecipeViaAPI).
+ *
+ * POST /importRecipeShortcut
+ *
+ * Headers:
+ *   X-Api-Key:  <SHORTCUT_API_KEY secret>
+ *   X-User-Id:  <Firebase User ID>
+ *   Content-Type: application/json
+ *
+ * Body (JSON):
+ *   url {string}            Required – public recipe URL to import
+ *   cuisineTypes {string[]} Optional – cuisine type list for AI prompt
+ *   mealCategories {string[]} Optional – meal category list for AI prompt
+ *
+ * Returns:
+ *   200 { success: true, recipe: <structured recipe data> }
+ *   400/401/403/500 { success: false, error: string }
+ */
+exports.importRecipeShortcut = onRequest(
+    {
+      maxInstances: 10,
+      memory: '2GiB',
+      timeoutSeconds: 120,
+      secrets: [geminiApiKey, shortcutApiKey],
+      invoker: 'public',
+    },
+    async (req, res) => {
+      // CORS – browsers hitting this from ALLOWED_ORIGINS get the header;
+      // native Apple Shortcut calls have no Origin header and are unaffected.
+      const origin = req.headers.origin;
+      if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, X-Api-Key, X-User-Id',
+        );
+        if (req.method === 'OPTIONS') {
+          res.status(204).send('');
+          return;
+        }
+      } else if (req.method === 'OPTIONS') {
+        res.status(403).send('');
+        return;
+      }
+
+      if (req.method !== 'POST') {
+        res.status(405).json({success: false, error: 'Method not allowed. Use POST.'});
+        return;
+      }
+
+      // Authentication via SHORTCUT_API_KEY + user ID
+      const apiKeyHeader = req.headers['x-api-key'];
+      const userId = req.headers['x-user-id'];
+
+      if (!apiKeyHeader || !userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Missing authentication headers',
+          requiredHeaders: ['X-Api-Key', 'X-User-Id'],
+        });
+        return;
+      }
+
+      const validApiKey = shortcutApiKey.value();
+      if (!validApiKey) {
+        console.error('importRecipeShortcut: SHORTCUT_API_KEY secret is not set');
+        res.status(500).json({
+          success: false,
+          error: 'Server misconfiguration: SHORTCUT_API_KEY secret is not set',
+        });
+        return;
+      }
+
+      let isValidKey = false;
+      try {
+        isValidKey = crypto.timingSafeEqual(
+            Buffer.from(apiKeyHeader),
+            Buffer.from(validApiKey),
+        );
+      } catch (_) {
+        isValidKey = false;
+      }
+      if (!isValidKey) {
+        console.warn('importRecipeShortcut: invalid API key attempt');
+        res.status(401).json({success: false, error: 'Invalid API key'});
+        return;
+      }
+
+      // Validate user role in Firestore
+      const db = admin.firestore();
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+          res.status(403).json({success: false, error: 'Access denied'});
+          return;
+        }
+        const userData = userDoc.data();
+        const role = userData?.role;
+        const isShortcutUser = userData?.isShortcutUser === true;
+        if (role !== 'edit' && role !== 'admin' && !isShortcutUser) {
+          res.status(403).json({success: false, error: 'Insufficient permissions'});
+          return;
+        }
+      } catch (err) {
+        console.error('importRecipeShortcut: error validating user:', err);
+        res.status(500).json({success: false, error: 'Failed to validate user'});
+        return;
+      }
+
+      // Parse JSON body
+      let body = req.body;
+      if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+        try {
+          const raw = req.rawBody;
+          if (raw) body = JSON.parse(raw.toString('utf8'));
+        } catch (_) {
+          res.status(400).json({success: false, error: 'Invalid JSON body'});
+          return;
+        }
+      }
+
+      const {url, cuisineTypes, mealCategories} = body || {};
+      if (!url || typeof url !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: url (string)',
+        });
+        return;
+      }
+
+      // SSRF guard
+      try {
+        assertPublicUrl(url);
+      } catch (ssrfErr) {
+        res.status(400).json({success: false, error: ssrfErr.message});
+        return;
+      }
+
+      const geminiKey = geminiApiKey.value();
+      if (!geminiKey) {
+        res.status(500).json({
+          success: false,
+          error: 'AI service not configured. Please contact administrator.',
+        });
+        return;
+      }
+
+      console.log(`importRecipeShortcut: import requested by user ${userId} for URL: ${url}`);
+
+      try {
+        const recipe = await runImportFromUrl(url, {
+          apiKey: geminiKey,
+          cuisineTypes,
+          mealCategories,
+          source: 'shortcut',
+          userId,
+        });
+        res.status(200).json({success: true, recipe});
+      } catch (err) {
+        const statusCode =
+          err instanceof HttpsError && err.code === 'deadline-exceeded' ? 504
+            : err instanceof HttpsError && err.code === 'invalid-argument' ? 400
+              : 500;
+        console.error(`importRecipeShortcut: import failed for user ${userId}:`, err);
+        res.status(statusCode).json({success: false, error: err.message});
+      }
+    },
+);
+
+// ─── End of Hybrid Import Architecture ────────────────────────────────────────
 
 /**
  * Sleeps for a given duration.

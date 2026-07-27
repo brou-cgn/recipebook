@@ -2,7 +2,129 @@
 
 This directory contains Firebase Cloud Functions that provide secure server-side functionality for the RecipeBook app.
 
+## Import Architecture
+
+The web import flow uses a **hybrid architecture** to avoid browser CORS/auth issues:
+
+| Path | Function | Auth |
+|------|----------|------|
+| Web app | `importRecipeCallable` (onCall) | Firebase Auth (httpsCallable) |
+| Apple Shortcut | `importRecipeShortcut` (onRequest) | `X-Api-Key` + `X-User-Id` headers |
+
+Both endpoints share the same internal `runImportFromUrl` pipeline:
+1. **fetch_html** – server-side HTTP GET of the recipe URL
+2. **jsonld** – Schema.org Recipe JSON-LD extraction → Gemini Text API
+3. **text** – plain-text extraction → Gemini Text API
+4. **screenshot** – Puppeteer screenshot → Gemini Vision API (fallback)
+
+Structured log entries use the prefix `[importRecipe:<phase>:<status>]` for observability.
+
+---
+
 ## Functions
+
+### importRecipeCallable
+
+Firebase callable function used by the **web app** to import a recipe from a URL.
+No direct Cloud Function URL is invoked from the browser; `httpsCallable` handles
+Firebase Auth tokens and CORS automatically.
+
+**Input data (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | ✅ | Public recipe URL to import |
+| `cuisineTypes` | string[] | – | Configured cuisine types for AI prompt |
+| `mealCategories` | string[] | – | Configured meal categories for AI prompt |
+
+**Returns:** Structured recipe data (`title`, `ingredients`, `steps`, `servings`, `cookTime`, `difficulty`, `cuisine`, `category`, `tags`).
+
+---
+
+### importRecipeShortcut
+
+HTTP endpoint for **Apple Shortcut** deep-link imports.
+Authenticates via `SHORTCUT_API_KEY` (same mechanism as `addRecipeViaAPI`).
+
+**Features:**
+- ✅ Authentication: API Key (`X-Api-Key` header) + User ID (`X-User-Id` header)
+- ✅ CORS enabled for allowed origins
+- ✅ Full import pipeline (HTML fetch → JSON-LD → text → screenshot fallback)
+- ✅ Requires user role `edit`, `admin`, or flag `isShortcutUser: true`
+
+**Setup:**
+1. Generate API key: `openssl rand -hex 32`
+2. Store as secret: `firebase functions:secrets:set SHORTCUT_API_KEY`
+3. Copy Firebase User ID from Firebase Console (Authentication → select user → UID)
+
+**Request:**
+
+```
+POST https://<region>-<project-id>.cloudfunctions.net/importRecipeShortcut
+Content-Type: application/json
+X-Api-Key: <SHORTCUT_API_KEY>
+X-User-Id: <Firebase User ID>
+```
+
+**Body (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | ✅ | Public recipe URL to import |
+| `cuisineTypes` | string[] | – | Cuisine types for AI prompt |
+| `mealCategories` | string[] | – | Meal categories for AI prompt |
+
+**Example request body:**
+
+```json
+{
+  "url": "https://www.lecker.de/zucchini-kartoffel-puffer-127503.html"
+}
+```
+
+**Example Apple Shortcut action (URL request):**
+
+```
+Method: POST
+URL:    https://us-central1-broubook.cloudfunctions.net/importRecipeShortcut
+Headers:
+  Content-Type: application/json
+  X-Api-Key:  <your SHORTCUT_API_KEY>
+  X-User-Id:  <your Firebase UID>
+Body:   {"url": "<the recipe URL>"}
+```
+
+**Success response (200):**
+
+```json
+{
+  "success": true,
+  "recipe": {
+    "title": "Zucchini-Kartoffel-Puffer",
+    "ingredients": ["500 g Zucchini", "300 g Kartoffeln"],
+    "steps": ["Zucchini raspeln ...", "Kartoffeln schälen ..."],
+    "servings": 4,
+    "cookTime": "30 min",
+    "difficulty": 2,
+    "cuisine": "Deutsch",
+    "category": "Hauptgericht",
+    "tags": ["vegetarisch"]
+  }
+}
+```
+
+**Error responses:**
+
+| Status | Reason |
+|--------|--------|
+| 400 | Missing or invalid `url` field |
+| 401 | Missing or invalid `X-Api-Key` / `X-User-Id` |
+| 403 | User not found or insufficient permissions |
+| 405 | Wrong HTTP method (only POST allowed) |
+| 500 | Server misconfiguration or unexpected error |
+| 504 | Import timed out (deadline exceeded) |
+
+---
 
 ### addRecipeViaAPI
 
