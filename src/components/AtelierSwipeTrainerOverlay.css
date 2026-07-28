@@ -99,12 +99,18 @@
 }
 
 .atelier-swipe-trainer-photo img {
+  width: 72%;
+  height: 88%;
   object-fit: contain;
   pointer-events: none;
 }
 
 .atelier-swipe-trainer-body--recipe {
-  padding: 16px 18px;
+  padding: 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .atelier-swipe-trainer-name {
@@ -136,6 +142,10 @@
 
 .atelier-swipe-trainer-body--note {
   padding: 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .atelier-swipe-trainer-note-tag {
@@ -167,7 +177,11 @@
 }
 
 .atelier-swipe-trainer-body--final {
-  padding: 12px 16px 14px;
+  padding: 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .atelier-swipe-trainer-final-tag {
@@ -191,7 +205,6 @@
   font-weight: 300;
   color: #6B6B65;
   line-height: 1.55;
-  margin-bottom: 10px;
 }
 
 .atelier-swipe-trainer-final-body strong {
@@ -199,25 +212,30 @@
   font-weight: 600;
 }
 
-.atelier-swipe-trainer-final-divider {
+.atelier-swipe-trainer-hints {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.atelier-swipe-trainer-hints-divider {
   height: 1px;
   background: #f0f0ee;
   margin-bottom: 10px;
 }
 
-.atelier-swipe-trainer-final-legend {
+.atelier-swipe-trainer-hints-rows {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.atelier-swipe-trainer-final-legend-row {
+.atelier-swipe-trainer-hint-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.atelier-swipe-trainer-final-legend-icon {
+.atelier-swipe-trainer-hint-icon {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -228,13 +246,13 @@
   flex-shrink: 0;
 }
 
-.atelier-swipe-trainer-final-legend-title {
+.atelier-swipe-trainer-hint-title {
   font-size: 12px;
   font-weight: 700;
   color: #1A1A18;
 }
 
-.atelier-swipe-trainer-final-legend-sub {
+.atelier-swipe-trainer-hint-sub {
   font-size: 10px;
   color: #6B6B65;
   font-weight: 300;
@@ -332,15 +350,15 @@
   color: #F0EAE0;
 }
 
-[data-theme="dark"] .atelier-swipe-trainer-final-divider {
+[data-theme="dark"] .atelier-swipe-trainer-hints-divider {
   background: #3A3A35;
 }
 
-[data-theme="dark"] .atelier-swipe-trainer-final-legend-title {
+[data-theme="dark"] .atelier-swipe-trainer-hint-title {
   color: #F0EAE0;
 }
 
-[data-theme="dark"] .atelier-swipe-trainer-final-legend-sub {
+[data-theme="dark"] .atelier-swipe-trainer-hint-sub {
   color: #B0A898;
 }
 
