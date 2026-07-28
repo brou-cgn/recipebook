@@ -36,7 +36,7 @@ const SLOT_CONTENT = [
     author: 'Benjamin',
     tags: ['Vegetarisch', '5 Min.'],
     imgAlt: 'Mango Cocktail',
-    imgStyle: { width: '72%', height: '88%' },
+    hints: [{ icon: '→', bg: '#FDF3E3', title: 'Parken', sub: 'Swipe nach rechts' }],
   },
   {
     type: 'note',
@@ -50,7 +50,7 @@ const SLOT_CONTENT = [
       </>
     ),
     imgAlt: 'Mango Cocktail',
-    imgStyle: { width: '72%', height: '88%' },
+    hints: [{ icon: '←', bg: '#F0F0EE', title: 'Archivieren', sub: 'Swipe nach links' }],
   },
   {
     type: 'note',
@@ -64,7 +64,7 @@ const SLOT_CONTENT = [
       </>
     ),
     imgAlt: 'Mango Cocktail',
-    imgStyle: { width: '72%', height: '88%' },
+    hints: [{ icon: '↑', bg: '#EDF2EE', title: 'Kochen', sub: 'Swipe nach oben' }],
   },
   {
     type: 'final',
@@ -77,21 +77,41 @@ const SLOT_CONTENT = [
         langweilig und es ist wieder Platz für neue Rezepte.
       </>
     ),
-    imgStyle: { width: '60%', height: '80%', opacity: 0.35 },
+    imgAlt: 'Mango Cocktail',
+    hints: [
+      { icon: '↑', bg: '#EDF2EE', title: 'Weiter', sub: 'Swipe nach oben' },
+      { icon: '→', bg: '#FDF3E3', title: 'Nochmal ansehen', sub: 'Swipe nach rechts' },
+      { icon: '←', bg: '#F0F0EE', title: 'Direkt ins Kochatelier', sub: 'Swipe nach links' },
+    ],
   },
 ];
 
-const FINAL_LEGEND_ROWS = [
-  { icon: '↑', bg: '#EDF2EE', title: 'Weiter', sub: 'Swipe nach oben' },
-  { icon: '→', bg: '#FDF3E3', title: 'Nochmal ansehen', sub: 'Swipe nach rechts' },
-  { icon: '←', bg: '#F0F0EE', title: 'Direkt ins Kochatelier', sub: 'Swipe nach links' },
-];
+function CardHints({ hints }) {
+  return (
+    <div className="atelier-swipe-trainer-hints">
+      <div className="atelier-swipe-trainer-hints-divider" />
+      <div className="atelier-swipe-trainer-hints-rows">
+        {hints.map((hint) => (
+          <div key={hint.title} className="atelier-swipe-trainer-hint-row">
+            <div className="atelier-swipe-trainer-hint-icon" style={{ background: hint.bg }}>
+              {hint.icon}
+            </div>
+            <div>
+              <div className="atelier-swipe-trainer-hint-title">{hint.title}</div>
+              <div className="atelier-swipe-trainer-hint-sub">{hint.sub}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function CardContent({ slot }) {
   return (
     <>
       <div className="atelier-swipe-trainer-photo">
-        <img src={cocktailPlaceholder} alt={slot.imgAlt || ''} style={slot.imgStyle} draggable="false" />
+        <img src={cocktailPlaceholder} alt={slot.imgAlt || ''} draggable="false" />
       </div>
       {slot.type === 'recipe' && (
         <div className="atelier-swipe-trainer-body--recipe">
@@ -102,6 +122,7 @@ function CardContent({ slot }) {
               <span key={tag} className="atelier-swipe-trainer-tag">{tag}</span>
             ))}
           </div>
+          <CardHints hints={slot.hints} />
         </div>
       )}
       {slot.type === 'note' && (
@@ -109,6 +130,7 @@ function CardContent({ slot }) {
           <p className="atelier-swipe-trainer-note-tag">{slot.tag}</p>
           <p className="atelier-swipe-trainer-note-title">{slot.title}</p>
           <p className="atelier-swipe-trainer-note-body">{slot.body}</p>
+          <CardHints hints={slot.hints} />
         </div>
       )}
       {slot.type === 'final' && (
@@ -116,20 +138,7 @@ function CardContent({ slot }) {
           <p className="atelier-swipe-trainer-final-tag">{slot.tag}</p>
           <p className="atelier-swipe-trainer-final-title">{slot.title}</p>
           <p className="atelier-swipe-trainer-final-body">{slot.body}</p>
-          <div className="atelier-swipe-trainer-final-divider" />
-          <div className="atelier-swipe-trainer-final-legend">
-            {FINAL_LEGEND_ROWS.map((row) => (
-              <div key={row.title} className="atelier-swipe-trainer-final-legend-row">
-                <div className="atelier-swipe-trainer-final-legend-icon" style={{ background: row.bg }}>
-                  {row.icon}
-                </div>
-                <div>
-                  <div className="atelier-swipe-trainer-final-legend-title">{row.title}</div>
-                  <div className="atelier-swipe-trainer-final-legend-sub">{row.sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CardHints hints={slot.hints} />
         </div>
       )}
     </>
