@@ -26,6 +26,7 @@ import MobileSearchOverlay from './components/MobileSearchOverlay';
 import BottomNavigation from './components/BottomNavigation';
 import AtelierOnboardingOverlay from './components/AtelierOnboardingOverlay';
 import AtelierSwipeTrainerOverlay from './components/AtelierSwipeTrainerOverlay';
+import AtelierTasteIntroOverlay from './components/AtelierTasteIntroOverlay';
 import AtelierCategorySelectionPage from './components/AtelierCategorySelectionPage';
 import { 
   loginUser, 
@@ -369,6 +370,7 @@ function App() {
   const [isKuechePersonalDataOpen, setIsKuechePersonalDataOpen] = useState(false);
   const [showAtelierOnboarding, setShowAtelierOnboarding] = useState(false);
   const [showAtelierSwipeTrainer, setShowAtelierSwipeTrainer] = useState(false);
+  const [showAtelierTasteIntro, setShowAtelierTasteIntro] = useState(false);
   const [atelierSelectedCategories, setAtelierSelectedCategories] = useState([]);
   const [onboardingTestmodeActive, setOnboardingTestmodeActive] = useState(false);
   // Capture the webimportAuthor URL param synchronously on mount (alongside pendingWebimportUrl)
@@ -1240,10 +1242,17 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleAtelierSwipeTrainerComplete = () => {
+  const handleAtelierSwipeTrainerComplete = (direction) => {
     localStorage.setItem(ATELIER_ONBOARDING_KEY, 'true');
     setShowAtelierSwipeTrainer(false);
     handleOpenAtelier();
+    if (direction === 'u') {
+      setShowAtelierTasteIntro(true);
+    }
+  };
+
+  const handleAtelierTasteIntroContinue = () => {
+    setShowAtelierTasteIntro(false);
   };
 
   const handleOpenPrivateListRecipes = (groupId) => {
@@ -2232,6 +2241,9 @@ function App() {
         )}
         {showAtelierSwipeTrainer && (
           <AtelierSwipeTrainerOverlay onComplete={handleAtelierSwipeTrainerComplete} />
+        )}
+        {showAtelierTasteIntro && (
+          <AtelierTasteIntroOverlay onContinue={handleAtelierTasteIntroContinue} />
         )}
       </div>
     </NutritionReferenceProvider>
