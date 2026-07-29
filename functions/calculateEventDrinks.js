@@ -20,6 +20,27 @@ async function loadRatesDb(db, uid) {
 }
 
 /**
+ * Laedt die benutzerdefinierten Getraenke eines Nutzers aus Firestore.
+ * @param {object} db Firestore-Instanz.
+ * @param {string} uid Firebase-Nutzer-ID.
+ * @param {string[]} drinkIds IDs der gewuenschten Getraenke.
+ * @return {Promise<object>} Map von drinkId -> Getraenke-Definition.
+ */
+async function loadCustomDrinks(db, uid, drinkIds) {
+  if (!drinkIds || drinkIds.length === 0) return {};
+  const result = {};
+  await Promise.all(
+      drinkIds.map(async (id) => {
+        const snap = await db.collection('users').doc(uid).collection('customDrinks').doc(id).get();
+        if (snap.exists) {
+          result[id] = snap.data();
+        }
+      }),
+  );
+  return result;
+}
+
+/**
  * Rundet auf 2 Nachkommastellen.
  * @param {number} n Zahl.
  * @return {number} Gerundete Zahl.
@@ -31,11 +52,12 @@ function round2(n) {
 /**
  * Reine Berechnungsfunktion, kein Firestore-Zugriff -- leicht testbar.
  * @param {object} event Event-Parameter (eventName, durationHours, guests, season,
- *   eventType, categories, pufferProzent).
+ *   eventType, categories, customDrinkIds, pufferProzent).
  * @param {object} ratesDb Rate-Datenbank (Default + ggf. Erfahrungswerte).
+ * @param {object} [customDrinksMap] Map von drinkId -> Getraenke-Definition.
  * @return {object} Ergebnis pro Kategorie + Warnungen.
  */
-function calculate(event, ratesDb) {
+function calculate(event, ratesDb, customDrinksMap) {
   const adults = event.guests?.adults || 0;
   const children = event.guests?.children || 0;
   const hours = event.durationHours;
@@ -44,10 +66,13 @@ function calculate(event, ratesDb) {
   const puffer = (event.pufferProzent ?? 12) / 100;
   const durFactor = durationFactor(hours);
   const categories = event.categories || Object.keys(DEFAULT_RATES);
+  const customDrinkIds = event.customDrinkIds || [];
+  const allCustomDrinks = customDrinksMap || {};
 
   const ergebnis = [];
   const warnungen = [];
 
+  // --- Predefined categories ---
   for (const cat of categories) {
     const entry = ratesDb[cat];
     if (!entry) {
@@ -90,6 +115,49 @@ function calculate(event, ratesDb) {
     });
   }
 
+  // --- Custom drinks ---
+  for (const drinkId of customDrinkIds) {
+    const entry = allCustomDrinks[drinkId];
+    if (!entry) {
+      warnungen.push(
+          `Benutzerdefiniertes Getraenk '${drinkId}' nicht gefunden -- wird uebersprungen.`,
+      );
+      continue;
+    }
+
+    const anteilTrinker = entry.anteilTrinker ?? 1.0;
+    const modus = entry.modus || 'stunde';
+
+    let literErwachsene;
+    let literKinder;
+    if (modus === 'pauschal') {
+      literErwachsene = adults * anteilTrinker * (entry.erwachsene || 0) * seasonFactor;
+      literKinder = children * (entry.kinder || 0) * seasonFactor;
+    } else {
+      literErwachsene =
+          adults * anteilTrinker * (entry.erwachsene || 0) * hours * seasonFactor * durFactor;
+      literKinder = children * (entry.kinder || 0) * hours * durFactor;
+    }
+
+    const literGesamt = literErwachsene + literKinder;
+    const literMitPuffer = literGesamt * (1 + puffer);
+    const anzahlGebinde =
+        entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
+
+    ergebnis.push({
+      kategorie: drinkId,
+      drinkLabel: entry.name,
+      isCustomDrink: true,
+      literOhnePuffer: round2(literGesamt),
+      literMitPuffer: round2(literMitPuffer),
+      gebinde: entry.gebindeName || (entry.gebindeLiter ? `${entry.gebindeLiter}L` : null),
+      gebindeGroesseLiter: entry.gebindeLiter,
+      anzahlGebinde,
+      ratenQuelle: 'benutzerdefiniert',
+      anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
+    });
+  }
+
   return {
     eventName: event.eventName || 'Event',
     gaeste: {erwachsene: adults, kinder: children},
@@ -105,7 +173,7 @@ function calculate(event, ratesDb) {
 /**
  * Callable: calculateEventDrinks({ eventId?, event })
  * - event: Parameter-Objekt (eventName, date, durationHours, guests, season,
- *   eventType, categories, pufferProzent)
+ *   eventType, categories, customDrinkIds, pufferProzent)
  * - eventId: falls gesetzt, wird das bestehende Event-Dokument mit dem
  *   Ergebnis aktualisiert (status -> "berechnet"). Sonst wird ein neues
  *   Event-Dokument angelegt.
@@ -123,8 +191,11 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
   }
 
   const db = admin.firestore();
-  const ratesDb = await loadRatesDb(db, uid);
-  const result = calculate(event, ratesDb);
+  const [ratesDb, customDrinksMap] = await Promise.all([
+    loadRatesDb(db, uid),
+    loadCustomDrinks(db, uid, event.customDrinkIds),
+  ]);
+  const result = calculate(event, ratesDb, customDrinksMap);
 
   const eventsRef = db.collection('users').doc(uid).collection('events');
   let docRef;
@@ -139,4 +210,4 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
 });
 
 // Fuer Unit-Tests (z.B. mit firebase-functions-test) ohne Firestore-Zugriff.
-exports._internal = {calculate};
+exports._internal = {calculate, loadCustomDrinks};

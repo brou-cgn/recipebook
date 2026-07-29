@@ -166,6 +166,16 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // User-defined custom drinks library (reusable across events)
+    match /users/{userId}/customDrinks/{drinkId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Reusable guest profiles for drink planning
+    match /users/{userId}/guestProfiles/{profileId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Per-user calibrated consumption rates used by calculateEventDrinks.
     // Only writable via the submitConsumption Cloud Function (Admin SDK
     // bypasses these rules) so a manipulated client can't inject bogus

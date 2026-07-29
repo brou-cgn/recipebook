@@ -329,3 +329,27 @@
   font-size: 14px;
   line-height: 1.6;
 }
+
+.events-manage-links {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.events-manage-link-btn {
+  background: none;
+  border: 1px solid #2F5D50;
+  color: #2F5D50;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.events-manage-link-btn:hover {
+  background: #2F5D50;
+  color: white;
+}
