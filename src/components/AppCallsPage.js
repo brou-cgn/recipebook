@@ -10,6 +10,7 @@ import {
   getDarkModePreference,
   getCustomLists,
   saveCustomLists,
+  clearSettingsCache,
   getStandardIngredientTerms,
   getCommonAdjectives,
   saveCommonAdjectives,
@@ -822,6 +823,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
       }
 
       await saveCustomLists({ cuisineTypes: updatedTypes, cuisineGroups: updatedGroups });
+      clearSettingsCache();
 
       // Propagate rename to all recipes that reference the original name
       if (wasRenamed && onUpdateRecipe) {
