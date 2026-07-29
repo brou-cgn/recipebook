@@ -8,10 +8,13 @@ import {
   collection,
   doc,
   getDoc,
+  addDoc,
+  setDoc,
   deleteDoc,
   onSnapshot,
   query,
   orderBy,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 
@@ -119,4 +122,124 @@ export const submitConsumption = async (eventId, gebinde) => {
   const fn = httpsCallable(functions, 'submitConsumption');
   const result = await fn({ eventId, gebinde });
   return result.data;
+};
+
+// ---------------------------------------------------------------------------
+// Custom Drinks Library
+// ---------------------------------------------------------------------------
+
+/**
+ * Set up a real-time listener for a user's custom drinks, ordered by name.
+ * @param {string} uid - Current user ID
+ * @param {Function} callback - Receives the array of custom drinks
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToCustomDrinks = (uid, callback) => {
+  const ref = collection(db, 'users', uid, 'customDrinks');
+  const q = query(ref, orderBy('name', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const drinks = [];
+    snapshot.forEach((docSnap) => {
+      drinks.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    callback(drinks);
+  }, (error) => {
+    console.error('Error subscribing to customDrinks:', error);
+    callback([]);
+  });
+};
+
+/**
+ * Save a custom drink (create or update).
+ * @param {string} uid - Current user ID
+ * @param {Object} drink - { name, gebindeLiter, gebindeName, erwachsene, kinder, modus, anteilTrinker }
+ * @param {string} [drinkId] - If provided, update existing drink
+ * @returns {Promise<string>} The drink ID
+ */
+export const saveCustomDrink = async (uid, drink, drinkId) => {
+  const payload = { ...drink, updatedAt: serverTimestamp() };
+  if (drinkId) {
+    const ref = doc(db, 'users', uid, 'customDrinks', drinkId);
+    await setDoc(ref, payload, { merge: true });
+    return drinkId;
+  }
+  payload.createdAt = serverTimestamp();
+  const ref = collection(db, 'users', uid, 'customDrinks');
+  const docRef = await addDoc(ref, payload);
+  return docRef.id;
+};
+
+/**
+ * Delete a custom drink.
+ * @param {string} uid - Current user ID
+ * @param {string} drinkId - ID of the drink to delete
+ * @returns {Promise<void>}
+ */
+export const deleteCustomDrink = async (uid, drinkId) => {
+  try {
+    await deleteDoc(doc(db, 'users', uid, 'customDrinks', drinkId));
+  } catch (error) {
+    console.error('Error deleting customDrink:', error);
+    throw error;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Guest Profiles
+// ---------------------------------------------------------------------------
+
+/**
+ * Set up a real-time listener for a user's guest profiles, ordered by name.
+ * @param {string} uid - Current user ID
+ * @param {Function} callback - Receives the array of guest profiles
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToGuestProfiles = (uid, callback) => {
+  const ref = collection(db, 'users', uid, 'guestProfiles');
+  const q = query(ref, orderBy('name', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const profiles = [];
+    snapshot.forEach((docSnap) => {
+      profiles.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    callback(profiles);
+  }, (error) => {
+    console.error('Error subscribing to guestProfiles:', error);
+    callback([]);
+  });
+};
+
+/**
+ * Save a guest profile (create or update).
+ * @param {string} uid - Current user ID
+ * @param {Object} profile - { name, adults, children }
+ * @param {string} [profileId] - If provided, update existing profile
+ * @returns {Promise<string>} The profile ID
+ */
+export const saveGuestProfile = async (uid, profile, profileId) => {
+  const payload = { ...profile, updatedAt: serverTimestamp() };
+  if (profileId) {
+    const ref = doc(db, 'users', uid, 'guestProfiles', profileId);
+    await setDoc(ref, payload, { merge: true });
+    return profileId;
+  }
+  payload.createdAt = serverTimestamp();
+  const ref = collection(db, 'users', uid, 'guestProfiles');
+  const docRef = await addDoc(ref, payload);
+  return docRef.id;
+};
+
+/**
+ * Delete a guest profile.
+ * @param {string} uid - Current user ID
+ * @param {string} profileId - ID of the profile to delete
+ * @returns {Promise<void>}
+ */
+export const deleteGuestProfile = async (uid, profileId) => {
+  try {
+    await deleteDoc(doc(db, 'users', uid, 'guestProfiles', profileId));
+  } catch (error) {
+    console.error('Error deleting guestProfile:', error);
+    throw error;
+  }
 };

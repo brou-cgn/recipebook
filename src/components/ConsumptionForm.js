@@ -3,6 +3,11 @@ import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 
+function getRowLabel(row) {
+  if (row.isCustomDrink && row.drinkLabel) return row.drinkLabel;
+  return CATEGORY_LABELS[row.kategorie] || row.kategorie;
+}
+
 function ConsumptionForm({ event, onDone, onCancel }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.gebindeGroesseLiter);
   const [values, setValues] = useState(() => {
@@ -99,7 +104,7 @@ function ConsumptionForm({ event, onDone, onCancel }) {
         {kategorien.map((row) => (
           <div className="events-form-row" key={row.kategorie}>
             <span className="events-consumption-category-label">
-              {CATEGORY_LABELS[row.kategorie] || row.kategorie} ({row.gebinde})
+              {getRowLabel(row)} ({row.gebinde})
             </span>
             <label className="events-form-field">
               <span>Eingekauft</span>

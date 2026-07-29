@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './EventsPage.css';
-import { EVENT_CATEGORIES, EVENT_TYPES, deriveSeason, calculateEventDrinks } from '../utils/eventsFirestore';
+import {
+  EVENT_CATEGORIES,
+  EVENT_TYPES,
+  deriveSeason,
+  calculateEventDrinks,
+  subscribeToCustomDrinks,
+  subscribeToGuestProfiles,
+} from '../utils/eventsFirestore';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -26,7 +33,7 @@ const DEFAULT_PUFFER_PROZENT = 12;
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
-function EventForm({ onSaved, onCancel }) {
+function EventForm({ onSaved, onCancel, currentUser }) {
   const [eventName, setEventName] = useState('');
   const [date, setDate] = useState(todayIsoDate());
   const [durationHours, setDurationHours] = useState(4);
@@ -34,9 +41,35 @@ function EventForm({ onSaved, onCancel }) {
   const [children, setChildren] = useState(0);
   const [eventType, setEventType] = useState('familienfeier');
   const [categories, setCategories] = useState(['wasser', 'softdrinks', 'bier', 'wein']);
+  const [customDrinkIds, setCustomDrinkIds] = useState([]);
   const [pufferProzent, setPufferProzent] = useState(DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Reusable data
+  const [guestProfiles, setGuestProfiles] = useState([]);
+  const [customDrinks, setCustomDrinks] = useState([]);
+  const [selectedProfileId, setSelectedProfileId] = useState('');
+
+  useEffect(() => {
+    if (!currentUser?.id) return undefined;
+    const unsubProfiles = subscribeToGuestProfiles(currentUser.id, setGuestProfiles);
+    const unsubDrinks = subscribeToCustomDrinks(currentUser.id, setCustomDrinks);
+    return () => {
+      unsubProfiles();
+      unsubDrinks();
+    };
+  }, [currentUser?.id]);
+
+  const applyGuestProfile = (profileId) => {
+    setSelectedProfileId(profileId);
+    if (!profileId) return;
+    const profile = guestProfiles.find((p) => p.id === profileId);
+    if (profile) {
+      setAdults(profile.adults ?? 0);
+      setChildren(profile.children ?? 0);
+    }
+  };
 
   const toggleCategory = (cat) => {
     setCategories((prev) =>
@@ -44,10 +77,20 @@ function EventForm({ onSaved, onCancel }) {
     );
   };
 
+  const toggleCustomDrink = (id) => {
+    setCustomDrinkIds((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!eventName.trim() || !date || !durationHours || categories.length === 0) {
-      setError('Bitte Name, Datum, Dauer und mindestens eine Getränkekategorie angeben.');
+    if (!eventName.trim() || !date || !durationHours) {
+      setError('Bitte Name, Datum und Dauer angeben.');
+      return;
+    }
+    if (categories.length === 0 && customDrinkIds.length === 0) {
+      setError('Bitte mindestens eine Getränkekategorie oder ein eigenes Getränk auswählen.');
       return;
     }
     setSaving(true);
@@ -61,6 +104,7 @@ function EventForm({ onSaved, onCancel }) {
         season: deriveSeason(date),
         eventType,
         categories,
+        customDrinkIds,
         pufferProzent: Number(pufferProzent),
       };
       const result = await calculateEventDrinks(event);
@@ -121,6 +165,23 @@ function EventForm({ onSaved, onCancel }) {
           </label>
         </div>
 
+        {guestProfiles.length > 0 && (
+          <label className="events-form-field">
+            <span>Gästeprofil laden</span>
+            <select
+              value={selectedProfileId}
+              onChange={(e) => applyGuestProfile(e.target.value)}
+            >
+              <option value="">— Manuell eingeben —</option>
+              {guestProfiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.adults ?? 0} Erw. / {p.children ?? 0} Kinder)
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <div className="events-form-row">
           <label className="events-form-field">
             <span>Erwachsene</span>
@@ -128,7 +189,7 @@ function EventForm({ onSaved, onCancel }) {
               type="number"
               min="0"
               value={adults}
-              onChange={(e) => setAdults(e.target.value)}
+              onChange={(e) => { setSelectedProfileId(''); setAdults(e.target.value); }}
             />
           </label>
           <label className="events-form-field">
@@ -137,7 +198,7 @@ function EventForm({ onSaved, onCancel }) {
               type="number"
               min="0"
               value={children}
-              onChange={(e) => setChildren(e.target.value)}
+              onChange={(e) => { setSelectedProfileId(''); setChildren(e.target.value); }}
             />
           </label>
         </div>
@@ -152,7 +213,7 @@ function EventForm({ onSaved, onCancel }) {
         </label>
 
         <div className="events-form-field">
-          <span>Getränkekategorien</span>
+          <span>Standardkategorien</span>
           <div className="events-category-grid">
             {EVENT_CATEGORIES.map((cat) => (
               <label key={cat} className="events-category-checkbox">
@@ -166,6 +227,24 @@ function EventForm({ onSaved, onCancel }) {
             ))}
           </div>
         </div>
+
+        {customDrinks.length > 0 && (
+          <div className="events-form-field">
+            <span>Eigene Getränke</span>
+            <div className="events-category-grid">
+              {customDrinks.map((drink) => (
+                <label key={drink.id} className="events-category-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={customDrinkIds.includes(drink.id)}
+                    onChange={() => toggleCustomDrink(drink.id)}
+                  />
+                  <span>{drink.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <label className="events-form-field">
           <span>Puffer (%)</span>
@@ -195,3 +274,4 @@ function EventForm({ onSaved, onCancel }) {
 
 export { CATEGORY_LABELS, EVENT_TYPE_LABELS };
 export default EventForm;
+

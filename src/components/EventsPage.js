@@ -4,6 +4,8 @@ import { subscribeToEvents, deleteEvent, getEvent } from '../utils/eventsFiresto
 import { CATEGORY_LABELS, EVENT_TYPE_LABELS } from './EventForm';
 import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
+import DrinkManagementPage from './DrinkManagementPage';
+import GuestManagementPage from './GuestManagementPage';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -23,7 +25,7 @@ const formatDate = (dateStr) => {
 function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEventReminderHandled }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [subView, setSubView] = useState('list'); // list | new | detail | consumption
+  const [subView, setSubView] = useState('list'); // list | new | detail | consumption | drinks | guests
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
 
@@ -81,11 +83,30 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
     }
   };
 
+  if (subView === 'drinks') {
+    return (
+      <DrinkManagementPage
+        onBack={() => setSubView('list')}
+        currentUser={currentUser}
+      />
+    );
+  }
+
+  if (subView === 'guests') {
+    return (
+      <GuestManagementPage
+        onBack={() => setSubView('list')}
+        currentUser={currentUser}
+      />
+    );
+  }
+
   if (subView === 'new') {
     return (
       <EventForm
         onSaved={handleEventSaved}
         onCancel={() => setSubView('list')}
+        currentUser={currentUser}
       />
     );
   }
@@ -155,7 +176,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
               <tbody>
                 {(berechnung?.ergebnis || []).map((row) => (
                   <tr key={row.kategorie}>
-                    <td>{CATEGORY_LABELS[row.kategorie] || row.kategorie}</td>
+                    <td>{row.isCustomDrink && row.drinkLabel ? row.drinkLabel : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
                     <td>{row.literMitPuffer} L</td>
                     <td>{row.gebinde || '-'}</td>
                     <td>{row.anzahlGebinde ?? '-'}</td>
@@ -226,6 +247,15 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
             ×
           </button>
         )}
+      </div>
+
+      <div className="events-manage-links">
+        <button type="button" className="events-manage-link-btn" onClick={() => setSubView('drinks')}>
+          Getränke verwalten
+        </button>
+        <button type="button" className="events-manage-link-btn" onClick={() => setSubView('guests')}>
+          Gäste verwalten
+        </button>
       </div>
 
       {loading ? (
