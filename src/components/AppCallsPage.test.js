@@ -104,6 +104,7 @@ jest.mock('../utils/customLists', () => ({
     Promise.resolve({ cuisineTypes: ['Spanisch', 'Italienisch'], cuisineGroups: [] })
   ),
   saveCustomLists: jest.fn(() => Promise.resolve()),
+  clearSettingsCache: jest.fn(),
   getStandardIngredientTerms: jest.fn(() =>
     Promise.resolve({ standardUnits: ['Tasse'], standardAdjectives: ['frisch'] })
   ),
@@ -193,7 +194,7 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
 
   test('releasing an unedited proposal adds it to cuisineTypes without modifying other types', async () => {
     const { getCuisineProposals, releaseCuisineProposal } = require('../utils/cuisineProposalsFirestore');
-    const { saveCustomLists } = require('../utils/customLists');
+    const { saveCustomLists, clearSettingsCache } = require('../utils/customLists');
     getCuisineProposals.mockResolvedValueOnce([
       { id: 'p1', name: 'Spanisch', originalName: 'Spanisch', groupName: null, released: false, source: 'recipe_form' },
     ]);
@@ -220,6 +221,7 @@ describe('AppCallsPage – Kulinariktypen release with rename', () => {
     await waitFor(() => expect(saveCustomLists).toHaveBeenCalledWith(
       expect.objectContaining({ cuisineTypes: expect.arrayContaining(['Spanisch', 'Italienisch']) })
     ));
+    expect(clearSettingsCache).toHaveBeenCalledTimes(1);
   });
 
   test('releasing a renamed proposal replaces the original name in cuisineTypes', async () => {
@@ -446,7 +448,7 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
   });
 
   test('adding a new cuisineType saves it', async () => {
-    const { saveCustomLists } = require('../utils/customLists');
+    const { saveCustomLists, clearSettingsCache } = require('../utils/customLists');
 
     render(
       <AppCallsPage
@@ -468,10 +470,11 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
         cuisineTypes: expect.arrayContaining(['Spanisch', 'Italienisch', 'Mexikanisch']),
       })
     ));
+    expect(clearSettingsCache).toHaveBeenCalledTimes(1);
   });
 
   test('removing a cuisineType saves the updated list', async () => {
-    const { saveCustomLists } = require('../utils/customLists');
+    const { saveCustomLists, clearSettingsCache } = require('../utils/customLists');
 
     render(
       <AppCallsPage
@@ -492,10 +495,11 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
     const savedArg = saveCustomLists.mock.calls[0][0];
     expect(savedArg.cuisineTypes).not.toContain('Spanisch');
     expect(savedArg.cuisineTypes).toContain('Italienisch');
+    expect(clearSettingsCache).toHaveBeenCalledTimes(1);
   });
 
   test('adding a new cuisineGroup saves it', async () => {
-    const { saveCustomLists } = require('../utils/customLists');
+    const { saveCustomLists, clearSettingsCache } = require('../utils/customLists');
 
     render(
       <AppCallsPage
@@ -521,6 +525,7 @@ describe('AppCallsPage – Kulinariktypen & Gruppen management', () => {
         ]),
       })
     ));
+    expect(clearSettingsCache).toHaveBeenCalledTimes(1);
   });
 });
 

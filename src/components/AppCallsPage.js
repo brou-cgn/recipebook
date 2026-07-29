@@ -858,6 +858,7 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
   const saveCuisineLists = async (updatedTypes, updatedGroups) => {
     try {
       await saveCustomLists({ cuisineTypes: updatedTypes, cuisineGroups: updatedGroups });
+      clearSettingsCache();
     } catch (err) {
       console.error('Error saving cuisine lists:', err);
     }
