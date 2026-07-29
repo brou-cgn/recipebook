@@ -50,6 +50,19 @@ function round2(n) {
 }
 
 /**
+ * Clamp value to [0, 1], fallback 1 for invalid values.
+ * @param {number} value Candidate multiplier.
+ * @return {number}
+ */
+function normalizeMultiplier(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
+/**
  * Reine Berechnungsfunktion, kein Firestore-Zugriff -- leicht testbar.
  * @param {object} event Event-Parameter (eventName, durationHours, guests, season,
  *   eventType, categories, customDrinkIds, pufferProzent).
@@ -68,6 +81,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   const categories = event.categories || Object.keys(DEFAULT_RATES);
   const customDrinkIds = event.customDrinkIds || [];
   const allCustomDrinks = customDrinksMap || {};
+  const guestPreferenceMultipliers = event.guestPreferenceMultipliers || {};
 
   const ergebnis = [];
   const warnungen = [];
@@ -98,7 +112,8 @@ function calculate(event, ratesDb, customDrinksMap) {
       literKinder = children * (entry.kinder || 0) * hours * durFactor;
     }
 
-    const literGesamt = literErwachsene + literKinder;
+    const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[cat]);
+    const literGesamt = (literErwachsene + literKinder) * preferenceMultiplier;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
@@ -112,6 +127,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       anzahlGebinde,
       ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
+      praeferenzFaktor: preferenceMultiplier !== 1 ? preferenceMultiplier : null,
     });
   }
 
@@ -139,7 +155,8 @@ function calculate(event, ratesDb, customDrinksMap) {
       literKinder = children * (entry.kinder || 0) * hours * durFactor;
     }
 
-    const literGesamt = literErwachsene + literKinder;
+    const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[drinkId]);
+    const literGesamt = (literErwachsene + literKinder) * preferenceMultiplier;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
@@ -155,6 +172,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       anzahlGebinde,
       ratenQuelle: 'benutzerdefiniert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
+      praeferenzFaktor: preferenceMultiplier !== 1 ? preferenceMultiplier : null,
     });
   }
 

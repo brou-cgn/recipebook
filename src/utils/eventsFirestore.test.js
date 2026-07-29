@@ -13,6 +13,8 @@ const mockOrderBy = jest.fn((...args) => args);
 const mockQuery = jest.fn((...args) => args);
 const mockCollection = jest.fn();
 const mockDoc = jest.fn();
+const mockHttpsCallable = jest.fn();
+const mockGuestCallable = jest.fn();
 
 jest.mock('firebase/firestore', () => ({
   collection: (...args) => mockCollection(...args),
@@ -28,7 +30,7 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 jest.mock('firebase/functions', () => ({
-  httpsCallable: jest.fn(),
+  httpsCallable: (...args) => mockHttpsCallable(...args),
 }));
 
 import {
@@ -130,6 +132,7 @@ describe('subscribeToGuestProfiles', () => {
     subscribeToGuestProfiles('user1', cb);
 
     expect(cb).toHaveBeenCalledWith([{ id: 'p1', name: 'Familie', adults: 4, children: 2 }]);
+    expect(mockCollection).toHaveBeenCalledWith({}, 'guests', 'user1', 'profiles');
   });
 
   it('calls callback with empty array on error', () => {
@@ -146,40 +149,59 @@ describe('subscribeToGuestProfiles', () => {
 });
 
 describe('saveGuestProfile', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHttpsCallable.mockReturnValue(mockGuestCallable);
+  });
 
   it('creates a new profile when no profileId provided', async () => {
-    mockAddDoc.mockResolvedValue({ id: 'new-profile-id' });
+    mockGuestCallable.mockResolvedValue({ data: { id: 'new-profile-id' } });
 
     const id = await saveGuestProfile('user1', { name: 'Familie', adults: 4, children: 2 });
 
-    expect(mockAddDoc).toHaveBeenCalledTimes(1);
+    expect(mockHttpsCallable).toHaveBeenCalledTimes(1);
+    expect(mockHttpsCallable).toHaveBeenCalledWith({}, 'manageGuestProfile');
+    expect(mockGuestCallable).toHaveBeenCalledWith({
+      action: 'create',
+      profileId: null,
+      profile: { name: 'Familie', adults: 4, children: 2 },
+    });
     expect(id).toBe('new-profile-id');
   });
 
   it('updates an existing profile when profileId provided', async () => {
-    mockSetDoc.mockResolvedValue(undefined);
+    mockGuestCallable.mockResolvedValue({ data: { id: 'profile-abc' } });
 
     const id = await saveGuestProfile('user1', { name: 'Familie', adults: 4, children: 2 }, 'profile-abc');
 
-    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    expect(mockGuestCallable).toHaveBeenCalledWith({
+      action: 'update',
+      profileId: 'profile-abc',
+      profile: { name: 'Familie', adults: 4, children: 2 },
+    });
     expect(id).toBe('profile-abc');
   });
 });
 
 describe('deleteGuestProfile', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHttpsCallable.mockReturnValue(mockGuestCallable);
+  });
 
   it('deletes the specified profile', async () => {
-    mockDeleteDoc.mockResolvedValue(undefined);
+    mockGuestCallable.mockResolvedValue({ data: { id: 'profile-123' } });
 
     await deleteGuestProfile('user1', 'profile-123');
 
-    expect(mockDeleteDoc).toHaveBeenCalledTimes(1);
+    expect(mockGuestCallable).toHaveBeenCalledWith({
+      action: 'delete',
+      profileId: 'profile-123',
+    });
   });
 
   it('throws on Firestore error', async () => {
-    mockDeleteDoc.mockRejectedValue(new Error('not found'));
+    mockGuestCallable.mockRejectedValue(new Error('not found'));
 
     await expect(deleteGuestProfile('user1', 'profile-xyz')).rejects.toThrow('not found');
   });

@@ -1,15 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
-import { subscribeToGuestProfiles, saveGuestProfile, deleteGuestProfile } from '../utils/eventsFirestore';
+import {
+  EVENT_CATEGORIES,
+  subscribeToGuestProfiles,
+  saveGuestProfile,
+  deleteGuestProfile,
+  subscribeToCustomDrinks,
+} from '../utils/eventsFirestore';
+import { canEditRecipes } from '../utils/userManagement';
+import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
+
+const CATEGORY_LABELS = {
+  wasser: 'Wasser',
+  softdrinks: 'Softdrinks',
+  saft: 'Saft',
+  bier: 'Bier',
+  wein: 'Wein',
+  sekt: 'Sekt',
+  spirituosen: 'Spirituosen',
+  kaffee: 'Kaffee',
+  tee: 'Tee',
+};
 
 const emptyForm = () => ({
-  name: '',
-  adults: 10,
-  children: 0,
+  vorname: '',
+  nachname: '',
+  email: '',
+  alkoholischeGetraenke: true,
+  bevorzugteGetraenke: [],
+  praeferenzFaktor: 0.5,
 });
+
+const getPreferenceLabel = (factor) => {
+  if (factor === 1) return 'trinkt nur diese Getränke';
+  if (factor === 0.75) return 'trinkt vorwiegend diese Getränke';
+  if (factor === 0.5) return 'trinkt diese Getränke gerne';
+  if (factor === 0.25) return 'mag diese Getränke';
+  return 'wird nicht berücksichtigt';
+};
 
 function GuestManagementPage({ onBack, currentUser }) {
   const [profiles, setProfiles] = useState([]);
+  const [customDrinks, setCustomDrinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -17,14 +49,26 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const canManageGuests = canEditRecipes(currentUser);
+
   useEffect(() => {
     if (!currentUser?.id) return undefined;
-    const unsubscribe = subscribeToGuestProfiles(currentUser.id, (loaded) => {
+    const unsubscribeProfiles = subscribeToGuestProfiles(currentUser.id, (loaded) => {
       setProfiles(loaded);
       setLoading(false);
     });
-    return unsubscribe;
+    const unsubscribeDrinks = subscribeToCustomDrinks(currentUser.id, setCustomDrinks);
+    return () => {
+      unsubscribeProfiles();
+      unsubscribeDrinks();
+    };
   }, [currentUser?.id]);
+
+  const availableDrinks = useMemo(() => {
+    const standard = EVENT_CATEGORIES.map((id) => ({ id, label: CATEGORY_LABELS[id] || id }));
+    const custom = customDrinks.map((drink) => ({ id: drink.id, label: drink.name || drink.id }));
+    return [...standard, ...custom];
+  }, [customDrinks]);
 
   const openNew = () => {
     setEditId(null);
@@ -36,18 +80,44 @@ function GuestManagementPage({ onBack, currentUser }) {
   const openEdit = (profile) => {
     setEditId(profile.id);
     setForm({
-      name: profile.name || '',
-      adults: profile.adults ?? 10,
-      children: profile.children ?? 0,
+      vorname: profile.vorname || '',
+      nachname: profile.nachname || '',
+      email: profile.email || '',
+      alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
+      bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
+      praeferenzFaktor: normalizePreferenceFactor(profile.präferenzFaktor),
     });
     setError('');
     setShowForm(true);
   };
 
+  const togglePreferredDrink = (drinkId) => {
+    setForm((prev) => {
+      const current = Array.isArray(prev.bevorzugteGetraenke) ? prev.bevorzugteGetraenke : [];
+      const next = current.includes(drinkId)
+        ? current.filter((id) => id !== drinkId)
+        : [...current, drinkId];
+      return { ...prev, bevorzugteGetraenke: next };
+    });
+  };
+
+  const validateEmail = (email) => {
+    if (!email) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) {
-      setError('Bitte einen Namen angeben.');
+    if (!canManageGuests) {
+      setError('Du hast keine Berechtigung, Gäste zu verwalten.');
+      return;
+    }
+    if (!form.vorname.trim() || !form.nachname.trim()) {
+      setError('Bitte Vorname und Nachname angeben.');
+      return;
+    }
+    if (!validateEmail(form.email.trim())) {
+      setError('Bitte eine gültige E-Mail-Adresse angeben.');
       return;
     }
     setSaving(true);
@@ -56,9 +126,12 @@ function GuestManagementPage({ onBack, currentUser }) {
       await saveGuestProfile(
         currentUser.id,
         {
-          name: form.name.trim(),
-          adults: Number(form.adults) || 0,
-          children: Number(form.children) || 0,
+          vorname: form.vorname.trim(),
+          nachname: form.nachname.trim(),
+          email: form.email.trim(),
+          alkoholischeGetränke: form.alkoholischeGetraenke,
+          bevorzugteGetränke: form.bevorzugteGetraenke,
+          präferenzFaktor: normalizePreferenceFactor(form.praeferenzFaktor),
         },
         editId || undefined,
       );
@@ -72,7 +145,9 @@ function GuestManagementPage({ onBack, currentUser }) {
   };
 
   const handleDelete = async (profile) => {
-    if (!window.confirm(`Möchtest du "${profile.name}" wirklich löschen?`)) return;
+    if (!canManageGuests) return;
+    const name = getGuestDisplayName(profile) || 'diesen Gast';
+    if (!window.confirm(`Möchtest du "${name}" wirklich löschen?`)) return;
     try {
       await deleteGuestProfile(currentUser.id, profile.id);
     } catch (err) {
@@ -80,11 +155,34 @@ function GuestManagementPage({ onBack, currentUser }) {
     }
   };
 
+  if (!canManageGuests) {
+    return (
+      <div className="events-page-container">
+        <div className="events-page-header">
+          <h2>Gäste verwalten</h2>
+          {onBack && (
+            <button
+              className="events-close-btn"
+              onClick={onBack}
+              aria-label="Zurück"
+              title="Zurück"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="events-empty-state">
+          Nur Benutzer mit der Rolle „edit“ oder höher können Gäste verwalten.
+        </div>
+      </div>
+    );
+  }
+
   if (showForm) {
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>{editId ? 'Gästeprofil bearbeiten' : 'Neues Gästeprofil'}</h2>
+          <h2>{editId ? 'Gast bearbeiten' : 'Neuen Gast erfassen'}</h2>
           <button
             className="events-close-btn"
             onClick={() => setShowForm(false)}
@@ -95,37 +193,73 @@ function GuestManagementPage({ onBack, currentUser }) {
           </button>
         </div>
         <form className="events-form" onSubmit={handleSave}>
-          <label className="events-form-field">
-            <span>Name des Profils</span>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="z. B. Familie, Büro-Team, ..."
-              required
-            />
-          </label>
-
           <div className="events-form-row">
             <label className="events-form-field">
-              <span>Erwachsene</span>
+              <span>Vorname</span>
               <input
-                type="number"
-                min="0"
-                value={form.adults}
-                onChange={(e) => setForm((f) => ({ ...f, adults: e.target.value }))}
+                type="text"
+                value={form.vorname}
+                onChange={(e) => setForm((f) => ({ ...f, vorname: e.target.value }))}
+                required
               />
             </label>
             <label className="events-form-field">
-              <span>Kinder</span>
+              <span>Nachname</span>
               <input
-                type="number"
-                min="0"
-                value={form.children}
-                onChange={(e) => setForm((f) => ({ ...f, children: e.target.value }))}
+                type="text"
+                value={form.nachname}
+                onChange={(e) => setForm((f) => ({ ...f, nachname: e.target.value }))}
+                required
               />
             </label>
           </div>
+
+          <label className="events-form-field">
+            <span>E-Mail (optional)</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="name@beispiel.de"
+            />
+          </label>
+
+          <label className="events-category-checkbox">
+            <input
+              type="checkbox"
+              checked={form.alkoholischeGetraenke}
+              onChange={(e) => setForm((f) => ({ ...f, alkoholischeGetraenke: e.target.checked }))}
+            />
+            <span>Alkoholische Getränke</span>
+          </label>
+
+          <div className="events-form-field">
+            <span>Bevorzugte Getränke</span>
+            <div className="events-category-grid">
+              {availableDrinks.map((drink) => (
+                <label key={drink.id} className="events-category-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={form.bevorzugteGetraenke.includes(drink.id)}
+                    onChange={() => togglePreferredDrink(drink.id)}
+                  />
+                  <span>{drink.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="events-form-field">
+            <span>Präferenzfaktor: {Number(form.praeferenzFaktor).toFixed(2)} ({getPreferenceLabel(Number(form.praeferenzFaktor))})</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.25"
+              value={form.praeferenzFaktor}
+              onChange={(e) => setForm((f) => ({ ...f, praeferenzFaktor: Number(e.target.value) }))}
+            />
+          </label>
 
           {error && <p className="events-error-text">{error}</p>}
 
@@ -167,38 +301,44 @@ function GuestManagementPage({ onBack, currentUser }) {
         <div className="events-empty-state">Laden...</div>
       ) : profiles.length === 0 ? (
         <div className="events-empty-state">
-          <p>Noch keine Gästeprofile angelegt.</p>
+          <p>Noch keine Gäste erfasst.</p>
           <button type="button" className="events-primary-btn" onClick={openNew}>
-            Erstes Profil anlegen
+            Ersten Gast anlegen
           </button>
         </div>
       ) : (
         <>
           <div className="events-list">
-            {profiles.map((profile) => (
-              <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
-                <div className="events-card-main">
-                  <h3>{profile.name}</h3>
-                  <p className="events-card-meta">
-                    {profile.adults ?? 0} Erw. / {profile.children ?? 0} Kinder
-                  </p>
+            {profiles.map((profile) => {
+              const fullName = getGuestDisplayName(profile);
+              const preferenceCount = Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke.length : 0;
+              return (
+                <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
+                  <div className="events-card-main">
+                    <h3>{fullName || 'Unbenannter Gast'}</h3>
+                    <p className="events-card-meta">
+                      {profile.email || 'Keine E-Mail'} · {profile.alkoholischeGetränke === false ? 'ohne Alkohol' : 'mit Alkohol'}
+                      {' · '}
+                      {preferenceCount} Präferenz{preferenceCount === 1 ? '' : 'en'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="events-secondary-btn events-delete-btn"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(profile); }}
+                    aria-label={`${fullName || 'Gast'} löschen`}
+                  >
+                    Löschen
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="events-secondary-btn events-delete-btn"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(profile); }}
-                  aria-label={`${profile.name} löschen`}
-                >
-                  Löschen
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button
             className="events-add-fab-button"
             onClick={openNew}
-            title="Profil anlegen"
-            aria-label="Profil anlegen"
+            title="Gast anlegen"
+            aria-label="Gast anlegen"
           >
             +
           </button>

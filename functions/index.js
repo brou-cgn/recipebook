@@ -6353,3 +6353,4 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
 exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
 exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;
+exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;
