@@ -195,8 +195,8 @@ export const deleteCustomDrink = async (uid, drinkId) => {
  * @returns {Function} Unsubscribe function
  */
 export const subscribeToGuestProfiles = (uid, callback) => {
-  const ref = collection(db, 'users', uid, 'guestProfiles');
-  const q = query(ref, orderBy('name', 'asc'));
+  const ref = collection(db, 'guests', uid, 'profiles');
+  const q = query(ref, orderBy('nachname', 'asc'));
   return onSnapshot(q, (snapshot) => {
     const profiles = [];
     snapshot.forEach((docSnap) => {
@@ -216,17 +216,14 @@ export const subscribeToGuestProfiles = (uid, callback) => {
  * @param {string} [profileId] - If provided, update existing profile
  * @returns {Promise<string>} The profile ID
  */
-export const saveGuestProfile = async (uid, profile, profileId) => {
-  const payload = { ...profile, updatedAt: serverTimestamp() };
-  if (profileId) {
-    const ref = doc(db, 'users', uid, 'guestProfiles', profileId);
-    await setDoc(ref, payload, { merge: true });
-    return profileId;
-  }
-  payload.createdAt = serverTimestamp();
-  const ref = collection(db, 'users', uid, 'guestProfiles');
-  const docRef = await addDoc(ref, payload);
-  return docRef.id;
+export const saveGuestProfile = async (_uid, profile, profileId) => {
+  const fn = httpsCallable(functions, 'manageGuestProfile');
+  const result = await fn({
+    action: profileId ? 'update' : 'create',
+    profileId: profileId || null,
+    profile,
+  });
+  return result?.data?.id || profileId;
 };
 
 /**
@@ -235,9 +232,13 @@ export const saveGuestProfile = async (uid, profile, profileId) => {
  * @param {string} profileId - ID of the profile to delete
  * @returns {Promise<void>}
  */
-export const deleteGuestProfile = async (uid, profileId) => {
+export const deleteGuestProfile = async (_uid, profileId) => {
   try {
-    await deleteDoc(doc(db, 'users', uid, 'guestProfiles', profileId));
+    const fn = httpsCallable(functions, 'manageGuestProfile');
+    await fn({
+      action: 'delete',
+      profileId,
+    });
   } catch (error) {
     console.error('Error deleting guestProfile:', error);
     throw error;

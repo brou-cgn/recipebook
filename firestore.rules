@@ -173,7 +173,16 @@ service cloud.firestore {
 
     // Reusable guest profiles for drink planning
     match /users/{userId}/guestProfiles/{profileId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Guest profiles (new data model):
+    // /guests/{userId}/profiles/{guestId}
+    // Reads are limited to the owner; writes happen via Cloud Function (Admin SDK).
+    match /guests/{userId}/profiles/{guestId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;
     }
 
     // Per-user calibrated consumption rates used by calculateEventDrinks.

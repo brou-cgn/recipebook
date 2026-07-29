@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
 import {
   EVENT_CATEGORIES,
@@ -8,6 +8,7 @@ import {
   subscribeToCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
+import { computeGuestPreferenceMultipliers, getGuestDisplayName } from '../utils/guestPreferences';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -46,30 +47,29 @@ function EventForm({ onSaved, onCancel, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Reusable data
-  const [guestProfiles, setGuestProfiles] = useState([]);
+  const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
-  const [selectedProfileId, setSelectedProfileId] = useState('');
+  const [selectedGuestIds, setSelectedGuestIds] = useState([]);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
-    const unsubProfiles = subscribeToGuestProfiles(currentUser.id, setGuestProfiles);
+    const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
     const unsubDrinks = subscribeToCustomDrinks(currentUser.id, setCustomDrinks);
     return () => {
-      unsubProfiles();
+      unsubGuests();
       unsubDrinks();
     };
   }, [currentUser?.id]);
 
-  const applyGuestProfile = (profileId) => {
-    setSelectedProfileId(profileId);
-    if (!profileId) return;
-    const profile = guestProfiles.find((p) => p.id === profileId);
-    if (profile) {
-      setAdults(profile.adults ?? 0);
-      setChildren(profile.children ?? 0);
-    }
-  };
+  const selectedGuests = useMemo(
+    () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
+    [guests, selectedGuestIds],
+  );
+
+  const guestPreferenceMultipliers = useMemo(
+    () => computeGuestPreferenceMultipliers(selectedGuests, [...EVENT_CATEGORIES, ...customDrinks.map((drink) => drink.id)]),
+    [selectedGuests, customDrinks],
+  );
 
   const toggleCategory = (cat) => {
     setCategories((prev) =>
@@ -81,6 +81,22 @@ function EventForm({ onSaved, onCancel, currentUser }) {
     setCustomDrinkIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
     );
+  };
+
+  const toggleGuest = (guestId) => {
+    setSelectedGuestIds((prev) => {
+      const next = prev.includes(guestId)
+        ? prev.filter((id) => id !== guestId)
+        : [...prev, guestId];
+      setAdults(next.length);
+      return next;
+    });
+  };
+
+  const applyGuestDrinkFilter = () => {
+    if (selectedGuestIds.length === 0) return;
+    setCategories((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
+    setCustomDrinkIds((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
   };
 
   const handleSubmit = async (e) => {
@@ -101,6 +117,8 @@ function EventForm({ onSaved, onCancel, currentUser }) {
         date,
         durationHours: Number(durationHours),
         guests: { adults: Number(adults) || 0, children: Number(children) || 0 },
+        selectedGuestIds,
+        guestPreferenceMultipliers,
         season: deriveSeason(date),
         eventType,
         categories,
@@ -165,21 +183,30 @@ function EventForm({ onSaved, onCancel, currentUser }) {
           </label>
         </div>
 
-        {guestProfiles.length > 0 && (
-          <label className="events-form-field">
-            <span>Gästeprofil laden</span>
-            <select
-              value={selectedProfileId}
-              onChange={(e) => applyGuestProfile(e.target.value)}
-            >
-              <option value="">— Manuell eingeben —</option>
-              {guestProfiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.adults ?? 0} Erw. / {p.children ?? 0} Kinder)
-                </option>
-              ))}
-            </select>
-          </label>
+        {guests.length > 0 && (
+          <div className="events-form-field">
+            <span>Gästeauswahl für Menüplanung</span>
+            <div className="events-category-grid">
+              {guests.map((guest) => {
+                const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                return (
+                  <label key={guest.id} className="events-category-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedGuestIds.includes(guest.id)}
+                      onChange={() => toggleGuest(guest.id)}
+                    />
+                    <span>{fullName}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {selectedGuestIds.length > 0 && (
+              <p className="events-info-text">
+                {selectedGuestIds.length} Gäste ausgewählt. Getränkefilter kann anhand der Präferenzen angewendet werden.
+              </p>
+            )}
+          </div>
         )}
 
         <div className="events-form-row">
@@ -189,7 +216,7 @@ function EventForm({ onSaved, onCancel, currentUser }) {
               type="number"
               min="0"
               value={adults}
-              onChange={(e) => { setSelectedProfileId(''); setAdults(e.target.value); }}
+              onChange={(e) => setAdults(e.target.value)}
             />
           </label>
           <label className="events-form-field">
@@ -198,7 +225,7 @@ function EventForm({ onSaved, onCancel, currentUser }) {
               type="number"
               min="0"
               value={children}
-              onChange={(e) => { setSelectedProfileId(''); setChildren(e.target.value); }}
+              onChange={(e) => setChildren(e.target.value)}
             />
           </label>
         </div>
@@ -222,7 +249,12 @@ function EventForm({ onSaved, onCancel, currentUser }) {
                   checked={categories.includes(cat)}
                   onChange={() => toggleCategory(cat)}
                 />
-                <span>{CATEGORY_LABELS[cat]}</span>
+                <span>
+                  {CATEGORY_LABELS[cat]}
+                  {selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[cat] === 'number'
+                    ? ` (${guestPreferenceMultipliers[cat]})`
+                    : ''}
+                </span>
               </label>
             ))}
           </div>
@@ -239,11 +271,22 @@ function EventForm({ onSaved, onCancel, currentUser }) {
                     checked={customDrinkIds.includes(drink.id)}
                     onChange={() => toggleCustomDrink(drink.id)}
                   />
-                  <span>{drink.name}</span>
+                  <span>
+                    {drink.name}
+                    {selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[drink.id] === 'number'
+                      ? ` (${guestPreferenceMultipliers[drink.id]})`
+                      : ''}
+                  </span>
                 </label>
               ))}
             </div>
           </div>
+        )}
+
+        {selectedGuestIds.length > 0 && (
+          <button type="button" className="events-secondary-btn" onClick={applyGuestDrinkFilter}>
+            Getränke nach Gästewunsch filtern
+          </button>
         )}
 
         <label className="events-form-field">
@@ -274,4 +317,3 @@ function EventForm({ onSaved, onCancel, currentUser }) {
 
 export { CATEGORY_LABELS, EVENT_TYPE_LABELS };
 export default EventForm;
-

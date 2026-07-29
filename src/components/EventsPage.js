@@ -6,6 +6,7 @@ import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
+import { canEditRecipes } from '../utils/userManagement';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -253,9 +254,11 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
         <button type="button" className="events-manage-link-btn" onClick={() => setSubView('drinks')}>
           Getränke verwalten
         </button>
-        <button type="button" className="events-manage-link-btn" onClick={() => setSubView('guests')}>
-          Gäste verwalten
-        </button>
+        {canEditRecipes(currentUser) && (
+          <button type="button" className="events-manage-link-btn" onClick={() => setSubView('guests')}>
+            Gäste verwalten
+          </button>
+        )}
       </div>
 
       {loading ? (
