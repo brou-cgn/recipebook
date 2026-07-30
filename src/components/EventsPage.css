@@ -183,7 +183,7 @@
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 16px;
   font-family: inherit;
 }
 
@@ -401,4 +401,50 @@
 .events-manage-link-btn:hover {
   background: #2F5D50;
   color: white;
+}
+
+@media (max-width: 600px) {
+  .events-form-field {
+    font-size: 16px;
+  }
+
+  .events-form-field > span:first-child {
+    font-size: 16px;
+  }
+
+  .events-category-checkbox {
+    font-size: 16px;
+  }
+
+  .events-card-meta {
+    font-size: 16px;
+  }
+
+  .events-info-text {
+    font-size: 16px;
+  }
+
+  .events-error-text {
+    font-size: 16px;
+  }
+
+  .events-warning-text {
+    font-size: 16px;
+  }
+
+  .events-manage-link-btn {
+    font-size: 16px;
+  }
+
+  .events-drink-chip {
+    font-size: 16px;
+  }
+
+  .events-table {
+    font-size: 16px;
+  }
+
+  .events-detail-meta {
+    font-size: 16px;
+  }
 }

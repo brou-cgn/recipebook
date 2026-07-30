@@ -8,7 +8,6 @@ const mockSaveGuestProfile = jest.fn();
 const mockDeleteGuestProfile = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
-  EVENT_CATEGORIES: ['wasser', 'bier', 'wein'],
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
   saveGuestProfile: (...args) => mockSaveGuestProfile(...args),
@@ -48,14 +47,14 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     expect(screen.queryByLabelText(/entfernen/)).not.toBeInTheDocument();
   });
 
-  test('shows a dropdown to select drinks from available list', () => {
+  test('shows a dropdown to select drinks – standard categories are not listed', () => {
     openNewGuestForm();
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
     expect(select).toBeInTheDocument();
-    // All available drinks appear as options
-    expect(screen.getByRole('option', { name: 'Wasser' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Bier' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Wein' })).toBeInTheDocument();
+    // Standard categories should NOT appear – only custom drinks are listed
+    expect(screen.queryByRole('option', { name: 'Wasser' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Bier' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Wein' })).not.toBeInTheDocument();
   });
 
   test('Hinzufügen button is disabled when no drink is selected in dropdown', () => {
@@ -65,38 +64,50 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
   });
 
   test('adding a drink creates a chip and removes it from the dropdown', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'mineral-wasser', name: 'Mineral Wasser' }]);
+      return jest.fn();
+    });
     openNewGuestForm();
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
-    fireEvent.change(select, { target: { value: 'wasser' } });
+    fireEvent.change(select, { target: { value: 'mineral-wasser' } });
 
     const addBtn = screen.getByRole('button', { name: 'Hinzufügen' });
     expect(addBtn).not.toBeDisabled();
     fireEvent.click(addBtn);
 
-    // Chip for Wasser should now be visible
-    expect(screen.getByLabelText('Wasser entfernen')).toBeInTheDocument();
-    // Wasser should no longer appear in dropdown options
-    expect(screen.queryByRole('option', { name: 'Wasser' })).not.toBeInTheDocument();
+    // Chip for Mineral Wasser should now be visible
+    expect(screen.getByLabelText('Mineral Wasser entfernen')).toBeInTheDocument();
+    // Mineral Wasser should no longer appear in dropdown options
+    expect(screen.queryByRole('option', { name: 'Mineral Wasser' })).not.toBeInTheDocument();
     // Dropdown should reset to empty
     expect(select.value).toBe('');
   });
 
   test('removing a chip via × button makes drink available in dropdown again', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'craft-bier', name: 'Craft Bier' }]);
+      return jest.fn();
+    });
     openNewGuestForm();
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
-    fireEvent.change(select, { target: { value: 'bier' } });
+    fireEvent.change(select, { target: { value: 'craft-bier' } });
     fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
 
     // Remove the chip
-    fireEvent.click(screen.getByLabelText('Bier entfernen'));
+    fireEvent.click(screen.getByLabelText('Craft Bier entfernen'));
 
     // Chip should be gone
-    expect(screen.queryByLabelText('Bier entfernen')).not.toBeInTheDocument();
-    // Bier should be back in dropdown
-    expect(screen.getByRole('option', { name: 'Bier' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Craft Bier entfernen')).not.toBeInTheDocument();
+    // Craft Bier should be back in dropdown
+    expect(screen.getByRole('option', { name: 'Craft Bier' })).toBeInTheDocument();
   });
 
-  test('editing an existing guest shows pre-selected drinks as chips', () => {
+  test('editing an existing guest shows pre-selected custom drinks as chips', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'hauswein', name: 'Hauswein' }]);
+      return jest.fn();
+    });
     mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
       cb([
         {
@@ -104,7 +115,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
           vorname: 'Max',
           nachname: 'Mustermann',
           alkoholischeGetränke: true,
-          bevorzugteGetränke: ['wein'],
+          bevorzugteGetränke: ['hauswein'],
           präferenzFaktor: 0.5,
         },
       ]);
@@ -114,10 +125,10 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     render(<GuestManagementPage currentUser={currentUser} />);
     fireEvent.click(screen.getByText('Max Mustermann'));
 
-    // Wein chip should be present
-    expect(screen.getByLabelText('Wein entfernen')).toBeInTheDocument();
-    // Wein should not appear in dropdown options
-    expect(screen.queryByRole('option', { name: 'Wein' })).not.toBeInTheDocument();
+    // Hauswein chip should be present
+    expect(screen.getByLabelText('Hauswein entfernen')).toBeInTheDocument();
+    // Hauswein should not appear in dropdown options
+    expect(screen.queryByRole('option', { name: 'Hauswein' })).not.toBeInTheDocument();
   });
 
   test('custom drinks appear in the dropdown', () => {

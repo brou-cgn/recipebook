@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
 import {
-  EVENT_CATEGORIES,
   EVENT_TYPES,
   deriveSeason,
   calculateEventDrinks,
@@ -41,13 +40,10 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
   const [adults, setAdults] = useState(10);
   const [children, setChildren] = useState(0);
   const [eventType, setEventType] = useState('familienfeier');
-  const [categories, setCategories] = useState(['wasser', 'softdrinks', 'bier', 'wein']);
   const [customDrinkIds, setCustomDrinkIds] = useState([]);
   const [pufferProzent, setPufferProzent] = useState(DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  const autoSelectedCustomDrinksRef = useRef(false);
 
   const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
@@ -56,24 +52,21 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
   useEffect(() => {
     if (!currentUser?.id) return undefined;
     const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
-    const unsubDrinks = subscribeToCustomDrinks(currentUser.id, setCustomDrinks);
+    const unsubDrinks = subscribeToCustomDrinks(currentUser.id, (drinks) => {
+      setCustomDrinks(drinks);
+      // Auto-select all custom drinks when they load for the first time
+      setCustomDrinkIds((prev) => {
+        if (prev.length === 0 && drinks.length > 0) {
+          return drinks.map((d) => d.id);
+        }
+        return prev;
+      });
+    });
     return () => {
       unsubGuests();
       unsubDrinks();
     };
   }, [currentUser?.id]);
-
-  // When custom drinks load for the first time, auto-select them and clear the
-  // standard-category defaults so that manually created drinks are the primary
-  // selection instead of the fixed categories.
-  useEffect(() => {
-    if (autoSelectedCustomDrinksRef.current) return;
-    if (customDrinks.length > 0) {
-      autoSelectedCustomDrinksRef.current = true;
-      setCustomDrinkIds(customDrinks.map((d) => d.id));
-      setCategories([]);
-    }
-  }, [customDrinks]);
 
   const selectedGuests = useMemo(
     () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
@@ -81,15 +74,9 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, [...EVENT_CATEGORIES, ...customDrinks.map((drink) => drink.id)]),
+    () => computeGuestPreferenceMultipliers(selectedGuests, customDrinks.map((drink) => drink.id)),
     [selectedGuests, customDrinks],
   );
-
-  const toggleCategory = (cat) => {
-    setCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  };
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) =>
@@ -109,7 +96,6 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
 
   const applyGuestDrinkFilter = () => {
     if (selectedGuestIds.length === 0) return;
-    setCategories((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
     setCustomDrinkIds((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
   };
 
@@ -119,8 +105,8 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
       setError('Bitte Name, Datum und Dauer angeben.');
       return;
     }
-    if (categories.length === 0 && customDrinkIds.length === 0) {
-      setError('Bitte mindestens eine Getränkekategorie oder ein eigenes Getränk auswählen.');
+    if (customDrinkIds.length === 0) {
+      setError('Bitte mindestens ein eigenes Getränk auswählen.');
       return;
     }
     setSaving(true);
@@ -135,7 +121,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
         guestPreferenceMultipliers,
         season: deriveSeason(date),
         eventType,
-        categories,
+        categories: [],
         customDrinkIds,
         pufferProzent: Number(pufferProzent),
       };
@@ -290,27 +276,6 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
               )}
             </p>
           )}
-        </div>
-
-        <div className="events-form-field">
-          <span>Standardkategorien</span>
-          <div className="events-category-grid">
-            {EVENT_CATEGORIES.map((cat) => (
-              <label key={cat} className="events-category-checkbox">
-                <input
-                  type="checkbox"
-                  checked={categories.includes(cat)}
-                  onChange={() => toggleCategory(cat)}
-                />
-                <span>
-                  {CATEGORY_LABELS[cat]}
-                  {selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[cat] === 'number'
-                    ? ` (${guestPreferenceMultipliers[cat]})`
-                    : ''}
-                </span>
-              </label>
-            ))}
-          </div>
         </div>
 
         {selectedGuestIds.length > 0 && (
