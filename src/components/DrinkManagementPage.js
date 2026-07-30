@@ -264,24 +264,12 @@ function DrinkManagementPage({ onBack, currentUser }) {
               <div className="events-card-main">
                 <h3>{drink.name}</h3>
                 <p className="events-card-meta">
-                  {drink.kategorie ? `${DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie} · ` : ''}
-                  {drink.gebindeLiter ? `${String(drink.gebindeLiter).replace('.', ',')} L · ` : ''}
-                  {drink.modus === 'pauschal'
-                    ? `${drink.erwachsene} L/Person`
-                    : `${drink.erwachsene} L/Person/Std.`}
-                  {drink.anteilTrinker && drink.anteilTrinker < 1
-                    ? ` · ${Math.round(drink.anteilTrinker * 100)} % der Gäste`
-                    : ''}
+                  {[
+                    drink.kategorie ? (DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie) : null,
+                    drink.anteilTrinker && drink.anteilTrinker < 1 ? `${Math.round(drink.anteilTrinker * 100)} % der Gäste` : null,
+                  ].filter(Boolean).join(' · ')}
                 </p>
               </div>
-              <button
-                type="button"
-                className="events-secondary-btn events-delete-btn"
-                onClick={(e) => { e.stopPropagation(); handleDelete(drink); }}
-                aria-label={`${drink.name} löschen`}
-              >
-                Löschen
-              </button>
             </div>
           ))}
         </div>
