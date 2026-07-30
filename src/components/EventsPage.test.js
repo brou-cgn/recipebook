@@ -101,4 +101,29 @@ describe('EventsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
   });
+
+  test('shows marked drivers on the event detail card', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      driverGuestIds: ['g1'],
+      guestNamesById: { g1: 'Anna Beispiel' },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Sommerfest'));
+
+    expect(screen.getByText('Fahrer: Anna Beispiel')).toBeInTheDocument();
+  });
 });
