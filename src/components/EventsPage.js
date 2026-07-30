@@ -6,6 +6,7 @@ import EventForm from './EventForm';
 import ConsumptionForm from './ConsumptionForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
+import OverviewAddFab from './OverviewAddFab';
 import { canEditRecipes } from '../utils/userManagement';
 
 const STATUS_LABELS = {
@@ -272,32 +273,23 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
           </button>
         </div>
       ) : (
-        <>
-          <div className="events-list">
-            {events.map((event) => (
-              <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
-                <div className="events-card-main">
-                  <h3>{event.eventName}</h3>
-                  <p className="events-card-meta">
-                    {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                  </p>
-                </div>
-                <span className={`events-status-badge events-status-${event.status}`}>
-                  {STATUS_LABELS[event.status] || event.status}
-                </span>
+        <div className="events-list">
+          {events.map((event) => (
+            <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
+              <div className="events-card-main">
+                <h3>{event.eventName}</h3>
+                <p className="events-card-meta">
+                  {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                </p>
               </div>
-            ))}
-          </div>
-          <button
-            className="events-add-fab-button"
-            onClick={() => setSubView('new')}
-            title="Event erstellen"
-            aria-label="Event erstellen"
-          >
-            +
-          </button>
-        </>
+              <span className={`events-status-badge events-status-${event.status}`}>
+                {STATUS_LABELS[event.status] || event.status}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
+      <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />
     </div>
   );
 }

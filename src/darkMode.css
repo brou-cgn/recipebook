@@ -873,6 +873,12 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .events-add-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
 [data-theme="dark"] .menu-favorite-badge {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }

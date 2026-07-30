@@ -54,7 +54,8 @@
   .App .add-icon-button,
   .App .filter-button,
   .App .menu-favorites-filter-button,
-  .App .add-menu-fab-button {
+  .App .add-menu-fab-button,
+  .App .events-add-fab-button {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     transition:
       transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -75,6 +76,7 @@
   .App .kueche-fab-button,
   .App .add-icon-button,
   .App .add-menu-fab-button,
+  .App .events-add-fab-button,
   .App .menu-favorites-filter-button,
   .App .recipe-detail-container .edit-fab-button,
   .App .recipe-detail-container .new-version-fab-button,
