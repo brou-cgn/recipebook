@@ -75,7 +75,8 @@ describe('App CSS FAB bottom offset selectors', () => {
     expect(mobileBlock).toContain('.App .add-icon-button,');
     expect(mobileBlock).toContain('.App .filter-button,');
     expect(mobileBlock).toContain('.App .menu-favorites-filter-button,');
-    expect(mobileBlock).toContain('.App .add-menu-fab-button {');
+    expect(mobileBlock).toContain('.App .add-menu-fab-button,');
+    expect(mobileBlock).toContain('.App .events-add-fab-button {');
     expect(mobileBlock).toContain('bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
   });
 
@@ -95,6 +96,7 @@ describe('App CSS FAB bottom offset selectors', () => {
 
     expect(reducedMotionBlock).toContain('.App .add-icon-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .edit-fab-button,');
+    expect(reducedMotionBlock).toContain('.App .events-add-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .new-version-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .delete-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .publish-fab-button,');

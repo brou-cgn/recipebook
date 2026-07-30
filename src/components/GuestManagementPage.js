@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
+import OverviewAddFab from './OverviewAddFab';
 import {
   subscribeToGuestProfiles,
   saveGuestProfile,
@@ -330,43 +331,34 @@ function GuestManagementPage({ onBack, currentUser }) {
           </button>
         </div>
       ) : (
-        <>
-          <div className="events-list">
-            {profiles.map((profile) => {
-              const fullName = getGuestDisplayName(profile);
-              const preferenceCount = Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke.length : 0;
-              return (
-                <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
-                  <div className="events-card-main">
-                    <h3>{fullName || 'Unbenannter Gast'}</h3>
-                    <p className="events-card-meta">
-                      {profile.email || 'Keine E-Mail'} · {profile.alkoholischeGetränke === false ? 'ohne Alkohol' : 'mit Alkohol'}
-                      {' · '}
-                      {preferenceCount} Präferenz{preferenceCount === 1 ? '' : 'en'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="events-secondary-btn events-delete-btn"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(profile); }}
-                    aria-label={`${fullName || 'Gast'} löschen`}
-                  >
-                    Löschen
-                  </button>
+        <div className="events-list">
+          {profiles.map((profile) => {
+            const fullName = getGuestDisplayName(profile);
+            const preferenceCount = Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke.length : 0;
+            return (
+              <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
+                <div className="events-card-main">
+                  <h3>{fullName || 'Unbenannter Gast'}</h3>
+                  <p className="events-card-meta">
+                    {profile.email || 'Keine E-Mail'} · {profile.alkoholischeGetränke === false ? 'ohne Alkohol' : 'mit Alkohol'}
+                    {' · '}
+                    {preferenceCount} Präferenz{preferenceCount === 1 ? '' : 'en'}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-          <button
-            className="events-add-fab-button"
-            onClick={openNew}
-            title="Gast anlegen"
-            aria-label="Gast anlegen"
-          >
-            +
-          </button>
-        </>
+                <button
+                  type="button"
+                  className="events-secondary-btn events-delete-btn"
+                  onClick={(e) => { e.stopPropagation(); handleDelete(profile); }}
+                  aria-label={`${fullName || 'Gast'} löschen`}
+                >
+                  Löschen
+                </button>
+              </div>
+            );
+          })}
+        </div>
       )}
+      <OverviewAddFab onClick={openNew} title="Gast anlegen" ariaLabel="Gast anlegen" />
     </div>
   );
 }

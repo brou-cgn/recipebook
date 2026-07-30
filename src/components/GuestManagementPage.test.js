@@ -18,6 +18,17 @@ jest.mock('../utils/userManagement', () => ({
   canEditRecipes: () => true,
 }));
 
+jest.mock('../utils/customLists', () => ({
+  getButtonIcons: () => Promise.resolve({ addMenu: 'Menü+' }),
+  DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+' },
+  getEffectiveIcon: (icons, key) => icons[key] ?? '',
+  getDarkModePreference: () => false,
+}));
+
+jest.mock('../utils/imageUtils', () => ({
+  isBase64Image: () => false,
+}));
+
 const CATEGORY_LABELS = { wasser: 'Wasser', bier: 'Bier', wein: 'Wein' };
 
 describe('GuestManagementPage – Bevorzugte Getränke', () => {
@@ -139,5 +150,15 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     openNewGuestForm();
     expect(screen.getByRole('option', { name: 'Craft IPA' })).toBeInTheDocument();
+  });
+
+  test('renders the mobile add FAB even in the empty state and opens the create form', () => {
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    const fabButton = screen.getByRole('button', { name: 'Gast anlegen' });
+    expect(fabButton).toBeInTheDocument();
+
+    fireEvent.click(fabButton);
+    expect(screen.getByRole('heading', { level: 2, name: 'Neuen Gast erfassen' })).toBeInTheDocument();
   });
 });

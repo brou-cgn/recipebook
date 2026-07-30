@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
+import OverviewAddFab from './OverviewAddFab';
 
 const UNIT_SIZES = [
   { label: '0,2 L', value: 0.2 },
@@ -257,44 +258,35 @@ function DrinkManagementPage({ onBack, currentUser }) {
           </button>
         </div>
       ) : (
-        <>
-          <div className="events-list">
-            {drinks.map((drink) => (
-              <div key={drink.id} className="events-card" onClick={() => openEdit(drink)}>
-                <div className="events-card-main">
-                  <h3>{drink.name}</h3>
-                  <p className="events-card-meta">
-                    {drink.kategorie ? `${DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie} · ` : ''}
-                    {drink.gebindeLiter ? `${String(drink.gebindeLiter).replace('.', ',')} L · ` : ''}
-                    {drink.modus === 'pauschal'
-                      ? `${drink.erwachsene} L/Person`
-                      : `${drink.erwachsene} L/Person/Std.`}
-                    {drink.anteilTrinker && drink.anteilTrinker < 1
-                      ? ` · ${Math.round(drink.anteilTrinker * 100)} % der Gäste`
-                      : ''}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="events-secondary-btn events-delete-btn"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(drink); }}
-                  aria-label={`${drink.name} löschen`}
-                >
-                  Löschen
-                </button>
+        <div className="events-list">
+          {drinks.map((drink) => (
+            <div key={drink.id} className="events-card" onClick={() => openEdit(drink)}>
+              <div className="events-card-main">
+                <h3>{drink.name}</h3>
+                <p className="events-card-meta">
+                  {drink.kategorie ? `${DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie} · ` : ''}
+                  {drink.gebindeLiter ? `${String(drink.gebindeLiter).replace('.', ',')} L · ` : ''}
+                  {drink.modus === 'pauschal'
+                    ? `${drink.erwachsene} L/Person`
+                    : `${drink.erwachsene} L/Person/Std.`}
+                  {drink.anteilTrinker && drink.anteilTrinker < 1
+                    ? ` · ${Math.round(drink.anteilTrinker * 100)} % der Gäste`
+                    : ''}
+                </p>
               </div>
-            ))}
-          </div>
-          <button
-            className="events-add-fab-button"
-            onClick={openNew}
-            title="Getränk anlegen"
-            aria-label="Getränk anlegen"
-          >
-            +
-          </button>
-        </>
+              <button
+                type="button"
+                className="events-secondary-btn events-delete-btn"
+                onClick={(e) => { e.stopPropagation(); handleDelete(drink); }}
+                aria-label={`${drink.name} löschen`}
+              >
+                Löschen
+              </button>
+            </div>
+          ))}
+        </div>
       )}
+      <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />
     </div>
   );
 }
