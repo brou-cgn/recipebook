@@ -45,7 +45,8 @@ describe('EventForm', () => {
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
-    fireEvent.click(screen.getByLabelText('Anna Beispiel'));
+    fireEvent.change(screen.getByLabelText('Gast auswählen'), { target: { value: 'g1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Gast hinzufügen' }));
     fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
