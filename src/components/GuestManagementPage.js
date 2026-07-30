@@ -48,6 +48,7 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [drinkToAdd, setDrinkToAdd] = useState('');
 
   const canManageGuests = canEditRecipes(currentUser);
 
@@ -73,6 +74,7 @@ function GuestManagementPage({ onBack, currentUser }) {
   const openNew = () => {
     setEditId(null);
     setForm(emptyForm());
+    setDrinkToAdd('');
     setError('');
     setShowForm(true);
   };
@@ -87,6 +89,7 @@ function GuestManagementPage({ onBack, currentUser }) {
       bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
       praeferenzFaktor: normalizePreferenceFactor(profile.präferenzFaktor),
     });
+    setDrinkToAdd('');
     setError('');
     setShowForm(true);
   };
@@ -235,17 +238,52 @@ function GuestManagementPage({ onBack, currentUser }) {
 
           <div className="events-form-field">
             <span>Bevorzugte Getränke</span>
-            <div className="events-category-grid">
-              {availableDrinks.map((drink) => (
-                <label key={drink.id} className="events-category-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={form.bevorzugteGetraenke.includes(drink.id)}
-                    onChange={() => togglePreferredDrink(drink.id)}
-                  />
-                  <span>{drink.label}</span>
-                </label>
-              ))}
+            {form.bevorzugteGetraenke.length > 0 && (
+              <div className="events-preferred-drinks-list">
+                {form.bevorzugteGetraenke.map((drinkId) => {
+                  const drink = availableDrinks.find((d) => d.id === drinkId);
+                  return (
+                    <span key={drinkId} className="events-drink-chip">
+                      {drink ? drink.label : drinkId}
+                      <button
+                        type="button"
+                        className="events-drink-chip-remove"
+                        onClick={() => togglePreferredDrink(drinkId)}
+                        aria-label={`${drink ? drink.label : drinkId} entfernen`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            <div className="events-drink-selector">
+              <select
+                value={drinkToAdd}
+                onChange={(e) => setDrinkToAdd(e.target.value)}
+                aria-label="Getränk auswählen"
+              >
+                <option value="">Getränk auswählen …</option>
+                {availableDrinks
+                  .filter((d) => !form.bevorzugteGetraenke.includes(d.id))
+                  .map((drink) => (
+                    <option key={drink.id} value={drink.id}>{drink.label}</option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                className="events-secondary-btn"
+                onClick={() => {
+                  if (drinkToAdd) {
+                    togglePreferredDrink(drinkToAdd);
+                    setDrinkToAdd('');
+                  }
+                }}
+                disabled={!drinkToAdd}
+              >
+                Hinzufügen
+              </button>
             </div>
           </div>
 
