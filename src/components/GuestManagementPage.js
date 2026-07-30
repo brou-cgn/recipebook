@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './EventsPage.css';
 import {
-  EVENT_CATEGORIES,
   subscribeToGuestProfiles,
   saveGuestProfile,
   deleteGuestProfile,
@@ -9,18 +8,6 @@ import {
 } from '../utils/eventsFirestore';
 import { canEditRecipes } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
-
-const CATEGORY_LABELS = {
-  wasser: 'Wasser',
-  softdrinks: 'Softdrinks',
-  saft: 'Saft',
-  bier: 'Bier',
-  wein: 'Wein',
-  sekt: 'Sekt',
-  spirituosen: 'Spirituosen',
-  kaffee: 'Kaffee',
-  tee: 'Tee',
-};
 
 const emptyForm = () => ({
   vorname: '',
@@ -66,9 +53,7 @@ function GuestManagementPage({ onBack, currentUser }) {
   }, [currentUser?.id]);
 
   const availableDrinks = useMemo(() => {
-    const standard = EVENT_CATEGORIES.map((id) => ({ id, label: CATEGORY_LABELS[id] || id }));
-    const custom = customDrinks.map((drink) => ({ id: drink.id, label: drink.name || drink.id }));
-    return [...standard, ...custom];
+    return customDrinks.map((drink) => ({ id: drink.id, label: drink.name || drink.id }));
   }, [customDrinks]);
 
   const openNew = () => {

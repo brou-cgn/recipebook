@@ -13,8 +13,21 @@ const UNIT_SIZES = [
   { label: '2 L', value: 2.0 },
 ];
 
+const DRINK_CATEGORIES = [
+  { id: 'wasser', label: 'Wasser' },
+  { id: 'softdrinks', label: 'Softdrinks' },
+  { id: 'saft', label: 'Saft' },
+  { id: 'bier', label: 'Bier' },
+  { id: 'wein', label: 'Wein' },
+  { id: 'sekt', label: 'Sekt' },
+  { id: 'spirituosen', label: 'Spirituosen' },
+  { id: 'kaffee', label: 'Kaffee' },
+  { id: 'tee', label: 'Tee' },
+];
+
 const emptyForm = () => ({
   name: '',
+  kategorie: '',
   gebindeLiter: 0.5,
   erwachsene: 0.15,
   kinder: 0.0,
@@ -51,6 +64,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
     setEditId(drink.id);
     setForm({
       name: drink.name || '',
+      kategorie: drink.kategorie || '',
       gebindeLiter: drink.gebindeLiter ?? 0.5,
       erwachsene: drink.erwachsene ?? 0.15,
       kinder: drink.kinder ?? 0.0,
@@ -73,6 +87,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
       const gebindeLiter = Number(form.gebindeLiter);
       const payload = {
         name: form.name.trim(),
+        kategorie: form.kategorie || null,
         gebindeLiter,
         gebindeName: gebindeLiter ? `${String(gebindeLiter).replace('.', ',')} L` : null,
         erwachsene: Number(form.erwachsene) || 0,
@@ -123,6 +138,19 @@ function DrinkManagementPage({ onBack, currentUser }) {
               placeholder="z. B. Craft-Bier, Apfelsaft, ..."
               required
             />
+          </label>
+
+          <label className="events-form-field">
+            <span>Getränkekategorie</span>
+            <select
+              value={form.kategorie}
+              onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
+            >
+              <option value="">Keine Kategorie</option>
+              {DRINK_CATEGORIES.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.label}</option>
+              ))}
+            </select>
           </label>
 
           <label className="events-form-field">
@@ -236,6 +264,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
                 <div className="events-card-main">
                   <h3>{drink.name}</h3>
                   <p className="events-card-meta">
+                    {drink.kategorie ? `${DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie} · ` : ''}
                     {drink.gebindeLiter ? `${String(drink.gebindeLiter).replace('.', ',')} L · ` : ''}
                     {drink.modus === 'pauschal'
                       ? `${drink.erwachsene} L/Person`
