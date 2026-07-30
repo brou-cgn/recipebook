@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
+import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 
 const UNIT_SIZES = [
   { label: '0,2 L', value: 0.2 },
@@ -13,46 +14,6 @@ const UNIT_SIZES = [
   { label: '1,5 L', value: 1.5 },
   { label: '2 L', value: 2.0 },
 ];
-
-const DRINK_CATEGORIES = [
-  { id: 'wasser', label: 'Wasser' },
-  { id: 'softdrinks', label: 'Softdrinks' },
-  { id: 'saft', label: 'Saft' },
-  {
-    id: 'bier',
-    label: 'Bier',
-    subcategories: [
-      { id: 'bier_koelsch', label: 'Kölsch' },
-      { id: 'bier_pils', label: 'Pils' },
-      { id: 'bier_weizen', label: 'Weizen' },
-      { id: 'bier_alkoholfrei', label: 'Alkoholfreies Bier' },
-    ],
-  },
-  {
-    id: 'wein',
-    label: 'Wein',
-    subcategories: [
-      { id: 'wein_weisswein', label: 'Weißwein' },
-      { id: 'wein_rose', label: 'Rosé' },
-      { id: 'wein_rotwein', label: 'Rotwein' },
-    ],
-  },
-  { id: 'sekt', label: 'Sekt' },
-  { id: 'spirituosen', label: 'Spirituosen' },
-  { id: 'kaffee', label: 'Kaffee' },
-  { id: 'tee', label: 'Tee' },
-];
-
-function getDrinkCategoryLabel(kategorieId) {
-  for (const cat of DRINK_CATEGORIES) {
-    if (cat.id === kategorieId) return cat.label;
-    if (cat.subcategories) {
-      const sub = cat.subcategories.find((s) => s.id === kategorieId);
-      if (sub) return sub.label;
-    }
-  }
-  return kategorieId;
-}
 
 const emptyForm = () => ({
   name: '',

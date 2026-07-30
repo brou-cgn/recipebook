@@ -9,6 +9,7 @@ import {
 } from '../utils/eventsFirestore';
 import { canEditRecipes } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
+import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 
 const emptyForm = () => ({
   vorname: '',
@@ -16,6 +17,7 @@ const emptyForm = () => ({
   email: '',
   alkoholischeGetraenke: true,
   bevorzugteGetraenke: [],
+  bevorzugteKategorien: [],
   praeferenzFaktor: 0.5,
 });
 
@@ -37,6 +39,7 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
+  const [categoryToAdd, setCategoryToAdd] = useState('');
 
   const canManageGuests = canEditRecipes(currentUser);
 
@@ -61,6 +64,7 @@ function GuestManagementPage({ onBack, currentUser }) {
     setEditId(null);
     setForm(emptyForm());
     setDrinkToAdd('');
+    setCategoryToAdd('');
     setError('');
     setShowForm(true);
   };
@@ -73,9 +77,11 @@ function GuestManagementPage({ onBack, currentUser }) {
       email: profile.email || '',
       alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
       bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
+      bevorzugteKategorien: Array.isArray(profile.bevorzugteKategorien) ? profile.bevorzugteKategorien : [],
       praeferenzFaktor: normalizePreferenceFactor(profile.präferenzFaktor),
     });
     setDrinkToAdd('');
+    setCategoryToAdd('');
     setError('');
     setShowForm(true);
   };
@@ -87,6 +93,16 @@ function GuestManagementPage({ onBack, currentUser }) {
         ? current.filter((id) => id !== drinkId)
         : [...current, drinkId];
       return { ...prev, bevorzugteGetraenke: next };
+    });
+  };
+
+  const togglePreferredCategory = (categoryId) => {
+    setForm((prev) => {
+      const current = Array.isArray(prev.bevorzugteKategorien) ? prev.bevorzugteKategorien : [];
+      const next = current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId];
+      return { ...prev, bevorzugteKategorien: next };
     });
   };
 
@@ -120,6 +136,7 @@ function GuestManagementPage({ onBack, currentUser }) {
           email: form.email.trim(),
           alkoholischeGetränke: form.alkoholischeGetraenke,
           bevorzugteGetränke: form.bevorzugteGetraenke,
+          bevorzugteKategorien: form.bevorzugteKategorien,
           präferenzFaktor: normalizePreferenceFactor(form.praeferenzFaktor),
         },
         editId || undefined,
@@ -267,6 +284,67 @@ function GuestManagementPage({ onBack, currentUser }) {
                   }
                 }}
                 disabled={!drinkToAdd}
+              >
+                Hinzufügen
+              </button>
+            </div>
+          </div>
+
+          <div className="events-form-field">
+            <span>Bevorzugte Getränkekategorien</span>
+            {form.bevorzugteKategorien.length > 0 && (
+              <div className="events-preferred-drinks-list">
+                {form.bevorzugteKategorien.map((catId) => (
+                  <span key={catId} className="events-drink-chip">
+                    {getDrinkCategoryLabel(catId)}
+                    <button
+                      type="button"
+                      className="events-drink-chip-remove"
+                      onClick={() => togglePreferredCategory(catId)}
+                      aria-label={`${getDrinkCategoryLabel(catId)} entfernen`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="events-drink-selector">
+              <select
+                value={categoryToAdd}
+                onChange={(e) => setCategoryToAdd(e.target.value)}
+                aria-label="Getränkekategorie auswählen"
+              >
+                <option value="">Kategorie auswählen …</option>
+                {DRINK_CATEGORIES.map((cat) =>
+                  cat.subcategories ? (
+                    <optgroup key={cat.id} label={cat.label}>
+                      {!form.bevorzugteKategorien.includes(cat.id) && (
+                        <option value={cat.id}>{cat.label}</option>
+                      )}
+                      {cat.subcategories
+                        .filter((sub) => !form.bevorzugteKategorien.includes(sub.id))
+                        .map((sub) => (
+                          <option key={sub.id} value={sub.id}>{sub.label}</option>
+                        ))}
+                    </optgroup>
+                  ) : (
+                    !form.bevorzugteKategorien.includes(cat.id) && (
+                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                    )
+                  )
+                )}
+              </select>
+              <button
+                type="button"
+                className="events-secondary-btn"
+                onClick={() => {
+                  if (categoryToAdd) {
+                    togglePreferredCategory(categoryToAdd);
+                    setCategoryToAdd('');
+                  }
+                }}
+                disabled={!categoryToAdd}
               >
                 Hinzufügen
               </button>

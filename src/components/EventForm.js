@@ -85,7 +85,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, customDrinks.map((drink) => drink.id)),
+    () => computeGuestPreferenceMultipliers(selectedGuests, customDrinks),
     [selectedGuests, customDrinks],
   );
 
