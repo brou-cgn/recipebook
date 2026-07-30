@@ -108,6 +108,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
         onSaved={handleEventSaved}
         onCancel={() => setSubView('list')}
         currentUser={currentUser}
+        onManageDrinks={() => setSubView('drinks')}
       />
     );
   }

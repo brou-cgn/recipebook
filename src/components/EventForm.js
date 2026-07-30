@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './EventsPage.css';
 import {
   EVENT_CATEGORIES,
@@ -34,7 +34,7 @@ const DEFAULT_PUFFER_PROZENT = 12;
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
-function EventForm({ onSaved, onCancel, currentUser }) {
+function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
   const [eventName, setEventName] = useState('');
   const [date, setDate] = useState(todayIsoDate());
   const [durationHours, setDurationHours] = useState(4);
@@ -46,6 +46,8 @@ function EventForm({ onSaved, onCancel, currentUser }) {
   const [pufferProzent, setPufferProzent] = useState(DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const autoSelectedCustomDrinksRef = useRef(false);
 
   const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
@@ -60,6 +62,18 @@ function EventForm({ onSaved, onCancel, currentUser }) {
       unsubDrinks();
     };
   }, [currentUser?.id]);
+
+  // When custom drinks load for the first time, auto-select them and clear the
+  // standard-category defaults so that manually created drinks are the primary
+  // selection instead of the fixed categories.
+  useEffect(() => {
+    if (autoSelectedCustomDrinksRef.current) return;
+    if (customDrinks.length > 0) {
+      autoSelectedCustomDrinksRef.current = true;
+      setCustomDrinkIds(customDrinks.map((d) => d.id));
+      setCategories([]);
+    }
+  }, [customDrinks]);
 
   const selectedGuests = useMemo(
     () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
@@ -240,6 +254,45 @@ function EventForm({ onSaved, onCancel, currentUser }) {
         </label>
 
         <div className="events-form-field">
+          <span>Eigene Getränke</span>
+          {customDrinks.length > 0 ? (
+            <div className="events-category-grid">
+              {customDrinks.map((drink) => (
+                <label key={drink.id} className="events-category-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={customDrinkIds.includes(drink.id)}
+                    onChange={() => toggleCustomDrink(drink.id)}
+                  />
+                  <span>
+                    {drink.name}
+                    {selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[drink.id] === 'number'
+                      ? ` (${guestPreferenceMultipliers[drink.id]})`
+                      : ''}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="events-info-text">
+              Noch keine eigenen Getränke angelegt.
+              {onManageDrinks && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="events-manage-link-btn"
+                    onClick={onManageDrinks}
+                  >
+                    Getränke verwalten
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+
+        <div className="events-form-field">
           <span>Standardkategorien</span>
           <div className="events-category-grid">
             {EVENT_CATEGORIES.map((cat) => (
@@ -259,29 +312,6 @@ function EventForm({ onSaved, onCancel, currentUser }) {
             ))}
           </div>
         </div>
-
-        {customDrinks.length > 0 && (
-          <div className="events-form-field">
-            <span>Eigene Getränke</span>
-            <div className="events-category-grid">
-              {customDrinks.map((drink) => (
-                <label key={drink.id} className="events-category-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={customDrinkIds.includes(drink.id)}
-                    onChange={() => toggleCustomDrink(drink.id)}
-                  />
-                  <span>
-                    {drink.name}
-                    {selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[drink.id] === 'number'
-                      ? ` (${guestPreferenceMultipliers[drink.id]})`
-                      : ''}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
 
         {selectedGuestIds.length > 0 && (
           <button type="button" className="events-secondary-btn" onClick={applyGuestDrinkFilter}>
