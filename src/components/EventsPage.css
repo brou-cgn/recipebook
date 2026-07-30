@@ -197,6 +197,11 @@
   color: #444;
 }
 
+.events-category-checkbox input[type="checkbox"],
+.events-form-field input[type="range"] {
+  accent-color: #2F5D50;
+}
+
 .events-preferred-drinks-list {
   display: flex;
   flex-wrap: wrap;
