@@ -305,7 +305,7 @@ function getBottomNavActiveKey(currentView) {
 
 function getBottomNavBehavior(currentView) {
   if (currentView === 'startseite') return 'visible';
-  if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection') return 'hidden';
+  if (currentView === 'tagesmenu' || currentView === 'atelierCategorySelection' || currentView === 'events') return 'hidden';
   if (['recipes', 'seasonalRecipes', 'trendingRecipes', 'menus', 'groups'].includes(currentView)) return 'auto';
   return 'visible';
 }
