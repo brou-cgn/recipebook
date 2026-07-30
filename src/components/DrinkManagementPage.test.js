@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import DrinkManagementPage from './DrinkManagementPage';
 
 const mockSubscribeToCustomDrinks = jest.fn();
@@ -42,5 +42,69 @@ describe('DrinkManagementPage', () => {
 
     fireEvent.click(fabButton);
     expect(screen.getByRole('heading', { level: 2, name: 'Neues Getränk' })).toBeInTheDocument();
+  });
+
+  test('category select contains Wein subcategories inside an optgroup', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    const selects = screen.getAllByRole('combobox');
+    // The category select is the one that contains "Keine Kategorie"
+    const select = selects.find((s) => s.querySelector('option[value=""]'));
+    expect(select).toBeTruthy();
+
+    const weinGroup = select.querySelector('optgroup[label="Wein"]');
+    expect(weinGroup).not.toBeNull();
+
+    const weinOptions = within(weinGroup).getAllByRole('option');
+    const weinOptionValues = weinOptions.map((o) => o.value);
+    expect(weinOptionValues).toContain('wein');
+    expect(weinOptionValues).toContain('wein_weisswein');
+    expect(weinOptionValues).toContain('wein_rose');
+    expect(weinOptionValues).toContain('wein_rotwein');
+  });
+
+  test('category select contains Bier subcategories inside an optgroup', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    const selects = screen.getAllByRole('combobox');
+    const select = selects.find((s) => s.querySelector('option[value=""]'));
+    expect(select).toBeTruthy();
+
+    const bierGroup = select.querySelector('optgroup[label="Bier"]');
+    expect(bierGroup).not.toBeNull();
+
+    const bierOptions = within(bierGroup).getAllByRole('option');
+    const bierOptionValues = bierOptions.map((o) => o.value);
+    expect(bierOptionValues).toContain('bier');
+    expect(bierOptionValues).toContain('bier_koelsch');
+    expect(bierOptionValues).toContain('bier_pils');
+    expect(bierOptionValues).toContain('bier_weizen');
+    expect(bierOptionValues).toContain('bier_alkoholfrei');
+  });
+
+  test('displays Weißwein subcategory label in drink list', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'd1', name: 'Riesling', kategorie: 'wein_weisswein', anteilTrinker: 1.0 }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Weißwein')).toBeInTheDocument();
+  });
+
+  test('displays Kölsch subcategory label in drink list', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'd2', name: 'Dom Kölsch', kategorie: 'bier_koelsch', anteilTrinker: 1.0 }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Kölsch')).toBeInTheDocument();
   });
 });

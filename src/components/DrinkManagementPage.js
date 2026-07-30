@@ -18,13 +18,41 @@ const DRINK_CATEGORIES = [
   { id: 'wasser', label: 'Wasser' },
   { id: 'softdrinks', label: 'Softdrinks' },
   { id: 'saft', label: 'Saft' },
-  { id: 'bier', label: 'Bier' },
-  { id: 'wein', label: 'Wein' },
+  {
+    id: 'bier',
+    label: 'Bier',
+    subcategories: [
+      { id: 'bier_koelsch', label: 'Kölsch' },
+      { id: 'bier_pils', label: 'Pils' },
+      { id: 'bier_weizen', label: 'Weizen' },
+      { id: 'bier_alkoholfrei', label: 'Alkoholfreies Bier' },
+    ],
+  },
+  {
+    id: 'wein',
+    label: 'Wein',
+    subcategories: [
+      { id: 'wein_weisswein', label: 'Weißwein' },
+      { id: 'wein_rose', label: 'Rosé' },
+      { id: 'wein_rotwein', label: 'Rotwein' },
+    ],
+  },
   { id: 'sekt', label: 'Sekt' },
   { id: 'spirituosen', label: 'Spirituosen' },
   { id: 'kaffee', label: 'Kaffee' },
   { id: 'tee', label: 'Tee' },
 ];
+
+function getDrinkCategoryLabel(kategorieId) {
+  for (const cat of DRINK_CATEGORIES) {
+    if (cat.id === kategorieId) return cat.label;
+    if (cat.subcategories) {
+      const sub = cat.subcategories.find((s) => s.id === kategorieId);
+      if (sub) return sub.label;
+    }
+  }
+  return kategorieId;
+}
 
 const emptyForm = () => ({
   name: '',
@@ -148,9 +176,18 @@ function DrinkManagementPage({ onBack, currentUser }) {
               onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
             >
               <option value="">Keine Kategorie</option>
-              {DRINK_CATEGORIES.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.label}</option>
-              ))}
+              {DRINK_CATEGORIES.map((cat) =>
+                cat.subcategories ? (
+                  <optgroup key={cat.id} label={cat.label}>
+                    <option value={cat.id}>{cat.label}</option>
+                    {cat.subcategories.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.label}</option>
+                    ))}
+                  </optgroup>
+                ) : (
+                  <option key={cat.id} value={cat.id}>{cat.label}</option>
+                )
+              )}
             </select>
           </label>
 
@@ -265,7 +302,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
                 <h3>{drink.name}</h3>
                 <p className="events-card-meta">
                   {[
-                    drink.kategorie ? (DRINK_CATEGORIES.find((c) => c.id === drink.kategorie)?.label ?? drink.kategorie) : null,
+                    drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
                     drink.anteilTrinker && drink.anteilTrinker < 1 ? `${Math.round(drink.anteilTrinker * 100)} % der Gäste` : null,
                   ].filter(Boolean).join(' · ')}
                 </p>
