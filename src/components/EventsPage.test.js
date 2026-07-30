@@ -12,8 +12,18 @@ jest.mock('../utils/eventsFirestore', () => ({
   getEvent: (...args) => mockGetEvent(...args),
 }));
 
-jest.mock('./EventForm', () => function MockEventForm() {
-  return <div>EventForm geöffnet</div>;
+jest.mock('./EventForm', () => {
+  function MockEventForm() {
+    return <div>EventForm geöffnet</div>;
+  }
+  MockEventForm.CATEGORY_LABELS = {};
+  MockEventForm.EVENT_TYPE_LABELS = { party: 'Party' };
+  return {
+    __esModule: true,
+    default: MockEventForm,
+    CATEGORY_LABELS: {},
+    EVENT_TYPE_LABELS: { party: 'Party' },
+  };
 });
 
 jest.mock('./ConsumptionForm', () => function MockConsumptionForm() {
@@ -62,6 +72,33 @@ describe('EventsPage', () => {
     expect(fabButton).toBeInTheDocument();
 
     fireEvent.click(fabButton);
+    expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+  });
+
+  test('shows Bearbeiten button in detail view and opens edit form', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    // Click the event card to open detail view
+    fireEvent.click(screen.getByText('Sommerfest'));
+
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
   });
 });

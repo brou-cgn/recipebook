@@ -27,7 +27,7 @@ const formatDate = (dateStr) => {
 function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEventReminderHandled }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [subView, setSubView] = useState('list'); // list | new | detail | consumption | drinks | guests
+  const [subView, setSubView] = useState('list'); // list | new | edit | detail | consumption | drinks | guests
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
 
@@ -110,6 +110,18 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
         onCancel={() => setSubView('list')}
         currentUser={currentUser}
         onManageDrinks={() => setSubView('drinks')}
+      />
+    );
+  }
+
+  if (subView === 'edit' && selectedEvent) {
+    return (
+      <EventForm
+        onSaved={handleEventSaved}
+        onCancel={() => setSubView('detail')}
+        currentUser={currentUser}
+        onManageDrinks={() => setSubView('drinks')}
+        initialEvent={selectedEvent}
       />
     );
   }
@@ -223,6 +235,13 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                 Verbrauch nachtragen
               </button>
             )}
+            <button
+              type="button"
+              className="events-secondary-btn"
+              onClick={() => setSubView('edit')}
+            >
+              Bearbeiten
+            </button>
             <button
               type="button"
               className="events-secondary-btn events-delete-btn"

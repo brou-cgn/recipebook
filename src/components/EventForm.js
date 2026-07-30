@@ -33,21 +33,23 @@ const DEFAULT_PUFFER_PROZENT = 12;
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
-function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
-  const [eventName, setEventName] = useState('');
-  const [date, setDate] = useState(todayIsoDate());
-  const [durationHours, setDurationHours] = useState(4);
-  const [adults, setAdults] = useState(10);
-  const [children, setChildren] = useState(0);
-  const [eventType, setEventType] = useState('familienfeier');
-  const [customDrinkIds, setCustomDrinkIds] = useState([]);
-  const [pufferProzent, setPufferProzent] = useState(DEFAULT_PUFFER_PROZENT);
+function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEvent }) {
+  const isEditing = Boolean(initialEvent?.id);
+
+  const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
+  const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
+  const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 4);
+  const [adults, setAdults] = useState(initialEvent?.guests?.adults ?? 10);
+  const [children, setChildren] = useState(initialEvent?.guests?.children ?? 0);
+  const [eventType, setEventType] = useState(initialEvent?.eventType ?? 'familienfeier');
+  const [customDrinkIds, setCustomDrinkIds] = useState(initialEvent?.customDrinkIds ?? []);
+  const [pufferProzent, setPufferProzent] = useState(initialEvent?.pufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
-  const [selectedGuestIds, setSelectedGuestIds] = useState([]);
+  const [selectedGuestIds, setSelectedGuestIds] = useState(initialEvent?.selectedGuestIds ?? []);
   const [guestToAdd, setGuestToAdd] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
 
@@ -56,9 +58,9 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
     const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
     const unsubDrinks = subscribeToCustomDrinks(currentUser.id, (drinks) => {
       setCustomDrinks(drinks);
-      // Auto-select all custom drinks when they load for the first time
+      // Auto-select all custom drinks when they load for the first time (only for new events)
       setCustomDrinkIds((prev) => {
-        if (prev.length === 0 && drinks.length > 0) {
+        if (!isEditing && prev.length === 0 && drinks.length > 0) {
           return drinks.map((d) => d.id);
         }
         return prev;
@@ -127,7 +129,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
         customDrinkIds,
         pufferProzent: Number(pufferProzent),
       };
-      const result = await calculateEventDrinks(event);
+      const result = await calculateEventDrinks(event, isEditing ? initialEvent.id : undefined);
       onSaved(result.eventId);
     } catch (err) {
       console.error('Error calculating event drinks:', err);
@@ -140,7 +142,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Neues Event</h2>
+        <h2>{isEditing ? 'Event bearbeiten' : 'Neues Event'}</h2>
         <button
           className="events-close-btn"
           onClick={onCancel}
@@ -378,7 +380,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks }) {
             Abbrechen
           </button>
           <button type="submit" className="events-primary-btn" disabled={saving}>
-            {saving ? 'Berechne...' : 'Einkaufsliste berechnen'}
+            {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
           </button>
         </div>
       </form>
