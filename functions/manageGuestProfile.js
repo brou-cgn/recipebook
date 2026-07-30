@@ -32,12 +32,17 @@ function validateProfile(profile) {
     ? [...new Set(profile['bevorzugteGetränke'].filter((item) => typeof item === 'string' && item.trim()))]
     : [];
 
+  const bevorzugteKategorien = Array.isArray(profile['bevorzugteKategorien'])
+    ? [...new Set(profile['bevorzugteKategorien'].filter((item) => typeof item === 'string' && item.trim()))]
+    : [];
+
   return {
     vorname,
     nachname,
     email,
     alkoholischeGetränke: profile['alkoholischeGetränke'] !== false,
     bevorzugteGetränke: bevorzugteGetraenke,
+    bevorzugteKategorien,
     präferenzFaktor: praeferenzFaktor,
   };
 }
