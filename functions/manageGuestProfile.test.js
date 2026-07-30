@@ -21,6 +21,27 @@ test('validateProfile accepts valid payload', () => {
   assert.equal(profile.präferenzFaktor, 0.75);
 });
 
+test('validateProfile persists bevorzugteKategorien', () => {
+  const profile = _internal.validateProfile({
+    vorname: 'Erika',
+    nachname: 'Muster',
+    bevorzugteKategorien: ['wein', 'wein_rotwein', 'wein_rotwein'],
+    präferenzFaktor: 0.5,
+  });
+
+  assert.deepEqual(profile.bevorzugteKategorien, ['wein', 'wein_rotwein']);
+});
+
+test('validateProfile returns empty bevorzugteKategorien when not provided', () => {
+  const profile = _internal.validateProfile({
+    vorname: 'Test',
+    nachname: 'User',
+    präferenzFaktor: 0,
+  });
+
+  assert.deepEqual(profile.bevorzugteKategorien, []);
+});
+
 test('validateProfile rejects invalid preference factor', () => {
   assert.throws(() => {
     _internal.validateProfile({
