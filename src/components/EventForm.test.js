@@ -54,4 +54,56 @@ describe('EventForm', () => {
     expect(event.guestPreferenceMultipliers.bier).toBe(0);
     expect(onSaved).toHaveBeenCalledWith('event-1');
   });
+
+  test('shows eigene Getränke section before Standardkategorien', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    const headings = screen.getAllByText(/Eigene Getränke|Standardkategorien/);
+    expect(headings[0]).toHaveTextContent('Eigene Getränke');
+    expect(headings[1]).toHaveTextContent('Standardkategorien');
+  });
+
+  test('shows Getränke verwalten link when no custom drinks and onManageDrinks is provided', () => {
+    const onManageDrinks = jest.fn();
+    render(
+      <EventForm
+        onSaved={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'u1' }}
+        onManageDrinks={onManageDrinks}
+      />,
+    );
+
+    const manageBtn = screen.getByRole('button', { name: 'Getränke verwalten' });
+    expect(manageBtn).toBeInTheDocument();
+    fireEvent.click(manageBtn);
+    expect(onManageDrinks).toHaveBeenCalledTimes(1);
+  });
+
+  test('auto-selects custom drinks and clears standard categories on load', async () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'custom-1', name: 'Craft-Bier' },
+        { id: 'custom-2', name: 'Apfelsaft' },
+      ]);
+      return jest.fn();
+    });
+
+    const onSaved = jest.fn();
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.customDrinkIds).toEqual(['custom-1', 'custom-2']);
+    expect(event.categories).toEqual([]);
+  });
+
+  test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.queryByRole('button', { name: 'Getränke verwalten' })).not.toBeInTheDocument();
+  });
 });
