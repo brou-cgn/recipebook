@@ -40,18 +40,21 @@ describe('EventForm', () => {
     });
   });
 
-  test('submits selected guests and preference multipliers', async () => {
+  test('submits selected guests, drivers and preference multipliers', async () => {
     const onSaved = jest.fn();
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
     fireEvent.change(screen.getByLabelText('Gast auswählen'), { target: { value: 'g1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Gast hinzufügen' }));
+    fireEvent.click(screen.getByLabelText('Anna Beispiel als Fahrer markieren'));
     fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.selectedGuestIds).toEqual(['g1']);
+    expect(event.driverGuestIds).toEqual(['g1']);
+    expect(event.guestNamesById).toEqual({ g1: 'Anna Beispiel' });
     expect(event.guests.adults).toBe(1);
     expect(event.guestPreferenceMultipliers['custom-wasser']).toBe(1);
     expect(event.guestPreferenceMultipliers['custom-bier']).toBe(0);

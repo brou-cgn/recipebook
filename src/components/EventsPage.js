@@ -142,6 +142,10 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
 
   if (subView === 'detail' && selectedEvent) {
     const berechnung = selectedEvent.berechnung;
+    const driverGuestIds = Array.isArray(selectedEvent.driverGuestIds) ? selectedEvent.driverGuestIds : [];
+    const driverNames = driverGuestIds
+      .map((guestId) => selectedEvent.guestNamesById?.[guestId] || guestId)
+      .filter(Boolean);
     return (
       <div className="events-page-container">
         <div className="events-page-header">
@@ -167,6 +171,9 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
             <span>
               {selectedEvent.guests?.adults ?? 0} Erw. / {selectedEvent.guests?.children ?? 0} Kinder
             </span>
+            {driverGuestIds.length > 0 && (
+              <span>Fahrer: {driverNames.join(', ')}</span>
+            )}
           </div>
 
           {berechnung?.warnungen?.length > 0 && (

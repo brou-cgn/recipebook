@@ -57,6 +57,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
   const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialEvent?.selectedGuestIds ?? []);
+  const [driverGuestIds, setDriverGuestIds] = useState(initialEvent?.driverGuestIds ?? []);
   const [guestToAdd, setGuestToAdd] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
 
@@ -89,6 +90,10 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     [selectedGuests, customDrinks],
   );
 
+  useEffect(() => {
+    setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));
+  }, [selectedGuestIds]);
+
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
@@ -110,6 +115,13 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     setCustomDrinkIds((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
   };
 
+  const toggleDriverGuest = (guestId) => {
+    if (!selectedGuestIds.includes(guestId)) return;
+    setDriverGuestIds((prev) =>
+      prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId]
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!eventName.trim() || !date || !durationHours) {
@@ -129,6 +141,11 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
         durationHours: Number(durationHours),
         guests: { adults: Number(adults) || 0, children: Number(children) || 0 },
         selectedGuestIds,
+        driverGuestIds: driverGuestIds.filter((guestId) => selectedGuestIds.includes(guestId)),
+        guestNamesById: selectedGuests.reduce((acc, guest) => {
+          acc[guest.id] = getGuestDisplayName(guest) || 'Unbenannter Gast';
+          return acc;
+        }, {}),
         guestPreferenceMultipliers,
         season: deriveSeason(date),
         eventType,
@@ -253,6 +270,31 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
                 {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
               </p>
             )}
+          </div>
+        )}
+
+        {selectedGuestIds.length > 0 && (
+          <div className="events-form-field">
+            <span>Fahrer festlegen</span>
+            <div className="events-preferred-drinks-list">
+              {selectedGuests.map((guest) => {
+                const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                return (
+                  <label key={guest.id} className="events-category-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={driverGuestIds.includes(guest.id)}
+                      onChange={() => toggleDriverGuest(guest.id)}
+                      aria-label={`${fullName} als Fahrer markieren`}
+                    />
+                    <span>{fullName}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="events-info-text">
+              {driverGuestIds.length} Fahrer markiert.
+            </p>
           </div>
         )}
 
