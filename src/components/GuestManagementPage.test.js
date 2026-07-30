@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import GuestManagementPage from './GuestManagementPage';
 
 const mockSubscribeToGuestProfiles = jest.fn();
@@ -58,20 +58,20 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     expect(screen.queryByLabelText(/entfernen/)).not.toBeInTheDocument();
   });
 
-  test('shows a dropdown to select drinks – standard categories are not listed', () => {
+  test('shows a dropdown to select drinks – standard categories are not listed in the drinks dropdown', () => {
     openNewGuestForm();
-    const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
-    expect(select).toBeInTheDocument();
-    // Standard categories should NOT appear – only custom drinks are listed
-    expect(screen.queryByRole('option', { name: 'Wasser' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Bier' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Wein' })).not.toBeInTheDocument();
+    const drinkSelect = screen.getByRole('combobox', { name: 'Getränk auswählen' });
+    expect(drinkSelect).toBeInTheDocument();
+    // Standard categories should NOT appear in the custom drinks dropdown
+    expect(within(drinkSelect).queryByRole('option', { name: 'Wasser' })).not.toBeInTheDocument();
+    expect(within(drinkSelect).queryByRole('option', { name: 'Bier' })).not.toBeInTheDocument();
+    expect(within(drinkSelect).queryByRole('option', { name: 'Wein' })).not.toBeInTheDocument();
   });
 
   test('Hinzufügen button is disabled when no drink is selected in dropdown', () => {
     openNewGuestForm();
-    const addBtn = screen.getByRole('button', { name: 'Hinzufügen' });
-    expect(addBtn).toBeDisabled();
+    const addButtons = screen.getAllByRole('button', { name: 'Hinzufügen' });
+    expect(addButtons[0]).toBeDisabled();
   });
 
   test('adding a drink creates a chip and removes it from the dropdown', () => {
@@ -83,7 +83,8 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
     fireEvent.change(select, { target: { value: 'mineral-wasser' } });
 
-    const addBtn = screen.getByRole('button', { name: 'Hinzufügen' });
+    const addButtons = screen.getAllByRole('button', { name: 'Hinzufügen' });
+    const addBtn = addButtons[0];
     expect(addBtn).not.toBeDisabled();
     fireEvent.click(addBtn);
 
@@ -103,7 +104,7 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     openNewGuestForm();
     const select = screen.getByRole('combobox', { name: 'Getränk auswählen' });
     fireEvent.change(select, { target: { value: 'craft-bier' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Hinzufügen' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Hinzufügen' })[0]);
 
     // Remove the chip
     fireEvent.click(screen.getByLabelText('Craft Bier entfernen'));
@@ -160,5 +161,65 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     fireEvent.click(fabButton);
     expect(screen.getByRole('heading', { level: 2, name: 'Neuen Gast erfassen' })).toBeInTheDocument();
+  });
+
+  test('shows a category dropdown with standard drink categories', () => {
+    openNewGuestForm();
+    const categorySelect = screen.getByRole('combobox', { name: 'Getränkekategorie auswählen' });
+    expect(categorySelect).toBeInTheDocument();
+    expect(within(categorySelect).getByRole('option', { name: 'Wasser' })).toBeInTheDocument();
+    expect(within(categorySelect).getByRole('option', { name: 'Wein' })).toBeInTheDocument();
+    expect(within(categorySelect).getByRole('option', { name: 'Rotwein' })).toBeInTheDocument();
+  });
+
+  test('adding a category creates a chip and removes it from the dropdown', () => {
+    openNewGuestForm();
+    const categorySelect = screen.getByRole('combobox', { name: 'Getränkekategorie auswählen' });
+    fireEvent.change(categorySelect, { target: { value: 'wein_rotwein' } });
+
+    // Find the Hinzufügen button next to the category select
+    const addButtons = screen.getAllByRole('button', { name: 'Hinzufügen' });
+    const categoryAddBtn = addButtons[1]; // second Hinzufügen button is for categories
+    expect(categoryAddBtn).not.toBeDisabled();
+    fireEvent.click(categoryAddBtn);
+
+    expect(screen.getByLabelText('Rotwein entfernen')).toBeInTheDocument();
+    expect(categorySelect.value).toBe('');
+  });
+
+  test('removing a category chip makes the category available in the dropdown again', () => {
+    openNewGuestForm();
+    const categorySelect = screen.getByRole('combobox', { name: 'Getränkekategorie auswählen' });
+    fireEvent.change(categorySelect, { target: { value: 'wein_rotwein' } });
+    const addButtons = screen.getAllByRole('button', { name: 'Hinzufügen' });
+    fireEvent.click(addButtons[1]);
+
+    // Remove the chip
+    fireEvent.click(screen.getByLabelText('Rotwein entfernen'));
+
+    expect(screen.queryByLabelText('Rotwein entfernen')).not.toBeInTheDocument();
+    expect(within(categorySelect).getByRole('option', { name: 'Rotwein' })).toBeInTheDocument();
+  });
+
+  test('editing a guest loads pre-selected categories as chips', () => {
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        {
+          id: 'g2',
+          vorname: 'Erika',
+          nachname: 'Muster',
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          bevorzugteKategorien: ['wein_rotwein'],
+          präferenzFaktor: 0.5,
+        },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+    fireEvent.click(screen.getByText('Erika Muster'));
+
+    expect(screen.getByLabelText('Rotwein entfernen')).toBeInTheDocument();
   });
 });
