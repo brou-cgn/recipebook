@@ -55,4 +55,13 @@ describe('EventsPage FAB CSS', () => {
     expect(pressedRule).toContain('transform: scale(1.15);');
     expect(pressedRule).toContain('box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);');
   });
+
+  test('checkbox and range slider use green accent-color matching the guest card signal color', () => {
+    const cssPath = path.join(__dirname, 'EventsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toContain('.events-category-checkbox input[type="checkbox"]');
+    expect(css).toContain('.events-form-field input[type="range"]');
+    expect(css).toContain('accent-color: #2F5D50;');
+  });
 });
