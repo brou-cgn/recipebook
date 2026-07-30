@@ -334,25 +334,11 @@ function GuestManagementPage({ onBack, currentUser }) {
         <div className="events-list">
           {profiles.map((profile) => {
             const fullName = getGuestDisplayName(profile);
-            const preferenceCount = Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke.length : 0;
             return (
               <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
-                  <p className="events-card-meta">
-                    {profile.email || 'Keine E-Mail'} · {profile.alkoholischeGetränke === false ? 'ohne Alkohol' : 'mit Alkohol'}
-                    {' · '}
-                    {preferenceCount} Präferenz{preferenceCount === 1 ? '' : 'en'}
-                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="events-secondary-btn events-delete-btn"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(profile); }}
-                  aria-label={`${fullName || 'Gast'} löschen`}
-                >
-                  Löschen
-                </button>
               </div>
             );
           })}
