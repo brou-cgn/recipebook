@@ -1,6 +1,8 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor} = require('./drinkRates');
+const {calculateDrinkAmounts} = require('./calculateDrinkAmounts');
+const {DRINK_WEIGHT_CATEGORIES} = require('./drinkWeights');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -50,6 +52,19 @@ function round2(n) {
 }
 
 /**
+ * Formatiert Minuten seit Mitternacht als "HH:MM".
+ * @param {number} totalMinutes Minuten seit Mitternacht.
+ * @return {string}
+ */
+function formatTime(totalMinutes) {
+  const minutesInDay = 24 * 60;
+  const normalized = ((Math.round(totalMinutes) % minutesInDay) + minutesInDay) % minutesInDay;
+  const hours = String(Math.floor(normalized / 60)).padStart(2, '0');
+  const minutes = String(normalized % 60).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
  * Clamp value to [0, 1], fallback 1 for invalid values.
  * @param {number} value Candidate multiplier.
  * @return {number}
@@ -60,6 +75,63 @@ function normalizeMultiplier(value) {
   if (n < 0) return 0;
   if (n > 1) return 1;
   return n;
+}
+
+/**
+ * Prueft auf gueltiges Uhrzeitformat "HH:MM".
+ * @param {string} value Kandidat.
+ * @return {boolean}
+ */
+function isValidTimeString(value) {
+  return typeof value === 'string' && /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+}
+
+/**
+ * Parst "HH:MM" in Minuten seit Mitternacht.
+ * @param {string} value Uhrzeit.
+ * @return {number}
+ */
+function parseTimeToMinutes(value) {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * Leitet Start- und Endzeit fuer die Vorab-Schaetzung ab.
+ * @param {object} event Event-Parameter.
+ * @return {{startTime: string, endTime: string}}
+ */
+function deriveEstimateTimes(event) {
+  const durationMinutes = Math.max(0, Math.round(Number(event.durationHours || 0) * 60));
+
+  if (isValidTimeString(event.startTime) && isValidTimeString(event.endTime)) {
+    return {startTime: event.startTime, endTime: event.endTime};
+  }
+
+  if (isValidTimeString(event.startTime)) {
+    const startMinutes = parseTimeToMinutes(event.startTime);
+    return {
+      startTime: event.startTime,
+      endTime: formatTime(startMinutes + durationMinutes),
+    };
+  }
+
+  const defaultStartMinutes = 12 * 60;
+  return {
+    startTime: formatTime(defaultStartMinutes),
+    endTime: formatTime(defaultStartMinutes + durationMinutes),
+  };
+}
+
+/**
+ * Rundet Literangaben in einem Kategorien-Objekt.
+ * @param {object} amounts Liter pro Kategorie.
+ * @return {object}
+ */
+function roundAmounts(amounts) {
+  return Object.fromEntries(
+      Object.entries(amounts).map(([category, liters]) => [category, round2(liters)]),
+  );
 }
 
 /**
@@ -99,10 +171,25 @@ function calculate(event, ratesDb, customDrinksMap) {
   const typeFactors = EVENT_TYPE_FACTORS[event.eventType] || {};
   const puffer = (event.pufferProzent ?? 12) / 100;
   const durFactor = durationFactor(hours);
-  const categories = event.categories || Object.keys(DEFAULT_RATES);
+  const categories = Array.isArray(event.categories) && event.categories.length > 0 ?
+    event.categories :
+    Object.keys(DEFAULT_RATES);
   const customDrinkIds = event.customDrinkIds || [];
   const allCustomDrinks = customDrinksMap || {};
   const guestPreferenceMultipliers = event.guestPreferenceMultipliers || {};
+  const weightedCategories = Object.keys(DRINK_WEIGHT_CATEGORIES);
+  const excludedCategories = weightedCategories.filter((category) => !categories.includes(category));
+  const includedWeightedCategories = weightedCategories.filter((category) => !excludedCategories.includes(category));
+  const {startTime, endTime} = deriveEstimateTimes(event);
+  const preEstimateAmounts = includedWeightedCategories.length > 0 ?
+    calculateDrinkAmounts({
+      guests: adults + children,
+      startTime,
+      endTime,
+      season: event.season,
+      excludedCategories,
+    }) :
+    {};
 
   const ergebnis = [];
   const warnungen = [];
@@ -133,8 +220,11 @@ function calculate(event, ratesDb, customDrinksMap) {
       literKinder = children * (entry.kinder || 0) * hours * durFactor;
     }
 
+    const calculatedLiters = literErwachsene + literKinder;
+    const preEstimateLiters = preEstimateAmounts[cat];
+    const usePreEstimate = Number.isFinite(preEstimateLiters) && !entry._nEvents;
     const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[cat]);
-    const literGesamt = (literErwachsene + literKinder) * preferenceMultiplier;
+    const literGesamt = (usePreEstimate ? preEstimateLiters : calculatedLiters) * preferenceMultiplier;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
@@ -146,9 +236,10 @@ function calculate(event, ratesDb, customDrinksMap) {
       gebinde: entry.gebindeName,
       gebindeGroesseLiter: entry.gebindeLiter,
       anzahlGebinde,
-      ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
+      ratenQuelle: entry._nEvents ? 'erfahrungswert' : (usePreEstimate ? 'vorabschaetzung' : 'standard-faustwert'),
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
       praeferenzFaktor: preferenceMultiplier !== 1 ? preferenceMultiplier : null,
+      preEstimateLiter: Number.isFinite(preEstimateLiters) ? round2(preEstimateLiters) : null,
     });
   }
 
@@ -227,6 +318,12 @@ function calculate(event, ratesDb, customDrinksMap) {
     saisonFaktor: seasonFactor,
     eventTyp: event.eventType,
     pufferProzent: event.pufferProzent ?? 12,
+    preEstimate: {
+      startTime,
+      endTime,
+      excludedCategories,
+      categories: roundAmounts(preEstimateAmounts),
+    },
     ergebnis,
     warnungen,
   };
@@ -272,4 +369,9 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
 });
 
 // Fuer Unit-Tests (z.B. mit firebase-functions-test) ohne Firestore-Zugriff.
-exports._internal = {calculate, loadCustomDrinks, getConfiguredUnitLabel};
+exports._internal = {
+  calculate,
+  loadCustomDrinks,
+  getConfiguredUnitLabel,
+  deriveEstimateTimes,
+};
