@@ -112,6 +112,12 @@ describe('EventForm', () => {
     expect(screen.queryByRole('button', { name: 'Getränke verwalten' })).not.toBeInTheDocument();
   });
 
+  test('uses 25 percent as default puffer for new events', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.getByLabelText('Puffer (%)')).toHaveValue(25);
+  });
+
   test('shows "Event bearbeiten" title and "Berechnung aktualisieren" button when initialEvent is provided', () => {
     const initialEvent = {
       id: 'event-42',
