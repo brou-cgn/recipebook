@@ -5,15 +5,25 @@ import OverviewAddFab from './OverviewAddFab';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 
 const UNIT_SIZES = [
-  { label: '0,2 L', value: 0.2 },
-  { label: '0,25 L', value: 0.25 },
-  { label: '0,33 L', value: 0.33 },
-  { label: '0,5 L', value: 0.5 },
-  { label: '0,75 L', value: 0.75 },
-  { label: '1 L', value: 1.0 },
-  { label: '1,5 L', value: 1.5 },
-  { label: '2 L', value: 2.0 },
+  { label: '200 ml', value: 0.2 },
+  { label: '330 ml', value: 0.33 },
+  { label: '500 ml', value: 0.5 },
+  { label: '750 ml', value: 0.75 },
+  { label: '1,0 l', value: 1.0 },
+  { label: '1,5 l', value: 1.5 },
+  { label: '2,0 l', value: 2.0 },
+  { label: '5,0 l (Pittermännchen)', value: 5.0 },
+  { label: '10,0 l (Fässchen)', value: 10.0 },
 ];
+
+const getUnitSizeLabel = (liters) => {
+  const value = Number(liters);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const configuredUnit = UNIT_SIZES.find((unit) => unit.value === value);
+  if (configuredUnit) return configuredUnit.label;
+  if (value < 1) return `${Math.round(value * 1000)} ml`;
+  return `${value.toFixed(1).replace('.', ',')} l`;
+};
 
 const emptyForm = () => ({
   name: '',
@@ -79,7 +89,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
         name: form.name.trim(),
         kategorie: form.kategorie || null,
         gebindeLiter,
-        gebindeName: gebindeLiter ? `${String(gebindeLiter).replace('.', ',')} L` : null,
+        gebindeName: getUnitSizeLabel(gebindeLiter),
         erwachsene: Number(form.erwachsene) || 0,
         kinder: Number(form.kinder) || 0,
         modus: form.modus,

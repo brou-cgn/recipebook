@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DrinkManagementPage from './DrinkManagementPage';
 
 const mockSubscribeToCustomDrinks = jest.fn();
@@ -106,5 +106,55 @@ describe('DrinkManagementPage', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     expect(screen.getByText('Kölsch')).toBeInTheDocument();
+  });
+
+  test('unit size select contains the configurable accepted sizes', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    const selects = screen.getAllByRole('combobox');
+    const select = selects.find((s) => s.querySelector('option[value="10"]'));
+    expect(select).toBeTruthy();
+
+    const unitLabels = within(select).getAllByRole('option').map((option) => option.textContent);
+    expect(unitLabels).toEqual([
+      '200 ml',
+      '330 ml',
+      '500 ml',
+      '750 ml',
+      '1,0 l',
+      '1,5 l',
+      '2,0 l',
+      '5,0 l (Pittermännchen)',
+      '10,0 l (Fässchen)',
+    ]);
+  });
+
+  test('saves configured unit labels in the normalized display format', async () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Party-Fass' } });
+
+    const selects = screen.getAllByRole('combobox');
+    const unitSelect = selects.find((s) => s.querySelector('option[value="10"]'));
+    expect(unitSelect).toBeTruthy();
+
+    fireEvent.change(unitSelect, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+        currentUser.id,
+        expect.objectContaining({
+          name: 'Party-Fass',
+          gebindeLiter: 10,
+          gebindeName: '10,0 l (Fässchen)',
+        }),
+        undefined,
+      );
+    });
   });
 });
