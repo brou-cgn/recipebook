@@ -4,8 +4,6 @@ const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor} = requ
 const {calculateDrinkAmounts} = require('./calculateDrinkAmounts');
 const {DRINK_WEIGHT_CATEGORIES} = require('./drinkWeights');
 
-const DEFAULT_PUFFER_PROZENT = 25;
-
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
  * den Startwerten (Erfahrungswert gewinnt pro Kategorie, wo vorhanden).
@@ -54,13 +52,13 @@ function round2(n) {
 }
 
 /**
- * Normalisiert den konfigurierten Pufferwert und faellt auf den Standard zurueck.
+ * Normalisiert den konfigurierten Pufferwert. Gibt 0 zurueck, wenn kein Wert angegeben ist.
  * @param {number|string|null|undefined} value Konfigurierter Puffer in Prozent.
  * @return {number}
  */
 function normalizePufferProzent(value) {
   const parsedValue = Number(value);
-  return Number.isFinite(parsedValue) ? parsedValue : DEFAULT_PUFFER_PROZENT;
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
 /**
