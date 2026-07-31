@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { _internal } = require('./calculateEventDrinks');
-const { DEFAULT_RATES } = require('./drinkRates');
+const {_internal} = require('./calculateEventDrinks');
+const {DEFAULT_RATES} = require('./drinkRates');
 
 test('calculate applies guest preference multipliers per category', () => {
   const result = _internal.calculate(
@@ -101,4 +101,81 @@ test('calculate includes new-model custom drinks with einheiten in results with 
     {einheitsgroesse: 0.5, gebindeinheit: 'Flasche', einheitenProGebinde: 1},
     {einheitsgroesse: 0.5, gebindeinheit: 'Kasten', einheitenProGebinde: 24},
   ]);
+});
+
+test('calculate uses pre-estimate defaults and exposes them in the result when no categories are selected', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Sommerfest',
+        durationHours: 4,
+        guests: {adults: 10, children: 2},
+        season: 'sommer',
+        eventType: 'familienfeier',
+        categories: [],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  assert.deepEqual(result.preEstimate.startTime, '12:00');
+  assert.deepEqual(result.preEstimate.endTime, '16:00');
+  assert.equal(result.preEstimate.excludedCategories.length, 0);
+
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const saft = result.ergebnis.find((item) => item.kategorie === 'saft');
+
+  assert.ok(wasser);
+  assert.ok(saft);
+  assert.equal(wasser.ratenQuelle, 'vorabschaetzung');
+  assert.equal(wasser.literOhnePuffer, result.preEstimate.categories.wasser);
+  assert.equal(wasser.preEstimateLiter, result.preEstimate.categories.wasser);
+  assert.equal(saft.ratenQuelle, 'standard-faustwert');
+});
+
+test('calculate derives excluded categories and keeps calibrated rates over pre-estimates', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Abendessen',
+        durationHours: 3,
+        startTime: '17:30',
+        guests: {adults: 10, children: 0},
+        season: 'winter',
+        eventType: 'familienfeier',
+        categories: ['wasser', 'sekt'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      {
+        ...DEFAULT_RATES,
+        wasser: {
+          ...DEFAULT_RATES.wasser,
+          erwachsene: 0.5,
+          _nEvents: 3,
+        },
+      },
+      {},
+  );
+
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const sekt = result.ergebnis.find((item) => item.kategorie === 'sekt');
+
+  assert.deepEqual(result.preEstimate.startTime, '17:30');
+  assert.deepEqual(result.preEstimate.endTime, '20:30');
+  assert.deepEqual(result.preEstimate.excludedCategories.sort(), [
+    'bier',
+    'kaffee',
+    'softdrinks',
+    'spirituosen',
+    'tee',
+    'wein',
+  ]);
+  assert.deepEqual(Object.keys(result.preEstimate.categories), ['wasser']);
+  assert.ok(wasser);
+  assert.ok(sekt);
+  assert.equal(wasser.ratenQuelle, 'erfahrungswert');
+  assert.equal(wasser.literOhnePuffer, 12.75);
+  assert.notEqual(wasser.literOhnePuffer, result.preEstimate.categories.wasser);
+  assert.equal(sekt.ratenQuelle, 'standard-faustwert');
 });
