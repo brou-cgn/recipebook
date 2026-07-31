@@ -267,7 +267,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.portionUnits[2].id).toBe('neue-einheit');
   });
 
-  test('returns saved packageUnits from Firestore instead of defaults', async () => {
+  test('normalizes legacy string packageUnits from Firestore to object shape', async () => {
     const savedPackageUnits = ['Flasche', 'Dose', 'Sondergebinde'];
     mockGetDoc.mockResolvedValue({
       exists: () => true,
@@ -279,9 +279,10 @@ describe('getCustomLists – default fallbacks', () => {
 
     const lists = await getCustomLists();
 
-    expect(lists.packageUnits).toEqual(savedPackageUnits);
     expect(lists.packageUnits).toHaveLength(3);
-    expect(lists.packageUnits[2]).toBe('Sondergebinde');
+    expect(lists.packageUnits[0]).toEqual({ id: 'flasche', singular: 'Flasche', plural: 'Flasche' });
+    expect(lists.packageUnits[1]).toEqual({ id: 'dose', singular: 'Dose', plural: 'Dose' });
+    expect(lists.packageUnits[2]).toEqual({ id: 'sondergebinde', singular: 'Sondergebinde', plural: 'Sondergebinde' });
   });
 
   test('keeps legacy customUnits empty even when Firestore still contains old values', async () => {

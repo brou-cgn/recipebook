@@ -136,12 +136,28 @@ export const DEFAULT_PORTION_UNITS = [
 ];
 
 export const DEFAULT_PACKAGE_UNITS = [
-  'Flasche',
-  'Dose',
-  'Kasten',
-  'Kiste',
-  'Fass',
+  { id: 'flasche', singular: 'Flasche', plural: 'Flaschen' },
+  { id: 'dose', singular: 'Dose', plural: 'Dosen' },
+  { id: 'kasten', singular: 'Kasten', plural: 'Kästen' },
+  { id: 'kiste', singular: 'Kiste', plural: 'Kisten' },
+  { id: 'fass', singular: 'Fass', plural: 'Fässer' },
 ];
+
+/**
+ * Normalizes packageUnits array – converts legacy plain strings to the
+ * new `{ id, singular, plural }` object shape for backward compatibility.
+ * @param {Array} units
+ * @returns {Array<{id: string, singular: string, plural: string}>}
+ */
+export function normalizePackageUnits(units) {
+  if (!Array.isArray(units)) return DEFAULT_PACKAGE_UNITS;
+  return units.map((unit) => {
+    if (unit && typeof unit === 'object' && unit.id && unit.singular) return unit;
+    const str = String(unit || '').trim();
+    if (!str) return null;
+    return { id: str.toLowerCase().replace(/\s+/g, '-'), singular: str, plural: str };
+  }).filter(Boolean);
+}
 
 export const DEFAULT_CONVERSION_TABLE = [
   { id: 'butter-el', ingredient: 'Butter', unit: 'EL', grams: '15', milliliters: '' },
@@ -1092,7 +1108,7 @@ export async function getSettings() {
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
-        packageUnits: settings.packageUnits ?? DEFAULT_PACKAGE_UNITS,
+        packageUnits: normalizePackageUnits(settings.packageUnits ?? DEFAULT_PACKAGE_UNITS),
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
@@ -1253,7 +1269,7 @@ export async function getCustomLists() {
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
-    packageUnits: settings.packageUnits ?? DEFAULT_PACKAGE_UNITS,
+    packageUnits: normalizePackageUnits(settings.packageUnits ?? DEFAULT_PACKAGE_UNITS),
     conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
     customUnits: [],
     customIngredientAdjectives: [],
