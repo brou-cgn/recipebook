@@ -88,7 +88,7 @@ describe('DrinkManagementPage', () => {
 
   test('displays Weißwein subcategory label in drink list', () => {
     mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
-      cb([{ id: 'd1', name: 'Riesling', kategorie: 'wein_weisswein', anteilTrinker: 1.0 }]);
+      cb([{ id: 'd1', name: 'Riesling', kategorie: 'wein_weisswein' }]);
       return jest.fn();
     });
 
@@ -99,7 +99,7 @@ describe('DrinkManagementPage', () => {
 
   test('displays Kölsch subcategory label in drink list', () => {
     mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
-      cb([{ id: 'd2', name: 'Dom Kölsch', kategorie: 'bier_koelsch', anteilTrinker: 1.0 }]);
+      cb([{ id: 'd2', name: 'Dom Kölsch', kategorie: 'bier_koelsch' }]);
       return jest.fn();
     });
 
@@ -131,30 +131,141 @@ describe('DrinkManagementPage', () => {
     ]);
   });
 
-  test('saves configured unit labels in the normalized display format', async () => {
+  test('form does not contain removed calculation fields', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
 
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Party-Fass' } });
+    expect(screen.queryByText(/Berechnungsmodus/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Erwachsene \(L\/Person/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Kinder \(L\/Person/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Anteil Trinker/i)).not.toBeInTheDocument();
+  });
 
-    const selects = screen.getAllByRole('combobox');
-    const unitSelect = selects.find((s) => s.querySelector('option[value="10"]'));
-    expect(unitSelect).toBeTruthy();
+  test('form contains new unit fields (Einheitsgröße, Gebindeinheit, Einheiten pro Gebinde)', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
 
-    fireEvent.change(unitSelect, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    expect(screen.getByText('Einheitsgröße')).toBeInTheDocument();
+    expect(screen.getByText('Gebindeinheit')).toBeInTheDocument();
+    expect(screen.getByText('Einheiten pro Gebinde')).toBeInTheDocument();
+  });
+
+  test('saves drink with einheiten payload', async () => {
+    mockSaveCustomDrink.mockResolvedValue('new-drink-id');
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Craft-Bier' } });
+
+    // Fill the Gebindeinheit field
+    const gebindeinheitInput = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
+    fireEvent.change(gebindeinheitInput, { target: { value: 'Flasche' } });
+
+    // Fill the Einheiten pro Gebinde field
+    const einheitenProGebindeInput = screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    fireEvent.change(einheitenProGebindeInput, { target: { value: '24' } });
+
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() => {
       expect(mockSaveCustomDrink).toHaveBeenCalledWith(
         currentUser.id,
         expect.objectContaining({
-          name: 'Party-Fass',
-          gebindeLiter: 10,
-          gebindeName: '10,0 l (Fässchen)',
+          name: 'Craft-Bier',
+          einheiten: [
+            expect.objectContaining({
+              einheitsgroesse: 0.5,
+              gebindeinheit: 'Flasche',
+              einheitenProGebinde: 24,
+            }),
+          ],
         }),
         undefined,
       );
     });
+  });
+
+  test('allows adding multiple units to a drink', async () => {
+    mockSaveCustomDrink.mockResolvedValue('new-drink-id');
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Party-Bier' } });
+
+    // Fill first einheit
+    const firstGebindeinheit = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
+    fireEvent.change(firstGebindeinheit, { target: { value: 'Flasche' } });
+    const firstEinheitenProGebinde = screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    fireEvent.change(firstEinheitenProGebinde, { target: { value: '1' } });
+
+    // Add a second einheit
+    fireEvent.click(screen.getByRole('button', { name: 'Einheit hinzufügen' }));
+
+    // Now there should be two Gebindeinheit inputs
+    const gebindeinheitInputs = screen.getAllByPlaceholderText('z. B. Flasche, Dose, Kasten');
+    expect(gebindeinheitInputs).toHaveLength(2);
+
+    // Fill second einheit
+    fireEvent.change(gebindeinheitInputs[1], { target: { value: 'Kasten' } });
+    const einheitenProGebindeInputs = screen.getAllByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    fireEvent.change(einheitenProGebindeInputs[1], { target: { value: '24' } });
+
+    // Change unit size for second einheit
+    const unitSelects = screen.getAllByRole('combobox');
+    const sizeSelects = unitSelects.filter((s) => s.querySelector('option[value="10"]'));
+    fireEvent.change(sizeSelects[1], { target: { value: '0.5' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+        currentUser.id,
+        expect.objectContaining({
+          name: 'Party-Bier',
+          einheiten: expect.arrayContaining([
+            expect.objectContaining({ gebindeinheit: 'Flasche', einheitenProGebinde: 1 }),
+            expect.objectContaining({ gebindeinheit: 'Kasten', einheitenProGebinde: 24 }),
+          ]),
+        }),
+        undefined,
+      );
+    });
+    expect(mockSaveCustomDrink.mock.calls[0][1].einheiten).toHaveLength(2);
+  });
+
+  test('shows validation error when einheit fields are incomplete', async () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Test-Getränk' } });
+
+    // Don't fill Gebindeinheit or Einheiten pro Gebinde
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(screen.getByText('Bitte alle Felder pro Einheit ausfüllen.')).toBeInTheDocument();
+    expect(mockSaveCustomDrink).not.toHaveBeenCalled();
+  });
+
+  test('displays einheiten info in the drink list card', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{
+        id: 'd1',
+        name: 'Craft-Bier',
+        kategorie: 'bier_koelsch',
+        einheiten: [{ einheitsgroesse: 0.5, gebindeinheit: 'Flasche', einheitenProGebinde: 24 }],
+      }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Craft-Bier')).toBeInTheDocument();
+    // The card meta should show "Kölsch · 500 ml Flasche"
+    expect(screen.getByText(/500 ml Flasche/)).toBeInTheDocument();
   });
 });

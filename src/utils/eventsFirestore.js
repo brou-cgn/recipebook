@@ -152,7 +152,7 @@ export const subscribeToCustomDrinks = (uid, callback) => {
 /**
  * Save a custom drink (create or update).
  * @param {string} uid - Current user ID
- * @param {Object} drink - { name, gebindeLiter, gebindeName, erwachsene, kinder, modus, anteilTrinker }
+ * @param {Object} drink - { name, kategorie, einheiten: [{ einheitsgroesse, gebindeinheit, einheitenProGebinde }] }
  * @param {string} [drinkId] - If provided, update existing drink
  * @returns {Promise<string>} The drink ID
  */
