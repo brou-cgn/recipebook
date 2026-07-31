@@ -4,6 +4,8 @@ const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor} = requ
 const {calculateDrinkAmounts} = require('./calculateDrinkAmounts');
 const {DRINK_WEIGHT_CATEGORIES} = require('./drinkWeights');
 
+const DEFAULT_PUFFER_PROZENT = 25;
+
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
  * den Startwerten (Erfahrungswert gewinnt pro Kategorie, wo vorhanden).
@@ -49,6 +51,16 @@ async function loadCustomDrinks(db, uid, drinkIds) {
  */
 function round2(n) {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Normalisiert den konfigurierten Pufferwert und faellt auf den Standard zurueck.
+ * @param {number|string|null|undefined} value Konfigurierter Puffer in Prozent.
+ * @return {number}
+ */
+function normalizePufferProzent(value) {
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : DEFAULT_PUFFER_PROZENT;
 }
 
 /**
@@ -192,7 +204,8 @@ function calculate(event, ratesDb, customDrinksMap) {
   const hours = event.durationHours;
   const seasonFactor = SEASON_FACTORS[event.season] ?? 1.0;
   const typeFactors = EVENT_TYPE_FACTORS[event.eventType] || {};
-  const puffer = (event.pufferProzent ?? 12) / 100;
+  const pufferProzent = normalizePufferProzent(event.pufferProzent);
+  const puffer = pufferProzent / 100;
   const durFactor = durationFactor(hours);
   const categories = Array.isArray(event.categories) && event.categories.length > 0 ?
     event.categories :
@@ -403,7 +416,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     dauerStunden: hours,
     saisonFaktor: seasonFactor,
     eventTyp: event.eventType,
-    pufferProzent: event.pufferProzent ?? 12,
+    pufferProzent,
     preEstimate: {
       startTime,
       endTime,

@@ -36,7 +36,7 @@ const EVENT_TYPE_LABELS = {
   sportuebertragung: 'Sportübertragung',
 };
 
-const DEFAULT_PUFFER_PROZENT = 12;
+const DEFAULT_PUFFER_PROZENT = 25;
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
