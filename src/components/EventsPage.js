@@ -24,6 +24,19 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatDrinkSummary = (berechnung) => {
+  const ergebnis = berechnung?.ergebnis;
+  if (!ergebnis || ergebnis.length === 0) return null;
+  return ergebnis
+    .map((row) => {
+      const label = row.isCustomDrink && row.drinkLabel
+        ? row.drinkLabel
+        : (CATEGORY_LABELS[row.kategorie] || row.kategorie);
+      return `~${row.literMitPuffer}L ${label}`;
+    })
+    .join(', ');
+};
+
 function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEventReminderHandled }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -300,19 +313,27 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
         </div>
       ) : (
         <div className="events-list">
-          {events.map((event) => (
-            <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
-              <div className="events-card-main">
-                <h3>{event.eventName}</h3>
-                <p className="events-card-meta">
-                  {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                </p>
+          {events.map((event) => {
+            const drinkSummary = (event.status === 'berechnet' || event.status === 'verbrauchErfasst')
+              ? formatDrinkSummary(event.berechnung)
+              : null;
+            return (
+              <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
+                <div className="events-card-main">
+                  <h3>{event.eventName}</h3>
+                  <p className="events-card-meta">
+                    {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                  </p>
+                  {drinkSummary && (
+                    <p className="events-card-drink-summary">{drinkSummary}</p>
+                  )}
+                </div>
+                <span className={`events-status-badge events-status-${event.status}`}>
+                  {STATUS_LABELS[event.status] || event.status}
+                </span>
               </div>
-              <span className={`events-status-badge events-status-${event.status}`}>
-                {STATUS_LABELS[event.status] || event.status}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <OverviewAddFab onClick={() => setSubView('new')} title="Event erstellen" ariaLabel="Event erstellen" />

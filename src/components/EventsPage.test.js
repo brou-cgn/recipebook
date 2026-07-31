@@ -126,4 +126,117 @@ describe('EventsPage', () => {
 
     expect(screen.getByText('Fahrer: Anna Beispiel')).toBeInTheDocument();
   });
+
+  test('shows drink summary on event card when status is berechnet', () => {
+    const event = {
+      id: 'e2',
+      eventName: 'Grillfest',
+      date: '2025-08-10',
+      eventType: 'party',
+      status: 'berechnet',
+      berechnung: {
+        ergebnis: [
+          { kategorie: 'wasser', literMitPuffer: 50 },
+          { kategorie: 'softdrinks', literMitPuffer: 30 },
+        ],
+      },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.getByText('~50L wasser, ~30L softdrinks')).toBeInTheDocument();
+  });
+
+  test('shows drink summary on event card when status is verbrauchErfasst', () => {
+    const event = {
+      id: 'e3',
+      eventName: 'Familienfeier',
+      date: '2025-09-05',
+      eventType: 'party',
+      status: 'verbrauchErfasst',
+      berechnung: {
+        ergebnis: [
+          { kategorie: 'bier', literMitPuffer: 20 },
+        ],
+      },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.getByText('~20L bier')).toBeInTheDocument();
+  });
+
+  test('does not show drink summary on event card when status is geplant', () => {
+    const event = {
+      id: 'e4',
+      eventName: 'Planungsparty',
+      date: '2025-10-01',
+      eventType: 'party',
+      status: 'geplant',
+      berechnung: {
+        ergebnis: [
+          { kategorie: 'wasser', literMitPuffer: 40 },
+        ],
+      },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.queryByText(/~40L/)).not.toBeInTheDocument();
+  });
+
+  test('does not show drink summary when berechnung has no ergebnis', () => {
+    const event = {
+      id: 'e5',
+      eventName: 'Leeres Event',
+      date: '2025-11-01',
+      eventType: 'party',
+      status: 'berechnet',
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.queryByText(/events-card-drink-summary/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/~.*L/)).not.toBeInTheDocument();
+  });
+
+  test('shows custom drink label in summary when isCustomDrink is true', () => {
+    const event = {
+      id: 'e6',
+      eventName: 'Spezialparty',
+      date: '2025-12-01',
+      eventType: 'party',
+      status: 'berechnet',
+      berechnung: {
+        ergebnis: [
+          { kategorie: 'custom_1', literMitPuffer: 15, isCustomDrink: true, drinkLabel: 'Craft Bier' },
+        ],
+      },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.getByText('~15L Craft Bier')).toBeInTheDocument();
+  });
 });

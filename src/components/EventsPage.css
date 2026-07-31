@@ -86,6 +86,12 @@
   font-size: 14px;
 }
 
+.events-card-drink-summary {
+  margin: 4px 0 0;
+  color: #555;
+  font-size: 13px;
+}
+
 .events-status-badge {
   flex-shrink: 0;
   padding: 4px 10px;
@@ -450,6 +456,10 @@
 
   .events-card-meta {
     font-size: 16px;
+  }
+
+  .events-card-drink-summary {
+    font-size: 15px;
   }
 
   .events-info-text {
