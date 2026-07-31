@@ -162,6 +162,29 @@ function calculate(event, ratesDb, customDrinksMap) {
       continue;
     }
 
+    // New model: einheiten array (no rate fields)
+    if (Array.isArray(entry.einheiten) && entry.einheiten.length > 0) {
+      const firstEinheit = entry.einheiten[0];
+      const gebindeLiter = Number(firstEinheit.einheitsgroesse) || null;
+      const gebindeName = firstEinheit.gebindeinheit || null;
+      ergebnis.push({
+        kategorie: drinkId,
+        drinkLabel: entry.name,
+        isCustomDrink: true,
+        literOhnePuffer: null,
+        literMitPuffer: null,
+        gebinde: gebindeName,
+        gebindeGroesseLiter: gebindeLiter,
+        anzahlGebinde: null,
+        ratenQuelle: 'benutzerdefiniert',
+        anteilTrinkerAngenommen: null,
+        praeferenzFaktor: null,
+        einheiten: entry.einheiten,
+      });
+      continue;
+    }
+
+    // Legacy model: rate-based calculation
     const anteilTrinker = entry.anteilTrinker ?? 1.0;
     const modus = entry.modus || 'stunde';
 

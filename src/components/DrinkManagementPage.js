@@ -25,14 +25,16 @@ const getUnitSizeLabel = (liters) => {
   return `${value.toFixed(1).replace('.', ',')} l`;
 };
 
+const emptyEinheit = () => ({
+  einheitsgroesse: 0.5,
+  gebindeinheit: '',
+  einheitenProGebinde: '',
+});
+
 const emptyForm = () => ({
   name: '',
   kategorie: '',
-  gebindeLiter: 0.5,
-  erwachsene: 0.15,
-  kinder: 0.0,
-  modus: 'stunde',
-  anteilTrinker: 1.0,
+  einheiten: [emptyEinheit()],
 });
 
 function DrinkManagementPage({ onBack, currentUser }) {
@@ -65,14 +67,32 @@ function DrinkManagementPage({ onBack, currentUser }) {
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
-      gebindeLiter: drink.gebindeLiter ?? 0.5,
-      erwachsene: drink.erwachsene ?? 0.15,
-      kinder: drink.kinder ?? 0.0,
-      modus: drink.modus || 'stunde',
-      anteilTrinker: drink.anteilTrinker ?? 1.0,
+      einheiten:
+        Array.isArray(drink.einheiten) && drink.einheiten.length > 0
+          ? drink.einheiten.map((e) => ({
+              einheitsgroesse: e.einheitsgroesse ?? 0.5,
+              gebindeinheit: e.gebindeinheit || '',
+              einheitenProGebinde: e.einheitenProGebinde ?? '',
+            }))
+          : [emptyEinheit()],
     });
     setError('');
     setShowForm(true);
+  };
+
+  const addEinheit = () => {
+    setForm((f) => ({ ...f, einheiten: [...f.einheiten, emptyEinheit()] }));
+  };
+
+  const removeEinheit = (idx) => {
+    setForm((f) => ({ ...f, einheiten: f.einheiten.filter((_, i) => i !== idx) }));
+  };
+
+  const updateEinheit = (idx, field, value) => {
+    setForm((f) => ({
+      ...f,
+      einheiten: f.einheiten.map((e, i) => (i === idx ? { ...e, [field]: value } : e)),
+    }));
   };
 
   const handleSave = async (e) => {
@@ -81,19 +101,27 @@ function DrinkManagementPage({ onBack, currentUser }) {
       setError('Bitte einen Namen angeben.');
       return;
     }
+    if (form.einheiten.length === 0) {
+      setError('Bitte mindestens eine Einheit angeben.');
+      return;
+    }
+    for (const einheit of form.einheiten) {
+      if (!einheit.einheitsgroesse || !String(einheit.gebindeinheit).trim() || !einheit.einheitenProGebinde) {
+        setError('Bitte alle Felder pro Einheit ausfüllen.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     try {
-      const gebindeLiter = Number(form.gebindeLiter);
       const payload = {
         name: form.name.trim(),
         kategorie: form.kategorie || null,
-        gebindeLiter,
-        gebindeName: getUnitSizeLabel(gebindeLiter),
-        erwachsene: Number(form.erwachsene) || 0,
-        kinder: Number(form.kinder) || 0,
-        modus: form.modus,
-        anteilTrinker: Number(form.anteilTrinker) || 1.0,
+        einheiten: form.einheiten.map((e) => ({
+          einheitsgroesse: Number(e.einheitsgroesse),
+          gebindeinheit: String(e.gebindeinheit).trim(),
+          einheitenProGebinde: Number(e.einheitenProGebinde),
+        })),
       };
       await saveCustomDrink(currentUser.id, payload, editId || undefined);
       setShowForm(false);
@@ -162,63 +190,62 @@ function DrinkManagementPage({ onBack, currentUser }) {
             </select>
           </label>
 
-          <label className="events-form-field">
-            <span>Einheitsgröße</span>
-            <select
-              value={form.gebindeLiter}
-              onChange={(e) => setForm((f) => ({ ...f, gebindeLiter: e.target.value }))}
+          <div className="events-form-field">
+            <span>Einheiten</span>
+            {form.einheiten.map((einheit, idx) => (
+              <div key={idx} className="events-form-row events-einheit-row">
+                <label className="events-form-field">
+                  <span>Einheitsgröße</span>
+                  <select
+                    value={einheit.einheitsgroesse}
+                    onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
+                  >
+                    {UNIT_SIZES.map((u) => (
+                      <option key={u.value} value={u.value}>{u.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="events-form-field">
+                  <span>Gebindeinheit</span>
+                  <input
+                    type="text"
+                    value={einheit.gebindeinheit}
+                    onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
+                    placeholder="z. B. Flasche, Dose, Kasten"
+                    required
+                  />
+                </label>
+                <label className="events-form-field">
+                  <span>Einheiten pro Gebinde</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={einheit.einheitenProGebinde}
+                    onChange={(e) => updateEinheit(idx, 'einheitenProGebinde', e.target.value)}
+                    required
+                  />
+                </label>
+                {form.einheiten.length > 1 && (
+                  <button
+                    type="button"
+                    className="events-secondary-btn"
+                    onClick={() => removeEinheit(idx)}
+                    aria-label="Einheit entfernen"
+                  >
+                    –
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="events-secondary-btn"
+              onClick={addEinheit}
             >
-              {UNIT_SIZES.map((u) => (
-                <option key={u.value} value={u.value}>{u.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="events-form-field">
-            <span>Berechnungsmodus</span>
-            <select
-              value={form.modus}
-              onChange={(e) => setForm((f) => ({ ...f, modus: e.target.value }))}
-            >
-              <option value="stunde">Pro Stunde (L/Person/Std.)</option>
-              <option value="pauschal">Pauschal (L/Person gesamt)</option>
-            </select>
-          </label>
-
-          <div className="events-form-row">
-            <label className="events-form-field">
-              <span>{form.modus === 'pauschal' ? 'Erwachsene (L/Person)' : 'Erwachsene (L/Person/Std.)'}</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.erwachsene}
-                onChange={(e) => setForm((f) => ({ ...f, erwachsene: e.target.value }))}
-              />
-            </label>
-            <label className="events-form-field">
-              <span>{form.modus === 'pauschal' ? 'Kinder (L/Person)' : 'Kinder (L/Person/Std.)'}</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.kinder}
-                onChange={(e) => setForm((f) => ({ ...f, kinder: e.target.value }))}
-              />
-            </label>
+              Einheit hinzufügen
+            </button>
           </div>
-
-          <label className="events-form-field">
-            <span>Anteil Trinker (0–1, z. B. 0,5 = 50 % der Gäste)</span>
-            <input
-              type="number"
-              min="0"
-              max="1"
-              step="0.05"
-              value={form.anteilTrinker}
-              onChange={(e) => setForm((f) => ({ ...f, anteilTrinker: e.target.value }))}
-            />
-          </label>
 
           {error && <p className="events-error-text">{error}</p>}
 
@@ -274,7 +301,11 @@ function DrinkManagementPage({ onBack, currentUser }) {
                 <p className="events-card-meta">
                   {[
                     drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
-                    drink.anteilTrinker && drink.anteilTrinker < 1 ? `${Math.round(drink.anteilTrinker * 100)} % der Gäste` : null,
+                    Array.isArray(drink.einheiten) && drink.einheiten.length > 0
+                      ? drink.einheiten
+                          .map((e) => `${getUnitSizeLabel(e.einheitsgroesse) || e.einheitsgroesse} ${e.gebindeinheit}`.trim())
+                          .join(', ')
+                      : null,
                   ].filter(Boolean).join(' · ')}
                 </p>
               </div>

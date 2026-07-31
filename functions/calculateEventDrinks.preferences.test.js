@@ -62,3 +62,43 @@ test('calculate normalizes configured custom drink unit labels for legacy entrie
   assert.ok(customDrink);
   assert.equal(customDrink.gebinde, '5,0 l (Pittermännchen)');
 });
+
+test('calculate includes new-model custom drinks with einheiten in results with null liter values', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 20, children: 5},
+        season: 'sommer',
+        eventType: 'party',
+        categories: [],
+        customDrinkIds: ['craft-bier'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        'craft-bier': {
+          name: 'Craft-Bier',
+          einheiten: [
+            {einheitsgroesse: 0.5, gebindeinheit: 'Flasche', einheitenProGebinde: 1},
+            {einheitsgroesse: 0.5, gebindeinheit: 'Kasten', einheitenProGebinde: 24},
+          ],
+        },
+      },
+  );
+
+  const craftBier = result.ergebnis.find((item) => item.kategorie === 'craft-bier');
+
+  assert.ok(craftBier);
+  assert.equal(craftBier.drinkLabel, 'Craft-Bier');
+  assert.equal(craftBier.isCustomDrink, true);
+  assert.equal(craftBier.literOhnePuffer, null);
+  assert.equal(craftBier.literMitPuffer, null);
+  assert.equal(craftBier.anzahlGebinde, null);
+  assert.equal(craftBier.gebinde, 'Flasche');
+  assert.equal(craftBier.gebindeGroesseLiter, 0.5);
+  assert.deepEqual(craftBier.einheiten, [
+    {einheitsgroesse: 0.5, gebindeinheit: 'Flasche', einheitenProGebinde: 1},
+    {einheitsgroesse: 0.5, gebindeinheit: 'Kasten', einheitenProGebinde: 24},
+  ]);
+});
