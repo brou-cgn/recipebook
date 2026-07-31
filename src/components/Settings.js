@@ -233,6 +233,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     mealCategories: [],
     units: [],
     portionUnits: [],
+    packageUnits: [],
     conversionTable: [],
     customUnits: []
   });
@@ -242,6 +243,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newCustomUnit, setNewCustomUnit] = useState('');
   const [newPortionSingular, setNewPortionSingular] = useState('');
   const [newPortionPlural, setNewPortionPlural] = useState('');
+  const [newPackageUnit, setNewPackageUnit] = useState('');
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -922,6 +924,24 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     });
   };
 
+  const addPackageUnit = () => {
+    const trimmed = newPackageUnit.trim();
+    if (trimmed && !lists.packageUnits.includes(trimmed)) {
+      setLists({
+        ...lists,
+        packageUnits: [...lists.packageUnits, trimmed]
+      });
+      setNewPackageUnit('');
+    }
+  };
+
+  const removePackageUnit = (unit) => {
+    setLists({
+      ...lists,
+      packageUnits: lists.packageUnits.filter(u => u !== unit)
+    });
+  };
+
   const addConversionEntry = () => {
     if (newConversionIngredient.trim() && newConversionUnit.trim()) {
       const slugify = (str) => str.toLowerCase()
@@ -1048,6 +1068,20 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         return {
           ...prevLists,
           portionUnits: arrayMove(prevLists.portionUnits, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
+  const handleDragEndPackageUnits = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.packageUnits.indexOf(active.id);
+        const newIndex = prevLists.packageUnits.indexOf(over.id);
+        return {
+          ...prevLists,
+          packageUnits: arrayMove(prevLists.packageUnits, oldIndex, newIndex)
         };
       });
     }
@@ -2662,6 +2696,32 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <div className="list-items">
                 {lists.portionUnits.map((unit) => (
                   <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePortionUnit(unit.id)} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        <div className="settings-section">
+          <h3>Gebindeeinheiten</h3>
+          <p className="section-description">
+            Definieren Sie die verfügbaren Gebindeeinheiten für Getränke (z.B. Flasche, Dose, Kasten).
+          </p>
+          <div className="list-input">
+            <input
+              type="text"
+              value={newPackageUnit}
+              onChange={(e) => setNewPackageUnit(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && addPackageUnit()}
+              placeholder="Neue Gebindeeinheit hinzufügen..."
+            />
+            <button onClick={addPackageUnit}>Hinzufügen</button>
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPackageUnits}>
+            <SortableContext items={lists.packageUnits} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.packageUnits.map((unit) => (
+                  <SortableListItem key={unit} id={unit} label={unit} onRemove={() => removePackageUnit(unit)} />
                 ))}
               </div>
             </SortableContext>

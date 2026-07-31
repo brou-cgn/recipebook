@@ -3,6 +3,7 @@ import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
+import { getCustomLists } from '../utils/customLists';
 
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
@@ -45,6 +46,15 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [packageUnits, setPackageUnits] = useState([]);
+
+  useEffect(() => {
+    getCustomLists().then((lists) => {
+      setPackageUnits(lists.packageUnits || []);
+    }).catch(() => {
+      setPackageUnits([]);
+    });
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -207,13 +217,26 @@ function DrinkManagementPage({ onBack, currentUser }) {
                 </label>
                 <label className="events-form-field">
                   <span>Gebindeinheit</span>
-                  <input
-                    type="text"
-                    value={einheit.gebindeinheit}
-                    onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
-                    placeholder="z. B. Flasche, Dose, Kasten"
-                    required
-                  />
+                  {packageUnits.length > 0 ? (
+                    <select
+                      value={einheit.gebindeinheit}
+                      onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
+                      required
+                    >
+                      <option value="">Bitte wählen...</option>
+                      {packageUnits.map((unit) => (
+                        <option key={unit} value={unit}>{unit}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={einheit.gebindeinheit}
+                      onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
+                      placeholder="z. B. Flasche, Dose, Kasten"
+                      required
+                    />
+                  )}
                 </label>
                 <label className="events-form-field">
                   <span>Einheiten pro Gebinde</span>
