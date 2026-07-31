@@ -116,8 +116,8 @@ function DrinkManagementPage({ onBack, currentUser }) {
       return;
     }
     for (const einheit of form.einheiten) {
-      if (!einheit.einheitsgroesse || !String(einheit.gebindeinheit).trim() || !einheit.einheitenProGebinde) {
-        setError('Bitte alle Felder pro Einheit ausfüllen.');
+      if (!einheit.einheitsgroesse) {
+        setError('Bitte eine Einheitsgröße pro Einheit angeben.');
         return;
       }
     }
@@ -127,11 +127,15 @@ function DrinkManagementPage({ onBack, currentUser }) {
       const payload = {
         name: form.name.trim(),
         kategorie: form.kategorie || null,
-        einheiten: form.einheiten.map((e) => ({
-          einheitsgroesse: Number(e.einheitsgroesse),
-          gebindeinheit: String(e.gebindeinheit).trim(),
-          einheitenProGebinde: Number(e.einheitenProGebinde),
-        })),
+        einheiten: form.einheiten.map((e) => {
+          const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
+          const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
+          if (gebindeinheitTrimmed) einheit.gebindeinheit = gebindeinheitTrimmed;
+          if (e.einheitenProGebinde !== '' && e.einheitenProGebinde !== null && e.einheitenProGebinde !== undefined) {
+            einheit.einheitenProGebinde = Number(e.einheitenProGebinde);
+          }
+          return einheit;
+        }),
       };
       await saveCustomDrink(currentUser.id, payload, editId || undefined);
       setShowForm(false);
@@ -221,11 +225,10 @@ function DrinkManagementPage({ onBack, currentUser }) {
                     <select
                       value={einheit.gebindeinheit}
                       onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
-                      required
                     >
-                      <option value="">Bitte wählen...</option>
+                      <option value="">Keine Angabe</option>
                       {packageUnits.map((unit) => (
-                        <option key={unit} value={unit}>{unit}</option>
+                        <option key={unit.id} value={unit.singular}>{unit.singular}</option>
                       ))}
                     </select>
                   ) : (
@@ -234,7 +237,6 @@ function DrinkManagementPage({ onBack, currentUser }) {
                       value={einheit.gebindeinheit}
                       onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
                       placeholder="z. B. Flasche, Dose, Kasten"
-                      required
                     />
                   )}
                 </label>
@@ -246,7 +248,6 @@ function DrinkManagementPage({ onBack, currentUser }) {
                     step="1"
                     value={einheit.einheitenProGebinde}
                     onChange={(e) => updateEinheit(idx, 'einheitenProGebinde', e.target.value)}
-                    required
                   />
                 </label>
                 {form.einheiten.length > 1 && (

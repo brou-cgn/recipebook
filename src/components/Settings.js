@@ -243,7 +243,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newCustomUnit, setNewCustomUnit] = useState('');
   const [newPortionSingular, setNewPortionSingular] = useState('');
   const [newPortionPlural, setNewPortionPlural] = useState('');
-  const [newPackageUnit, setNewPackageUnit] = useState('');
+  const [newPackageSingular, setNewPackageSingular] = useState('');
+  const [newPackagePlural, setNewPackagePlural] = useState('');
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -925,20 +926,28 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   };
 
   const addPackageUnit = () => {
-    const trimmed = newPackageUnit.trim();
-    if (trimmed && !lists.packageUnits.includes(trimmed)) {
-      setLists({
-        ...lists,
-        packageUnits: [...lists.packageUnits, trimmed]
-      });
-      setNewPackageUnit('');
+    if (newPackageSingular.trim() && newPackagePlural.trim()) {
+      const newId = newPackageSingular.toLowerCase().replace(/\s+/g, '-');
+      const exists = lists.packageUnits.some(pu => pu.id === newId);
+      if (!exists) {
+        setLists({
+          ...lists,
+          packageUnits: [...lists.packageUnits, {
+            id: newId,
+            singular: newPackageSingular.trim(),
+            plural: newPackagePlural.trim()
+          }]
+        });
+        setNewPackageSingular('');
+        setNewPackagePlural('');
+      }
     }
   };
 
-  const removePackageUnit = (unit) => {
+  const removePackageUnit = (unitId) => {
     setLists({
       ...lists,
-      packageUnits: lists.packageUnits.filter(u => u !== unit)
+      packageUnits: lists.packageUnits.filter(u => u.id !== unitId)
     });
   };
 
@@ -1077,8 +1086,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setLists((prevLists) => {
-        const oldIndex = prevLists.packageUnits.indexOf(active.id);
-        const newIndex = prevLists.packageUnits.indexOf(over.id);
+        const oldIndex = prevLists.packageUnits.findIndex(u => u.id === active.id);
+        const newIndex = prevLists.packageUnits.findIndex(u => u.id === over.id);
         return {
           ...prevLists,
           packageUnits: arrayMove(prevLists.packageUnits, oldIndex, newIndex)
@@ -2705,23 +2714,29 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         <div className="settings-section">
           <h3>Gebindeeinheiten</h3>
           <p className="section-description">
-            Definieren Sie die verfügbaren Gebindeeinheiten für Getränke (z.B. Flasche, Dose, Kasten).
+            Definieren Sie die verfügbaren Gebindeeinheiten für Getränke mit Singular- und Pluralformen (z.B. Flasche/Flaschen, Dose/Dosen).
           </p>
-          <div className="list-input">
+          <div className="list-input portion-unit-input">
             <input
               type="text"
-              value={newPackageUnit}
-              onChange={(e) => setNewPackageUnit(e.target.value)}
+              value={newPackageSingular}
+              onChange={(e) => setNewPackageSingular(e.target.value)}
+              placeholder="Singular (z.B. Flasche)"
+            />
+            <input
+              type="text"
+              value={newPackagePlural}
+              onChange={(e) => setNewPackagePlural(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addPackageUnit()}
-              placeholder="Neue Gebindeeinheit hinzufügen..."
+              placeholder="Plural (z.B. Flaschen)"
             />
             <button onClick={addPackageUnit}>Hinzufügen</button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPackageUnits}>
-            <SortableContext items={lists.packageUnits} strategy={verticalListSortingStrategy}>
+            <SortableContext items={lists.packageUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
               <div className="list-items">
                 {lists.packageUnits.map((unit) => (
-                  <SortableListItem key={unit} id={unit} label={unit} onRemove={() => removePackageUnit(unit)} />
+                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePackageUnit(unit.id)} />
                 ))}
               </div>
             </SortableContext>

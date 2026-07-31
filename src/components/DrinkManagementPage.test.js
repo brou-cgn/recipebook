@@ -240,7 +240,8 @@ describe('DrinkManagementPage', () => {
     expect(mockSaveCustomDrink.mock.calls[0][1].einheiten).toHaveLength(2);
   });
 
-  test('shows validation error when einheit fields are incomplete', async () => {
+  test('gebindeinheit and einheitenProGebinde are optional – saving without them succeeds', async () => {
+    mockSaveCustomDrink.mockResolvedValue('new-drink-id');
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
@@ -250,8 +251,14 @@ describe('DrinkManagementPage', () => {
     // Don't fill Gebindeinheit or Einheiten pro Gebinde
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(screen.getByText('Bitte alle Felder pro Einheit ausfüllen.')).toBeInTheDocument();
-    expect(mockSaveCustomDrink).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+        currentUser.id,
+        expect.objectContaining({ name: 'Test-Getränk' }),
+        undefined,
+      );
+    });
+    expect(screen.queryByText('Bitte alle Felder pro Einheit ausfüllen.')).not.toBeInTheDocument();
   });
 
   test('displays einheiten info in the drink list card', () => {
@@ -273,7 +280,13 @@ describe('DrinkManagementPage', () => {
   });
 
   test('shows gebindeinheit as select when packageUnits are configured', async () => {
-    mockGetCustomLists.mockResolvedValue({ packageUnits: ['Flasche', 'Dose', 'Kasten'] });
+    mockGetCustomLists.mockResolvedValue({
+      packageUnits: [
+        { id: 'flasche', singular: 'Flasche', plural: 'Flaschen' },
+        { id: 'dose', singular: 'Dose', plural: 'Dosen' },
+        { id: 'kasten', singular: 'Kasten', plural: 'Kästen' },
+      ],
+    });
 
     render(<DrinkManagementPage currentUser={currentUser} />);
 
