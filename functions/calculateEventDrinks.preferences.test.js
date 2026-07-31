@@ -58,7 +58,7 @@ test('calculate uses the event-specific puffer percentage instead of a fixed buf
   assert.equal(withTenPercentBuffer.pufferProzent, 10);
 });
 
-test('calculate falls back to a 25 percent buffer when no event puffer is configured', () => {
+test('calculate falls back to 0 percent buffer when no event puffer is configured', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -76,8 +76,8 @@ test('calculate falls back to a 25 percent buffer when no event puffer is config
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
 
   assert.ok(wasser);
-  assert.equal(wasser.literMitPuffer, roundTo2(wasser.literOhnePuffer * 1.25));
-  assert.equal(result.pufferProzent, 25);
+  assert.equal(wasser.literMitPuffer, roundTo2(wasser.literOhnePuffer * 1.0));
+  assert.equal(result.pufferProzent, 0);
 });
 
 test('calculate normalizes configured custom drink unit labels for legacy entries', () => {
