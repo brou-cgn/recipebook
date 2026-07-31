@@ -135,6 +135,29 @@ function roundAmounts(amounts) {
 }
 
 /**
+ * Map von Unterkategorie-ID auf uebergeordnete Kategorie-ID.
+ * Spiegelt die Hierarchie aus drinkCategories.js (src) wider.
+ */
+const DRINK_CATEGORY_PARENTS = {
+  bier_koelsch: 'bier',
+  bier_pils: 'bier',
+  bier_weizen: 'bier',
+  bier_alkoholfrei: 'bier',
+  wein_weisswein: 'wein',
+  wein_rose: 'wein',
+  wein_rotwein: 'wein',
+};
+
+/**
+ * Liefert die uebergeordnete Kategorie-ID, falls vorhanden; sonst die ID selbst.
+ * @param {string} kategorieId Getränke-Kategorie-ID.
+ * @return {string}
+ */
+function resolveTopLevelCategory(kategorieId) {
+  return DRINK_CATEGORY_PARENTS[kategorieId] || kategorieId;
+}
+
+/**
  * Liefert die vereinheitlichte Gebindebezeichnung fuer pflegbare Standardgroessen.
  * @param {number} liters Gebindegroesse in Litern.
  * @return {string|null}
@@ -243,6 +266,27 @@ function calculate(event, ratesDb, customDrinksMap) {
     });
   }
 
+  // Aufbau der Kategorie-Liter-Map fuer die Verteilung auf Einzelgetraenke.
+  const categoryLitersMap = {};
+  for (const item of ergebnis) {
+    if (!item.isCustomDrink && item.literOhnePuffer !== null) {
+      categoryLitersMap[item.kategorie] = {
+        literOhnePuffer: item.literOhnePuffer,
+        literMitPuffer: item.literMitPuffer,
+      };
+    }
+  }
+
+  // Anzahl der neuen Modell-Getraenke (mit einheiten) pro uebergeordneter Kategorie zaehlen.
+  const drinkCountByTopLevelCategory = {};
+  for (const drinkId of customDrinkIds) {
+    const entry = allCustomDrinks[drinkId];
+    if (entry && Array.isArray(entry.einheiten) && entry.einheiten.length > 0 && entry.kategorie) {
+      const topCat = resolveTopLevelCategory(entry.kategorie);
+      drinkCountByTopLevelCategory[topCat] = (drinkCountByTopLevelCategory[topCat] || 0) + 1;
+    }
+  }
+
   // --- Custom drinks ---
   for (const drinkId of customDrinkIds) {
     const entry = allCustomDrinks[drinkId];
@@ -258,16 +302,33 @@ function calculate(event, ratesDb, customDrinksMap) {
       const firstEinheit = entry.einheiten[0];
       const gebindeLiter = Number(firstEinheit.einheitsgroesse) || null;
       const gebindeName = firstEinheit.gebindeinheit || null;
+
+      // Kategoriebedarfe auf einzelne Getraenke verteilen, falls Kategorie bekannt.
+      let literOhnePuffer = null;
+      let literMitPuffer = null;
+      let anzahlGebinde = null;
+      const topCat = entry.kategorie ? resolveTopLevelCategory(entry.kategorie) : null;
+      const catLiters = topCat ? categoryLitersMap[topCat] : null;
+      if (catLiters) {
+        const count = drinkCountByTopLevelCategory[topCat] || 1;
+        literOhnePuffer = round2(catLiters.literOhnePuffer / count);
+        literMitPuffer = round2(catLiters.literMitPuffer / count);
+        if (gebindeLiter) {
+          anzahlGebinde = Math.ceil(literMitPuffer / gebindeLiter);
+        }
+      }
+
       ergebnis.push({
         kategorie: drinkId,
         drinkLabel: entry.name,
+        drinkKategorie: entry.kategorie || null,
         isCustomDrink: true,
-        literOhnePuffer: null,
-        literMitPuffer: null,
+        literOhnePuffer,
+        literMitPuffer,
         gebinde: gebindeName,
         gebindeGroesseLiter: gebindeLiter,
-        anzahlGebinde: null,
-        ratenQuelle: 'benutzerdefiniert',
+        anzahlGebinde,
+        ratenQuelle: catLiters ? 'kategorie-verteilung' : 'benutzerdefiniert',
         anteilTrinkerAngenommen: null,
         praeferenzFaktor: null,
         einheiten: entry.einheiten,
@@ -374,4 +435,5 @@ exports._internal = {
   loadCustomDrinks,
   getConfiguredUnitLabel,
   deriveEstimateTimes,
+  resolveTopLevelCategory,
 };
