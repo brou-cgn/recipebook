@@ -287,6 +287,31 @@ function calculate(event, ratesDb, customDrinksMap) {
     }
   }
 
+  // Mengen von Kategorien ohne Getraenke linear auf Kategorien mit Getraenken verteilen.
+  const categoriesWithDrinksInMap = Object.keys(drinkCountByTopLevelCategory).filter(
+      (cat) => !!categoryLitersMap[cat],
+  );
+  const categoriesWithoutDrinks = Object.keys(categoryLitersMap).filter(
+      (cat) => !drinkCountByTopLevelCategory[cat],
+  );
+  if (categoriesWithoutDrinks.length > 0 && categoriesWithDrinksInMap.length > 0) {
+    const totalOhnePuffer = categoriesWithoutDrinks.reduce(
+        (sum, cat) => sum + categoryLitersMap[cat].literOhnePuffer, 0,
+    );
+    const totalMitPuffer = categoriesWithoutDrinks.reduce(
+        (sum, cat) => sum + categoryLitersMap[cat].literMitPuffer, 0,
+    );
+    const n = categoriesWithDrinksInMap.length;
+    const addOhnePuffer = totalOhnePuffer / n;
+    const addMitPuffer = totalMitPuffer / n;
+    for (const cat of categoriesWithDrinksInMap) {
+      categoryLitersMap[cat] = {
+        literOhnePuffer: round2(categoryLitersMap[cat].literOhnePuffer + addOhnePuffer),
+        literMitPuffer: round2(categoryLitersMap[cat].literMitPuffer + addMitPuffer),
+      };
+    }
+  }
+
   // --- Custom drinks ---
   for (const drinkId of customDrinkIds) {
     const entry = allCustomDrinks[drinkId];
