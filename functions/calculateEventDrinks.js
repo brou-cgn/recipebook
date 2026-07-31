@@ -63,6 +63,27 @@ function normalizeMultiplier(value) {
 }
 
 /**
+ * Liefert die vereinheitlichte Gebindebezeichnung fuer pflegbare Standardgroessen.
+ * @param {number} liters Gebindegroesse in Litern.
+ * @return {string|null}
+ */
+function getConfiguredUnitLabel(liters) {
+  const value = Number(liters);
+  if (!Number.isFinite(value) || value <= 0) return null;
+
+  if (value === 0.2) return '200 ml';
+  if (value === 0.33) return '330 ml';
+  if (value === 0.5) return '500 ml';
+  if (value === 0.75) return '750 ml';
+  if (value === 1) return '1,0 l';
+  if (value === 1.5) return '1,5 l';
+  if (value === 2) return '2,0 l';
+  if (value === 5) return '5,0 l (Pittermännchen)';
+  if (value === 10) return '10,0 l (Fässchen)';
+  return null;
+}
+
+/**
  * Reine Berechnungsfunktion, kein Firestore-Zugriff -- leicht testbar.
  * @param {object} event Event-Parameter (eventName, durationHours, guests, season,
  *   eventType, categories, customDrinkIds, pufferProzent).
@@ -167,7 +188,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       isCustomDrink: true,
       literOhnePuffer: round2(literGesamt),
       literMitPuffer: round2(literMitPuffer),
-      gebinde: entry.gebindeName || (entry.gebindeLiter ? `${entry.gebindeLiter}L` : null),
+      gebinde: getConfiguredUnitLabel(entry.gebindeLiter) || entry.gebindeName,
       gebindeGroesseLiter: entry.gebindeLiter,
       anzahlGebinde,
       ratenQuelle: 'benutzerdefiniert',
@@ -228,4 +249,4 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
 });
 
 // Fuer Unit-Tests (z.B. mit firebase-functions-test) ohne Firestore-Zugriff.
-exports._internal = {calculate, loadCustomDrinks};
+exports._internal = {calculate, loadCustomDrinks, getConfiguredUnitLabel};
