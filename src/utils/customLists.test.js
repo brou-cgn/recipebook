@@ -37,6 +37,7 @@ import {
   DEFAULT_COMMON_UNITS,
   DEFAULT_COMMON_ADJECTIVES,
   DEFAULT_PORTION_UNITS,
+  DEFAULT_PACKAGE_UNITS,
   DEFAULT_CONVERSION_TABLE,
   expandCuisineSelection,
   getParentCuisineNames,
@@ -226,6 +227,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.mealCategories).toEqual(DEFAULT_MEAL_CATEGORIES);
     expect(lists.units).toEqual(DEFAULT_UNITS);
     expect(lists.portionUnits).toEqual(DEFAULT_PORTION_UNITS);
+    expect(lists.packageUnits).toEqual(DEFAULT_PACKAGE_UNITS);
     expect(lists.conversionTable).toEqual(DEFAULT_CONVERSION_TABLE);
   });
 
@@ -263,6 +265,23 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.portionUnits).toEqual(savedPortionUnits);
     expect(lists.portionUnits).toHaveLength(3);
     expect(lists.portionUnits[2].id).toBe('neue-einheit');
+  });
+
+  test('returns saved packageUnits from Firestore instead of defaults', async () => {
+    const savedPackageUnits = ['Flasche', 'Dose', 'Sondergebinde'];
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        packageUnits: savedPackageUnits,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.packageUnits).toEqual(savedPackageUnits);
+    expect(lists.packageUnits).toHaveLength(3);
+    expect(lists.packageUnits[2]).toBe('Sondergebinde');
   });
 
   test('keeps legacy customUnits empty even when Firestore still contains old values', async () => {

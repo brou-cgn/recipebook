@@ -5,6 +5,7 @@ import DrinkManagementPage from './DrinkManagementPage';
 const mockSubscribeToCustomDrinks = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockDeleteCustomDrink = jest.fn();
+const mockGetCustomLists = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
@@ -17,6 +18,7 @@ jest.mock('../utils/customLists', () => ({
   DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
+  getCustomLists: (...args) => mockGetCustomLists(...args),
 }));
 
 jest.mock('../utils/imageUtils', () => ({
@@ -32,6 +34,7 @@ describe('DrinkManagementPage', () => {
       cb([]);
       return jest.fn();
     });
+    mockGetCustomLists.mockResolvedValue({ packageUnits: [] });
   });
 
   test('renders the mobile add FAB even in the empty state and opens the create form', () => {
@@ -267,5 +270,36 @@ describe('DrinkManagementPage', () => {
     expect(screen.getByText('Craft-Bier')).toBeInTheDocument();
     // The card meta should show "Kölsch · 500 ml Flasche"
     expect(screen.getByText(/500 ml Flasche/)).toBeInTheDocument();
+  });
+
+  test('shows gebindeinheit as select when packageUnits are configured', async () => {
+    mockGetCustomLists.mockResolvedValue({ packageUnits: ['Flasche', 'Dose', 'Kasten'] });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox');
+      const gebindeinheitSelect = selects.find((s) =>
+        s.querySelector('option[value="Flasche"]')
+      );
+      expect(gebindeinheitSelect).toBeTruthy();
+      const options = within(gebindeinheitSelect).getAllByRole('option').map((o) => o.textContent);
+      expect(options).toContain('Flasche');
+      expect(options).toContain('Dose');
+      expect(options).toContain('Kasten');
+    });
+
+    // Text input should not be visible when select is shown
+    expect(screen.queryByPlaceholderText('z. B. Flasche, Dose, Kasten')).not.toBeInTheDocument();
+  });
+
+  test('shows gebindeinheit as text input when no packageUnits are configured', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    expect(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten')).toBeInTheDocument();
   });
 });

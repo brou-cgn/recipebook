@@ -135,6 +135,14 @@ export const DEFAULT_PORTION_UNITS = [
   { id: 'person', singular: 'Person', plural: 'Personen' }
 ];
 
+export const DEFAULT_PACKAGE_UNITS = [
+  'Flasche',
+  'Dose',
+  'Kasten',
+  'Kiste',
+  'Fass',
+];
+
 export const DEFAULT_CONVERSION_TABLE = [
   { id: 'butter-el', ingredient: 'Butter', unit: 'EL', grams: '15', milliliters: '' },
   { id: 'mehl-el', ingredient: 'Mehl', unit: 'EL', grams: '10', milliliters: '' },
@@ -1084,6 +1092,7 @@ export async function getSettings() {
         mealCategories: settings.mealCategories || DEFAULT_MEAL_CATEGORIES,
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
+        packageUnits: settings.packageUnits ?? DEFAULT_PACKAGE_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
@@ -1134,6 +1143,7 @@ export async function getSettings() {
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
+      packageUnits: DEFAULT_PACKAGE_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
       customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
@@ -1190,6 +1200,7 @@ export async function getSettings() {
       mealCategories: DEFAULT_MEAL_CATEGORIES,
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
+      packageUnits: DEFAULT_PACKAGE_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
       customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
@@ -1242,6 +1253,7 @@ export async function getCustomLists() {
     mealCategories: settings.mealCategories ?? DEFAULT_MEAL_CATEGORIES,
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
+    packageUnits: settings.packageUnits ?? DEFAULT_PACKAGE_UNITS,
     conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
     customUnits: [],
     customIngredientAdjectives: [],
@@ -1500,6 +1512,7 @@ export async function resetCustomLists() {
     mealCategories: DEFAULT_MEAL_CATEGORIES,
     units: DEFAULT_UNITS,
     portionUnits: DEFAULT_PORTION_UNITS,
+    packageUnits: DEFAULT_PACKAGE_UNITS,
     conversionTable: DEFAULT_CONVERSION_TABLE
   };
   
