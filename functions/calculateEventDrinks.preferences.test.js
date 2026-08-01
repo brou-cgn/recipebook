@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./calculateEventDrinks');
-const {DEFAULT_RATES} = require('./drinkRates');
+const {DEFAULT_RATES, BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
 
 function roundTo2(value) {
   return Math.round(value * 100) / 100;
@@ -181,6 +181,70 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
   assert.ok(wasser);
   assert.ok(sekt);
   assert.equal(wasser.ratenQuelle, 'erfahrungswert');
-  assert.equal(wasser.literOhnePuffer, 12.75);
   assert.equal(sekt.ratenQuelle, 'standard-faustwert');
+  // Calibrated wasser rate (0.5 L/h) is used as a proportional weight.
+  // rawWasser = 10 * 1.0 * 0.5 * 3 * 0.85 = 12.75
+  // rawSekt   = 10 * 0.4 * 0.06 * 3 * 0.85 = 0.612
+  // totalBeverage = 10 * 0.5 (BASE_RATE) * 3 * 0.85 = 12.75
+  // wasser share = round2(12.75 * 12.75 / 13.362) = 12.17
+  // sekt share   = round2(12.75 * 0.612 / 13.362) = 0.58
+  assert.equal(wasser.literOhnePuffer, 12.17);
+  assert.equal(sekt.literOhnePuffer, 0.58);
+  assert.ok(wasser.literOhnePuffer > sekt.literOhnePuffer,
+      'wasser (calibrated high rate) should dominate sekt');
+});
+
+test('calculate ergibt realistischen Gesamtgetraenkebedarf: 1 Gast, 4 Stunden = 2 L', () => {
+  // Core requirement: total = guests x BASE_RATE x hours x season_factor
+  // 1 adult x 0.5 L/h x 4 h x 1.0 (uebergang) = 2.0 L total across all categories
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: [], // all default categories used
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const totalLiters = result.ergebnis
+      .filter((item) => !item.isCustomDrink)
+      .reduce((sum, item) => sum + (item.literOhnePuffer || 0), 0);
+
+  // Due to rounding of individual categories the sum may differ by at most ~0.05 L.
+  const expectedTotal = 1 * BASE_RATE_PER_PERSON_PER_HOUR * 4; // 2.0
+  assert.ok(
+      Math.abs(totalLiters - expectedTotal) < 0.05,
+      `Total should be ~${expectedTotal} L, got ${totalLiters.toFixed(4)} L`,
+  );
+});
+
+test('calculate ergibt doppelten Gesamtgetraenkebedarf fuer 2 Gaeste gegenueber 1 Gast', () => {
+  const make = (adults) => _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['wasser', 'bier'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const total1 = make(1).ergebnis.reduce((s, i) => s + (i.literOhnePuffer || 0), 0);
+  const total2 = make(2).ergebnis.reduce((s, i) => s + (i.literOhnePuffer || 0), 0);
+
+  assert.ok(
+      Math.abs(total2 - total1 * 2) < 0.05,
+      `2-guest total (${total2}) should be double 1-guest total (${total1})`,
+  );
 });
