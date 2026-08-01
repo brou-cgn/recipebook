@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -143,7 +143,46 @@ function calculate(event, ratesDb, customDrinksMap) {
   const ergebnis = [];
   const warnungen = [];
 
-  // --- Predefined categories ---
+  // --- Step 1: Compute total beverage requirement for the event ---
+  // Total = guests x base_rate x hours x season_factor x duration_factor.
+  // This single budget is then distributed across selected categories proportionally.
+  const totalBeverage =
+      (adults + children) * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
+
+  // --- Step 2: Compute raw category weights for proportional distribution ---
+  // Each category's weight is its expected amount based on the standard/calibrated rate,
+  // adjusted by the event-type factor and any guest preference multiplier.
+  // The existing rates (erwachsene, anteilTrinker, modus) serve as relative weights only;
+  // the absolute total is fixed by BASE_RATE_PER_PERSON_PER_HOUR above.
+  const categoryRawWeights = {};
+  let totalRawWeight = 0;
+
+  for (const cat of categories) {
+    const entry = ratesDb[cat];
+    if (!entry) continue;
+
+    const anteilTrinker = entry.anteilTrinker ?? 1.0;
+    const typeFactor = typeFactors[cat] ?? 1.0;
+    const modus = entry.modus || 'stunde';
+    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
+
+    let rawAdult;
+    let rawChild;
+    if (modus === 'pauschal') {
+      rawAdult = adults * anteilTrinker * entry.erwachsene * seasonFactor * typeFactor;
+      rawChild = children * (entry.kinder || 0) * seasonFactor;
+    } else {
+      rawAdult =
+          adults * anteilTrinker * entry.erwachsene * hours * seasonFactor * typeFactor * durFactor;
+      rawChild = children * (entry.kinder || 0) * hours * durFactor;
+    }
+
+    const rawWeight = (rawAdult + rawChild) * prefMult;
+    categoryRawWeights[cat] = rawWeight;
+    totalRawWeight += rawWeight;
+  }
+
+  // --- Step 3: Distribute total across selected categories ---
   for (const cat of categories) {
     const entry = ratesDb[cat];
     if (!entry) {
@@ -155,23 +194,11 @@ function calculate(event, ratesDb, customDrinksMap) {
     }
 
     const anteilTrinker = entry.anteilTrinker ?? 1.0;
-    const typeFactor = typeFactors[cat] ?? 1.0;
-    const modus = entry.modus || 'stunde';
+    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
 
-    let literErwachsene;
-    let literKinder;
-    if (modus === 'pauschal') {
-      literErwachsene = adults * anteilTrinker * entry.erwachsene * seasonFactor * typeFactor;
-      literKinder = children * (entry.kinder || 0) * seasonFactor;
-    } else {
-      literErwachsene =
-          adults * anteilTrinker * entry.erwachsene * hours * seasonFactor * typeFactor * durFactor;
-      literKinder = children * (entry.kinder || 0) * hours * durFactor;
-    }
-
-    const calculatedLiters = literErwachsene + literKinder;
-    const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[cat]);
-    const literGesamt = calculatedLiters * preferenceMultiplier;
+    const literGesamt = totalRawWeight > 0 ?
+        totalBeverage * (categoryRawWeights[cat] / totalRawWeight) :
+        0;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
@@ -185,7 +212,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       anzahlGebinde,
       ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
-      praeferenzFaktor: preferenceMultiplier !== 1 ? preferenceMultiplier : null,
+      praeferenzFaktor: prefMult !== 1 ? prefMult : null,
     });
   }
 

@@ -7,6 +7,10 @@
  * werden, sobald echte Event-Daten vorliegen.
  */
 
+// Gesamter Getraenkebedarf pro Person und Stunde (alle Kategorien zusammen).
+// Ergibt z.B. 2 Liter fuer 1 Person bei 4 Stunden Veranstaltung (Uebergangszeit).
+const BASE_RATE_PER_PERSON_PER_HOUR = 0.5;
+
 // Liter pro Person pro Stunde (bzw. pauschal, siehe modus).
 const DEFAULT_RATES = {
   wasser: {
@@ -69,4 +73,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor};
+module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR};
