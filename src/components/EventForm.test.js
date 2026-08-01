@@ -148,6 +148,7 @@ describe('EventForm', () => {
       id: 'event-42',
       eventName: 'Geburtstag',
       date: '2025-06-15',
+      startTime: '14:30',
       durationHours: 5,
       guests: { adults: 8, children: 2 },
       eventType: 'party',
@@ -166,6 +167,7 @@ describe('EventForm', () => {
 
     expect(screen.getByLabelText('Name')).toHaveValue('Geburtstag');
     expect(screen.getByLabelText('Dauer (Stunden)')).toHaveValue(5);
+    expect(screen.getByLabelText('Startuhrzeit')).toHaveValue('14:30');
     expect(screen.getByLabelText('Erwachsene')).toHaveValue(8);
     expect(screen.getByLabelText('Kinder')).toHaveValue(2);
     expect(screen.getByLabelText('Puffer (%)')).toHaveValue(10);
@@ -201,6 +203,32 @@ describe('EventForm', () => {
     expect(eventId).toBe('event-42');
     expect(onSaved).toHaveBeenCalledWith('event-42');
   });
+
+  test('passes startTime to calculateEventDrinks when provided', async () => {
+    const onSaved = jest.fn();
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Nachmittagsfest' } });
+    fireEvent.change(screen.getByLabelText('Startuhrzeit'), { target: { value: '14:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.startTime).toBe('14:00');
+  });
+
+  test('omits startTime from event when not provided', async () => {
+    const onSaved = jest.fn();
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.startTime).toBeUndefined();
+  });
+
 
   test('does not auto-select all drinks when editing (respects initialEvent customDrinkIds)', async () => {
     const onSaved = jest.fn();

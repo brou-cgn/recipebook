@@ -45,6 +45,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
   const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
+  const [startTime, setStartTime] = useState(initialEvent?.startTime ?? '');
   const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 4);
   const [adults, setAdults] = useState(initialEvent?.guests?.adults ?? 10);
   const [children, setChildren] = useState(initialEvent?.guests?.children ?? 0);
@@ -138,6 +139,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
       const event = {
         eventName: eventName.trim(),
         date,
+        startTime: startTime || undefined,
         durationHours: Number(durationHours),
         guests: { adults: Number(adults) || 0, children: Number(children) || 0 },
         selectedGuestIds,
@@ -196,6 +198,15 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+            />
+          </label>
+          <label className="events-form-field">
+            <span>Startuhrzeit</span>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              aria-label="Startuhrzeit"
             />
           </label>
           <label className="events-form-field">
