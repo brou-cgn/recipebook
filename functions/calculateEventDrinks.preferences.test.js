@@ -160,7 +160,7 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
         guests: {adults: 10, children: 0},
         season: 'winter',
         eventType: 'familienfeier',
-        categories: ['wasser', 'sekt'],
+        categories: ['wasser', 'bier'],
         customDrinkIds: [],
         pufferProzent: 0,
       },
@@ -176,22 +176,21 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
   );
 
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
-  const sekt = result.ergebnis.find((item) => item.kategorie === 'sekt');
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
 
   assert.ok(wasser);
-  assert.ok(sekt);
+  assert.ok(bier);
   assert.equal(wasser.ratenQuelle, 'erfahrungswert');
-  assert.equal(sekt.ratenQuelle, 'standard-faustwert');
-  // Calibrated wasser rate (0.5 L/h) is used as a proportional weight.
-  // rawWasser = 10 * 1.0 * 0.5 * 3 * 0.85 = 12.75
-  // rawSekt   = 10 * 0.4 * 0.06 * 3 * 0.85 = 0.612
+  assert.equal(bier.ratenQuelle, 'standard-faustwert');
+  // New DRINK_WEIGHTS distribution: wasser basis=0.170, bier basis=0.260
+  // totalRawWeight = 0.170 + 0.260 = 0.430
   // totalBeverage = 10 * 0.5 (BASE_RATE) * 3 * 0.85 = 12.75
-  // wasser share = round2(12.75 * 12.75 / 13.362) = 12.17
-  // sekt share   = round2(12.75 * 0.612 / 13.362) = 0.58
-  assert.equal(wasser.literOhnePuffer, 12.17);
-  assert.equal(sekt.literOhnePuffer, 0.58);
-  assert.ok(wasser.literOhnePuffer > sekt.literOhnePuffer,
-      'wasser (calibrated high rate) should dominate sekt');
+  // wasser share = round2(12.75 * 0.170 / 0.430) = round2(5.035) = 5.03
+  // bier share   = round2(12.75 * 0.260 / 0.430) = round2(7.714) = 7.71
+  assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * 0.170 / 0.430));
+  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * 0.260 / 0.430));
+  assert.ok(bier.literOhnePuffer > wasser.literOhnePuffer,
+      'bier (higher DRINK_WEIGHT) should dominate wasser');
 });
 
 test('calculate ergibt realistischen Gesamtgetraenkebedarf: 1 Gast, 4 Stunden = 2 L', () => {

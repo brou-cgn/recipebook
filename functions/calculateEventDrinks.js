@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -149,37 +149,21 @@ function calculate(event, ratesDb, customDrinksMap) {
   const totalBeverage =
       (adults + children) * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
 
-  // --- Step 2: Compute raw category weights for proportional distribution ---
-  // Each category's weight is its expected amount based on the standard/calibrated rate,
-  // adjusted by the event-type factor and any guest preference multiplier.
-  // The existing rates (erwachsene, anteilTrinker, modus) serve as relative weights only;
-  // the absolute total is fixed by BASE_RATE_PER_PERSON_PER_HOUR above.
+  // --- Step 2: Compute DRINK_WEIGHT-based category weights ---
+  // Each category's effective weight is its DRINK_WEIGHTS basis value adjusted by
+  // the event-type factor and any guest preference multiplier.
   const categoryRawWeights = {};
   let totalRawWeight = 0;
 
   for (const cat of categories) {
-    const entry = ratesDb[cat];
-    if (!entry) continue;
+    const drinkWeight = getDrinkWeight(cat, event.season);
+    if (drinkWeight <= 0) continue;
 
-    const anteilTrinker = entry.anteilTrinker ?? 1.0;
     const typeFactor = typeFactors[cat] ?? 1.0;
-    const modus = entry.modus || 'stunde';
     const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
-
-    let rawAdult;
-    let rawChild;
-    if (modus === 'pauschal') {
-      rawAdult = adults * anteilTrinker * entry.erwachsene * seasonFactor * typeFactor;
-      rawChild = children * (entry.kinder || 0) * seasonFactor;
-    } else {
-      rawAdult =
-          adults * anteilTrinker * entry.erwachsene * hours * seasonFactor * typeFactor * durFactor;
-      rawChild = children * (entry.kinder || 0) * hours * durFactor;
-    }
-
-    const rawWeight = (rawAdult + rawChild) * prefMult;
-    categoryRawWeights[cat] = rawWeight;
-    totalRawWeight += rawWeight;
+    const effectiveWeight = drinkWeight * typeFactor * prefMult;
+    categoryRawWeights[cat] = effectiveWeight;
+    totalRawWeight += effectiveWeight;
   }
 
   // --- Step 3: Distribute total across selected categories ---
@@ -197,7 +181,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
 
     const literGesamt = totalRawWeight > 0 ?
-        totalBeverage * (categoryRawWeights[cat] / totalRawWeight) :
+        totalBeverage * ((categoryRawWeights[cat] || 0) / totalRawWeight) :
         0;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
