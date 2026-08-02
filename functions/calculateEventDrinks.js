@@ -240,13 +240,16 @@ function calculate(event, ratesDb, customDrinksMap) {
     }
   }
 
-  // Anzahl der neuen Modell-Getraenke (mit einheiten) pro uebergeordneter Kategorie zaehlen.
-  const drinkCountByTopLevelCategory = {};
+  // Anzahl der neuen Modell-Getraenke (mit einheiten) pro genutzter Kategorie zaehlen.
+  // Wenn die genaue Kategorie des Drinks angeboten wird (z.B. 'bier_alkoholfrei'),
+  // wird sie direkt verwendet. Sonst wird die Oberkategorie (z.B. 'bier') verwendet.
+  const drinkCountByCategory = {};
   for (const drinkId of customDrinkIds) {
     const entry = allCustomDrinks[drinkId];
     if (entry && Array.isArray(entry.einheiten) && entry.einheiten.length > 0 && entry.kategorie) {
       const topCat = resolveTopLevelCategory(entry.kategorie);
-      drinkCountByTopLevelCategory[topCat] = (drinkCountByTopLevelCategory[topCat] || 0) + 1;
+      const catToUse = categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
+      drinkCountByCategory[catToUse] = (drinkCountByCategory[catToUse] || 0) + 1;
     }
   }
 
@@ -271,9 +274,10 @@ function calculate(event, ratesDb, customDrinksMap) {
       let literMitPuffer = null;
       let anzahlGebinde = null;
       const topCat = entry.kategorie ? resolveTopLevelCategory(entry.kategorie) : null;
-      const catLiters = topCat ? categoryLitersMap[topCat] : null;
+      const catToUse = entry.kategorie && categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
+      const catLiters = catToUse ? categoryLitersMap[catToUse] : null;
       if (catLiters) {
-        const count = drinkCountByTopLevelCategory[topCat] || 1;
+        const count = drinkCountByCategory[catToUse] || 1;
         literOhnePuffer = round2(catLiters.literOhnePuffer / count);
         literMitPuffer = round2(catLiters.literMitPuffer / count);
         if (gebindeLiter) {
