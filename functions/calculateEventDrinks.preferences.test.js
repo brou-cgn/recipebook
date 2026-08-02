@@ -222,6 +222,50 @@ test('calculate ergibt realistischen Gesamtgetraenkebedarf: 1 Gast, 4 Stunden = 
   );
 });
 
+test('calculate bier_af-Fallback: bier erhaelt bier_af-Gewicht wenn bier_af nicht in categories', () => {
+  // Scenario: ['bier', 'softdrinks'], 1 person, 4 hours, season uebergang.
+  // Expected:
+  //   bier weight  = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis = 0.221 + 0.039 = 0.260
+  //   softdrinks weight = DRINK_WEIGHTS.softdrinks.basis = 0.260
+  //   totalRawWeight = 0.520
+  //   totalBeverage = 1 * 0.5 L/h * 4 h * 1.0 (uebergang) = 2.0 L
+  //   bier: 2.0 * (0.260 / 0.520) = 1.00 L
+  //   softdrinks: 2.0 * (0.260 / 0.520) = 1.00 L
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+
+  assert.ok(bier, 'bier Kategorie vorhanden');
+  assert.ok(softdrinks, 'softdrinks Kategorie vorhanden');
+
+  const expectedBierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const expectedSoftdrinksWeight = DRINK_WEIGHTS.softdrinks.basis;
+  const expectedTotalWeight = expectedBierWeight + expectedSoftdrinksWeight;
+  const totalBeverage = 1 * BASE_RATE_PER_PERSON_PER_HOUR * 4; // 2.0 L
+
+  assert.equal(bier.literOhnePuffer, roundTo2(totalBeverage * expectedBierWeight / expectedTotalWeight));
+  assert.equal(softdrinks.literOhnePuffer, roundTo2(totalBeverage * expectedSoftdrinksWeight / expectedTotalWeight));
+
+  // Both categories have equal weight, so both receive exactly half of total.
+  assert.equal(bier.literOhnePuffer, softdrinks.literOhnePuffer);
+  assert.equal(bier.literOhnePuffer, 1.0);
+  assert.equal(softdrinks.literOhnePuffer, 1.0);
+});
+
 test('calculate ergibt doppelten Gesamtgetraenkebedarf fuer 2 Gaeste gegenueber 1 Gast', () => {
   const make = (adults) => _internal.calculate(
       {
