@@ -136,11 +136,19 @@ function calculate(event, ratesDb, customDrinksMap) {
   const pufferProzent = normalizePufferProzent(event.pufferProzent);
   const puffer = pufferProzent / 100;
   const durFactor = durationFactor(hours);
-  const categories = Array.isArray(event.categories) && event.categories.length > 0 ?
-    event.categories :
-    Object.keys(DEFAULT_RATES);
   const customDrinkIds = event.customDrinkIds || [];
   const allCustomDrinks = customDrinksMap || {};
+  const derivedCategoriesFromCustomDrinks = [...new Set(
+      customDrinkIds
+          .map((drinkId) => allCustomDrinks[drinkId]?.kategorie)
+          .filter(Boolean)
+          .map((categoryId) => resolveTopLevelCategory(categoryId)),
+  )];
+  const categories = Array.isArray(event.categories) && event.categories.length > 0 ?
+    event.categories :
+    derivedCategoriesFromCustomDrinks.length > 0 ?
+      derivedCategoriesFromCustomDrinks :
+      Object.keys(DEFAULT_RATES);
   const guestPreferenceMultipliers = event.guestPreferenceMultipliers || {};
 
   const ergebnis = [];

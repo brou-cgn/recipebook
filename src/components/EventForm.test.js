@@ -33,8 +33,8 @@ describe('EventForm', () => {
     });
     mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
       cb([
-        { id: 'custom-wasser', name: 'Wasser (eigen)' },
-        { id: 'custom-bier', name: 'Bier (eigen)' },
+        { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
+        { id: 'custom-bier', name: 'Bier (eigen)', kategorie: 'bier_alkoholfrei' },
       ]);
       return jest.fn();
     });
@@ -99,7 +99,7 @@ describe('EventForm', () => {
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser', 'custom-bier']);
-    expect(event.categories).toEqual([]);
+    expect(event.categories).toEqual(['wasser', 'bier']);
   });
 
   test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
@@ -259,5 +259,6 @@ describe('EventForm', () => {
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     // Only the drink from initialEvent should be selected, not all available drinks
     expect(event.customDrinkIds).toEqual(['custom-wasser']);
+    expect(event.categories).toEqual(['wasser']);
   });
 });
