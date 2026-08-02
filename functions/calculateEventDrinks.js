@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -130,7 +130,6 @@ function calculate(event, ratesDb, customDrinksMap) {
   const children = event.guests?.children || 0;
   const hours = event.durationHours;
   const seasonFactor = SEASON_FACTORS[event.season] ?? 1.0;
-  const typeFactors = EVENT_TYPE_FACTORS[event.eventType] || {};
   const pufferProzent = normalizePufferProzent(event.pufferProzent);
   const puffer = pufferProzent / 100;
   const durFactor = durationFactor(hours);
@@ -150,9 +149,9 @@ function calculate(event, ratesDb, customDrinksMap) {
   const totalBeverage =
       (adults + children) * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
 
-  // --- Step 2: Compute DRINK_WEIGHT-based category weights ---
-  // Each category's effective weight is its DRINK_WEIGHTS basis value adjusted by
-  // the event-type factor and any guest preference multiplier.
+  // --- Step 2: Compute effective category weights from DRINK_WEIGHTS ---
+  // Each offered category receives its raw DRINK_WEIGHTS basis value.
+  // Categories not in event.categories effectively get weight 0 (they are not iterated).
   const categoryRawWeights = {};
   let totalRawWeight = 0;
   const categorySet = new Set(categories);
@@ -161,25 +160,19 @@ function calculate(event, ratesDb, customDrinksMap) {
     const drinkWeight = getDrinkWeight(cat, event.season);
     if (drinkWeight <= 0) continue;
 
-    const typeFactor = typeFactors[cat] ?? 1.0;
-    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
-    const effectiveWeight = drinkWeight * typeFactor * prefMult;
-    categoryRawWeights[cat] = effectiveWeight;
-    totalRawWeight += effectiveWeight;
+    categoryRawWeights[cat] = drinkWeight;
+    totalRawWeight += drinkWeight;
   }
 
+  // Step 2: bier_af fallback -- if bier is offered but bier_af is not, add bier_af weight to bier.
   for (const [subCategory, parentCategory] of Object.entries(DRINK_CATEGORY_PARENTS)) {
     if (!categorySet.has(parentCategory) || categorySet.has(subCategory)) continue;
 
     const subCategoryWeight = getDrinkWeight(subCategory, event.season);
     if (subCategoryWeight <= 0) continue;
 
-    const typeFactor = typeFactors[parentCategory] ?? 1.0;
-    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[parentCategory]);
-    const inheritedWeight = subCategoryWeight * typeFactor * prefMult;
-
-    categoryRawWeights[parentCategory] = (categoryRawWeights[parentCategory] || 0) + inheritedWeight;
-    totalRawWeight += inheritedWeight;
+    categoryRawWeights[parentCategory] = (categoryRawWeights[parentCategory] || 0) + subCategoryWeight;
+    totalRawWeight += subCategoryWeight;
   }
 
   // --- Step 3: Distribute total across selected categories ---
