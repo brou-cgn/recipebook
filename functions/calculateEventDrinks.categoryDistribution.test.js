@@ -371,3 +371,41 @@ test('calculate 1 Person 4 Stunden bier+softdrinks mit 2 Softdrinks: jeder Drink
   assert.equal(cola.literOhnePuffer, 0.5, 'cola = 0,50 L');
   assert.equal(fanta.literOhnePuffer, 0.5, 'fanta = 0,50 L');
 });
+
+test('calculate addiert bier_af Gewicht NICHT zu bier, wenn bier_alkoholfrei angeboten wird', () => {
+  // Wenn bier_alkoholfrei explizit angeboten wird, deckt es die alkoholfreie Bier-Gruppe ab.
+  // bier_af-Fallback darf dann NICHT ausgeloest werden.
+  // bier-Gewicht bleibt 0,221, softdrinks 0,260 -> Verhaeltnis 45,95% : 54,05%.
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'bier_alkoholfrei', 'softdrinks'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+
+  assert.ok(bier, 'bier Kategorie vorhanden');
+  assert.ok(softdrinks, 'softdrinks Kategorie vorhanden');
+
+  // bier_alkoholfrei deckt die Gruppe ab -> kein bier_af-Fallback, Gewicht bleibt 0,221
+  // totalRawWeight = 0,221 + 0,260 = 0,481
+  // bier: 2,0 * (0,221 / 0,481) = 0,9188... -> round2 = 0,92
+  // softdrinks: 2,0 * (0,260 / 0,481) = 1,0811... -> round2 = 1,08
+  assert.equal(bier.literOhnePuffer, 0.92, 'bier bleibt bei 0,92 L (kein bier_af-Fallback)');
+  assert.equal(softdrinks.literOhnePuffer, 1.08, 'softdrinks = 1,08 L');
+
+  // Warnung fuer bier_alkoholfrei (keine Faustwerte hinterlegt)
+  assert.ok(
+      result.warnungen.some((w) => w.includes('bier_alkoholfrei')),
+      'Warnung fuer bier_alkoholfrei vorhanden',
+  );
+});
