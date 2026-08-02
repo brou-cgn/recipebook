@@ -99,7 +99,7 @@ describe('EventForm', () => {
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser', 'custom-bier']);
-    expect(event.categories).toEqual(['wasser', 'bier']);
+    expect(event.categories).toEqual(['wasser', 'bier_alkoholfrei']);
   });
 
   test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
