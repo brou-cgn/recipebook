@@ -75,13 +75,15 @@ function normalizeMultiplier(value) {
 /**
  * Map von Unterkategorie-ID auf uebergeordnete Kategorie-ID.
  * Spiegelt die Hierarchie aus drinkCategories.js (src) wider.
+ * bier_alkoholfrei ist eine Variante von bier_af (alkoholfreies Bier) und
+ * wird daher als Kindkategorie von bier_af modelliert.
  */
 const DRINK_CATEGORY_PARENTS = {
   bier_af: 'bier',
   bier_koelsch: 'bier',
   bier_pils: 'bier',
   bier_weizen: 'bier',
-  bier_alkoholfrei: 'bier',
+  bier_alkoholfrei: 'bier_af',
   wein_weisswein: 'wein',
   wein_rose: 'wein',
   wein_rotwein: 'wein',
@@ -89,11 +91,14 @@ const DRINK_CATEGORY_PARENTS = {
 
 /**
  * Liefert die uebergeordnete Kategorie-ID, falls vorhanden; sonst die ID selbst.
+ * Loest rekursiv auf, d.h. bier_alkoholfrei -> bier_af -> bier.
  * @param {string} kategorieId Getränke-Kategorie-ID.
  * @return {string}
  */
 function resolveTopLevelCategory(kategorieId) {
-  return DRINK_CATEGORY_PARENTS[kategorieId] || kategorieId;
+  const parent = DRINK_CATEGORY_PARENTS[kategorieId];
+  if (!parent) return kategorieId;
+  return resolveTopLevelCategory(parent);
 }
 
 /**
@@ -164,9 +169,18 @@ function calculate(event, ratesDb, customDrinksMap) {
     totalRawWeight += drinkWeight;
   }
 
-  // Step 2: bier_af fallback -- if bier is offered but bier_af is not, add bier_af weight to bier.
+  // Step 2b: fallback -- if parent is offered but sub-category (and none of its children) is not,
+  // add the sub-category weight to the parent.
+  // Example: bier offered, bier_af not offered AND bier_alkoholfrei not offered
+  //          -> add bier_af weight (0.039) to bier.
+  // If bier_alkoholfrei IS offered instead of bier_af, the group is covered -> no fallback.
   for (const [subCategory, parentCategory] of Object.entries(DRINK_CATEGORY_PARENTS)) {
     if (!categorySet.has(parentCategory) || categorySet.has(subCategory)) continue;
+
+    // Also skip if any direct child of subCategory is offered (they cover the same consumer group)
+    const hasOfferedChild = Object.entries(DRINK_CATEGORY_PARENTS)
+        .some(([child, parent]) => parent === subCategory && categorySet.has(child));
+    if (hasOfferedChild) continue;
 
     const subCategoryWeight = getDrinkWeight(subCategory, event.season);
     if (subCategoryWeight <= 0) continue;
