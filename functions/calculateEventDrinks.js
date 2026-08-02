@@ -253,6 +253,14 @@ function calculate(event, ratesDb, customDrinksMap) {
     }
   }
 
+  // Kategorie-Zeilen markieren, deren Bedarf bereits durch benutzerdefinierte
+  // Getraenke abgedeckt ist -- diese Zeilen sind fuer die Einkaufsliste redundant.
+  for (const item of ergebnis) {
+    if (!item.isCustomDrink) {
+      item.hasCustomDrinkCoverage = (drinkCountByCategory[item.kategorie] || 0) > 0;
+    }
+  }
+
   // --- Custom drinks ---
   for (const drinkId of customDrinkIds) {
     const entry = allCustomDrinks[drinkId];

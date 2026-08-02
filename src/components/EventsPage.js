@@ -208,14 +208,16 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                 </tr>
               </thead>
               <tbody>
-                {(berechnung?.ergebnis || []).map((row) => (
-                  <tr key={row.kategorie}>
-                    <td>{row.isCustomDrink && row.drinkLabel ? row.drinkLabel : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
-                    <td>{row.literMitPuffer} L</td>
-                    <td>{row.gebinde || '-'}</td>
-                    <td>{row.anzahlGebinde ?? '-'}</td>
-                  </tr>
-                ))}
+                {(berechnung?.ergebnis || [])
+                  .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage)
+                  .map((row) => (
+                    <tr key={row.kategorie}>
+                      <td>{row.isCustomDrink && row.drinkLabel ? row.drinkLabel : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
+                      <td>{row.literMitPuffer} L</td>
+                      <td>{row.gebinde || '-'}</td>
+                      <td>{row.anzahlGebinde ?? '-'}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
