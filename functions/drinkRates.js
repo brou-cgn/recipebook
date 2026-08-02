@@ -29,7 +29,7 @@ const DEFAULT_RATES = {
     erwachsene: 0.25, kinder: 0.0,
     gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
   },
-  bier_af: {
+  bier_alkoholfrei: {
     erwachsene: 0.25, kinder: 0.0,
     gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
   },
@@ -70,7 +70,7 @@ const DRINK_WEIGHTS = {
     sommer: 0.010,
     nachmittag: -0.040,
   },
-  bier_af: {
+  bier_alkoholfrei: {
     basis: 0.039,
     winter: -0.002,
     sommer: 0.004,

@@ -16,7 +16,7 @@ test('getDrinkWeight gibt 0 fuer unbekannte Kategorie zurueck', () => {
 
 test('getDrinkWeight gibt Basis-Gewicht fuer bekannte Kategorien zurueck', () => {
   assert.equal(getDrinkWeight('bier'), DRINK_WEIGHTS.bier.basis);
-  assert.equal(getDrinkWeight('bier_af'), DRINK_WEIGHTS.bier_af.basis);
+  assert.equal(getDrinkWeight('bier_alkoholfrei'), DRINK_WEIGHTS.bier_alkoholfrei.basis);
   assert.equal(getDrinkWeight('wein'), DRINK_WEIGHTS.wein.basis);
   assert.equal(getDrinkWeight('softdrinks'), DRINK_WEIGHTS.softdrinks.basis);
   assert.equal(getDrinkWeight('spirituosen'), DRINK_WEIGHTS.spirituosen.basis);
@@ -47,7 +47,7 @@ test('DRINK_WEIGHTS Basis-Gewichte ergeben in Summe 1.0', () => {
 });
 
 test('DRINK_WEIGHTS enthaelt alle erwarteten Kategorien', () => {
-  const expected = ['bier', 'bier_af', 'wein', 'softdrinks', 'spirituosen', 'kaffee', 'tee', 'wasser'];
+  const expected = ['bier', 'bier_alkoholfrei', 'wein', 'softdrinks', 'spirituosen', 'kaffee', 'tee', 'wasser'];
   for (const cat of expected) {
     assert.ok(Object.prototype.hasOwnProperty.call(DRINK_WEIGHTS, cat), `${cat} fehlt in DRINK_WEIGHTS`);
   }
@@ -57,7 +57,7 @@ test('DRINK_WEIGHTS enthaelt alle erwarteten Kategorien', () => {
 
 test('calculate verteilt Gesamtgetraenkebedarf proportional per DRINK_WEIGHTS (Issue-Beispiel)', () => {
   // Beispiel aus dem Issue: 1 Person, 4 Stunden → 2 Liter Gesamtbedarf
-  // Kategorien: bier (inkl. bier_af-Fallback), softdrinks (2x Drinks), wein
+  // Kategorien: bier (inkl. bier_alkoholfrei-Fallback), softdrinks (2x Drinks), wein
   // Summe = 0.67
   // Bierbedarf: 2 / 0.67 * 0.26 ≈ 0.78 L
   // Softdrinks: 2 / 0.67 * 0.26 ≈ 0.78 L (je Drink: ~0.39 L)
@@ -89,7 +89,7 @@ test('calculate verteilt Gesamtgetraenkebedarf proportional per DRINK_WEIGHTS (I
   );
 
   const totalBeverage = 1 * BASE_RATE_PER_PERSON_PER_HOUR * 4 * 1.0; // 2.0 L
-  const effectiveBierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const effectiveBierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis;
   const sumWeights = effectiveBierWeight + DRINK_WEIGHTS.softdrinks.basis + DRINK_WEIGHTS.wein.basis;
 
   const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
@@ -144,7 +144,7 @@ test('calculate liefert Gesamtgetraenkebedarf = totalBeverage fuer alle DRINK_WE
         guests: {adults: 1, children: 0},
         season: 'uebergang',
         eventType: 'familienfeier',
-        categories: ['bier', 'bier_af', 'wein', 'softdrinks', 'spirituosen', 'kaffee', 'tee', 'wasser'],
+        categories: ['bier', 'bier_alkoholfrei', 'wein', 'softdrinks', 'spirituosen', 'kaffee', 'tee', 'wasser'],
         customDrinkIds: [],
         pufferProzent: 0,
       },
@@ -185,7 +185,7 @@ test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinf
   const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
   const totalBeverage = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4; // 20.0 L
-  const bierEffWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const bierEffWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis;
   const sumWeights = bierEffWeight + DRINK_WEIGHTS.wasser.basis;
   const expectedBier = Math.round(totalBeverage * bierEffWeight / sumWeights * 100) / 100;
 
@@ -202,7 +202,7 @@ test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinf
   assert.ok(wasser.literOhnePuffer > 0, 'wasser bekommt Liter');
 });
 
-test('calculate vererbt bier_af-Gewicht auf bier, wenn bier_af nicht angeboten wird', () => {
+test('calculate vererbt bier_alkoholfrei-Gewicht auf bier, wenn bier_alkoholfrei nicht angeboten wird', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -221,13 +221,13 @@ test('calculate vererbt bier_af-Gewicht auf bier, wenn bier_af nicht angeboten w
   const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
   const totalBeverage = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4;
-  const sumWeights = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis + DRINK_WEIGHTS.wasser.basis;
+  const sumWeights = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis + DRINK_WEIGHTS.wasser.basis;
 
   assert.ok(bier);
   assert.ok(wasser);
   assert.equal(
       bier.literOhnePuffer,
-      Math.round((totalBeverage * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis) / sumWeights) * 100) / 100,
+      Math.round((totalBeverage * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis) / sumWeights) * 100) / 100,
   );
   assert.equal(
       wasser.literOhnePuffer,
@@ -235,7 +235,7 @@ test('calculate vererbt bier_af-Gewicht auf bier, wenn bier_af nicht angeboten w
   );
 });
 
-test('calculate behandelt bier_af als eigene Kategorie, wenn angeboten', () => {
+test('calculate behandelt bier_alkoholfrei als eigene Kategorie, wenn angeboten', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -243,7 +243,7 @@ test('calculate behandelt bier_af als eigene Kategorie, wenn angeboten', () => {
         guests: {adults: 10, children: 0},
         season: 'uebergang',
         eventType: 'familienfeier',
-        categories: ['bier', 'bier_af', 'wasser'],
+        categories: ['bier', 'bier_alkoholfrei', 'wasser'],
         customDrinkIds: [],
         pufferProzent: 0,
       },
@@ -252,10 +252,10 @@ test('calculate behandelt bier_af als eigene Kategorie, wenn angeboten', () => {
   );
 
   const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
-  const bierAf = result.ergebnis.find((item) => item.kategorie === 'bier_af');
+  const bierAf = result.ergebnis.find((item) => item.kategorie === 'bier_alkoholfrei');
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
   const totalBeverage = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4;
-  const sumWeights = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis + DRINK_WEIGHTS.wasser.basis;
+  const sumWeights = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis + DRINK_WEIGHTS.wasser.basis;
 
   assert.ok(bier);
   assert.ok(bierAf);
@@ -266,6 +266,6 @@ test('calculate behandelt bier_af als eigene Kategorie, wenn angeboten', () => {
   );
   assert.equal(
       bierAf.literOhnePuffer,
-      Math.round((totalBeverage * DRINK_WEIGHTS.bier_af.basis / sumWeights) * 100) / 100,
+      Math.round((totalBeverage * DRINK_WEIGHTS.bier_alkoholfrei.basis / sumWeights) * 100) / 100,
   );
 });

@@ -182,12 +182,12 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
   assert.ok(bier);
   assert.equal(wasser.ratenQuelle, 'erfahrungswert');
   assert.equal(bier.ratenQuelle, 'standard-faustwert');
-  // bier erhaelt hier auch das bier_af-Gewicht per Fallback, da bier_af nicht angeboten ist.
-  // totalRawWeight = wasser + bier + bier_af
+  // bier erhaelt hier auch das bier_alkoholfrei-Gewicht per Fallback, da bier_alkoholfrei nicht angeboten ist.
+  // totalRawWeight = wasser + bier + bier_alkoholfrei
   // totalBeverage = 10 * 0.5 (BASE_RATE) * 3 * 0.85 = 12.75
-  const totalRawWeight = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const totalRawWeight = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis;
   assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * DRINK_WEIGHTS.wasser.basis / totalRawWeight));
-  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis) / totalRawWeight));
+  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis) / totalRawWeight));
   assert.ok(bier.literOhnePuffer > wasser.literOhnePuffer,
       'bier (higher DRINK_WEIGHT) should dominate wasser');
 });
@@ -222,10 +222,10 @@ test('calculate ergibt realistischen Gesamtgetraenkebedarf: 1 Gast, 4 Stunden = 
   );
 });
 
-test('calculate bier_af-Fallback: bier erhaelt bier_af-Gewicht wenn bier_af nicht in categories', () => {
+test('calculate bier_alkoholfrei-Fallback: bier erhaelt bier_alkoholfrei-Gewicht wenn bier_alkoholfrei nicht in categories', () => {
   // Scenario: ['bier', 'softdrinks'], 1 person, 4 hours, season uebergang.
   // Expected:
-  //   bier weight  = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis = 0.221 + 0.039 = 0.260
+  //   bier weight  = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis = 0.221 + 0.039 = 0.260
   //   softdrinks weight = DRINK_WEIGHTS.softdrinks.basis = 0.260
   //   totalRawWeight = 0.520
   //   totalBeverage = 1 * 0.5 L/h * 4 h * 1.0 (uebergang) = 2.0 L
@@ -252,7 +252,7 @@ test('calculate bier_af-Fallback: bier erhaelt bier_af-Gewicht wenn bier_af nich
   assert.ok(bier, 'bier Kategorie vorhanden');
   assert.ok(softdrinks, 'softdrinks Kategorie vorhanden');
 
-  const expectedBierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const expectedBierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis;
   const expectedSoftdrinksWeight = DRINK_WEIGHTS.softdrinks.basis;
   const expectedTotalWeight = expectedBierWeight + expectedSoftdrinksWeight;
   const totalBeverage = 1 * BASE_RATE_PER_PERSON_PER_HOUR * 4; // 2.0 L
