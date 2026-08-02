@@ -1,6 +1,7 @@
 import { DRINK_CATEGORIES, getDrinkParentCategoryId } from './drinkCategories';
 
 const ALCOHOLIC_CATEGORY_IDS = ['bier', 'wein', 'sekt', 'spirituosen'];
+const NON_ALCOHOLIC_SUBCATEGORY_IDS = ['bier_alkoholfrei'];
 
 const ALLOWED_PREFERENCE_FACTORS = [0, 0.25, 0.5, 0.75, 1];
 
@@ -25,6 +26,7 @@ const isDrinkCategoryPreferred = (drinkKategorie, preferredCategoryIds) => {
 
 const isDrinkAlcoholic = (drinkId, drinkKategorie) => {
   if (drinkKategorie) {
+    if (NON_ALCOHOLIC_SUBCATEGORY_IDS.includes(drinkKategorie)) return false;
     if (ALCOHOLIC_CATEGORY_IDS.includes(drinkKategorie)) return true;
     const parentId = getDrinkParentCategoryId(drinkKategorie);
     if (parentId && ALCOHOLIC_CATEGORY_IDS.includes(parentId)) return true;

@@ -9,7 +9,7 @@ export const DRINK_CATEGORIES = [
       { id: 'bier_koelsch', label: 'Kölsch' },
       { id: 'bier_pils', label: 'Pils' },
       { id: 'bier_weizen', label: 'Weizen' },
-      { id: 'bier_alkoholfrei', label: 'Alkoholfreies Bier' },
+      { id: 'bier_alkoholfrei', label: 'Alkoholfreies Bier', hasOwnBudget: true },
     ],
   },
   {
@@ -45,4 +45,15 @@ export const getDrinkParentCategoryId = (subcategoryId) => {
     }
   }
   return null;
+};
+
+// Subcategories flagged hasOwnBudget have a dedicated rate/weight entry on the
+// backend (functions/drinkRates.js) and must be kept as-is instead of being
+// collapsed into their parent category when building an event's category list.
+export const categoryHasOwnBudget = (categoryId) => {
+  for (const cat of DRINK_CATEGORIES) {
+    const sub = cat.subcategories?.find((s) => s.id === categoryId);
+    if (sub) return Boolean(sub.hasOwnBudget);
+  }
+  return false;
 };
