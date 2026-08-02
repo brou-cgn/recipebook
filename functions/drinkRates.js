@@ -29,6 +29,10 @@ const DEFAULT_RATES = {
     erwachsene: 0.25, kinder: 0.0,
     gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
   },
+  bier_af: {
+    erwachsene: 0.25, kinder: 0.0,
+    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
+  },
   wein: {
     erwachsene: 0.10, kinder: 0.0,
     gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', modus: 'stunde', anteilTrinker: 0.3,
@@ -61,10 +65,16 @@ const SEASON_FACTORS = {sommer: 1.2, uebergang: 1.0, winter: 0.85};
  */
 const DRINK_WEIGHTS = {
   bier: {
-    basis: 0.260,
-    winter: -0.018,
-    sommer: 0.014,
-    nachmittag: -0.035,
+    basis: 0.221,
+    winter: -0.016,
+    sommer: 0.010,
+    nachmittag: -0.040,
+  },
+  bier_af: {
+    basis: 0.039,
+    winter: -0.002,
+    sommer: 0.004,
+    nachmittag: 0.005,
   },
   wein: {
     basis: 0.150,
