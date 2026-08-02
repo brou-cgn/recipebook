@@ -409,6 +409,54 @@ test('calculate addiert bier_alkoholfrei Gewicht NICHT zu bier, wenn bier_alkoho
   assert.equal(softdrinks.literOhnePuffer, 1.00, 'softdrinks = 1,00 L');
 });
 
+test('calculate weist custom drink mit bier_alkoholfrei-Kategorie das bier_alkoholfrei-Budget zu, wenn es explizit angeboten wird', () => {
+  // Bug-Szenario: categories: ['bier', 'bier_alkoholfrei']
+  // Custom Drink 'Bitburger 0,0%' mit kategorie: 'bier_alkoholfrei'
+  // Da 'bier_alkoholfrei' explizit in categories, soll der Drink das bier_alkoholfrei-Budget erhalten,
+  // NICHT das bier-Budget (das war der Bug: resolveTopLevelCategory('bier_alkoholfrei') = 'bier').
+  // bier-Gewicht: 0,221, bier_alkoholfrei: 0,039
+  // totalRawWeight = 0,221 + 0,039 = 0,260
+  // totalBeverage = 1 * 0.5 L/h * 4 h * 1.0 (uebergang) = 2.0 L
+  // bier: 2.0 * (0,221 / 0,260) = 1.70 L
+  // bier_alkoholfrei: 2.0 * (0,039 / 0,260) = 0.30 L
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'bier_alkoholfrei'],
+        customDrinkIds: ['bitburger-0-0'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        'bitburger-0-0': {
+          name: 'Bitburger 0,0%',
+          kategorie: 'bier_alkoholfrei',
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const bierAlkoholfrei = result.ergebnis.find((item) => item.kategorie === 'bier_alkoholfrei');
+  const bitburger = result.ergebnis.find((item) => item.kategorie === 'bitburger-0-0');
+
+  assert.ok(bier, 'bier Kategorie vorhanden');
+  assert.ok(bierAlkoholfrei, 'bier_alkoholfrei Kategorie vorhanden');
+  assert.ok(bitburger, 'custom drink vorhanden');
+  assert.equal(bitburger.drinkKategorie, 'bier_alkoholfrei');
+
+  // Bitburger soll das bier_alkoholfrei-Budget erhalten, nicht das bier-Budget.
+  assert.equal(bitburger.literOhnePuffer, bierAlkoholfrei.literOhnePuffer,
+      'Bitburger soll bier_alkoholfrei-Budget erhalten');
+  assert.notEqual(bitburger.literOhnePuffer, bier.literOhnePuffer,
+      'Bitburger soll NICHT das bier-Budget erhalten');
+  assert.equal(bitburger.ratenQuelle, 'kategorie-verteilung');
+});
+
 test('calculate leitet Kategorien aus custom drinks ab, wenn event.categories leer ist', () => {
   const result = _internal.calculate(
       {
