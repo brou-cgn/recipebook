@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./calculateEventDrinks');
-const {DEFAULT_RATES, BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
+const {DEFAULT_RATES, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS} = require('./drinkRates');
 
 function roundTo2(value) {
   return Math.round(value * 100) / 100;
@@ -182,13 +182,12 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
   assert.ok(bier);
   assert.equal(wasser.ratenQuelle, 'erfahrungswert');
   assert.equal(bier.ratenQuelle, 'standard-faustwert');
-  // New DRINK_WEIGHTS distribution: wasser basis=0.170, bier basis=0.260
-  // totalRawWeight = 0.170 + 0.260 = 0.430
+  // bier erhaelt hier auch das bier_af-Gewicht per Fallback, da bier_af nicht angeboten ist.
+  // totalRawWeight = wasser + bier + bier_af
   // totalBeverage = 10 * 0.5 (BASE_RATE) * 3 * 0.85 = 12.75
-  // wasser share = round2(12.75 * 0.170 / 0.430) = round2(5.035) = 5.03
-  // bier share   = round2(12.75 * 0.260 / 0.430) = round2(7.714) = 7.71
-  assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * 0.170 / 0.430));
-  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * 0.260 / 0.430));
+  const totalRawWeight = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * DRINK_WEIGHTS.wasser.basis / totalRawWeight));
+  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis) / totalRawWeight));
   assert.ok(bier.literOhnePuffer > wasser.literOhnePuffer,
       'bier (higher DRINK_WEIGHT) should dominate wasser');
 });

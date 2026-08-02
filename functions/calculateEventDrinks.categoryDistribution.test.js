@@ -12,6 +12,7 @@ test('resolveTopLevelCategory gibt fuer Oberkategorie die ID selbst zurueck', ()
 });
 
 test('resolveTopLevelCategory loest Biervarianten auf "bier" auf', () => {
+  assert.equal(_internal.resolveTopLevelCategory('bier_af'), 'bier');
   assert.equal(_internal.resolveTopLevelCategory('bier_koelsch'), 'bier');
   assert.equal(_internal.resolveTopLevelCategory('bier_pils'), 'bier');
   assert.equal(_internal.resolveTopLevelCategory('bier_weizen'), 'bier');

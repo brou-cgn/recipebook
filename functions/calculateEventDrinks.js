@@ -77,6 +77,7 @@ function normalizeMultiplier(value) {
  * Spiegelt die Hierarchie aus drinkCategories.js (src) wider.
  */
 const DRINK_CATEGORY_PARENTS = {
+  bier_af: 'bier',
   bier_koelsch: 'bier',
   bier_pils: 'bier',
   bier_weizen: 'bier',
@@ -154,6 +155,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   // the event-type factor and any guest preference multiplier.
   const categoryRawWeights = {};
   let totalRawWeight = 0;
+  const categorySet = new Set(categories);
 
   for (const cat of categories) {
     const drinkWeight = getDrinkWeight(cat, event.season);
@@ -164,6 +166,20 @@ function calculate(event, ratesDb, customDrinksMap) {
     const effectiveWeight = drinkWeight * typeFactor * prefMult;
     categoryRawWeights[cat] = effectiveWeight;
     totalRawWeight += effectiveWeight;
+  }
+
+  for (const [subCategory, parentCategory] of Object.entries(DRINK_CATEGORY_PARENTS)) {
+    if (!categorySet.has(parentCategory) || categorySet.has(subCategory)) continue;
+
+    const subCategoryWeight = getDrinkWeight(subCategory, event.season);
+    if (subCategoryWeight <= 0) continue;
+
+    const typeFactor = typeFactors[parentCategory] ?? 1.0;
+    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[parentCategory]);
+    const inheritedWeight = subCategoryWeight * typeFactor * prefMult;
+
+    categoryRawWeights[parentCategory] = (categoryRawWeights[parentCategory] || 0) + inheritedWeight;
+    totalRawWeight += inheritedWeight;
   }
 
   // --- Step 3: Distribute total across selected categories ---
