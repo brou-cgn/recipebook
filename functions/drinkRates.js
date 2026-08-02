@@ -53,6 +53,72 @@ const DEFAULT_RATES = {
 
 const SEASON_FACTORS = {sommer: 1.2, uebergang: 1.0, winter: 0.85};
 
+/**
+ * Gewichtungsmatrix fuer Getraenkekategorien.
+ * Basis-Gewicht bestimmt den proportionalen Anteil einer Kategorie am
+ * Gesamtgetraenkebedarf. Saisonale und Tageszeit-Anpassungen folgen in
+ * separaten Tickets.
+ */
+const DRINK_WEIGHTS = {
+  bier: {
+    basis: 0.260,
+    winter: -0.018,
+    sommer: 0.014,
+    nachmittag: -0.035,
+  },
+  wein: {
+    basis: 0.150,
+    winter: 0.042,
+    sommer: -0.053,
+    nachmittag: -0.020,
+  },
+  softdrinks: {
+    basis: 0.260,
+    winter: -0.048,
+    sommer: 0.056,
+    nachmittag: 0.020,
+  },
+  spirituosen: {
+    basis: 0.030,
+    winter: 0.005,
+    sommer: -0.008,
+    nachmittag: -0.015,
+  },
+  kaffee: {
+    basis: 0.090,
+    winter: 0.046,
+    sommer: -0.039,
+    nachmittag: 0.035,
+  },
+  tee: {
+    basis: 0.040,
+    winter: 0.025,
+    sommer: -0.021,
+    nachmittag: 0.015,
+  },
+  wasser: {
+    basis: 0.170,
+    winter: -0.051,
+    sommer: 0.050,
+    nachmittag: 0.000,
+  },
+};
+
+/**
+ * Gibt das Gewicht einer Getraenkekategorie zurueck.
+ * Aktuell wird nur die Basis-Gewichtung verwendet; Saison- und Tageszeitanpassungen
+ * folgen in einem separaten Ticket.
+ * @param {string} category Getraenkekategorie-ID.
+ * @param {string} [season] Jahreszeit (sommer/winter/uebergang) -- reserviert fuer spaeteren Einsatz.
+ * @param {string} [timeOfDay] Tageszeit (nachmittag) -- reserviert fuer spaeteren Einsatz.
+ * @return {number} Gewicht fuer die Kategorie (0 wenn nicht bekannt).
+ */
+function getDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no-unused-vars
+  const entry = DRINK_WEIGHTS[category];
+  if (!entry) return 0;
+  return entry.basis;
+}
+
 const EVENT_TYPE_FACTORS = {
   familienfeier: {},
   party: {bier: 1.3, wein: 1.15, sekt: 1.2, spirituosen: 1.5, wasser: 1.1},
@@ -73,4 +139,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR};
+module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight};
