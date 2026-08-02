@@ -163,7 +163,9 @@ test('calculate liefert Gesamtgetraenkebedarf = totalBeverage fuer alle DRINK_WE
   );
 });
 
-test('calculate beruecksichtigt guestPreferenceMultipliers bei DRINK_WEIGHTS-Verteilung', () => {
+test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinflusst aber nicht die Verteilung', () => {
+  // Neue Logik (5-Schritt): guestPreferenceMultipliers werden im praeferenzFaktor-Feld
+  // gespeichert, beeinflussen aber die proportionale Verteilung nicht mehr.
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -182,12 +184,22 @@ test('calculate beruecksichtigt guestPreferenceMultipliers bei DRINK_WEIGHTS-Ver
 
   const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const totalBeverage = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4; // 20.0 L
+  const bierEffWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_af.basis;
+  const sumWeights = bierEffWeight + DRINK_WEIGHTS.wasser.basis;
+  const expectedBier = Math.round(totalBeverage * bierEffWeight / sumWeights * 100) / 100;
 
   assert.ok(bier, 'bier vorhanden');
   assert.ok(wasser, 'wasser vorhanden');
-  assert.equal(bier.literOhnePuffer, 0, 'bier mit prefMult=0 bekommt 0 Liter');
-  assert.ok(wasser.literOhnePuffer > 0, 'wasser bekommt alle Liter');
+  // praeferenzFaktor wird weiterhin im Ergebnis gespeichert
   assert.equal(bier.praeferenzFaktor, 0, 'bier praeferenzFaktor ist 0');
+  // Die Verteilung basiert nur auf DRINK_WEIGHTS -- prefMult=0 aendert nichts am Budget
+  assert.equal(
+      bier.literOhnePuffer,
+      expectedBier,
+      'bier bekommt proportionalen Anteil (DRINK_WEIGHTS), nicht beeinflusst durch prefMult',
+  );
+  assert.ok(wasser.literOhnePuffer > 0, 'wasser bekommt Liter');
 });
 
 test('calculate vererbt bier_af-Gewicht auf bier, wenn bier_af nicht angeboten wird', () => {
