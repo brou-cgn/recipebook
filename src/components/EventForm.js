@@ -7,6 +7,7 @@ import {
   subscribeToCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
+import { getDrinkParentCategoryId } from '../utils/drinkCategories';
 import { computeGuestPreferenceMultipliers, getGuestDisplayName } from '../utils/guestPreferences';
 
 const CATEGORY_LABELS = {
@@ -136,6 +137,13 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     setSaving(true);
     setError('');
     try {
+      const categories = [...new Set(
+        customDrinkIds
+          .map((drinkId) => customDrinks.find((drink) => drink.id === drinkId)?.kategorie)
+          .filter(Boolean)
+          .map((categoryId) => getDrinkParentCategoryId(categoryId) || categoryId),
+      )];
+
       const event = {
         eventName: eventName.trim(),
         date,
@@ -151,7 +159,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
         guestPreferenceMultipliers,
         season: deriveSeason(date),
         eventType,
-        categories: [],
+        categories,
         customDrinkIds,
         pufferProzent: Number(pufferProzent),
       };

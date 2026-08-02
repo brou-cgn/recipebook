@@ -408,3 +408,37 @@ test('calculate addiert bier_alkoholfrei Gewicht NICHT zu bier, wenn bier_alkoho
   assert.equal(bierAlkoholfrei.literOhnePuffer, 0.15, 'bier_alkoholfrei = 0,15 L (eigene Gewichtung)');
   assert.equal(softdrinks.literOhnePuffer, 1.00, 'softdrinks = 1,00 L');
 });
+
+test('calculate leitet Kategorien aus custom drinks ab, wenn event.categories leer ist', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: [],
+        customDrinkIds: ['bitburger-0-0'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        'bitburger-0-0': {
+          name: 'Bitburger 0,0%',
+          kategorie: 'bier_alkoholfrei',
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
+
+  const standardCategories = result.ergebnis.filter((item) => !item.isCustomDrink);
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const bitburger = result.ergebnis.find((item) => item.kategorie === 'bitburger-0-0');
+
+  assert.equal(standardCategories.length, 1, 'nur eine Standardkategorie wird berechnet');
+  assert.ok(bier, 'bier ist als abgeleitete Oberkategorie vorhanden');
+  assert.ok(bitburger, 'custom drink vorhanden');
+  assert.equal(bitburger.drinkKategorie, 'bier_alkoholfrei');
+  assert.equal(bitburger.literOhnePuffer, bier.literOhnePuffer);
+  assert.equal(bitburger.literMitPuffer, bier.literMitPuffer);
+});
