@@ -246,8 +246,9 @@ test('calculate teilt Kategoriebedarf auf drei Getraenke einer Kategorie auf', (
   assert.equal(sprite.literMitPuffer, erwartetesDrittel);
 });
 
-test('calculate verteilt Menge einer Kategorie ohne Getraenke auf Kategorien mit Getraenken', () => {
-  // bier hat keine Getraenke, softdrinks hat cola. Die bier-Menge soll auf softdrinks verteilt werden.
+test('calculate verteilt Softdrink-Kategoriebedarf auf einzelnes Getraenk ohne Bier-Umverteilung', () => {
+  // Neue Semantik: Jede Kategorie behaelt ihr eigenes Budget.
+  // bier hat keine Getraenke und behaelt sein Budget; cola bekommt nur den softdrinks-Anteil.
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -277,13 +278,13 @@ test('calculate verteilt Menge einer Kategorie ohne Getraenke auf Kategorien mit
   assert.ok(bier, 'bier Kategorie vorhanden');
   assert.ok(cola, 'cola Getraenk vorhanden');
 
-  // cola erhaelt den gesamten Bedarf aus softdrinks UND bier (da bier keine Getraenke hat).
-  const erwartetLiterMitPuffer = Math.round((softdrinks.literMitPuffer + bier.literMitPuffer) * 100) / 100;
-  assert.equal(cola.literMitPuffer, erwartetLiterMitPuffer);
+  // cola erhaelt nur den softdrinks-Bedarf (NICHT den bier-Bedarf).
+  assert.equal(cola.literMitPuffer, softdrinks.literMitPuffer);
   assert.equal(cola.ratenQuelle, 'kategorie-verteilung');
 });
 
-test('calculate verteilt Menge von zwei Kategorien ohne Getraenke gleichmaessig auf zwei Kategorien mit Getraenken', () => {
+test('calculate gibt jedem Getraenk nur den Bedarf seiner eigenen Kategorie', () => {
+  // Neue Semantik: Kategorien ohne Getraenke behalten ihr Budget und werden nicht umverteilt.
   // bier und wein haben keine Getraenke; softdrinks hat cola, wasser hat mineralwasser.
   const result = _internal.calculate(
       {
@@ -313,21 +314,60 @@ test('calculate verteilt Menge von zwei Kategorien ohne Getraenke gleichmaessig 
 
   const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
-  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
-  const wein = result.ergebnis.find((item) => item.kategorie === 'wein');
   const cola = result.ergebnis.find((item) => item.kategorie === 'cola');
   const mw = result.ergebnis.find((item) => item.kategorie === 'mineralwasser');
 
   assert.ok(cola, 'cola vorhanden');
   assert.ok(mw, 'mineralwasser vorhanden');
 
-  // Gesamtmenge aus bier+wein wird haelftig auf softdrinks und wasser aufgeteilt.
-  const ohneGetraenkeMitPuffer = Math.round((bier.literMitPuffer + wein.literMitPuffer) * 100) / 100;
-  const anteilJeKategorie = Math.round((ohneGetraenkeMitPuffer / 2) * 100) / 100;
+  // cola bekommt nur softdrinks-Budget, mineralwasser nur wasser-Budget (keine Umverteilung von bier/wein).
+  assert.equal(cola.literMitPuffer, softdrinks.literMitPuffer);
+  assert.equal(mw.literMitPuffer, wasser.literMitPuffer);
+});
 
-  const erwartetColaMitPuffer = Math.round((softdrinks.literMitPuffer + anteilJeKategorie) * 100) / 100;
-  const erwartetMwMitPuffer = Math.round((wasser.literMitPuffer + anteilJeKategorie) * 100) / 100;
+test('calculate 1 Person 4 Stunden bier+softdrinks mit 2 Softdrinks: jeder Drink bekommt 0,50 L', () => {
+  // Fehlerszenario: categories: ['bier', 'softdrinks'], 1 Person, 4h, 2 Softdrinks.
+  // bier erhaelt 0,260 Gewicht (0,221 + 0,039 bier_af-Fallback), softdrinks 0,260.
+  // totalRawWeight = 0,520 -> bier = 1,00 L, softdrinks = 1,00 L.
+  // Jeder der 2 Softdrinks bekommt 1,00 / 2 = 0,50 L (kein Umverteilen des Bier-Budgets).
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: ['cola', 'fanta'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        cola: {
+          name: 'Cola',
+          kategorie: 'softdrinks',
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        fanta: {
+          name: 'Fanta',
+          kategorie: 'softdrinks',
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
 
-  assert.equal(cola.literMitPuffer, erwartetColaMitPuffer);
-  assert.equal(mw.literMitPuffer, erwartetMwMitPuffer);
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  const cola = result.ergebnis.find((item) => item.kategorie === 'cola');
+  const fanta = result.ergebnis.find((item) => item.kategorie === 'fanta');
+
+  assert.ok(bier, 'bier Kategorie vorhanden');
+  assert.ok(softdrinks, 'softdrinks Kategorie vorhanden');
+  assert.ok(cola, 'cola vorhanden');
+  assert.ok(fanta, 'fanta vorhanden');
+
+  assert.equal(bier.literOhnePuffer, 1.0, 'bier = 1,00 L');
+  assert.equal(softdrinks.literOhnePuffer, 1.0, 'softdrinks = 1,00 L');
+  assert.equal(cola.literOhnePuffer, 0.5, 'cola = 0,50 L');
+  assert.equal(fanta.literOhnePuffer, 0.5, 'fanta = 0,50 L');
 });
