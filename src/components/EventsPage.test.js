@@ -127,7 +127,7 @@ describe('EventsPage', () => {
     expect(screen.getByText('Fahrer: Anna Beispiel')).toBeInTheDocument();
   });
 
-  test('shows drink summary on event card when status is berechnet', () => {
+  test('does not show drink summary on event card when status is berechnet but only categories are present', () => {
     const event = {
       id: 'e2',
       eventName: 'Grillfest',
@@ -148,10 +148,11 @@ describe('EventsPage', () => {
 
     render(<EventsPage currentUser={currentUser} />);
 
-    expect(screen.getByText('~50L wasser, ~30L softdrinks')).toBeInTheDocument();
+    expect(screen.queryByText(/~50L wasser/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/~30L softdrinks/)).not.toBeInTheDocument();
   });
 
-  test('shows drink summary on event card when status is verbrauchErfasst', () => {
+  test('shows only custom drinks in summary on event card when status is verbrauchErfasst', () => {
     const event = {
       id: 'e3',
       eventName: 'Familienfeier',
@@ -161,6 +162,7 @@ describe('EventsPage', () => {
       berechnung: {
         ergebnis: [
           { kategorie: 'bier', literMitPuffer: 20 },
+          { kategorie: 'custom_1', literMitPuffer: 10, isCustomDrink: true, drinkLabel: 'Bitburger 0,0%' },
         ],
       },
     };
@@ -171,7 +173,8 @@ describe('EventsPage', () => {
 
     render(<EventsPage currentUser={currentUser} />);
 
-    expect(screen.getByText('~20L bier')).toBeInTheDocument();
+    expect(screen.getByText('~10L Bitburger 0,0%')).toBeInTheDocument();
+    expect(screen.queryByText(/~20L bier/)).not.toBeInTheDocument();
   });
 
   test('does not show drink summary on event card when status is geplant', () => {

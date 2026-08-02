@@ -28,10 +28,9 @@ const formatDrinkSummary = (berechnung) => {
   const ergebnis = berechnung?.ergebnis;
   if (!ergebnis || ergebnis.length === 0) return null;
   return ergebnis
+    .filter((row) => row.isCustomDrink)
     .map((row) => {
-      const label = row.isCustomDrink && row.drinkLabel
-        ? row.drinkLabel
-        : (CATEGORY_LABELS[row.kategorie] || row.kategorie);
+      const label = row.drinkLabel || row.kategorie;
       return `~${row.literMitPuffer}L ${label}`;
     })
     .join(', ');
