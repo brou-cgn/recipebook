@@ -185,10 +185,10 @@ function calculate(event, ratesDb, customDrinksMap) {
   const warnungen = [];
 
   // --- Step 1: Compute total beverage requirement for the event ---
-  // Total = guests x base_rate x hours x season_factor x duration_factor.
+  // Total = adults x base_rate x hours x season_factor x duration_factor.
   // This single budget is then distributed across selected categories proportionally.
   const totalBeverage =
-      (adults + children) * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
+      adults * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
 
   // --- Step 2: Compute effective category weights from DRINK_WEIGHTS ---
   // Each offered category receives its raw DRINK_WEIGHTS basis value.
@@ -359,18 +359,15 @@ function calculate(event, ratesDb, customDrinksMap) {
     const modus = entry.modus || 'stunde';
 
     let literErwachsene;
-    let literKinder;
     if (modus === 'pauschal') {
       literErwachsene = adults * anteilTrinker * (entry.erwachsene || 0) * seasonFactor;
-      literKinder = children * (entry.kinder || 0) * seasonFactor;
     } else {
       literErwachsene =
           adults * anteilTrinker * (entry.erwachsene || 0) * hours * seasonFactor * durFactor;
-      literKinder = children * (entry.kinder || 0) * hours * durFactor;
     }
 
     const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[drinkId]);
-    const literGesamt = (literErwachsene + literKinder) * preferenceMultiplier;
+    const literGesamt = literErwachsene * preferenceMultiplier;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
