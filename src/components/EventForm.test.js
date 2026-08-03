@@ -207,6 +207,39 @@ describe('EventForm', () => {
     expect(screen.getByRole('button', { name: 'Berechnung aktualisieren' })).toBeInTheDocument();
   });
 
+  test('shows delete button on the edit page and calls onDelete', () => {
+    const onDelete = jest.fn();
+    const initialEvent = {
+      id: 'event-42',
+      eventName: 'Geburtstag',
+      date: '2025-06-15',
+      durationHours: 5,
+      guests: { adults: 8, children: 2 },
+      eventType: 'party',
+      customDrinkIds: ['custom-wasser'],
+      selectedGuestIds: [],
+      pufferProzent: 10,
+    };
+    render(
+      <EventForm
+        onSaved={jest.fn()}
+        onCancel={jest.fn()}
+        onDelete={onDelete}
+        currentUser={{ id: 'u1' }}
+        initialEvent={initialEvent}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not show delete button for new events', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+  });
+
   test('pre-populates form fields from initialEvent', () => {
     const initialEvent = {
       id: 'event-42',

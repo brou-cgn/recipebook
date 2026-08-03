@@ -30,6 +30,16 @@ describe('EventsPage FAB CSS', () => {
     expect(rule).toContain('display: none;');
   });
 
+  test('hides the event edit FAB by default on desktop', () => {
+    const cssPath = path.join(__dirname, 'EventsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const rule = getRuleBody(css, '.events-edit-fab-button');
+
+    expect(rule).toContain('display: none;');
+    expect(rule).toContain('position: fixed;');
+    expect(rule).toContain('right: 20px;');
+  });
+
   test('shows the overview add FAB with the menu FAB styling on mobile', () => {
     const cssPath = path.join(__dirname, 'EventsPage.css');
     const css = fs.readFileSync(cssPath, 'utf8');
@@ -47,10 +57,31 @@ describe('EventsPage FAB CSS', () => {
     expect(rule).toContain('font-size: 1.1rem;');
   });
 
+  test('shows the event edit FAB with the recipe detail FAB styling on mobile', () => {
+    const cssPath = path.join(__dirname, 'EventsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const mobileBlock = getMediaBlock(css, '(max-width: 768px)');
+    const rule = getRuleBody(mobileBlock, '.events-edit-fab-button');
+
+    expect(rule).toContain('display: flex;');
+    expect(rule).toContain('width: 56px;');
+    expect(rule).toContain('height: 56px;');
+    expect(rule).toContain('opacity: 0.85;');
+  });
+
   test('uses the same pressed animation as the menu overview FAB', () => {
     const cssPath = path.join(__dirname, 'EventsPage.css');
     const css = fs.readFileSync(cssPath, 'utf8');
     const pressedRule = getRuleBody(css, '.events-add-fab-button.pressed');
+
+    expect(pressedRule).toContain('transform: scale(1.15);');
+    expect(pressedRule).toContain('box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);');
+  });
+
+  test('uses the same pressed animation for the event edit FAB', () => {
+    const cssPath = path.join(__dirname, 'EventsPage.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const pressedRule = getRuleBody(css, '.events-edit-fab-button.pressed');
 
     expect(pressedRule).toContain('transform: scale(1.15);');
     expect(pressedRule).toContain('box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);');
