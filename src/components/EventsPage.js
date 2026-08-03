@@ -196,15 +196,13 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
             </div>
           )}
 
-          <h3>Einkaufsliste</h3>
+          <h3>Getränke</h3>
           <div className="events-table-container">
             <table className="events-table">
               <thead>
                 <tr>
-                  <th>Kategorie</th>
-                  <th>Liter</th>
-                  <th>Gebinde</th>
-                  <th>Anzahl</th>
+                  <th>Getränk</th>
+                  <th>Menge</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,9 +211,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                   .map((row) => (
                     <tr key={row.kategorie}>
                       <td>{row.isCustomDrink && row.drinkLabel ? row.drinkLabel : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
-                      <td>{row.literMitPuffer} L</td>
-                      <td>{row.gebinde || '-'}</td>
-                      <td>{row.anzahlGebinde ?? '-'}</td>
+                      <td>{row.literMitPuffer} l</td>
                     </tr>
                   ))}
               </tbody>
@@ -229,15 +225,15 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                 <table className="events-table">
                   <thead>
                     <tr>
-                      <th>Kategorie</th>
-                      <th>Liter</th>
+                      <th>Getränk</th>
+                      <th>Menge</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(selectedEvent.istVerbrauch).map(([kategorie, liter]) => (
                       <tr key={kategorie}>
                         <td>{CATEGORY_LABELS[kategorie] || kategorie}</td>
-                        <td>{liter} L</td>
+                        <td>{liter} l</td>
                       </tr>
                     ))}
                   </tbody>
