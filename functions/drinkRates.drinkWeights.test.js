@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {DRINK_WEIGHTS, getDrinkWeight, BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
+const {DRINK_WEIGHTS, getDrinkWeight, BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
 const {_internal} = require('./calculateEventDrinks');
 
 // --- getDrinkWeight ---
@@ -268,4 +268,123 @@ test('calculate behandelt bier_alkoholfrei als eigene Kategorie, wenn angeboten'
       bierAf.literOhnePuffer,
       Math.round((totalBeverage * DRINK_WEIGHTS.bier_alkoholfrei.basis / sumWeights) * 100) / 100,
   );
+});
+
+// --- CHILDREN_DRINK_WEIGHTS / getChildrenDrinkWeight ---
+
+test('getChildrenDrinkWeight gibt 0 fuer unbekannte Kategorie zurueck', () => {
+  assert.equal(getChildrenDrinkWeight('unbekannt'), 0);
+  assert.equal(getChildrenDrinkWeight(''), 0);
+  assert.equal(getChildrenDrinkWeight(undefined), 0);
+});
+
+test('getChildrenDrinkWeight gibt 0 fuer Alkohol-Kategorien zurueck', () => {
+  assert.equal(getChildrenDrinkWeight('bier'), 0);
+  assert.equal(getChildrenDrinkWeight('bier_alkoholfrei'), 0);
+  assert.equal(getChildrenDrinkWeight('wein'), 0);
+  assert.equal(getChildrenDrinkWeight('spirituosen'), 0);
+  assert.equal(getChildrenDrinkWeight('kaffee'), 0);
+});
+
+test('getChildrenDrinkWeight gibt Basis-Gewicht fuer Kinderkategorien zurueck', () => {
+  assert.equal(getChildrenDrinkWeight('softdrinks'), CHILDREN_DRINK_WEIGHTS.softdrinks.basis);
+  assert.equal(getChildrenDrinkWeight('saft'), CHILDREN_DRINK_WEIGHTS.saft.basis);
+  assert.equal(getChildrenDrinkWeight('tee'), CHILDREN_DRINK_WEIGHTS.tee.basis);
+  assert.equal(getChildrenDrinkWeight('wasser'), CHILDREN_DRINK_WEIGHTS.wasser.basis);
+});
+
+test('CHILDREN_DRINK_WEIGHTS Basis-Gewichte ergeben in Summe 1.0', () => {
+  const sum = Object.values(CHILDREN_DRINK_WEIGHTS).reduce((acc, entry) => acc + entry.basis, 0);
+  assert.ok(
+      Math.abs(sum - 1.0) < 0.001,
+      `Kinder-Basis-Summe sollte 1.0 sein, ist aber ${sum.toFixed(4)}`,
+  );
+});
+
+test('CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR ist 0.35', () => {
+  assert.equal(CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, 0.35);
+});
+
+test('calculate addiert Kinderbedarf (Wasser/Saft) zu Erwachsenenbedarf', () => {
+  // 10 Erwachsene + 10 Kinder, 4 Stunden, uebergang
+  // Erwachsene: 10 * 0.5 * 4 = 20 L total
+  // Kinder: 10 * 0.35 * 4 = 14 L total
+  // Kinder-Gewichte fuer [wasser, saft]: wasser=0.370, saft=0.320 => sum=0.690
+  // Kinder-wasser: 14 * (0.370/0.690)
+  // Kinder-saft: 14 * (0.320/0.690)
+  // Erwachsene-Gewichte fuer [wasser, saft]: wasser=0.170, saft=0 (kein DRINK_WEIGHT) => sum=0.170
+  // Erwachsene-wasser: 20 * (0.170/0.170) = 20 L
+  // Erwachsene-saft: 0 L (kein DRINK_WEIGHT-Eintrag fuer saft)
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 10},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['wasser', 'saft'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      require('./drinkRates').DEFAULT_RATES,
+      {},
+  );
+
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const saft = result.ergebnis.find((item) => item.kategorie === 'saft');
+
+  assert.ok(wasser, 'wasser vorhanden');
+  assert.ok(saft, 'saft vorhanden');
+
+  const childrenTotal = 10 * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * 4;
+  const adultsTotal = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4;
+  const childrenWeightSum = CHILDREN_DRINK_WEIGHTS.wasser.basis + CHILDREN_DRINK_WEIGHTS.saft.basis;
+
+  const expectedWasserKinder = childrenTotal * (CHILDREN_DRINK_WEIGHTS.wasser.basis / childrenWeightSum);
+  const expectedWasserErwachsene = adultsTotal; // wasser is the only category with DRINK_WEIGHT > 0
+  const expectedWasser = Math.round((expectedWasserErwachsene + expectedWasserKinder) * 100) / 100;
+
+  const expectedSaftKinder = childrenTotal * (CHILDREN_DRINK_WEIGHTS.saft.basis / childrenWeightSum);
+  const expectedSaft = Math.round(expectedSaftKinder * 100) / 100; // no adult contribution
+
+  assert.equal(wasser.literOhnePuffer, expectedWasser, 'Wasser: Erwachsene + Kinder');
+  assert.equal(saft.literOhnePuffer, expectedSaft, 'Saft: nur Kinder');
+  assert.ok(saft.literOhnePuffer > 0, 'Saft hat Bedarf (Kinder)');
+});
+
+test('calculate berechnet nur Kinderbedarf wenn keine Erwachsenen vorhanden', () => {
+  // 0 adults, 20 children, 2 hours, uebergang, categories: [softdrinks, wasser]
+  // children total = 20 * 0.35 * 2 = 14 L
+  // children weights for [softdrinks, wasser]: 0.280 + 0.370 = 0.650
+  const result = _internal.calculate(
+      {
+        eventName: 'Kinderfeier',
+        durationHours: 2,
+        guests: {adults: 0, children: 20},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['softdrinks', 'wasser'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      require('./drinkRates').DEFAULT_RATES,
+      {},
+  );
+
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+
+  assert.ok(softdrinks, 'softdrinks vorhanden');
+  assert.ok(wasser, 'wasser vorhanden');
+
+  const childrenTotal = 20 * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * 2;
+  const weightSum = CHILDREN_DRINK_WEIGHTS.softdrinks.basis + CHILDREN_DRINK_WEIGHTS.wasser.basis;
+
+  const expectedSoftdrinks = Math.round((childrenTotal * CHILDREN_DRINK_WEIGHTS.softdrinks.basis / weightSum) * 100) / 100;
+  const expectedWasser = Math.round((childrenTotal * CHILDREN_DRINK_WEIGHTS.wasser.basis / weightSum) * 100) / 100;
+
+  assert.equal(softdrinks.literOhnePuffer, expectedSoftdrinks);
+  assert.equal(wasser.literOhnePuffer, expectedWasser);
+  assert.ok(wasser.literOhnePuffer > 0);
+  assert.ok(softdrinks.literOhnePuffer > 0);
 });

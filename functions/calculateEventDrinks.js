@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -185,12 +185,15 @@ function calculate(event, ratesDb, customDrinksMap) {
   const warnungen = [];
 
   // --- Step 1: Compute total beverage requirement for the event ---
-  // Total = adults x base_rate x hours x season_factor x duration_factor.
-  // This single budget is then distributed across selected categories proportionally.
+  // Adults: total = adults x base_rate x hours x season_factor x duration_factor.
+  // Children: total = children x children_base_rate x hours x season_factor x duration_factor.
+  // Both budgets are distributed independently across selected categories and then summed.
   const totalBeverage =
       adults * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
+  const childrenTotalBeverage =
+      children * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
 
-  // --- Step 2: Compute effective category weights from DRINK_WEIGHTS ---
+  // --- Step 2: Compute effective category weights from DRINK_WEIGHTS (adults) ---
   // Each offered category receives its raw DRINK_WEIGHTS basis value.
   // Categories not in event.categories effectively get weight 0 (they are not iterated).
   const categoryRawWeights = {};
@@ -225,7 +228,35 @@ function calculate(event, ratesDb, customDrinksMap) {
     totalRawWeight += subCategoryWeight;
   }
 
-  // --- Step 3: Distribute total across selected categories ---
+  // --- Step 2c: Compute effective category weights from CHILDREN_DRINK_WEIGHTS ---
+  const childrenCategoryRawWeights = {};
+  let childrenTotalRawWeight = 0;
+
+  for (const cat of categories) {
+    const childWeight = getChildrenDrinkWeight(cat, event.season);
+    if (childWeight <= 0) continue;
+
+    childrenCategoryRawWeights[cat] = childWeight;
+    childrenTotalRawWeight += childWeight;
+  }
+
+  // Step 2d: same bier_alkoholfrei fallback for children weights.
+  for (const [subCategory, parentCategory] of Object.entries(DRINK_CATEGORY_PARENTS)) {
+    if (!categorySet.has(parentCategory) || categorySet.has(subCategory)) continue;
+
+    const hasOfferedChild = Object.entries(DRINK_CATEGORY_PARENTS)
+        .some(([child, parent]) => parent === subCategory && categorySet.has(child));
+    if (hasOfferedChild) continue;
+
+    const subCategoryChildWeight = getChildrenDrinkWeight(subCategory, event.season);
+    if (subCategoryChildWeight <= 0) continue;
+
+    childrenCategoryRawWeights[parentCategory] =
+        (childrenCategoryRawWeights[parentCategory] || 0) + subCategoryChildWeight;
+    childrenTotalRawWeight += subCategoryChildWeight;
+  }
+
+  // --- Step 3: Distribute totals across selected categories and sum adults + children ---
   for (const cat of categories) {
     const entry = ratesDb[cat];
     if (!entry) {
@@ -239,9 +270,13 @@ function calculate(event, ratesDb, customDrinksMap) {
     const anteilTrinker = entry.anteilTrinker ?? 1.0;
     const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
 
-    const literGesamt = totalRawWeight > 0 ?
+    const adultsLiterGesamt = totalRawWeight > 0 ?
         totalBeverage * ((categoryRawWeights[cat] || 0) / totalRawWeight) :
         0;
+    const childrenLiterGesamt = childrenTotalRawWeight > 0 ?
+        childrenTotalBeverage * ((childrenCategoryRawWeights[cat] || 0) / childrenTotalRawWeight) :
+        0;
+    const literGesamt = adultsLiterGesamt + childrenLiterGesamt;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
         entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
