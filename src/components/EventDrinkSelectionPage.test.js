@@ -56,7 +56,7 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByText('Bier (eigen)')).toBeInTheDocument();
   });
 
-  test('does not show Faktor column when no guests are selected', () => {
+  test('shows table columns Getränk, Faktor und Aktion for selected drinks', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -68,10 +68,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.queryByRole('columnheader', { name: 'Faktor' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Getränk' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Faktor' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Aktion' })).toBeInTheDocument();
   });
 
-  test('shows Faktor column with multipliers when guests are selected', () => {
+  test('shows default factor input 1.00 for selected drinks', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -83,26 +85,36 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Faktor' })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' })).toHaveValue(1);
+    expect(screen.getByRole('spinbutton', { name: 'Bier (eigen) Faktor' })).toHaveValue(1);
   });
 
-  test('shows Verteilung column when at least one drink has custom distributionFactor', () => {
+  test('stores non-default factors on save', () => {
+    const onSave = jest.fn();
     render(
       <EventDrinkSelectionPage
-        customDrinks={[
-          ...customDrinks,
-          { id: 'custom-cola', name: 'Cola (eigen)', kategorie: 'softdrinks', distributionFactor: 1.5 },
-        ]}
-        customDrinkIds={['custom-wasser', 'custom-cola']}
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser', 'custom-bier']}
+        drinkDistributionFactors={{ 'custom-bier': 1.5 }}
         guestPreferenceMultipliers={{}}
         selectedGuestIds={[]}
-        onSave={jest.fn()}
+        onSave={onSave}
         onBack={jest.fn()}
       />,
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Verteilung' })).toBeInTheDocument();
-    expect(screen.getByText('1.5')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' }), {
+      target: { value: '1.2' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Bier (eigen) Faktor' }), {
+      target: { value: '1.0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      ['custom-wasser', 'custom-bier'],
+      { 'custom-wasser': 1.2 },
+    );
   });
 
   test('removes a drink when its remove button is clicked', () => {
@@ -158,7 +170,28 @@ describe('EventDrinkSelectionPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier']);
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier'], {});
+  });
+
+  test('uses default factor 1.0 for invalid values', () => {
+    const onSave = jest.fn();
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={onSave}
+        onBack={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' }), {
+      target: { value: '4' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {});
   });
 
   test('calls onBack when Abbrechen button is clicked', () => {

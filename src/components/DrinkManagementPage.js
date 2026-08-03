@@ -17,9 +17,6 @@ const UNIT_SIZES = [
   { label: '10,0 l (Fässchen)', value: 10.0 },
 ];
 
-const MIN_DISTRIBUTION_FACTOR = 0.1;
-const MAX_DISTRIBUTION_FACTOR = 2.0;
-
 const getUnitSizeLabel = (liters) => {
   const value = Number(liters);
   if (!Number.isFinite(value) || value <= 0) return null;
@@ -38,16 +35,8 @@ const emptyEinheit = () => ({
 const emptyForm = () => ({
   name: '',
   kategorie: '',
-  distributionFactor: 1,
   einheiten: [emptyEinheit()],
 });
-
-const normalizeDistributionFactor = (value) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 1;
-  if (parsed < MIN_DISTRIBUTION_FACTOR || parsed > MAX_DISTRIBUTION_FACTOR) return 1;
-  return parsed;
-};
 
 function DrinkManagementPage({ onBack, currentUser }) {
   const [drinks, setDrinks] = useState([]);
@@ -88,7 +77,6 @@ function DrinkManagementPage({ onBack, currentUser }) {
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
-      distributionFactor: normalizeDistributionFactor(drink.distributionFactor),
       einheiten:
         Array.isArray(drink.einheiten) && drink.einheiten.length > 0
           ? drink.einheiten.map((e) => ({
@@ -139,7 +127,6 @@ function DrinkManagementPage({ onBack, currentUser }) {
       const payload = {
         name: form.name.trim(),
         kategorie: form.kategorie || null,
-        distributionFactor: normalizeDistributionFactor(form.distributionFactor),
         einheiten: form.einheiten.map((e) => {
           const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
           const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
@@ -215,18 +202,6 @@ function DrinkManagementPage({ onBack, currentUser }) {
                 )
               )}
             </select>
-          </label>
-
-          <label className="events-form-field">
-            <span>Distributionsfaktor</span>
-            <input
-              type="number"
-              min={MIN_DISTRIBUTION_FACTOR}
-              max={MAX_DISTRIBUTION_FACTOR}
-              step="0.1"
-              value={form.distributionFactor}
-              onChange={(e) => setForm((f) => ({ ...f, distributionFactor: e.target.value }))}
-            />
           </label>
 
           <div className="events-form-field">

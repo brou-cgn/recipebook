@@ -152,7 +152,7 @@ function getConfiguredUnitLabel(liters) {
 /**
  * Reine Berechnungsfunktion, kein Firestore-Zugriff -- leicht testbar.
  * @param {object} event Event-Parameter (eventName, durationHours, guests, season,
- *   eventType, categories, customDrinkIds, pufferProzent).
+ *   eventType, categories, customDrinkIds, drinkDistributionFactors, pufferProzent).
  * @param {object} ratesDb Rate-Datenbank (Default + ggf. Erfahrungswerte).
  * @param {object} [customDrinksMap] Map von drinkId -> Getraenke-Definition.
  * @return {object} Ergebnis pro Kategorie + Warnungen.
@@ -166,6 +166,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   const puffer = pufferProzent / 100;
   const durFactor = durationFactor(hours);
   const customDrinkIds = event.customDrinkIds || [];
+  const drinkDistributionFactors = event.drinkDistributionFactors || {};
   const allCustomDrinks = customDrinksMap || {};
   const derivedCategoriesFromCustomDrinks = [...new Set(
       customDrinkIds
@@ -278,7 +279,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     if (entry && Array.isArray(entry.einheiten) && entry.einheiten.length > 0 && entry.kategorie) {
       const topCat = resolveBudgetCategory(entry.kategorie);
       const catToUse = categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
-      const distributionFactor = normalizeDistributionFactor(entry.distributionFactor);
+      const distributionFactor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
       if (!drinkDistributionByCategory[catToUse]) {
         drinkDistributionByCategory[catToUse] = {sumFactors: 0, factorsByDrinkId: {}};
       }
@@ -319,7 +320,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       const catToUse = entry.kategorie && categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
       const catLiters = catToUse ? categoryLitersMap[catToUse] : null;
       const categoryDistribution = catToUse ? drinkDistributionByCategory[catToUse] : null;
-      const distributionFactor = normalizeDistributionFactor(entry.distributionFactor);
+      const distributionFactor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
       if (catLiters) {
         const factor =
             categoryDistribution?.factorsByDrinkId?.[drinkId] ?? distributionFactor;
@@ -404,7 +405,7 @@ function calculate(event, ratesDb, customDrinksMap) {
 /**
  * Callable: calculateEventDrinks({ eventId?, event })
  * - event: Parameter-Objekt (eventName, date, durationHours, guests, season,
- *   eventType, categories, customDrinkIds, pufferProzent)
+ *   eventType, categories, customDrinkIds, drinkDistributionFactors, pufferProzent)
  * - eventId: falls gesetzt, wird das bestehende Event-Dokument mit dem
  *   Ergebnis aktualisiert (status -> "berechnet"). Sonst wird ein neues
  *   Event-Dokument angelegt.

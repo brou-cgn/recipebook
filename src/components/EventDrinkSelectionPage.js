@@ -1,37 +1,66 @@
 import React, { useState } from 'react';
 import './EventsPage.css';
 
+const MIN_DISTRIBUTION_FACTOR = 0.1;
+const MAX_DISTRIBUTION_FACTOR = 2.0;
+
+const normalizeDistributionFactor = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  if (parsed < MIN_DISTRIBUTION_FACTOR || parsed > MAX_DISTRIBUTION_FACTOR) return 1;
+  return parsed;
+};
+
 function EventDrinkSelectionPage({
   customDrinks,
   customDrinkIds: initialCustomDrinkIds,
-  guestPreferenceMultipliers,
-  selectedGuestIds,
+  drinkDistributionFactors: initialDrinkDistributionFactors,
   onSave,
   onBack,
 }) {
-  const normalizeDistributionFactor = (value) => {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0.1 || parsed > 2.0) return 1;
-    return parsed;
-  };
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
+  const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
+    initialDrinkDistributionFactors ?? {},
+  );
   const [drinkToAdd, setDrinkToAdd] = useState('');
 
   const toggleCustomDrink = (id) => {
-    setCustomDrinkIds((prev) =>
-      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
-    );
+    setCustomDrinkIds((prev) => {
+      if (prev.includes(id)) {
+        setDrinkDistributionFactors((current) => {
+          if (!(id in current)) return current;
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        return prev.filter((d) => d !== id);
+      }
+      return [...prev, id];
+    });
   };
 
   const handleSave = () => {
-    onSave(customDrinkIds);
+    const optimizedFactors = customDrinkIds.reduce((acc, drinkId) => {
+      const factor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
+      if (factor !== 1) acc[drinkId] = factor;
+      return acc;
+    }, {});
+    onSave(customDrinkIds, optimizedFactors);
   };
 
   const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id));
-  const showMultipliers = (selectedGuestIds ?? []).length > 0;
-  const showDistributionFactors = selectedDrinks.some(
-    (drink) => normalizeDistributionFactor(drink.distributionFactor) !== 1
-  );
+  const updateDistributionFactor = (drinkId, value) => {
+    setDrinkDistributionFactors((prev) => {
+      const factor = normalizeDistributionFactor(value);
+      if (factor === 1) {
+        if (!(drinkId in prev)) return prev;
+        const next = { ...prev };
+        delete next[drinkId];
+        return next;
+      }
+      return { ...prev, [drinkId]: factor };
+    });
+  };
 
   return (
     <div className="events-page-container">
@@ -86,25 +115,27 @@ function EventDrinkSelectionPage({
                     <thead>
                       <tr>
                         <th>Getränk</th>
-                        {showMultipliers && <th>Faktor</th>}
-                        {showDistributionFactors && <th>Verteilung</th>}
-                        <th></th>
+                        <th>Faktor</th>
+                        <th>Aktion</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedDrinks.map((drink) => {
-                        const multiplier =
-                          showMultipliers &&
-                          typeof guestPreferenceMultipliers?.[drink.id] === 'number'
-                            ? guestPreferenceMultipliers[drink.id]
-                            : null;
+                        const factor = normalizeDistributionFactor(drinkDistributionFactors[drink.id]);
                         return (
                           <tr key={drink.id}>
                             <td>{drink.name}</td>
-                            {showMultipliers && <td>{multiplier}</td>}
-                            {showDistributionFactors && (
-                              <td>{normalizeDistributionFactor(drink.distributionFactor)}</td>
-                            )}
+                            <td>
+                              <input
+                                type="number"
+                                min={MIN_DISTRIBUTION_FACTOR}
+                                max={MAX_DISTRIBUTION_FACTOR}
+                                step="0.01"
+                                value={factor.toFixed(2)}
+                                onChange={(e) => updateDistributionFactor(drink.id, e.target.value)}
+                                aria-label={`${drink.name} Faktor`}
+                              />
+                            </td>
                             <td>
                               <button
                                 type="button"
