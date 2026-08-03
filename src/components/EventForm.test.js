@@ -23,6 +23,15 @@ jest.mock('./EventGuestSelectionPage', () => function MockEventGuestSelectionPag
   );
 });
 
+jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPage({ onSave, onBack }) {
+  return (
+    <div>
+      <button type="button" onClick={() => onSave(['custom-wasser'])}>Getränke speichern</button>
+      <button type="button" onClick={onBack}>Getränke abbrechen</button>
+    </div>
+  );
+});
+
 describe('EventForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -309,5 +318,62 @@ describe('EventForm', () => {
     // Only the drink from initialEvent should be selected, not all available drinks
     expect(event.customDrinkIds).toEqual(['custom-wasser']);
     expect(event.categories).toEqual(['wasser']);
+  });
+
+  test('shows Anlass field directly after Name field', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    const formFields = Array.from(document.querySelectorAll('.events-form-field, .events-form-row'));
+    const nameIndex = formFields.findIndex((el) => el.querySelector('input[type="text"]'));
+    const anlassIndex = formFields.findIndex((el) => el.querySelector('select'));
+    expect(anlassIndex).toBe(nameIndex + 1);
+  });
+
+  test('shows "Getränke verwalten" button when custom drinks are available', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.getByRole('button', { name: 'Getränke verwalten' })).toBeInTheDocument();
+  });
+
+  test('shows drink selection sub-page when Getränke verwalten button is clicked', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+
+    expect(screen.getByRole('button', { name: 'Getränke speichern' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Einkaufsliste berechnen' })).not.toBeInTheDocument();
+  });
+
+  test('returns to main form when drink sub-page is cancelled', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke abbrechen' }));
+
+    expect(screen.getByRole('button', { name: 'Einkaufsliste berechnen' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Getränke speichern' })).not.toBeInTheDocument();
+  });
+
+  test('updates selected drinks when drink sub-page is saved', async () => {
+    const onSaved = jest.fn();
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    // Mock sub-page saves only custom-wasser
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke speichern' }));
+
+    // Now submit the form - should use the saved drink ids
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.customDrinkIds).toEqual(['custom-wasser']);
+  });
+
+  test('does not show "Getränke nach Gästewunsch filtern" button', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.queryByRole('button', { name: /Getränke nach Gästewunsch/ })).not.toBeInTheDocument();
   });
 });
