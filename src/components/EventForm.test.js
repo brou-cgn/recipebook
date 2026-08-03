@@ -26,7 +26,12 @@ jest.mock('./EventGuestSelectionPage', () => function MockEventGuestSelectionPag
 jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPage({ onSave, onBack }) {
   return (
     <div>
-      <button type="button" onClick={() => onSave(['custom-wasser'])}>Getränke speichern</button>
+      <button
+        type="button"
+        onClick={() => onSave(['custom-wasser'], { 'custom-wasser': 1.4 })}
+      >
+        Getränke speichern
+      </button>
       <button type="button" onClick={onBack}>Getränke abbrechen</button>
     </div>
   );
@@ -158,6 +163,7 @@ describe('EventForm', () => {
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser', 'custom-bier']);
     expect(event.categories).toEqual(['wasser', 'bier_alkoholfrei']);
+    expect(event.drinkDistributionFactors).toEqual({});
   });
 
   test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
@@ -369,6 +375,7 @@ describe('EventForm', () => {
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser']);
+    expect(event.drinkDistributionFactors).toEqual({ 'custom-wasser': 1.4 });
   });
 
   test('does not show "Getränke nach Gästewunsch filtern" button', () => {

@@ -246,7 +246,7 @@ test('calculate teilt Kategoriebedarf auf drei Getraenke einer Kategorie auf', (
   assert.equal(sprite.literMitPuffer, erwartetesDrittel);
 });
 
-test('calculate verteilt Kategoriebedarf gewichtet anhand distributionFactor', () => {
+test('calculate verteilt Kategoriebedarf gewichtet anhand event-spezifischer Faktoren', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -256,6 +256,7 @@ test('calculate verteilt Kategoriebedarf gewichtet anhand distributionFactor', (
         eventType: 'familienfeier',
         categories: ['softdrinks'],
         customDrinkIds: ['cola', 'fanta', 'sprite'],
+        drinkDistributionFactors: {cola: 1.0, fanta: 1.0, sprite: 1.5},
         pufferProzent: 0,
       },
       DEFAULT_RATES,
@@ -263,19 +264,16 @@ test('calculate verteilt Kategoriebedarf gewichtet anhand distributionFactor', (
         cola: {
           name: 'Cola',
           kategorie: 'softdrinks',
-          distributionFactor: 1.0,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
         fanta: {
           name: 'Fanta',
           kategorie: 'softdrinks',
-          distributionFactor: 1.0,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
         sprite: {
           name: 'Sprite',
           kategorie: 'softdrinks',
-          distributionFactor: 1.5,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
       },
@@ -298,7 +296,7 @@ test('calculate verteilt Kategoriebedarf gewichtet anhand distributionFactor', (
   assert.equal(sprite.literOhnePuffer, round2(softdrinks.literOhnePuffer * (1.5 / sumFactors)));
 });
 
-test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Werten', () => {
+test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Event-Werten', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -308,6 +306,7 @@ test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Werten', ()
         eventType: 'familienfeier',
         categories: ['softdrinks'],
         customDrinkIds: ['cola', 'fanta'],
+        drinkDistributionFactors: {cola: 5.0}, // ungueltig -> default 1.0
         pufferProzent: 0,
       },
       DEFAULT_RATES,
@@ -315,13 +314,11 @@ test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Werten', ()
         cola: {
           name: 'Cola',
           kategorie: 'softdrinks',
-          distributionFactor: 5.0, // ungueltig -> default 1.0
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
         fanta: {
           name: 'Fanta',
           kategorie: 'softdrinks',
-          // fehlt -> default 1.0
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
       },
@@ -344,6 +341,7 @@ test('calculate verteilt bier und bier_alkoholfrei in getrennten Budgets', () =>
         eventType: 'familienfeier',
         categories: ['bier', 'bier_alkoholfrei'],
         customDrinkIds: ['pils', 'weizen', 'alkfrei'],
+        drinkDistributionFactors: {pils: 2.0, weizen: 1.0, alkfrei: 0.5},
         pufferProzent: 0,
       },
       DEFAULT_RATES,
@@ -351,19 +349,16 @@ test('calculate verteilt bier und bier_alkoholfrei in getrennten Budgets', () =>
         pils: {
           name: 'Pils',
           kategorie: 'bier',
-          distributionFactor: 2.0,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
         weizen: {
           name: 'Weizen',
           kategorie: 'bier',
-          distributionFactor: 1.0,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
         alkfrei: {
           name: 'Alkoholfrei',
           kategorie: 'bier_alkoholfrei',
-          distributionFactor: 0.5,
           einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
         },
       },

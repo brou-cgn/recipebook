@@ -143,6 +143,7 @@ describe('DrinkManagementPage', () => {
     expect(screen.queryByText(/Erwachsene \(L\/Person/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Kinder \(L\/Person/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Anteil Trinker/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Distributionsfaktor/i)).not.toBeInTheDocument();
   });
 
   test('form contains new unit fields (Einheitsgröße, Gebindeinheit, Einheiten pro Gebinde)', () => {
@@ -162,9 +163,6 @@ describe('DrinkManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
 
     fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Craft-Bier' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: /Distributionsfaktor/i }), {
-      target: { value: '1.6' },
-    });
 
     // Fill the Gebindeinheit field
     const gebindeinheitInput = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
@@ -181,7 +179,6 @@ describe('DrinkManagementPage', () => {
         currentUser.id,
         expect.objectContaining({
           name: 'Craft-Bier',
-          distributionFactor: 1.6,
           einheiten: [
             expect.objectContaining({
               einheitsgroesse: 0.5,
@@ -189,29 +186,6 @@ describe('DrinkManagementPage', () => {
               einheitenProGebinde: 24,
             }),
           ],
-        }),
-        undefined,
-      );
-    });
-  });
-
-  test('uses default distributionFactor when input is invalid', async () => {
-    mockSaveCustomDrink.mockResolvedValue('new-drink-id');
-    render(<DrinkManagementPage currentUser={currentUser} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
-    fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Test-Drink' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: /Distributionsfaktor/i }), {
-      target: { value: '4' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-
-    await waitFor(() => {
-      expect(mockSaveCustomDrink).toHaveBeenCalledWith(
-        currentUser.id,
-        expect.objectContaining({
-          name: 'Test-Drink',
-          distributionFactor: 1,
         }),
         undefined,
       );

@@ -40,6 +40,14 @@ const EVENT_TYPE_LABELS = {
 };
 
 const DEFAULT_PUFFER_PROZENT = 25;
+const DEFAULT_DISTRIBUTION_FACTOR = 1;
+
+const normalizeDistributionFactor = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_DISTRIBUTION_FACTOR;
+  if (parsed < 0.1 || parsed > 2.0) return DEFAULT_DISTRIBUTION_FACTOR;
+  return parsed;
+};
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
@@ -54,6 +62,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
   const [children, setChildren] = useState(initialEvent?.guests?.children ?? 0);
   const [eventType, setEventType] = useState(initialEvent?.eventType ?? 'familienfeier');
   const [customDrinkIds, setCustomDrinkIds] = useState(initialEvent?.customDrinkIds ?? []);
+  const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(initialEvent?.drinkDistributionFactors ?? {});
   const [pufferProzent, setPufferProzent] = useState(initialEvent?.pufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -138,6 +147,11 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
         eventType,
         categories,
         customDrinkIds,
+        drinkDistributionFactors: customDrinkIds.reduce((acc, drinkId) => {
+          const factor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
+          if (factor !== DEFAULT_DISTRIBUTION_FACTOR) acc[drinkId] = factor;
+          return acc;
+        }, {}),
         pufferProzent: Number(pufferProzent),
       };
       const result = await calculateEventDrinks(event, isEditing ? initialEvent.id : undefined);
@@ -172,10 +186,10 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
         customDrinkIds={customDrinkIds}
-        guestPreferenceMultipliers={guestPreferenceMultipliers}
-        selectedGuestIds={selectedGuestIds}
-        onSave={(newDrinkIds) => {
+        drinkDistributionFactors={drinkDistributionFactors}
+        onSave={(newDrinkIds, newDrinkDistributionFactors) => {
           setCustomDrinkIds(newDrinkIds);
+          setDrinkDistributionFactors(newDrinkDistributionFactors || {});
           setShowDrinkSelection(false);
         }}
         onBack={() => setShowDrinkSelection(false)}
