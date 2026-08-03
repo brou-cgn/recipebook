@@ -55,6 +55,7 @@ describe('App CSS FAB bottom offset selectors', () => {
       '.App .startseite-fab-button,',
       '.App .kueche-fab-button,',
       '.App .recipe-detail-container .edit-fab-button,',
+      '.App .events-page-container .edit-fab-button,',
       '.App .recipe-detail-container .new-version-fab-button,',
       '.App .recipe-detail-container .delete-fab-button,',
       '.App .recipe-detail-container .publish-fab-button,',
@@ -95,6 +96,7 @@ describe('App CSS FAB bottom offset selectors', () => {
     const reducedMotionBlock = getMediaBlock(css, '(prefers-reduced-motion: reduce)');
 
     expect(reducedMotionBlock).toContain('.App .add-icon-button,');
+    expect(reducedMotionBlock).toContain('.App .events-page-container .edit-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .edit-fab-button,');
     expect(reducedMotionBlock).toContain('.App .events-add-fab-button,');
     expect(reducedMotionBlock).toContain('.App .recipe-detail-container .new-version-fab-button,');

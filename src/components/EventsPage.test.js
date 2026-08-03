@@ -43,8 +43,8 @@ jest.mock('../utils/userManagement', () => ({
 }));
 
 jest.mock('../utils/customLists', () => ({
-  getButtonIcons: () => Promise.resolve({ addMenu: 'Menü+' }),
-  DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+' },
+  getButtonIcons: () => new Promise(() => {}),
+  DEFAULT_BUTTON_ICONS: { addMenu: 'Menü+', editRecipe: 'Edit' },
   getEffectiveIcon: (icons, key) => icons[key] ?? '',
   getDarkModePreference: () => false,
 }));
@@ -55,14 +55,20 @@ jest.mock('../utils/imageUtils', () => ({
 
 describe('EventsPage', () => {
   const currentUser = { id: 'u1' };
+  const originalInnerWidth = window.innerWidth;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
     mockSubscribeToEvents.mockImplementation((_uid, cb) => {
       cb([]);
       return jest.fn();
     });
     mockGetEvent.mockResolvedValue(null);
+  });
+
+  afterAll(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
   });
 
   test('renders the mobile add FAB in the empty state and opens the event form', () => {
@@ -75,7 +81,7 @@ describe('EventsPage', () => {
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
   });
 
-  test('shows Bearbeiten button in detail view and opens edit form', () => {
+  test('shows desktop Bearbeiten button in detail view and opens edit form', () => {
     const event = {
       id: 'e1',
       eventName: 'Sommerfest',
@@ -99,6 +105,36 @@ describe('EventsPage', () => {
     expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+  });
+
+  test('shows mobile edit FAB in detail view and removes inline edit and delete buttons', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 480 });
+    window.dispatchEvent(new Event('resize'));
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Sommerfest'));
+
+    expect(screen.getByRole('button', { name: 'Event bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Event bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
   });
 

@@ -51,7 +51,7 @@ const normalizeDistributionFactor = (value) => {
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
-function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEvent }) {
+function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, initialEvent }) {
   const isEditing = Boolean(initialEvent?.id);
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
@@ -357,6 +357,11 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
         {error && <p className="events-error-text">{error}</p>}
 
         <div className="events-form-actions">
+          {isEditing && onDelete && (
+            <button type="button" className="events-secondary-btn events-delete-btn" onClick={onDelete} disabled={saving}>
+              Löschen
+            </button>
+          )}
           <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
             Abbrechen
           </button>
