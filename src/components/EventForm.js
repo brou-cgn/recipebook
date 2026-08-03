@@ -9,6 +9,7 @@ import {
 } from '../utils/eventsFirestore';
 import { getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { computeGuestPreferenceMultipliers, getGuestDisplayName } from '../utils/guestPreferences';
+import EventGuestSelectionPage from './EventGuestSelectionPage';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -60,8 +61,8 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
   const [customDrinks, setCustomDrinks] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialEvent?.selectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialEvent?.driverGuestIds ?? []);
-  const [guestToAdd, setGuestToAdd] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
+  const [showGuestSelection, setShowGuestSelection] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -102,26 +103,9 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     );
   };
 
-  const toggleGuest = (guestId) => {
-    setSelectedGuestIds((prev) => {
-      const next = prev.includes(guestId)
-        ? prev.filter((id) => id !== guestId)
-        : [...prev, guestId];
-      setAdults(next.length);
-      return next;
-    });
-  };
-
   const applyGuestDrinkFilter = () => {
     if (selectedGuestIds.length === 0) return;
     setCustomDrinkIds((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
-  };
-
-  const toggleDriverGuest = (guestId) => {
-    if (!selectedGuestIds.includes(guestId)) return;
-    setDriverGuestIds((prev) =>
-      prev.includes(guestId) ? prev.filter((id) => id !== guestId) : [...prev, guestId]
-    );
   };
 
   const handleSubmit = async (e) => {
@@ -174,6 +158,23 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
       setSaving(false);
     }
   };
+
+  if (showGuestSelection) {
+    return (
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={selectedGuestIds}
+        driverGuestIds={driverGuestIds}
+        onSave={(newSelectedIds, newDriverIds) => {
+          setSelectedGuestIds(newSelectedIds);
+          setDriverGuestIds(newDriverIds);
+          setAdults(newSelectedIds.length > 0 ? newSelectedIds.length : adults);
+          setShowGuestSelection(false);
+        }}
+        onBack={() => setShowGuestSelection(false)}
+      />
+    );
+  }
 
   return (
     <div className="events-page-container">
@@ -234,88 +235,22 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
 
         {guests.length > 0 && (
           <div className="events-form-field">
-            <span>Gästeauswahl für Menüplanung</span>
-            {selectedGuestIds.length > 0 && (
-              <div className="events-preferred-drinks-list">
-                {selectedGuests.map((guest) => {
-                  const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
-                  return (
-                    <span key={guest.id} className="events-drink-chip">
-                      {fullName}
-                      <button
-                        type="button"
-                        className="events-drink-chip-remove"
-                        onClick={() => toggleGuest(guest.id)}
-                        aria-label={`${fullName} entfernen`}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-            <div className="events-drink-selector">
-              <select
-                value={guestToAdd}
-                onChange={(e) => setGuestToAdd(e.target.value)}
-                aria-label="Gast auswählen"
-              >
-                <option value="">Gast auswählen …</option>
-                {guests
-                  .filter((g) => !selectedGuestIds.includes(g.id))
-                  .map((guest) => {
-                    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
-                    return (
-                      <option key={guest.id} value={guest.id}>{fullName}</option>
-                    );
-                  })}
-              </select>
-              <button
-                type="button"
-                className="events-secondary-btn"
-                onClick={() => {
-                  if (guestToAdd) {
-                    toggleGuest(guestToAdd);
-                    setGuestToAdd('');
-                  }
-                }}
-                disabled={!guestToAdd}
-                aria-label="Gast hinzufügen"
-              >
-                Hinzufügen
-              </button>
-            </div>
-            {selectedGuestIds.length > 0 && (
+            <span>Gäste &amp; Fahrer</span>
+            {selectedGuestIds.length > 0 ? (
               <p className="events-info-text">
-                {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
+                {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt
+                {driverGuestIds.length > 0 ? `, ${driverGuestIds.length} Fahrer markiert` : ''}.
               </p>
+            ) : (
+              <p className="events-info-text">Keine Gäste ausgewählt.</p>
             )}
-          </div>
-        )}
-
-        {selectedGuestIds.length > 0 && (
-          <div className="events-form-field">
-            <span>Fahrer festlegen</span>
-            <div className="events-preferred-drinks-list">
-              {selectedGuests.map((guest) => {
-                const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
-                return (
-                  <label key={guest.id} className="events-category-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={driverGuestIds.includes(guest.id)}
-                      onChange={() => toggleDriverGuest(guest.id)}
-                      aria-label={`${fullName} als Fahrer markieren`}
-                    />
-                    <span>{fullName}</span>
-                  </label>
-                );
-              })}
-            </div>
-            <p className="events-info-text">
-              {driverGuestIds.length} Fahrer markiert.
-            </p>
+            <button
+              type="button"
+              className="events-secondary-btn"
+              onClick={() => setShowGuestSelection(true)}
+            >
+              Gäste &amp; Fahrer verwalten
+            </button>
           </div>
         )}
 
