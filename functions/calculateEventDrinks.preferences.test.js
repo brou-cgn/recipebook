@@ -291,8 +291,13 @@ test('calculate ergibt doppelten Gesamtgetraenkebedarf fuer 2 Gaeste gegenueber 
   );
 });
 
-test('calculate ignoriert Kinder bei der Standard-Mengenkalkulation', () => {
-  const make = (children) => _internal.calculate(
+test('calculate addiert Kinderbedarf zum Erwachsenenbedarf (Standardkalkulation)', () => {
+  // After the children matrix was introduced, children contribute their own budget.
+  // With categories ['wasser', 'bier']:
+  //   children weights: wasser=0.370, bier=0.0 -> all children budget goes to wasser
+  //   adults weights: wasser gets its share, bier gets its share
+  // -> wasser increases with children; bier stays constant.
+  const makeResult = (children) => _internal.calculate(
       {
         eventName: 'Test',
         durationHours: 4,
@@ -307,12 +312,18 @@ test('calculate ignoriert Kinder bei der Standard-Mengenkalkulation', () => {
       {},
   );
 
-  const withoutChildren = make(0).ergebnis
-      .map((item) => [item.kategorie, item.literOhnePuffer]);
-  const withChildren = make(25).ergebnis
-      .map((item) => [item.kategorie, item.literOhnePuffer]);
+  const withoutChildren = makeResult(0);
+  const withChildren = makeResult(25);
 
-  assert.deepEqual(withChildren, withoutChildren);
+  const wasserOhne = withoutChildren.ergebnis.find((item) => item.kategorie === 'wasser');
+  const wasserMit = withChildren.ergebnis.find((item) => item.kategorie === 'wasser');
+  const bierOhne = withoutChildren.ergebnis.find((item) => item.kategorie === 'bier');
+  const bierMit = withChildren.ergebnis.find((item) => item.kategorie === 'bier');
+
+  assert.ok(wasserMit.literOhnePuffer > wasserOhne.literOhnePuffer,
+      'wasser soll mit Kindern mehr sein (Kinder trinken Wasser)');
+  assert.equal(bierMit.literOhnePuffer, bierOhne.literOhnePuffer,
+      'bier bleibt gleich, da Kinder kein Bier bekommen');
 });
 
 test('calculate ignoriert Kinder bei Legacy-Custom-Drink-Mengenkalkulation', () => {
