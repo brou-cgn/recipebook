@@ -10,6 +10,7 @@ import {
 import { getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { computeGuestPreferenceMultipliers, getGuestDisplayName } from '../utils/guestPreferences';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
+import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -61,8 +62,8 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
   const [customDrinks, setCustomDrinks] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialEvent?.selectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialEvent?.driverGuestIds ?? []);
-  const [drinkToAdd, setDrinkToAdd] = useState('');
   const [showGuestSelection, setShowGuestSelection] = useState(false);
+  const [showDrinkSelection, setShowDrinkSelection] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -97,16 +98,6 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));
   }, [selectedGuestIds]);
 
-  const toggleCustomDrink = (id) => {
-    setCustomDrinkIds((prev) =>
-      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
-    );
-  };
-
-  const applyGuestDrinkFilter = () => {
-    if (selectedGuestIds.length === 0) return;
-    setCustomDrinkIds((prev) => prev.filter((id) => (guestPreferenceMultipliers[id] ?? 1) > 0));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -176,6 +167,22 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
     );
   }
 
+  if (showDrinkSelection) {
+    return (
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={customDrinkIds}
+        guestPreferenceMultipliers={guestPreferenceMultipliers}
+        selectedGuestIds={selectedGuestIds}
+        onSave={(newDrinkIds) => {
+          setCustomDrinkIds(newDrinkIds);
+          setShowDrinkSelection(false);
+        }}
+        onBack={() => setShowDrinkSelection(false)}
+      />
+    );
+  }
+
   return (
     <div className="events-page-container">
       <div className="events-page-header">
@@ -199,6 +206,15 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
             placeholder="z. B. Sommerfest im Garten"
             required
           />
+        </label>
+
+        <label className="events-form-field">
+          <span>Anlass</span>
+          <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
+            {EVENT_TYPES.map((type) => (
+              <option key={type} value={type}>{EVENT_TYPE_LABELS[type]}</option>
+            ))}
+          </select>
         </label>
 
         <div className="events-form-row">
@@ -275,72 +291,24 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
           </label>
         </div>
 
-        <label className="events-form-field">
-          <span>Anlass</span>
-          <select value={eventType} onChange={(e) => setEventType(e.target.value)}>
-            {EVENT_TYPES.map((type) => (
-              <option key={type} value={type}>{EVENT_TYPE_LABELS[type]}</option>
-            ))}
-          </select>
-        </label>
-
         <div className="events-form-field">
           <span>Eigene Getränke</span>
           {customDrinks.length > 0 ? (
             <>
-              {customDrinkIds.length > 0 && (
-                <div className="events-preferred-drinks-list">
-                  {customDrinkIds.map((id) => {
-                    const drink = customDrinks.find((d) => d.id === id);
-                    const label = drink ? drink.name : id;
-                    const multiplierText =
-                      selectedGuestIds.length > 0 && typeof guestPreferenceMultipliers[id] === 'number'
-                        ? ` (${guestPreferenceMultipliers[id]})`
-                        : '';
-                    return (
-                      <span key={id} className="events-drink-chip">
-                        {label}{multiplierText}
-                        <button
-                          type="button"
-                          className="events-drink-chip-remove"
-                          onClick={() => toggleCustomDrink(id)}
-                          aria-label={`${label} entfernen`}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
+              {customDrinkIds.length > 0 ? (
+                <p className="events-info-text">
+                  {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt
+                </p>
+              ) : (
+                <p className="events-info-text">Keine Getränke ausgewählt.</p>
               )}
-              <div className="events-drink-selector">
-                <select
-                  value={drinkToAdd}
-                  onChange={(e) => setDrinkToAdd(e.target.value)}
-                  aria-label="Getränk auswählen"
-                >
-                  <option value="">Getränk auswählen …</option>
-                  {customDrinks
-                    .filter((d) => !customDrinkIds.includes(d.id))
-                    .map((drink) => (
-                      <option key={drink.id} value={drink.id}>{drink.name}</option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  className="events-secondary-btn"
-                  onClick={() => {
-                    if (drinkToAdd) {
-                      toggleCustomDrink(drinkToAdd);
-                      setDrinkToAdd('');
-                    }
-                  }}
-                  disabled={!drinkToAdd}
-                  aria-label="Getränk hinzufügen"
-                >
-                  Hinzufügen
-                </button>
-              </div>
+              <button
+                type="button"
+                className="events-secondary-btn"
+                onClick={() => setShowDrinkSelection(true)}
+              >
+                Getränke verwalten
+              </button>
             </>
           ) : (
             <p className="events-info-text">
@@ -360,12 +328,6 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
             </p>
           )}
         </div>
-
-        {selectedGuestIds.length > 0 && (
-          <button type="button" className="events-secondary-btn" onClick={applyGuestDrinkFilter}>
-            Getränke nach Gästewunsch filtern
-          </button>
-        )}
 
         <label className="events-form-field">
           <span>Puffer (%)</span>
