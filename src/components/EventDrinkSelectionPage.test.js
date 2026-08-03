@@ -86,6 +86,25 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Faktor' })).toBeInTheDocument();
   });
 
+  test('shows Verteilung column when at least one drink has custom distributionFactor', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={[
+          ...customDrinks,
+          { id: 'custom-cola', name: 'Cola (eigen)', kategorie: 'softdrinks', distributionFactor: 1.5 },
+        ]}
+        customDrinkIds={['custom-wasser', 'custom-cola']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'Verteilung' })).toBeInTheDocument();
+    expect(screen.getByText('1.5')).toBeInTheDocument();
+  });
+
   test('removes a drink when its remove button is clicked', () => {
     render(
       <EventDrinkSelectionPage

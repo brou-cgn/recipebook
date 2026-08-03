@@ -9,6 +9,11 @@ function EventDrinkSelectionPage({
   onSave,
   onBack,
 }) {
+  const normalizeDistributionFactor = (value) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0.1 || parsed > 2.0) return 1;
+    return parsed;
+  };
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkToAdd, setDrinkToAdd] = useState('');
 
@@ -24,6 +29,9 @@ function EventDrinkSelectionPage({
 
   const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id));
   const showMultipliers = (selectedGuestIds ?? []).length > 0;
+  const showDistributionFactors = selectedDrinks.some(
+    (drink) => normalizeDistributionFactor(drink.distributionFactor) !== 1
+  );
 
   return (
     <div className="events-page-container">
@@ -79,6 +87,7 @@ function EventDrinkSelectionPage({
                       <tr>
                         <th>Getränk</th>
                         {showMultipliers && <th>Faktor</th>}
+                        {showDistributionFactors && <th>Verteilung</th>}
                         <th></th>
                       </tr>
                     </thead>
@@ -93,6 +102,9 @@ function EventDrinkSelectionPage({
                           <tr key={drink.id}>
                             <td>{drink.name}</td>
                             {showMultipliers && <td>{multiplier}</td>}
+                            {showDistributionFactors && (
+                              <td>{normalizeDistributionFactor(drink.distributionFactor)}</td>
+                            )}
                             <td>
                               <button
                                 type="button"
