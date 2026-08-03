@@ -8,7 +8,11 @@ import {
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
 import { getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
-import { computeGuestPreferenceMultipliers, getGuestDisplayName } from '../utils/guestPreferences';
+import {
+  computeGuestPreferenceMultipliers,
+  countGuestsByCategory,
+  getGuestDisplayName,
+} from '../utils/guestPreferences';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 
@@ -97,6 +101,10 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
     [guests, selectedGuestIds],
   );
+  const selectedGuestCounts = useMemo(
+    () => countGuestsByCategory(selectedGuests),
+    [selectedGuests],
+  );
 
   const guestPreferenceMultipliers = useMemo(
     () => computeGuestPreferenceMultipliers(selectedGuests, customDrinks),
@@ -106,6 +114,12 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   useEffect(() => {
     setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));
   }, [selectedGuestIds]);
+
+  useEffect(() => {
+    if (selectedGuestIds.length === 0) return;
+    setAdults(selectedGuestCounts.adults);
+    setChildren(selectedGuestCounts.children);
+  }, [selectedGuestCounts.adults, selectedGuestCounts.children, selectedGuestIds.length]);
 
 
   const handleSubmit = async (e) => {
@@ -173,7 +187,12 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         onSave={(newSelectedIds, newDriverIds) => {
           setSelectedGuestIds(newSelectedIds);
           setDriverGuestIds(newDriverIds);
-          setAdults(newSelectedIds.length > 0 ? newSelectedIds.length : adults);
+          if (newSelectedIds.length > 0) {
+            const nextSelectedGuests = guests.filter((guest) => newSelectedIds.includes(guest.id));
+            const nextCounts = countGuestsByCategory(nextSelectedGuests);
+            setAdults(nextCounts.adults);
+            setChildren(nextCounts.children);
+          }
           setShowGuestSelection(false);
         }}
         onBack={() => setShowGuestSelection(false)}

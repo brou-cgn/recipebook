@@ -18,6 +18,7 @@ jest.mock('./EventGuestSelectionPage', () => function MockEventGuestSelectionPag
   return (
     <div>
       <button type="button" onClick={() => onSave(['g1'], ['g1'])}>Gäste speichern</button>
+      <button type="button" onClick={() => onSave(['g1', 'g2'], ['g1'])}>Gäste mit Kind speichern</button>
       <button type="button" onClick={onBack}>Gäste abbrechen</button>
     </div>
   );
@@ -50,6 +51,15 @@ describe('EventForm', () => {
           alkoholischeGetränke: false,
           bevorzugteGetränke: ['custom-wasser'],
           präferenzFaktor: 1,
+        },
+        {
+          id: 'g2',
+          vorname: 'Tom',
+          nachname: 'Kind',
+          kind: true,
+          alkoholischeGetränke: false,
+          bevorzugteGetränke: [],
+          präferenzFaktor: 0,
         },
       ]);
       return jest.fn();
@@ -122,6 +132,31 @@ describe('EventForm', () => {
 
     expect(screen.getByText(/1 Gast ausgewählt/)).toBeInTheDocument();
     expect(screen.getByText(/1 Fahrer markiert/)).toBeInTheDocument();
+  });
+
+  test('counts child guests separately from adults after guest assignment', async () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste mit Kind speichern' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Erwachsene')).toHaveValue(1);
+      expect(screen.getByLabelText('Kinder')).toHaveValue(1);
+    });
+  });
+
+  test('submits child guests in the children count instead of adult count', async () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Familienfest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste mit Kind speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.guests).toEqual({ adults: 1, children: 1 });
   });
 
   test('shows only Eigene Getränke section, no Standardkategorien', () => {

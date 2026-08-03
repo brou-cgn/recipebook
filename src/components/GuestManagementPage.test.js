@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import GuestManagementPage from './GuestManagementPage';
 
 const mockSubscribeToGuestProfiles = jest.fn();
@@ -161,6 +161,27 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     fireEvent.click(fabButton);
     expect(screen.getByRole('heading', { level: 2, name: 'Neuen Gast erfassen' })).toBeInTheDocument();
+  });
+
+  test('saves the Kind flag for a guest profile', async () => {
+    openNewGuestForm();
+
+    fireEvent.change(screen.getByLabelText('Vorname'), { target: { value: 'Lena' } });
+    fireEvent.change(screen.getByLabelText('Nachname'), { target: { value: 'Beispiel' } });
+    fireEvent.click(screen.getByLabelText('Kind'));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSaveGuestProfile).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({
+          vorname: 'Lena',
+          nachname: 'Beispiel',
+          kind: true,
+        }),
+        undefined,
+      );
+    });
   });
 
   test('shows a category dropdown with standard drink categories', () => {
