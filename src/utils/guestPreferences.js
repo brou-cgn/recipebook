@@ -17,6 +17,21 @@ export const getGuestDisplayName = (guest) => {
   return `${firstName} ${lastName}`.trim();
 };
 
+export const countGuestsByCategory = (guests) => {
+  if (!Array.isArray(guests) || guests.length === 0) {
+    return { adults: 0, children: 0 };
+  }
+
+  return guests.reduce((counts, guest) => {
+    if (guest?.kind === true) {
+      counts.children += 1;
+    } else {
+      counts.adults += 1;
+    }
+    return counts;
+  }, { adults: 0, children: 0 });
+};
+
 const isDrinkCategoryPreferred = (drinkKategorie, preferredCategoryIds) => {
   if (!drinkKategorie || preferredCategoryIds.length === 0) return false;
   if (preferredCategoryIds.includes(drinkKategorie)) return true;
@@ -80,4 +95,3 @@ export const computeGuestPreferenceMultipliers = (selectedGuests, drinks) => {
     Object.entries(totals).map(([drinkId, total]) => [drinkId, Math.round((total / selectedGuests.length) * 100) / 100]),
   );
 };
-

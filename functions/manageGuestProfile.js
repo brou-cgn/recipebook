@@ -40,6 +40,7 @@ function validateProfile(profile) {
     vorname,
     nachname,
     email,
+    kind: profile.kind === true,
     alkoholischeGetränke: profile['alkoholischeGetränke'] !== false,
     bevorzugteGetränke: bevorzugteGetraenke,
     bevorzugteKategorien,

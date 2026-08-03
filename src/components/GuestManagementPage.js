@@ -15,6 +15,7 @@ const emptyForm = () => ({
   vorname: '',
   nachname: '',
   email: '',
+  kind: false,
   alkoholischeGetraenke: true,
   bevorzugteGetraenke: [],
   bevorzugteKategorien: [],
@@ -75,6 +76,7 @@ function GuestManagementPage({ onBack, currentUser }) {
       vorname: profile.vorname || '',
       nachname: profile.nachname || '',
       email: profile.email || '',
+      kind: profile.kind === true,
       alkoholischeGetraenke: profile.alkoholischeGetränke !== false,
       bevorzugteGetraenke: Array.isArray(profile.bevorzugteGetränke) ? profile.bevorzugteGetränke : [],
       bevorzugteKategorien: Array.isArray(profile.bevorzugteKategorien) ? profile.bevorzugteKategorien : [],
@@ -134,6 +136,7 @@ function GuestManagementPage({ onBack, currentUser }) {
           vorname: form.vorname.trim(),
           nachname: form.nachname.trim(),
           email: form.email.trim(),
+          kind: form.kind === true,
           alkoholischeGetränke: form.alkoholischeGetraenke,
           bevorzugteGetränke: form.bevorzugteGetraenke,
           bevorzugteKategorien: form.bevorzugteKategorien,
@@ -228,6 +231,15 @@ function GuestManagementPage({ onBack, currentUser }) {
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="name@beispiel.de"
             />
+          </label>
+
+          <label className="events-category-checkbox">
+            <input
+              type="checkbox"
+              checked={form.kind}
+              onChange={(e) => setForm((f) => ({ ...f, kind: e.target.checked }))}
+            />
+            <span>Kind</span>
           </label>
 
           <label className="events-category-checkbox">
@@ -416,6 +428,7 @@ function GuestManagementPage({ onBack, currentUser }) {
               <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
+                  {profile.kind === true && <p className="events-info-text">Kind</p>}
                 </div>
               </div>
             );
