@@ -8,6 +8,8 @@ import DrinkManagementPage from './DrinkManagementPage';
 import GuestManagementPage from './GuestManagementPage';
 import OverviewAddFab from './OverviewAddFab';
 import { canEditRecipes } from '../utils/userManagement';
+import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -37,11 +39,39 @@ const formatDrinkSummary = (berechnung) => {
 };
 
 function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEventReminderHandled }) {
+  const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
+  const [editFabPressed, setEditFabPressed] = useState(false);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subView, setSubView] = useState('list'); // list | new | edit | detail | consumption | drinks | guests
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const loadButtonIcons = async () => {
+      try {
+        const icons = await getButtonIcons();
+        setButtonIcons(icons);
+      } catch (error) {
+        console.error('Error loading button icons:', error);
+      }
+    };
+    loadButtonIcons();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -72,6 +102,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
   const selectedEvent = useMemo(() => {
     return events.find((e) => e.id === selectedEventId) || fallbackEvent || null;
   }, [events, selectedEventId, fallbackEvent]);
+  const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
 
   const handleSelectEvent = (event) => {
     setSelectedEventId(event.id);
@@ -131,6 +162,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
       <EventForm
         onSaved={handleEventSaved}
         onCancel={() => setSubView('detail')}
+        onDelete={() => handleDelete(selectedEvent)}
         currentUser={currentUser}
         onManageDrinks={() => setSubView('drinks')}
         initialEvent={selectedEvent}
@@ -252,22 +284,38 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                 Verbrauch nachtragen
               </button>
             )}
-            <button
-              type="button"
-              className="events-secondary-btn"
-              onClick={() => setSubView('edit')}
-            >
-              Bearbeiten
-            </button>
-            <button
-              type="button"
-              className="events-secondary-btn events-delete-btn"
-              onClick={() => handleDelete(selectedEvent)}
-            >
-              Löschen
-            </button>
+            {!isMobileView && (
+              <button
+                type="button"
+                className="events-secondary-btn"
+                onClick={() => setSubView('edit')}
+              >
+                Bearbeiten
+              </button>
+            )}
           </div>
         </div>
+        {isMobileView && (
+          <button
+            type="button"
+            className={`edit-fab-button events-edit-fab-button${editFabPressed ? ' pressed' : ''}`}
+            onClick={() => setSubView('edit')}
+            onTouchStart={() => setEditFabPressed(true)}
+            onTouchEnd={() => setEditFabPressed(false)}
+            onTouchCancel={() => setEditFabPressed(false)}
+            onMouseDown={() => setEditFabPressed(true)}
+            onMouseUp={() => setEditFabPressed(false)}
+            onMouseLeave={() => setEditFabPressed(false)}
+            title="Event bearbeiten"
+            aria-label="Event bearbeiten"
+          >
+            {isBase64Image(editEventIcon) ? (
+              <img src={editEventIcon} alt="Bearbeiten" className="button-icon-image" draggable="false" />
+            ) : (
+              editEventIcon
+            )}
+          </button>
+        )}
       </div>
     );
   }
