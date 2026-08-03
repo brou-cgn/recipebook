@@ -56,7 +56,7 @@ describe('EventForm', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
 
     // Open the guest selection sub-page via the manage button
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste & Fahrer verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
 
     // The mock sub-page saves g1 as selected guest and driver
     fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
@@ -75,16 +75,16 @@ describe('EventForm', () => {
     expect(onSaved).toHaveBeenCalledWith('event-1');
   });
 
-  test('shows "Gäste & Fahrer verwalten" button when guests are available', () => {
+  test('shows "Gäste verwalten" button when guests are available', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    expect(screen.getByRole('button', { name: 'Gäste & Fahrer verwalten' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gäste verwalten' })).toBeInTheDocument();
   });
 
   test('shows guest selection sub-page when manage button is clicked', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste & Fahrer verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
 
     expect(screen.getByRole('button', { name: 'Gäste speichern' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Einkaufsliste berechnen' })).not.toBeInTheDocument();
@@ -93,7 +93,7 @@ describe('EventForm', () => {
   test('returns to main form when guest sub-page is cancelled', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste & Fahrer verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste abbrechen' }));
 
     expect(screen.getByRole('button', { name: 'Einkaufsliste berechnen' })).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('EventForm', () => {
   test('shows guest count summary after selecting guests', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Gäste & Fahrer verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
 
     expect(screen.getByText(/1 Gast ausgewählt/)).toBeInTheDocument();

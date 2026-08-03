@@ -34,10 +34,10 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { name: 'Gäste & Fahrer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Gäste' })).toBeInTheDocument();
   });
 
-  test('shows guest dropdown with unselected guests', () => {
+  test('shows a shared guests/drivers table', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
@@ -48,13 +48,13 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    const select = screen.getByLabelText('Gast auswählen');
-    expect(select).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Gast' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Fahrer' })).toBeInTheDocument();
     expect(screen.getByText('Anna Beispiel')).toBeInTheDocument();
     expect(screen.getByText('Bob Muster')).toBeInTheDocument();
   });
 
-  test('adds a guest when Hinzufügen is clicked', () => {
+  test('toggles a guest in the table', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
@@ -65,24 +65,24 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText('Gast auswählen'), { target: { value: 'g1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Gast hinzufügen' }));
+    const guestCheckbox = screen.getByLabelText('Anna Beispiel als Gast auswählen');
+    fireEvent.click(guestCheckbox);
 
     expect(screen.getByText('1 Gast ausgewählt.')).toBeInTheDocument();
   });
 
-  test('shows driver checkboxes for selected guests', () => {
+  test('disables driver checkbox when guest is not selected', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
-        selectedGuestIds={['g1']}
+        selectedGuestIds={[]}
         driverGuestIds={[]}
         onSave={jest.fn()}
         onBack={jest.fn()}
       />
     );
 
-    expect(screen.getByLabelText('Anna Beispiel als Fahrer markieren')).toBeInTheDocument();
+    expect(screen.getByLabelText('Anna Beispiel als Fahrer markieren')).toBeDisabled();
   });
 
   test('toggles driver when checkbox is clicked', () => {
@@ -97,6 +97,7 @@ describe('EventGuestSelectionPage', () => {
     );
 
     const checkbox = screen.getByLabelText('Anna Beispiel als Fahrer markieren');
+    expect(checkbox).not.toBeDisabled();
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
     expect(screen.getByText('1 Fahrer markiert.')).toBeInTheDocument();
@@ -138,23 +139,6 @@ describe('EventGuestSelectionPage', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  test('removes a guest via chip remove button', () => {
-    render(
-      <EventGuestSelectionPage
-        currentUser={currentUser}
-        selectedGuestIds={['g1']}
-        driverGuestIds={[]}
-        onSave={jest.fn()}
-        onBack={jest.fn()}
-      />
-    );
-
-    fireEvent.click(screen.getByLabelText('Anna Beispiel entfernen'));
-
-    expect(screen.queryByText('1 Gast ausgewählt.')).not.toBeInTheDocument();
-    expect(screen.getByText('Gast auswählen …')).toBeInTheDocument();
-  });
-
   test('driver is removed when corresponding guest is deselected', () => {
     const onSave = jest.fn();
     render(
@@ -167,10 +151,8 @@ describe('EventGuestSelectionPage', () => {
       />
     );
 
-    // Remove guest g1
-    fireEvent.click(screen.getByLabelText('Anna Beispiel entfernen'));
+    fireEvent.click(screen.getByLabelText('Anna Beispiel als Gast auswählen'));
 
-    // Save and verify driver is also removed
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith([], []);
