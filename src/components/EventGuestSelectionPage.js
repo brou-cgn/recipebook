@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
 import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
@@ -13,6 +13,10 @@ function EventGuestSelectionPage({
   const [guests, setGuests] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialSelectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialDriverGuestIds ?? []);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const searchRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -23,6 +27,21 @@ function EventGuestSelectionPage({
   useEffect(() => {
     setDriverGuestIds((prev) => prev.filter((guestId) => selectedGuestIds.includes(guestId)));
   }, [selectedGuestIds]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(e.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleGuest = (guestId) => {
     setSelectedGuestIds((prev) =>
@@ -41,6 +60,27 @@ function EventGuestSelectionPage({
     onSave(selectedGuestIds, driverGuestIds);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setIsDropdownOpen(e.target.value.trim().length > 0);
+  };
+
+  const handleSelectGuest = (guestId) => {
+    setSelectedGuestIds((prev) => (prev.includes(guestId) ? prev : [...prev, guestId]));
+    setSearchQuery('');
+    setIsDropdownOpen(false);
+  };
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredGuests = normalizedQuery
+    ? guests.filter((guest) => {
+        const fullName = (getGuestDisplayName(guest) || 'Unbenannter Gast').toLowerCase();
+        return fullName.includes(normalizedQuery) && !selectedGuestIds.includes(guest.id);
+      })
+    : [];
+
+  const selectedGuests = guests.filter((g) => selectedGuestIds.includes(g.id));
+
   return (
     <div className="events-page-container">
       <div className="events-page-header">
@@ -57,9 +97,53 @@ function EventGuestSelectionPage({
 
       <div className="events-form">
         <div className="events-form-field">
-          {guests.length === 0 ? (
-            <p className="events-info-text">Noch keine Gäste erfasst.</p>
-          ) : (
+          <div className="events-guest-typeahead">
+            <input
+              ref={searchRef}
+              type="text"
+              className="events-guest-search-input"
+              placeholder="Gast suchen..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onFocus={() => {
+                if (searchQuery.trim().length > 0) setIsDropdownOpen(true);
+              }}
+              aria-label="Gast suchen"
+              aria-autocomplete="list"
+              aria-expanded={isDropdownOpen}
+              role="combobox"
+              aria-controls="guest-typeahead-list"
+            />
+            {isDropdownOpen && (
+              <ul
+                id="guest-typeahead-list"
+                ref={dropdownRef}
+                className="events-guest-typeahead-list"
+                role="listbox"
+              >
+                {filteredGuests.length === 0 ? (
+                  <li className="events-guest-typeahead-empty">Keine Gäste gefunden.</li>
+                ) : (
+                  filteredGuests.map((guest) => {
+                    const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
+                    return (
+                      <li
+                        key={guest.id}
+                        role="option"
+                        aria-selected={false}
+                        className="events-guest-typeahead-option"
+                        onMouseDown={() => handleSelectGuest(guest.id)}
+                      >
+                        {fullName}
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            )}
+          </div>
+
+          {selectedGuests.length > 0 && (
             <div className="events-table-container">
               <table className="events-table">
                 <thead>
@@ -69,16 +153,15 @@ function EventGuestSelectionPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {guests.map((guest) => {
+                  {selectedGuests.map((guest) => {
                     const fullName = getGuestDisplayName(guest) || 'Unbenannter Gast';
-                    const isSelected = selectedGuestIds.includes(guest.id);
                     return (
                       <tr key={guest.id}>
                         <td>
                           <label className="events-category-checkbox">
                             <input
                               type="checkbox"
-                              checked={isSelected}
+                              checked
                               onChange={() => toggleGuest(guest.id)}
                               aria-label={`${fullName} als Gast auswählen`}
                             />
@@ -90,7 +173,6 @@ function EventGuestSelectionPage({
                             type="checkbox"
                             checked={driverGuestIds.includes(guest.id)}
                             onChange={() => toggleDriverGuest(guest.id)}
-                            disabled={!isSelected}
                             aria-label={`${fullName} als Fahrer markieren`}
                           />
                         </td>
@@ -101,6 +183,7 @@ function EventGuestSelectionPage({
               </table>
             </div>
           )}
+
           <p className="events-info-text">
             {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
           </p>
