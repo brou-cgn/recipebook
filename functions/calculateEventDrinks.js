@@ -72,6 +72,21 @@ function normalizeMultiplier(value) {
   return n;
 }
 
+const MIN_DISTRIBUTION_FACTOR = 0.1;
+const MAX_DISTRIBUTION_FACTOR = 2.0;
+
+/**
+ * Clamp value to [0.1, 2.0], fallback 1.0 for invalid values.
+ * @param {number} value Candidate distribution factor.
+ * @return {number}
+ */
+function normalizeDistributionFactor(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1.0;
+  if (n < MIN_DISTRIBUTION_FACTOR || n > MAX_DISTRIBUTION_FACTOR) return 1.0;
+  return n;
+}
+
 /**
  * Map von Unterkategorie-ID auf uebergeordnete Kategorie-ID.
  * Spiegelt die Hierarchie aus drinkCategories.js (src) wider.
@@ -87,6 +102,8 @@ const DRINK_CATEGORY_PARENTS = {
   wein_rotwein: 'wein',
 };
 
+const CATEGORY_HAS_OWN_BUDGET = new Set(['bier_alkoholfrei']);
+
 /**
  * Liefert die uebergeordnete Kategorie-ID, falls vorhanden; sonst die ID selbst.
  * Loest rekursiv auf, d.h. bier_alkoholfrei -> bier.
@@ -97,6 +114,18 @@ function resolveTopLevelCategory(kategorieId) {
   const parent = DRINK_CATEGORY_PARENTS[kategorieId];
   if (!parent) return kategorieId;
   return resolveTopLevelCategory(parent);
+}
+
+/**
+ * Liefert die Kategorie fuer Budget-/Verteilungsgruppen.
+ * Kategorien mit eigenem Budget (z.B. bier_alkoholfrei) bleiben erhalten.
+ * @param {string} kategorieId Getränke-Kategorie-ID.
+ * @return {string}
+ */
+function resolveBudgetCategory(kategorieId) {
+  if (!kategorieId) return kategorieId;
+  if (CATEGORY_HAS_OWN_BUDGET.has(kategorieId)) return kategorieId;
+  return resolveTopLevelCategory(kategorieId);
 }
 
 /**
@@ -142,7 +171,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       customDrinkIds
           .map((drinkId) => allCustomDrinks[drinkId]?.kategorie)
           .filter(Boolean)
-          .map((categoryId) => resolveTopLevelCategory(categoryId)),
+          .map((categoryId) => resolveBudgetCategory(categoryId)),
   )];
   const categories = Array.isArray(event.categories) && event.categories.length > 0 ?
     event.categories :
@@ -243,13 +272,18 @@ function calculate(event, ratesDb, customDrinksMap) {
   // Anzahl der neuen Modell-Getraenke (mit einheiten) pro genutzter Kategorie zaehlen.
   // Wenn die genaue Kategorie des Drinks angeboten wird (z.B. 'bier_alkoholfrei'),
   // wird sie direkt verwendet. Sonst wird die Oberkategorie (z.B. 'bier') verwendet.
-  const drinkCountByCategory = {};
+  const drinkDistributionByCategory = {};
   for (const drinkId of customDrinkIds) {
     const entry = allCustomDrinks[drinkId];
     if (entry && Array.isArray(entry.einheiten) && entry.einheiten.length > 0 && entry.kategorie) {
-      const topCat = resolveTopLevelCategory(entry.kategorie);
+      const topCat = resolveBudgetCategory(entry.kategorie);
       const catToUse = categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
-      drinkCountByCategory[catToUse] = (drinkCountByCategory[catToUse] || 0) + 1;
+      const distributionFactor = normalizeDistributionFactor(entry.distributionFactor);
+      if (!drinkDistributionByCategory[catToUse]) {
+        drinkDistributionByCategory[catToUse] = {sumFactors: 0, factorsByDrinkId: {}};
+      }
+      drinkDistributionByCategory[catToUse].sumFactors += distributionFactor;
+      drinkDistributionByCategory[catToUse].factorsByDrinkId[drinkId] = distributionFactor;
     }
   }
 
@@ -257,7 +291,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   // Getraenke abgedeckt ist -- diese Zeilen sind fuer die Einkaufsliste redundant.
   for (const item of ergebnis) {
     if (!item.isCustomDrink) {
-      item.hasCustomDrinkCoverage = (drinkCountByCategory[item.kategorie] || 0) > 0;
+      item.hasCustomDrinkCoverage = Boolean(drinkDistributionByCategory[item.kategorie]);
     }
   }
 
@@ -281,13 +315,20 @@ function calculate(event, ratesDb, customDrinksMap) {
       let literOhnePuffer = null;
       let literMitPuffer = null;
       let anzahlGebinde = null;
-      const topCat = entry.kategorie ? resolveTopLevelCategory(entry.kategorie) : null;
+      const topCat = entry.kategorie ? resolveBudgetCategory(entry.kategorie) : null;
       const catToUse = entry.kategorie && categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
       const catLiters = catToUse ? categoryLitersMap[catToUse] : null;
+      const categoryDistribution = catToUse ? drinkDistributionByCategory[catToUse] : null;
+      const distributionFactor = normalizeDistributionFactor(entry.distributionFactor);
       if (catLiters) {
-        const count = drinkCountByCategory[catToUse] || 1;
-        literOhnePuffer = round2(catLiters.literOhnePuffer / count);
-        literMitPuffer = round2(catLiters.literMitPuffer / count);
+        const factor =
+            categoryDistribution?.factorsByDrinkId?.[drinkId] ?? distributionFactor;
+        const sumFactors =
+            categoryDistribution?.sumFactors && categoryDistribution.sumFactors > 0 ?
+            categoryDistribution.sumFactors :
+            factor;
+        literOhnePuffer = round2(catLiters.literOhnePuffer * (factor / sumFactors));
+        literMitPuffer = round2(catLiters.literMitPuffer * (factor / sumFactors));
         if (gebindeLiter) {
           anzahlGebinde = Math.ceil(literMitPuffer / gebindeLiter);
         }
@@ -306,6 +347,7 @@ function calculate(event, ratesDb, customDrinksMap) {
         ratenQuelle: catLiters ? 'kategorie-verteilung' : 'benutzerdefiniert',
         anteilTrinkerAngenommen: null,
         praeferenzFaktor: null,
+        distributionFactor,
         einheiten: entry.einheiten,
       });
       continue;

@@ -246,6 +246,147 @@ test('calculate teilt Kategoriebedarf auf drei Getraenke einer Kategorie auf', (
   assert.equal(sprite.literMitPuffer, erwartetesDrittel);
 });
 
+test('calculate verteilt Kategoriebedarf gewichtet anhand distributionFactor', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 3,
+        guests: {adults: 9, children: 0},
+        season: 'sommer',
+        eventType: 'familienfeier',
+        categories: ['softdrinks'],
+        customDrinkIds: ['cola', 'fanta', 'sprite'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        cola: {
+          name: 'Cola',
+          kategorie: 'softdrinks',
+          distributionFactor: 1.0,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        fanta: {
+          name: 'Fanta',
+          kategorie: 'softdrinks',
+          distributionFactor: 1.0,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        sprite: {
+          name: 'Sprite',
+          kategorie: 'softdrinks',
+          distributionFactor: 1.5,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
+
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  const cola = result.ergebnis.find((item) => item.kategorie === 'cola');
+  const fanta = result.ergebnis.find((item) => item.kategorie === 'fanta');
+  const sprite = result.ergebnis.find((item) => item.kategorie === 'sprite');
+
+  assert.ok(softdrinks);
+  assert.ok(cola);
+  assert.ok(fanta);
+  assert.ok(sprite);
+
+  const sumFactors = 3.5;
+  const round2 = (value) => Math.round(value * 100) / 100;
+  assert.equal(cola.literOhnePuffer, round2(softdrinks.literOhnePuffer * (1 / sumFactors)));
+  assert.equal(fanta.literOhnePuffer, round2(softdrinks.literOhnePuffer * (1 / sumFactors)));
+  assert.equal(sprite.literOhnePuffer, round2(softdrinks.literOhnePuffer * (1.5 / sumFactors)));
+});
+
+test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Werten', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'sommer',
+        eventType: 'familienfeier',
+        categories: ['softdrinks'],
+        customDrinkIds: ['cola', 'fanta'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        cola: {
+          name: 'Cola',
+          kategorie: 'softdrinks',
+          distributionFactor: 5.0, // ungueltig -> default 1.0
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        fanta: {
+          name: 'Fanta',
+          kategorie: 'softdrinks',
+          // fehlt -> default 1.0
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
+
+  const cola = result.ergebnis.find((item) => item.kategorie === 'cola');
+  const fanta = result.ergebnis.find((item) => item.kategorie === 'fanta');
+  assert.ok(cola);
+  assert.ok(fanta);
+  assert.equal(cola.literOhnePuffer, fanta.literOhnePuffer);
+});
+
+test('calculate verteilt bier und bier_alkoholfrei in getrennten Budgets', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 20, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'bier_alkoholfrei'],
+        customDrinkIds: ['pils', 'weizen', 'alkfrei'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        pils: {
+          name: 'Pils',
+          kategorie: 'bier',
+          distributionFactor: 2.0,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        weizen: {
+          name: 'Weizen',
+          kategorie: 'bier',
+          distributionFactor: 1.0,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+        alkfrei: {
+          name: 'Alkoholfrei',
+          kategorie: 'bier_alkoholfrei',
+          distributionFactor: 0.5,
+          einheiten: [{einheitsgroesse: 0.5, gebindeinheit: 'Flasche'}],
+        },
+      },
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const bierAlkoholfrei = result.ergebnis.find((item) => item.kategorie === 'bier_alkoholfrei');
+  const pils = result.ergebnis.find((item) => item.kategorie === 'pils');
+  const weizen = result.ergebnis.find((item) => item.kategorie === 'weizen');
+  const alkfrei = result.ergebnis.find((item) => item.kategorie === 'alkfrei');
+
+  assert.ok(bier);
+  assert.ok(bierAlkoholfrei);
+  assert.ok(pils);
+  assert.ok(weizen);
+  assert.ok(alkfrei);
+
+  const round2 = (value) => Math.round(value * 100) / 100;
+  assert.equal(pils.literOhnePuffer, round2(bier.literOhnePuffer * (2 / 3)));
+  assert.equal(weizen.literOhnePuffer, round2(bier.literOhnePuffer * (1 / 3)));
+  assert.equal(alkfrei.literOhnePuffer, bierAlkoholfrei.literOhnePuffer);
+});
+
 test('calculate verteilt Softdrink-Kategoriebedarf auf einzelnes Getraenk ohne Bier-Umverteilung', () => {
   // Neue Semantik: Jede Kategorie behaelt ihr eigenes Budget.
   // bier hat keine Getraenke und behaelt sein Budget; cola bekommt nur den softdrinks-Anteil.
@@ -457,7 +598,7 @@ test('calculate weist custom drink mit bier_alkoholfrei-Kategorie das bier_alkoh
   assert.equal(bitburger.ratenQuelle, 'kategorie-verteilung');
 });
 
-test('calculate leitet Kategorien aus custom drinks ab, wenn event.categories leer ist', () => {
+test('calculate leitet Kategorien mit eigenem Budget aus custom drinks ab, wenn event.categories leer ist', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -480,13 +621,13 @@ test('calculate leitet Kategorien aus custom drinks ab, wenn event.categories le
   );
 
   const standardCategories = result.ergebnis.filter((item) => !item.isCustomDrink);
-  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const bierAlkoholfrei = result.ergebnis.find((item) => item.kategorie === 'bier_alkoholfrei');
   const bitburger = result.ergebnis.find((item) => item.kategorie === 'bitburger-0-0');
 
   assert.equal(standardCategories.length, 1, 'nur eine Standardkategorie wird berechnet');
-  assert.ok(bier, 'bier ist als abgeleitete Oberkategorie vorhanden');
+  assert.ok(bierAlkoholfrei, 'bier_alkoholfrei ist als Kategorie mit eigenem Budget vorhanden');
   assert.ok(bitburger, 'custom drink vorhanden');
   assert.equal(bitburger.drinkKategorie, 'bier_alkoholfrei');
-  assert.equal(bitburger.literOhnePuffer, bier.literOhnePuffer);
-  assert.equal(bitburger.literMitPuffer, bier.literMitPuffer);
+  assert.equal(bitburger.literOhnePuffer, bierAlkoholfrei.literOhnePuffer);
+  assert.equal(bitburger.literMitPuffer, bierAlkoholfrei.literMitPuffer);
 });
