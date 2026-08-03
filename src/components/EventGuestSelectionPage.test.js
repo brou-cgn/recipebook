@@ -37,11 +37,132 @@ describe('EventGuestSelectionPage', () => {
     expect(screen.getByRole('heading', { name: 'Gäste' })).toBeInTheDocument();
   });
 
-  test('shows a shared guests/drivers table', () => {
+  test('renders typeahead search input', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
         selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    expect(screen.getByRole('combobox', { name: 'Gast suchen' })).toBeInTheDocument();
+  });
+
+  test('guests are not listed before typing', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByText('Anna Beispiel')).not.toBeInTheDocument();
+    expect(screen.queryByText('Bob Muster')).not.toBeInTheDocument();
+  });
+
+  test('typing in search input shows matching guests in dropdown', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('combobox', { name: 'Gast suchen' });
+    fireEvent.change(searchInput, { target: { value: 'Anna' } });
+
+    expect(screen.getByText('Anna Beispiel')).toBeInTheDocument();
+    expect(screen.queryByText('Bob Muster')).not.toBeInTheDocument();
+  });
+
+  test('shows no-results message when search does not match any guest', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('combobox', { name: 'Gast suchen' });
+    fireEvent.change(searchInput, { target: { value: 'ZZZ' } });
+
+    expect(screen.getByText('Keine Gäste gefunden.')).toBeInTheDocument();
+  });
+
+  test('selecting a guest from the dropdown adds them to the selection table', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('combobox', { name: 'Gast suchen' });
+    fireEvent.change(searchInput, { target: { value: 'Anna' } });
+
+    const option = screen.getByRole('option', { name: 'Anna Beispiel' });
+    fireEvent.mouseDown(option);
+
+    expect(screen.getByText('1 Gast ausgewählt.')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Gast' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Anna Beispiel als Gast auswählen')).toBeInTheDocument();
+  });
+
+  test('search input is cleared after selecting a guest', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={[]}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('combobox', { name: 'Gast suchen' });
+    fireEvent.change(searchInput, { target: { value: 'Anna' } });
+    fireEvent.mouseDown(screen.getByRole('option', { name: 'Anna Beispiel' }));
+
+    expect(searchInput.value).toBe('');
+  });
+
+  test('already-selected guests do not appear in the typeahead dropdown', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={['g1']}
+        driverGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('combobox', { name: 'Gast suchen' });
+    fireEvent.change(searchInput, { target: { value: 'Anna' } });
+
+    expect(screen.queryByRole('option', { name: 'Anna Beispiel' })).not.toBeInTheDocument();
+  });
+
+  test('shows selected guests table with Gast and Fahrer columns', () => {
+    render(
+      <EventGuestSelectionPage
+        currentUser={currentUser}
+        selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
         onBack={jest.fn()}
@@ -51,38 +172,23 @@ describe('EventGuestSelectionPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Gast' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Fahrer' })).toBeInTheDocument();
     expect(screen.getByText('Anna Beispiel')).toBeInTheDocument();
-    expect(screen.getByText('Bob Muster')).toBeInTheDocument();
   });
 
-  test('toggles a guest in the table', () => {
+  test('deselecting a guest in the table removes them from the selection', () => {
     render(
       <EventGuestSelectionPage
         currentUser={currentUser}
-        selectedGuestIds={[]}
+        selectedGuestIds={['g1']}
         driverGuestIds={[]}
         onSave={jest.fn()}
         onBack={jest.fn()}
       />
     );
 
-    const guestCheckbox = screen.getByLabelText('Anna Beispiel als Gast auswählen');
-    fireEvent.click(guestCheckbox);
+    fireEvent.click(screen.getByLabelText('Anna Beispiel als Gast auswählen'));
 
-    expect(screen.getByText('1 Gast ausgewählt.')).toBeInTheDocument();
-  });
-
-  test('disables driver checkbox when guest is not selected', () => {
-    render(
-      <EventGuestSelectionPage
-        currentUser={currentUser}
-        selectedGuestIds={[]}
-        driverGuestIds={[]}
-        onSave={jest.fn()}
-        onBack={jest.fn()}
-      />
-    );
-
-    expect(screen.getByLabelText('Anna Beispiel als Fahrer markieren')).toBeDisabled();
+    expect(screen.getByText('0 Gäste ausgewählt.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Anna Beispiel als Gast auswählen')).not.toBeInTheDocument();
   });
 
   test('toggles driver when checkbox is clicked', () => {
