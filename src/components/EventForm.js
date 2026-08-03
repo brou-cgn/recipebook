@@ -235,7 +235,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
 
         {guests.length > 0 && (
           <div className="events-form-field">
-            <span>Gäste &amp; Fahrer</span>
+            <span>Gäste</span>
             {selectedGuestIds.length > 0 ? (
               <p className="events-info-text">
                 {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt
@@ -249,7 +249,7 @@ function EventForm({ onSaved, onCancel, currentUser, onManageDrinks, initialEven
               className="events-secondary-btn"
               onClick={() => setShowGuestSelection(true)}
             >
-              Gäste &amp; Fahrer verwalten
+              Gäste verwalten
             </button>
           </div>
         )}
