@@ -290,3 +290,60 @@ test('calculate ergibt doppelten Gesamtgetraenkebedarf fuer 2 Gaeste gegenueber 
       `2-guest total (${total2}) should be double 1-guest total (${total1})`,
   );
 });
+
+test('calculate ignoriert Kinder bei der Standard-Mengenkalkulation', () => {
+  const make = (children) => _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children},
+        season: 'sommer',
+        eventType: 'party',
+        categories: ['wasser', 'bier'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const withoutChildren = make(0).ergebnis
+      .map((item) => [item.kategorie, item.literOhnePuffer]);
+  const withChildren = make(25).ergebnis
+      .map((item) => [item.kategorie, item.literOhnePuffer]);
+
+  assert.deepEqual(withChildren, withoutChildren);
+});
+
+test('calculate ignoriert Kinder bei Legacy-Custom-Drink-Mengenkalkulation', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 3,
+        guests: {adults: 0, children: 12},
+        season: 'sommer',
+        eventType: 'party',
+        categories: [],
+        customDrinkIds: ['kinderdrink'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        kinderdrink: {
+          name: 'Kinderdrink',
+          gebindeLiter: 1,
+          gebindeName: '1L-Flasche',
+          erwachsene: 0,
+          kinder: 0.3,
+          modus: 'stunde',
+          anteilTrinker: 1,
+        },
+      },
+  );
+
+  const customDrink = result.ergebnis.find((item) => item.kategorie === 'kinderdrink');
+  assert.ok(customDrink);
+  assert.equal(customDrink.literOhnePuffer, 0);
+  assert.equal(customDrink.literMitPuffer, 0);
+  assert.equal(customDrink.anzahlGebinde, 0);
+});
