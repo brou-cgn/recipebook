@@ -51,6 +51,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -324,6 +325,23 @@ function DrinkManagementPage({ onBack, currentUser }) {
           ) : (
             getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) || '💾'
           )}
+        </button>
+        {/* Cancel FAB button - positioned at bottom-left, mobile only */}
+        <button
+          type="button"
+          className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+          onClick={() => setShowForm(false)}
+          onTouchStart={() => setCancelPressed(true)}
+          onTouchEnd={() => setCancelPressed(false)}
+          onTouchCancel={() => setCancelPressed(false)}
+          onMouseDown={() => setCancelPressed(true)}
+          onMouseUp={() => setCancelPressed(false)}
+          onMouseLeave={() => setCancelPressed(false)}
+          title="Abbrechen"
+          aria-label="Getränkbearbeitung abbrechen"
+          disabled={saving}
+        >
+          ×
         </button>
       </div>
     );

@@ -15,6 +15,8 @@ import {
 } from '../utils/guestPreferences';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const CATEGORY_LABELS = {
   wasser: 'Wasser',
@@ -70,6 +72,9 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   const [pufferProzent, setPufferProzent] = useState(initialEvent?.pufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fabPressed, setFabPressed] = useState(false);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   const [guests, setGuests] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
@@ -96,6 +101,21 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
       unsubDrinks();
     };
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    const loadButtonIcons = async () => {
+      const { getButtonIcons } = await import('../utils/customLists');
+      const icons = await getButtonIcons();
+      setButtonIcons(icons);
+    };
+    loadButtonIcons();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
 
   const selectedGuests = useMemo(
     () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
@@ -384,11 +404,35 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
           <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
             Abbrechen
           </button>
-          <button type="submit" className="events-primary-btn" disabled={saving}>
+          <button type="submit" className={`events-primary-btn${isEditing ? ' events-primary-btn--desktop-only' : ''}`} disabled={saving}>
             {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
           </button>
         </div>
       </form>
+
+      {/* FAB Save Button - visible on mobile when editing */}
+      {isEditing && (
+        <button
+          type="button"
+          className={`event-save-fab-button${fabPressed ? ' pressed' : ''}`}
+          onClick={() => handleSubmit({ preventDefault: () => {} })}
+          onMouseDown={() => setFabPressed(true)}
+          onMouseUp={() => setFabPressed(false)}
+          onMouseLeave={() => setFabPressed(false)}
+          onTouchStart={() => setFabPressed(true)}
+          onTouchEnd={() => setFabPressed(false)}
+          onTouchCancel={() => setFabPressed(false)}
+          disabled={saving}
+          aria-label="Event-Berechnung aktualisieren"
+          title="Berechnung aktualisieren"
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+          )}
+        </button>
+      )}
     </div>
   );
 }
