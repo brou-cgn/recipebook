@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
-import { getCustomLists } from '../utils/customLists';
+import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
@@ -47,13 +48,20 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [packageUnits, setPackageUnits] = useState([]);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+  const formRef = useRef(null);
 
   useEffect(() => {
     getCustomLists().then((lists) => {
       setPackageUnits(lists.packageUnits || []);
     }).catch(() => {
       setPackageUnits([]);
+    });
+    import('../utils/customLists').then(({ getButtonIcons }) => {
+      getButtonIcons().then((icons) => setButtonIcons(icons)).catch(() => {});
     });
   }, []);
 
@@ -171,7 +179,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
             ×
           </button>
         </div>
-        <form className="events-form" onSubmit={handleSave}>
+        <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <label className="events-form-field">
             <span>Name</span>
             <input
@@ -275,12 +283,49 @@ function DrinkManagementPage({ onBack, currentUser }) {
           {error && <p className="events-error-text">{error}</p>}
 
           <div className="events-form-actions">
-            <button type="submit" className="events-primary-btn" disabled={saving}>
+            <button
+              type="button"
+              className="events-secondary-btn"
+              onClick={() => setShowForm(false)}
+              disabled={saving}
+            >
+              Abbrechen
+            </button>
+            <button type="submit" className="events-primary-btn events-save-desktop-only" disabled={saving}>
               {saving ? 'Speichere...' : 'Speichern'}
             </button>
           </div>
         </form>
 
+        {/* FAB Save Button - mobile only */}
+        <button
+          type="button"
+          className={`drink-save-fab-button events-save-mobile-only${fabPressed ? ' pressed' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            if (formRef.current) {
+              if (typeof formRef.current.requestSubmit === 'function') {
+                formRef.current.requestSubmit();
+              } else {
+                handleSave(e);
+              }
+            }
+          }}
+          onMouseDown={() => setFabPressed(true)}
+          onMouseUp={() => setFabPressed(false)}
+          onMouseLeave={() => setFabPressed(false)}
+          onTouchStart={() => setFabPressed(true)}
+          onTouchEnd={() => setFabPressed(false)}
+          disabled={saving}
+          aria-label={editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
+          title={editId ? 'Getränk aktualisieren' : 'Getränk speichern'}
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode) || '💾'
+          )}
+        </button>
         {/* Cancel FAB button - positioned at bottom-left, mobile only */}
         <button
           type="button"
