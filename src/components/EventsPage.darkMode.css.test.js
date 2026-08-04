@@ -37,4 +37,17 @@ describe('EventsPage dark mode FAB styles', () => {
     expect(rule).toContain('color: #e8e8e8;');
     expect(rule).toContain('border-color: #555;');
   });
+
+  test('styles the events table for dark mode', () => {
+    const cssPath = path.join(__dirname, '..', 'darkMode.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    const tableRule = getRuleBody(css, '[data-theme="dark"] .events-table');
+    const headerRule = getRuleBody(css, '[data-theme="dark"] .events-table th');
+
+    expect(tableRule).toContain('color: #e8e8e8;');
+    expect(css).toContain('[data-theme="dark"] .events-table th,\n[data-theme="dark"] .events-table td');
+    expect(css).toContain('border-bottom-color: #3d3d3d;');
+    expect(headerRule).toContain('background: #2a2a2a;');
+    expect(headerRule).toContain('color: #e8e8e8;');
+  });
 });

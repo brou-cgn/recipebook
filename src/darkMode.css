@@ -3827,12 +3827,17 @@
   color: #e8c766;
 }
 
+[data-theme="dark"] .events-table {
+  color: #e8e8e8;
+}
+
 [data-theme="dark"] .events-table th,
 [data-theme="dark"] .events-table td {
-  border-bottom-color: #333;
+  border-bottom-color: #3d3d3d;
+  color: #e8e8e8;
 }
 
 [data-theme="dark"] .events-table th {
-  background: #262626;
-  color: #ccc;
+  background: #2a2a2a;
+  color: #e8e8e8;
 }
