@@ -188,7 +188,7 @@ describe('EventsPage', () => {
     expect(screen.queryByText(/~30L softdrinks/)).not.toBeInTheDocument();
   });
 
-  test('shows only custom drinks in summary on event card when status is verbrauchErfasst', () => {
+  test('does not show drink summary on event card when status is verbrauchErfasst', () => {
     const event = {
       id: 'e3',
       eventName: 'Familienfeier',
@@ -209,7 +209,7 @@ describe('EventsPage', () => {
 
     render(<EventsPage currentUser={currentUser} />);
 
-    expect(screen.getByText('~10L Bitburger 0,0%')).toBeInTheDocument();
+    expect(screen.queryByText(/~10L Bitburger/)).not.toBeInTheDocument();
     expect(screen.queryByText(/~20L bier/)).not.toBeInTheDocument();
   });
 
@@ -256,7 +256,7 @@ describe('EventsPage', () => {
     expect(screen.queryByText(/~.*L/)).not.toBeInTheDocument();
   });
 
-  test('shows custom drink label in summary when isCustomDrink is true', () => {
+  test('does not show custom drink label in summary on event card', () => {
     const event = {
       id: 'e6',
       eventName: 'Spezialparty',
@@ -276,6 +276,6 @@ describe('EventsPage', () => {
 
     render(<EventsPage currentUser={currentUser} />);
 
-    expect(screen.getByText('~15L Craft Bier')).toBeInTheDocument();
+    expect(screen.queryByText(/~15L Craft Bier/)).not.toBeInTheDocument();
   });
 });

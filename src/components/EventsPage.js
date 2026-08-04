@@ -359,9 +359,6 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
       ) : (
         <div className="events-list">
           {events.map((event) => {
-            const drinkSummary = (event.status === 'berechnet' || event.status === 'verbrauchErfasst')
-              ? formatDrinkSummary(event.berechnung)
-              : null;
             return (
               <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
                 <div className="events-card-main">
@@ -369,9 +366,6 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
                   <p className="events-card-meta">
                     {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
                   </p>
-                  {drinkSummary && (
-                    <p className="events-card-drink-summary">{drinkSummary}</p>
-                  )}
                 </div>
                 <span className={`events-status-badge events-status-${event.status}`}>
                   {STATUS_LABELS[event.status] || event.status}
