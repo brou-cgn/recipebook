@@ -403,11 +403,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
             </button>
           )}
           {!isEditing && (
-            <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
+            <button type="button" className="events-secondary-btn events-secondary-btn--desktop-only" onClick={onCancel} disabled={saving}>
               Abbrechen
             </button>
           )}
-          <button type="submit" className={`events-primary-btn${isEditing ? ' events-primary-btn--desktop-only' : ''}`} disabled={saving}>
+          <button type="submit" className={`events-primary-btn events-primary-btn--desktop-only`} disabled={saving}>
             {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
           </button>
         </div>
