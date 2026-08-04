@@ -285,7 +285,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
           <div className="events-form-actions">
             <button
               type="button"
-              className="events-secondary-btn"
+              className="events-secondary-btn events-save-desktop-only"
               onClick={() => setShowForm(false)}
               disabled={saving}
             >
