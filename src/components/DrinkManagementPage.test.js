@@ -326,4 +326,54 @@ describe('DrinkManagementPage', () => {
     expect(fabButton).toBeInTheDocument();
     expect(fabButton).toHaveClass('drink-save-fab-button');
   });
+
+  test('predefined drink "Mineralwasser" is always shown in the list', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Mineralwasser')).toBeInTheDocument();
+  });
+
+  test('predefined drink shows category label "Wasser"', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Wasser')).toBeInTheDocument();
+  });
+
+  test('predefined drink name field is disabled in edit form', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Mineralwasser'));
+
+    const nameInput = screen.getByRole('textbox', { name: /Name/i });
+    expect(nameInput).toBeDisabled();
+    expect(nameInput.value).toBe('Mineralwasser');
+  });
+
+  test('predefined drink category field is disabled in edit form', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Mineralwasser'));
+
+    const selects = screen.getAllByRole('combobox');
+    const categorySelect = selects.find((s) => s.querySelector('option[value="wasser"]'));
+    expect(categorySelect).toBeTruthy();
+    expect(categorySelect).toBeDisabled();
+  });
+
+  test('saving predefined drink only updates einheiten', async () => {
+    mockSaveCustomDrink.mockResolvedValue(undefined);
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Mineralwasser'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() => {
+      expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+        currentUser.id,
+        expect.not.objectContaining({ name: expect.anything() }),
+        'predefined_mineralwasser',
+      );
+    });
+  });
 });

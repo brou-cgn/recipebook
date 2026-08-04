@@ -27,6 +27,21 @@ export const DRINK_CATEGORIES = [
   { id: 'tee', label: 'Tee' },
 ];
 
+/**
+ * Predefined drinks that are always available for all users.
+ * These drinks cannot be deleted, renamed, or have their category changed.
+ * They are pre-selected at events by default.
+ */
+export const PREDEFINED_DRINKS = [
+  {
+    id: 'predefined_mineralwasser',
+    name: 'Mineralwasser',
+    kategorie: 'wasser',
+    einheiten: [],
+    predefined: true,
+  },
+];
+
 export const getDrinkCategoryLabel = (kategorieId) => {
   for (const cat of DRINK_CATEGORIES) {
     if (cat.id === kategorieId) return cat.label;
