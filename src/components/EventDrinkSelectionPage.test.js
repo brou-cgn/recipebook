@@ -39,7 +39,7 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByRole('combobox', { name: 'Getränk auswählen' })).toBeInTheDocument();
   });
 
-  test('shows selected drinks in a table', () => {
+  test('shows selected drinks in the list', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -51,12 +51,11 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Getränk' })).toBeInTheDocument();
     expect(screen.getByText('Wasser (eigen)')).toBeInTheDocument();
     expect(screen.getByText('Bier (eigen)')).toBeInTheDocument();
   });
 
-  test('shows table columns Getränk, Einheitsgrößen, Faktor und Aktion for selected drinks', () => {
+  test('shows two-row structure with drink name and details rows', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -68,10 +67,9 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Getränk' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Einheitsgrößen' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Faktor' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Aktion' })).toBeInTheDocument();
+    expect(screen.getByText('Wasser (eigen)')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Wasser (eigen) Faktor' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Aktion' })).not.toBeInTheDocument();
   });
 
   test('shows default factor input 1.00 for selected drinks', () => {
@@ -119,7 +117,7 @@ describe('EventDrinkSelectionPage', () => {
     );
   });
 
-  test('removes a drink when its remove button is clicked', () => {
+  test('removes a drink when swiped left and delete button is clicked', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -131,9 +129,13 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
+    const wasserRow = screen.getByText('Wasser (eigen)').closest('.events-drink-row');
+    fireEvent.touchStart(wasserRow, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(wasserRow, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(wasserRow);
     fireEvent.click(screen.getByLabelText('Wasser (eigen) entfernen'));
 
-    expect(screen.queryByLabelText('Wasser (eigen) entfernen')).not.toBeInTheDocument();
+    expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
   });
 

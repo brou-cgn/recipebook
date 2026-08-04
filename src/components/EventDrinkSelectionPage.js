@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './EventsPage.css';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
@@ -35,6 +35,152 @@ const buildInitialSelectedEinheiten = (customDrinks, initialCustomDrinkIds, init
   return result;
 };
 
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+
+function DrinkRow({
+  drink,
+  factor,
+  einheiten,
+  selectedIndices,
+  isDeleteVisible,
+  onToggleEinheit,
+  onUpdateFactor,
+  onRemove,
+  onSwipeDeleteVisible,
+  onSwipeDeleteHidden,
+  minFactor,
+  maxFactor,
+}) {
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
+  const swipeDirectionLockedRef = useRef(null);
+  const isSwipingRef = useRef(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
+  const effectiveSwipeOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+
+  const resetSwipe = ({ keepDeleteAction = false } = {}) => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+    setSwipeOffset(0);
+    if (!keepDeleteAction) {
+      onSwipeDeleteHidden();
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    if (isDeleteVisible) {
+      onSwipeDeleteHidden();
+    }
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
+      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
+      isSwipingRef.current = true;
+      setSwipeOffset(Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET));
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current && Math.abs(swipeOffset) >= SWIPE_DELETE_THRESHOLD) {
+      onSwipeDeleteVisible();
+      resetSwipe({ keepDeleteAction: true });
+      return;
+    }
+    resetSwipe();
+  };
+
+  const handleSwipeDeleteClick = () => {
+    onRemove();
+    resetSwipe();
+  };
+
+  const swipeContentStyle = {
+    transform: `translateX(${effectiveSwipeOffset}px)`,
+    transition: 'transform 0.15s ease',
+  };
+
+  return (
+    <div
+      className={`events-drink-row${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="events-drink-row-swipe-background" aria-hidden={!isDeleteVisible}>
+        {isDeleteVisible && (
+          <button
+            type="button"
+            className="events-drink-row-swipe-action"
+            onClick={handleSwipeDeleteClick}
+            aria-label={`${drink.name} entfernen`}
+          >
+            <span>🗑</span>
+          </button>
+        )}
+      </div>
+      <div className="events-drink-row-content" style={swipeContentStyle}>
+        <div className="events-drink-row-name">{drink.name}</div>
+        <div className="events-drink-row-details">
+          <div className="events-drink-row-einheiten">
+            {einheiten.length > 1 ? (
+              <div className="events-einheit-checkboxes">
+                {einheiten.map((einheit, idx) => (
+                  <label key={idx} className="events-einheit-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedIndices.has(idx)}
+                      onChange={() => onToggleEinheit(idx)}
+                      aria-label={`${drink.name} ${getEinheitLabel(einheit)}`}
+                    />
+                    {getEinheitLabel(einheit)}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <span>{einheiten.length === 1 ? getEinheitLabel(einheiten[0]) : '–'}</span>
+            )}
+          </div>
+          <div className="events-drink-row-factor">
+            <input
+              type="number"
+              min={minFactor}
+              max={maxFactor}
+              step="0.01"
+              value={factor.toFixed(2)}
+              onChange={(e) => onUpdateFactor(e.target.value)}
+              aria-label={`${drink.name} Faktor`}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EventDrinkSelectionPage({
   customDrinks,
   customDrinkIds: initialCustomDrinkIds,
@@ -51,6 +197,7 @@ function EventDrinkSelectionPage({
     buildInitialSelectedEinheiten(customDrinks, initialCustomDrinkIds, initialDrinkSelectedEinheiten),
   );
   const [drinkToAdd, setDrinkToAdd] = useState('');
+  const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) => {
@@ -166,69 +313,30 @@ function EventDrinkSelectionPage({
               </div>
 
               {selectedDrinks.length > 0 && (
-                <div className="events-table-container">
-                  <table className="events-table">
-                    <thead>
-                      <tr>
-                        <th>Getränk</th>
-                        <th>Einheitsgrößen</th>
-                        <th>Faktor</th>
-                        <th>Aktion</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedDrinks.map((drink) => {
-                        const factor = normalizeDistributionFactor(drinkDistributionFactors[drink.id]);
-                        const einheiten = Array.isArray(drink.einheiten) ? drink.einheiten : [];
-                        const selectedIndices = drinkSelectedEinheiten[drink.id] || new Set([0]);
-                        return (
-                          <tr key={drink.id}>
-                            <td>{drink.name}</td>
-                            <td>
-                              {einheiten.length > 1 ? (
-                                <div className="events-einheit-checkboxes">
-                                  {einheiten.map((einheit, idx) => (
-                                    <label key={idx} className="events-einheit-checkbox-label">
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedIndices.has(idx)}
-                                        onChange={() => toggleEinheit(drink.id, idx)}
-                                        aria-label={`${drink.name} ${getEinheitLabel(einheit)}`}
-                                      />
-                                      {getEinheitLabel(einheit)}
-                                    </label>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span>{einheiten.length === 1 ? getEinheitLabel(einheiten[0]) : '–'}</span>
-                              )}
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min={MIN_DISTRIBUTION_FACTOR}
-                                max={MAX_DISTRIBUTION_FACTOR}
-                                step="0.01"
-                                value={factor.toFixed(2)}
-                                onChange={(e) => updateDistributionFactor(drink.id, e.target.value)}
-                                aria-label={`${drink.name} Faktor`}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="events-drink-chip-remove"
-                                onClick={() => toggleCustomDrink(drink.id)}
-                                aria-label={`${drink.name} entfernen`}
-                              >
-                                ×
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="events-drink-list">
+                  {selectedDrinks.map((drink) => {
+                    const factor = normalizeDistributionFactor(drinkDistributionFactors[drink.id]);
+                    const einheiten = Array.isArray(drink.einheiten) ? drink.einheiten : [];
+                    const selectedIndices = drinkSelectedEinheiten[drink.id] || new Set([0]);
+                    const isDeleteVisible = swipeDeleteVisibleId === drink.id;
+                    return (
+                      <DrinkRow
+                        key={drink.id}
+                        drink={drink}
+                        factor={factor}
+                        einheiten={einheiten}
+                        selectedIndices={selectedIndices}
+                        isDeleteVisible={isDeleteVisible}
+                        onToggleEinheit={(idx) => toggleEinheit(drink.id, idx)}
+                        onUpdateFactor={(val) => updateDistributionFactor(drink.id, val)}
+                        onRemove={() => toggleCustomDrink(drink.id)}
+                        onSwipeDeleteVisible={() => setSwipeDeleteVisibleId(drink.id)}
+                        onSwipeDeleteHidden={() => setSwipeDeleteVisibleId((prev) => prev === drink.id ? null : prev)}
+                        minFactor={MIN_DISTRIBUTION_FACTOR}
+                        maxFactor={MAX_DISTRIBUTION_FACTOR}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </>
