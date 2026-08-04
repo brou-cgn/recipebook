@@ -173,6 +173,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   const durFactor = durationFactor(hours);
   const customDrinkIds = event.customDrinkIds || [];
   const drinkDistributionFactors = event.drinkDistributionFactors || {};
+  const drinkSelectedEinheiten = event.drinkSelectedEinheiten || {};
   const allCustomDrinks = customDrinksMap || {};
   const derivedCategoriesFromCustomDrinks = [...new Set(
       customDrinkIds
@@ -447,19 +448,22 @@ function calculate(event, ratesDb, customDrinksMap) {
 
     // New model: einheiten array (no rate fields)
     if (Array.isArray(entry.einheiten) && entry.einheiten.length > 0) {
-      const firstEinheit = entry.einheiten[0];
-      const gebindeLiter = Number(firstEinheit.einheitsgroesse) || null;
-      const gebindeName = firstEinheit.gebindeinheit || null;
+      // Determine which einheiten indices are selected for this drink
+      const selectedIndices = Array.isArray(drinkSelectedEinheiten[drinkId]) && drinkSelectedEinheiten[drinkId].length > 0
+        ? drinkSelectedEinheiten[drinkId]
+        : [0];
+      const validIndices = selectedIndices.filter((idx) => idx >= 0 && idx < entry.einheiten.length);
+      const indicesToUse = validIndices.length > 0 ? validIndices : [0];
 
       // Kategoriebedarfe auf einzelne Getraenke verteilen, falls Kategorie bekannt.
-      let literOhnePuffer = null;
-      let literMitPuffer = null;
-      let anzahlGebinde = null;
       const topCat = entry.kategorie ? resolveBudgetCategory(entry.kategorie) : null;
       const catToUse = entry.kategorie && categorySet.has(entry.kategorie) ? entry.kategorie : topCat;
       const catLiters = catToUse ? categoryLitersMap[catToUse] : null;
       const categoryDistribution = catToUse ? drinkDistributionByCategory[catToUse] : null;
       const distributionFactor = normalizeDistributionFactor(drinkDistributionFactors[drinkId]);
+
+      let literOhnePuffer = null;
+      let literMitPuffer = null;
       if (catLiters) {
         const factor =
             categoryDistribution?.factorsByDrinkId?.[drinkId] ?? distributionFactor;
@@ -469,27 +473,36 @@ function calculate(event, ratesDb, customDrinksMap) {
             factor;
         literOhnePuffer = round2(catLiters.literOhnePuffer * (factor / sumFactors));
         literMitPuffer = round2(catLiters.literMitPuffer * (factor / sumFactors));
-        if (gebindeLiter) {
-          anzahlGebinde = Math.ceil(literMitPuffer / gebindeLiter);
-        }
       }
 
-      ergebnis.push({
-        kategorie: drinkId,
-        drinkLabel: entry.name,
-        drinkKategorie: entry.kategorie || null,
-        isCustomDrink: true,
-        literOhnePuffer,
-        literMitPuffer,
-        gebinde: gebindeName,
-        gebindeGroesseLiter: gebindeLiter,
-        anzahlGebinde,
-        ratenQuelle: catLiters ? 'kategorie-verteilung' : 'benutzerdefiniert',
-        anteilTrinkerAngenommen: null,
-        praeferenzFaktor: null,
-        distributionFactor,
-        einheiten: entry.einheiten,
-      });
+      for (const einheitIdx of indicesToUse) {
+        const einheit = entry.einheiten[einheitIdx];
+        const gebindeLiter = Number(einheit.einheitsgroesse) || null;
+        const gebindeName = einheit.gebindeinheit || null;
+        const anzahlGebinde = (literMitPuffer !== null && gebindeLiter)
+          ? Math.ceil(literMitPuffer / gebindeLiter)
+          : null;
+        const rowKategorie = indicesToUse.length > 1 ? `${drinkId}:${einheitIdx}` : drinkId;
+
+        ergebnis.push({
+          kategorie: rowKategorie,
+          drinkId,
+          drinkLabel: entry.name,
+          drinkKategorie: entry.kategorie || null,
+          isCustomDrink: true,
+          einheitIdx,
+          literOhnePuffer,
+          literMitPuffer,
+          gebinde: gebindeName,
+          gebindeGroesseLiter: gebindeLiter,
+          anzahlGebinde,
+          ratenQuelle: catLiters ? 'kategorie-verteilung' : 'benutzerdefiniert',
+          anteilTrinkerAngenommen: null,
+          praeferenzFaktor: null,
+          distributionFactor,
+          einheiten: entry.einheiten,
+        });
+      }
       continue;
     }
 

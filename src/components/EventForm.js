@@ -69,6 +69,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   const [eventType, setEventType] = useState(initialEvent?.eventType ?? 'familienfeier');
   const [customDrinkIds, setCustomDrinkIds] = useState(initialEvent?.customDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(initialEvent?.drinkDistributionFactors ?? {});
+  const [drinkSelectedEinheiten, setDrinkSelectedEinheiten] = useState(initialEvent?.drinkSelectedEinheiten ?? {});
   const [pufferProzent, setPufferProzent] = useState(initialEvent?.pufferProzent ?? DEFAULT_PUFFER_PROZENT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -187,6 +188,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
           if (factor !== DEFAULT_DISTRIBUTION_FACTOR) acc[drinkId] = factor;
           return acc;
         }, {}),
+        drinkSelectedEinheiten: customDrinkIds.reduce((acc, drinkId) => {
+          const indices = drinkSelectedEinheiten[drinkId];
+          if (Array.isArray(indices) && indices.length > 0) acc[drinkId] = indices;
+          return acc;
+        }, {}),
         pufferProzent: Number(pufferProzent),
       };
       const result = await calculateEventDrinks(event, isEditing ? initialEvent.id : undefined);
@@ -227,9 +233,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         customDrinks={customDrinks}
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
-        onSave={(newDrinkIds, newDrinkDistributionFactors) => {
+        drinkSelectedEinheiten={drinkSelectedEinheiten}
+        onSave={(newDrinkIds, newDrinkDistributionFactors, newDrinkSelectedEinheiten) => {
           setCustomDrinkIds(newDrinkIds);
           setDrinkDistributionFactors(newDrinkDistributionFactors || {});
+          setDrinkSelectedEinheiten(newDrinkSelectedEinheiten || {});
           setShowDrinkSelection(false);
         }}
         onBack={() => setShowDrinkSelection(false)}

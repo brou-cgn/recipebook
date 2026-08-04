@@ -11,16 +11,44 @@ const normalizeDistributionFactor = (value) => {
   return parsed;
 };
 
+const getEinheitLabel = (einheit) => {
+  if (!einheit) return '';
+  const liters = Number(einheit.einheitsgroesse);
+  let sizeLabel;
+  if (liters < 1) {
+    sizeLabel = `${Math.round(liters * 1000)} ml`;
+  } else {
+    sizeLabel = `${liters.toFixed(1).replace('.', ',')} l`;
+  }
+  return einheit.gebindeinheit ? `${sizeLabel} (${einheit.gebindeinheit})` : sizeLabel;
+};
+
+const buildInitialSelectedEinheiten = (customDrinks, initialCustomDrinkIds, initialDrinkSelectedEinheiten) => {
+  const result = {};
+  for (const drinkId of (initialCustomDrinkIds ?? [])) {
+    if (initialDrinkSelectedEinheiten && Array.isArray(initialDrinkSelectedEinheiten[drinkId])) {
+      result[drinkId] = new Set(initialDrinkSelectedEinheiten[drinkId]);
+    } else {
+      result[drinkId] = new Set([0]);
+    }
+  }
+  return result;
+};
+
 function EventDrinkSelectionPage({
   customDrinks,
   customDrinkIds: initialCustomDrinkIds,
   drinkDistributionFactors: initialDrinkDistributionFactors,
+  drinkSelectedEinheiten: initialDrinkSelectedEinheiten,
   onSave,
   onBack,
 }) {
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
     initialDrinkDistributionFactors ?? {},
+  );
+  const [drinkSelectedEinheiten, setDrinkSelectedEinheiten] = useState(() =>
+    buildInitialSelectedEinheiten(customDrinks, initialCustomDrinkIds, initialDrinkSelectedEinheiten),
   );
   const [drinkToAdd, setDrinkToAdd] = useState('');
 
@@ -33,9 +61,29 @@ function EventDrinkSelectionPage({
           delete next[id];
           return next;
         });
+        setDrinkSelectedEinheiten((current) => {
+          if (!(id in current)) return current;
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
         return prev.filter((d) => d !== id);
       }
+      setDrinkSelectedEinheiten((current) => ({ ...current, [id]: new Set([0]) }));
       return [...prev, id];
+    });
+  };
+
+  const toggleEinheit = (drinkId, idx) => {
+    setDrinkSelectedEinheiten((prev) => {
+      const current = new Set(prev[drinkId] || []);
+      if (current.has(idx)) {
+        if (current.size <= 1) return prev;
+        current.delete(idx);
+      } else {
+        current.add(idx);
+      }
+      return { ...prev, [drinkId]: current };
     });
   };
 
@@ -45,7 +93,15 @@ function EventDrinkSelectionPage({
       if (factor !== 1) acc[drinkId] = factor;
       return acc;
     }, {});
-    onSave(customDrinkIds, optimizedFactors);
+    const optimizedEinheiten = customDrinkIds.reduce((acc, drinkId) => {
+      const selected = drinkSelectedEinheiten[drinkId];
+      const indices = selected ? [...selected].sort((a, b) => a - b) : [0];
+      if (indices.length > 1 || (indices.length === 1 && indices[0] !== 0)) {
+        acc[drinkId] = indices;
+      }
+      return acc;
+    }, {});
+    onSave(customDrinkIds, optimizedFactors, optimizedEinheiten);
   };
 
   const selectedDrinks = customDrinks.filter((d) => customDrinkIds.includes(d.id));
@@ -115,6 +171,7 @@ function EventDrinkSelectionPage({
                     <thead>
                       <tr>
                         <th>Getränk</th>
+                        <th>Einheitsgrößen</th>
                         <th>Faktor</th>
                         <th>Aktion</th>
                       </tr>
@@ -122,9 +179,30 @@ function EventDrinkSelectionPage({
                     <tbody>
                       {selectedDrinks.map((drink) => {
                         const factor = normalizeDistributionFactor(drinkDistributionFactors[drink.id]);
+                        const einheiten = Array.isArray(drink.einheiten) ? drink.einheiten : [];
+                        const selectedIndices = drinkSelectedEinheiten[drink.id] || new Set([0]);
                         return (
                           <tr key={drink.id}>
                             <td>{drink.name}</td>
+                            <td>
+                              {einheiten.length > 1 ? (
+                                <div className="events-einheit-checkboxes">
+                                  {einheiten.map((einheit, idx) => (
+                                    <label key={idx} className="events-einheit-checkbox-label">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedIndices.has(idx)}
+                                        onChange={() => toggleEinheit(drink.id, idx)}
+                                        aria-label={`${drink.name} ${getEinheitLabel(einheit)}`}
+                                      />
+                                      {getEinheitLabel(einheit)}
+                                    </label>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span>{einheiten.length === 1 ? getEinheitLabel(einheiten[0]) : '–'}</span>
+                              )}
+                            </td>
                             <td>
                               <input
                                 type="number"
