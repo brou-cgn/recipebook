@@ -316,4 +316,14 @@ describe('DrinkManagementPage', () => {
 
     expect(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten')).toBeInTheDocument();
   });
+
+  test('renders the FAB save button in the edit form', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    const fabButton = screen.getByRole('button', { name: 'Getränk speichern' });
+    expect(fabButton).toBeInTheDocument();
+    expect(fabButton).toHaveClass('drink-save-fab-button');
+  });
 });
