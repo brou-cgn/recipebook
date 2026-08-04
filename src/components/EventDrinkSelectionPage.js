@@ -76,6 +76,9 @@ function DrinkRow({
     const touch = e.touches?.[0];
     if (!touch) return;
     if (isDeleteVisible) {
+      const target = e.target;
+      const isDeleteButton = target.closest('.events-drink-row-swipe-action');
+      if (isDeleteButton) return;
       onSwipeDeleteHidden();
     }
     touchStartXRef.current = touch.clientX;

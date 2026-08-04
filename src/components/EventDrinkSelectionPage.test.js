@@ -139,6 +139,34 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
   });
 
+  test('deletes drink when delete button receives touchstart before click (regression: Faktor activates instead)', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser', 'custom-bier']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    const wasserRow = screen.getByText('Wasser (eigen)').closest('.events-drink-row');
+    // First: swipe left to reveal delete button
+    fireEvent.touchStart(wasserRow, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(wasserRow, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(wasserRow);
+
+    const deleteButton = screen.getByLabelText('Wasser (eigen) entfernen');
+
+    // Simulate touch tap on the delete button: touchstart fires on the row first, then click on button
+    fireEvent.touchStart(deleteButton, { touches: [{ clientX: 10, clientY: 10 }] });
+    fireEvent.click(deleteButton);
+
+    expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
+  });
+
   test('adds a drink via the dropdown', () => {
     render(
       <EventDrinkSelectionPage
