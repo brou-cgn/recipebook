@@ -276,8 +276,9 @@ describe('DrinkManagementPage', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     expect(screen.getByText('Craft-Bier')).toBeInTheDocument();
-    // The card meta should show "Kölsch · 500 ml Flasche"
-    expect(screen.getByText(/500 ml Flasche/)).toBeInTheDocument();
+    // The card meta should show "Kölsch · 500 ml" (gebindeinheit is hidden in the overview)
+    expect(screen.getByText(/500 ml/)).toBeInTheDocument();
+    expect(screen.queryByText(/Flasche/)).not.toBeInTheDocument();
   });
 
   test('shows gebindeinheit as select when packageUnits are configured', async () => {

@@ -3,32 +3,36 @@ import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 
-function getEinheitLabel(einheit) {
-  if (!einheit) return '';
-  const liters = Number(einheit.einheitsgroesse);
-  let sizeLabel;
+function getEinheitSizeLabel(einheitsgroesse) {
+  const liters = Number(einheitsgroesse);
   if (liters < 1) {
-    sizeLabel = `${Math.round(liters * 1000)} ml`;
-  } else {
-    sizeLabel = `${liters.toFixed(1).replace('.', ',')} l`;
+    return `${Math.round(liters * 1000)} ml`;
   }
-  return einheit.gebindeinheit ? `${sizeLabel} (${einheit.gebindeinheit})` : sizeLabel;
+  return `${liters.toFixed(1).replace('.', ',')} l`;
 }
 
-function getRowLabel(row) {
-  if (row.isCustomDrink && row.drinkLabel) {
-    const drinkName = row.drinkLabel;
-    if (row.kategorie && row.kategorie.includes(':') && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
-      const einheit = row.einheiten[row.einheitIdx];
-      return `${drinkName} (${getEinheitLabel(einheit)})`;
-    }
-    return drinkName;
-  }
+function getRowDrinkName(row) {
+  if (row.isCustomDrink && row.drinkLabel) return row.drinkLabel;
   return CATEGORY_LABELS[row.kategorie] || row.kategorie;
 }
 
+function getRowUnitSubtitle(row) {
+  if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
+    const einheit = row.einheiten[row.einheitIdx];
+    if (einheit) {
+      const sizeLabel = getEinheitSizeLabel(einheit.einheitsgroesse);
+      return einheit.gebindeinheit ? `${sizeLabel} · ${einheit.gebindeinheit}` : sizeLabel;
+    }
+  }
+  if (row.gebindeGroesseLiter) {
+    const sizeLabel = getEinheitSizeLabel(row.gebindeGroesseLiter);
+    return row.gebinde ? `${sizeLabel} · ${row.gebinde}` : sizeLabel;
+  }
+  return null;
+}
+
 function ConsumptionForm({ event, onDone, onCancel }) {
-  const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.gebindeGroesseLiter);
+  const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.isCustomDrink && row.gebindeGroesseLiter);
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {
@@ -122,9 +126,12 @@ function ConsumptionForm({ event, onDone, onCancel }) {
       <form className="events-form" onSubmit={handleSubmit}>
         {kategorien.map((row) => (
           <div className="events-form-row" key={row.kategorie}>
-            <span className="events-consumption-category-label">
-              {getRowLabel(row)} ({row.gebinde})
-            </span>
+            <div className="events-consumption-category-label">
+              <h3>{getRowDrinkName(row)}</h3>
+              {getRowUnitSubtitle(row) && (
+                <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+              )}
+            </div>
             <label className="events-form-field">
               <span>Eingekauft</span>
               <input

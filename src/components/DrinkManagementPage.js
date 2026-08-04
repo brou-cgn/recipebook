@@ -387,7 +387,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
                     drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
                     Array.isArray(drink.einheiten) && drink.einheiten.length > 0
                       ? drink.einheiten
-                          .map((e) => `${getUnitSizeLabel(e.einheitsgroesse) || e.einheitsgroesse} ${e.gebindeinheit}`.trim())
+                          .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
                           .join(', ')
                       : null,
                   ].filter(Boolean).join(' · ')}
