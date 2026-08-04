@@ -39,6 +39,8 @@ jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPag
 });
 
 describe('EventForm', () => {
+  const getInlineCalculateButton = () => document.querySelector('.events-form-actions .events-primary-btn');
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-1' });
@@ -86,7 +88,7 @@ describe('EventForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gäste speichern' }));
 
     // Submit the main form
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
@@ -111,7 +113,7 @@ describe('EventForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
 
     expect(screen.getByRole('button', { name: 'Gäste speichern' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Einkaufsliste berechnen' })).not.toBeInTheDocument();
+    expect(getInlineCalculateButton()).not.toBeInTheDocument();
   });
 
   test('returns to main form when guest sub-page is cancelled', () => {
@@ -120,7 +122,7 @@ describe('EventForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste abbrechen' }));
 
-    expect(screen.getByRole('button', { name: 'Einkaufsliste berechnen' })).toBeInTheDocument();
+    expect(getInlineCalculateButton()).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Gäste speichern' })).not.toBeInTheDocument();
   });
 
@@ -152,7 +154,7 @@ describe('EventForm', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Familienfest' } });
     fireEvent.click(screen.getByRole('button', { name: 'Gäste verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Gäste mit Kind speichern' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
@@ -192,7 +194,7 @@ describe('EventForm', () => {
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
@@ -215,6 +217,22 @@ describe('EventForm', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
     expect(screen.getByLabelText('Puffer (%)')).toHaveValue(25);
+  });
+
+  test('shows mobile FAB buttons on the new event page', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(document.querySelector('.event-save-fab-button[aria-label="Einkaufsliste berechnen"]')).toBeInTheDocument();
+    expect(document.querySelector('.events-cancel-fab-button[aria-label="Neues Event abbrechen"]')).toBeInTheDocument();
+  });
+
+  test('new event cancel FAB calls onCancel', () => {
+    const onCancel = jest.fn();
+    render(<EventForm onSaved={jest.fn()} onCancel={onCancel} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Neues Event abbrechen' }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   test('shows "Event bearbeiten" title and "Berechnung aktualisieren" button when initialEvent is provided', () => {
@@ -342,7 +360,7 @@ describe('EventForm', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Nachmittagsfest' } });
     fireEvent.change(screen.getByLabelText('Startuhrzeit'), { target: { value: '14:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
@@ -354,7 +372,7 @@ describe('EventForm', () => {
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
@@ -415,7 +433,7 @@ describe('EventForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
 
     expect(screen.getByRole('button', { name: 'Getränke speichern' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Einkaufsliste berechnen' })).not.toBeInTheDocument();
+    expect(getInlineCalculateButton()).not.toBeInTheDocument();
   });
 
   test('returns to main form when drink sub-page is cancelled', () => {
@@ -424,7 +442,7 @@ describe('EventForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Getränke abbrechen' }));
 
-    expect(screen.getByRole('button', { name: 'Einkaufsliste berechnen' })).toBeInTheDocument();
+    expect(getInlineCalculateButton()).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Getränke speichern' })).not.toBeInTheDocument();
   });
 
@@ -438,7 +456,7 @@ describe('EventForm', () => {
 
     // Now submit the form - should use the saved drink ids
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste berechnen' }));
+    fireEvent.click(getInlineCalculateButton());
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
