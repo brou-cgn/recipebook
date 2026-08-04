@@ -3,8 +3,27 @@ import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 
+function getEinheitLabel(einheit) {
+  if (!einheit) return '';
+  const liters = Number(einheit.einheitsgroesse);
+  let sizeLabel;
+  if (liters < 1) {
+    sizeLabel = `${Math.round(liters * 1000)} ml`;
+  } else {
+    sizeLabel = `${liters.toFixed(1).replace('.', ',')} l`;
+  }
+  return einheit.gebindeinheit ? `${sizeLabel} (${einheit.gebindeinheit})` : sizeLabel;
+}
+
 function getRowLabel(row) {
-  if (row.isCustomDrink && row.drinkLabel) return row.drinkLabel;
+  if (row.isCustomDrink && row.drinkLabel) {
+    const drinkName = row.drinkLabel;
+    if (row.kategorie && row.kategorie.includes(':') && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
+      const einheit = row.einheiten[row.einheitIdx];
+      return `${drinkName} (${getEinheitLabel(einheit)})`;
+    }
+    return drinkName;
+  }
   return CATEGORY_LABELS[row.kategorie] || row.kategorie;
 }
 

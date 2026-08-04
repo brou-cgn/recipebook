@@ -56,7 +56,7 @@ describe('EventDrinkSelectionPage', () => {
     expect(screen.getByText('Bier (eigen)')).toBeInTheDocument();
   });
 
-  test('shows table columns Getränk, Faktor und Aktion for selected drinks', () => {
+  test('shows table columns Getränk, Einheitsgrößen, Faktor und Aktion for selected drinks', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -69,6 +69,7 @@ describe('EventDrinkSelectionPage', () => {
     );
 
     expect(screen.getByRole('columnheader', { name: 'Getränk' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Einheitsgrößen' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Faktor' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Aktion' })).toBeInTheDocument();
   });
@@ -114,6 +115,7 @@ describe('EventDrinkSelectionPage', () => {
     expect(onSave).toHaveBeenCalledWith(
       ['custom-wasser', 'custom-bier'],
       { 'custom-wasser': 1.2 },
+      {},
     );
   });
 
@@ -170,7 +172,7 @@ describe('EventDrinkSelectionPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier'], {});
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier'], {}, {});
   });
 
   test('uses default factor 1.0 for invalid values', () => {
@@ -191,7 +193,7 @@ describe('EventDrinkSelectionPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {});
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {});
   });
 
   test('calls onBack when Abbrechen button is clicked', () => {
@@ -278,5 +280,117 @@ describe('EventDrinkSelectionPage', () => {
     const options = Array.from(select.options).map((o) => o.text);
     expect(options).not.toContain('Wasser (eigen)');
     expect(options).toContain('Bier (eigen)');
+  });
+
+  const drinksWithMultipleEinheiten = [
+    {
+      id: 'custom-bier-multi',
+      name: 'Craft-Bier',
+      kategorie: 'bier',
+      einheiten: [
+        { einheitsgroesse: 0.33, gebindeinheit: 'Dose' },
+        { einheitsgroesse: 0.5, gebindeinheit: 'Flasche' },
+        { einheitsgroesse: 10, gebindeinheit: 'Fässchen' },
+      ],
+    },
+  ];
+
+  test('shows checkboxes for multiple einheiten when drink has more than one einheit', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksWithMultipleEinheiten}
+        customDrinkIds={['custom-bier-multi']}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).toBeInTheDocument();
+  });
+
+  test('first einheit is checked by default', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksWithMultipleEinheiten}
+        customDrinkIds={['custom-bier-multi']}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).not.toBeChecked();
+  });
+
+  test('can select multiple einheiten and saves selected indices', () => {
+    const onSave = jest.fn();
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksWithMultipleEinheiten}
+        customDrinkIds={['custom-bier-multi']}
+        onSave={onSave}
+        onBack={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      ['custom-bier-multi'],
+      {},
+      { 'custom-bier-multi': [0, 1] },
+    );
+  });
+
+  test('restores previously selected einheiten from drinkSelectedEinheiten prop', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksWithMultipleEinheiten}
+        customDrinkIds={['custom-bier-multi']}
+        drinkSelectedEinheiten={{ 'custom-bier-multi': [1, 2] }}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).toBeChecked();
+  });
+
+  test('cannot deselect the last remaining einheit', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksWithMultipleEinheiten}
+        customDrinkIds={['custom-bier-multi']}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeChecked();
+  });
+
+  test('shows plain text for drinks with only one einheit', () => {
+    const drinksSingleEinheit = [
+      { id: 'custom-saft', name: 'Saft', einheiten: [{ einheitsgroesse: 1.0, gebindeinheit: 'Flasche' }] },
+    ];
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={drinksSingleEinheit}
+        customDrinkIds={['custom-saft']}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByText('1,0 l (Flasche)')).toBeInTheDocument();
   });
 });
