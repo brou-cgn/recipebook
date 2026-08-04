@@ -13,6 +13,8 @@ import {
   countGuestsByCategory,
   getGuestDisplayName,
 } from '../utils/guestPreferences';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 import EventGuestSelectionPage from './EventGuestSelectionPage';
 import EventDrinkSelectionPage from './EventDrinkSelectionPage';
 
@@ -77,6 +79,9 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   const [driverGuestIds, setDriverGuestIds] = useState(initialEvent?.driverGuestIds ?? []);
   const [showGuestSelection, setShowGuestSelection] = useState(false);
   const [showDrinkSelection, setShowDrinkSelection] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -96,6 +101,23 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
       unsubDrinks();
     };
   }, [currentUser?.id]);
+
+  // Load button icons
+  useEffect(() => {
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setButtonIcons(icons);
+    };
+    loadIcons();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for dark mode changes
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
 
   const selectedGuests = useMemo(
     () => guests.filter((guest) => selectedGuestIds.includes(guest.id)),
@@ -381,14 +403,32 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
               Löschen
             </button>
           )}
-          <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
-            Abbrechen
-          </button>
           <button type="submit" className="events-primary-btn" disabled={saving}>
             {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
           </button>
         </div>
       </form>
+
+      {/* Cancel FAB button - positioned at bottom-left */}
+      <button
+        className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+        onClick={onCancel}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        disabled={saving}
+        title="Abbrechen"
+        aria-label="Eventbearbeitung abbrechen"
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
+        )}
+      </button>
     </div>
   );
 }
