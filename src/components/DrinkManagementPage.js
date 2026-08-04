@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
-import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
+import { DRINK_CATEGORIES, getDrinkCategoryLabel, PREDEFINED_DRINKS } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
@@ -44,6 +44,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isPredefined, setIsPredefined] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -76,6 +77,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
 
   const openNew = () => {
     setEditId(null);
+    setIsPredefined(false);
     setForm(emptyForm());
     setError('');
     setShowForm(true);
@@ -83,6 +85,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
 
   const openEdit = (drink) => {
     setEditId(drink.id);
+    setIsPredefined(Boolean(drink.predefined));
     setForm({
       name: drink.name || '',
       kategorie: drink.kategorie || '',
@@ -116,7 +119,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) {
+    if (!isPredefined && !form.name.trim()) {
       setError('Bitte einen Namen angeben.');
       return;
     }
@@ -134,8 +137,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
     setError('');
     try {
       const payload = {
-        name: form.name.trim(),
-        kategorie: form.kategorie || null,
+        ...(isPredefined ? {} : { name: form.name.trim(), kategorie: form.kategorie || null }),
         einheiten: form.einheiten.map((e) => {
           const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
           const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
@@ -146,7 +148,11 @@ function DrinkManagementPage({ onBack, currentUser }) {
           return einheit;
         }),
       };
-      await saveCustomDrink(currentUser.id, payload, editId || undefined);
+      if (isPredefined) {
+        await saveCustomDrink(currentUser.id, { ...payload, predefined: true }, editId || undefined);
+      } else {
+        await saveCustomDrink(currentUser.id, payload, editId || undefined);
+      }
       setShowForm(false);
     } catch (err) {
       console.error('Error saving custom drink:', err);
@@ -187,7 +193,8 @@ function DrinkManagementPage({ onBack, currentUser }) {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="z. B. Craft-Bier, Apfelsaft, ..."
-              required
+              required={!isPredefined}
+              disabled={isPredefined}
             />
           </label>
 
@@ -196,6 +203,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
             <select
               value={form.kategorie}
               onChange={(e) => setForm((f) => ({ ...f, kategorie: e.target.value }))}
+              disabled={isPredefined}
             >
               <option value="">Keine Kategorie</option>
               {DRINK_CATEGORIES.map((cat) =>
@@ -369,16 +377,9 @@ function DrinkManagementPage({ onBack, currentUser }) {
 
       {loading ? (
         <div className="events-empty-state">Laden...</div>
-      ) : drinks.length === 0 ? (
-        <div className="events-empty-state">
-          <p>Noch keine eigenen Getränke angelegt.</p>
-          <button type="button" className="events-primary-btn" onClick={openNew}>
-            Erstes Getränk anlegen
-          </button>
-        </div>
       ) : (
         <div className="events-list">
-          {drinks.map((drink) => (
+          {[...PREDEFINED_DRINKS, ...drinks].map((drink) => (
             <div key={drink.id} className="events-card" onClick={() => openEdit(drink)}>
               <div className="events-card-main">
                 <h3>{drink.name}</h3>
@@ -395,6 +396,9 @@ function DrinkManagementPage({ onBack, currentUser }) {
               </div>
             </div>
           ))}
+          {drinks.length === 0 && (
+            <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
+          )}
         </div>
       )}
       <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />

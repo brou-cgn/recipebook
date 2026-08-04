@@ -7,7 +7,7 @@ import {
   subscribeToCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
-import { getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
+import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS } from '../utils/drinkCategories';
 import {
   computeGuestPreferenceMultipliers,
   countGuestsByCategory,
@@ -90,10 +90,12 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
     const unsubDrinks = subscribeToCustomDrinks(currentUser.id, (drinks) => {
       setCustomDrinks(drinks);
-      // Auto-select all custom drinks when they load for the first time (only for new events)
+      // Auto-select predefined drinks and all custom drinks for new events
       setCustomDrinkIds((prev) => {
-        if (!isEditing && prev.length === 0 && drinks.length > 0) {
-          return drinks.map((d) => d.id);
+        if (!isEditing && prev.length === 0) {
+          const predefinedIds = PREDEFINED_DRINKS.map((d) => d.id);
+          const customIds = drinks.map((d) => d.id);
+          return [...predefinedIds, ...customIds];
         }
         return prev;
       });
@@ -129,7 +131,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, customDrinks),
+    () => computeGuestPreferenceMultipliers(selectedGuests, [...PREDEFINED_DRINKS, ...customDrinks]),
     [selectedGuests, customDrinks],
   );
 
@@ -157,9 +159,10 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     setSaving(true);
     setError('');
     try {
+      const allDrinks = [...PREDEFINED_DRINKS, ...customDrinks];
       const categories = [...new Set(
         customDrinkIds
-          .map((drinkId) => customDrinks.find((drink) => drink.id === drinkId)?.kategorie)
+          .map((drinkId) => allDrinks.find((drink) => drink.id === drinkId)?.kategorie)
           .filter(Boolean)
           .map((categoryId) =>
             categoryHasOwnBudget(categoryId) ? categoryId : getDrinkParentCategoryId(categoryId) || categoryId
@@ -230,7 +233,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   if (showDrinkSelection) {
     return (
       <EventDrinkSelectionPage
-        customDrinks={customDrinks}
+        customDrinks={[...PREDEFINED_DRINKS, ...customDrinks]}
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}
