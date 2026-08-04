@@ -73,6 +73,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
@@ -401,9 +402,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
               Löschen
             </button>
           )}
-          <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
-            Abbrechen
-          </button>
+          {!isEditing && (
+            <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
+              Abbrechen
+            </button>
+          )}
           <button type="submit" className={`events-primary-btn${isEditing ? ' events-primary-btn--desktop-only' : ''}`} disabled={saving}>
             {saving ? 'Berechne...' : isEditing ? 'Berechnung aktualisieren' : 'Einkaufsliste berechnen'}
           </button>
@@ -430,6 +433,30 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
             <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+          )}
+        </button>
+      )}
+
+      {/* Cancel FAB button - visible on mobile when editing */}
+      {isEditing && (
+        <button
+          type="button"
+          className={`events-cancel-fab-button${cancelPressed ? ' pressed' : ''}`}
+          onClick={onCancel}
+          onTouchStart={() => setCancelPressed(true)}
+          onTouchEnd={() => setCancelPressed(false)}
+          onTouchCancel={() => setCancelPressed(false)}
+          onMouseDown={() => setCancelPressed(true)}
+          onMouseUp={() => setCancelPressed(false)}
+          onMouseLeave={() => setCancelPressed(false)}
+          title="Abbrechen"
+          aria-label="Eventbearbeitung abbrechen"
+          disabled={saving}
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
           )}
         </button>
       )}
