@@ -179,6 +179,12 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
 }
 
+.events-cancel-fab-button .button-icon-image {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+}
+
 .events-edit-fab-button {
   display: none;
   position: fixed;
