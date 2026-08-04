@@ -47,6 +47,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [packageUnits, setPackageUnits] = useState([]);
+  const [cancelPressed, setCancelPressed] = useState(false);
 
   useEffect(() => {
     getCustomLists().then((lists) => {
@@ -274,19 +275,29 @@ function DrinkManagementPage({ onBack, currentUser }) {
           {error && <p className="events-error-text">{error}</p>}
 
           <div className="events-form-actions">
-            <button
-              type="button"
-              className="events-secondary-btn"
-              onClick={() => setShowForm(false)}
-              disabled={saving}
-            >
-              Abbrechen
-            </button>
             <button type="submit" className="events-primary-btn" disabled={saving}>
               {saving ? 'Speichere...' : 'Speichern'}
             </button>
           </div>
         </form>
+
+        {/* Cancel FAB button - positioned at bottom-left, mobile only */}
+        <button
+          type="button"
+          className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+          onClick={() => setShowForm(false)}
+          onTouchStart={() => setCancelPressed(true)}
+          onTouchEnd={() => setCancelPressed(false)}
+          onTouchCancel={() => setCancelPressed(false)}
+          onMouseDown={() => setCancelPressed(true)}
+          onMouseUp={() => setCancelPressed(false)}
+          onMouseLeave={() => setCancelPressed(false)}
+          title="Abbrechen"
+          aria-label="Getränkbearbeitung abbrechen"
+          disabled={saving}
+        >
+          ×
+        </button>
       </div>
     );
   }
