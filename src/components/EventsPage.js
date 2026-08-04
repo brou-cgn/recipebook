@@ -275,7 +275,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
           )}
 
           <div className="events-form-actions">
-            {selectedEvent.status === 'berechnet' && (
+            {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'verbrauchErfasst') && (
               <button
                 type="button"
                 className="events-primary-btn"

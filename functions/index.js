@@ -6352,5 +6352,6 @@ exports.nightlySwipeFlagsCleanup = onSchedule(
 // Getränke-Kalkulation für Events (Menüpunkt "Events" im Hamburger-Menü).
 exports.calculateEventDrinks = require('./calculateEventDrinks').calculateEventDrinks;
 exports.submitConsumption = require('./submitConsumption').submitConsumption;
+exports.savePurchase = require('./submitConsumption').savePurchase;
 exports.reminderConsumption = require('./reminderConsumption').reminderConsumption;
 exports.manageGuestProfile = require('./manageGuestProfile').manageGuestProfile;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './EventsPage.css';
-import { submitConsumption } from '../utils/eventsFirestore';
+import { submitConsumption, savePurchase } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 
 function getEinheitLabel(einheit) {
@@ -31,13 +31,20 @@ function ConsumptionForm({ event, onDone, onCancel }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.gebindeGroesseLiter);
   const [values, setValues] = useState(() => {
     const initial = {};
+    const existing = event.istVerbrauchEingegeben || {};
     kategorien.forEach((row) => {
-      initial[row.kategorie] = { eingekauft: '', uebrig: '' };
+      const prev = existing[row.kategorie];
+      initial[row.kategorie] = {
+        eingekauft: prev?.eingekauft != null ? String(prev.eingekauft) : '',
+        uebrig: prev?.uebrig != null ? String(prev.uebrig) : '',
+      };
     });
     return initial;
   });
   const [saving, setSaving] = useState(false);
+  const [savingIntermediate, setSavingIntermediate] = useState(false);
   const [error, setError] = useState('');
+  const [savedIntermediate, setSavedIntermediate] = useState(false);
   const [changes, setChanges] = useState(null);
 
   const updateValue = (kategorie, field, value) => {
@@ -47,19 +54,38 @@ function ConsumptionForm({ event, onDone, onCancel }) {
     }));
   };
 
+  const buildGebinde = () => {
+    const gebinde = {};
+    Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
+      gebinde[kategorie] = {
+        eingekauft: Number(eingekauft) || 0,
+        uebrig: Number(uebrig) || 0,
+      };
+    });
+    return gebinde;
+  };
+
+  const handleSaveIntermediate = async () => {
+    setSavingIntermediate(true);
+    setError('');
+    setSavedIntermediate(false);
+    try {
+      await savePurchase(event.id, buildGebinde());
+      setSavedIntermediate(true);
+    } catch (err) {
+      console.error('Error saving purchase:', err);
+      setError('Zwischenspeichern fehlgeschlagen. Bitte versuche es erneut.');
+    } finally {
+      setSavingIntermediate(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      const gebinde = {};
-      Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
-        gebinde[kategorie] = {
-          eingekauft: Number(eingekauft) || 0,
-          uebrig: Number(uebrig) || 0,
-        };
-      });
-      const result = await submitConsumption(event.id, gebinde);
+      const result = await submitConsumption(event.id, buildGebinde());
       setChanges(result.changes || []);
     } catch (err) {
       console.error('Error submitting consumption:', err);
@@ -147,12 +173,16 @@ function ConsumptionForm({ event, onDone, onCancel }) {
         ))}
 
         {error && <p className="events-error-text">{error}</p>}
+        {savedIntermediate && <p className="events-success-text">Zwischengespeichert.</p>}
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
+          <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving || savingIntermediate}>
             Abbrechen
           </button>
-          <button type="submit" className="events-primary-btn" disabled={saving}>
+          <button type="button" className="events-secondary-btn" onClick={handleSaveIntermediate} disabled={saving || savingIntermediate}>
+            {savingIntermediate ? 'Speichere...' : 'Zwischenspeichern'}
+          </button>
+          <button type="submit" className="events-primary-btn" disabled={saving || savingIntermediate}>
             {saving ? 'Speichere...' : 'Verbrauch speichern'}
           </button>
         </div>

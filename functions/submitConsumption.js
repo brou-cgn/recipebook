@@ -156,4 +156,36 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   return {eventId, changes};
 });
 
+/**
+ * Callable: savePurchase({ eventId, gebinde })
+ * - eventId: ID des Event-Dokuments (muss existieren und berechnet sein)
+ * - gebinde: { kategorie: { eingekauft: <Anzahl>, uebrig: <Anzahl> } }
+ * Speichert die Einkaufsdaten (eingekauft/uebrig) am Event, OHNE den Status
+ * auf "verbrauchErfasst" zu setzen. Kann mehrfach aufgerufen werden.
+ */
+exports.savePurchase = onCall({maxInstances: 10}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Login erforderlich.');
+  }
+  const uid = request.auth.uid;
+  const {eventId, gebinde} = request.data || {};
+
+  if (!eventId || !gebinde) {
+    throw new HttpsError('invalid-argument', 'eventId und gebinde sind erforderlich.');
+  }
+
+  const db = admin.firestore();
+  const eventRef = db.collection('users').doc(uid).collection('events').doc(eventId);
+  const eventSnap = await eventRef.get();
+  if (!eventSnap.exists) {
+    throw new HttpsError('not-found', 'Event nicht gefunden.');
+  }
+
+  await eventRef.set({
+    istVerbrauchEingegeben: gebinde,
+  }, {merge: true});
+
+  return {eventId};
+});
+
 exports._internal = {gebindeZuLiter, impliedRate};

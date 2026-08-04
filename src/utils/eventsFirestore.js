@@ -124,6 +124,19 @@ export const submitConsumption = async (eventId, gebinde) => {
   return result.data;
 };
 
+/**
+ * Call the savePurchase Cloud Function: saves eingekauft/uebrig data to the
+ * event without changing its status. Can be called multiple times.
+ * @param {string} eventId - ID of the event
+ * @param {Object} gebinde - { kategorie: { eingekauft, uebrig } } in Gebinde-Einheiten
+ * @returns {Promise<Object>} { eventId }
+ */
+export const savePurchase = async (eventId, gebinde) => {
+  const fn = httpsCallable(functions, 'savePurchase');
+  const result = await fn({ eventId, gebinde });
+  return result.data;
+};
+
 // ---------------------------------------------------------------------------
 // Custom Drinks Library
 // ---------------------------------------------------------------------------
