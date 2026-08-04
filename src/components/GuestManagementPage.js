@@ -10,6 +10,8 @@ import {
 import { canEditRecipes } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const emptyForm = () => ({
   vorname: '',
@@ -41,8 +43,25 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [error, setError] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
   const [categoryToAdd, setCategoryToAdd] = useState('');
+  const [cancelPressed, setCancelPressed] = useState(false);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   const canManageGuests = canEditRecipes(currentUser);
+
+  useEffect(() => {
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setButtonIcons(icons);
+    };
+    loadIcons();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -378,19 +397,32 @@ function GuestManagementPage({ onBack, currentUser }) {
           {error && <p className="events-error-text">{error}</p>}
 
           <div className="events-form-actions">
-            <button
-              type="button"
-              className="events-secondary-btn"
-              onClick={() => setShowForm(false)}
-              disabled={saving}
-            >
-              Abbrechen
-            </button>
             <button type="submit" className="events-primary-btn" disabled={saving}>
               {saving ? 'Speichere...' : 'Speichern'}
             </button>
           </div>
         </form>
+
+        {/* Cancel FAB button - positioned at bottom-left */}
+        <button
+          className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+          onClick={() => setShowForm(false)}
+          onTouchStart={() => setCancelPressed(true)}
+          onTouchEnd={() => setCancelPressed(false)}
+          onTouchCancel={() => setCancelPressed(false)}
+          onMouseDown={() => setCancelPressed(true)}
+          onMouseUp={() => setCancelPressed(false)}
+          onMouseLeave={() => setCancelPressed(false)}
+          disabled={saving}
+          title="Abbrechen"
+          aria-label="Gast bearbeiten abbrechen"
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
+          )}
+        </button>
       </div>
     );
   }
