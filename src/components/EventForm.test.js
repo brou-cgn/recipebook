@@ -96,8 +96,10 @@ describe('EventForm', () => {
     expect(event.driverGuestIds).toEqual(['g1']);
     expect(event.guestNamesById).toEqual({ g1: 'Anna Beispiel' });
     expect(event.guests.adults).toBe(1);
-    expect(event.guestPreferenceMultipliers['custom-wasser']).toBe(1);
-    expect(event.guestPreferenceMultipliers['custom-bier']).toBe(0);
+    expect(event.guestPreferenceMultipliers.perGuest).toHaveLength(1);
+    expect(event.guestPreferenceMultipliers.perGuest[0].preferredDrinkIds).toContain('custom-wasser');
+    expect(event.guestPreferenceMultipliers.perGuest[0].preferenceFactor).toBe(1);
+    expect(event.guestPreferenceMultipliers.perGuest[0].allowsAlcohol).toBe(false);
     expect(onSaved).toHaveBeenCalledWith('event-1');
   });
 

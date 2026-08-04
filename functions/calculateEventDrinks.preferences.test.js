@@ -8,18 +8,26 @@ function roundTo2(value) {
   return Math.round(value * 100) / 100;
 }
 
-test('calculate applies guest preference multipliers per category', () => {
+test('calculate distributes budget based on per-guest preferences (wein preferred)', () => {
+  // 2 adults: guest 1 prefers wein (factor 0.75), guest 2 has no preference.
+  // categories: ['wein', 'wasser']
+  // Expected: wein gets more than default because one guest strongly prefers it.
   const result = _internal.calculate(
       {
         eventName: 'Test',
         durationHours: 2,
-        guests: {adults: 10, children: 0},
+        guests: {adults: 2, children: 0},
         season: 'sommer',
         eventType: 'party',
         categories: ['wein', 'wasser'],
         customDrinkIds: [],
         pufferProzent: 0,
-        guestPreferenceMultipliers: {wein: 0.5, wasser: 1},
+        guestPreferenceMultipliers: {
+          perGuest: [
+            {preferredCategoryIds: ['wein'], preferredDrinkIds: [], preferenceFactor: 0.75, allowsAlcohol: true},
+            {preferredCategoryIds: [], preferredDrinkIds: [], preferenceFactor: 0, allowsAlcohol: true},
+          ],
+        },
       },
       DEFAULT_RATES,
       {},
@@ -30,9 +38,19 @@ test('calculate applies guest preference multipliers per category', () => {
 
   assert.ok(wein);
   assert.ok(wasser);
-  assert.equal(wein.praeferenzFaktor, 0.5);
-  assert.equal(wasser.praeferenzFaktor, null);
-  assert.ok(wein.literMitPuffer < wasser.literMitPuffer);
+
+  // Guest 1 prefers wein 75%: wein gets more, wasser gets less than baseline.
+  // Without preference both guests: wein would share ~equally.
+  // With preference: wein should have more than baseline (wasser dominated by weight).
+  // Key: total budget is still the same (2 guests x budget).
+  const totalLiters = wein.literOhnePuffer + wasser.literOhnePuffer;
+  const expectedTotal = 2 * BASE_RATE_PER_PERSON_PER_HOUR * 2 * 1.2; // 2 adults, 2 hours, sommer 1.2
+  assert.ok(Math.abs(totalLiters - expectedTotal) < 0.05,
+      `Total should be ~${expectedTotal} L, got ${totalLiters.toFixed(4)} L`);
+  // Wein should be higher than it would be for a guest with no preference
+  // (preference guest puts 75% into wein, which dominates over weight-based share)
+  assert.ok(wein.literOhnePuffer > wasser.literOhnePuffer,
+      `wein (preferred by 1 guest with factor 0.75) should dominate wasser`);
 });
 
 test('calculate uses the event-specific puffer percentage instead of a fixed buffer', () => {
@@ -357,4 +375,155 @@ test('calculate ignoriert Kinder bei Legacy-Custom-Drink-Mengenkalkulation', () 
   assert.equal(customDrink.literOhnePuffer, 0);
   assert.equal(customDrink.literMitPuffer, 0);
   assert.equal(customDrink.anzahlGebinde, 0);
+});
+
+// --- Per-guest preference distribution tests ---
+
+test('calculate: Gast ohne Präferenz erhält normale Gewichtsverteilung', () => {
+  // 1 guest, no preferences -> normal weight distribution
+  // categories: bier, softdrinks (bier_alkoholfrei fallback included)
+  // totalBeverage = 1 * 0.5 * 4 * 1.0 = 2.0 L
+  // bierWeight = 0.221 + 0.039 = 0.26, softdrinksWeight = 0.26, total = 0.52
+  // bier = 2.0 * 0.26 / 0.52 = 1.0 L, softdrinks = 1.0 L
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+        guestPreferenceMultipliers: {
+          perGuest: [
+            {preferredCategoryIds: [], preferredDrinkIds: [], preferenceFactor: 0, allowsAlcohol: true},
+          ],
+        },
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  assert.ok(bier);
+  assert.ok(softdrinks);
+  assert.equal(bier.literOhnePuffer, 1.0);
+  assert.equal(softdrinks.literOhnePuffer, 1.0);
+});
+
+test('calculate: alle Präferenzen angeboten - Szenario aus Issue #2772', () => {
+  // Event: 4 Stunden, 2 Gaeste, Season uebergang
+  // Gast 1: keine Präferenzen
+  // Gast 2: Vorliebe softdrinks, Faktor 0.75
+  // Verfügbar: bier, softdrinks (kein bier_alkoholfrei separat)
+  //
+  // totalBeverage = 2 * 0.5 * 4 * 1.0 = 4.0 L, perGuestBudget = 2.0 L
+  // bierWeight = 0.221 + 0.039 = 0.26, softdrinksWeight = 0.26, total = 0.52
+  //
+  // Gast 1 (keine Präferenz): 2.0 L -> bier: 1.0 L, softdrinks: 1.0 L
+  // Gast 2 (softdrinks, 0.75): 75% = 1.5 L -> softdrinks, 25% = 0.5 L -> bier (only non-preferred)
+  //
+  // Gesamt: bier = 1.0 + 0.5 = 1.5 L, softdrinks = 1.0 + 1.5 = 2.5 L
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 2, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+        guestPreferenceMultipliers: {
+          perGuest: [
+            {preferredCategoryIds: [], preferredDrinkIds: [], preferenceFactor: 0, allowsAlcohol: true},
+            {preferredCategoryIds: ['softdrinks'], preferredDrinkIds: [], preferenceFactor: 0.75, allowsAlcohol: true},
+          ],
+        },
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  assert.ok(bier);
+  assert.ok(softdrinks);
+  assert.equal(bier.literOhnePuffer, 1.5, `bier expected 1.5 L, got ${bier.literOhnePuffer}`);
+  assert.equal(softdrinks.literOhnePuffer, 2.5, `softdrinks expected 2.5 L, got ${softdrinks.literOhnePuffer}`);
+
+  // Total should still be 4.0 L
+  const total = bier.literOhnePuffer + softdrinks.literOhnePuffer;
+  assert.ok(Math.abs(total - 4.0) < 0.05, `Total expected 4.0 L, got ${total}`);
+});
+
+test('calculate: keine Präferenz angeboten - Vorliebe wird ignoriert', () => {
+  // Gast hat Vorliebe "bier_alkoholfrei" (Faktor 0.75), aber bier_alkoholfrei wird nicht angeboten.
+  // Ergebnis: Vorliebe ignoriert, normale Verteilung.
+  // categories: bier, softdrinks
+  // totalBeverage = 1 * 0.5 * 4 * 1.0 = 2.0 L
+  // bierWeight = 0.260, softdrinksWeight = 0.260, total = 0.520
+  // bier = 2.0 * 0.26/0.52 = 1.0, softdrinks = 1.0
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 1, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+        guestPreferenceMultipliers: {
+          perGuest: [
+            {preferredCategoryIds: ['bier_alkoholfrei'], preferredDrinkIds: [], preferenceFactor: 0.75, allowsAlcohol: true},
+          ],
+        },
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const bier = result.ergebnis.find((item) => item.kategorie === 'bier');
+  const softdrinks = result.ergebnis.find((item) => item.kategorie === 'softdrinks');
+  assert.ok(bier);
+  assert.ok(softdrinks);
+  // bier_alkoholfrei not offered -> preference ignored -> normal distribution
+  assert.equal(bier.literOhnePuffer, 1.0, `bier expected 1.0 L (no fallback), got ${bier.literOhnePuffer}`);
+  assert.equal(softdrinks.literOhnePuffer, 1.0, `softdrinks expected 1.0 L, got ${softdrinks.literOhnePuffer}`);
+});
+
+test('calculate: gesamtbudget bleibt gleich mit und ohne Präferenzen', () => {
+  // Total budget should be identical with or without preferences.
+  const makeResult = (withPreference) => _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 2, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['bier', 'softdrinks'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+        guestPreferenceMultipliers: withPreference ? {
+          perGuest: [
+            {preferredCategoryIds: ['softdrinks'], preferredDrinkIds: [], preferenceFactor: 0.75, allowsAlcohol: true},
+            {preferredCategoryIds: [], preferredDrinkIds: [], preferenceFactor: 0, allowsAlcohol: true},
+          ],
+        } : {perGuest: []},
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const withPref = makeResult(true);
+  const withoutPref = makeResult(false);
+
+  const totalWith = withPref.ergebnis.reduce((s, i) => s + (i.literOhnePuffer || 0), 0);
+  const totalWithout = withoutPref.ergebnis.reduce((s, i) => s + (i.literOhnePuffer || 0), 0);
+
+  assert.ok(Math.abs(totalWith - totalWithout) < 0.05,
+      `Total with preference (${totalWith.toFixed(3)}) should equal total without (${totalWithout.toFixed(3)})`);
 });

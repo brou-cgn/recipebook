@@ -18,8 +18,8 @@ describe('guestPreferences', () => {
     expect(getGuestDisplayName({})).toBe('');
   });
 
-  test('computeGuestPreferenceMultipliers honors alcohol and preference factors', () => {
-    const multipliers = computeGuestPreferenceMultipliers(
+  test('computeGuestPreferenceMultipliers returns per-guest preference profiles', () => {
+    const result = computeGuestPreferenceMultipliers(
       [
         {
           alkoholischeGetränke: true,
@@ -35,13 +35,17 @@ describe('guestPreferences', () => {
       ['wein', 'bier', 'wasser'],
     );
 
-    expect(multipliers.wein).toBe(0.5);
-    expect(multipliers.bier).toBe(0);
-    expect(multipliers.wasser).toBe(0.5);
+    expect(result.perGuest).toHaveLength(2);
+    expect(result.perGuest[0].preferenceFactor).toBe(1);
+    expect(result.perGuest[0].allowsAlcohol).toBe(true);
+    // wein's kategorie is null (string drink list), so preferredCategoryIds includes 'wein' from drinkId
+    expect(result.perGuest[0].preferredDrinkIds).toContain('wein');
+    expect(result.perGuest[1].preferenceFactor).toBe(0);
+    expect(result.perGuest[1].allowsAlcohol).toBe(false);
   });
 
-  test('computeGuestPreferenceMultipliers honors bevorzugteKategorien with drink objects', () => {
-    const multipliers = computeGuestPreferenceMultipliers(
+  test('computeGuestPreferenceMultipliers resolves bevorzugteKategorien', () => {
+    const result = computeGuestPreferenceMultipliers(
       [
         {
           alkoholischeGetränke: true,
@@ -57,13 +61,14 @@ describe('guestPreferences', () => {
       ],
     );
 
-    expect(multipliers.hauswein).toBe(1);
-    expect(multipliers.weisswein).toBe(0);
-    expect(multipliers.wasser).toBe(0);
+    expect(result.perGuest).toHaveLength(1);
+    expect(result.perGuest[0].preferredCategoryIds).toContain('wein_rotwein');
+    expect(result.perGuest[0].preferenceFactor).toBe(1);
+    expect(result.perGuest[0].allowsAlcohol).toBe(true);
   });
 
-  test('bevorzugteKategorien parent category also matches subcategory drinks', () => {
-    const multipliers = computeGuestPreferenceMultipliers(
+  test('bevorzugteKategorien parent category is included in preferredCategoryIds', () => {
+    const result = computeGuestPreferenceMultipliers(
       [
         {
           alkoholischeGetränke: true,
@@ -79,13 +84,13 @@ describe('guestPreferences', () => {
       ],
     );
 
-    expect(multipliers['rotwein-1']).toBe(1);
-    expect(multipliers['weisswein-1']).toBe(1);
-    expect(multipliers['bier-1']).toBe(0);
+    expect(result.perGuest).toHaveLength(1);
+    expect(result.perGuest[0].preferredCategoryIds).toContain('wein');
+    expect(result.perGuest[0].preferenceFactor).toBe(1);
   });
 
-  test('alcohol restriction overrides category preference for alcoholic drinks', () => {
-    const multipliers = computeGuestPreferenceMultipliers(
+  test('alcohol restriction is captured in allowsAlcohol flag', () => {
+    const result = computeGuestPreferenceMultipliers(
       [
         {
           alkoholischeGetränke: false,
@@ -100,26 +105,56 @@ describe('guestPreferences', () => {
       ],
     );
 
-    expect(multipliers['rotwein-1']).toBe(0);
-    expect(multipliers['wasser-1']).toBe(0);
+    expect(result.perGuest).toHaveLength(1);
+    expect(result.perGuest[0].allowsAlcohol).toBe(false);
+    expect(result.perGuest[0].preferredCategoryIds).toContain('wein_rotwein');
   });
 
-  test('alcoholic subcategory drink is blocked when alkohol is false', () => {
-    const multipliers = computeGuestPreferenceMultipliers(
+  test('children are excluded from perGuest array', () => {
+    const result = computeGuestPreferenceMultipliers(
       [
         {
           alkoholischeGetränke: false,
           bevorzugteGetränke: [],
           präferenzFaktor: 0,
+          kind: true,
+        },
+        {
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          präferenzFaktor: 0,
         },
       ],
       [
-        { id: 'pils-1', kategorie: 'bier_pils' },
         { id: 'saft-1', kategorie: 'saft' },
       ],
     );
 
-    expect(multipliers['pils-1']).toBe(0);
-    expect(multipliers['saft-1']).toBe(1);
+    // Only the adult guest is included
+    expect(result.perGuest).toHaveLength(1);
+    expect(result.perGuest[0].allowsAlcohol).toBe(true);
+  });
+
+  test('bevorzugteGetränke resolves to correct preferredCategoryIds via drink kategorie', () => {
+    const result = computeGuestPreferenceMultipliers(
+      [
+        {
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: ['cola', 'fanta'],
+          präferenzFaktor: 0.75,
+        },
+      ],
+      [
+        { id: 'cola', kategorie: 'softdrinks' },
+        { id: 'fanta', kategorie: 'softdrinks' },
+        { id: 'bier-1', kategorie: 'bier' },
+      ],
+    );
+
+    expect(result.perGuest).toHaveLength(1);
+    const guest = result.perGuest[0];
+    expect(guest.preferenceFactor).toBe(0.75);
+    expect(guest.preferredDrinkIds).toEqual(expect.arrayContaining(['cola', 'fanta']));
+    expect(guest.preferredCategoryIds).toContain('softdrinks');
   });
 });

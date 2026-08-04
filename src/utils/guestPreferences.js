@@ -49,19 +49,34 @@ const isDrinkAlcoholic = (drinkId, drinkKategorie) => {
   return ALCOHOLIC_CATEGORY_IDS.includes(drinkId);
 };
 
+/**
+ * Computes a per-guest preference structure for use in drink budget calculation.
+ *
+ * Returns an object with a `perGuest` array where each entry describes one adult
+ * guest's preference profile. The backend uses this to compute per-guest budget
+ * allocations: the preference fraction goes to preferred drinks/categories first,
+ * and the remainder is distributed proportionally across the other available
+ * categories.
+ *
+ * @param {Array} selectedGuests - Array of guest objects with preference properties.
+ * @param {Array} drinks - Array of drink objects or IDs (used to resolve preferred drink categories).
+ * @returns {{ perGuest: Array }} Per-guest preference profiles for adult guests.
+ */
 export const computeGuestPreferenceMultipliers = (selectedGuests, drinks) => {
   const allDrinks = Array.isArray(drinks) ? drinks : [];
-  if (!Array.isArray(selectedGuests) || selectedGuests.length === 0 || allDrinks.length === 0) {
-    return {};
+  if (!Array.isArray(selectedGuests) || selectedGuests.length === 0) {
+    return { perGuest: [] };
   }
 
   const normalizedDrinks = allDrinks.map((d) =>
     typeof d === 'string' ? { id: d, kategorie: null } : { id: d.id, kategorie: d.kategorie ?? null },
   );
 
-  const totals = Object.fromEntries(normalizedDrinks.map(({ id }) => [id, 0]));
+  const perGuest = [];
 
   selectedGuests.forEach((guest) => {
+    if (guest?.kind === true) return;
+
     const preferredDrinkIds = Array.isArray(guest?.bevorzugteGetränke)
       ? [...new Set(guest.bevorzugteGetränke.filter((id) => typeof id === 'string' && id.trim()))]
       : [];
@@ -69,29 +84,27 @@ export const computeGuestPreferenceMultipliers = (selectedGuests, drinks) => {
       ? [...new Set(guest.bevorzugteKategorien.filter((id) => typeof id === 'string' && id.trim()))]
       : [];
     const preferenceFactor = normalizePreferenceFactor(guest?.präferenzFaktor);
-    const hasExplicitPreferences =
-      (preferredDrinkIds.length > 0 || preferredCategoryIds.length > 0) && preferenceFactor > 0;
-    const nonPreferredMultiplier = hasExplicitPreferences ? Math.max(0, 1 - preferenceFactor) : 1;
     const allowsAlcohol = guest?.alkoholischeGetränke !== false;
 
-    normalizedDrinks.forEach(({ id: drinkId, kategorie: drinkKategorie }) => {
-      let multiplier = nonPreferredMultiplier;
-      if (hasExplicitPreferences) {
-        const isDrinkPreferred =
-          preferredDrinkIds.includes(drinkId) ||
-          isDrinkCategoryPreferred(drinkKategorie, preferredCategoryIds);
-        if (isDrinkPreferred) {
-          multiplier = 1;
-        }
-      }
-      if (!allowsAlcohol && isDrinkAlcoholic(drinkId, drinkKategorie)) {
-        multiplier = 0;
-      }
-      totals[drinkId] += multiplier;
+    // Resolve categories for specifically preferred drink IDs
+    const preferredCategoryIdsFromDrinks = preferredDrinkIds.flatMap((drinkId) => {
+      const drink = normalizedDrinks.find((d) => d.id === drinkId);
+      if (!drink?.kategorie) return [drinkId];
+      const parentId = getDrinkParentCategoryId(drink.kategorie);
+      return [drink.kategorie, ...(parentId ? [parentId] : [])];
+    });
+
+    const allPreferredCategoryIds = [
+      ...new Set([...preferredCategoryIds, ...preferredCategoryIdsFromDrinks]),
+    ];
+
+    perGuest.push({
+      preferredDrinkIds,
+      preferredCategoryIds: allPreferredCategoryIds,
+      preferenceFactor: (preferredDrinkIds.length > 0 || preferredCategoryIds.length > 0) ? preferenceFactor : 0,
+      allowsAlcohol,
     });
   });
 
-  return Object.fromEntries(
-    Object.entries(totals).map(([drinkId, total]) => [drinkId, Math.round((total / selectedGuests.length) * 100) / 100]),
-  );
+  return { perGuest };
 };
