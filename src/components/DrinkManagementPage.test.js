@@ -377,4 +377,56 @@ describe('DrinkManagementPage', () => {
       );
     });
   });
+
+  test('swipe-to-delete: delete button appears after swiping a custom drink row left', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier_koelsch', einheiten: [{ einheitsgroesse: 0.5 }] }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    const row = screen.getByText('Craft-Bier').closest('.events-drink-row');
+    expect(row).not.toBeNull();
+
+    // Simulate swipe left
+    fireEvent.touchStart(row, { touches: [{ clientX: 200, clientY: 50 }] });
+    fireEvent.touchMove(row, { touches: [{ clientX: 130, clientY: 50 }] });
+    fireEvent.touchEnd(row);
+
+    expect(screen.getByRole('button', { name: 'Craft-Bier löschen' })).toBeInTheDocument();
+  });
+
+  test('swipe-to-delete: clicking delete button calls deleteCustomDrink after confirm', async () => {
+    window.confirm = jest.fn(() => true);
+    mockDeleteCustomDrink.mockResolvedValue(undefined);
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier_koelsch', einheiten: [{ einheitsgroesse: 0.5 }] }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    const row = screen.getByText('Craft-Bier').closest('.events-drink-row');
+
+    fireEvent.touchStart(row, { touches: [{ clientX: 200, clientY: 50 }] });
+    fireEvent.touchMove(row, { touches: [{ clientX: 130, clientY: 50 }] });
+    fireEvent.touchEnd(row);
+
+    const deleteBtn = screen.getByRole('button', { name: 'Craft-Bier löschen' });
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(mockDeleteCustomDrink).toHaveBeenCalledWith(currentUser.id, 'd1');
+    });
+  });
+
+  test('swipe-to-delete: predefined drinks do not have a swipeable row', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    const mineralwasserEl = screen.getByText('Mineralwasser');
+    // Predefined drinks render as events-card, not events-drink-row
+    expect(mineralwasserEl.closest('.events-drink-row')).toBeNull();
+    expect(mineralwasserEl.closest('.events-card')).not.toBeNull();
+  });
 });
