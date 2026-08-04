@@ -105,6 +105,12 @@ const DRINK_CATEGORY_PARENTS = {
 const CATEGORY_HAS_OWN_BUDGET = new Set(['bier_alkoholfrei']);
 
 /**
+ * Set of category IDs that are considered alcoholic (for alkohol-restriction logic).
+ * Mirrors ALCOHOLIC_CATEGORY_IDS in guestPreferences.js (src).
+ */
+const ALCOHOLIC_CATEGORY_IDS_FUNCTIONS = new Set(['bier', 'wein', 'sekt', 'spirituosen']);
+
+/**
  * Liefert die uebergeordnete Kategorie-ID, falls vorhanden; sonst die ID selbst.
  * Loest rekursiv auf, d.h. bier_alkoholfrei -> bier.
  * @param {string} kategorieId Getränke-Kategorie-ID.
@@ -179,7 +185,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     derivedCategoriesFromCustomDrinks.length > 0 ?
       derivedCategoriesFromCustomDrinks :
       Object.keys(DEFAULT_RATES);
-  const guestPreferenceMultipliers = event.guestPreferenceMultipliers || {};
+  const guestPreferences = event.guestPreferenceMultipliers?.perGuest ?? null;
 
   const ergebnis = [];
   const warnungen = [];
@@ -256,6 +262,107 @@ function calculate(event, ratesDb, customDrinksMap) {
     childrenTotalRawWeight += subCategoryChildWeight;
   }
 
+  // --- Step 2e: Compute per-category adults budget using per-guest preferences ---
+  // If guestPreferences is provided, each guest's budget is split between preferred
+  // and non-preferred categories. Otherwise, budget is distributed purely by weights.
+  const categoryAdultsLiters = {};
+  for (const cat of categories) {
+    categoryAdultsLiters[cat] = 0;
+  }
+
+  if (adults > 0 && totalRawWeight > 0) {
+    const perGuestBudget = totalBeverage / adults;
+
+    if (Array.isArray(guestPreferences) && guestPreferences.length > 0) {
+      // Per-guest preference-aware distribution
+      for (const guestPref of guestPreferences) {
+        const {
+          preferredCategoryIds = [],
+          preferenceFactor = 0,
+          allowsAlcohol = true,
+        } = guestPref;
+
+        // Determine which preferred categories are available in this event
+        const availablePreferredCats = preferredCategoryIds.filter((catId) => {
+          if (!categorySet.has(catId)) return false;
+          if (!allowsAlcohol && ALCOHOLIC_CATEGORY_IDS_FUNCTIONS.has(catId)) return false;
+          return true;
+        });
+
+        const hasAvailablePreferences = availablePreferredCats.length > 0 && preferenceFactor > 0;
+
+        if (hasAvailablePreferences) {
+          // Preferred portion: preferenceFactor * guestBudget -> distributed among available preferred categories
+          const preferredBudget = perGuestBudget * preferenceFactor;
+          const preferredCatSet = new Set(availablePreferredCats);
+          const preferredTotalWeight = availablePreferredCats.reduce(
+              (sum, cat) => sum + (categoryRawWeights[cat] || 0), 0,
+          );
+          if (preferredTotalWeight > 0) {
+            for (const cat of availablePreferredCats) {
+              categoryAdultsLiters[cat] += preferredBudget * (categoryRawWeights[cat] / preferredTotalWeight);
+            }
+          } else {
+            // All preferred cats have zero weight: distribute evenly
+            for (const cat of availablePreferredCats) {
+              categoryAdultsLiters[cat] += preferredBudget / availablePreferredCats.length;
+            }
+          }
+
+          // Remaining portion: (1 - preferenceFactor) * guestBudget -> distributed among non-preferred available categories
+          const remainingBudget = perGuestBudget * (1 - preferenceFactor);
+          const nonPreferredCats = categories.filter((cat) => {
+            if (preferredCatSet.has(cat)) return false;
+            if (!allowsAlcohol && ALCOHOLIC_CATEGORY_IDS_FUNCTIONS.has(cat)) return false;
+            return (categoryRawWeights[cat] || 0) > 0;
+          });
+          const nonPreferredTotalWeight = nonPreferredCats.reduce(
+              (sum, cat) => sum + (categoryRawWeights[cat] || 0), 0,
+          );
+          if (nonPreferredTotalWeight > 0) {
+            for (const cat of nonPreferredCats) {
+              categoryAdultsLiters[cat] += remainingBudget * (categoryRawWeights[cat] / nonPreferredTotalWeight);
+            }
+          } else if (nonPreferredCats.length > 0) {
+            for (const cat of nonPreferredCats) {
+              categoryAdultsLiters[cat] += remainingBudget / nonPreferredCats.length;
+            }
+          }
+        } else {
+          // No available preferences (or no preferences at all): distribute full budget by weights
+          const availableCats = categories.filter((cat) => {
+            if (!allowsAlcohol && ALCOHOLIC_CATEGORY_IDS_FUNCTIONS.has(cat)) return false;
+            return (categoryRawWeights[cat] || 0) > 0;
+          });
+          const availableTotalWeight = availableCats.reduce(
+              (sum, cat) => sum + (categoryRawWeights[cat] || 0), 0,
+          );
+          if (availableTotalWeight > 0) {
+            for (const cat of availableCats) {
+              categoryAdultsLiters[cat] += perGuestBudget * (categoryRawWeights[cat] / availableTotalWeight);
+            }
+          }
+        }
+      }
+
+      // Guests not covered by guestPreferences entries: distribute normally
+      const coveredGuests = guestPreferences.length;
+      if (coveredGuests < adults) {
+        const uncoveredBudget = perGuestBudget * (adults - coveredGuests);
+        for (const cat of categories) {
+          categoryAdultsLiters[cat] += totalRawWeight > 0 ?
+            uncoveredBudget * (categoryRawWeights[cat] || 0) / totalRawWeight :
+            0;
+        }
+      }
+    } else {
+      // No preference data: standard weight-based distribution
+      for (const cat of categories) {
+        categoryAdultsLiters[cat] = totalBeverage * (categoryRawWeights[cat] || 0) / totalRawWeight;
+      }
+    }
+  }
+
   // --- Step 3: Distribute totals across selected categories and sum adults + children ---
   for (const cat of categories) {
     const entry = ratesDb[cat];
@@ -268,11 +375,8 @@ function calculate(event, ratesDb, customDrinksMap) {
     }
 
     const anteilTrinker = entry.anteilTrinker ?? 1.0;
-    const prefMult = normalizeMultiplier(guestPreferenceMultipliers[cat]);
 
-    const adultsLiterGesamt = totalRawWeight > 0 ?
-        totalBeverage * ((categoryRawWeights[cat] || 0) / totalRawWeight) :
-        0;
+    const adultsLiterGesamt = categoryAdultsLiters[cat] || 0;
     const childrenLiterGesamt = childrenTotalRawWeight > 0 ?
         childrenTotalBeverage * ((childrenCategoryRawWeights[cat] || 0) / childrenTotalRawWeight) :
         0;
@@ -290,7 +394,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       anzahlGebinde,
       ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
-      praeferenzFaktor: prefMult !== 1 ? prefMult : null,
+      praeferenzFaktor: null,
     });
   }
 
@@ -401,7 +505,7 @@ function calculate(event, ratesDb, customDrinksMap) {
           adults * anteilTrinker * (entry.erwachsene || 0) * hours * seasonFactor * durFactor;
     }
 
-    const preferenceMultiplier = normalizeMultiplier(guestPreferenceMultipliers[drinkId]);
+    const preferenceMultiplier = 1;
     const literGesamt = literErwachsene * preferenceMultiplier;
     const literMitPuffer = literGesamt * (1 + puffer);
     const anzahlGebinde =
@@ -418,7 +522,7 @@ function calculate(event, ratesDb, customDrinksMap) {
       anzahlGebinde,
       ratenQuelle: 'benutzerdefiniert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
-      praeferenzFaktor: preferenceMultiplier !== 1 ? preferenceMultiplier : null,
+      praeferenzFaktor: null,
     });
   }
 
