@@ -44,6 +44,7 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [drinkToAdd, setDrinkToAdd] = useState('');
   const [categoryToAdd, setCategoryToAdd] = useState('');
   const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
   const formRef = React.useRef(null);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -51,15 +52,11 @@ function GuestManagementPage({ onBack, currentUser }) {
   const canManageGuests = canEditRecipes(currentUser);
 
   useEffect(() => {
-    const loadButtonIcons = async () => {
-      try {
-        const icons = await getButtonIcons();
-        setButtonIcons(icons);
-      } catch (error) {
-        console.error('Error loading button icons:', error);
-      }
+    const loadIcons = async () => {
+      const icons = await getButtonIcons();
+      setButtonIcons(icons);
     };
-    loadButtonIcons();
+    loadIcons();
   }, []);
 
   useEffect(() => {
@@ -444,6 +441,27 @@ function GuestManagementPage({ onBack, currentUser }) {
             <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
           ) : (
             getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+          )}
+        </button>
+
+        {/* Cancel FAB button - positioned at bottom-left */}
+        <button
+          className={`cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+          onClick={() => setShowForm(false)}
+          onTouchStart={() => setCancelPressed(true)}
+          onTouchEnd={() => setCancelPressed(false)}
+          onTouchCancel={() => setCancelPressed(false)}
+          onMouseDown={() => setCancelPressed(true)}
+          onMouseUp={() => setCancelPressed(false)}
+          onMouseLeave={() => setCancelPressed(false)}
+          disabled={saving}
+          title="Abbrechen"
+          aria-label="Gast bearbeiten abbrechen"
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
           )}
         </button>
       </div>

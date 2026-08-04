@@ -588,6 +588,16 @@
   background: #2a2a2a;
 }
 
+[data-theme="dark"] .events-cancel-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .events-cancel-fab-button:active {
+  background: #2a2a2a;
+}
+
 [data-theme="dark"] .add-section-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;
