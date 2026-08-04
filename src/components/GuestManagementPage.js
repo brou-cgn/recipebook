@@ -10,6 +10,8 @@ import {
 import { canEditRecipes } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
+import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const emptyForm = () => ({
   vorname: '',
@@ -41,8 +43,30 @@ function GuestManagementPage({ onBack, currentUser }) {
   const [error, setError] = useState('');
   const [drinkToAdd, setDrinkToAdd] = useState('');
   const [categoryToAdd, setCategoryToAdd] = useState('');
+  const [fabPressed, setFabPressed] = useState(false);
+  const formRef = React.useRef(null);
+  const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
 
   const canManageGuests = canEditRecipes(currentUser);
+
+  useEffect(() => {
+    const loadButtonIcons = async () => {
+      try {
+        const icons = await getButtonIcons();
+        setButtonIcons(icons);
+      } catch (error) {
+        console.error('Error loading button icons:', error);
+      }
+    };
+    loadButtonIcons();
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setIsDarkMode(e.detail.isDark);
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -164,6 +188,18 @@ function GuestManagementPage({ onBack, currentUser }) {
     }
   };
 
+  const handleFabClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (formRef.current) {
+      if (typeof formRef.current.requestSubmit === 'function') {
+        formRef.current.requestSubmit();
+      } else {
+        formRef.current.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      }
+    }
+  };
+
   if (!canManageGuests) {
     return (
       <div className="events-page-container">
@@ -201,7 +237,7 @@ function GuestManagementPage({ onBack, currentUser }) {
             ×
           </button>
         </div>
-        <form className="events-form" onSubmit={handleSave}>
+        <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <div className="events-form-row">
             <label className="events-form-field">
               <span>Vorname</span>
@@ -386,11 +422,30 @@ function GuestManagementPage({ onBack, currentUser }) {
             >
               Abbrechen
             </button>
-            <button type="submit" className="events-primary-btn" disabled={saving}>
+            <button type="submit" className="events-primary-btn events-form-actions-save" disabled={saving}>
               {saving ? 'Speichere...' : 'Speichern'}
             </button>
           </div>
         </form>
+        <button
+          type="button"
+          className={`events-save-fab-button${fabPressed ? ' pressed' : ''}`}
+          onClick={handleFabClick}
+          onMouseDown={() => setFabPressed(true)}
+          onMouseUp={() => setFabPressed(false)}
+          onMouseLeave={() => setFabPressed(false)}
+          onTouchStart={() => setFabPressed(true)}
+          onTouchEnd={() => setFabPressed(false)}
+          disabled={saving}
+          aria-label={editId ? 'Gast aktualisieren' : 'Gast speichern'}
+          title={editId ? 'Gast aktualisieren' : 'Gast speichern'}
+        >
+          {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+            <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+          ) : (
+            getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+          )}
+        </button>
       </div>
     );
   }
