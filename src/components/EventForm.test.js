@@ -217,6 +217,22 @@ describe('EventForm', () => {
     expect(screen.getByLabelText('Puffer (%)')).toHaveValue(25);
   });
 
+  test('shows mobile FAB buttons on the new event page', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    expect(screen.getByRole('button', { name: 'Einkaufsliste berechnen' })).toHaveClass('event-save-fab-button');
+    expect(screen.getByRole('button', { name: 'Neues Event abbrechen' })).toHaveClass('events-cancel-fab-button');
+  });
+
+  test('new event cancel FAB calls onCancel', () => {
+    const onCancel = jest.fn();
+    render(<EventForm onSaved={jest.fn()} onCancel={onCancel} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Neues Event abbrechen' }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
   test('shows "Event bearbeiten" title and "Berechnung aktualisieren" button when initialEvent is provided', () => {
     const initialEvent = {
       id: 'event-42',
