@@ -578,6 +578,36 @@
   border-color: #555;
 }
 
+[data-theme="dark"] .events-save-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .events-save-fab-button:active {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .drink-save-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .drink-save-fab-button:active {
+  background: #2a2a2a;
+}
+
+[data-theme="dark"] .event-save-fab-button {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .event-save-fab-button:active {
+  background: #2a2a2a;
+}
+
 [data-theme="dark"] .cancel-fab-button {
   background: #2a2a2a;
   color: #e8e8e8;
