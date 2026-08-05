@@ -272,10 +272,27 @@
   min-width: 140px;
 }
 
-.events-consumption-category-label {
-  flex-basis: 100%;
+.events-consumption-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.events-consumption-group + .events-consumption-group {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.events-consumption-drink-name {
+  margin: 0;
   font-weight: 600;
   color: #2F5D50;
+}
+
+.events-consumption-unit-subtitle {
+  flex-basis: 100%;
+  color: #888;
 }
 
 .events-form-field {
