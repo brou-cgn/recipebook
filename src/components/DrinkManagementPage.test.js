@@ -377,4 +377,85 @@ describe('DrinkManagementPage', () => {
       );
     });
   });
+
+  describe('swipe-delete', () => {
+    const createTouchEvent = (type, clientX, clientY) => ({
+      touches: [{ clientX, clientY }],
+      cancelable: false,
+      preventDefault: jest.fn(),
+    });
+
+    test('swipe-delete button appears after swiping a custom drink left', async () => {
+      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
+        return jest.fn();
+      });
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      const drinkContent = screen.getByText('Craft-Bier').closest('.drink-swipe-content');
+      expect(drinkContent).toBeInTheDocument();
+
+      fireEvent.touchStart(drinkContent, createTouchEvent('touchstart', 200, 100));
+      fireEvent.touchMove(drinkContent, createTouchEvent('touchmove', 130, 100));
+      fireEvent.touchEnd(drinkContent, {});
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Craft-Bier löschen' })).toBeInTheDocument();
+      });
+    });
+
+    test('clicking swipe-delete button calls deleteCustomDrink', async () => {
+      mockDeleteCustomDrink.mockResolvedValue(undefined);
+      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
+        return jest.fn();
+      });
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      const drinkContent = screen.getByText('Craft-Bier').closest('.drink-swipe-content');
+      fireEvent.touchStart(drinkContent, createTouchEvent('touchstart', 200, 100));
+      fireEvent.touchMove(drinkContent, createTouchEvent('touchmove', 130, 100));
+      fireEvent.touchEnd(drinkContent, {});
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Craft-Bier löschen' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
+
+      await waitFor(() => {
+        expect(mockDeleteCustomDrink).toHaveBeenCalledWith(currentUser.id, 'd1');
+      });
+    });
+
+    test('delete banner appears after deleting a drink', async () => {
+      mockDeleteCustomDrink.mockResolvedValue(undefined);
+      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
+        return jest.fn();
+      });
+
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      const drinkContent = screen.getByText('Craft-Bier').closest('.drink-swipe-content');
+      fireEvent.touchStart(drinkContent, createTouchEvent('touchstart', 200, 100));
+      fireEvent.touchMove(drinkContent, createTouchEvent('touchmove', 130, 100));
+      fireEvent.touchEnd(drinkContent, {});
+
+      await waitFor(() => screen.getByRole('button', { name: 'Craft-Bier löschen' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Craft-Bier löschen' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('status')).toHaveTextContent('"Craft-Bier" gelöscht.');
+      });
+    });
+
+    test('predefined drinks do not show swipe-delete button', () => {
+      render(<DrinkManagementPage currentUser={currentUser} />);
+
+      expect(screen.queryByRole('button', { name: /Mineralwasser löschen/i })).not.toBeInTheDocument();
+    });
+  });
 });
