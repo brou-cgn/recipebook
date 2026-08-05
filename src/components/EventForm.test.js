@@ -191,7 +191,7 @@ describe('EventForm', () => {
     expect(onManageDrinks).toHaveBeenCalledTimes(1);
   });
 
-  test('auto-selects custom drinks on load', async () => {
+  test('auto-selects only Mineralwasser on load for new events', async () => {
     const onSaved = jest.fn();
     render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
@@ -200,8 +200,8 @@ describe('EventForm', () => {
 
     await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
     const [event] = mockCalculateEventDrinks.mock.calls[0];
-    expect(event.customDrinkIds).toEqual(['custom-wasser', 'custom-bier']);
-    expect(event.categories).toEqual(['wasser', 'bier_alkoholfrei']);
+    expect(event.customDrinkIds).toEqual(['predefined_mineralwasser']);
+    expect(event.categories).toEqual(['wasser']);
     expect(event.drinkDistributionFactors).toEqual({});
   });
 
