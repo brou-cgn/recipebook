@@ -90,12 +90,10 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
     const unsubDrinks = subscribeToCustomDrinks(currentUser.id, (drinks) => {
       setCustomDrinks(drinks);
-      // Auto-select predefined drinks and all custom drinks for new events
+      // Auto-select only Mineralwasser for new events
       setCustomDrinkIds((prev) => {
         if (!isEditing && prev.length === 0) {
-          const predefinedIds = PREDEFINED_DRINKS.map((d) => d.id);
-          const customIds = drinks.map((d) => d.id);
-          return [...predefinedIds, ...customIds];
+          return ['predefined_mineralwasser'];
         }
         return prev;
       });
