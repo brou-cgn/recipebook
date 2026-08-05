@@ -325,7 +325,7 @@ describe('EventDrinkSelectionPage', () => {
     },
   ];
 
-  test('shows checkboxes for multiple einheiten when drink has more than one einheit', () => {
+  test('shows chips for multiple einheiten when drink has more than one einheit', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={drinksWithMultipleEinheiten}
@@ -335,12 +335,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toBeInTheDocument();
   });
 
-  test('first einheit is checked by default', () => {
+  test('first einheit chip is selected by default', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={drinksWithMultipleEinheiten}
@@ -350,12 +350,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test('can select multiple einheiten and saves selected indices', () => {
+  test('can select multiple einheiten via chips and saves selected indices', () => {
     const onSave = jest.fn();
     render(
       <EventDrinkSelectionPage
@@ -366,7 +366,7 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' }));
+    fireEvent.click(screen.getByRole('button', { name: '500 ml (Flasche)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith(
@@ -387,12 +387,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 500 ml (Flasche)' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 10,0 l (Fässchen)' })).toBeChecked();
+    expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('cannot deselect the last remaining einheit', () => {
+  test('cannot deselect the last remaining einheit chip', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={drinksWithMultipleEinheiten}
@@ -402,9 +402,9 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' }));
+    fireEvent.click(screen.getByRole('button', { name: '330 ml (Dose)' }));
 
-    expect(screen.getByRole('checkbox', { name: 'Craft-Bier 330 ml (Dose)' })).toBeChecked();
+    expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('shows plain text for drinks with only one einheit', () => {
