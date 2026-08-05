@@ -129,17 +129,17 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    const wasserRow = screen.getByText('Wasser (eigen)').closest('.events-drink-row');
-    fireEvent.touchStart(wasserRow, { touches: [{ clientX: 200, clientY: 100 }] });
-    fireEvent.touchMove(wasserRow, { touches: [{ clientX: 80, clientY: 100 }] });
-    fireEvent.touchEnd(wasserRow);
+    const wasserRowContent = screen.getByText('Wasser (eigen)').closest('.events-drink-row-content');
+    fireEvent.touchStart(wasserRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(wasserRowContent);
     fireEvent.click(screen.getByLabelText('Wasser (eigen) entfernen'));
 
     expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
   });
 
-  test('deletes drink when delete button receives touchstart before click (regression: Faktor activates instead)', () => {
+  test('deletes drink when delete button receives touchstart before click (regression: touchend hid the button before click landed)', () => {
     render(
       <EventDrinkSelectionPage
         customDrinks={customDrinks}
@@ -151,20 +151,45 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    const wasserRow = screen.getByText('Wasser (eigen)').closest('.events-drink-row');
+    const wasserRowContent = screen.getByText('Wasser (eigen)').closest('.events-drink-row-content');
     // First: swipe left to reveal delete button
-    fireEvent.touchStart(wasserRow, { touches: [{ clientX: 200, clientY: 100 }] });
-    fireEvent.touchMove(wasserRow, { touches: [{ clientX: 80, clientY: 100 }] });
-    fireEvent.touchEnd(wasserRow);
+    fireEvent.touchStart(wasserRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(wasserRowContent);
 
     const deleteButton = screen.getByLabelText('Wasser (eigen) entfernen');
 
-    // Simulate touch tap on the delete button: touchstart fires on the row first, then click on button
+    // Simulate a real tap on the delete button: touchstart, touchend, then click all target the
+    // button itself. Since touch handlers only live on the content element (not the row or the
+    // delete button), this sequence must not hide the button before the click can register.
     fireEvent.touchStart(deleteButton, { touches: [{ clientX: 10, clientY: 10 }] });
+    fireEvent.touchEnd(deleteButton);
     fireEvent.click(deleteButton);
 
     expect(screen.queryByText('Wasser (eigen)', { selector: '.events-drink-row-name' })).not.toBeInTheDocument();
     expect(screen.getByText('1 Getränk ausgewählt.')).toBeInTheDocument();
+  });
+
+  test('swipe-delete button uses the configured swipeDelete icon (same as RecipeForm ingredient delete)', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        guestPreferenceMultipliers={{}}
+        selectedGuestIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+        buttonIcons={{ swipeDelete: '❌' }}
+        isDarkMode={false}
+      />,
+    );
+
+    const wasserRowContent = screen.getByText('Wasser (eigen)').closest('.events-drink-row-content');
+    fireEvent.touchStart(wasserRowContent, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(wasserRowContent, { touches: [{ clientX: 80, clientY: 100 }] });
+    fireEvent.touchEnd(wasserRowContent);
+
+    expect(screen.getByLabelText('Wasser (eigen) entfernen')).toHaveTextContent('❌');
   });
 
   test('adds a drink via the dropdown', () => {
