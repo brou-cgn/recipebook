@@ -335,9 +335,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
+    // Only the selected chip (first by default) is visible; unselected ones are accessible via typeahead
     expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '500 ml (Flasche)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '10,0 l (Fässchen)' })).not.toBeInTheDocument();
+    // Typeahead input is visible for unselected einheiten
+    expect(screen.getByRole('textbox', { name: 'Craft-Bier Einheit suchen' })).toBeInTheDocument();
   });
 
   test('first einheit chip is selected by default', () => {
@@ -350,12 +353,13 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
+    // Only selected chips are rendered; first is selected by default
     expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: '500 ml (Flasche)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '10,0 l (Fässchen)' })).not.toBeInTheDocument();
   });
 
-  test('can select multiple einheiten via chips and saves selected indices', () => {
+  test('can select multiple einheiten via typeahead and saves selected indices', () => {
     const onSave = jest.fn();
     render(
       <EventDrinkSelectionPage
@@ -366,7 +370,10 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '500 ml (Flasche)' }));
+    // Open typeahead and select '500 ml (Flasche)' via dropdown
+    const typeaheadInput = screen.getByRole('textbox', { name: 'Craft-Bier Einheit suchen' });
+    fireEvent.focus(typeaheadInput);
+    fireEvent.mouseDown(screen.getByRole('button', { name: '500 ml (Flasche)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     expect(onSave).toHaveBeenCalledWith(
@@ -387,9 +394,12 @@ describe('EventDrinkSelectionPage', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: '330 ml (Dose)' })).toHaveAttribute('aria-pressed', 'false');
+    // Only selected chips (indices 1 and 2) are shown
+    expect(screen.queryByRole('button', { name: '330 ml (Dose)' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '500 ml (Flasche)' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '10,0 l (Fässchen)' })).toHaveAttribute('aria-pressed', 'true');
+    // Typeahead shows for unselected '330 ml (Dose)'
+    expect(screen.getByRole('textbox', { name: 'Craft-Bier Einheit suchen' })).toBeInTheDocument();
   });
 
   test('cannot deselect the last remaining einheit chip', () => {

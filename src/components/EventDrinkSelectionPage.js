@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './EventsPage.css';
 import UnitChip from './UnitChip';
 
@@ -35,6 +35,76 @@ const buildInitialSelectedEinheiten = (customDrinks, initialCustomDrinkIds, init
   }
   return result;
 };
+
+function EinheitenTypeahead({ einheiten, selectedIndices, onToggle, drinkName }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const unselectedEinheiten = einheiten
+    .map((e, idx) => ({ einheit: e, idx }))
+    .filter(({ idx }) => !selectedIndices.has(idx));
+
+  const filtered = query.trim()
+    ? unselectedEinheiten.filter(({ einheit }) =>
+        getEinheitLabel(einheit).toLowerCase().includes(query.toLowerCase()),
+      )
+    : unselectedEinheiten;
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [open]);
+
+  if (unselectedEinheiten.length === 0) return null;
+
+  return (
+    <div className="events-einheiten-typeahead" ref={containerRef}>
+      <input
+        type="text"
+        className="events-einheiten-typeahead-input"
+        placeholder="Einheit hinzufügen …"
+        value={query}
+        aria-label={`${drinkName} Einheit suchen`}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+      />
+      {open && filtered.length > 0 && (
+        <ul className="events-einheiten-typeahead-dropdown" role="listbox">
+          {filtered.map(({ einheit, idx }) => (
+            <li key={idx} role="option" aria-selected="false">
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onToggle(idx);
+                  setQuery('');
+                  setOpen(false);
+                }}
+              >
+                {getEinheitLabel(einheit)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
@@ -152,14 +222,23 @@ function DrinkRow({
           <div className="events-drink-row-einheiten">
             {einheiten.length > 1 ? (
               <div className="events-unit-chip-row">
-                {einheiten.map((einheit, idx) => (
-                  <UnitChip
-                    key={idx}
-                    label={getEinheitLabel(einheit)}
-                    selected={selectedIndices.has(idx)}
-                    onToggle={() => onToggleEinheit(idx)}
-                  />
-                ))}
+                {einheiten
+                  .map((einheit, idx) => ({ einheit, idx }))
+                  .filter(({ idx }) => selectedIndices.has(idx))
+                  .map(({ einheit, idx }) => (
+                    <UnitChip
+                      key={idx}
+                      label={getEinheitLabel(einheit)}
+                      selected={true}
+                      onToggle={() => onToggleEinheit(idx)}
+                    />
+                  ))}
+                <EinheitenTypeahead
+                  einheiten={einheiten}
+                  selectedIndices={selectedIndices}
+                  onToggle={onToggleEinheit}
+                  drinkName={drink.name}
+                />
               </div>
             ) : (
               <span>{einheiten.length === 1 ? getEinheitLabel(einheiten[0]) : '–'}</span>
