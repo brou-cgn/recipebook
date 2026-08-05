@@ -3844,7 +3844,8 @@
 
 [data-theme="dark"] .events-drink-row {
   background: #1e1e1e;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  border-color: #3d3d3d;
+  box-shadow: none;
 }
 
 [data-theme="dark"] .events-drink-row-content {
@@ -3853,6 +3854,11 @@
 
 [data-theme="dark"] .events-drink-row-name {
   color: #7fb8a3;
+}
+
+[data-theme="dark"] .events-drink-row-empty-label,
+[data-theme="dark"] .events-drink-row-single-unit {
+  color: #999;
 }
 
 [data-theme="dark"] .events-unit-chip {
@@ -3867,8 +3873,53 @@
   color: #fff;
 }
 
+[data-theme="dark"] .events-einheiten-typeahead-input {
+  background: #2a2a2a;
+  color: #ccc;
+  border-color: #555;
+}
+
+[data-theme="dark"] .events-einheiten-typeahead-input::placeholder {
+  color: #777;
+}
+
+[data-theme="dark"] .events-einheiten-typeahead-dropdown {
+  background: #1e1e1e;
+  border-color: #3d3d3d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .events-einheiten-typeahead-dropdown button {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .events-einheiten-typeahead-dropdown button:hover {
+  background: #2a2a2a;
+  color: #7fb8a3;
+}
+
 [data-theme="dark"] .events-drink-row-factor input[type="number"] {
   background: #2a2a2a;
   color: #e8e8e8;
   border-color: #555;
+}
+
+[data-theme="dark"] .events-drink-row-factor input[type="number"]:focus {
+  border-color: #4f9a80;
+}
+
+[data-theme="dark"] .events-drink-add-btn {
+  background: transparent;
+  color: #ccc;
+  border-color: #555;
+}
+
+[data-theme="dark"] .events-drink-add-btn:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #666;
+}
+
+[data-theme="dark"] .events-selected-count-badge {
+  background: #1f2b27;
+  color: #9fc4b7;
 }

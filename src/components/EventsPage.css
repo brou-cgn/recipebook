@@ -438,6 +438,43 @@
   font-size: 14px;
 }
 
+/* Neutral outlined "Hinzufügen" button - lower visual weight than the
+   filled primary Speichern button/FAB. */
+.events-drink-add-btn {
+  background: transparent;
+  color: #555;
+  border: 1px solid #ccc;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.events-drink-add-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.events-drink-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.events-selected-count-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #eef3f1;
+  color: #4a6b60;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .events-result-card {
   background: white;
   border-radius: 10px;
@@ -855,15 +892,16 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .events-drink-row {
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 10px;
   background: white;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e8e8e8;
+  box-shadow: none;
 }
 
 .events-drink-row-swipe-background {
@@ -902,41 +940,55 @@
 .events-drink-row-content {
   position: relative;
   z-index: 1;
-  padding: 10px 12px;
+  padding: 16px;
 }
 
 .events-drink-row-name {
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: #2F5D50;
 }
 
+/* Grid (not flex) so the Mengen-input column has a fixed width and stays in
+   the same horizontal position regardless of how many unit pills wrap onto
+   additional lines in the left column. */
 .events-drink-row-details {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
 }
 
 .events-drink-row-einheiten {
-  flex: 1;
+  min-width: 0;
+}
+
+.events-drink-row-empty-label,
+.events-drink-row-single-unit {
+  color: #888;
+  font-size: 0.9rem;
+  font-weight: 400;
 }
 
 .events-unit-chip-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .events-unit-chip {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.85rem;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 400;
   cursor: pointer;
-  border: 1.5px solid #aaa;
+  border: 1px solid #ccc;
   background: transparent;
-  color: #333;
+  color: #666;
   line-height: 1.4;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -948,15 +1000,88 @@
 }
 
 .events-unit-chip-check {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+}
+
+/* Unit typeahead ("Einheit hinzufügen …") - constrained so it wraps inside
+   the chip row instead of pushing the card wider than its container. */
+.events-einheiten-typeahead {
+  position: relative;
+  flex: 1 1 140px;
+  min-width: 110px;
+  max-width: 100%;
+}
+
+.events-einheiten-typeahead-input {
+  width: 100%;
+  max-width: 200px;
+  box-sizing: border-box;
+  padding: 3px 10px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #666;
+}
+
+.events-einheiten-typeahead-input::placeholder {
+  color: #999;
+}
+
+.events-einheiten-typeahead-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  min-width: 160px;
+  max-width: 240px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.events-einheiten-typeahead-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  color: #333;
+  cursor: pointer;
+}
+
+.events-einheiten-typeahead-dropdown button:hover {
+  background: #f0f7f4;
+  color: #2F5D50;
 }
 
 .events-drink-row-factor {
-  flex-shrink: 0;
+  justify-self: end;
 }
 
 .events-drink-row-factor input[type="number"] {
-  width: 80px;
+  width: 72px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #333;
+  text-align: right;
+}
+
+.events-drink-row-factor input[type="number"]:focus {
+  outline: none;
+  border-color: #2F5D50;
 }
 
 /* ── Swipe-Delete für Getränke-Zeilen ───────────────────────────────────── */
