@@ -626,3 +626,49 @@ test('calculate leitet Kategorien mit eigenem Budget aus custom drinks ab, wenn 
   assert.equal(bitburger.literOhnePuffer, bierAlkoholfrei.literOhnePuffer);
   assert.equal(bitburger.literMitPuffer, bierAlkoholfrei.literMitPuffer);
 });
+
+test('loadCustomDrinks loest "predefined_mineralwasser" auf, ohne Firestore abzufragen', async () => {
+  const db = {
+    collection() {
+      throw new Error('Firestore sollte fuer vordefinierte Getraenke nicht angefragt werden.');
+    },
+  };
+
+  const result = await _internal.loadCustomDrinks(db, 'user-1', ['predefined_mineralwasser']);
+
+  assert.ok(result.predefined_mineralwasser, 'predefined_mineralwasser wurde aufgeloest');
+  assert.equal(result.predefined_mineralwasser.kategorie, 'wasser');
+  assert.equal(result.predefined_mineralwasser.predefined, true);
+});
+
+test('calculate erzeugt fuer "predefined_mineralwasser" weder Warnung noch eigene Zeile', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 6,
+        guests: {adults: 10, children: 0},
+        season: 'sommer',
+        eventType: 'familienfeier',
+        categories: ['wasser'],
+        customDrinkIds: ['predefined_mineralwasser'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        predefined_mineralwasser: {
+          name: 'Mineralwasser',
+          kategorie: 'wasser',
+          einheiten: [],
+          predefined: true,
+        },
+      },
+  );
+
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const predefinedRow = result.ergebnis.find((item) => item.kategorie === 'predefined_mineralwasser');
+
+  assert.equal(result.warnungen.length, 0, 'keine Warnung fuer bekanntes vordefiniertes Getraenk');
+  assert.ok(wasser, 'wasser-Kategorie wird normal berechnet');
+  assert.ok(wasser.literOhnePuffer > 0);
+  assert.equal(predefinedRow, undefined, 'keine eigene Zeile fuer das vordefinierte Getraenk ohne Gebinde');
+});

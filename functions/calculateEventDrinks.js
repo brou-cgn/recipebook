@@ -20,7 +20,22 @@ async function loadRatesDb(db, uid) {
 }
 
 /**
+ * Vordefinierte Getraenke, die allen Nutzern ohne Firestore-Dokument zur
+ * Verfuegung stehen. Spiegelt PREDEFINED_DRINKS aus drinkCategories.js (src).
+ */
+const PREDEFINED_DRINKS = {
+  predefined_mineralwasser: {
+    name: 'Mineralwasser',
+    kategorie: 'wasser',
+    einheiten: [],
+    predefined: true,
+  },
+};
+
+/**
  * Laedt die benutzerdefinierten Getraenke eines Nutzers aus Firestore.
+ * Vordefinierte Getraenke-IDs (siehe PREDEFINED_DRINKS) werden direkt
+ * aufgeloest, ohne Firestore abzufragen.
  * @param {object} db Firestore-Instanz.
  * @param {string} uid Firebase-Nutzer-ID.
  * @param {string[]} drinkIds IDs der gewuenschten Getraenke.
@@ -31,6 +46,10 @@ async function loadCustomDrinks(db, uid, drinkIds) {
   const result = {};
   await Promise.all(
       drinkIds.map(async (id) => {
+        if (PREDEFINED_DRINKS[id]) {
+          result[id] = PREDEFINED_DRINKS[id];
+          return;
+        }
         const snap = await db.collection('users').doc(uid).collection('customDrinks').doc(id).get();
         if (snap.exists) {
           result[id] = snap.data();
@@ -443,6 +462,13 @@ function calculate(event, ratesDb, customDrinksMap) {
       warnungen.push(
           `Benutzerdefiniertes Getraenk '${drinkId}' nicht gefunden -- wird uebersprungen.`,
       );
+      continue;
+    }
+
+    // Vordefinierte Getraenke ohne eigene Gebinde (z.B. Mineralwasser) liefern
+    // keine Gebinde-/Ratendaten -- ihr Bedarf steckt bereits in der normalen
+    // Kategorie-Zeile (siehe categoryLitersMap oben), daher keine eigene Zeile.
+    if (entry.predefined && (!Array.isArray(entry.einheiten) || entry.einheiten.length === 0)) {
       continue;
     }
 
