@@ -214,6 +214,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         currentUser={currentUser}
         selectedGuestIds={selectedGuestIds}
         driverGuestIds={driverGuestIds}
+        buttonIcons={buttonIcons}
+        isDarkMode={isDarkMode}
         onSave={(newSelectedIds, newDriverIds) => {
           setSelectedGuestIds(newSelectedIds);
           setDriverGuestIds(newDriverIds);

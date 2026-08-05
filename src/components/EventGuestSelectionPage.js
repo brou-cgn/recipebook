@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
 import { subscribeToGuestProfiles } from '../utils/eventsFirestore';
 import { getGuestDisplayName } from '../utils/guestPreferences';
+import { DEFAULT_BUTTON_ICONS, getEffectiveIcon } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 function EventGuestSelectionPage({
   currentUser,
@@ -9,14 +11,19 @@ function EventGuestSelectionPage({
   driverGuestIds: initialDriverGuestIds,
   onSave,
   onBack,
+  buttonIcons,
+  isDarkMode,
 }) {
   const [guests, setGuests] = useState([]);
   const [selectedGuestIds, setSelectedGuestIds] = useState(initialSelectedGuestIds ?? []);
   const [driverGuestIds, setDriverGuestIds] = useState(initialDriverGuestIds ?? []);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
+  const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
 
   useEffect(() => {
     if (!currentUser?.id) return undefined;
@@ -171,6 +178,7 @@ function EventGuestSelectionPage({
                         <td>
                           <input
                             type="checkbox"
+                            className="events-driver-checkbox"
                             checked={driverGuestIds.includes(guest.id)}
                             onChange={() => toggleDriverGuest(guest.id)}
                             aria-label={`${fullName} als Fahrer markieren`}
@@ -184,22 +192,73 @@ function EventGuestSelectionPage({
             </div>
           )}
 
-          <p className="events-info-text">
-            {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
-          </p>
-          <p className="events-info-text">
-            {driverGuestIds.length} Fahrer markiert.
-          </p>
+          <div className="events-guest-summary-badges">
+            <span className="events-summary-badge">
+              {selectedGuestIds.length} {selectedGuestIds.length === 1 ? 'Gast' : 'Gäste'} ausgewählt.
+            </span>
+            <span className="events-summary-badge">
+              {driverGuestIds.length} Fahrer markiert.
+            </span>
+          </div>
         </div>
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn" onClick={onBack}>
+          <button
+            type="button"
+            className="events-secondary-btn events-save-desktop-only"
+            onClick={onBack}
+          >
             Abbrechen
           </button>
-          <button type="button" className="events-primary-btn" onClick={handleSave}>
+          <button
+            type="button"
+            className="events-primary-btn events-form-actions-save"
+            onClick={handleSave}
+          >
             Speichern
           </button>
         </div>
       </div>
+
+      {/* FAB Save button - mobile only */}
+      <button
+        type="button"
+        className={`events-save-fab-button${fabPressed ? ' pressed' : ''}`}
+        onClick={handleSave}
+        onMouseDown={() => setFabPressed(true)}
+        onMouseUp={() => setFabPressed(false)}
+        onMouseLeave={() => setFabPressed(false)}
+        onTouchStart={() => setFabPressed(true)}
+        onTouchEnd={() => setFabPressed(false)}
+        aria-label="Gästeliste speichern"
+        title="Speichern"
+      >
+        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)
+        )}
+      </button>
+
+      {/* Cancel FAB button - positioned at bottom-left, mobile only */}
+      <button
+        type="button"
+        className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
+        onClick={onBack}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        title="Abbrechen"
+        aria-label="Gästeauswahl abbrechen"
+      >
+        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
+        )}
+      </button>
     </div>
   );
 }
