@@ -6,6 +6,11 @@ import { DRINK_CATEGORIES, getDrinkCategoryLabel, PREDEFINED_DRINKS } from '../u
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 
+const SWIPE_DELETE_THRESHOLD = 56;
+const SWIPE_DELETE_MAX_OFFSET = 96;
+const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
+const DELETE_BANNER_TIMEOUT_MS = 5000;
+
 const UNIT_SIZES = [
   { label: '200 ml', value: 0.2 },
   { label: '330 ml', value: 0.33 },
@@ -39,6 +44,112 @@ const emptyForm = () => ({
   einheiten: [emptyEinheit()],
 });
 
+function DrinkRow({ drink, onEdit, onDelete }) {
+  const touchStartXRef = React.useRef(null);
+  const touchStartYRef = React.useRef(null);
+  const swipeDirectionLockedRef = React.useRef(null);
+  const isSwipingRef = React.useRef(false);
+  const swipeOffsetRef = React.useRef(0);
+  const [swipeOffset, setSwipeOffset] = React.useState(0);
+  const [isDeleteVisible, setIsDeleteVisible] = React.useState(false);
+
+  const effectiveOffset = isDeleteVisible ? -SWIPE_DELETE_MAX_OFFSET : swipeOffset;
+
+  const resetSwipe = ({ keepDelete = false } = {}) => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+    swipeOffsetRef.current = 0;
+    setSwipeOffset(0);
+    if (!keepDelete) setIsDeleteVisible(false);
+  };
+
+  const handleTouchStart = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || drink.predefined) return;
+    if (isDeleteVisible) setIsDeleteVisible(false);
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    swipeDirectionLockedRef.current = null;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e) => {
+    const touch = e.touches?.[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null || drink.predefined) return;
+
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (!swipeDirectionLockedRef.current && (absX > SWIPE_DIRECTION_LOCK_THRESHOLD || absY > SWIPE_DIRECTION_LOCK_THRESHOLD)) {
+      swipeDirectionLockedRef.current = absX > absY ? 'horizontal' : 'vertical';
+    }
+
+    if (swipeDirectionLockedRef.current === 'horizontal' && deltaX < 0) {
+      isSwipingRef.current = true;
+      const clamped = Math.max(deltaX, -SWIPE_DELETE_MAX_OFFSET);
+      swipeOffsetRef.current = clamped;
+      setSwipeOffset(clamped);
+      if (e.cancelable) e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current && Math.abs(swipeOffsetRef.current) >= SWIPE_DELETE_THRESHOLD) {
+      setIsDeleteVisible(true);
+      resetSwipe({ keepDelete: true });
+      return;
+    }
+    resetSwipe();
+  };
+
+  return (
+    <div
+      className={`drink-list-item events-card${effectiveOffset < 0 ? ' swipe-delete-active' : ''}`}
+      style={{ padding: 0 }}
+    >
+      {!drink.predefined && (
+        <div className="drink-swipe-delete-background" aria-hidden={!isDeleteVisible}>
+          {isDeleteVisible && (
+            <button
+              type="button"
+              className="drink-swipe-delete-action"
+              onClick={() => { onDelete(drink); resetSwipe(); }}
+              aria-label={`${drink.name} löschen`}
+            >
+              🗑
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className="drink-swipe-content events-card-main"
+        style={{ transform: `translateX(${effectiveOffset}px)`, padding: '16px 20px', width: '100%' }}
+        onClick={effectiveOffset < 0 ? undefined : () => onEdit(drink)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={resetSwipe}
+      >
+        <h3>{drink.name}</h3>
+        <p className="events-card-meta">
+          {[
+            drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
+            Array.isArray(drink.einheiten) && drink.einheiten.length > 0
+              ? drink.einheiten
+                  .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
+                  .join(', ')
+              : null,
+          ].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DrinkManagementPage({ onBack, currentUser }) {
   const [drinks, setDrinks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +164,9 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
   const [cancelPressed, setCancelPressed] = useState(false);
+  const [deleteBanners, setDeleteBanners] = useState([]);
+  const deleteBannerCounterRef = useRef(0);
+  const deleteBannerTimeoutsRef = useRef(new Map());
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -74,6 +188,14 @@ function DrinkManagementPage({ onBack, currentUser }) {
     });
     return unsubscribe;
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    const timeouts = deleteBannerTimeoutsRef.current;
+    return () => {
+      timeouts.forEach((id) => clearTimeout(id));
+      timeouts.clear();
+    };
+  }, []);
 
   const openNew = () => {
     setEditId(null);
@@ -163,9 +285,16 @@ function DrinkManagementPage({ onBack, currentUser }) {
   };
 
   const handleDelete = async (drink) => {
-    if (!window.confirm(`Möchtest du "${drink.name}" wirklich löschen?`)) return;
     try {
       await deleteCustomDrink(currentUser.id, drink.id);
+      const id = deleteBannerCounterRef.current;
+      deleteBannerCounterRef.current = (id + 1) % 100000;
+      setDeleteBanners((prev) => [...prev, { id, message: `"${drink.name}" gelöscht.` }]);
+      const timeoutId = setTimeout(() => {
+        setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
+        deleteBannerTimeoutsRef.current.delete(id);
+      }, DELETE_BANNER_TIMEOUT_MS);
+      deleteBannerTimeoutsRef.current.set(id, timeoutId);
     } catch (err) {
       console.error('Error deleting custom drink:', err);
     }
@@ -380,27 +509,23 @@ function DrinkManagementPage({ onBack, currentUser }) {
       ) : (
         <div className="events-list">
           {[...PREDEFINED_DRINKS, ...drinks].map((drink) => (
-            <div key={drink.id} className="events-card" onClick={() => openEdit(drink)}>
-              <div className="events-card-main">
-                <h3>{drink.name}</h3>
-                <p className="events-card-meta">
-                  {[
-                    drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
-                    Array.isArray(drink.einheiten) && drink.einheiten.length > 0
-                      ? drink.einheiten
-                          .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
-                          .join(', ')
-                      : null,
-                  ].filter(Boolean).join(' · ')}
-                </p>
-              </div>
-            </div>
+            <DrinkRow
+              key={drink.id}
+              drink={drink}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+            />
           ))}
           {drinks.length === 0 && (
             <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
           )}
         </div>
       )}
+      {deleteBanners.map((banner) => (
+        <div key={banner.id} className="drink-delete-banner" role="status">
+          <span>{banner.message}</span>
+        </div>
+      ))}
       <OverviewAddFab onClick={openNew} title="Getränk anlegen" ariaLabel="Getränk anlegen" />
     </div>
   );
