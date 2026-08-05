@@ -44,7 +44,7 @@ const emptyForm = () => ({
   einheiten: [emptyEinheit()],
 });
 
-function DrinkRow({ drink, onEdit, onDelete }) {
+function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
   const touchStartXRef = React.useRef(null);
   const touchStartYRef = React.useRef(null);
   const swipeDirectionLockedRef = React.useRef(null);
@@ -120,7 +120,11 @@ function DrinkRow({ drink, onEdit, onDelete }) {
               onClick={() => { onDelete(drink); resetSwipe(); }}
               aria-label={`${drink.name} löschen`}
             >
-              🗑
+              {isBase64Image(swipeDeleteIcon) ? (
+                <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+              ) : (
+                <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+              )}
             </button>
           )}
         </div>
@@ -178,6 +182,12 @@ function DrinkManagementPage({ onBack, currentUser }) {
     import('../utils/customLists').then(({ getButtonIcons }) => {
       getButtonIcons().then((icons) => setButtonIcons(icons)).catch(() => {});
     });
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsDarkMode(getDarkModePreference());
+    window.addEventListener('darkModeChange', handler);
+    return () => window.removeEventListener('darkModeChange', handler);
   }, []);
 
   useEffect(() => {
@@ -488,6 +498,8 @@ function DrinkManagementPage({ onBack, currentUser }) {
     );
   }
 
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons, 'swipeDelete', isDarkMode) || '🗑';
+
   return (
     <div className="events-page-container">
       <div className="events-page-header">
@@ -514,6 +526,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
               drink={drink}
               onEdit={openEdit}
               onDelete={handleDelete}
+              swipeDeleteIcon={swipeDeleteIcon}
             />
           ))}
           {drinks.length === 0 && (
