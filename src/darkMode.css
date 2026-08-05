@@ -3841,3 +3841,34 @@
   background: #2a2a2a;
   color: #e8e8e8;
 }
+
+[data-theme="dark"] .events-drink-row {
+  background: #1e1e1e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .events-drink-row-content {
+  background: #1e1e1e;
+}
+
+[data-theme="dark"] .events-drink-row-name {
+  color: #7fb8a3;
+}
+
+[data-theme="dark"] .events-unit-chip {
+  border-color: #666;
+  color: #ccc;
+  background: transparent;
+}
+
+[data-theme="dark"] .events-unit-chip--selected {
+  background: #2F5D50;
+  border-color: #2F5D50;
+  color: #fff;
+}
+
+[data-theme="dark"] .events-drink-row-factor input[type="number"] {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
