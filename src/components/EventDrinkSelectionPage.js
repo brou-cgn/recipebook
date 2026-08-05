@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './EventsPage.css';
 import UnitChip from './UnitChip';
+import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -123,6 +125,7 @@ function DrinkRow({
   onSwipeDeleteHidden,
   minFactor,
   maxFactor,
+  swipeDeleteIcon,
 }) {
   const touchStartXRef = useRef(null);
   const touchStartYRef = useRef(null);
@@ -146,12 +149,7 @@ function DrinkRow({
   const handleTouchStart = (e) => {
     const touch = e.touches?.[0];
     if (!touch) return;
-    if (isDeleteVisible) {
-      const target = e.target;
-      const isDeleteButton = target.closest('.events-drink-row-swipe-action');
-      if (isDeleteButton) return;
-      onSwipeDeleteHidden();
-    }
+    if (isDeleteVisible) onSwipeDeleteHidden();
     touchStartXRef.current = touch.clientX;
     touchStartYRef.current = touch.clientY;
     swipeDirectionLockedRef.current = null;
@@ -200,9 +198,6 @@ function DrinkRow({
   return (
     <div
       className={`events-drink-row${effectiveSwipeOffset < 0 ? ' swipe-delete-active' : ''}`}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       <div className="events-drink-row-swipe-background" aria-hidden={!isDeleteVisible}>
         {isDeleteVisible && (
@@ -212,11 +207,22 @@ function DrinkRow({
             onClick={handleSwipeDeleteClick}
             aria-label={`${drink.name} entfernen`}
           >
-            <span>🗑</span>
+            {isBase64Image(swipeDeleteIcon) ? (
+              <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
+            ) : (
+              <span className="swipe-delete-icon-text">{swipeDeleteIcon || '🗑'}</span>
+            )}
           </button>
         )}
       </div>
-      <div className="events-drink-row-content" style={swipeContentStyle}>
+      <div
+        className="events-drink-row-content"
+        style={swipeContentStyle}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={resetSwipe}
+      >
         <div className="events-drink-row-name">{drink.name}</div>
         <div className="events-drink-row-details">
           <div className="events-drink-row-einheiten">
@@ -268,7 +274,10 @@ function EventDrinkSelectionPage({
   drinkSelectedEinheiten: initialDrinkSelectedEinheiten,
   onSave,
   onBack,
+  buttonIcons,
+  isDarkMode,
 }) {
+  const swipeDeleteIcon = getEffectiveIcon(buttonIcons || DEFAULT_BUTTON_ICONS, 'swipeDelete', isDarkMode) || '🗑';
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
     initialDrinkDistributionFactors ?? {},
@@ -414,6 +423,7 @@ function EventDrinkSelectionPage({
                         onSwipeDeleteHidden={() => setSwipeDeleteVisibleId((prev) => prev === drink.id ? null : prev)}
                         minFactor={MIN_DISTRIBUTION_FACTOR}
                         maxFactor={MAX_DISTRIBUTION_FACTOR}
+                        swipeDeleteIcon={swipeDeleteIcon}
                       />
                     );
                   })}

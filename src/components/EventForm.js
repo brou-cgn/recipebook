@@ -237,6 +237,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}
+        buttonIcons={buttonIcons}
+        isDarkMode={isDarkMode}
         onSave={(newDrinkIds, newDrinkDistributionFactors, newDrinkSelectedEinheiten) => {
           setCustomDrinkIds(newDrinkIds);
           setDrinkDistributionFactors(newDrinkDistributionFactors || {});
