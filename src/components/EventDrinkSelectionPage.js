@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './EventsPage.css';
+import UnitChip from './UnitChip';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -150,17 +151,14 @@ function DrinkRow({
         <div className="events-drink-row-details">
           <div className="events-drink-row-einheiten">
             {einheiten.length > 1 ? (
-              <div className="events-einheit-checkboxes">
+              <div className="events-unit-chip-row">
                 {einheiten.map((einheit, idx) => (
-                  <label key={idx} className="events-einheit-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={selectedIndices.has(idx)}
-                      onChange={() => onToggleEinheit(idx)}
-                      aria-label={`${drink.name} ${getEinheitLabel(einheit)}`}
-                    />
-                    {getEinheitLabel(einheit)}
-                  </label>
+                  <UnitChip
+                    key={idx}
+                    label={getEinheitLabel(einheit)}
+                    selected={selectedIndices.has(idx)}
+                    onToggle={() => onToggleEinheit(idx)}
+                  />
                 ))}
               </div>
             ) : (

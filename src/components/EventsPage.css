@@ -904,6 +904,36 @@
   flex: 1;
 }
 
+.events-unit-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.events-unit-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: 1.5px solid #aaa;
+  background: transparent;
+  color: #333;
+  line-height: 1.4;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.events-unit-chip--selected {
+  background: #2F5D50;
+  border-color: #2F5D50;
+  color: #fff;
+}
+
+.events-unit-chip-check {
+  font-size: 0.8rem;
+}
+
 .events-drink-row-factor {
   flex-shrink: 0;
 }
