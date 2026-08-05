@@ -14,15 +14,18 @@ const normalizeDistributionFactor = (value) => {
   return parsed;
 };
 
-const getEinheitLabel = (einheit) => {
+const getEinheitSizeLabel = (einheit) => {
   if (!einheit) return '';
   const liters = Number(einheit.einheitsgroesse);
-  let sizeLabel;
   if (liters < 1) {
-    sizeLabel = `${Math.round(liters * 1000)} ml`;
-  } else {
-    sizeLabel = `${liters.toFixed(1).replace('.', ',')} l`;
+    return `${Math.round(liters * 1000)} ml`;
   }
+  return `${liters.toFixed(1).replace('.', ',')} l`;
+};
+
+const getEinheitLabel = (einheit) => {
+  if (!einheit) return '';
+  const sizeLabel = getEinheitSizeLabel(einheit);
   return einheit.gebindeinheit ? `${sizeLabel} (${einheit.gebindeinheit})` : sizeLabel;
 };
 
@@ -234,7 +237,8 @@ function DrinkRow({
                   .map(({ einheit, idx }) => (
                     <UnitChip
                       key={idx}
-                      label={getEinheitLabel(einheit)}
+                      label={getEinheitSizeLabel(einheit)}
+                      ariaLabel={getEinheitLabel(einheit)}
                       selected={true}
                       onToggle={() => onToggleEinheit(idx)}
                     />
@@ -246,8 +250,10 @@ function DrinkRow({
                   drinkName={drink.name}
                 />
               </div>
+            ) : einheiten.length === 1 ? (
+              <span className="events-drink-row-single-unit">{getEinheitLabel(einheiten[0])}</span>
             ) : (
-              <span>{einheiten.length === 1 ? getEinheitLabel(einheiten[0]) : '–'}</span>
+              <span className="events-drink-row-empty-label">Keine Einheit ausgewählt</span>
             )}
           </div>
           <div className="events-drink-row-factor">
@@ -277,7 +283,8 @@ function EventDrinkSelectionPage({
   buttonIcons,
   isDarkMode,
 }) {
-  const swipeDeleteIcon = getEffectiveIcon(buttonIcons || DEFAULT_BUTTON_ICONS, 'swipeDelete', isDarkMode) || '🗑';
+  const effectiveButtonIcons = buttonIcons || DEFAULT_BUTTON_ICONS;
+  const swipeDeleteIcon = getEffectiveIcon(effectiveButtonIcons, 'swipeDelete', isDarkMode) || '🗑';
   const [customDrinkIds, setCustomDrinkIds] = useState(initialCustomDrinkIds ?? []);
   const [drinkDistributionFactors, setDrinkDistributionFactors] = useState(
     initialDrinkDistributionFactors ?? {},
@@ -287,6 +294,8 @@ function EventDrinkSelectionPage({
   );
   const [drinkToAdd, setDrinkToAdd] = useState('');
   const [swipeDeleteVisibleId, setSwipeDeleteVisibleId] = useState(null);
+  const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
 
   const toggleCustomDrink = (id) => {
     setCustomDrinkIds((prev) => {
@@ -355,7 +364,7 @@ function EventDrinkSelectionPage({
   };
 
   return (
-    <div className="events-page-container">
+    <div className="events-page-container events-drink-selection-page">
       <div className="events-page-header">
         <h2>Getränke</h2>
         <button
@@ -387,7 +396,7 @@ function EventDrinkSelectionPage({
                 </select>
                 <button
                   type="button"
-                  className="events-secondary-btn"
+                  className="events-drink-add-btn"
                   onClick={() => {
                     if (drinkToAdd) {
                       toggleCustomDrink(drinkToAdd);
@@ -434,20 +443,61 @@ function EventDrinkSelectionPage({
             <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
           )}
 
-          <p className="events-info-text">
+          <span className="events-selected-count-badge">
             {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt.
-          </p>
+          </span>
         </div>
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn" onClick={onBack}>
+          <button type="button" className="events-secondary-btn events-save-desktop-only" onClick={onBack}>
             Abbrechen
           </button>
-          <button type="button" className="events-primary-btn" onClick={handleSave}>
+          <button type="button" className="events-primary-btn events-save-desktop-only" onClick={handleSave}>
             Speichern
           </button>
         </div>
       </div>
+
+      {/* FAB Save Button - mobile only, matches the "Rezept bearbeiten" FAB pattern */}
+      <button
+        type="button"
+        className={`events-save-fab-button${fabPressed ? ' pressed' : ''}`}
+        onClick={handleSave}
+        onMouseDown={() => setFabPressed(true)}
+        onMouseUp={() => setFabPressed(false)}
+        onMouseLeave={() => setFabPressed(false)}
+        onTouchStart={() => setFabPressed(true)}
+        onTouchEnd={() => setFabPressed(false)}
+        aria-label="Getränkeauswahl speichern"
+        title="Speichern"
+      >
+        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(effectiveButtonIcons, 'saveRecipe', isDarkMode)
+        )}
+      </button>
+
+      {/* Cancel FAB button - positioned at bottom-left, mobile only */}
+      <button
+        type="button"
+        className={`events-cancel-fab-button${cancelPressed ? ' pressed' : ''}`}
+        onClick={onBack}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        title="Abbrechen"
+        aria-label="Getränkeauswahl abbrechen"
+      >
+        {isBase64Image(getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(effectiveButtonIcons, 'cancelRecipe', isDarkMode)
+        )}
+      </button>
     </div>
   );
 }
