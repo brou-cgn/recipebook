@@ -31,8 +31,25 @@ function getRowUnitSubtitle(row) {
   return null;
 }
 
+function groupKategorienByDrink(kategorien) {
+  const groups = [];
+  const groupsByKey = new Map();
+  kategorien.forEach((row) => {
+    const key = row.drinkId || row.kategorie;
+    let group = groupsByKey.get(key);
+    if (!group) {
+      group = { key, drinkName: getRowDrinkName(row), rows: [] };
+      groupsByKey.set(key, group);
+      groups.push(group);
+    }
+    group.rows.push(row);
+  });
+  return groups;
+}
+
 function ConsumptionForm({ event, onDone, onCancel }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.isCustomDrink && row.gebindeGroesseLiter);
+  const drinkGroups = groupKategorienByDrink(kategorien);
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {
@@ -124,32 +141,34 @@ function ConsumptionForm({ event, onDone, onCancel }) {
         Wie viele Gebinde wurden für „{event.eventName}" eingekauft, und wie viele sind übrig?
       </p>
       <form className="events-form" onSubmit={handleSubmit}>
-        {kategorien.map((row) => (
-          <div className="events-form-row" key={row.kategorie}>
-            <div className="events-consumption-category-label">
-              <h3>{getRowDrinkName(row)}</h3>
-              {getRowUnitSubtitle(row) && (
-                <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
-              )}
-            </div>
-            <label className="events-form-field">
-              <span>Eingekauft</span>
-              <input
-                type="number"
-                min="0"
-                value={values[row.kategorie].eingekauft}
-                onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-              />
-            </label>
-            <label className="events-form-field">
-              <span>Übrig</span>
-              <input
-                type="number"
-                min="0"
-                value={values[row.kategorie].uebrig}
-                onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
-              />
-            </label>
+        {drinkGroups.map((group) => (
+          <div className="events-consumption-group" key={group.key}>
+            <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
+            {group.rows.map((row) => (
+              <div className="events-form-row" key={row.kategorie}>
+                {getRowUnitSubtitle(row) && (
+                  <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                )}
+                <label className="events-form-field">
+                  <span>Eingekauft</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={values[row.kategorie].eingekauft}
+                    onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
+                  />
+                </label>
+                <label className="events-form-field">
+                  <span>Übrig</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={values[row.kategorie].uebrig}
+                    onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                  />
+                </label>
+              </div>
+            ))}
           </div>
         ))}
 
