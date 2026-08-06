@@ -33,6 +33,7 @@ const CATEGORY_LABELS = {
   wein_rotwein: 'Rotwein',
   sekt: 'Sekt',
   spirituosen: 'Spirituosen',
+  longdrinks: 'Longdrinks',
   kaffee: 'Kaffee',
   tee: 'Tee',
 };

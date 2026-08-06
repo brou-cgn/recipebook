@@ -48,6 +48,10 @@ const DEFAULT_RATES = {
     erwachsene: 0.02, kinder: 0.0,
     gebindeLiter: 0.7, gebindeName: '0,7L-Flasche', modus: 'stunde', anteilTrinker: 0.25,
   },
+  longdrinks: {
+    erwachsene: 0.03, kinder: 0.0,
+    gebindeLiter: 1.0, gebindeName: '1L-Flasche (Mixer)', modus: 'stunde', anteilTrinker: 0.35,
+  },
   kaffee: {
     erwachsene: 0.30, kinder: 0.0,
     gebindeLiter: 0.0625, gebindeName: 'Tasse (125ml)', modus: 'pauschal',
@@ -65,57 +69,116 @@ const SEASON_FACTORS = {sommer: 1.2, uebergang: 1.0, winter: 0.85};
  * Basis-Gewicht bestimmt den proportionalen Anteil einer Kategorie am
  * Gesamtgetraenkebedarf. Saisonale und Tageszeit-Anpassungen folgen in
  * separaten Tickets.
+ *
+ * `parent` verweist auf den Key der uebergeordneten Kategorie (oder null bei
+ * Top-Level-Kategorien) und ist die Referenz-Quelle fuer alle Eltern/Kind-
+ * Beziehungen im Getraenke-Modell (siehe getWeightSubcategoryParents(),
+ * getParentTotal() sowie DRINK_CATEGORY_PARENTS in calculateEventDrinks.js).
+ *
+ * bier_alkoholfrei (85/15-Split von "bier") und longdrinks (40/60-Split von
+ * "spirituosen") sind beides ungeprueft geschaetzte Aufteilungen ohne
+ * Kalibrierungsgrundlage und sollten nachgeschaerft werden, sobald genug
+ * Erfahrungswerte aus echten Events vorliegen.
  */
 const DRINK_WEIGHTS = {
   bier: {
+    parent: null,
     basis: 0.221,
     winter: -0.016,
     sommer: 0.010,
     nachmittag: -0.040,
   },
   bier_alkoholfrei: {
+    parent: 'bier',
     basis: 0.039,
     winter: -0.002,
     sommer: 0.004,
     nachmittag: 0.005,
   },
   wein: {
+    parent: null,
     basis: 0.150,
     winter: 0.042,
     sommer: -0.053,
     nachmittag: -0.020,
   },
   softdrinks: {
+    parent: null,
     basis: 0.260,
     winter: -0.048,
     sommer: 0.056,
     nachmittag: 0.020,
   },
   spirituosen: {
-    basis: 0.030,
-    winter: 0.005,
-    sommer: -0.008,
-    nachmittag: -0.015,
+    parent: null,
+    basis: 0.012,
+    winter: 0.007,
+    sommer: -0.010,
+    nachmittag: -0.010,
+  },
+  longdrinks: {
+    parent: 'spirituosen',
+    basis: 0.018,
+    winter: -0.002,
+    sommer: 0.002,
+    nachmittag: -0.005,
   },
   kaffee: {
+    parent: null,
     basis: 0.090,
     winter: 0.046,
     sommer: -0.039,
     nachmittag: 0.035,
   },
   tee: {
+    parent: null,
     basis: 0.040,
     winter: 0.025,
     sommer: -0.021,
     nachmittag: 0.015,
   },
   wasser: {
+    parent: null,
     basis: 0.170,
     winter: -0.051,
     sommer: 0.050,
     nachmittag: 0.000,
   },
 };
+
+/**
+ * Leitet aus DRINK_WEIGHTS eine Map von Subkategorie-Key auf Elternkategorie-Key ab.
+ * Einzige Quelle der Wahrheit fuer Eltern/Kind-Beziehungen mit eigenem Budget
+ * (Kategorien mit parent: null werden nicht aufgenommen).
+ * @return {object} Subkategorie-Key -> Elternkategorie-Key.
+ */
+function getWeightSubcategoryParents() {
+  const result = {};
+  for (const [key, entry] of Object.entries(DRINK_WEIGHTS)) {
+    if (entry.parent) result[key] = entry.parent;
+  }
+  return result;
+}
+
+/**
+ * Summiert fuer eine Elternkategorie deren eigenen Betrag plus die Betraege
+ * aller Subkategorien (basierend auf DRINK_WEIGHTS.parent). Fuer Ansichten,
+ * die keine Subkategorie-Granularitaet benoetigen (z.B. Einkaufslisten:
+ * "wie viel Bier insgesamt", alkoholisch + alkoholfrei).
+ * @param {object} categoryAmounts Map von Kategorie-Key -> Betrag (z.B. Liter).
+ * @param {string} parentKey Key der Elternkategorie.
+ * @return {number} Summe aus Elternkategorie-Betrag und allen Subkategorie-Betraegen.
+ */
+function getParentTotal(categoryAmounts, parentKey) {
+  if (!categoryAmounts || !parentKey) return 0;
+  let total = Number(categoryAmounts[parentKey]) || 0;
+  for (const [key, entry] of Object.entries(DRINK_WEIGHTS)) {
+    if (entry.parent === parentKey && categoryAmounts[key] !== undefined) {
+      total += Number(categoryAmounts[key]) || 0;
+    }
+  }
+  return total;
+}
 
 /**
  * Gibt das Gewicht einer Getraenkekategorie zurueck.
@@ -138,15 +201,16 @@ function getDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no
  * Die Basis-Gewichte ergeben in Summe 1.0.
  */
 const CHILDREN_DRINK_WEIGHTS = {
-  bier: {basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
-  bier_alkoholfrei: {basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
-  wein: {basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
-  spirituosen: {basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
-  softdrinks: {basis: 0.280, winter: -0.040, sommer: 0.050, nachmittag: 0.010},
-  saft: {basis: 0.320, winter: 0.010, sommer: 0.030, nachmittag: 0.015},
-  kaffee: {basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
-  tee: {basis: 0.030, winter: 0.030, sommer: -0.010, nachmittag: 0.010},
-  wasser: {basis: 0.370, winter: -0.020, sommer: 0.060, nachmittag: -0.005},
+  bier: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  bier_alkoholfrei: {parent: 'bier', basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  wein: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  spirituosen: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  longdrinks: {parent: 'spirituosen', basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  softdrinks: {parent: null, basis: 0.280, winter: -0.040, sommer: 0.050, nachmittag: 0.010},
+  saft: {parent: null, basis: 0.320, winter: 0.010, sommer: 0.030, nachmittag: 0.015},
+  kaffee: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  tee: {parent: null, basis: 0.030, winter: 0.030, sommer: -0.010, nachmittag: 0.010},
+  wasser: {parent: null, basis: 0.370, winter: -0.020, sommer: 0.060, nachmittag: -0.005},
 };
 
 /**
@@ -184,4 +248,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};
+module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};

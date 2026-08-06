@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./calculateEventDrinks');
-const {DEFAULT_RATES} = require('./drinkRates');
+const {DEFAULT_RATES, DRINK_WEIGHTS} = require('./drinkRates');
 
 test('resolveTopLevelCategory gibt fuer Oberkategorie die ID selbst zurueck', () => {
   assert.equal(_internal.resolveTopLevelCategory('softdrinks'), 'softdrinks');
@@ -23,6 +23,112 @@ test('resolveTopLevelCategory loest Weinvarianten auf "wein" auf', () => {
   assert.equal(_internal.resolveTopLevelCategory('wein_weisswein'), 'wein');
   assert.equal(_internal.resolveTopLevelCategory('wein_rose'), 'wein');
   assert.equal(_internal.resolveTopLevelCategory('wein_rotwein'), 'wein');
+});
+
+test('resolveTopLevelCategory loest longdrinks auf "spirituosen" auf', () => {
+  assert.equal(_internal.resolveTopLevelCategory('longdrinks'), 'spirituosen');
+});
+
+// --- longdrinks/spirituosen Subkategorie-Redistribution (analog zu bier/bier_alkoholfrei) ---
+
+test('calculate vererbt longdrinks-Gewicht auf spirituosen, wenn longdrinks nicht angeboten wird', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['spirituosen', 'wasser'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const spirituosen = result.ergebnis.find((item) => item.kategorie === 'spirituosen');
+  const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
+  const totalBeverage = 10 * 0.5 * 4;
+  const sumWeights = DRINK_WEIGHTS.spirituosen.basis + DRINK_WEIGHTS.longdrinks.basis + DRINK_WEIGHTS.wasser.basis;
+
+  assert.ok(spirituosen);
+  assert.ok(wasser);
+  assert.equal(
+      spirituosen.literOhnePuffer,
+      Math.round((totalBeverage * (DRINK_WEIGHTS.spirituosen.basis + DRINK_WEIGHTS.longdrinks.basis) / sumWeights) * 100) / 100,
+      'spirituosen erhaelt das komplette longdrinks-Gewicht (Geschwister-Fallback)',
+  );
+  assert.equal(
+      wasser.literOhnePuffer,
+      Math.round((totalBeverage * DRINK_WEIGHTS.wasser.basis / sumWeights) * 100) / 100,
+  );
+});
+
+test('calculate behandelt longdrinks als eigene Kategorie mit eigenem Budget, wenn angeboten', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['spirituosen', 'longdrinks', 'wasser'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {},
+  );
+
+  const spirituosen = result.ergebnis.find((item) => item.kategorie === 'spirituosen');
+  const longdrinks = result.ergebnis.find((item) => item.kategorie === 'longdrinks');
+  const totalBeverage = 10 * 0.5 * 4;
+  const sumWeights = DRINK_WEIGHTS.spirituosen.basis + DRINK_WEIGHTS.longdrinks.basis + DRINK_WEIGHTS.wasser.basis;
+
+  assert.ok(spirituosen);
+  assert.ok(longdrinks);
+  assert.equal(
+      spirituosen.literOhnePuffer,
+      Math.round((totalBeverage * DRINK_WEIGHTS.spirituosen.basis / sumWeights) * 100) / 100,
+      'spirituosen bekommt NICHT das longdrinks-Gewicht, da longdrinks explizit angeboten wird',
+  );
+  assert.equal(
+      longdrinks.literOhnePuffer,
+      Math.round((totalBeverage * DRINK_WEIGHTS.longdrinks.basis / sumWeights) * 100) / 100,
+  );
+});
+
+test('calculate leitet Kategorie "longdrinks" (eigenes Budget) aus custom drinks ab, wenn event.categories leer ist', () => {
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: [],
+        customDrinkIds: ['ginTonic'],
+        pufferProzent: 0,
+      },
+      DEFAULT_RATES,
+      {
+        ginTonic: {
+          name: 'Gin Tonic',
+          kategorie: 'longdrinks',
+          einheiten: [{einheitsgroesse: 0.2, gebindeinheit: 'Glas'}],
+        },
+      },
+  );
+
+  const standardCategories = result.ergebnis.filter((item) => !item.isCustomDrink);
+  const longdrinks = result.ergebnis.find((item) => item.kategorie === 'longdrinks');
+  const ginTonic = result.ergebnis.find((item) => item.kategorie === 'ginTonic');
+
+  assert.equal(standardCategories.length, 1, 'nur eine Standardkategorie ("longdrinks") wird berechnet');
+  assert.ok(longdrinks, 'longdrinks ist als Kategorie mit eigenem Budget vorhanden, nicht kollabiert zu spirituosen');
+  assert.ok(ginTonic);
+  assert.equal(ginTonic.literOhnePuffer, longdrinks.literOhnePuffer);
 });
 
 test('calculate verteilt Softdrink-Kategoriebedarf gleichmaessig auf zwei Getraenke', () => {

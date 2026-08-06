@@ -22,7 +22,13 @@ export const DRINK_CATEGORIES = [
     ],
   },
   { id: 'sekt', label: 'Sekt' },
-  { id: 'spirituosen', label: 'Spirituosen' },
+  {
+    id: 'spirituosen',
+    label: 'Spirituosen',
+    subcategories: [
+      { id: 'longdrinks', label: 'Longdrinks', hasOwnBudget: true },
+    ],
+  },
   { id: 'kaffee', label: 'Kaffee' },
   { id: 'tee', label: 'Tee' },
 ];

@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -107,27 +107,42 @@ function normalizeDistributionFactor(value) {
 }
 
 /**
- * Map von Unterkategorie-ID auf uebergeordnete Kategorie-ID.
- * Spiegelt die Hierarchie aus drinkCategories.js (src) wider.
- * bier_alkoholfrei ist eine direkte Unterkategorie von bier.
+ * Rein kosmetische Unterkategorien (Geschmacksvarianten), die kein eigenes
+ * Gewicht in DRINK_WEIGHTS haben und daher immer vollstaendig ins Budget der
+ * Elternkategorie aufgeloest werden. Spiegelt die Hierarchie aus
+ * drinkCategories.js (src) wider.
  */
-const DRINK_CATEGORY_PARENTS = {
+const COSMETIC_SUBCATEGORY_PARENTS = {
   bier_koelsch: 'bier',
   bier_pils: 'bier',
   bier_weizen: 'bier',
-  bier_alkoholfrei: 'bier',
   wein_weisswein: 'wein',
   wein_rose: 'wein',
   wein_rotwein: 'wein',
 };
 
-const CATEGORY_HAS_OWN_BUDGET = new Set(['bier_alkoholfrei']);
+/**
+ * Map von Unterkategorie-ID auf uebergeordnete Kategorie-ID. Kombiniert die
+ * kosmetischen Geschmacksvarianten mit den Subkategorien, die ein eigenes
+ * Budget/Gewicht in DRINK_WEIGHTS besitzen (z.B. bier_alkoholfrei, longdrinks)
+ * -- DRINK_WEIGHTS.parent ist dafuer die einzige Quelle der Wahrheit.
+ */
+const DRINK_CATEGORY_PARENTS = {...COSMETIC_SUBCATEGORY_PARENTS, ...getWeightSubcategoryParents()};
+
+/**
+ * Subkategorien mit eigenem Budget/Gewicht (siehe DRINK_WEIGHTS.parent), die
+ * bei der Kategorie-Ableitung aus custom drinks NICHT in ihre Elternkategorie
+ * kollabiert werden duerfen.
+ */
+const CATEGORY_HAS_OWN_BUDGET = new Set(Object.keys(getWeightSubcategoryParents()));
 
 /**
  * Set of category IDs that are considered alcoholic (for alkohol-restriction logic).
- * Mirrors ALCOHOLIC_CATEGORY_IDS in guestPreferences.js (src).
+ * Mirrors ALCOHOLIC_CATEGORY_IDS in guestPreferences.js (src). Anders als
+ * bier_alkoholfrei ist longdrinks (Subkategorie von spirituosen) alkoholisch
+ * und muss daher explizit gelistet werden.
  */
-const ALCOHOLIC_CATEGORY_IDS_FUNCTIONS = new Set(['bier', 'wein', 'sekt', 'spirituosen']);
+const ALCOHOLIC_CATEGORY_IDS_FUNCTIONS = new Set(['bier', 'wein', 'sekt', 'spirituosen', 'longdrinks']);
 
 /**
  * Liefert die uebergeordnete Kategorie-ID, falls vorhanden; sonst die ID selbst.
