@@ -58,7 +58,7 @@ const normalizeDistributionFactor = (value) => {
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
-function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, initialEvent }) {
+function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, initialEvent, recipes }) {
   const isEditing = Boolean(initialEvent?.id);
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
@@ -238,6 +238,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}
+        recipes={recipes}
         buttonIcons={buttonIcons}
         isDarkMode={isDarkMode}
         onSave={(newDrinkIds, newDrinkDistributionFactors, newDrinkSelectedEinheiten) => {

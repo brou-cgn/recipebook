@@ -10,6 +10,7 @@ import OverviewAddFab from './OverviewAddFab';
 import { canEditRecipes } from '../utils/userManagement';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 
 const STATUS_LABELS = {
   geplant: 'Geplant',
@@ -143,6 +144,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       <GuestManagementPage
         onBack={() => setSubView('list')}
         currentUser={currentUser}
+        recipes={recipes}
       />
     );
   }
@@ -154,6 +156,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         onCancel={() => setSubView('list')}
         currentUser={currentUser}
         onManageDrinks={() => setSubView('drinks')}
+        recipes={recipes}
       />
     );
   }
@@ -167,6 +170,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
         currentUser={currentUser}
         onManageDrinks={() => setSubView('drinks')}
         initialEvent={selectedEvent}
+        recipes={recipes}
       />
     );
   }
@@ -175,6 +179,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     return (
       <ConsumptionForm
         event={selectedEvent}
+        recipes={recipes}
         onDone={(eventId) => {
           setSelectedEventId(eventId);
           setFallbackEvent(null);
@@ -243,7 +248,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                   .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage)
                   .map((row) => (
                     <tr key={row.kategorie}>
-                      <td>{row.isCustomDrink && row.drinkLabel ? row.drinkLabel : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
+                      <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
                       <td>{row.literMitPuffer} l</td>
                     </tr>
                   ))}

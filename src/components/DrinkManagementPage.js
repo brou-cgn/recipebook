@@ -6,7 +6,10 @@ import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, PREDEFINED_DRINKS } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
-import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
+import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import { parseIngredientPartsSync } from '../utils/ingredientUtils';
+import { updateRecipe } from '../utils/recipeFirestore';
 
 const DRINK_RECIPE_CATEGORY = 'Drinks';
 
@@ -14,11 +17,6 @@ const isDrinkRecipe = (recipe) =>
   Array.isArray(recipe?.speisekategorie)
     ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
     : recipe?.speisekategorie === DRINK_RECIPE_CATEGORY;
-
-const getDrinkDisplayName = (drink) => {
-  const link = decodeRecipeLink(drink?.name);
-  return link ? link.recipeName : (drink?.name || '');
-};
 
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
@@ -58,7 +56,7 @@ const emptyForm = () => ({
   einheiten: [emptyEinheit()],
 });
 
-function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
+function DrinkRow({ drink, displayName, onEdit, onDelete, swipeDeleteIcon }) {
   const touchStartXRef = React.useRef(null);
   const touchStartYRef = React.useRef(null);
   const swipeDirectionLockedRef = React.useRef(null);
@@ -132,7 +130,7 @@ function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
               type="button"
               className="drink-swipe-delete-action"
               onClick={() => { onDelete(drink); resetSwipe(); }}
-              aria-label={`${getDrinkDisplayName(drink)} löschen`}
+              aria-label={`${displayName} löschen`}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -152,7 +150,7 @@ function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <h3>{getDrinkDisplayName(drink)}</h3>
+        <h3>{displayName}</h3>
         <p className="events-card-meta">
           {[
             drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
@@ -227,7 +225,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     [recipes]
   );
 
-  const nameRecipeLink = decodeRecipeLink(form.name);
+  const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
   const openNew = () => {
     setEditId(null);
@@ -292,6 +290,23 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     }));
   };
 
+  const handleToggleIngredientIncluded = async (ingredientIndex) => {
+    const recipe = nameDrinkDisplay.recipe;
+    if (!recipe) return;
+    const currentIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+    const updatedIngredients = currentIngredients.map((item, idx) => {
+      if (idx !== ingredientIndex) return item;
+      const normalized = typeof item === 'string' ? { type: 'ingredient', text: item } : item;
+      const currentlyIncluded = normalized.includedInCalculation !== false;
+      return { ...normalized, includedInCalculation: !currentlyIncluded };
+    });
+    try {
+      await updateRecipe(recipe.id, { ingredients: updatedIngredients });
+    } catch (err) {
+      console.error('Error updating ingredient calculation flag:', err);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!isPredefined && !form.name.trim()) {
@@ -342,7 +357,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
       await deleteCustomDrink(currentUser.id, drink.id);
       const id = deleteBannerCounterRef.current;
       deleteBannerCounterRef.current = (id + 1) % 100000;
-      setDeleteBanners((prev) => [...prev, { id, message: `"${getDrinkDisplayName(drink)}" gelöscht.` }]);
+      const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
+      setDeleteBanners((prev) => [...prev, { id, message: `"${deletedDisplayName}" gelöscht.` }]);
       const timeoutId = setTimeout(() => {
         setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
         deleteBannerTimeoutsRef.current.delete(id);
@@ -373,16 +389,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             <div className="events-name-input-wrapper">
               <input
                 type="text"
-                value={nameRecipeLink ? nameRecipeLink.recipeName : form.name}
+                value={nameDrinkDisplay.isRecipe ? nameDrinkDisplay.displayName : form.name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="z. B. Craft-Bier, Apfelsaft, ... (# verlinkt ein Rezept)"
                 required={!isPredefined}
                 disabled={isPredefined}
-                readOnly={!!nameRecipeLink}
-                className={nameRecipeLink ? 'recipe-link-input' : ''}
-                title={nameRecipeLink ? `Verlinktes Rezept: ${nameRecipeLink.recipeName}` : undefined}
+                readOnly={nameDrinkDisplay.isRecipe}
+                className={nameDrinkDisplay.isRecipe ? 'recipe-link-input' : ''}
+                title={nameDrinkDisplay.isRecipe ? `Verlinktes Rezept: ${nameDrinkDisplay.displayName}` : undefined}
               />
-              {nameRecipeLink && !isPredefined && (
+              {nameDrinkDisplay.isRecipe && !isPredefined && (
                 <button
                   type="button"
                   className="events-name-link-clear-btn"
@@ -485,6 +501,38 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
               Einheit hinzufügen
             </button>
           </div>
+
+          {nameDrinkDisplay.isRecipe && nameDrinkDisplay.recipe && (
+            <div className="events-form-field">
+              <span>Zutaten von „{nameDrinkDisplay.displayName}"</span>
+              <ul className="drink-recipe-ingredient-list">
+                {nameDrinkDisplay.ingredients.map((rawItem, idx) => {
+                  const item = typeof rawItem === 'string' ? { type: 'ingredient', text: rawItem } : rawItem;
+                  if (item.type === 'heading') return null;
+                  const { amount, amountMax, unit, name } = parseIngredientPartsSync(item.text);
+                  const amountLabel = amount != null
+                    ? `${amount}${amountMax != null ? `–${amountMax}` : ''}${unit ? ` ${unit}` : ''}`
+                    : null;
+                  const included = item.includedInCalculation !== false;
+                  return (
+                    <li key={idx} className="drink-recipe-ingredient-row">
+                      <span className="drink-recipe-ingredient-name">{name}</span>
+                      {amountLabel && <span className="drink-recipe-ingredient-amount">{amountLabel}</span>}
+                      <label className="drink-recipe-ingredient-toggle">
+                        <input
+                          type="checkbox"
+                          checked={included}
+                          onChange={() => handleToggleIngredientIncluded(idx)}
+                          aria-label={`${name} in Kalkulation berücksichtigen`}
+                        />
+                        <span className="drink-recipe-ingredient-toggle-slider" aria-hidden="true" />
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {error && <p className="events-error-text">{error}</p>}
 
@@ -592,6 +640,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             <DrinkRow
               key={drink.id}
               drink={drink}
+              displayName={resolveDrinkDisplay(drink, recipes).displayName}
               onEdit={openEdit}
               onDelete={handleDelete}
               swipeDeleteIcon={swipeDeleteIcon}

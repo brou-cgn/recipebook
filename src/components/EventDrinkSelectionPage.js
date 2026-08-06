@@ -3,6 +3,7 @@ import './EventsPage.css';
 import UnitChip from './UnitChip';
 import { getEffectiveIcon, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 
 const MIN_DISTRIBUTION_FACTOR = 0.1;
 const MAX_DISTRIBUTION_FACTOR = 2.0;
@@ -117,6 +118,7 @@ const SWIPE_DIRECTION_LOCK_THRESHOLD = 6;
 
 function DrinkRow({
   drink,
+  displayName,
   factor,
   einheiten,
   selectedIndices,
@@ -208,7 +210,7 @@ function DrinkRow({
             type="button"
             className="events-drink-row-swipe-action"
             onClick={handleSwipeDeleteClick}
-            aria-label={`${drink.name} entfernen`}
+            aria-label={`${displayName} entfernen`}
           >
             {isBase64Image(swipeDeleteIcon) ? (
               <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -226,7 +228,7 @@ function DrinkRow({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <div className="events-drink-row-name">{drink.name}</div>
+        <div className="events-drink-row-name">{displayName}</div>
         <div className="events-drink-row-details">
           <div className="events-drink-row-einheiten">
             {einheiten.length > 1 ? (
@@ -247,7 +249,7 @@ function DrinkRow({
                   einheiten={einheiten}
                   selectedIndices={selectedIndices}
                   onToggle={onToggleEinheit}
-                  drinkName={drink.name}
+                  drinkName={displayName}
                 />
               </div>
             ) : einheiten.length === 1 ? (
@@ -264,7 +266,7 @@ function DrinkRow({
               step="0.01"
               value={factor.toFixed(2)}
               onChange={(e) => onUpdateFactor(e.target.value)}
-              aria-label={`${drink.name} Faktor`}
+              aria-label={`${displayName} Faktor`}
             />
           </div>
         </div>
@@ -278,6 +280,7 @@ function EventDrinkSelectionPage({
   customDrinkIds: initialCustomDrinkIds,
   drinkDistributionFactors: initialDrinkDistributionFactors,
   drinkSelectedEinheiten: initialDrinkSelectedEinheiten,
+  recipes,
   onSave,
   onBack,
   buttonIcons,
@@ -391,7 +394,7 @@ function EventDrinkSelectionPage({
                   {customDrinks
                     .filter((d) => !customDrinkIds.includes(d.id))
                     .map((drink) => (
-                      <option key={drink.id} value={drink.id}>{drink.name}</option>
+                      <option key={drink.id} value={drink.id}>{resolveDrinkDisplay(drink, recipes).displayName}</option>
                     ))}
                 </select>
                 <button
@@ -421,6 +424,7 @@ function EventDrinkSelectionPage({
                       <DrinkRow
                         key={drink.id}
                         drink={drink}
+                        displayName={resolveDrinkDisplay(drink, recipes).displayName}
                         factor={factor}
                         einheiten={einheiten}
                         selectedIndices={selectedIndices}
