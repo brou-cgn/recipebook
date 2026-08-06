@@ -48,6 +48,26 @@ export const PREDEFINED_DRINKS = [
   },
 ];
 
+export const mergePredefinedDrinks = (customDrinks = []) => {
+  const customById = new Map((Array.isArray(customDrinks) ? customDrinks : []).map((drink) => [drink.id, drink]));
+
+  const mergedPredefined = PREDEFINED_DRINKS.map((predefinedDrink) => {
+    const customDrink = customById.get(predefinedDrink.id);
+    if (!customDrink) return predefinedDrink;
+    customById.delete(predefinedDrink.id);
+    return {
+      ...predefinedDrink,
+      ...customDrink,
+      id: predefinedDrink.id,
+      name: predefinedDrink.name,
+      kategorie: predefinedDrink.kategorie,
+      predefined: true,
+    };
+  });
+
+  return [...mergedPredefined, ...customById.values()];
+};
+
 export const getDrinkCategoryLabel = (kategorieId) => {
   for (const cat of DRINK_CATEGORIES) {
     if (cat.id === kategorieId) return cat.label;

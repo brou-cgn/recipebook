@@ -3,7 +3,7 @@ import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
 import RecipeTypeahead from './RecipeTypeahead';
-import { DRINK_CATEGORIES, getDrinkCategoryLabel, PREDEFINED_DRINKS } from '../utils/drinkCategories';
+import { DRINK_CATEGORIES, getDrinkCategoryLabel, mergePredefinedDrinks } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import { encodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
@@ -228,6 +228,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     () => (Array.isArray(recipes) ? recipes.filter(isDrinkRecipe) : []),
     [recipes]
   );
+  const allDrinks = useMemo(() => mergePredefinedDrinks(drinks), [drinks]);
 
   const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
@@ -346,7 +347,12 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         }),
       };
       if (isPredefined) {
-        await saveCustomDrink(currentUser.id, { ...payload, predefined: true }, editId || undefined);
+        await saveCustomDrink(currentUser.id, {
+          ...payload,
+          name: form.name.trim(),
+          kategorie: form.kategorie || null,
+          predefined: true,
+        }, editId || undefined);
       } else {
         await saveCustomDrink(currentUser.id, payload, editId || undefined);
       }
@@ -686,7 +692,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         <div className="events-empty-state">Laden...</div>
       ) : (
         <div className="events-list">
-          {[...PREDEFINED_DRINKS, ...drinks].map((drink) => (
+          {allDrinks.map((drink) => (
             <DrinkRow
               key={drink.id}
               drink={drink}

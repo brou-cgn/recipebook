@@ -411,7 +411,7 @@ describe('DrinkManagementPage', () => {
     expect(categorySelect).toBeDisabled();
   });
 
-  test('saving predefined drink only updates einheiten', async () => {
+  test('saving predefined drink persists name/category and updates einheiten', async () => {
     mockSaveCustomDrink.mockResolvedValue(undefined);
     render(<DrinkManagementPage currentUser={currentUser} />);
 
@@ -422,10 +422,41 @@ describe('DrinkManagementPage', () => {
     await waitFor(() => {
       expect(mockSaveCustomDrink).toHaveBeenCalledWith(
         currentUser.id,
-        expect.not.objectContaining({ name: expect.anything() }),
+        expect.objectContaining({
+          name: 'Mineralwasser',
+          kategorie: 'wasser',
+          predefined: true,
+        }),
         'predefined_mineralwasser',
       );
     });
+  });
+
+  test('predefined Mineralwasser row uses persisted data when a custom document exists', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{
+        id: 'predefined_mineralwasser',
+        name: 'Mineralwasser',
+        kategorie: 'wasser',
+        predefined: true,
+        einheiten: [{
+          einheitsgroesse: 1.5,
+          einheit: 'Flasche',
+          gebindeinheit: 'Kasten',
+          einheitenProGebinde: 12,
+        }],
+      }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getAllByText('Mineralwasser')).toHaveLength(1);
+    fireEvent.click(screen.getByText('Mineralwasser'));
+
+    expect(screen.getByPlaceholderText('z. B. Glas, Flasche, Dose')).toHaveValue('Flasche');
+    expect(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten')).toHaveValue('Kasten');
+    expect(screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i })).toHaveValue(12);
   });
 
   describe('recipe linking in the name field', () => {
