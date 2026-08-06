@@ -682,6 +682,10 @@
   border-bottom: none;
 }
 
+.events-table-amount {
+  text-align: right;
+}
+
 .events-guest-typeahead {
   position: relative;
 }
