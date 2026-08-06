@@ -13,7 +13,7 @@ function getEinheitSizeLabel(einheitsgroesse) {
 }
 
 function getRowDrinkName(row, recipes) {
-  if (row.isCustomDrink && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes).displayName;
+  if ((row.isCustomDrink || row.isPredefinedDrink) && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes).displayName;
   return CATEGORY_LABELS[row.kategorie] || row.kategorie;
 }
 
@@ -49,7 +49,7 @@ function groupKategorienByDrink(kategorien, recipes) {
 }
 
 function ConsumptionForm({ event, recipes, onDone, onCancel }) {
-  const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.isCustomDrink && row.gebindeGroesseLiter);
+  const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
   const [values, setValues] = useState(() => {
     const initial = {};

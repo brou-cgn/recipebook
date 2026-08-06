@@ -491,10 +491,28 @@ function calculate(event, ratesDb, customDrinksMap) {
       continue;
     }
 
-    // Vordefinierte Getraenke ohne eigene Gebinde (z.B. Mineralwasser) liefern
-    // keine Gebinde-/Ratendaten -- ihr Bedarf steckt bereits in der normalen
-    // Kategorie-Zeile (siehe categoryLitersMap oben), daher keine eigene Zeile.
+    // Vordefinierte Getraenke ohne eigene Gebinde (z.B. Mineralwasser) haben
+    // keine eigenen Einheiten. Ihr Bedarf steckt bereits in der normalen
+    // Kategorie-Zeile. Wir erzeugen trotzdem eine eigene Zeile mit
+    // isPredefinedDrink: true, damit die Verbrauch-Form das Getraenk
+    // anzeigen kann (mit den Gebinde-Daten der Kategorie-Zeile).
     if (entry.predefined && (!Array.isArray(entry.einheiten) || entry.einheiten.length === 0)) {
+      const catRow = ergebnis.find((r) => !r.isCustomDrink && r.kategorie === entry.kategorie);
+      ergebnis.push({
+        kategorie: drinkId,
+        drinkId,
+        drinkLabel: entry.name,
+        drinkKategorie: entry.kategorie || null,
+        isPredefinedDrink: true,
+        literOhnePuffer: catRow?.literOhnePuffer ?? null,
+        literMitPuffer: catRow?.literMitPuffer ?? null,
+        gebinde: catRow?.gebinde ?? null,
+        gebindeGroesseLiter: catRow?.gebindeGroesseLiter ?? null,
+        anzahlGebinde: catRow?.anzahlGebinde ?? null,
+        ratenQuelle: catRow?.ratenQuelle ?? 'standard-faustwert',
+        anteilTrinkerAngenommen: null,
+        praeferenzFaktor: null,
+      });
       continue;
     }
 
