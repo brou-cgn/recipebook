@@ -152,12 +152,13 @@ describe('DrinkManagementPage', () => {
     expect(screen.queryByLabelText(/Distributionsfaktor/i)).not.toBeInTheDocument();
   });
 
-  test('form contains new unit fields (Einheitsgröße, Gebindeinheit, Einheiten pro Gebinde)', () => {
+  test('form contains new unit fields (Einheitsgröße, Einheit, Gebindeinheit, Einheiten pro Gebinde)', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
 
     expect(screen.getByText('Einheitsgröße')).toBeInTheDocument();
+    expect(screen.getByText('Einheit')).toBeInTheDocument();
     expect(screen.getByText('Gebindeinheit')).toBeInTheDocument();
     expect(screen.getByText('Einheiten pro Gebinde')).toBeInTheDocument();
   });
@@ -169,6 +170,10 @@ describe('DrinkManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
 
     fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Craft-Bier' } });
+
+    // Fill the Einheit field
+    const einheitInput = screen.getByPlaceholderText('z. B. Glas, Flasche, Dose');
+    fireEvent.change(einheitInput, { target: { value: 'Glas' } });
 
     // Fill the Gebindeinheit field
     const gebindeinheitInput = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
@@ -188,6 +193,7 @@ describe('DrinkManagementPage', () => {
           einheiten: [
             expect.objectContaining({
               einheitsgroesse: 0.5,
+              einheit: 'Glas',
               gebindeinheit: 'Flasche',
               einheitenProGebinde: 24,
             }),
@@ -322,6 +328,44 @@ describe('DrinkManagementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
 
     expect(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten')).toBeInTheDocument();
+  });
+
+  test('shows einheit as select when drinkUnits are configured', async () => {
+    mockGetCustomLists.mockResolvedValue({
+      packageUnits: [],
+      drinkUnits: [
+        { id: 'glas', singular: 'Glas', plural: 'Gläser' },
+        { id: 'flasche', singular: 'Flasche', plural: 'Flaschen' },
+        { id: 'dose', singular: 'Dose', plural: 'Dosen' },
+      ],
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox');
+      const einheitSelect = selects.find((s) =>
+        s.querySelector('option[value="Glas"]')
+      );
+      expect(einheitSelect).toBeTruthy();
+      const options = within(einheitSelect).getAllByRole('option').map((o) => o.textContent);
+      expect(options).toContain('Glas');
+      expect(options).toContain('Flasche');
+      expect(options).toContain('Dose');
+    });
+
+    // Text input should not be visible when select is shown
+    expect(screen.queryByPlaceholderText('z. B. Glas, Flasche, Dose')).not.toBeInTheDocument();
+  });
+
+  test('shows einheit as text input when no drinkUnits are configured', () => {
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+    expect(screen.getByPlaceholderText('z. B. Glas, Flasche, Dose')).toBeInTheDocument();
   });
 
   test('renders the FAB save button in the edit form', () => {

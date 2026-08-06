@@ -38,6 +38,7 @@ import {
   DEFAULT_COMMON_ADJECTIVES,
   DEFAULT_PORTION_UNITS,
   DEFAULT_PACKAGE_UNITS,
+  DEFAULT_DRINK_UNITS,
   DEFAULT_CONVERSION_TABLE,
   expandCuisineSelection,
   getParentCuisineNames,
@@ -228,6 +229,7 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.units).toEqual(DEFAULT_UNITS);
     expect(lists.portionUnits).toEqual(DEFAULT_PORTION_UNITS);
     expect(lists.packageUnits).toEqual(DEFAULT_PACKAGE_UNITS);
+    expect(lists.drinkUnits).toEqual(DEFAULT_DRINK_UNITS);
     expect(lists.conversionTable).toEqual(DEFAULT_CONVERSION_TABLE);
   });
 
@@ -283,6 +285,26 @@ describe('getCustomLists – default fallbacks', () => {
     expect(lists.packageUnits[0]).toEqual({ id: 'flasche', singular: 'Flasche', plural: 'Flasche' });
     expect(lists.packageUnits[1]).toEqual({ id: 'dose', singular: 'Dose', plural: 'Dose' });
     expect(lists.packageUnits[2]).toEqual({ id: 'sondergebinde', singular: 'Sondergebinde', plural: 'Sondergebinde' });
+  });
+
+  test('returns saved drinkUnits from Firestore instead of defaults', async () => {
+    const savedDrinkUnits = [
+      { id: 'glas', singular: 'Glas', plural: 'Gläser' },
+      { id: 'shot', singular: 'Shot', plural: 'Shots' },
+    ];
+    mockGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        drinkUnits: savedDrinkUnits,
+        aiRecipePrompt: DEFAULT_AI_RECIPE_PROMPT,
+      }),
+    });
+
+    const lists = await getCustomLists();
+
+    expect(lists.drinkUnits).toEqual(savedDrinkUnits);
+    expect(lists.drinkUnits).toHaveLength(2);
+    expect(lists.drinkUnits[1].id).toBe('shot');
   });
 
   test('keeps legacy customUnits empty even when Firestore still contains old values', async () => {

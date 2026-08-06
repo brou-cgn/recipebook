@@ -143,6 +143,13 @@ export const DEFAULT_PACKAGE_UNITS = [
   { id: 'fass', singular: 'Fass', plural: 'Fässer' },
 ];
 
+export const DEFAULT_DRINK_UNITS = [
+  { id: 'glas', singular: 'Glas', plural: 'Gläser' },
+  { id: 'flasche', singular: 'Flasche', plural: 'Flaschen' },
+  { id: 'dose', singular: 'Dose', plural: 'Dosen' },
+  { id: 'becher', singular: 'Becher', plural: 'Becher' },
+];
+
 /**
  * Normalizes packageUnits array – converts legacy plain strings to the
  * new `{ id, singular, plural }` object shape for backward compatibility.
@@ -1109,6 +1116,7 @@ export async function getSettings() {
         units: settings.units || DEFAULT_UNITS,
         portionUnits: settings.portionUnits || DEFAULT_PORTION_UNITS,
         packageUnits: normalizePackageUnits(settings.packageUnits ?? DEFAULT_PACKAGE_UNITS),
+        drinkUnits: settings.drinkUnits || DEFAULT_DRINK_UNITS,
         conversionTable: settings.conversionTable || DEFAULT_CONVERSION_TABLE,
         customUnits: settings.customUnits || [],
         customIngredientAdjectives: settings.customIngredientAdjectives || [],
@@ -1160,6 +1168,7 @@ export async function getSettings() {
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
       packageUnits: DEFAULT_PACKAGE_UNITS,
+      drinkUnits: DEFAULT_DRINK_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
       customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
@@ -1217,6 +1226,7 @@ export async function getSettings() {
       units: DEFAULT_UNITS,
       portionUnits: DEFAULT_PORTION_UNITS,
       packageUnits: DEFAULT_PACKAGE_UNITS,
+      drinkUnits: DEFAULT_DRINK_UNITS,
       conversionTable: DEFAULT_CONVERSION_TABLE,
       customIngredientAdjectives: [],
       headerSlogan: DEFAULT_SLOGAN,
@@ -1270,6 +1280,7 @@ export async function getCustomLists() {
     units: settings.units ?? DEFAULT_UNITS,
     portionUnits: settings.portionUnits ?? DEFAULT_PORTION_UNITS,
     packageUnits: normalizePackageUnits(settings.packageUnits ?? DEFAULT_PACKAGE_UNITS),
+    drinkUnits: settings.drinkUnits ?? DEFAULT_DRINK_UNITS,
     conversionTable: settings.conversionTable ?? DEFAULT_CONVERSION_TABLE,
     customUnits: [],
     customIngredientAdjectives: [],
@@ -1529,6 +1540,7 @@ export async function resetCustomLists() {
     units: DEFAULT_UNITS,
     portionUnits: DEFAULT_PORTION_UNITS,
     packageUnits: DEFAULT_PACKAGE_UNITS,
+    drinkUnits: DEFAULT_DRINK_UNITS,
     conversionTable: DEFAULT_CONVERSION_TABLE
   };
   
