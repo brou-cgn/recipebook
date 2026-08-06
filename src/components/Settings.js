@@ -234,6 +234,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     units: [],
     portionUnits: [],
     packageUnits: [],
+    drinkUnits: [],
     conversionTable: [],
     customUnits: []
   });
@@ -245,6 +246,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   const [newPortionPlural, setNewPortionPlural] = useState('');
   const [newPackageSingular, setNewPackageSingular] = useState('');
   const [newPackagePlural, setNewPackagePlural] = useState('');
+  const [newDrinkUnitSingular, setNewDrinkUnitSingular] = useState('');
+  const [newDrinkUnitPlural, setNewDrinkUnitPlural] = useState('');
   const [newConversionIngredient, setNewConversionIngredient] = useState('');
   const [newConversionUnit, setNewConversionUnit] = useState('');
   const [newConversionGrams, setNewConversionGrams] = useState('');
@@ -951,6 +954,32 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     });
   };
 
+  const addDrinkUnit = () => {
+    if (newDrinkUnitSingular.trim() && newDrinkUnitPlural.trim()) {
+      const newId = newDrinkUnitSingular.toLowerCase().replace(/\s+/g, '-');
+      const exists = lists.drinkUnits.some(u => u.id === newId);
+      if (!exists) {
+        setLists({
+          ...lists,
+          drinkUnits: [...lists.drinkUnits, {
+            id: newId,
+            singular: newDrinkUnitSingular.trim(),
+            plural: newDrinkUnitPlural.trim()
+          }]
+        });
+        setNewDrinkUnitSingular('');
+        setNewDrinkUnitPlural('');
+      }
+    }
+  };
+
+  const removeDrinkUnit = (unitId) => {
+    setLists({
+      ...lists,
+      drinkUnits: lists.drinkUnits.filter(u => u.id !== unitId)
+    });
+  };
+
   const addConversionEntry = () => {
     if (newConversionIngredient.trim() && newConversionUnit.trim()) {
       const slugify = (str) => str.toLowerCase()
@@ -1091,6 +1120,20 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
         return {
           ...prevLists,
           packageUnits: arrayMove(prevLists.packageUnits, oldIndex, newIndex)
+        };
+      });
+    }
+  };
+
+  const handleDragEndDrinkUnits = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLists((prevLists) => {
+        const oldIndex = prevLists.drinkUnits.findIndex(u => u.id === active.id);
+        const newIndex = prevLists.drinkUnits.findIndex(u => u.id === over.id);
+        return {
+          ...prevLists,
+          drinkUnits: arrayMove(prevLists.drinkUnits, oldIndex, newIndex)
         };
       });
     }
@@ -2737,6 +2780,38 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
               <div className="list-items">
                 {lists.packageUnits.map((unit) => (
                   <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removePackageUnit(unit.id)} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        <div className="settings-section">
+          <h3>Getränkeeinheiten</h3>
+          <p className="section-description">
+            Definieren Sie die verfügbaren Einheiten für Getränke mit Singular- und Pluralformen (z.B. Glas/Gläser, Flasche/Flaschen).
+          </p>
+          <div className="list-input portion-unit-input">
+            <input
+              type="text"
+              value={newDrinkUnitSingular}
+              onChange={(e) => setNewDrinkUnitSingular(e.target.value)}
+              placeholder="Singular (z.B. Glas)"
+            />
+            <input
+              type="text"
+              value={newDrinkUnitPlural}
+              onChange={(e) => setNewDrinkUnitPlural(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && addDrinkUnit()}
+              placeholder="Plural (z.B. Gläser)"
+            />
+            <button onClick={addDrinkUnit}>Hinzufügen</button>
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndDrinkUnits}>
+            <SortableContext items={lists.drinkUnits.map(u => u.id)} strategy={verticalListSortingStrategy}>
+              <div className="list-items">
+                {lists.drinkUnits.map((unit) => (
+                  <SortablePortionUnitItem key={unit.id} id={unit.id} unit={unit} onRemove={() => removeDrinkUnit(unit.id)} />
                 ))}
               </div>
             </SortableContext>

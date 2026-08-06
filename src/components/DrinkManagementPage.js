@@ -46,6 +46,7 @@ const getUnitSizeLabel = (liters) => {
 
 const emptyEinheit = () => ({
   einheitsgroesse: 0.5,
+  einheit: '',
   gebindeinheit: '',
   einheitenProGebinde: '',
 });
@@ -176,6 +177,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [packageUnits, setPackageUnits] = useState([]);
+  const [drinkUnits, setDrinkUnits] = useState([]);
   const [showNameTypeahead, setShowNameTypeahead] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
@@ -189,8 +191,10 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   useEffect(() => {
     getCustomLists().then((lists) => {
       setPackageUnits(lists.packageUnits || []);
+      setDrinkUnits(lists.drinkUnits || []);
     }).catch(() => {
       setPackageUnits([]);
+      setDrinkUnits([]);
     });
     import('../utils/customLists').then(({ getButtonIcons }) => {
       getButtonIcons().then((icons) => setButtonIcons(icons)).catch(() => {});
@@ -246,6 +250,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         Array.isArray(drink.einheiten) && drink.einheiten.length > 0
           ? drink.einheiten.map((e) => ({
               einheitsgroesse: e.einheitsgroesse ?? 0.5,
+              einheit: e.einheit || '',
               gebindeinheit: e.gebindeinheit || '',
               einheitenProGebinde: e.einheitenProGebinde ?? '',
             }))
@@ -330,6 +335,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         ...(isPredefined ? {} : { name: form.name.trim(), kategorie: form.kategorie || null }),
         einheiten: form.einheiten.map((e) => {
           const einheit = { einheitsgroesse: Number(e.einheitsgroesse) };
+          const einheitTrimmed = String(e.einheit || '').trim();
+          if (einheitTrimmed) einheit.einheit = einheitTrimmed;
           const gebindeinheitTrimmed = String(e.gebindeinheit || '').trim();
           if (gebindeinheitTrimmed) einheit.gebindeinheit = gebindeinheitTrimmed;
           if (e.einheitenProGebinde !== '' && e.einheitenProGebinde !== null && e.einheitenProGebinde !== undefined) {
@@ -438,77 +445,102 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           <div className="events-form-field">
             <span>Einheiten</span>
             {form.einheiten.map((einheit, idx) => (
-              <div key={idx} className="events-form-row events-einheit-row">
-                <label className="events-form-field">
-                  <span>{nameDrinkDisplay.isRecipe ? 'Einheitsgröße (ml)' : 'Einheitsgröße'}</span>
-                  {nameDrinkDisplay.isRecipe ? (
+              <div key={idx} className="events-einheit-group">
+                <div className="events-form-row events-einheit-row">
+                  <label className="events-form-field">
+                    <span>{nameDrinkDisplay.isRecipe ? 'Einheitsgröße (ml)' : 'Einheitsgröße'}</span>
+                    {nameDrinkDisplay.isRecipe ? (
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={
+                          einheit.einheitsgroesse !== '' && einheit.einheitsgroesse !== null && einheit.einheitsgroesse !== undefined
+                            ? Math.round(Number(einheit.einheitsgroesse) * 1000)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const ml = e.target.value;
+                          updateEinheit(idx, 'einheitsgroesse', ml === '' ? '' : Number(ml) / 1000);
+                        }}
+                        placeholder="z. B. 250"
+                      />
+                    ) : (
+                      <select
+                        value={einheit.einheitsgroesse}
+                        onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
+                      >
+                        {UNIT_SIZES.map((u) => (
+                          <option key={u.value} value={u.value}>{u.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                  <label className="events-form-field">
+                    <span>Einheit</span>
+                    {drinkUnits.length > 0 ? (
+                      <select
+                        value={einheit.einheit}
+                        onChange={(e) => updateEinheit(idx, 'einheit', e.target.value)}
+                      >
+                        <option value="">Keine Angabe</option>
+                        {drinkUnits.map((unit) => (
+                          <option key={unit.id} value={unit.singular}>{unit.singular}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={einheit.einheit}
+                        onChange={(e) => updateEinheit(idx, 'einheit', e.target.value)}
+                        placeholder="z. B. Glas, Flasche, Dose"
+                      />
+                    )}
+                  </label>
+                </div>
+                <div className="events-form-row events-einheit-row">
+                  <label className="events-form-field">
+                    <span>Einheiten pro Gebinde</span>
                     <input
                       type="number"
                       min="1"
                       step="1"
-                      value={
-                        einheit.einheitsgroesse !== '' && einheit.einheitsgroesse !== null && einheit.einheitsgroesse !== undefined
-                          ? Math.round(Number(einheit.einheitsgroesse) * 1000)
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const ml = e.target.value;
-                        updateEinheit(idx, 'einheitsgroesse', ml === '' ? '' : Number(ml) / 1000);
-                      }}
-                      placeholder="z. B. 250"
+                      value={einheit.einheitenProGebinde}
+                      onChange={(e) => updateEinheit(idx, 'einheitenProGebinde', e.target.value)}
                     />
-                  ) : (
-                    <select
-                      value={einheit.einheitsgroesse}
-                      onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
+                  </label>
+                  <label className="events-form-field">
+                    <span>Gebindeinheit</span>
+                    {packageUnits.length > 0 ? (
+                      <select
+                        value={einheit.gebindeinheit}
+                        onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
+                      >
+                        <option value="">Keine Angabe</option>
+                        {packageUnits.map((unit) => (
+                          <option key={unit.id} value={unit.singular}>{unit.singular}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={einheit.gebindeinheit}
+                        onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
+                        placeholder="z. B. Flasche, Dose, Kasten"
+                      />
+                    )}
+                  </label>
+                  {form.einheiten.length > 1 && (
+                    <button
+                      type="button"
+                      className="events-secondary-btn"
+                      onClick={() => removeEinheit(idx)}
+                      aria-label="Einheit entfernen"
                     >
-                      {UNIT_SIZES.map((u) => (
-                        <option key={u.value} value={u.value}>{u.label}</option>
-                      ))}
-                    </select>
+                      –
+                    </button>
                   )}
-                </label>
-                <label className="events-form-field">
-                  <span>Gebindeinheit</span>
-                  {packageUnits.length > 0 ? (
-                    <select
-                      value={einheit.gebindeinheit}
-                      onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
-                    >
-                      <option value="">Keine Angabe</option>
-                      {packageUnits.map((unit) => (
-                        <option key={unit.id} value={unit.singular}>{unit.singular}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={einheit.gebindeinheit}
-                      onChange={(e) => updateEinheit(idx, 'gebindeinheit', e.target.value)}
-                      placeholder="z. B. Flasche, Dose, Kasten"
-                    />
-                  )}
-                </label>
-                <label className="events-form-field">
-                  <span>Einheiten pro Gebinde</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={einheit.einheitenProGebinde}
-                    onChange={(e) => updateEinheit(idx, 'einheitenProGebinde', e.target.value)}
-                  />
-                </label>
-                {form.einheiten.length > 1 && (
-                  <button
-                    type="button"
-                    className="events-secondary-btn"
-                    onClick={() => removeEinheit(idx)}
-                    aria-label="Einheit entfernen"
-                  >
-                    –
-                  </button>
-                )}
+                </div>
               </div>
             ))}
             <button
