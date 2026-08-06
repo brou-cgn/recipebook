@@ -3,6 +3,7 @@ import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -49,13 +50,56 @@ function groupKategorienByDrink(kategorien, recipes) {
   return groups;
 }
 
+// Baut die Kaskaden-Einheiten (eigene Groesse + optionale Gebindegroesse) fuer eine Getraenke-Gruppe.
+function getGroupCascadeUnits(group) {
+  return group.rows.map((row) => {
+    if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
+      const einheit = row.einheiten[row.einheitIdx] || {};
+      const einheitsgroesseLiter = Number(einheit.einheitsgroesse);
+      const stueckProGebinde = Number(einheit.einheitenProGebinde);
+      const gebindeGroesseLiter =
+        Number.isFinite(einheitsgroesseLiter) && Number.isFinite(stueckProGebinde) && stueckProGebinde > 0
+          ? einheitsgroesseLiter * stueckProGebinde
+          : null;
+      return { key: row.kategorie, einheitsgroesseLiter, gebindeGroesseLiter };
+    }
+    return { key: row.kategorie, einheitsgroesseLiter: Number(row.gebindeGroesseLiter), gebindeGroesseLiter: null };
+  });
+}
+
+// Ermittelt den kalkulierten Liter-Bedarf einer Getraenke-Gruppe (identisch fuer alle Zeilen der Gruppe).
+function getGroupBedarfLiter(group) {
+  const row = group.rows[0];
+  const liter = Number(row?.literMitPuffer ?? row?.literOhnePuffer);
+  return Number.isFinite(liter) ? liter : 0;
+}
+
+// Berechnet die kaskadierende Vorbefuellung fuer alle Getraenke-Gruppen.
+function getCascadePrefill(drinkGroups) {
+  const prefillMap = {};
+  const warnings = [];
+  drinkGroups.forEach((group) => {
+    const units = getGroupCascadeUnits(group);
+    const bedarfLiter = getGroupBedarfLiter(group);
+    const { values: cascadeValues, warnings: groupWarnings } = calculateCascadingEinkauf(units, bedarfLiter);
+    Object.assign(prefillMap, cascadeValues);
+    groupWarnings.forEach((warning) => warnings.push(`${group.drinkName}: ${warning}`));
+  });
+  return { prefillMap, warnings };
+}
+
 function ConsumptionForm({ event, recipes, onDone, onCancel }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
+  const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups);
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {
-      initial[row.kategorie] = { eingekauft: '', uebrig: '' };
+      const prefillValue = prefillMap[row.kategorie];
+      initial[row.kategorie] = {
+        eingekauft: prefillValue !== undefined && prefillValue !== null ? String(prefillValue) : '',
+        uebrig: '',
+      };
     });
     return initial;
   });
@@ -141,7 +185,15 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
       </div>
       <p className="events-info-text">
         Wie viele Gebinde wurden für „{event.eventName}" eingekauft, und wie viele sind übrig?
+        {' '}Die Eingekauft-Felder sind bereits aus der Kalkulation vorbefüllt und lassen sich anpassen.
       </p>
+      {prefillWarnings.length > 0 && (
+        <div className="events-warnings">
+          {prefillWarnings.map((warning, idx) => (
+            <p key={idx} className="events-warning-text">{warning}</p>
+          ))}
+        </div>
+      )}
       <form className="events-form" onSubmit={handleSubmit}>
         {drinkGroups.map((group) => (
           <div className="events-consumption-group" key={group.key}>
@@ -156,6 +208,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     value={values[row.kategorie].eingekauft}
                     onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
                   />
