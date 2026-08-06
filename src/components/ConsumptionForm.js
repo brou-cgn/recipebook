@@ -22,7 +22,8 @@ function getRowUnitSubtitle(row) {
     const einheit = row.einheiten[row.einheitIdx];
     if (einheit) {
       const sizeLabel = getEinheitSizeLabel(einheit.einheitsgroesse);
-      return einheit.gebindeinheit ? `${sizeLabel} · ${einheit.gebindeinheit}` : sizeLabel;
+      const unitLabel = einheit.gebindeinheit || einheit.einheit;
+      return unitLabel ? `${sizeLabel} · ${unitLabel}` : sizeLabel;
     }
   }
   if (row.gebindeGroesseLiter) {
