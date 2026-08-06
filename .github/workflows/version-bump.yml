@@ -12,6 +12,7 @@ permissions:
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.bump.outputs.new_version }}
       bump_type: ${{ steps.determine-bump.outputs.bump_type }}
