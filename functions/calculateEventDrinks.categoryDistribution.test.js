@@ -806,7 +806,7 @@ test('loadCustomDrinks verwendet fallback fuer predefined_mineralwasser ohne Fir
   assert.equal(result.predefined_mineralwasser.predefined, true);
 });
 
-test('calculate erzeugt fuer "predefined_mineralwasser" weder Warnung noch eigene Zeile', () => {
+test('calculate erzeugt fuer "predefined_mineralwasser" keine Warnung und eine isPredefinedDrink-Zeile', () => {
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -835,5 +835,10 @@ test('calculate erzeugt fuer "predefined_mineralwasser" weder Warnung noch eigen
   assert.equal(result.warnungen.length, 0, 'keine Warnung fuer bekanntes vordefiniertes Getraenk');
   assert.ok(wasser, 'wasser-Kategorie wird normal berechnet');
   assert.ok(wasser.literOhnePuffer > 0);
-  assert.equal(predefinedRow, undefined, 'keine eigene Zeile fuer das vordefinierte Getraenk ohne Gebinde');
+  assert.ok(predefinedRow, 'eigene Zeile fuer das vordefinierte Getraenk wird erzeugt');
+  assert.equal(predefinedRow.isPredefinedDrink, true, 'Zeile ist als isPredefinedDrink markiert');
+  assert.equal(predefinedRow.drinkLabel, 'Mineralwasser', 'drinkLabel ist gesetzt');
+  assert.equal(predefinedRow.drinkKategorie, 'wasser', 'drinkKategorie ist gesetzt');
+  assert.equal(predefinedRow.gebindeGroesseLiter, wasser.gebindeGroesseLiter, 'Gebinde aus Kategorie-Zeile uebernommen');
+  assert.equal(predefinedRow.literOhnePuffer, wasser.literOhnePuffer, 'Literbedarf aus Kategorie-Zeile uebernommen');
 });
