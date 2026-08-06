@@ -1,0 +1,81 @@
+import { calculateCascadingEinkauf } from './einkaufCascade';
+
+describe('calculateCascadingEinkauf', () => {
+  it('kaskadiert Fass (groß, kein Gebinde) und Flasche (klein, mit Gebinde Kasten)', () => {
+    const units = [
+      { key: 'fass', einheitsgroesseLiter: 50, gebindeGroesseLiter: null },
+      { key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 24 * 0.33 },
+    ];
+    const { values, warnings } = calculateCascadingEinkauf(units, 62.7);
+    expect(values.fass).toBe(1);
+    expect(values.flasche).toBeCloseTo(1.75, 6);
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('rundet 2,4 auf 2,5 und 2,8 auf 3,0', () => {
+    const units = [{ key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 1 }];
+    expect(calculateCascadingEinkauf(units, 2.4).values.flasche).toBeCloseTo(2.5, 6);
+    expect(calculateCascadingEinkauf(units, 2.8).values.flasche).toBeCloseTo(3.0, 6);
+  });
+
+  it('funktioniert mit nur einer Einheit (kein Fass, nur Flasche)', () => {
+    const units = [{ key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 7.92 }];
+    const { values, warnings } = calculateCascadingEinkauf(units, 12.7);
+    expect(values.flasche).toBeCloseTo(1.75, 6);
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('lässt das Feld leer und warnt, wenn eine große Einheit keine Größe hat', () => {
+    const units = [
+      { key: 'fass', einheitsgroesseLiter: 0, gebindeGroesseLiter: null },
+      { key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 7.92 },
+    ];
+    const { values, warnings } = calculateCascadingEinkauf(units, 62.7);
+    expect(values.fass).toBeNull();
+    // Fass entfällt komplett, voller Bedarf (62.7) geht auf die Flasche: 62.7 / 7.92 = 7.9166... -> Stufe 1 -> 8.0
+    expect(values.flasche).toBeCloseTo(8.0, 6);
+    expect(warnings.length).toBe(1);
+  });
+
+  it('lässt eine mittlere Einheit ohne gültige Größe aus, ohne die übrigen Einheiten zu stören', () => {
+    const units = [
+      { key: 'fass', einheitsgroesseLiter: 50, gebindeGroesseLiter: null },
+      { key: 'mittelgebinde', einheitsgroesseLiter: 0, gebindeGroesseLiter: null },
+      { key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 24 * 0.33 },
+    ];
+    const { values, warnings } = calculateCascadingEinkauf(units, 62.7);
+    expect(values.fass).toBe(1);
+    expect(values.mittelgebinde).toBeNull();
+    expect(values.flasche).toBeCloseTo(1.75, 6);
+    expect(warnings.length).toBe(1);
+  });
+
+  it('lässt das Feld leer und warnt, wenn die einzige (kleinste) Einheit keine gültige Größe hat', () => {
+    const units = [{ key: 'flasche', einheitsgroesseLiter: 0, gebindeGroesseLiter: null }];
+    const { values, warnings } = calculateCascadingEinkauf(units, 62.7);
+    expect(values.flasche).toBeNull();
+    expect(warnings.length).toBe(1);
+  });
+
+  it('nutzt die eigene Größe als Basis, wenn keine Gebindeeinheit vorhanden ist', () => {
+    const units = [{ key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: null }];
+    const { values } = calculateCascadingEinkauf(units, 0.5);
+    // 0.5 / 0.33 = 1.515... -> nächste Stufe 3/4 -> 1.75
+    expect(values.flasche).toBeCloseTo(1.75, 6);
+  });
+
+  it('gibt leere values zurück, wenn keine Einheiten übergeben werden', () => {
+    expect(calculateCascadingEinkauf([], 10).values).toEqual({});
+    expect(calculateCascadingEinkauf(undefined, 10).values).toEqual({});
+  });
+
+  it('behandelt Bedarf 0 als 0 in allen Feldern', () => {
+    const units = [
+      { key: 'fass', einheitsgroesseLiter: 50, gebindeGroesseLiter: null },
+      { key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 7.92 },
+    ];
+    const { values } = calculateCascadingEinkauf(units, 0);
+    expect(values.fass).toBe(0);
+    expect(values.flasche).toBe(0);
+  });
+});
