@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -11,8 +12,8 @@ function getEinheitSizeLabel(einheitsgroesse) {
   return `${liters.toFixed(1).replace('.', ',')} l`;
 }
 
-function getRowDrinkName(row) {
-  if (row.isCustomDrink && row.drinkLabel) return row.drinkLabel;
+function getRowDrinkName(row, recipes) {
+  if (row.isCustomDrink && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes).displayName;
   return CATEGORY_LABELS[row.kategorie] || row.kategorie;
 }
 
@@ -31,14 +32,14 @@ function getRowUnitSubtitle(row) {
   return null;
 }
 
-function groupKategorienByDrink(kategorien) {
+function groupKategorienByDrink(kategorien, recipes) {
   const groups = [];
   const groupsByKey = new Map();
   kategorien.forEach((row) => {
     const key = row.drinkId || row.kategorie;
     let group = groupsByKey.get(key);
     if (!group) {
-      group = { key, drinkName: getRowDrinkName(row), rows: [] };
+      group = { key, drinkName: getRowDrinkName(row, recipes), rows: [] };
       groupsByKey.set(key, group);
       groups.push(group);
     }
@@ -47,9 +48,9 @@ function groupKategorienByDrink(kategorien) {
   return groups;
 }
 
-function ConsumptionForm({ event, onDone, onCancel }) {
+function ConsumptionForm({ event, recipes, onDone, onCancel }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => row.isCustomDrink && row.gebindeGroesseLiter);
-  const drinkGroups = groupKategorienByDrink(kategorien);
+  const drinkGroups = groupKategorienByDrink(kategorien, recipes);
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {

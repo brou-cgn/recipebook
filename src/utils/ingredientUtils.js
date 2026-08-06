@@ -238,7 +238,7 @@ const QUANTITY_PATTERN = '(?:\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?)'
  * @param {string} ingredient - The ingredient string to parse
  * @returns {{ amount: number|null, unit: string|null, name: string }}
  */
-function parseIngredientPartsSync(ingredient) {
+export function parseIngredientPartsSync(ingredient) {
   if (!ingredient || typeof ingredient !== 'string') {
     return { amount: null, unit: null, name: ingredient || '' };
   }

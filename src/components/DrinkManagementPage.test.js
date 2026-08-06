@@ -6,11 +6,16 @@ const mockSubscribeToCustomDrinks = jest.fn();
 const mockSaveCustomDrink = jest.fn();
 const mockDeleteCustomDrink = jest.fn();
 const mockGetCustomLists = jest.fn();
+const mockUpdateRecipe = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   deleteCustomDrink: (...args) => mockDeleteCustomDrink(...args),
+}));
+
+jest.mock('../utils/recipeFirestore', () => ({
+  updateRecipe: (...args) => mockUpdateRecipe(...args),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -35,6 +40,7 @@ describe('DrinkManagementPage', () => {
       return jest.fn();
     });
     mockGetCustomLists.mockResolvedValue({ packageUnits: [] });
+    mockUpdateRecipe.mockResolvedValue(undefined);
   });
 
   test('renders the mobile add FAB even in the empty state and opens the create form', () => {
@@ -454,6 +460,91 @@ describe('DrinkManagementPage', () => {
 
       expect(screen.getByText('Mojito')).toBeInTheDocument();
       expect(screen.queryByText('#recipe:r1:Mojito')).not.toBeInTheDocument();
+    });
+
+    describe('ingredient list on the edit page', () => {
+      const recipesWithIngredients = [
+        {
+          id: 'r1',
+          title: 'Mojito',
+          speisekategorie: ['Drinks'],
+          ingredients: [
+            { type: 'ingredient', text: '50 ml Rum' },
+            { type: 'ingredient', text: '2 EL Zucker', includedInCalculation: false },
+            { type: 'heading', text: 'Deko' },
+          ],
+        },
+      ];
+
+      test('shows the ingredients of the linked recipe with amount and unit', () => {
+        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+          cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
+          return jest.fn();
+        });
+
+        render(<DrinkManagementPage currentUser={currentUser} recipes={recipesWithIngredients} />);
+
+        fireEvent.click(screen.getByText('Mojito'));
+
+        expect(screen.getByText('Rum')).toBeInTheDocument();
+        expect(screen.getByText('50 ml')).toBeInTheDocument();
+        expect(screen.getByText('Zucker')).toBeInTheDocument();
+        expect(screen.getByText('2 EL')).toBeInTheDocument();
+        // Headings are not rendered as ingredient rows
+        expect(screen.queryByText('Deko')).not.toBeInTheDocument();
+      });
+
+      test('does not show an ingredient list for a normal (non-recipe) drink', () => {
+        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+          cb([{ id: 'd1', name: 'Craft-Bier', kategorie: 'bier', einheiten: [] }]);
+          return jest.fn();
+        });
+
+        render(<DrinkManagementPage currentUser={currentUser} recipes={recipesWithIngredients} />);
+
+        fireEvent.click(screen.getByText('Craft-Bier'));
+
+        expect(screen.queryByText('Rum')).not.toBeInTheDocument();
+      });
+
+      test('toggling an ingredient persists includedInCalculation on the recipe document', async () => {
+        mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+          cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
+          return jest.fn();
+        });
+
+        render(<DrinkManagementPage currentUser={currentUser} recipes={recipesWithIngredients} />);
+
+        fireEvent.click(screen.getByText('Mojito'));
+
+        const rumToggle = screen.getByRole('checkbox', { name: 'Rum in Kalkulation berücksichtigen' });
+        expect(rumToggle).toBeChecked();
+        fireEvent.click(rumToggle);
+
+        await waitFor(() => {
+          expect(mockUpdateRecipe).toHaveBeenCalledWith('r1', {
+            ingredients: [
+              { type: 'ingredient', text: '50 ml Rum', includedInCalculation: false },
+              { type: 'ingredient', text: '2 EL Zucker', includedInCalculation: false },
+              { type: 'heading', text: 'Deko' },
+            ],
+          });
+        });
+
+        const zuckerToggle = screen.getByRole('checkbox', { name: 'Zucker in Kalkulation berücksichtigen' });
+        expect(zuckerToggle).not.toBeChecked();
+        fireEvent.click(zuckerToggle);
+
+        await waitFor(() => {
+          expect(mockUpdateRecipe).toHaveBeenLastCalledWith('r1', {
+            ingredients: [
+              { type: 'ingredient', text: '50 ml Rum' },
+              { type: 'ingredient', text: '2 EL Zucker', includedInCalculation: true },
+              { type: 'heading', text: 'Deko' },
+            ],
+          });
+        });
+      });
     });
   });
 

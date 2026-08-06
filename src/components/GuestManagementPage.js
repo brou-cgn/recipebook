@@ -12,6 +12,7 @@ import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPr
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 
 const emptyForm = () => ({
   vorname: '',
@@ -32,7 +33,7 @@ const getPreferenceLabel = (factor) => {
   return 'wird nicht berücksichtigt';
 };
 
-function GuestManagementPage({ onBack, currentUser }) {
+function GuestManagementPage({ onBack, currentUser, recipes }) {
   const [profiles, setProfiles] = useState([]);
   const [customDrinks, setCustomDrinks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,8 +80,8 @@ function GuestManagementPage({ onBack, currentUser }) {
   }, [currentUser?.id]);
 
   const availableDrinks = useMemo(() => {
-    return customDrinks.map((drink) => ({ id: drink.id, label: drink.name || drink.id }));
-  }, [customDrinks]);
+    return customDrinks.map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes).displayName || drink.id }));
+  }, [customDrinks, recipes]);
 
   const openNew = () => {
     setEditId(null);

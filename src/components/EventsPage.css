@@ -422,6 +422,82 @@
   color: #a12626;
 }
 
+.drink-recipe-ingredient-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drink-recipe-ingredient-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.drink-recipe-ingredient-name {
+  flex: 1;
+  color: #333;
+}
+
+.drink-recipe-ingredient-amount {
+  color: #777;
+  white-space: nowrap;
+}
+
+.drink-recipe-ingredient-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.drink-recipe-ingredient-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.drink-recipe-ingredient-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 22px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.drink-recipe-ingredient-toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.drink-recipe-ingredient-toggle input:checked + .drink-recipe-ingredient-toggle-slider {
+  background-color: #2F5D50;
+}
+
+.drink-recipe-ingredient-toggle input:checked + .drink-recipe-ingredient-toggle-slider::before {
+  transform: translateX(18px);
+}
+
+.drink-recipe-ingredient-toggle input:focus-visible + .drink-recipe-ingredient-toggle-slider {
+  box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.3);
+}
+
 .events-drink-selector {
   display: flex;
   gap: 8px;

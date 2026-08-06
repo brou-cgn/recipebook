@@ -3821,6 +3821,22 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .drink-recipe-ingredient-row {
+  border-color: #555;
+}
+
+[data-theme="dark"] .drink-recipe-ingredient-name {
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .drink-recipe-ingredient-amount {
+  color: #999;
+}
+
+[data-theme="dark"] .drink-recipe-ingredient-toggle-slider {
+  background-color: #555;
+}
+
 [data-theme="dark"] .events-delete-btn {
   background: #4a2323;
   color: #f0a0a0;
