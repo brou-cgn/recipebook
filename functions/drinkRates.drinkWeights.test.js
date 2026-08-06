@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {DRINK_WEIGHTS, getDrinkWeight, BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
+const {DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR} = require('./drinkRates');
 const {_internal} = require('./calculateEventDrinks');
 
 // --- getDrinkWeight ---
@@ -47,10 +47,40 @@ test('DRINK_WEIGHTS Basis-Gewichte ergeben in Summe 1.0', () => {
 });
 
 test('DRINK_WEIGHTS enthaelt alle erwarteten Kategorien', () => {
-  const expected = ['bier', 'bier_alkoholfrei', 'wein', 'softdrinks', 'spirituosen', 'kaffee', 'tee', 'wasser'];
+  const expected = ['bier', 'bier_alkoholfrei', 'wein', 'softdrinks', 'spirituosen', 'longdrinks', 'kaffee', 'tee', 'wasser'];
   for (const cat of expected) {
     assert.ok(Object.prototype.hasOwnProperty.call(DRINK_WEIGHTS, cat), `${cat} fehlt in DRINK_WEIGHTS`);
   }
+});
+
+// --- parent / getWeightSubcategoryParents / getParentTotal ---
+
+test('DRINK_WEIGHTS.parent bildet die Eltern/Kind-Beziehungen ab', () => {
+  assert.equal(DRINK_WEIGHTS.bier.parent, null);
+  assert.equal(DRINK_WEIGHTS.bier_alkoholfrei.parent, 'bier');
+  assert.equal(DRINK_WEIGHTS.wein.parent, null);
+  assert.equal(DRINK_WEIGHTS.spirituosen.parent, null);
+  assert.equal(DRINK_WEIGHTS.longdrinks.parent, 'spirituosen');
+  assert.equal(DRINK_WEIGHTS.wasser.parent, null);
+});
+
+test('getWeightSubcategoryParents gibt nur Subkategorien mit eigenem Budget zurueck', () => {
+  assert.deepEqual(getWeightSubcategoryParents(), {
+    bier_alkoholfrei: 'bier',
+    longdrinks: 'spirituosen',
+  });
+});
+
+test('getParentTotal summiert Elternkategorie und alle Subkategorien', () => {
+  assert.equal(getParentTotal({bier: 2.0, bier_alkoholfrei: 0.5}, 'bier'), 2.5);
+  assert.equal(getParentTotal({spirituosen: 1.2, longdrinks: 0.8}, 'spirituosen'), 2.0);
+});
+
+test('getParentTotal ignoriert fehlende Subkategorien und liefert 0 fuer unbekannte Elternkategorie', () => {
+  assert.equal(getParentTotal({bier: 2.0}, 'bier'), 2.0);
+  assert.equal(getParentTotal({}, 'bier'), 0);
+  assert.equal(getParentTotal({bier: 2.0}, 'unbekannt'), 0);
+  assert.equal(getParentTotal(null, 'bier'), 0);
 });
 
 // --- Proportionale Verteilung mit DRINK_WEIGHTS ---
