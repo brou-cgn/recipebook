@@ -440,15 +440,33 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
             {form.einheiten.map((einheit, idx) => (
               <div key={idx} className="events-form-row events-einheit-row">
                 <label className="events-form-field">
-                  <span>Einheitsgröße</span>
-                  <select
-                    value={einheit.einheitsgroesse}
-                    onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
-                  >
-                    {UNIT_SIZES.map((u) => (
-                      <option key={u.value} value={u.value}>{u.label}</option>
-                    ))}
-                  </select>
+                  <span>{nameDrinkDisplay.isRecipe ? 'Einheitsgröße (ml)' : 'Einheitsgröße'}</span>
+                  {nameDrinkDisplay.isRecipe ? (
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={
+                        einheit.einheitsgroesse !== '' && einheit.einheitsgroesse !== null && einheit.einheitsgroesse !== undefined
+                          ? Math.round(Number(einheit.einheitsgroesse) * 1000)
+                          : ''
+                      }
+                      onChange={(e) => {
+                        const ml = e.target.value;
+                        updateEinheit(idx, 'einheitsgroesse', ml === '' ? '' : Number(ml) / 1000);
+                      }}
+                      placeholder="z. B. 250"
+                    />
+                  ) : (
+                    <select
+                      value={einheit.einheitsgroesse}
+                      onChange={(e) => updateEinheit(idx, 'einheitsgroesse', e.target.value)}
+                    >
+                      {UNIT_SIZES.map((u) => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </select>
+                  )}
                 </label>
                 <label className="events-form-field">
                   <span>Gebindeinheit</span>

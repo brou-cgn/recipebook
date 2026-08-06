@@ -450,6 +450,49 @@ describe('DrinkManagementPage', () => {
       expect(nameInput).not.toHaveAttribute('readonly');
     });
 
+    test('shows a free-form ml input for Einheitsgröße instead of the dropdown when the drink is linked to a recipe', () => {
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#Mojito' } });
+      fireEvent.click(screen.getByText('Mojito'));
+
+      expect(screen.getByText('Einheitsgröße (ml)')).toBeInTheDocument();
+      expect(screen.getByRole('spinbutton', { name: 'Einheitsgröße (ml)' })).toBeInTheDocument();
+      expect(screen.queryByText('Einheitsgröße')).not.toBeInTheDocument();
+    });
+
+    test('saving a recipe-linked drink converts the entered ml value to liters', async () => {
+      mockSaveCustomDrink.mockResolvedValue('new-drink-id');
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#Mojito' } });
+      fireEvent.click(screen.getByText('Mojito'));
+
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Einheitsgröße (ml)' }), { target: { value: '250' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+          currentUser.id,
+          expect.objectContaining({
+            einheiten: [expect.objectContaining({ einheitsgroesse: 0.25 })],
+          }),
+          undefined,
+        );
+      });
+    });
+
+    test('keeps the Einheitsgröße dropdown for drinks that are not linked to a recipe', () => {
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+
+      expect(screen.getByText('Einheitsgröße')).toBeInTheDocument();
+      expect(screen.queryByText('Einheitsgröße (ml)')).not.toBeInTheDocument();
+    });
+
     test('the drink list shows the linked recipe name instead of the raw link', () => {
       mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
         cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
