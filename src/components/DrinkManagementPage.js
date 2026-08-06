@@ -1,10 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './EventsPage.css';
 import { subscribeToCustomDrinks, saveCustomDrink, deleteCustomDrink } from '../utils/eventsFirestore';
 import OverviewAddFab from './OverviewAddFab';
+import RecipeTypeahead from './RecipeTypeahead';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel, PREDEFINED_DRINKS } from '../utils/drinkCategories';
 import { getCustomLists, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
+import { encodeRecipeLink, decodeRecipeLink, containsHashForTypeahead } from '../utils/recipeLinks';
+
+const DRINK_RECIPE_CATEGORY = 'Drinks';
+
+const isDrinkRecipe = (recipe) =>
+  Array.isArray(recipe?.speisekategorie)
+    ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
+    : recipe?.speisekategorie === DRINK_RECIPE_CATEGORY;
+
+const getDrinkDisplayName = (drink) => {
+  const link = decodeRecipeLink(drink?.name);
+  return link ? link.recipeName : (drink?.name || '');
+};
 
 const SWIPE_DELETE_THRESHOLD = 56;
 const SWIPE_DELETE_MAX_OFFSET = 96;
@@ -118,7 +132,7 @@ function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
               type="button"
               className="drink-swipe-delete-action"
               onClick={() => { onDelete(drink); resetSwipe(); }}
-              aria-label={`${drink.name} löschen`}
+              aria-label={`${getDrinkDisplayName(drink)} löschen`}
             >
               {isBase64Image(swipeDeleteIcon) ? (
                 <img src={swipeDeleteIcon} alt="" className="swipe-delete-icon-image" draggable="false" />
@@ -138,7 +152,7 @@ function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
         onTouchEnd={handleTouchEnd}
         onTouchCancel={resetSwipe}
       >
-        <h3>{drink.name}</h3>
+        <h3>{getDrinkDisplayName(drink)}</h3>
         <p className="events-card-meta">
           {[
             drink.kategorie ? getDrinkCategoryLabel(drink.kategorie) : null,
@@ -154,7 +168,7 @@ function DrinkRow({ drink, onEdit, onDelete, swipeDeleteIcon }) {
   );
 }
 
-function DrinkManagementPage({ onBack, currentUser }) {
+function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [drinks, setDrinks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -164,6 +178,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [packageUnits, setPackageUnits] = useState([]);
+  const [showNameTypeahead, setShowNameTypeahead] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [fabPressed, setFabPressed] = useState(false);
@@ -207,11 +222,19 @@ function DrinkManagementPage({ onBack, currentUser }) {
     };
   }, []);
 
+  const drinkRecipes = useMemo(
+    () => (Array.isArray(recipes) ? recipes.filter(isDrinkRecipe) : []),
+    [recipes]
+  );
+
+  const nameRecipeLink = decodeRecipeLink(form.name);
+
   const openNew = () => {
     setEditId(null);
     setIsPredefined(false);
     setForm(emptyForm());
     setError('');
+    setShowNameTypeahead(false);
     setShowForm(true);
   };
 
@@ -231,7 +254,27 @@ function DrinkManagementPage({ onBack, currentUser }) {
           : [emptyEinheit()],
     });
     setError('');
+    setShowNameTypeahead(false);
     setShowForm(true);
+  };
+
+  const handleNameChange = (value) => {
+    setForm((f) => ({ ...f, name: value }));
+    setShowNameTypeahead(containsHashForTypeahead(value));
+  };
+
+  const handleNameRecipeSelect = (selectedRecipe) => {
+    setForm((f) => ({ ...f, name: encodeRecipeLink(selectedRecipe.id, selectedRecipe.title) }));
+    setShowNameTypeahead(false);
+  };
+
+  const handleClearNameLink = () => {
+    setForm((f) => ({ ...f, name: '' }));
+  };
+
+  const closeForm = () => {
+    setShowNameTypeahead(false);
+    setShowForm(false);
   };
 
   const addEinheit = () => {
@@ -299,7 +342,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
       await deleteCustomDrink(currentUser.id, drink.id);
       const id = deleteBannerCounterRef.current;
       deleteBannerCounterRef.current = (id + 1) % 100000;
-      setDeleteBanners((prev) => [...prev, { id, message: `"${drink.name}" gelöscht.` }]);
+      setDeleteBanners((prev) => [...prev, { id, message: `"${getDrinkDisplayName(drink)}" gelöscht.` }]);
       const timeoutId = setTimeout(() => {
         setDeleteBanners((prev) => prev.filter((b) => b.id !== id));
         deleteBannerTimeoutsRef.current.delete(id);
@@ -317,7 +360,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
           <h2>{editId ? 'Getränk bearbeiten' : 'Neues Getränk'}</h2>
           <button
             className="events-close-btn"
-            onClick={() => setShowForm(false)}
+            onClick={closeForm}
             aria-label="Abbrechen"
             title="Abbrechen"
           >
@@ -327,14 +370,30 @@ function DrinkManagementPage({ onBack, currentUser }) {
         <form className="events-form" onSubmit={handleSave} ref={formRef}>
           <label className="events-form-field">
             <span>Name</span>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="z. B. Craft-Bier, Apfelsaft, ..."
-              required={!isPredefined}
-              disabled={isPredefined}
-            />
+            <div className="events-name-input-wrapper">
+              <input
+                type="text"
+                value={nameRecipeLink ? nameRecipeLink.recipeName : form.name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="z. B. Craft-Bier, Apfelsaft, ... (# verlinkt ein Rezept)"
+                required={!isPredefined}
+                disabled={isPredefined}
+                readOnly={!!nameRecipeLink}
+                className={nameRecipeLink ? 'recipe-link-input' : ''}
+                title={nameRecipeLink ? `Verlinktes Rezept: ${nameRecipeLink.recipeName}` : undefined}
+              />
+              {nameRecipeLink && !isPredefined && (
+                <button
+                  type="button"
+                  className="events-name-link-clear-btn"
+                  onClick={handleClearNameLink}
+                  aria-label="Verknüpfung entfernen"
+                  title="Verknüpfung entfernen"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </label>
 
           <label className="events-form-field">
@@ -433,7 +492,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
             <button
               type="button"
               className="events-secondary-btn events-save-desktop-only"
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               disabled={saving}
             >
               Abbrechen
@@ -477,7 +536,7 @@ function DrinkManagementPage({ onBack, currentUser }) {
         <button
           type="button"
           className={`events-cancel-fab-button ${cancelPressed ? 'pressed' : ''}`}
-          onClick={() => setShowForm(false)}
+          onClick={closeForm}
           onTouchStart={() => setCancelPressed(true)}
           onTouchEnd={() => setCancelPressed(false)}
           onTouchCancel={() => setCancelPressed(false)}
@@ -494,6 +553,15 @@ function DrinkManagementPage({ onBack, currentUser }) {
             getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
           )}
         </button>
+
+        {showNameTypeahead && (
+          <RecipeTypeahead
+            recipes={drinkRecipes}
+            onSelect={handleNameRecipeSelect}
+            onCancel={() => setShowNameTypeahead(false)}
+            inputValue={form.name}
+          />
+        )}
       </div>
     );
   }

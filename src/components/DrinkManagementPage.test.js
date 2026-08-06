@@ -378,6 +378,85 @@ describe('DrinkManagementPage', () => {
     });
   });
 
+  describe('recipe linking in the name field', () => {
+    const recipes = [
+      { id: 'r1', title: 'Mojito', speisekategorie: ['Drinks'] },
+      { id: 'r2', title: 'Aperol Spritz', speisekategorie: ['Drinks'] },
+      { id: 'r3', title: 'Tomatensoße', speisekategorie: ['Hauptspeisen'] },
+    ];
+
+    test('typing # in the name field opens the recipe typeahead with only Drinks-category recipes', () => {
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#' } });
+
+      expect(screen.getByPlaceholderText('Rezept suchen...')).toBeInTheDocument();
+      expect(screen.getByText('Mojito')).toBeInTheDocument();
+      expect(screen.getByText('Aperol Spritz')).toBeInTheDocument();
+      expect(screen.queryByText('Tomatensoße')).not.toBeInTheDocument();
+    });
+
+    test('selecting a recipe from the typeahead links it and shows the recipe name', () => {
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#Mojito' } });
+
+      fireEvent.click(screen.getByText('Mojito'));
+
+      const nameInput = screen.getByRole('textbox', { name: /Name/i });
+      expect(nameInput.value).toBe('Mojito');
+      expect(nameInput).toHaveAttribute('readonly');
+      expect(screen.queryByPlaceholderText('Rezept suchen...')).not.toBeInTheDocument();
+    });
+
+    test('saving a linked drink stores the encoded recipe link as the name', async () => {
+      mockSaveCustomDrink.mockResolvedValue('new-drink-id');
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#Mojito' } });
+      fireEvent.click(screen.getByText('Mojito'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveCustomDrink).toHaveBeenCalledWith(
+          currentUser.id,
+          expect.objectContaining({ name: '#recipe:r1:Mojito' }),
+          undefined,
+        );
+      });
+    });
+
+    test('clearing a linked recipe name makes the field editable again', () => {
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: '#Mojito' } });
+      fireEvent.click(screen.getByText('Mojito'));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Verknüpfung entfernen' }));
+
+      const nameInput = screen.getByRole('textbox', { name: /Name/i });
+      expect(nameInput.value).toBe('');
+      expect(nameInput).not.toHaveAttribute('readonly');
+    });
+
+    test('the drink list shows the linked recipe name instead of the raw link', () => {
+      mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+        cb([{ id: 'd1', name: '#recipe:r1:Mojito', kategorie: 'longdrink', einheiten: [] }]);
+        return jest.fn();
+      });
+
+      render(<DrinkManagementPage currentUser={currentUser} recipes={recipes} />);
+
+      expect(screen.getByText('Mojito')).toBeInTheDocument();
+      expect(screen.queryByText('#recipe:r1:Mojito')).not.toBeInTheDocument();
+    });
+  });
+
   describe('swipe-delete', () => {
     const createTouchEvent = (type, clientX, clientY) => ({
       touches: [{ clientX, clientY }],

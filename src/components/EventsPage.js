@@ -38,7 +38,7 @@ const formatDrinkSummary = (berechnung) => {
     .join(', ');
 };
 
-function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEventReminderHandled }) {
+function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -133,6 +133,7 @@ function EventsPage({ onBack, currentUser, pendingEventReminderId, onPendingEven
       <DrinkManagementPage
         onBack={() => setSubView('list')}
         currentUser={currentUser}
+        recipes={recipes}
       />
     );
   }

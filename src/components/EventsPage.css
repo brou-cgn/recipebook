@@ -328,6 +328,42 @@
   box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.12);
 }
 
+.events-name-input-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.events-name-input-wrapper input {
+  flex: 1;
+  width: 100%;
+}
+
+.events-name-input-wrapper input.recipe-link-input {
+  background-color: #f0f7ff;
+  border-color: #90c2f7;
+  color: #1a5fa8;
+  cursor: default;
+  padding-right: 36px;
+}
+
+.events-name-link-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #1a5fa8;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.events-name-link-clear-btn:hover {
+  color: #402C1C;
+}
+
 .events-category-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));

@@ -2057,6 +2057,7 @@ function App() {
         <EventsPage
           onBack={() => handleViewChange('recipes')}
           currentUser={currentUser}
+          recipes={recipes}
           pendingEventReminderId={pendingEventReminderId}
           onPendingEventReminderHandled={() => {
             setPendingEventReminderId(null);
