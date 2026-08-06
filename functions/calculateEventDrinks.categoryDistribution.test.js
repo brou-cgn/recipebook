@@ -733,16 +733,75 @@ test('calculate leitet Kategorien mit eigenem Budget aus custom drinks ab, wenn 
   assert.equal(bitburger.literMitPuffer, bierAlkoholfrei.literMitPuffer);
 });
 
-test('loadCustomDrinks loest "predefined_mineralwasser" auf, ohne Firestore abzufragen', async () => {
+test('loadCustomDrinks uebernimmt fuer predefined_mineralwasser gespeicherte einheiten aus Firestore', async () => {
   const db = {
     collection() {
-      throw new Error('Firestore sollte fuer vordefinierte Getraenke nicht angefragt werden.');
+      return {
+        doc() {
+          return {
+            collection() {
+              return {
+                doc() {
+                  return {
+                    async get() {
+                      return {
+                        exists: true,
+                        data() {
+                          return {
+                            name: 'Mineralwasser (falsch)',
+                            kategorie: 'softdrinks',
+                            einheiten: [{einheitsgroesse: 1.5, gebindeinheit: 'Kasten', einheitenProGebinde: 6}],
+                          };
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
     },
   };
 
   const result = await _internal.loadCustomDrinks(db, 'user-1', ['predefined_mineralwasser']);
 
   assert.ok(result.predefined_mineralwasser, 'predefined_mineralwasser wurde aufgeloest');
+  assert.deepEqual(result.predefined_mineralwasser.einheiten, [{einheitsgroesse: 1.5, gebindeinheit: 'Kasten', einheitenProGebinde: 6}]);
+  assert.equal(result.predefined_mineralwasser.name, 'Mineralwasser');
+  assert.equal(result.predefined_mineralwasser.kategorie, 'wasser');
+  assert.equal(result.predefined_mineralwasser.predefined, true);
+});
+
+test('loadCustomDrinks verwendet fallback fuer predefined_mineralwasser ohne Firestore-Dokument', async () => {
+  const db = {
+    collection() {
+      return {
+        doc() {
+          return {
+            collection() {
+              return {
+                doc() {
+                  return {
+                    async get() {
+                      return {exists: false};
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  const result = await _internal.loadCustomDrinks(db, 'user-1', ['predefined_mineralwasser']);
+
+  assert.ok(result.predefined_mineralwasser, 'predefined_mineralwasser wurde aufgeloest');
+  assert.deepEqual(result.predefined_mineralwasser.einheiten, []);
+  assert.equal(result.predefined_mineralwasser.name, 'Mineralwasser');
   assert.equal(result.predefined_mineralwasser.kategorie, 'wasser');
   assert.equal(result.predefined_mineralwasser.predefined, true);
 });

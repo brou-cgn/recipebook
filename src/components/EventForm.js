@@ -7,7 +7,7 @@ import {
   subscribeToCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
-import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS } from '../utils/drinkCategories';
+import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS, mergePredefinedDrinks } from '../utils/drinkCategories';
 import {
   computeGuestPreferenceMultipliers,
   countGuestsByCategory,
@@ -130,7 +130,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, [...PREDEFINED_DRINKS, ...customDrinks]),
+    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks)),
     [selectedGuests, customDrinks],
   );
 
@@ -158,7 +158,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     setSaving(true);
     setError('');
     try {
-      const allDrinks = [...PREDEFINED_DRINKS, ...customDrinks];
+      const allDrinks = mergePredefinedDrinks(customDrinks);
       const categories = [...new Set(
         customDrinkIds
           .map((drinkId) => allDrinks.find((drink) => drink.id === drinkId)?.kategorie)
@@ -234,7 +234,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   if (showDrinkSelection) {
     return (
       <EventDrinkSelectionPage
-        customDrinks={[...PREDEFINED_DRINKS, ...customDrinks]}
+        customDrinks={mergePredefinedDrinks(customDrinks)}
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}

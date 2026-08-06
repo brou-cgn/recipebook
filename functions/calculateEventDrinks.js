@@ -47,7 +47,18 @@ async function loadCustomDrinks(db, uid, drinkIds) {
   await Promise.all(
       drinkIds.map(async (id) => {
         if (PREDEFINED_DRINKS[id]) {
-          result[id] = PREDEFINED_DRINKS[id];
+          const snap = await db.collection('users').doc(uid).collection('customDrinks').doc(id).get();
+          if (snap.exists) {
+            result[id] = {
+              ...PREDEFINED_DRINKS[id],
+              ...snap.data(),
+              name: PREDEFINED_DRINKS[id].name,
+              kategorie: PREDEFINED_DRINKS[id].kategorie,
+              predefined: true,
+            };
+          } else {
+            result[id] = PREDEFINED_DRINKS[id];
+          }
           return;
         }
         const snap = await db.collection('users').doc(uid).collection('customDrinks').doc(id).get();
