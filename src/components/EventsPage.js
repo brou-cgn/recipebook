@@ -27,6 +27,12 @@ const formatDate = (dateStr) => {
   }
 };
 
+const formatLiter = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value;
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+};
+
 const formatDrinkSummary = (berechnung) => {
   const ergebnis = berechnung?.ergebnis;
   if (!ergebnis || ergebnis.length === 0) return null;
@@ -240,7 +246,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
               <thead>
                 <tr>
                   <th>Getränk</th>
-                  <th>Menge</th>
+                  <th className="events-table-amount">Menge</th>
                 </tr>
               </thead>
               <tbody>
@@ -249,7 +255,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                   .map((row) => (
                     <tr key={row.kategorie}>
                       <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
-                      <td>{row.literMitPuffer} l</td>
+                      <td className="events-table-amount">{formatLiter(row.literMitPuffer)} l</td>
                     </tr>
                   ))}
               </tbody>
@@ -264,14 +270,14 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                   <thead>
                     <tr>
                       <th>Getränk</th>
-                      <th>Menge</th>
+                      <th className="events-table-amount">Menge</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(selectedEvent.istVerbrauch).map(([kategorie, liter]) => (
                       <tr key={kategorie}>
                         <td>{CATEGORY_LABELS[kategorie] || kategorie}</td>
-                        <td>{liter} l</td>
+                        <td className="events-table-amount">{formatLiter(liter)} l</td>
                       </tr>
                     ))}
                   </tbody>
