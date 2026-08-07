@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
 import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
 import { formatQuantityFraction, parseFractionQuantity } from '../utils/fractionFormat';
+import { useLongPress } from '../utils/useLongPress';
+import { decodeRecipeLink } from '../utils/recipeLinks';
+import { scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from '../utils/ingredientUtils';
+import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries } from '../utils/customLists';
+import ShoppingListModal from './ShoppingListModal';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -107,6 +112,73 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [changes, setChanges] = useState(null);
+  const [conversionTable, setConversionTable] = useState([]);
+  const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
+  const [showShoppingListModal, setShowShoppingListModal] = useState(false);
+  const [showPortionSelector, setShowPortionSelector] = useState(false);
+  const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
+  const missingSavedRef = useRef(false);
+  const {
+    activeId: portionMinusLongPressActiveId,
+    triggeredRef: portionMinusLongPressTriggeredRef,
+    start: handlePortionMinusPressStart,
+    end: handlePortionMinusPressEnd,
+  } = useLongPress();
+
+  useEffect(() => {
+    const loadShoppingListSettings = async () => {
+      const [icons, lists] = await Promise.all([getButtonIcons(), getCustomLists()]);
+      setConversionTable(lists.conversionTable || []);
+      setBringButtonIcon(getEffectiveIcon(icons, 'bringButton', getDarkModePreference()) || 'Bring');
+    };
+    loadShoppingListSettings();
+  }, []);
+
+  // Recipes linked directly from a drink's name (see resolveDrinkDisplay), deduplicated.
+  const linkedRecipes = [];
+  {
+    const seenIds = new Set();
+    drinkGroups.forEach((group) => {
+      const display = resolveDrinkDisplay(group.rows[0]?.drinkLabel, recipes);
+      if (display.isRecipe && display.recipe && !seenIds.has(display.recipe.id)) {
+        seenIds.add(display.recipe.id);
+        linkedRecipes.push(display.recipe);
+      }
+    });
+  }
+
+  const getShoppingListIngredients = () => {
+    const ingredients = [];
+    linkedRecipes.forEach((linkedRecipe) => {
+      const targetPortions = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+      if (targetPortions === 0) return;
+      const multiplier = targetPortions / (linkedRecipe.portionen || 4);
+      (linkedRecipe.ingredients || []).forEach((ing) => {
+        const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
+        if (item.type === 'heading') return;
+        const text = typeof ing === 'string' ? ing : ing.text;
+        if (decodeRecipeLink(text)) return; // skip nested links
+        if (isWaterIngredient(text)) return; // skip water
+        ingredients.push(multiplier !== 1 ? scaleIngredient(text, multiplier) : text);
+      });
+    });
+    const { converted, missing } = convertIngredientUnits(ingredients, conversionTable);
+    if (missing.length > 0 && !missingSavedRef.current) {
+      missingSavedRef.current = true;
+      addMissingConversionEntries(missing, conversionTable).catch(console.error);
+    }
+    return combineIngredients(converted);
+  };
+
+  const handleShoppingListClick = () => {
+    if (linkedRecipes.length > 0) {
+      setLinkedPortionCounts({});
+      setShowPortionSelector(true);
+    } else {
+      missingSavedRef.current = false;
+      setShowShoppingListModal(true);
+    }
+  };
 
   const updateValue = (kategorie, field, value) => {
     setValues((prev) => ({
@@ -174,7 +246,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
   return (
     <div className="events-page-container">
       <div className="events-page-header">
-        <h2>Verbrauch nachtragen</h2>
+        <h2>Einkauf & Verbrauch</h2>
         <button
           className="events-close-btn"
           onClick={onCancel}
@@ -184,10 +256,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
           ×
         </button>
       </div>
-      <p className="events-info-text">
-        Wie viele Gebinde wurden für „{event.eventName}" eingekauft, und wie viele sind übrig?
-        {' '}Die Eingekauft-Felder sind bereits aus der Kalkulation vorbefüllt und lassen sich anpassen.
-      </p>
       {prefillWarnings.length > 0 && (
         <div className="events-warnings">
           {prefillWarnings.map((warning, idx) => (
@@ -232,6 +300,12 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
         {error && <p className="events-error-text">{error}</p>}
 
         <div className="events-form-actions">
+          <button type="button" className="events-secondary-btn" onClick={handleShoppingListClick}>
+            Einkaufsliste erstellen
+          </button>
+        </div>
+
+        <div className="events-form-actions">
           <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
             Abbrechen
           </button>
@@ -240,6 +314,96 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
           </button>
         </div>
       </form>
+      {showShoppingListModal && (
+        <ShoppingListModal
+          items={getShoppingListIngredients()}
+          title={event.eventName}
+          onClose={() => setShowShoppingListModal(false)}
+          shareId={event.id}
+          bringButtonIcon={bringButtonIcon}
+        />
+      )}
+      {showPortionSelector && linkedRecipes.length > 0 && (
+        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+          <div
+            className="portion-selector-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Portionen auswählen"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="portion-selector-header">
+              <h2 className="portion-selector-title">Portionen für Einkaufsliste</h2>
+              <button
+                className="portion-selector-close"
+                onClick={() => setShowPortionSelector(false)}
+                aria-label="Portionsauswahl schließen"
+              >
+                ×
+              </button>
+            </div>
+            <div className="portion-selector-body">
+              <div className="portion-selector-section-label">Verlinkte Rezepte</div>
+              {linkedRecipes.map(linkedRecipe => {
+                const current = linkedPortionCounts[linkedRecipe.id] ?? (linkedRecipe.portionen || 4);
+                return (
+                  <div key={linkedRecipe.id} className="portion-selector-item">
+                    <span className="portion-selector-recipe-name">{linkedRecipe.title}</span>
+                    <div className="portion-selector-controls">
+                      <button
+                        className={`portion-selector-btn${portionMinusLongPressActiveId === linkedRecipe.id ? ' longpress-active' : ''}`}
+                        onClick={() => {
+                          if (portionMinusLongPressTriggeredRef.current) {
+                            portionMinusLongPressTriggeredRef.current = false;
+                            return;
+                          }
+                          setLinkedPortionCounts(prev => ({
+                            ...prev,
+                            [linkedRecipe.id]: Math.max(0, current - 1)
+                          }));
+                        }}
+                        onMouseDown={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                        onMouseUp={handlePortionMinusPressEnd}
+                        onMouseLeave={handlePortionMinusPressEnd}
+                        onTouchStart={() => handlePortionMinusPressStart(linkedRecipe.id, () => setLinkedPortionCounts(prev => ({ ...prev, [linkedRecipe.id]: 0 })))}
+                        onTouchEnd={handlePortionMinusPressEnd}
+                        onTouchCancel={handlePortionMinusPressEnd}
+                        aria-label="Portionen verringern"
+                        disabled={current === 0}
+                      >
+                        −
+                      </button>
+                      <span className="portion-selector-count">{current}</span>
+                      <button
+                        className="portion-selector-btn"
+                        onClick={() => setLinkedPortionCounts(prev => ({
+                          ...prev,
+                          [linkedRecipe.id]: current + 1
+                        }))}
+                        aria-label="Portionen erhöhen"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="portion-selector-footer">
+              <button
+                className="portion-selector-generate-btn"
+                onClick={() => {
+                  setShowPortionSelector(false);
+                  missingSavedRef.current = false;
+                  setShowShoppingListModal(true);
+                }}
+              >
+                Einkaufsliste erstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
