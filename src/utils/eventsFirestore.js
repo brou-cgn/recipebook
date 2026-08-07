@@ -112,6 +112,21 @@ export const calculateEventDrinks = async (event, eventId) => {
 };
 
 /**
+ * Sperrt die "Eingekauft"-Menge einer Getraenke-Kategorie auf einem Event, damit
+ * sie beim naechsten Oeffnen der Einkauf & Verbrauch-Seite nicht mehr aus dem
+ * kalkulierten Bedarf neu vorbefuellt wird.
+ * @param {string} uid - Current user ID
+ * @param {string} eventId - ID of the event
+ * @param {string} kategorie - Kategorie-Schluessel der Getraenke-Zeile
+ * @param {string} eingekauft - Die einzufrierende "Eingekauft"-Menge
+ * @returns {Promise<void>}
+ */
+export const lockEinkaufMenge = async (uid, eventId, kategorie, eingekauft) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  await setDoc(eventRef, { einkaufGesperrt: { [kategorie]: eingekauft } }, { merge: true });
+};
+
+/**
  * Call the submitConsumption Cloud Function: records the actual consumption
  * of a finished event and updates the user's calibrated rates.
  * @param {string} eventId - ID of the event

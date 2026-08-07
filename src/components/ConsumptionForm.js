@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
-import { submitConsumption } from '../utils/eventsFirestore';
+import { submitConsumption, lockEinkaufMenge } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
@@ -11,6 +11,7 @@ import { scaleIngredient, combineIngredients, isWaterIngredient, convertIngredie
 import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import ShoppingListModal from './ShoppingListModal';
+import LockIcon from './icons/LockIcon';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -104,13 +105,18 @@ function getCascadePrefill(drinkGroups) {
   return { prefillMap, warnings };
 }
 
-function ConsumptionForm({ event, recipes, onDone, onCancel }) {
+function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
   const { prefillMap, warnings: prefillWarnings } = getCascadePrefill(drinkGroups);
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {
+      const lockedValue = event.einkaufGesperrt?.[row.kategorie];
+      if (lockedValue !== undefined) {
+        initial[row.kategorie] = { eingekauft: lockedValue, uebrig: '' };
+        return;
+      }
       const prefillValue = prefillMap[row.kategorie];
       initial[row.kategorie] = {
         eingekauft: prefillValue !== undefined && prefillValue !== null ? formatQuantityFraction(prefillValue) : '',
@@ -119,6 +125,9 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
     });
     return initial;
   });
+  const [lockedKategorien, setLockedKategorien] = useState(
+    () => new Set(Object.keys(event.einkaufGesperrt || {}))
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [changes, setChanges] = useState(null);
@@ -224,6 +233,15 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
     }));
   };
 
+  const handleLockRow = (kategorie) => {
+    setLockedKategorien((prev) => new Set(prev).add(kategorie));
+    if (currentUser?.id) {
+      lockEinkaufMenge(currentUser.id, event.id, kategorie, values[kategorie]?.eingekauft || '').catch((err) => {
+        console.error('Error locking eingekauft value:', err);
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -304,33 +322,48 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
         {drinkGroups.map((group) => (
           <div className="events-consumption-group" key={group.key}>
             <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
-            {group.rows.map((row) => (
-              <div className="events-form-row" key={row.kategorie}>
-                {getRowUnitSubtitle(row) && (
-                  <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
-                )}
-                <label className="events-form-field">
-                  <span>Eingekauft</span>
-                  <input
-                    type="text"
-                    inputMode="text"
-                    placeholder="z.B. 1 3/4"
-                    title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
-                    value={values[row.kategorie].eingekauft}
-                    onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-                  />
-                </label>
-                <label className="events-form-field">
-                  <span>Übrig</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={values[row.kategorie].uebrig}
-                    onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
-                  />
-                </label>
-              </div>
-            ))}
+            {group.rows.map((row) => {
+              const isLocked = lockedKategorien.has(row.kategorie);
+              return (
+                <div className="events-form-row" key={row.kategorie}>
+                  {getRowUnitSubtitle(row) && (
+                    <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                  )}
+                  <label className="events-form-field">
+                    <span>Eingekauft</span>
+                    <input
+                      type="text"
+                      inputMode="text"
+                      placeholder="z.B. 1 3/4"
+                      title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
+                      value={values[row.kategorie].eingekauft}
+                      onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
+                      disabled={isLocked}
+                    />
+                  </label>
+                  <label className="events-form-field">
+                    <span>Übrig</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={values[row.kategorie].uebrig}
+                      onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                    />
+                  </label>
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      className="events-lock-btn"
+                      onClick={() => handleLockRow(row.kategorie)}
+                      aria-label="Eingekaufte Menge sperren"
+                      title="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
+                    >
+                      <LockIcon size={18} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
 
