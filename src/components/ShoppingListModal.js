@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { isBase64Image } from '../utils/imageUtils';
 import './ShoppingListModal.css';
 
-function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon }) {
+function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hideBringButton, bringButtonIcon, accentTheme }) {
   const [listItems, setListItems] = useState(() =>
     items.map((text, index) => ({ id: index, text, checked: false }))
   );
@@ -108,7 +108,7 @@ function ShoppingListModal({ items, title, onClose, shareId, onEnableSharing, hi
   return (
     <div className="shopping-list-overlay" onClick={onClose}>
       <div
-        className="shopping-list-modal"
+        className={`shopping-list-modal${accentTheme === 'event' ? ' shopping-list-modal--event' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label="Einkaufsliste"

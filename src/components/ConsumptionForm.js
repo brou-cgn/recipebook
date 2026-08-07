@@ -9,6 +9,7 @@ import { useLongPress } from '../utils/useLongPress';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from '../utils/ingredientUtils';
 import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries } from '../utils/customLists';
+import { isBase64Image } from '../utils/imageUtils';
 import ShoppingListModal from './ShoppingListModal';
 
 function getEinheitSizeLabel(einheitsgroesse) {
@@ -22,6 +23,15 @@ function getEinheitSizeLabel(einheitsgroesse) {
 function getRowDrinkName(row, recipes) {
   if ((row.isCustomDrink || row.isPredefinedDrink) && row.drinkLabel) return resolveDrinkDisplay(row.drinkLabel, recipes).displayName;
   return CATEGORY_LABELS[row.kategorie] || row.kategorie;
+}
+
+// Gebindeeinheit wenn vorhanden, sonst die Einheit -- fuer die Einkaufsliste.
+function getRowPurchaseUnit(row) {
+  if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
+    const einheit = row.einheiten[row.einheitIdx];
+    if (einheit) return einheit.gebindeinheit || einheit.einheit || '';
+  }
+  return row.gebinde || '';
 }
 
 function getRowUnitSubtitle(row) {
@@ -114,6 +124,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
   const [changes, setChanges] = useState(null);
   const [conversionTable, setConversionTable] = useState([]);
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
+  const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
@@ -130,22 +141,42 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
       const [icons, lists] = await Promise.all([getButtonIcons(), getCustomLists()]);
       setConversionTable(lists.conversionTable || []);
       setBringButtonIcon(getEffectiveIcon(icons, 'bringButton', getDarkModePreference()) || 'Bring');
+      setShoppingListIcon(getEffectiveIcon(icons, 'shoppingList', getDarkModePreference()) || 'Einkauf');
     };
     loadShoppingListSettings();
   }, []);
 
-  // Recipes linked directly from a drink's name (see resolveDrinkDisplay), deduplicated.
+  // Getraenke-Gruppen aufteilen: mit Rezeptlink (linkedRecipes) vs. ohne (nonRecipeGroups).
   const linkedRecipes = [];
+  const nonRecipeGroups = [];
   {
     const seenIds = new Set();
     drinkGroups.forEach((group) => {
       const display = resolveDrinkDisplay(group.rows[0]?.drinkLabel, recipes);
-      if (display.isRecipe && display.recipe && !seenIds.has(display.recipe.id)) {
-        seenIds.add(display.recipe.id);
-        linkedRecipes.push(display.recipe);
+      if (display.isRecipe && display.recipe) {
+        if (!seenIds.has(display.recipe.id)) {
+          seenIds.add(display.recipe.id);
+          linkedRecipes.push(display.recipe);
+        }
+      } else {
+        nonRecipeGroups.push(group);
       }
     });
   }
+
+  // Getraenke ohne Rezeptlink: in Gebindeeinheit (falls vorhanden, sonst Einheit) uebernehmen.
+  const getOtherDrinkItems = () => {
+    const items = [];
+    nonRecipeGroups.forEach((group) => {
+      group.rows.forEach((row) => {
+        const quantityText = (values[row.kategorie]?.eingekauft || '').trim();
+        if (!quantityText || !parseFractionQuantity(quantityText)) return;
+        const unit = getRowPurchaseUnit(row);
+        items.push(unit ? `${quantityText} ${unit} ${group.drinkName}` : `${quantityText} ${group.drinkName}`);
+      });
+    });
+    return items;
+  };
 
   const getShoppingListIngredients = () => {
     const ingredients = [];
@@ -156,6 +187,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
       (linkedRecipe.ingredients || []).forEach((ing) => {
         const item = typeof ing === 'string' ? { type: 'ingredient', text: ing } : ing;
         if (item.type === 'heading') return;
+        if (item.includedInCalculation === false) return; // nur auf der Getränk-bearbeiten-Karte aktivierte Zutaten
         const text = typeof ing === 'string' ? ing : ing.text;
         if (decodeRecipeLink(text)) return; // skip nested links
         if (isWaterIngredient(text)) return; // skip water
@@ -167,7 +199,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
       missingSavedRef.current = true;
       addMissingConversionEntries(missing, conversionTable).catch(console.error);
     }
-    return combineIngredients(converted);
+    return [...combineIngredients(converted), ...getOtherDrinkItems()];
   };
 
   const handleShoppingListClick = () => {
@@ -300,7 +332,12 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
         {error && <p className="events-error-text">{error}</p>}
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn" onClick={handleShoppingListClick}>
+          <button type="button" className="events-secondary-btn events-shopping-list-btn" onClick={handleShoppingListClick}>
+            {isBase64Image(shoppingListIcon) ? (
+              <img src={shoppingListIcon} alt="" className="button-icon-image" draggable="false" />
+            ) : (
+              <span className="events-shopping-list-btn-icon">{shoppingListIcon}</span>
+            )}
             Einkaufsliste erstellen
           </button>
         </div>
@@ -321,10 +358,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
           onClose={() => setShowShoppingListModal(false)}
           shareId={event.id}
           bringButtonIcon={bringButtonIcon}
+          accentTheme="event"
         />
       )}
       {showPortionSelector && linkedRecipes.length > 0 && (
-        <div className="portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
+        <div className="portion-selector-overlay events-portion-selector-overlay" onClick={() => setShowPortionSelector(false)}>
           <div
             className="portion-selector-modal"
             role="dialog"

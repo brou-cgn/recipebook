@@ -563,6 +563,32 @@
   color: #a12626;
 }
 
+.events-shopping-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.events-shopping-list-btn .button-icon-image {
+  width: 20px;
+  height: 20px;
+}
+
+/* Portionsauswahl-Dialog auf "Einkauf & Verbrauch": Signalfarben in Event-Grün
+   statt der sonst üblichen Rezept-Farben (portion-selector-* wird auch von
+   RecipeDetail/MenuDetail/GroupDetail genutzt, daher hier gescopet). */
+.events-portion-selector-overlay .portion-selector-generate-btn {
+  background: #2F5D50;
+}
+
+.events-portion-selector-overlay .portion-selector-generate-btn:hover {
+  background: #24493f;
+}
+
+.events-portion-selector-overlay .portion-selector-btn.longpress-active {
+  background: #cfe3da;
+}
+
 .events-error-text {
   color: #c0392b;
   font-size: 14px;

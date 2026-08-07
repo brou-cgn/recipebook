@@ -1,6 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ConsumptionForm from './ConsumptionForm';
+import { encodeRecipeLink } from '../utils/recipeLinks';
 
 const mockSubmitConsumption = jest.fn();
 
@@ -110,5 +111,68 @@ describe('ConsumptionForm', () => {
     const eingekauftInput = screen.getByLabelText('Eingekauft');
     expect(eingekauftInput).toHaveValue('');
     expect(screen.getByText(/Limo:.*keine gültige/)).toBeInTheDocument();
+  });
+
+  it('übernimmt Getränke ohne Rezeptlink in der Gebindeeinheit (sonst Einheit) in die Einkaufsliste', async () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+
+    render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Einkaufsliste erstellen/ }));
+
+    expect(await screen.findByText('1 3/4 Kasten Cola')).toBeInTheDocument();
+  });
+
+  it('übernimmt bei Getränken mit Rezeptlink nur die auf der Getränk-bearbeiten-Karte aktivierten Zutaten', async () => {
+    const recipe = {
+      id: 'rezept1',
+      title: 'Aperol Spritz',
+      portionen: 4,
+      ingredients: [
+        { type: 'ingredient', text: '100 ml Aperol' },
+        { type: 'ingredient', text: '50 ml Sirup', includedInCalculation: false },
+      ],
+    };
+    const einheiten = [
+      { einheitsgroesse: 0.2, einheit: 'Glas', gebindeinheit: '', einheitenProGebinde: '' },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink4:0',
+        drinkId: 'drink4',
+        drinkLabel: encodeRecipeLink('rezept1', 'Aperol Spritz'),
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 4,
+        gebinde: null,
+        gebindeGroesseLiter: 0.2,
+        einheiten,
+      },
+    ];
+
+    render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[recipe]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Einkaufsliste erstellen/ }));
+    const generateBtn = await screen.findByText('Einkaufsliste erstellen', { selector: '.portion-selector-generate-btn' });
+    fireEvent.click(generateBtn);
+
+    expect(await screen.findByText('100 ml Aperol')).toBeInTheDocument();
+    expect(screen.queryByText(/Sirup/)).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Einkaufsliste' })).toHaveClass('shopping-list-modal--event');
   });
 });
