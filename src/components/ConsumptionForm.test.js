@@ -4,9 +4,11 @@ import ConsumptionForm from './ConsumptionForm';
 import { encodeRecipeLink } from '../utils/recipeLinks';
 
 const mockSubmitConsumption = jest.fn();
+const mockLockEinkaufMenge = jest.fn(() => Promise.resolve());
 
 jest.mock('../utils/eventsFirestore', () => ({
   submitConsumption: (...args) => mockSubmitConsumption(...args),
+  lockEinkaufMenge: (...args) => mockLockEinkaufMenge(...args),
 }));
 
 jest.mock('./EventForm', () => ({
@@ -24,6 +26,7 @@ function makeEvent(ergebnis) {
 describe('ConsumptionForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLockEinkaufMenge.mockResolvedValue(undefined);
   });
 
   it('befüllt Fass und Flasche kaskadierend aus dem kalkulierten Bedarf (Fass=1, Flasche=1,75)', () => {
@@ -178,5 +181,67 @@ describe('ConsumptionForm', () => {
     expect(await screen.findByText('500 ml Aperol')).toBeInTheDocument();
     expect(screen.queryByText(/Sirup/)).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Einkaufsliste' })).toHaveClass('shopping-list-modal--event');
+  });
+
+  it('zeigt einen Sperren-Button, sperrt beim Klick das Feld und blendet den Button aus', async () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+
+    render(
+      <ConsumptionForm
+        event={makeEvent(ergebnis)}
+        recipes={[]}
+        onDone={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'user1' }}
+      />
+    );
+
+    const lockButton = screen.getByRole('button', { name: 'Eingekaufte Menge sperren' });
+    fireEvent.click(lockButton);
+
+    expect(mockLockEinkaufMenge).toHaveBeenCalledWith('user1', 'event1', 'drink2:0', '1 3/4');
+    expect(screen.getByLabelText('Eingekauft')).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
+  });
+
+  it('laedt eine bereits gesperrte Menge ohne Neukalkulation und ohne Sperren-Button', () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), einkaufGesperrt: { 'drink2:0': '3' } };
+
+    render(<ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    expect(screen.getByLabelText('Eingekauft')).toHaveValue('3');
+    expect(screen.getByLabelText('Eingekauft')).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
   });
 });

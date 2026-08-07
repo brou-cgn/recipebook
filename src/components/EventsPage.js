@@ -186,6 +186,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       <ConsumptionForm
         event={selectedEvent}
         recipes={recipes}
+        currentUser={currentUser}
         onDone={(eventId) => {
           setSelectedEventId(eventId);
           setFallbackEvent(null);
