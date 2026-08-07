@@ -4,6 +4,7 @@ import { submitConsumption } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
+import { formatQuantityFraction, parseFractionQuantity } from '../utils/fractionFormat';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -97,7 +98,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
     kategorien.forEach((row) => {
       const prefillValue = prefillMap[row.kategorie];
       initial[row.kategorie] = {
-        eingekauft: prefillValue !== undefined && prefillValue !== null ? String(prefillValue) : '',
+        eingekauft: prefillValue !== undefined && prefillValue !== null ? formatQuantityFraction(prefillValue) : '',
         uebrig: '',
       };
     });
@@ -122,7 +123,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
       const gebinde = {};
       Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
         gebinde[kategorie] = {
-          eingekauft: Number(eingekauft) || 0,
+          eingekauft: parseFractionQuantity(eingekauft) || 0,
           uebrig: Number(uebrig) || 0,
         };
       });
@@ -206,9 +207,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
                 <label className="events-form-field">
                   <span>Eingekauft</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
+                    inputMode="text"
+                    placeholder="z.B. 1 3/4"
+                    title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
                     value={values[row.kategorie].eingekauft}
                     onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
                   />

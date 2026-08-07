@@ -23,6 +23,20 @@ function roundToNextStage(value) {
 }
 
 /**
+ * Rundet einen Wert auf die naechste ganze Zahl auf (fuer Einheiten ohne
+ * eigene Gebindeeinheit, die nicht in Bruchteilen gekauft werden koennen).
+ * @param {number} value Zu rundender Wert.
+ * @return {number} Aufgerundeter, ganzzahliger Wert.
+ */
+function roundToWholeNumber(value) {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  const floorVal = Math.floor(value);
+  const frac = value - floorVal;
+  if (frac < EPSILON) return floorVal;
+  return floorVal + 1;
+}
+
+/**
  * Verteilt den Liter-Bedarf eines Getraenks kaskadierend auf seine Einheiten.
  *
  * Ablauf: Einheiten werden nach ihrer eigenen Groesse (Liter) absteigend
@@ -76,13 +90,18 @@ export function calculateCascadingEinkauf(units, bedarfLiter) {
   });
 
   const gebindeSize = Number(smallest.gebindeGroesseLiter);
-  const basisLiter = Number.isFinite(gebindeSize) && gebindeSize > 0 ? gebindeSize : smallest.einheitsgroesseLiter;
+  const hatGebindeeinheit = Number.isFinite(gebindeSize) && gebindeSize > 0;
+  const basisLiter = hatGebindeeinheit ? gebindeSize : smallest.einheitsgroesseLiter;
 
   if (!Number.isFinite(basisLiter) || basisLiter <= 0) {
     values[smallest.key] = null;
     warnings.push(`Einheit "${smallest.key}" hat keine gültige Gebinde-/Einheitsgröße - Feld bleibt leer.`);
   } else {
-    values[smallest.key] = roundToNextStage(rest / basisLiter);
+    const verhaeltnis = rest / basisLiter;
+    // Ohne Gebindeeinheit (z.B. lose Flaschen ohne Kasten) wird immer auf
+    // ganze Zahlen aufgerundet, da Bruchteile einer Einheit nicht gekauft
+    // werden koennen.
+    values[smallest.key] = hatGebindeeinheit ? roundToNextStage(verhaeltnis) : roundToWholeNumber(verhaeltnis);
   }
 
   return { values, warnings };
