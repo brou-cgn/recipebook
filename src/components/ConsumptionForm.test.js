@@ -4,11 +4,13 @@ import ConsumptionForm from './ConsumptionForm';
 import { encodeRecipeLink } from '../utils/recipeLinks';
 
 const mockSubmitConsumption = jest.fn();
-const mockLockEinkaufMenge = jest.fn(() => Promise.resolve());
+const mockLockEinkaufMengen = jest.fn(() => Promise.resolve());
+const mockUnlockEinkaufMengen = jest.fn(() => Promise.resolve());
 
 jest.mock('../utils/eventsFirestore', () => ({
   submitConsumption: (...args) => mockSubmitConsumption(...args),
-  lockEinkaufMenge: (...args) => mockLockEinkaufMenge(...args),
+  lockEinkaufMengen: (...args) => mockLockEinkaufMengen(...args),
+  unlockEinkaufMengen: (...args) => mockUnlockEinkaufMengen(...args),
 }));
 
 jest.mock('./EventForm', () => ({
@@ -26,7 +28,8 @@ function makeEvent(ergebnis) {
 describe('ConsumptionForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockLockEinkaufMenge.mockResolvedValue(undefined);
+    mockLockEinkaufMengen.mockResolvedValue(undefined);
+    mockUnlockEinkaufMengen.mockResolvedValue(undefined);
   });
 
   it('befüllt Fass und Flasche kaskadierend aus dem kalkulierten Bedarf (Fass=1, Flasche=1,75)', () => {
@@ -183,18 +186,30 @@ describe('ConsumptionForm', () => {
     expect(screen.getByRole('dialog', { name: 'Einkaufsliste' })).toHaveClass('shopping-list-modal--event');
   });
 
-  it('zeigt einen Sperren-Button, sperrt beim Klick das Feld und blendet den Button aus', async () => {
+  it('sperrt beim Klick alle Einheiten des Getraenks gemeinsam und zeigt danach den Entsperren-Button', async () => {
     const einheiten = [
+      { einheitsgroesse: 50, einheit: 'Fass', gebindeinheit: '', einheitenProGebinde: '' },
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
     ];
     const ergebnis = [
       {
-        kategorie: 'drink2:0',
-        drinkId: 'drink2',
-        drinkLabel: 'Cola',
+        kategorie: 'drink1:0',
+        drinkId: 'drink1',
+        drinkLabel: 'Hausbier',
         isCustomDrink: true,
         einheitIdx: 0,
-        literMitPuffer: 12.7,
+        literMitPuffer: 62.7,
+        gebinde: null,
+        gebindeGroesseLiter: 50,
+        einheiten,
+      },
+      {
+        kategorie: 'drink1:1',
+        drinkId: 'drink1',
+        drinkLabel: 'Hausbier',
+        isCustomDrink: true,
+        einheitIdx: 1,
+        literMitPuffer: 62.7,
         gebinde: 'Kasten',
         gebindeGroesseLiter: 0.33,
         einheiten,
@@ -214,12 +229,77 @@ describe('ConsumptionForm', () => {
     const lockButton = screen.getByRole('button', { name: 'Eingekaufte Menge sperren' });
     fireEvent.click(lockButton);
 
-    expect(mockLockEinkaufMenge).toHaveBeenCalledWith('user1', 'event1', 'drink2:0', '1 3/4');
-    expect(screen.getByLabelText('Eingekauft')).toBeDisabled();
+    expect(mockLockEinkaufMengen).toHaveBeenCalledWith('user1', 'event1', {
+      'drink1:0': '1',
+      'drink1:1': '1 3/4',
+    });
+    const eingekauftInputs = screen.getAllByLabelText('Eingekauft');
+    expect(eingekauftInputs[0]).toBeDisabled();
+    expect(eingekauftInputs[1]).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eingekaufte Menge entsperren' })).toBeInTheDocument();
   });
 
-  it('laedt eine bereits gesperrte Menge ohne Neukalkulation und ohne Sperren-Button', () => {
+  it('entsperrt beim Klick auf den Entsperren-Button wieder alle Einheiten des Getraenks', async () => {
+    const einheiten = [
+      { einheitsgroesse: 50, einheit: 'Fass', gebindeinheit: '', einheitenProGebinde: '' },
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink1:0',
+        drinkId: 'drink1',
+        drinkLabel: 'Hausbier',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 62.7,
+        gebinde: null,
+        gebindeGroesseLiter: 50,
+        einheiten,
+      },
+      {
+        kategorie: 'drink1:1',
+        drinkId: 'drink1',
+        drinkLabel: 'Hausbier',
+        isCustomDrink: true,
+        einheitIdx: 1,
+        literMitPuffer: 62.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = {
+      ...makeEvent(ergebnis),
+      einkaufGesperrt: { 'drink1:0': '1', 'drink1:1': '1 3/4' },
+    };
+
+    render(
+      <ConsumptionForm
+        event={event}
+        recipes={[]}
+        onDone={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'user1' }}
+      />
+    );
+
+    const eingekauftInputsLocked = screen.getAllByLabelText('Eingekauft');
+    expect(eingekauftInputsLocked[0]).toBeDisabled();
+    expect(eingekauftInputsLocked[1]).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
+
+    const unlockButton = screen.getByRole('button', { name: 'Eingekaufte Menge entsperren' });
+    fireEvent.click(unlockButton);
+
+    expect(mockUnlockEinkaufMengen).toHaveBeenCalledWith('user1', 'event1', ['drink1:0', 'drink1:1']);
+    const eingekauftInputsUnlocked = screen.getAllByLabelText('Eingekauft');
+    expect(eingekauftInputsUnlocked[0]).not.toBeDisabled();
+    expect(eingekauftInputsUnlocked[1]).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eingekaufte Menge sperren' })).toBeInTheDocument();
+  });
+
+  it('laedt eine bereits gesperrte Menge ohne Neukalkulation und zeigt den Entsperren-Button', () => {
     const einheiten = [
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
     ];
@@ -243,5 +323,6 @@ describe('ConsumptionForm', () => {
     expect(screen.getByLabelText('Eingekauft')).toHaveValue('3');
     expect(screen.getByLabelText('Eingekauft')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eingekaufte Menge entsperren' })).toBeInTheDocument();
   });
 });
