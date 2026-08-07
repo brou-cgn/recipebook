@@ -299,6 +299,13 @@
   border-top: 1px solid #eee;
 }
 
+.events-consumption-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .events-consumption-drink-name {
   margin: 0;
   font-weight: 600;
@@ -348,7 +355,6 @@
 
 .events-lock-btn {
   flex: 0 0 auto;
-  align-self: flex-end;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -11,6 +11,7 @@ import {
   addDoc,
   setDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   query,
   orderBy,
@@ -112,18 +113,35 @@ export const calculateEventDrinks = async (event, eventId) => {
 };
 
 /**
- * Sperrt die "Eingekauft"-Menge einer Getraenke-Kategorie auf einem Event, damit
- * sie beim naechsten Oeffnen der Einkauf & Verbrauch-Seite nicht mehr aus dem
- * kalkulierten Bedarf neu vorbefuellt wird.
+ * Sperrt die "Eingekauft"-Mengen aller Kategorien eines Getraenks auf einem Event,
+ * damit sie beim naechsten Oeffnen der Einkauf & Verbrauch-Seite nicht mehr aus dem
+ * kalkulierten Bedarf neu vorbefuellt werden.
  * @param {string} uid - Current user ID
  * @param {string} eventId - ID of the event
- * @param {string} kategorie - Kategorie-Schluessel der Getraenke-Zeile
- * @param {string} eingekauft - Die einzufrierende "Eingekauft"-Menge
+ * @param {Object} werteByKategorie - { kategorie: eingekauft } der einzufrierenden Mengen
  * @returns {Promise<void>}
  */
-export const lockEinkaufMenge = async (uid, eventId, kategorie, eingekauft) => {
+export const lockEinkaufMengen = async (uid, eventId, werteByKategorie) => {
   const eventRef = doc(db, 'users', uid, 'events', eventId);
-  await setDoc(eventRef, { einkaufGesperrt: { [kategorie]: eingekauft } }, { merge: true });
+  await setDoc(eventRef, { einkaufGesperrt: werteByKategorie }, { merge: true });
+};
+
+/**
+ * Entsperrt die "Eingekauft"-Mengen aller Kategorien eines Getraenks auf einem Event,
+ * damit sie beim naechsten Oeffnen der Einkauf & Verbrauch-Seite wieder aus dem
+ * kalkulierten Bedarf neu vorbefuellt werden.
+ * @param {string} uid - Current user ID
+ * @param {string} eventId - ID of the event
+ * @param {string[]} kategorien - Kategorie-Schluessel der zu entsperrenden Getraenke-Zeilen
+ * @returns {Promise<void>}
+ */
+export const unlockEinkaufMengen = async (uid, eventId, kategorien) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  const updates = {};
+  kategorien.forEach((kategorie) => {
+    updates[kategorie] = deleteField();
+  });
+  await setDoc(eventRef, { einkaufGesperrt: updates }, { merge: true });
 };
 
 /**

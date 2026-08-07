@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
-import { submitConsumption, lockEinkaufMenge } from '../utils/eventsFirestore';
+import { submitConsumption, lockEinkaufMengen, unlockEinkaufMengen } from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
@@ -12,6 +12,7 @@ import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference
 import { isBase64Image } from '../utils/imageUtils';
 import ShoppingListModal from './ShoppingListModal';
 import LockIcon from './icons/LockIcon';
+import UnlockIcon from './icons/UnlockIcon';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -233,12 +234,37 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     }));
   };
 
-  const handleLockRow = (kategorie) => {
-    setLockedKategorien((prev) => new Set(prev).add(kategorie));
-    if (currentUser?.id) {
-      lockEinkaufMenge(currentUser.id, event.id, kategorie, values[kategorie]?.eingekauft || '').catch((err) => {
-        console.error('Error locking eingekauft value:', err);
+  const isGroupLocked = (group) =>
+    group.rows.length > 0 && group.rows.every((row) => lockedKategorien.has(row.kategorie));
+
+  const handleToggleLock = (group) => {
+    const kategorienKeys = group.rows.map((row) => row.kategorie);
+    if (isGroupLocked(group)) {
+      setLockedKategorien((prev) => {
+        const next = new Set(prev);
+        kategorienKeys.forEach((kategorie) => next.delete(kategorie));
+        return next;
       });
+      if (currentUser?.id) {
+        unlockEinkaufMengen(currentUser.id, event.id, kategorienKeys).catch((err) => {
+          console.error('Error unlocking eingekauft values:', err);
+        });
+      }
+    } else {
+      setLockedKategorien((prev) => {
+        const next = new Set(prev);
+        kategorienKeys.forEach((kategorie) => next.add(kategorie));
+        return next;
+      });
+      if (currentUser?.id) {
+        const werteByKategorie = {};
+        kategorienKeys.forEach((kategorie) => {
+          werteByKategorie[kategorie] = values[kategorie]?.eingekauft || '';
+        });
+        lockEinkaufMengen(currentUser.id, event.id, werteByKategorie).catch((err) => {
+          console.error('Error locking eingekauft values:', err);
+        });
+      }
     }
   };
 
@@ -319,12 +345,27 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
         </div>
       )}
       <form className="events-form" onSubmit={handleSubmit}>
-        {drinkGroups.map((group) => (
-          <div className="events-consumption-group" key={group.key}>
-            <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
-            {group.rows.map((row) => {
-              const isLocked = lockedKategorien.has(row.kategorie);
-              return (
+        {drinkGroups.map((group) => {
+          const groupLocked = isGroupLocked(group);
+          return (
+            <div className="events-consumption-group" key={group.key}>
+              <div className="events-consumption-group-header">
+                <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
+                <button
+                  type="button"
+                  className="events-lock-btn"
+                  onClick={() => handleToggleLock(group)}
+                  aria-label={groupLocked ? 'Eingekaufte Menge entsperren' : 'Eingekaufte Menge sperren'}
+                  title={
+                    groupLocked
+                      ? 'Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)'
+                      : 'Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)'
+                  }
+                >
+                  {groupLocked ? <UnlockIcon size={18} /> : <LockIcon size={18} />}
+                </button>
+              </div>
+              {group.rows.map((row) => (
                 <div className="events-form-row" key={row.kategorie}>
                   {getRowUnitSubtitle(row) && (
                     <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
@@ -338,7 +379,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                       title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
                       value={values[row.kategorie].eingekauft}
                       onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-                      disabled={isLocked}
+                      disabled={groupLocked}
                     />
                   </label>
                   <label className="events-form-field">
@@ -350,22 +391,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                       onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
                     />
                   </label>
-                  {!isLocked && (
-                    <button
-                      type="button"
-                      className="events-lock-btn"
-                      onClick={() => handleLockRow(row.kategorie)}
-                      aria-label="Eingekaufte Menge sperren"
-                      title="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
-                    >
-                      <LockIcon size={18} />
-                    </button>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
+              ))}
+            </div>
+          );
+        })}
 
         {error && <p className="events-error-text">{error}</p>}
 
