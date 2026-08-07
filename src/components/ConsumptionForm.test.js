@@ -168,10 +168,14 @@ describe('ConsumptionForm', () => {
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[recipe]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: /Einkaufsliste erstellen/ }));
+
+    // Die vorbefuellte "Eingekauft"-Menge (20 Glaeser) wird als Portionenzahl uebernommen.
+    expect(await screen.findByText('20')).toBeInTheDocument();
+
     const generateBtn = await screen.findByText('Einkaufsliste erstellen', { selector: '.portion-selector-generate-btn' });
     fireEvent.click(generateBtn);
 
-    expect(await screen.findByText('100 ml Aperol')).toBeInTheDocument();
+    expect(await screen.findByText('500 ml Aperol')).toBeInTheDocument();
     expect(screen.queryByText(/Sirup/)).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'Einkaufsliste' })).toHaveClass('shopping-list-modal--event');
   });
