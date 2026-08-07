@@ -235,6 +235,28 @@
   border-radius: 6px;
 }
 
+/* Signalfarben in Event-Grün, wenn von "Einkauf & Verbrauch" aufgerufen */
+.shopping-list-modal--event .shopping-list-checkbox {
+  accent-color: #2F5D50;
+}
+
+.shopping-list-modal--event .shopping-list-item:hover {
+  background: #eef3f1;
+}
+
+.shopping-list-modal--event .shopping-list-edit-input {
+  border-color: #2F5D50;
+}
+
+.shopping-list-modal--event .shopping-list-edit-btn:hover:not(:disabled) {
+  color: #2F5D50;
+}
+
+.shopping-list-modal--event .shopping-list-reset-btn:hover {
+  border-color: #2F5D50;
+  color: #2F5D50;
+}
+
 @media (max-width: 480px) {
   .shopping-list-footer {
     flex-wrap: wrap;
