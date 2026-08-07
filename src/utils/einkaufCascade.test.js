@@ -57,11 +57,11 @@ describe('calculateCascadingEinkauf', () => {
     expect(warnings.length).toBe(1);
   });
 
-  it('nutzt die eigene Größe als Basis, wenn keine Gebindeeinheit vorhanden ist', () => {
+  it('nutzt die eigene Größe als Basis und rundet ganzzahlig, wenn keine Gebindeeinheit vorhanden ist', () => {
     const units = [{ key: 'flasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: null }];
     const { values } = calculateCascadingEinkauf(units, 0.5);
-    // 0.5 / 0.33 = 1.515... -> nächste Stufe 3/4 -> 1.75
-    expect(values.flasche).toBeCloseTo(1.75, 6);
+    // 0.5 / 0.33 = 1.515... -> ohne Gebindeeinheit ganzzahlig aufgerundet -> 2
+    expect(values.flasche).toBe(2);
   });
 
   it('gibt leere values zurück, wenn keine Einheiten übergeben werden', () => {

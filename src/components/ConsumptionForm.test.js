@@ -59,8 +59,8 @@ describe('ConsumptionForm', () => {
 
     const eingekauftInputs = screen.getAllByLabelText('Eingekauft');
     expect(eingekauftInputs).toHaveLength(2);
-    expect(eingekauftInputs[0]).toHaveValue(1);
-    expect(eingekauftInputs[1]).toHaveValue(1.75);
+    expect(eingekauftInputs[0]).toHaveValue('1');
+    expect(eingekauftInputs[1]).toHaveValue('1 3/4');
   });
 
   it('befüllt die einzige Einheit korrekt, wenn ein Getränk nur eine Einheit hat', () => {
@@ -84,7 +84,7 @@ describe('ConsumptionForm', () => {
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
     const eingekauftInput = screen.getByLabelText('Eingekauft');
-    expect(eingekauftInput).toHaveValue(1.75);
+    expect(eingekauftInput).toHaveValue('1 3/4');
   });
 
   it('lässt das Feld leer und zeigt eine Warnung, wenn eine Einheitsgröße fehlt', () => {
@@ -108,7 +108,7 @@ describe('ConsumptionForm', () => {
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
     const eingekauftInput = screen.getByLabelText('Eingekauft');
-    expect(eingekauftInput).toHaveValue(null);
+    expect(eingekauftInput).toHaveValue('');
     expect(screen.getByText(/Limo:.*keine gültige/)).toBeInTheDocument();
   });
 });
