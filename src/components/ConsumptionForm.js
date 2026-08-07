@@ -148,6 +148,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
 
   // Getraenke-Gruppen aufteilen: mit Rezeptlink (linkedRecipes) vs. ohne (nonRecipeGroups).
   const linkedRecipes = [];
+  const linkedRecipeEingekauft = {};
   const nonRecipeGroups = [];
   {
     const seenIds = new Set();
@@ -157,6 +158,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
         if (!seenIds.has(display.recipe.id)) {
           seenIds.add(display.recipe.id);
           linkedRecipes.push(display.recipe);
+          const eingekauft = parseFractionQuantity(values[group.rows[0]?.kategorie]?.eingekauft);
+          if (Number.isFinite(eingekauft) && eingekauft > 0) {
+            linkedRecipeEingekauft[display.recipe.id] = Math.round(eingekauft);
+          }
         }
       } else {
         nonRecipeGroups.push(group);
@@ -204,7 +209,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
 
   const handleShoppingListClick = () => {
     if (linkedRecipes.length > 0) {
-      setLinkedPortionCounts({});
+      setLinkedPortionCounts({ ...linkedRecipeEingekauft });
       setShowPortionSelector(true);
     } else {
       missingSavedRef.current = false;
@@ -332,13 +337,18 @@ function ConsumptionForm({ event, recipes, onDone, onCancel }) {
         {error && <p className="events-error-text">{error}</p>}
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn events-shopping-list-btn" onClick={handleShoppingListClick}>
+          <button
+            type="button"
+            className="events-secondary-btn events-shopping-list-btn"
+            onClick={handleShoppingListClick}
+            aria-label="Einkaufsliste erstellen"
+            title="Einkaufsliste erstellen"
+          >
             {isBase64Image(shoppingListIcon) ? (
               <img src={shoppingListIcon} alt="" className="button-icon-image" draggable="false" />
             ) : (
               <span className="events-shopping-list-btn-icon">{shoppingListIcon}</span>
             )}
-            Einkaufsliste erstellen
           </button>
         </div>
 
