@@ -48,12 +48,22 @@ function getRowPurchaseUnit(row) {
   return row.gebinde || '';
 }
 
-function getRowUnitSubtitle(row) {
+// Einzel-Einheit (z.B. Flasche) fuer den Verbrauch -- im Unterschied zur
+// Gebindeeinheit (z.B. Kasten) beim Einkauf.
+function getRowConsumptionUnit(row) {
+  if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
+    const einheit = row.einheiten[row.einheitIdx];
+    if (einheit) return einheit.einheit || einheit.gebindeinheit || '';
+  }
+  return row.gebinde || '';
+}
+
+function getRowUnitSubtitle(row, unitLabelOverride) {
   if (row.isCustomDrink && Array.isArray(row.einheiten) && row.einheitIdx !== undefined) {
     const einheit = row.einheiten[row.einheitIdx];
     if (einheit) {
       const sizeLabel = getEinheitSizeLabel(einheit.einheitsgroesse);
-      const unitLabel = einheit.gebindeinheit || einheit.einheit;
+      const unitLabel = unitLabelOverride !== undefined ? unitLabelOverride : (einheit.gebindeinheit || einheit.einheit);
       return unitLabel ? `${sizeLabel} · ${unitLabel}` : sizeLabel;
     }
   }
@@ -187,7 +197,7 @@ function getGroupVerbrauchSummary(group, values, bedarfLiter) {
     if (raw === '' || raw === undefined || raw === null) return;
     const num = Number(raw);
     if (!Number.isFinite(num)) return;
-    const unit = getRowPurchaseUnit(row);
+    const unit = getRowConsumptionUnit(row);
     parts.push(unit ? `${num}× ${unit} übrig` : `${num} übrig`);
   });
   if (parts.length > 0) return parts.join(', ');
@@ -219,28 +229,6 @@ function LockStateIcon({ state }) {
   return (
     <span className={`events-lock-state-icon events-lock-state-${state}`} title={title} aria-label={title}>
       <Icon size={16} color={color} filled={filled} />
-    </span>
-  );
-}
-
-const ROW_STATUS_ICON_PROPS = {
-  neutral: { Icon: LockIcon, color: '#999', title: 'Keine Kalkulation vorhanden - Unterdeckungs-Prüfung nicht möglich' },
-  unentschieden: { Icon: UnlockIcon, color: '#c9a227', title: 'Eingekaufte Menge noch nicht gesperrt' },
-  unterdeckung: { Icon: LockIcon, color: '#c0392b', title: 'Unterdeckung: eingekaufte Menge reicht nicht für den kalkulierten Bedarf' },
-  ausreichend: { Icon: LockIcon, color: '#1c6b46', title: 'Ausreichend eingekauft' },
-};
-
-// Zeigt den Zeilen-Status einer Getraenke-Gruppe als farbiges Schloss-Icon an
-// (wiederverwendet dieselben Lock-/Unlock-Icons wie der Sperren-Button, nur
-// nicht-interaktiv und mit Zustandsfarbe).
-function RowStatusIcon({ status }) {
-  if (!status || status === 'offen') return null;
-  const config = ROW_STATUS_ICON_PROPS[status];
-  if (!config) return null;
-  const { Icon, color, title } = config;
-  return (
-    <span className={`events-row-status-icon events-row-status-${status}`} title={title} aria-label={title}>
-      <Icon size={16} color={color} />
     </span>
   );
 }
@@ -420,12 +408,31 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     }
   };
 
+  // "Übrig" wird vom Nutzer in Einheiten (z.B. Flaschen) erfasst, aber
+  // gegenueber dem Backend weiterhin als Bruchteil der Gebindeeinheit
+  // (z.B. Kasten) angegeben -- passend zu "Eingekauft" und zur bestehenden
+  // Verbrauchsberechnung. Rueckumrechnung ueber dasselbe Groessenverhaeltnis
+  // wie bei der Einkaufs-Kaskade.
   const buildGebindePayload = () => {
+    const cascadeUnitsByKey = {};
+    drinkGroups.forEach((group) => {
+      getGroupCascadeUnits(group).forEach((unit) => {
+        cascadeUnitsByKey[unit.key] = unit;
+      });
+    });
     const gebinde = {};
     Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
+      const uebrigEinheiten = Number(uebrig) || 0;
+      const unit = cascadeUnitsByKey[kategorie];
+      const hatGebinde = unit
+        && Number.isFinite(unit.einheitsgroesseLiter) && unit.einheitsgroesseLiter > 0
+        && Number.isFinite(unit.gebindeGroesseLiter) && unit.gebindeGroesseLiter > 0;
+      const uebrigGebinde = hatGebinde
+        ? (uebrigEinheiten * unit.einheitsgroesseLiter) / unit.gebindeGroesseLiter
+        : uebrigEinheiten;
       gebinde[kategorie] = {
         eingekauft: parseFractionQuantity(eingekauft) || 0,
-        uebrig: Number(uebrig) || 0,
+        uebrig: uebrigGebinde,
       };
     });
     return gebinde;
@@ -540,7 +547,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                 <div className="events-consumption-title-group">
                   <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
                   <LockStateIcon state={lockState} />
-                  <RowStatusIcon status={rowStatus} />
                   {verbrauchFehlt && (
                     <span className="events-consumption-missing-usage" title="Verbrauch fehlt" aria-label="Verbrauch fehlt">
                       ⚠️
@@ -625,11 +631,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                 <div className="events-consumption-detail">
                   {group.rows.map((row) => (
                     <div className="events-form-row" key={row.kategorie}>
-                      {getRowUnitSubtitle(row) && (
-                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                      {getRowUnitSubtitle(row, getRowConsumptionUnit(row)) && (
+                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, getRowConsumptionUnit(row))}</span>
                       )}
                       <label className="events-form-field">
-                        <span>Übrig</span>
+                        <span>{getRowConsumptionUnit(row) ? `Übrig (${getRowConsumptionUnit(row)})` : 'Übrig'}</span>
                         <input
                           type="number"
                           min="0"
