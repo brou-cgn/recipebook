@@ -498,17 +498,23 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         <div className="events-list">
           {profiles.map((profile) => {
             const fullName = getGuestDisplayName(profile);
-            const preferredCategories = Array.isArray(profile.bevorzugteKategorien)
-              ? profile.bevorzugteKategorien
+            const preferredDrinkNames = Array.isArray(profile.bevorzugteGetraenke)
+              ? profile.bevorzugteGetraenke.map(
+                  (drinkId) => availableDrinks.find((d) => d.id === drinkId)?.label || drinkId
+                )
               : [];
+            const preferredCategoryNames = Array.isArray(profile.bevorzugteKategorien)
+              ? profile.bevorzugteKategorien.map(getDrinkCategoryLabel)
+              : [];
+            const preferredSummary = [...preferredDrinkNames, ...preferredCategoryNames];
             return (
               <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
                   {profile.kind === true && <p className="events-info-text">Kind</p>}
-                  {preferredCategories.length > 0 && (
+                  {preferredSummary.length > 0 && (
                     <p className="events-card-drink-summary">
-                      Bevorzugt: {preferredCategories.map(getDrinkCategoryLabel).join(', ')}
+                      Bevorzugt: {preferredSummary.join(', ')}
                     </p>
                   )}
                 </div>

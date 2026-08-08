@@ -94,6 +94,10 @@
   font-size: 13px;
 }
 
+.events-card-main .events-info-text {
+  margin: 4px 0 0;
+}
+
 .events-status-badge {
   flex-shrink: 0;
   padding: 4px 10px;
