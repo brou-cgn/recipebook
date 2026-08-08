@@ -560,6 +560,43 @@ describe('ConsumptionForm', () => {
     expect(mockSubmitConsumption).toHaveBeenCalledWith('event1', { 'drink2:0': { eingekauft: 2, uebrig: 0 } });
   });
 
+  it('sperrt beim Sperren der Verbraucht/Uebrig-Menge automatisch auch die noch ungesperrte Eingekauft-Menge', async () => {
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), status: 'berechnet' };
+
+    render(
+      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Eingekauft'), { target: { value: '2' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
+    fireEvent.change(screen.getByLabelText('Übrig (Flasche)'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
+
+    expect(mockLockVerbrauchMengen).toHaveBeenCalledWith('user1', 'event1', { 'drink2:0': '1' });
+    expect(mockLockEinkaufMengen).toHaveBeenCalledWith('user1', 'event1', { 'drink2:0': '2' });
+    expect(mockSetEventStatus).toHaveBeenCalledWith('user1', 'event1', 'eingekauft');
+
+    await screen.findByText('Verbrauch gespeichert');
+  });
+
   it('zeigt im Verbrauch-Button immer Einkauf minus Uebrig als Liter-Menge an', () => {
     const einheiten = [
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
