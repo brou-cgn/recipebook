@@ -3857,6 +3857,11 @@
   color: #8fb8e8;
 }
 
+[data-theme="dark"] .events-status-eingekauft {
+  background: #362a52;
+  color: #c4a8f0;
+}
+
 [data-theme="dark"] .events-status-verbrauchErfasst {
   background: #1a3a2a;
   color: #7fd9a8;
@@ -3869,6 +3874,18 @@
 
 [data-theme="dark"] .events-warning-text {
   color: #e8c766;
+}
+
+[data-theme="dark"] .events-warning-text.events-consumption-underdeckung-warning {
+  color: #e8a0a0;
+}
+
+[data-theme="dark"] .events-consumption-group-footer {
+  border-top-color: #3a3a3a;
+}
+
+[data-theme="dark"] .events-consumption-verbrauch-label {
+  color: #aaa;
 }
 
 [data-theme="dark"] .events-table {

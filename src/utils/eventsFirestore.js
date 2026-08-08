@@ -145,6 +145,51 @@ export const unlockEinkaufMengen = async (uid, eventId, kategorien) => {
 };
 
 /**
+ * Sperrt die "Verbraucht/Uebrig"-Mengen aller Kategorien eines Getraenks auf einem
+ * Event, damit sie bei einer erneuten Kalibrierung nie ueberschrieben werden.
+ * Analog zu {@link lockEinkaufMengen}, nur fuer das zweite Sperren-Feld.
+ * @param {string} uid - Current user ID
+ * @param {string} eventId - ID of the event
+ * @param {Object} werteByKategorie - { kategorie: uebrig } der einzufrierenden Mengen
+ * @returns {Promise<void>}
+ */
+export const lockVerbrauchMengen = async (uid, eventId, werteByKategorie) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  await setDoc(eventRef, { verbrauchGesperrt: werteByKategorie }, { merge: true });
+};
+
+/**
+ * Entsperrt die "Verbraucht/Uebrig"-Mengen aller Kategorien eines Getraenks auf
+ * einem Event. Analog zu {@link unlockEinkaufMengen}.
+ * @param {string} uid - Current user ID
+ * @param {string} eventId - ID of the event
+ * @param {string[]} kategorien - Kategorie-Schluessel der zu entsperrenden Getraenke-Zeilen
+ * @returns {Promise<void>}
+ */
+export const unlockVerbrauchMengen = async (uid, eventId, kategorien) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  const updates = {};
+  kategorien.forEach((kategorie) => {
+    updates[kategorie] = deleteField();
+  });
+  await setDoc(eventRef, { verbrauchGesperrt: updates }, { merge: true });
+};
+
+/**
+ * Setzt den Event-Status direkt (ohne Neuberechnung), z.B. fuer den Uebergang
+ * "berechnet" -> "eingekauft" -> "berechnet", wenn alle bzw. nicht mehr alle
+ * Getraenke ueber die Eingekauft-Sperre fixiert sind.
+ * @param {string} uid - Current user ID
+ * @param {string} eventId - ID of the event
+ * @param {string} status - Neuer Status ("geplant" | "berechnet" | "eingekauft" | "verbrauchErfasst")
+ * @returns {Promise<void>}
+ */
+export const setEventStatus = async (uid, eventId, status) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  await setDoc(eventRef, { status }, { merge: true });
+};
+
+/**
  * Call the submitConsumption Cloud Function: records the actual consumption
  * of a finished event and updates the user's calibrated rates.
  * @param {string} eventId - ID of the event
