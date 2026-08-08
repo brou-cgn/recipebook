@@ -3884,6 +3884,11 @@
   border-top-color: #3a3a3a;
 }
 
+[data-theme="dark"] .events-consumption-group + .events-consumption-group,
+[data-theme="dark"] .events-einheit-group + .events-einheit-group {
+  border-top-color: #3a3a3a;
+}
+
 [data-theme="dark"] .events-consumption-verbrauch-label {
   color: #aaa;
 }
