@@ -243,4 +243,46 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     expect(screen.getByLabelText('Rotwein entfernen')).toBeInTheDocument();
   });
+
+  test('guest overview card shows preferred drink categories', () => {
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        {
+          id: 'g3',
+          vorname: 'Petra',
+          nachname: 'Beispiel',
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          bevorzugteKategorien: ['wein_rotwein', 'bier'],
+          präferenzFaktor: 0.5,
+        },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Bevorzugt: Rotwein, Bier')).toBeInTheDocument();
+  });
+
+  test('guest overview card shows no preference line when no categories are set', () => {
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        {
+          id: 'g4',
+          vorname: 'Otto',
+          nachname: 'Beispiel',
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          bevorzugteKategorien: [],
+          präferenzFaktor: 0.5,
+        },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    expect(screen.queryByText(/Bevorzugt:/)).not.toBeInTheDocument();
+  });
 });

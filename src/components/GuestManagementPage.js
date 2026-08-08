@@ -498,11 +498,19 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         <div className="events-list">
           {profiles.map((profile) => {
             const fullName = getGuestDisplayName(profile);
+            const preferredCategories = Array.isArray(profile.bevorzugteKategorien)
+              ? profile.bevorzugteKategorien
+              : [];
             return (
               <div key={profile.id} className="events-card" onClick={() => openEdit(profile)}>
                 <div className="events-card-main">
                   <h3>{fullName || 'Unbenannter Gast'}</h3>
                   {profile.kind === true && <p className="events-info-text">Kind</p>}
+                  {preferredCategories.length > 0 && (
+                    <p className="events-card-drink-summary">
+                      Bevorzugt: {preferredCategories.map(getDrinkCategoryLabel).join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
             );
