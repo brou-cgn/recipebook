@@ -31,7 +31,7 @@ exports.reminderConsumption = onSchedule(
 
       const pendingEvents = await db
           .collectionGroup('events')
-          .where('status', '==', 'berechnet')
+          .where('status', 'in', ['berechnet', 'eingekauft'])
           .where('date', '<=', cutoffStr)
           .get();
 

@@ -1,16 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './EventsPage.css';
-import { submitConsumption, lockEinkaufMengen, unlockEinkaufMengen } from '../utils/eventsFirestore';
+import {
+  submitConsumption,
+  lockEinkaufMengen,
+  unlockEinkaufMengen,
+  lockVerbrauchMengen,
+  unlockVerbrauchMengen,
+  setEventStatus,
+} from '../utils/eventsFirestore';
 import { CATEGORY_LABELS } from './EventForm';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { calculateCascadingEinkauf } from '../utils/einkaufCascade';
 import { formatQuantityFraction, parseFractionQuantity } from '../utils/fractionFormat';
 import { useLongPress } from '../utils/useLongPress';
+import { useGroupLock } from '../hooks/useGroupLock';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from '../utils/ingredientUtils';
 import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import ShoppingListModal from './ShoppingListModal';
+import LockToggleButton from './LockToggleButton';
 import LockIcon from './icons/LockIcon';
 import UnlockIcon from './icons/UnlockIcon';
 
@@ -106,6 +115,76 @@ function getCascadePrefill(drinkGroups) {
   return { prefillMap, warnings };
 }
 
+// Rechnet die "Eingekauft"-Mengen einer Getraenke-Gruppe ueber alle Einheiten
+// (Fass, Kasten, Flasche, ...) in Liter um und summiert sie, damit eine
+// Unterdeckung nicht pro Einheit isoliert, sondern fuer das ganze Getraenk
+// geprueft werden kann (Fass ok + Flasche ok kann in Summe trotzdem zu wenig sein).
+function getGroupEingekauftLiter(group, values) {
+  const units = getGroupCascadeUnits(group);
+  let totalLiter = 0;
+  let anyFilled = false;
+  units.forEach((unit) => {
+    const qty = parseFractionQuantity(values[unit.key]?.eingekauft);
+    if (!Number.isFinite(qty) || qty <= 0) return;
+    anyFilled = true;
+    const perUnitLiter = Number.isFinite(unit.gebindeGroesseLiter) && unit.gebindeGroesseLiter > 0
+      ? unit.gebindeGroesseLiter
+      : unit.einheitsgroesseLiter;
+    if (Number.isFinite(perUnitLiter) && perUnitLiter > 0) {
+      totalLiter += qty * perUnitLiter;
+    }
+  });
+  return { totalLiter, anyFilled };
+}
+
+// Zeilen-Status einer Getraenke-Gruppe (nur visuell, wird nirgends gespeichert):
+// 'offen' (nichts befuellt), 'unentschieden' (befuellt, aber ungesperrt),
+// 'unterdeckung'/'ausreichend' (gesperrt, Vergleich Summe vs. Kalkuliert) oder
+// 'neutral' (gesperrt, aber kein kalkulierter Bedarf vorhanden -- kein Vergleich moeglich).
+function getGroupRowStatus(group, values, einkaufLocked) {
+  const { totalLiter, anyFilled } = getGroupEingekauftLiter(group, values);
+  if (!anyFilled) return 'offen';
+  if (!einkaufLocked) return 'unentschieden';
+  const bedarfLiter = getGroupBedarfLiter(group);
+  if (!(bedarfLiter > 0)) return 'neutral';
+  return totalLiter < bedarfLiter ? 'unterdeckung' : 'ausreichend';
+}
+
+// Liegt das Eventdatum in der Vergangenheit (fuer den "Verbrauch fehlt"-Hinweis)?
+function isEventPast(dateStr) {
+  if (!dateStr) return false;
+  const todayStr = new Date().toISOString().slice(0, 10);
+  return dateStr < todayStr;
+}
+
+function formatLiterShort(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+}
+
+const ROW_STATUS_ICON_PROPS = {
+  neutral: { Icon: LockIcon, color: '#999', title: 'Keine Kalkulation vorhanden - Unterdeckungs-Prüfung nicht möglich' },
+  unentschieden: { Icon: UnlockIcon, color: '#c9a227', title: 'Eingekaufte Menge noch nicht gesperrt' },
+  unterdeckung: { Icon: LockIcon, color: '#c0392b', title: 'Unterdeckung: eingekaufte Menge reicht nicht für den kalkulierten Bedarf' },
+  ausreichend: { Icon: LockIcon, color: '#1c6b46', title: 'Ausreichend eingekauft' },
+};
+
+// Zeigt den Zeilen-Status einer Getraenke-Gruppe als farbiges Schloss-Icon an
+// (wiederverwendet dieselben Lock-/Unlock-Icons wie der Sperren-Button, nur
+// nicht-interaktiv und mit Zustandsfarbe).
+function RowStatusIcon({ status }) {
+  if (!status || status === 'offen') return null;
+  const config = ROW_STATUS_ICON_PROPS[status];
+  if (!config) return null;
+  const { Icon, color, title } = config;
+  return (
+    <span className={`events-row-status-icon events-row-status-${status}`} title={title} aria-label={title}>
+      <Icon size={16} color={color} />
+    </span>
+  );
+}
+
 function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const kategorien = (event.berechnung?.ergebnis || []).filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
   const drinkGroups = groupKategorienByDrink(kategorien, recipes);
@@ -113,22 +192,36 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const [values, setValues] = useState(() => {
     const initial = {};
     kategorien.forEach((row) => {
-      const lockedValue = event.einkaufGesperrt?.[row.kategorie];
-      if (lockedValue !== undefined) {
-        initial[row.kategorie] = { eingekauft: lockedValue, uebrig: '' };
-        return;
+      const lockedEinkauf = event.einkaufGesperrt?.[row.kategorie];
+      const lockedVerbrauch = event.verbrauchGesperrt?.[row.kategorie];
+      let eingekauft;
+      if (lockedEinkauf !== undefined) {
+        eingekauft = lockedEinkauf;
+      } else {
+        const prefillValue = prefillMap[row.kategorie];
+        eingekauft = prefillValue !== undefined && prefillValue !== null ? formatQuantityFraction(prefillValue) : '';
       }
-      const prefillValue = prefillMap[row.kategorie];
       initial[row.kategorie] = {
-        eingekauft: prefillValue !== undefined && prefillValue !== null ? formatQuantityFraction(prefillValue) : '',
-        uebrig: '',
+        eingekauft,
+        uebrig: lockedVerbrauch !== undefined ? lockedVerbrauch : '',
       };
     });
     return initial;
   });
-  const [lockedKategorien, setLockedKategorien] = useState(
-    () => new Set(Object.keys(event.einkaufGesperrt || {}))
-  );
+  const einkaufLock = useGroupLock({
+    initialLocked: event.einkaufGesperrt,
+    currentUser,
+    eventId: event.id,
+    lockFn: lockEinkaufMengen,
+    unlockFn: unlockEinkaufMengen,
+  });
+  const verbrauchLock = useGroupLock({
+    initialLocked: event.verbrauchGesperrt,
+    currentUser,
+    eventId: event.id,
+    lockFn: lockVerbrauchMengen,
+    unlockFn: unlockVerbrauchMengen,
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [changes, setChanges] = useState(null);
@@ -139,6 +232,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const missingSavedRef = useRef(false);
+  const autoSubmitTriggeredRef = useRef(false);
   const {
     activeId: portionMinusLongPressActiveId,
     triggeredRef: portionMinusLongPressTriggeredRef,
@@ -234,60 +328,74 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     }));
   };
 
-  const isGroupLocked = (group) =>
-    group.rows.length > 0 && group.rows.every((row) => lockedKategorien.has(row.kategorie));
+  const allGroupsLockedIn = (lockedSet) =>
+    drinkGroups.length > 0 && drinkGroups.every((group) => group.rows.every((row) => lockedSet.has(row.kategorie)));
 
-  const handleToggleLock = (group) => {
-    const kategorienKeys = group.rows.map((row) => row.kategorie);
-    if (isGroupLocked(group)) {
-      setLockedKategorien((prev) => {
-        const next = new Set(prev);
-        kategorienKeys.forEach((kategorie) => next.delete(kategorie));
-        return next;
+  const handleToggleEinkaufLock = (group) => {
+    const nextLocked = einkaufLock.toggleGroupLock(group, (keys) => {
+      const werteByKategorie = {};
+      keys.forEach((kategorie) => {
+        werteByKategorie[kategorie] = values[kategorie]?.eingekauft || '';
       });
-      if (currentUser?.id) {
-        unlockEinkaufMengen(currentUser.id, event.id, kategorienKeys).catch((err) => {
-          console.error('Error unlocking eingekauft values:', err);
-        });
-      }
-    } else {
-      setLockedKategorien((prev) => {
-        const next = new Set(prev);
-        kategorienKeys.forEach((kategorie) => next.add(kategorie));
-        return next;
+      return werteByKategorie;
+    });
+    if (!currentUser?.id) return;
+    const allLocked = allGroupsLockedIn(nextLocked);
+    if (allLocked && event.status === 'berechnet') {
+      setEventStatus(currentUser.id, event.id, 'eingekauft').catch((err) => {
+        console.error('Error setting event status to eingekauft:', err);
       });
-      if (currentUser?.id) {
-        const werteByKategorie = {};
-        kategorienKeys.forEach((kategorie) => {
-          werteByKategorie[kategorie] = values[kategorie]?.eingekauft || '';
-        });
-        lockEinkaufMengen(currentUser.id, event.id, werteByKategorie).catch((err) => {
-          console.error('Error locking eingekauft values:', err);
-        });
-      }
+    } else if (!allLocked && event.status === 'eingekauft') {
+      setEventStatus(currentUser.id, event.id, 'berechnet').catch((err) => {
+        console.error('Error resetting event status to berechnet:', err);
+      });
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const buildGebindePayload = () => {
+    const gebinde = {};
+    Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
+      gebinde[kategorie] = {
+        eingekauft: parseFractionQuantity(eingekauft) || 0,
+        uebrig: Number(uebrig) || 0,
+      };
+    });
+    return gebinde;
+  };
+
+  const runSubmitConsumption = async () => {
     setSaving(true);
     setError('');
     try {
-      const gebinde = {};
-      Object.entries(values).forEach(([kategorie, { eingekauft, uebrig }]) => {
-        gebinde[kategorie] = {
-          eingekauft: parseFractionQuantity(eingekauft) || 0,
-          uebrig: Number(uebrig) || 0,
-        };
-      });
-      const result = await submitConsumption(event.id, gebinde);
+      const result = await submitConsumption(event.id, buildGebindePayload());
       setChanges(result.changes || []);
     } catch (err) {
       console.error('Error submitting consumption:', err);
       setError('Der Verbrauch konnte nicht gespeichert werden. Bitte versuche es erneut.');
+      autoSubmitTriggeredRef.current = false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleToggleVerbrauchLock = (group) => {
+    const nextLocked = verbrauchLock.toggleGroupLock(group, (keys) => {
+      const werteByKategorie = {};
+      keys.forEach((kategorie) => {
+        werteByKategorie[kategorie] = values[kategorie]?.uebrig ?? '';
+      });
+      return werteByKategorie;
+    });
+    const allLocked = allGroupsLockedIn(nextLocked);
+    if (allLocked && event.status !== 'verbrauchErfasst' && !autoSubmitTriggeredRef.current) {
+      autoSubmitTriggeredRef.current = true;
+      runSubmitConsumption();
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    runSubmitConsumption();
   };
 
   if (changes) {
@@ -346,25 +454,40 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       )}
       <form className="events-form" onSubmit={handleSubmit}>
         {drinkGroups.map((group) => {
-          const groupLocked = isGroupLocked(group);
+          const einkaufGroupLocked = einkaufLock.isGroupLocked(group);
+          const verbrauchGroupLocked = verbrauchLock.isGroupLocked(group);
+          const rowStatus = event.status === 'geplant'
+            ? null
+            : getGroupRowStatus(group, values, einkaufGroupLocked);
+          const { totalLiter } = getGroupEingekauftLiter(group, values);
+          const bedarfLiter = getGroupBedarfLiter(group);
+          const verbrauchFehlt = isEventPast(event.date) && !verbrauchGroupLocked;
           return (
             <div className="events-consumption-group" key={group.key}>
               <div className="events-consumption-group-header">
-                <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
-                <button
-                  type="button"
-                  className="events-lock-btn"
-                  onClick={() => handleToggleLock(group)}
-                  aria-label={groupLocked ? 'Eingekaufte Menge entsperren' : 'Eingekaufte Menge sperren'}
-                  title={
-                    groupLocked
-                      ? 'Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)'
-                      : 'Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)'
-                  }
-                >
-                  {groupLocked ? <UnlockIcon size={18} /> : <LockIcon size={18} />}
-                </button>
+                <div className="events-consumption-title-group">
+                  <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
+                  <RowStatusIcon status={rowStatus} />
+                  {verbrauchFehlt && (
+                    <span className="events-consumption-missing-usage" title="Verbrauch fehlt" aria-label="Verbrauch fehlt">
+                      ⚠️
+                    </span>
+                  )}
+                </div>
+                <LockToggleButton
+                  locked={einkaufGroupLocked}
+                  onToggle={() => handleToggleEinkaufLock(group)}
+                  lockedLabel="Eingekaufte Menge entsperren"
+                  unlockedLabel="Eingekaufte Menge sperren"
+                  lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
+                  unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
+                />
               </div>
+              {rowStatus === 'unterdeckung' && (
+                <p className="events-warning-text events-consumption-underdeckung-warning">
+                  Unterdeckung: {formatLiterShort(totalLiter)} l eingekauft, aber {formatLiterShort(bedarfLiter)} l kalkuliert.
+                </p>
+              )}
               {group.rows.map((row) => (
                 <div className="events-form-row" key={row.kategorie}>
                   {getRowUnitSubtitle(row) && (
@@ -379,7 +502,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                       title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
                       value={values[row.kategorie].eingekauft}
                       onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-                      disabled={groupLocked}
+                      disabled={einkaufGroupLocked}
                     />
                   </label>
                   <label className="events-form-field">
@@ -389,10 +512,23 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                       min="0"
                       value={values[row.kategorie].uebrig}
                       onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                      disabled={verbrauchGroupLocked}
                     />
                   </label>
                 </div>
               ))}
+              <div className="events-consumption-group-footer">
+                <span className="events-consumption-verbrauch-label">Verbrauch</span>
+                <LockToggleButton
+                  locked={verbrauchGroupLocked}
+                  onToggle={() => handleToggleVerbrauchLock(group)}
+                  lockedLabel="Verbrauchte Menge entsperren"
+                  unlockedLabel="Verbrauchte Menge sperren"
+                  lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
+                  unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
+                  disabled={saving}
+                />
+              </div>
             </div>
           );
         })}

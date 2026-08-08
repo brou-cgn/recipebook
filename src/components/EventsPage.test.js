@@ -163,6 +163,31 @@ describe('EventsPage', () => {
     expect(screen.getByText('Fahrer: Anna Beispiel')).toBeInTheDocument();
   });
 
+  test('shows the "Eingekauft" status badge and the Einkauf & Verbrauch button for status eingekauft', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'eingekauft',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    expect(screen.getByText('Eingekauft')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Sommerfest'));
+
+    expect(screen.getByRole('button', { name: 'Einkauf & Verbrauch' })).toBeInTheDocument();
+  });
+
   test('does not show drink summary on event card when status is berechnet but only categories are present', () => {
     const event = {
       id: 'e2',

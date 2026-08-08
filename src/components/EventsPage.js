@@ -15,6 +15,7 @@ import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 const STATUS_LABELS = {
   geplant: 'Geplant',
   berechnet: 'Berechnet',
+  eingekauft: 'Eingekauft',
   verbrauchErfasst: 'Verbrauch erfasst',
 };
 
@@ -303,13 +304,13 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
           )}
 
           <div className="events-form-actions">
-            {selectedEvent.status === 'berechnet' && (
+            {(selectedEvent.status === 'berechnet' || selectedEvent.status === 'eingekauft') && (
               <button
                 type="button"
                 className="events-primary-btn"
                 onClick={() => setSubView('consumption')}
               >
-                Verbrauch nachtragen
+                Einkauf & Verbrauch
               </button>
             )}
             {!isMobileView && (
