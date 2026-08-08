@@ -3888,6 +3888,70 @@
   color: #aaa;
 }
 
+[data-theme="dark"] .events-consumption-toggle-btn {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .events-consumption-toggle-btn:hover {
+  border-color: #4f9a80;
+}
+
+[data-theme="dark"] .events-consumption-toggle-btn.is-expanded {
+  border-color: #4f9a80;
+  box-shadow: 0 0 0 2px rgba(79, 154, 128, 0.2);
+}
+
+[data-theme="dark"] .events-consumption-toggle-btn.is-locked {
+  background: #232323;
+  border-color: #3d3d3d;
+  color: #888;
+}
+
+[data-theme="dark"] .events-consumption-toggle-btn.is-locked:hover {
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .events-consumption-detail {
+  background: #232323;
+}
+
+[data-theme="dark"] .events-consumption-unit-subtitle {
+  color: #888;
+}
+
+[data-theme="dark"] .events-lock-btn {
+  background: #2a2a2a;
+  border-color: #555;
+  color: #ccc;
+}
+
+[data-theme="dark"] .events-lock-btn:hover {
+  background: #333;
+  color: #7fb8a3;
+  border-color: #4f9a80;
+}
+
+[data-theme="dark"] .events-name-input-wrapper input.recipe-link-input {
+  background-color: #1a2a3a;
+  border-color: #2a4a6a;
+  color: #8fb8e8;
+}
+
+[data-theme="dark"] .events-drink-chip {
+  background: #1f2b27;
+  color: #9fc4b7;
+}
+
+[data-theme="dark"] .events-drink-chip-remove {
+  color: #9fc4b7;
+}
+
+[data-theme="dark"] .events-drink-chip-remove:hover {
+  color: #e8a0a0;
+}
+
 [data-theme="dark"] .events-table {
   color: #e8e8e8;
 }
