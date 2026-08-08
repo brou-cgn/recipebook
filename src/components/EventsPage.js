@@ -33,6 +33,21 @@ const formatLiter = (value) => {
   return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
+// Fasst die Ergebniszeilen pro Getraenk zusammen (ein Getraenk kann mehrere
+// Zeilen haben, wenn mehrere Gebinde-Einheiten ausgewaehlt sind -- der Bedarf
+// ist dabei fuer alle Zeilen einer Gruppe identisch, daher reicht eine Zeile).
+const groupErgebnisRowsByDrink = (rows) => {
+  const seen = new Set();
+  const grouped = [];
+  rows.forEach((row) => {
+    const key = row.drinkId || row.kategorie;
+    if (seen.has(key)) return;
+    seen.add(key);
+    grouped.push(row);
+  });
+  return grouped;
+};
+
 const formatDrinkSummary = (berechnung) => {
   const ergebnis = berechnung?.ergebnis;
   if (!ergebnis || ergebnis.length === 0) return null;
@@ -251,10 +266,10 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                 </tr>
               </thead>
               <tbody>
-                {(berechnung?.ergebnis || [])
-                  .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage)
+                {groupErgebnisRowsByDrink((berechnung?.ergebnis || [])
+                  .filter((row) => row.isCustomDrink || !row.hasCustomDrinkCoverage))
                   .map((row) => (
-                    <tr key={row.kategorie}>
+                    <tr key={row.drinkId || row.kategorie}>
                       <td>{row.isCustomDrink && row.drinkLabel ? resolveDrinkDisplay(row.drinkLabel, recipes).displayName : (CATEGORY_LABELS[row.kategorie] || row.kategorie)}</td>
                       <td className="events-table-amount">{formatLiter(row.literMitPuffer)} l</td>
                     </tr>

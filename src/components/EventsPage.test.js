@@ -278,4 +278,47 @@ describe('EventsPage', () => {
 
     expect(screen.queryByText(/~15L Craft Bier/)).not.toBeInTheDocument();
   });
+
+  test('shows Bedarf only once per drink in detail view, even when multiple Einheiten are selected', () => {
+    const event = {
+      id: 'e7',
+      eventName: 'Bierfest',
+      date: '2026-01-10',
+      durationHours: 3,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 20, children: 0 },
+      berechnung: {
+        ergebnis: [
+          {
+            kategorie: 'custom_1:0',
+            drinkId: 'custom_1',
+            drinkLabel: 'Craft Bier',
+            literMitPuffer: 24,
+            isCustomDrink: true,
+            einheitIdx: 0,
+          },
+          {
+            kategorie: 'custom_1:1',
+            drinkId: 'custom_1',
+            drinkLabel: 'Craft Bier',
+            literMitPuffer: 24,
+            isCustomDrink: true,
+            einheitIdx: 1,
+          },
+        ],
+      },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Bierfest'));
+
+    expect(screen.getAllByText('Craft Bier')).toHaveLength(1);
+    expect(screen.getAllByText(/24,0 l/)).toHaveLength(1);
+  });
 });
