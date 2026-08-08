@@ -194,29 +194,31 @@ function getGroupVerbrauchSummary(group, values, bedarfLiter) {
   return bedarfLiter > 0 ? `${formatLiterShort(bedarfLiter)} l` : '–';
 }
 
-// Gesamt-Sperrstatus einer Getraenke-Gruppe fuer die Status-Pill im Card-Header.
+// Ermittelt den Sperr-Zustand einer Getraenke-Gruppe aus den getrennten
+// Einkauf-/Verbrauch-Flags fuer das Lock-Icon neben der Produktueberschrift.
 // "Verbrauch gesperrt" ohne "Einkauf gesperrt" ist im normalen Ablauf nicht vorgesehen
 // und wird wie "voll gesperrt" behandelt.
-function getGroupLockState(einkaufLocked, verbrauchLocked) {
-  if (verbrauchLocked) return 'fullyLocked';
-  if (einkaufLocked) return 'purchaseLocked';
+function getLockIconState(einkaufGesperrt, verbrauchGesperrt) {
+  if (verbrauchGesperrt) return 'fullyLocked';
+  if (einkaufGesperrt) return 'purchaseLocked';
   return 'open';
 }
 
-const LOCK_STATE_CONFIG = {
-  open: { label: 'Offen', color: '#999', filled: false, Icon: UnlockIcon },
-  purchaseLocked: { label: 'Einkauf gesperrt', color: '#c9a227', filled: false, Icon: LockIcon },
-  fullyLocked: { label: 'Einkauf & Verbrauch gesperrt', color: '#2F5D50', filled: true, Icon: LockIcon },
+const LOCK_ICON_CONFIG = {
+  open: { title: 'Offen', color: '#999', filled: false, Icon: UnlockIcon },
+  purchaseLocked: { title: 'Einkauf gesperrt', color: '#c9a227', filled: false, Icon: LockIcon },
+  fullyLocked: { title: 'Einkauf & Verbrauch gesperrt', color: '#2F5D50', filled: true, Icon: LockIcon },
 };
 
-// Eigenstaendiges Status-Element oben rechts in der Card-Kopfzeile (keine Toggle-Funktion,
-// nur Anzeige -- die eigentlichen Sperren-Buttons sitzen im aufgeklappten Detailbereich).
-function LockStatusPill({ state }) {
-  const { label, color, filled, Icon } = LOCK_STATE_CONFIG[state];
+// Zeigt den Sperr-Zustand einer Getraenke-Gruppe rein ueber das Lock-Icon an
+// (keine Toggle-Funktion, nur Anzeige -- die eigentlichen Sperren-Buttons sitzen
+// im aufgeklappten Detailbereich). Der Zustand wird ausschliesslich ueber
+// outline/filled vermittelt, kein Text-Badge.
+function LockStateIcon({ state }) {
+  const { title, color, filled, Icon } = LOCK_ICON_CONFIG[state];
   return (
-    <span className={`events-lock-status-pill events-lock-status-${state}`} title={label}>
-      <Icon size={14} color={color} filled={filled} />
-      <span>{label}</span>
+    <span className={`events-lock-state-icon events-lock-state-${state}`} title={title} aria-label={title}>
+      <Icon size={16} color={color} filled={filled} />
     </span>
   );
 }
@@ -528,7 +530,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
           const { totalLiter } = getGroupEingekauftLiter(group, values);
           const bedarfLiter = getGroupBedarfLiter(group);
           const verbrauchFehlt = isEventPast(event.date) && !verbrauchGroupLocked;
-          const lockState = getGroupLockState(einkaufGroupLocked, verbrauchGroupLocked);
+          const lockState = getLockIconState(einkaufGroupLocked, verbrauchGroupLocked);
           const einkaufSummary = getGroupEinkaufSummary(group, values);
           const verbrauchSummary = getGroupVerbrauchSummary(group, values, bedarfLiter);
           const activeSection = expandedSection[group.key] || null;
@@ -537,6 +539,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
               <div className="events-consumption-card-header">
                 <div className="events-consumption-title-group">
                   <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
+                  <LockStateIcon state={lockState} />
                   <RowStatusIcon status={rowStatus} />
                   {verbrauchFehlt && (
                     <span className="events-consumption-missing-usage" title="Verbrauch fehlt" aria-label="Verbrauch fehlt">
@@ -544,7 +547,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                     </span>
                   )}
                 </div>
-                <LockStatusPill state={lockState} />
               </div>
               {rowStatus === 'unterdeckung' && (
                 <p className="events-warning-text events-consumption-underdeckung-warning">
