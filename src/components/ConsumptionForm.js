@@ -16,7 +16,7 @@ import { useLongPress } from '../utils/useLongPress';
 import { useGroupLock } from '../hooks/useGroupLock';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { scaleIngredient, combineIngredients, isWaterIngredient, convertIngredientUnits } from '../utils/ingredientUtils';
-import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries } from '../utils/customLists';
+import { getCustomLists, getButtonIcons, getEffectiveIcon, getDarkModePreference, addMissingConversionEntries, DEFAULT_BUTTON_ICONS } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import ShoppingListModal from './ShoppingListModal';
 import LockToggleButton from './LockToggleButton';
@@ -292,12 +292,17 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const [conversionTable, setConversionTable] = useState([]);
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
+  const [buttonIcons, setButtonIcons] = useState(DEFAULT_BUTTON_ICONS);
+  const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference());
+  const [fabPressed, setFabPressed] = useState(false);
+  const [cancelPressed, setCancelPressed] = useState(false);
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [expandedSection, setExpandedSection] = useState({});
   const missingSavedRef = useRef(false);
   const autoSubmitTriggeredRef = useRef(false);
+  const formRef = useRef(null);
   const {
     activeId: portionMinusLongPressActiveId,
     triggeredRef: portionMinusLongPressTriggeredRef,
@@ -311,6 +316,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       setConversionTable(lists.conversionTable || []);
       setBringButtonIcon(getEffectiveIcon(icons, 'bringButton', getDarkModePreference()) || 'Bring');
       setShoppingListIcon(getEffectiveIcon(icons, 'shoppingList', getDarkModePreference()) || 'Einkauf');
+      setButtonIcons(icons);
+      setIsDarkMode(getDarkModePreference());
     };
     loadShoppingListSettings();
   }, []);
@@ -549,7 +556,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
           ))}
         </div>
       )}
-      <form className="events-form" onSubmit={handleSubmit}>
+      <form className="events-form" ref={formRef} onSubmit={handleSubmit}>
         {drinkGroups.map((group) => {
           const einkaufGroupLocked = einkaufLock.isGroupLocked(group);
           const verbrauchGroupLocked = verbrauchLock.isGroupLocked(group);
@@ -704,14 +711,58 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
         </div>
 
         <div className="events-form-actions">
-          <button type="button" className="events-secondary-btn" onClick={onCancel} disabled={saving}>
+          <button type="button" className="events-secondary-btn events-secondary-btn--desktop-only" onClick={onCancel} disabled={saving}>
             Abbrechen
           </button>
-          <button type="submit" className="events-primary-btn" disabled={saving}>
+          <button type="submit" className="events-primary-btn events-primary-btn--desktop-only" disabled={saving}>
             {saving ? 'Speichere...' : 'Verbrauch speichern'}
           </button>
         </div>
       </form>
+
+      {/* FAB Save Button - mobile only */}
+      <button
+        type="button"
+        className={`events-save-fab-button${fabPressed ? ' pressed' : ''}`}
+        onClick={() => { if (formRef.current) formRef.current.requestSubmit(); }}
+        onMouseDown={() => setFabPressed(true)}
+        onMouseUp={() => setFabPressed(false)}
+        onMouseLeave={() => setFabPressed(false)}
+        onTouchStart={() => setFabPressed(true)}
+        onTouchEnd={() => setFabPressed(false)}
+        onTouchCancel={() => setFabPressed(false)}
+        disabled={saving}
+        aria-label="Verbrauch speichern"
+        title="Verbrauch speichern"
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)} alt="Speichern" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'saveRecipe', isDarkMode)
+        )}
+      </button>
+
+      {/* Cancel FAB button - mobile only, positioned at bottom-left */}
+      <button
+        type="button"
+        className={`events-cancel-fab-button${cancelPressed ? ' pressed' : ''}`}
+        onClick={onCancel}
+        onTouchStart={() => setCancelPressed(true)}
+        onTouchEnd={() => setCancelPressed(false)}
+        onTouchCancel={() => setCancelPressed(false)}
+        onMouseDown={() => setCancelPressed(true)}
+        onMouseUp={() => setCancelPressed(false)}
+        onMouseLeave={() => setCancelPressed(false)}
+        title="Abbrechen"
+        aria-label="Verbrauch abbrechen"
+      >
+        {isBase64Image(getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)) ? (
+          <img src={getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)} alt="Abbrechen" className="button-icon-image" draggable="false" />
+        ) : (
+          getEffectiveIcon(buttonIcons, 'cancelRecipe', isDarkMode)
+        )}
+      </button>
+
       {showShoppingListModal && (
         <ShoppingListModal
           items={getShoppingListIngredients()}
