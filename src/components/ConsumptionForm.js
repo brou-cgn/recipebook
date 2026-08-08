@@ -22,6 +22,9 @@ import ShoppingListModal from './ShoppingListModal';
 import LockToggleButton from './LockToggleButton';
 import LockIcon from './icons/LockIcon';
 import UnlockIcon from './icons/UnlockIcon';
+import ShoppingCartIcon from './icons/ShoppingCartIcon';
+import CupIcon from './icons/CupIcon';
+import ChevronRightIcon from './icons/ChevronRightIcon';
 
 function getEinheitSizeLabel(einheitsgroesse) {
   const liters = Number(einheitsgroesse);
@@ -163,6 +166,61 @@ function formatLiterShort(value) {
   return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 }
 
+// Kompakte Zusammenfassung der eingetragenen "Eingekauft"-Mengen fuer den Einkauf-Button, z.B. "1× Fass, 1× Flasche".
+function getGroupEinkaufSummary(group, values) {
+  const parts = [];
+  group.rows.forEach((row) => {
+    const qty = (values[row.kategorie]?.eingekauft || '').trim();
+    if (!qty || !parseFractionQuantity(qty)) return;
+    const unit = getRowPurchaseUnit(row);
+    parts.push(unit ? `${qty}× ${unit}` : qty);
+  });
+  return parts.join(', ');
+}
+
+// Zusammenfassung fuer den Verbrauch-Button: eingetragene "Uebrig"-Mengen, sonst der
+// kalkulierte Bedarf als Platzhalter, solange noch nichts erfasst wurde.
+function getGroupVerbrauchSummary(group, values, bedarfLiter) {
+  const parts = [];
+  group.rows.forEach((row) => {
+    const raw = values[row.kategorie]?.uebrig;
+    if (raw === '' || raw === undefined || raw === null) return;
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return;
+    const unit = getRowPurchaseUnit(row);
+    parts.push(unit ? `${num}× ${unit} übrig` : `${num} übrig`);
+  });
+  if (parts.length > 0) return parts.join(', ');
+  return bedarfLiter > 0 ? `${formatLiterShort(bedarfLiter)} l` : '–';
+}
+
+// Gesamt-Sperrstatus einer Getraenke-Gruppe fuer die Status-Pill im Card-Header.
+// "Verbrauch gesperrt" ohne "Einkauf gesperrt" ist im normalen Ablauf nicht vorgesehen
+// und wird wie "voll gesperrt" behandelt.
+function getGroupLockState(einkaufLocked, verbrauchLocked) {
+  if (verbrauchLocked) return 'fullyLocked';
+  if (einkaufLocked) return 'purchaseLocked';
+  return 'open';
+}
+
+const LOCK_STATE_CONFIG = {
+  open: { label: 'Offen', color: '#999', filled: false, Icon: UnlockIcon },
+  purchaseLocked: { label: 'Einkauf gesperrt', color: '#c9a227', filled: false, Icon: LockIcon },
+  fullyLocked: { label: 'Einkauf & Verbrauch gesperrt', color: '#2F5D50', filled: true, Icon: LockIcon },
+};
+
+// Eigenstaendiges Status-Element oben rechts in der Card-Kopfzeile (keine Toggle-Funktion,
+// nur Anzeige -- die eigentlichen Sperren-Buttons sitzen im aufgeklappten Detailbereich).
+function LockStatusPill({ state }) {
+  const { label, color, filled, Icon } = LOCK_STATE_CONFIG[state];
+  return (
+    <span className={`events-lock-status-pill events-lock-status-${state}`} title={label}>
+      <Icon size={14} color={color} filled={filled} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
 const ROW_STATUS_ICON_PROPS = {
   neutral: { Icon: LockIcon, color: '#999', title: 'Keine Kalkulation vorhanden - Unterdeckungs-Prüfung nicht möglich' },
   unentschieden: { Icon: UnlockIcon, color: '#c9a227', title: 'Eingekaufte Menge noch nicht gesperrt' },
@@ -231,6 +289,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const [showShoppingListModal, setShowShoppingListModal] = useState(false);
   const [showPortionSelector, setShowPortionSelector] = useState(false);
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
+  const [expandedSection, setExpandedSection] = useState({});
   const missingSavedRef = useRef(false);
   const autoSubmitTriggeredRef = useRef(false);
   const {
@@ -319,6 +378,13 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       missingSavedRef.current = false;
       setShowShoppingListModal(true);
     }
+  };
+
+  const toggleSection = (groupKey, section) => {
+    setExpandedSection((prev) => ({
+      ...prev,
+      [groupKey]: prev[groupKey] === section ? null : section,
+    }));
   };
 
   const updateValue = (kategorie, field, value) => {
@@ -462,9 +528,13 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
           const { totalLiter } = getGroupEingekauftLiter(group, values);
           const bedarfLiter = getGroupBedarfLiter(group);
           const verbrauchFehlt = isEventPast(event.date) && !verbrauchGroupLocked;
+          const lockState = getGroupLockState(einkaufGroupLocked, verbrauchGroupLocked);
+          const einkaufSummary = getGroupEinkaufSummary(group, values);
+          const verbrauchSummary = getGroupVerbrauchSummary(group, values, bedarfLiter);
+          const activeSection = expandedSection[group.key] || null;
           return (
             <div className="events-consumption-group" key={group.key}>
-              <div className="events-consumption-group-header">
+              <div className="events-consumption-card-header">
                 <div className="events-consumption-title-group">
                   <h3 className="events-consumption-drink-name">{group.drinkName}</h3>
                   <RowStatusIcon status={rowStatus} />
@@ -474,61 +544,113 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
                     </span>
                   )}
                 </div>
-                <LockToggleButton
-                  locked={einkaufGroupLocked}
-                  onToggle={() => handleToggleEinkaufLock(group)}
-                  lockedLabel="Eingekaufte Menge entsperren"
-                  unlockedLabel="Eingekaufte Menge sperren"
-                  lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
-                  unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
-                />
+                <LockStatusPill state={lockState} />
               </div>
               {rowStatus === 'unterdeckung' && (
                 <p className="events-warning-text events-consumption-underdeckung-warning">
                   Unterdeckung: {formatLiterShort(totalLiter)} l eingekauft, aber {formatLiterShort(bedarfLiter)} l kalkuliert.
                 </p>
               )}
-              {group.rows.map((row) => (
-                <div className="events-form-row" key={row.kategorie}>
-                  {getRowUnitSubtitle(row) && (
-                    <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
-                  )}
-                  <label className="events-form-field">
-                    <span>Eingekauft</span>
-                    <input
-                      type="text"
-                      inputMode="text"
-                      placeholder="z.B. 1 3/4"
-                      title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
-                      value={values[row.kategorie].eingekauft}
-                      onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-                      disabled={einkaufGroupLocked}
-                    />
-                  </label>
-                  <label className="events-form-field">
-                    <span>Übrig</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={values[row.kategorie].uebrig}
-                      onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
-                      disabled={verbrauchGroupLocked}
-                    />
-                  </label>
-                </div>
-              ))}
-              <div className="events-consumption-group-footer">
-                <span className="events-consumption-verbrauch-label">Verbrauch</span>
-                <LockToggleButton
-                  locked={verbrauchGroupLocked}
-                  onToggle={() => handleToggleVerbrauchLock(group)}
-                  lockedLabel="Verbrauchte Menge entsperren"
-                  unlockedLabel="Verbrauchte Menge sperren"
-                  lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
-                  unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
-                  disabled={saving}
-                />
+
+              <div className="events-consumption-button-grid">
+                <button
+                  type="button"
+                  className={`events-consumption-toggle-btn${einkaufGroupLocked ? ' is-locked' : ''}${activeSection === 'einkauf' ? ' is-expanded' : ''}`}
+                  onClick={() => toggleSection(group.key, 'einkauf')}
+                  aria-expanded={activeSection === 'einkauf'}
+                  aria-label="Einkauf bearbeiten"
+                  title="Einkauf bearbeiten"
+                >
+                  <ShoppingCartIcon size={16} />
+                  <span className="events-consumption-toggle-text">
+                    <span className="events-consumption-toggle-label">Einkauf</span>
+                    <span className="events-consumption-toggle-value">{einkaufSummary || '–'}</span>
+                  </span>
+                  <ChevronRightIcon size={14} />
+                </button>
+                <button
+                  type="button"
+                  className={`events-consumption-toggle-btn${verbrauchGroupLocked ? ' is-locked' : ''}${activeSection === 'verbrauch' ? ' is-expanded' : ''}`}
+                  onClick={() => toggleSection(group.key, 'verbrauch')}
+                  aria-expanded={activeSection === 'verbrauch'}
+                  aria-label="Verbrauch bearbeiten"
+                  title="Verbrauch bearbeiten"
+                >
+                  <CupIcon size={16} />
+                  <span className="events-consumption-toggle-text">
+                    <span className="events-consumption-toggle-label">Verbrauch</span>
+                    <span className="events-consumption-toggle-value">{verbrauchSummary}</span>
+                  </span>
+                  <ChevronRightIcon size={14} />
+                </button>
               </div>
+
+              {activeSection === 'einkauf' && (
+                <div className="events-consumption-detail">
+                  {group.rows.map((row) => (
+                    <div className="events-form-row" key={row.kategorie}>
+                      {getRowUnitSubtitle(row) && (
+                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                      )}
+                      <label className="events-form-field">
+                        <span>Eingekauft</span>
+                        <input
+                          type="text"
+                          inputMode="text"
+                          placeholder="z.B. 1 3/4"
+                          title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
+                          value={values[row.kategorie].eingekauft}
+                          onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
+                          disabled={einkaufGroupLocked}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                  <div className="events-consumption-detail-footer">
+                    <LockToggleButton
+                      locked={einkaufGroupLocked}
+                      onToggle={() => handleToggleEinkaufLock(group)}
+                      lockedLabel="Eingekaufte Menge entsperren"
+                      unlockedLabel="Eingekaufte Menge sperren"
+                      lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
+                      unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeSection === 'verbrauch' && (
+                <div className="events-consumption-detail">
+                  {group.rows.map((row) => (
+                    <div className="events-form-row" key={row.kategorie}>
+                      {getRowUnitSubtitle(row) && (
+                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                      )}
+                      <label className="events-form-field">
+                        <span>Übrig</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={values[row.kategorie].uebrig}
+                          onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                          disabled={verbrauchGroupLocked}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                  <div className="events-consumption-detail-footer">
+                    <LockToggleButton
+                      locked={verbrauchGroupLocked}
+                      onToggle={() => handleToggleVerbrauchLock(group)}
+                      lockedLabel="Verbrauchte Menge entsperren"
+                      unlockedLabel="Verbrauchte Menge sperren"
+                      lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
+                      unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

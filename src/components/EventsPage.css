@@ -304,9 +304,9 @@
   border-top: 1px solid #eee;
 }
 
-.events-consumption-group-header {
+.events-consumption-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -341,20 +341,119 @@
   color: #c0392b;
 }
 
-.events-consumption-group-footer {
+.events-lock-status-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  font-size: 11px;
+  font-weight: 500;
+  color: #777;
+  white-space: nowrap;
+}
+
+.events-lock-status-pill svg {
+  flex-shrink: 0;
+}
+
+.events-lock-status-purchaseLocked {
+  color: #96751a;
+}
+
+.events-lock-status-fullyLocked {
+  color: #2F5D50;
+}
+
+.events-consumption-button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.events-consumption-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px dashed #e2e2e2;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d8d8d3;
+  border-radius: 12px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  font-family: inherit;
 }
 
-.events-consumption-verbrauch-label {
+.events-consumption-toggle-btn:hover {
+  border-color: #2F5D50;
+}
+
+.events-consumption-toggle-btn.is-expanded {
+  border-color: #2F5D50;
+  box-shadow: 0 0 0 2px rgba(47, 93, 80, 0.12);
+}
+
+.events-consumption-toggle-btn.is-locked {
+  background: #f7f7f5;
+  border-color: #ececec;
+  color: #999;
+}
+
+.events-consumption-toggle-btn.is-locked:hover {
+  border-color: #ececec;
+}
+
+.events-consumption-toggle-btn svg {
+  flex-shrink: 0;
+}
+
+.events-consumption-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.events-consumption-toggle-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.events-consumption-toggle-value {
   font-size: 13px;
   font-weight: 500;
-  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.events-consumption-toggle-btn svg:last-child {
+  opacity: 0.4;
+}
+
+.events-consumption-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fafaf8;
+}
+
+.events-consumption-detail-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .events-consumption-unit-subtitle {
