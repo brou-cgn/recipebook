@@ -188,20 +188,36 @@ function getGroupEinkaufSummary(group, values) {
   return parts.join(', ');
 }
 
-// Zusammenfassung fuer den Verbrauch-Button: eingetragene "Uebrig"-Mengen, sonst der
-// kalkulierte Bedarf als Platzhalter, solange noch nichts erfasst wurde.
-function getGroupVerbrauchSummary(group, values, bedarfLiter) {
-  const parts = [];
-  group.rows.forEach((row) => {
-    const raw = values[row.kategorie]?.uebrig;
-    if (raw === '' || raw === undefined || raw === null) return;
-    const num = Number(raw);
-    if (!Number.isFinite(num)) return;
-    const unit = getRowConsumptionUnit(row);
-    parts.push(unit ? `${num}× ${unit} übrig` : `${num} übrig`);
+// Berechnet den tatsaechlichen Verbrauch einer Getraenke-Gruppe in Litern als
+// Einkauf minus Uebrig -- analog zur Backend-Berechnung in submitConsumption
+// (gebindeZuLiter), damit die Anzeige immer der spaeter gespeicherten Menge entspricht.
+function getGroupVerbrauchLiter(group, values) {
+  const units = getGroupCascadeUnits(group);
+  let totalLiter = 0;
+  units.forEach((unit) => {
+    const eingekauft = parseFractionQuantity(values[unit.key]?.eingekauft) || 0;
+    const uebrigEinheiten = Number(values[unit.key]?.uebrig) || 0;
+    const hatGebinde = Number.isFinite(unit.einheitsgroesseLiter) && unit.einheitsgroesseLiter > 0
+      && Number.isFinite(unit.gebindeGroesseLiter) && unit.gebindeGroesseLiter > 0;
+    const uebrigGebinde = hatGebinde
+      ? (uebrigEinheiten * unit.einheitsgroesseLiter) / unit.gebindeGroesseLiter
+      : uebrigEinheiten;
+    const verbrauchtGebinde = Math.max(eingekauft - uebrigGebinde, 0);
+    const perUnitLiter = Number.isFinite(unit.gebindeGroesseLiter) && unit.gebindeGroesseLiter > 0
+      ? unit.gebindeGroesseLiter
+      : unit.einheitsgroesseLiter;
+    if (Number.isFinite(perUnitLiter) && perUnitLiter > 0) {
+      totalLiter += verbrauchtGebinde * perUnitLiter;
+    }
   });
-  if (parts.length > 0) return parts.join(', ');
-  return bedarfLiter > 0 ? `${formatLiterShort(bedarfLiter)} l` : '–';
+  return totalLiter;
+}
+
+// Zusammenfassung fuer den Verbrauch-Button: zeigt immer den berechneten
+// Verbrauch (Einkauf minus Uebrig) der Gruppe in Litern.
+function getGroupVerbrauchSummary(group, values) {
+  const verbrauchLiter = getGroupVerbrauchLiter(group, values);
+  return verbrauchLiter > 0 ? `${formatLiterShort(verbrauchLiter)} l` : '–';
 }
 
 // Ermittelt den Sperr-Zustand einer Getraenke-Gruppe aus den getrennten
@@ -539,7 +555,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
           const verbrauchFehlt = isEventPast(event.date) && !verbrauchGroupLocked;
           const lockState = getLockIconState(einkaufGroupLocked, verbrauchGroupLocked);
           const einkaufSummary = getGroupEinkaufSummary(group, values);
-          const verbrauchSummary = getGroupVerbrauchSummary(group, values, bedarfLiter);
+          const verbrauchSummary = getGroupVerbrauchSummary(group, values);
           const activeSection = expandedSection[group.key] || null;
           return (
             <div className="events-consumption-group" key={group.key}>
