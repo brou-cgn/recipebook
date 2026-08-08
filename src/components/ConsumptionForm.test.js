@@ -460,7 +460,7 @@ describe('ConsumptionForm', () => {
     expect(screen.getByText(/Unterdeckung: 61,88 l eingekauft, aber 62,7 l kalkuliert\./)).toBeInTheDocument();
   });
 
-  it('zeigt "Ausreichend eingekauft", wenn die gesperrte Summe (Liter) den kalkulierten Bedarf deckt', () => {
+  it('zeigt keine Unterdeckungs-Warnung, wenn die gesperrte Summe (Liter) den kalkulierten Bedarf deckt', () => {
     const einheiten = [
       { einheitsgroesse: 50, einheit: 'Fass', gebindeinheit: '', einheitenProGebinde: '' },
     ];
@@ -487,7 +487,7 @@ describe('ConsumptionForm', () => {
     fireEvent.change(screen.getByLabelText('Eingekauft'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Eingekaufte Menge sperren' }));
 
-    expect(screen.getByLabelText('Ausreichend eingekauft')).toBeInTheDocument();
+    expect(screen.queryByText(/Unterdeckung:/)).not.toBeInTheDocument();
   });
 
   it('sperrt die Verbraucht/Uebrig-Menge analog zur Eingekauft-Sperre und friert die Eingabe ein', async () => {
@@ -514,13 +514,13 @@ describe('ConsumptionForm', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
-    fireEvent.change(screen.getByLabelText('Übrig'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Übrig (Flasche)'), { target: { value: '1' } });
 
     const verbrauchLockButton = screen.getByRole('button', { name: 'Verbrauchte Menge sperren' });
     fireEvent.click(verbrauchLockButton);
 
     expect(mockLockVerbrauchMengen).toHaveBeenCalledWith('user1', 'event1', { 'drink2:0': '1' });
-    expect(screen.getByLabelText('Übrig')).toBeDisabled();
+    expect(screen.getByLabelText('Übrig (Flasche)')).toBeDisabled();
 
     // Diese Gruppe ist die einzige des Events -- das Sperren loest also auch
     // automatisch submitConsumption aus; hier nur abwarten, damit der Test
@@ -553,7 +553,7 @@ describe('ConsumptionForm', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
-    fireEvent.change(screen.getByLabelText('Übrig'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('Übrig (Flasche)'), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
 
     expect(await screen.findByText('Verbrauch gespeichert')).toBeInTheDocument();
