@@ -77,6 +77,8 @@ describe('ConsumptionForm', () => {
 
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     const eingekauftInputs = screen.getAllByLabelText('Eingekauft');
     expect(eingekauftInputs).toHaveLength(2);
     expect(eingekauftInputs[0]).toHaveValue('1');
@@ -103,6 +105,8 @@ describe('ConsumptionForm', () => {
 
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     const eingekauftInput = screen.getByLabelText('Eingekauft');
     expect(eingekauftInput).toHaveValue('1 3/4');
   });
@@ -126,6 +130,8 @@ describe('ConsumptionForm', () => {
     ];
 
     render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
 
     const eingekauftInput = screen.getByLabelText('Eingekauft');
     expect(eingekauftInput).toHaveValue('');
@@ -239,6 +245,8 @@ describe('ConsumptionForm', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     const lockButton = screen.getByRole('button', { name: 'Eingekaufte Menge sperren' });
     fireEvent.click(lockButton);
 
@@ -297,6 +305,8 @@ describe('ConsumptionForm', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     const eingekauftInputsLocked = screen.getAllByLabelText('Eingekauft');
     expect(eingekauftInputsLocked[0]).toBeDisabled();
     expect(eingekauftInputsLocked[1]).toBeDisabled();
@@ -333,6 +343,8 @@ describe('ConsumptionForm', () => {
 
     render(<ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     expect(screen.getByLabelText('Eingekauft')).toHaveValue('3');
     expect(screen.getByLabelText('Eingekauft')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Eingekaufte Menge sperren' })).not.toBeInTheDocument();
@@ -362,6 +374,7 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Eingekaufte Menge sperren' }));
 
     expect(mockSetEventStatus).toHaveBeenCalledWith('user1', 'event1', 'eingekauft');
@@ -394,6 +407,7 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Eingekaufte Menge entsperren' }));
 
     expect(mockSetEventStatus).toHaveBeenCalledWith('user1', 'event1', 'berechnet');
@@ -434,6 +448,8 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+
     const eingekauftInputs = screen.getAllByLabelText('Eingekauft');
     fireEvent.change(eingekauftInputs[0], { target: { value: '1' } });
     fireEvent.change(eingekauftInputs[1], { target: { value: '1 1/2' } });
@@ -467,6 +483,7 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
     fireEvent.change(screen.getByLabelText('Eingekauft'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Eingekaufte Menge sperren' }));
 
@@ -496,6 +513,7 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
     fireEvent.change(screen.getByLabelText('Übrig'), { target: { value: '1' } });
 
     const verbrauchLockButton = screen.getByRole('button', { name: 'Verbrauchte Menge sperren' });
@@ -534,6 +552,7 @@ describe('ConsumptionForm', () => {
       <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
     fireEvent.change(screen.getByLabelText('Übrig'), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
 

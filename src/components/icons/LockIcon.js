@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LockIcon = ({ color = 'currentColor', size = 24 }) => {
+const LockIcon = ({ color = 'currentColor', size = 24, filled = false }) => {
   return (
     <svg
       width={size}
@@ -17,7 +17,7 @@ const LockIcon = ({ color = 'currentColor', size = 24 }) => {
         rx="2"
         stroke={color}
         strokeWidth="2"
-        fill="none"
+        fill={filled ? color : 'none'}
       />
       <path
         d="M8 11V7a4 4 0 0 1 8 0v4"
