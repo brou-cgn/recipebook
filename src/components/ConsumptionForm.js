@@ -470,6 +470,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   };
 
   const handleToggleVerbrauchLock = (group) => {
+    const wasVerbrauchLocked = verbrauchLock.isGroupLocked(group);
     const nextLocked = verbrauchLock.toggleGroupLock(group, (keys) => {
       const werteByKategorie = {};
       keys.forEach((kategorie) => {
@@ -477,6 +478,11 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       });
       return werteByKategorie;
     });
+    // Wird "Übrig" gesperrt, soll automatisch auch die zugehoerige
+    // "Eingekauft"-Menge mitgesperrt werden (nicht umgekehrt beim Entsperren).
+    if (!wasVerbrauchLocked && !einkaufLock.isGroupLocked(group)) {
+      handleToggleEinkaufLock(group);
+    }
     const allLocked = allGroupsLockedIn(nextLocked);
     if (allLocked && event.status !== 'verbrauchErfasst' && !autoSubmitTriggeredRef.current) {
       autoSubmitTriggeredRef.current = true;
