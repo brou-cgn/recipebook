@@ -31,8 +31,8 @@ const UNIT_SIZES = [
   { label: '1,0 l', value: 1.0 },
   { label: '1,5 l', value: 1.5 },
   { label: '2,0 l', value: 2.0 },
-  { label: '5,0 l (Pittermännchen)', value: 5.0 },
-  { label: '10,0 l (Fässchen)', value: 10.0 },
+  { label: '5,0 l', value: 5.0 },
+  { label: '10,0 l', value: 10.0 },
 ];
 
 const getUnitSizeLabel = (liters) => {

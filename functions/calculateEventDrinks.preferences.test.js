@@ -127,7 +127,7 @@ test('calculate normalizes configured custom drink unit labels for legacy entrie
   const customDrink = result.ergebnis.find((item) => item.kategorie === 'drink-1');
 
   assert.ok(customDrink);
-  assert.equal(customDrink.gebinde, '5,0 l (Pittermännchen)');
+  assert.equal(customDrink.gebinde, '5,0 l');
 });
 
 test('calculate includes new-model custom drinks with einheiten in results with null liter values', () => {

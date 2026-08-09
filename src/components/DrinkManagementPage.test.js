@@ -135,8 +135,8 @@ describe('DrinkManagementPage', () => {
       '1,0 l',
       '1,5 l',
       '2,0 l',
-      '5,0 l (Pittermännchen)',
-      '10,0 l (Fässchen)',
+      '5,0 l',
+      '10,0 l',
     ]);
   });
 
