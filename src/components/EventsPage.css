@@ -1251,7 +1251,10 @@
 
 .events-drink-row {
   position: relative;
-  overflow: hidden;
+  /* Only clip horizontally (for the swipe-to-delete panel) so the unit
+     typeahead dropdown, which opens below the input, isn't cut off. */
+  overflow-x: hidden;
+  overflow-y: visible;
   border-radius: 10px;
   background: white;
   border: 1px solid #e8e8e8;
