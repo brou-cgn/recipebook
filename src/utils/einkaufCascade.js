@@ -41,12 +41,18 @@ function roundToWholeNumber(value) {
  *
  * Ablauf: Fuer jede Einheit wird zunaechst ihre Basisgroesse ermittelt --
  * die Groesse ihrer Gebindeeinheit (falls vorhanden, z.B. Kasten), sonst ihre
- * eigene Groesse (z.B. Fass ohne Gebinde). Die Einheiten werden nach dieser
- * Basisgroesse absteigend sortiert. Fuer alle bis auf die kleinste Einheit
- * wird ganzzahlig so viel wie moeglich vom Restbedarf abgezogen (floor),
- * gerechnet in ihrer Basisgroesse -- damit auch eine "mittlere" Einheit mit
- * eigenem Gebinde (z.B. Flasche mit Kasten) in Gebindeeinheiten befuellt
- * wird und nicht in Einzel-Einheiten. Die kleinste Einheit erhaelt den
+ * eigene Groesse (z.B. Fass ohne Gebinde). Einheiten ohne Gebindeeinheit
+ * (Faesser) werden immer vor Einheiten mit Gebindeeinheit (Kaesten)
+ * verarbeitet -- wenn ein Fass am Getraenk hinterlegt ist, geschah das
+ * bewusst (z.B. aus kulinarischen Gruenden) und soll bevorzugt ausgeschoepft
+ * werden, unabhaengig davon wie seine Basisgroesse im Vergleich zu Kaesten
+ * ausfaellt. Innerhalb der beiden Gruppen wird weiterhin absteigend nach
+ * Basisgroesse sortiert. Fuer alle bis auf die letzte (kleinste) Einheit
+ * dieser Reihenfolge wird ganzzahlig so viel wie moeglich vom Restbedarf
+ * abgezogen (floor), gerechnet in ihrer Basisgroesse -- damit auch eine
+ * "mittlere" Einheit mit eigenem Gebinde (z.B. Flasche mit Kasten) in
+ * Gebindeeinheiten befuellt wird und nicht in Einzel-Einheiten. Die letzte
+ * Einheit (ein Kasten, falls vorhanden, sonst das kleinste Fass) erhaelt den
  * verbleibenden Rest, umgerechnet in ihre Basisgroesse und auf die naechste
  * Rundungsstufe aufgerundet.
  *
@@ -84,7 +90,12 @@ export function calculateCascadingEinkauf(units, bedarfLiter) {
     return { values, warnings };
   }
 
-  const sorted = [...validUnits].sort((a, b) => b.basisLiter - a.basisLiter);
+  const byBasisDesc = (a, b) => b.basisLiter - a.basisLiter;
+  // Faesser (ohne Gebindeeinheit) kommen immer zuerst -- sie wurden bewusst
+  // zum Getraenk hinzugefuegt und sollen vor Kaesten ausgeschoepft werden.
+  const ohneGebinde = validUnits.filter((u) => !u.hatGebindeeinheit).sort(byBasisDesc);
+  const mitGebinde = validUnits.filter((u) => u.hatGebindeeinheit).sort(byBasisDesc);
+  const sorted = [...ohneGebinde, ...mitGebinde];
   const smallest = sorted[sorted.length - 1];
   const grossUnits = sorted.slice(0, -1);
 
