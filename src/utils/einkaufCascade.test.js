@@ -95,4 +95,28 @@ describe('calculateCascadingEinkauf', () => {
     expect(values.fass).toBe(0);
     expect(values.flasche).toBe(0);
   });
+
+  it('bevorzugt ein Fass ohne Gebinde vor einem Kasten mit gleicher Basisgroesse', () => {
+    // 500-ml-Flasche im 20er-Kasten (Basis 10 l) und 10-l-Faesschen ohne
+    // Gebinde (Basis 10 l) sind gleich gross -- das Fass muss trotzdem
+    // zuerst (per floor) ausgeschoepft werden.
+    const units = [
+      { key: 'kasten500', einheitsgroesseLiter: 0.5, gebindeGroesseLiter: 10 },
+      { key: 'fass10', einheitsgroesseLiter: 10, gebindeGroesseLiter: null },
+    ];
+    const { values } = calculateCascadingEinkauf(units, 10);
+    expect(values.fass10).toBe(1);
+    expect(values.kasten500).toBe(0);
+  });
+
+  it('bevorzugt ein Fass sogar dann, wenn seine Basisgroesse kleiner als die eines Kastens ist', () => {
+    const units = [
+      { key: 'kasten500', einheitsgroesseLiter: 0.5, gebindeGroesseLiter: 10 },
+      { key: 'fass5', einheitsgroesseLiter: 5, gebindeGroesseLiter: null },
+    ];
+    const { values } = calculateCascadingEinkauf(units, 15);
+    // Fass zuerst: floor(15/5) = 3 Faesser, Rest 0 -> Kasten bekommt 0.
+    expect(values.fass5).toBe(3);
+    expect(values.kasten500).toBe(0);
+  });
 });
