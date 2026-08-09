@@ -461,11 +461,12 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     return gebinde;
   };
 
-  const runSubmitConsumption = async () => {
+  const runSubmitConsumption = async (verbrauchGesperrtKategorien) => {
     setSaving(true);
     setError('');
     try {
-      const result = await submitConsumption(event.id, buildGebindePayload());
+      const gesperrt = verbrauchGesperrtKategorien || verbrauchLock.lockedKategorien;
+      const result = await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt));
       setChanges(result.changes || []);
     } catch (err) {
       console.error('Error submitting consumption:', err);
@@ -493,7 +494,7 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     const allLocked = allGroupsLockedIn(nextLocked);
     if (allLocked && event.status !== 'verbrauchErfasst' && !autoSubmitTriggeredRef.current) {
       autoSubmitTriggeredRef.current = true;
-      runSubmitConsumption();
+      runSubmitConsumption(nextLocked);
     }
   };
 
