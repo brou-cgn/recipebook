@@ -557,7 +557,7 @@ describe('ConsumptionForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
 
     expect(await screen.findByText('Verbrauch gespeichert')).toBeInTheDocument();
-    expect(mockSubmitConsumption).toHaveBeenCalledWith('event1', { 'drink2:0': { eingekauft: 2, uebrig: 0 } });
+    expect(mockSubmitConsumption).toHaveBeenCalledWith('event1', { 'drink2:0': { eingekauft: 2, uebrig: 0 } }, ['drink2:0']);
   });
 
   it('sperrt beim Sperren der Verbraucht/Uebrig-Menge automatisch auch die noch ungesperrte Eingekauft-Menge', async () => {

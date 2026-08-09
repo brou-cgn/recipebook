@@ -79,12 +79,29 @@ function impliedRate(cat, literGemessen, event, ratesDb) {
 }
 
 /**
+ * Prueft, ob fuer alle Getraenke-Kategorien eines Events die "Verbraucht/Uebrig"-Menge
+ * gesperrt (also final erfasst) ist. Nur dann darf der Event-Status auf
+ * "verbrauchErfasst" gesetzt werden.
+ * @param {object} event Event-Dokument.
+ * @param {object} verbrauchGesperrt Aktuelle (bzw. gemergte) Sperren-Map { kategorie: wert }.
+ * @return {boolean} true, wenn alle relevanten Kategorien gesperrt sind.
+ */
+function alleGetraenkeVerbrauchGesperrt(event, verbrauchGesperrt) {
+  const kategorien = (event.berechnung?.ergebnis || [])
+      .filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter);
+  if (kategorien.length === 0) return false;
+  return kategorien.every((row) =>
+    Object.prototype.hasOwnProperty.call(verbrauchGesperrt || {}, row.kategorie));
+}
+
+/**
  * Callable: submitConsumption({ eventId, gebinde })
  * - eventId: ID des Event-Dokuments (muss existieren und berechnet sein)
  * - gebinde: { kategorie: { eingekauft: <Anzahl>, uebrig: <Anzahl> } }
  *   in Gebinde-Einheiten (Flaschen/Kisten/Tassen je nach Kategorie)
- * Aktualisiert users/{uid}/erfahrungswerte/* per gewichtetem Durchschnitt
- * und setzt den Event-Status auf "verbrauchErfasst".
+ * Aktualisiert users/{uid}/erfahrungswerte/* per gewichtetem Durchschnitt und
+ * setzt den Event-Status erst dann auf "verbrauchErfasst", wenn fuer ALLE
+ * Getraenke des Events die Verbraucht/Uebrig-Menge gesperrt ist.
  * Gibt eine Zusammenfassung der Aenderungen zurueck.
  */
 exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
@@ -92,7 +109,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
     throw new HttpsError('unauthenticated', 'Login erforderlich.');
   }
   const uid = request.auth.uid;
-  const {eventId, gebinde} = request.data || {};
+  const {eventId, gebinde, verbrauchGesperrtKategorien} = request.data || {};
 
   if (!eventId || !gebinde) {
     throw new HttpsError('invalid-argument', 'eventId und gebinde sind erforderlich.');
@@ -145,15 +162,26 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
     });
   }
 
-  batch.set(eventRef, {
-    status: 'verbrauchErfasst',
+  const eventUpdate = {
     istVerbrauch: literGemessen,
     istVerbrauchEingegeben: gebinde,
-  }, {merge: true});
+  };
+  // Die vom Client mitgesendeten, gerade gesperrten Kategorien werden mit dem
+  // in Firestore gespeicherten Stand vereinigt, damit ein noch nicht
+  // durchgeschriebener Sperren-Aufruf (Race Condition beim automatischen
+  // Absenden nach dem letzten Sperren) den Status nicht faelschlich blockiert.
+  const verbrauchGesperrt = {...(event.verbrauchGesperrt || {})};
+  (verbrauchGesperrtKategorien || []).forEach((kategorie) => {
+    verbrauchGesperrt[kategorie] = true;
+  });
+  if (alleGetraenkeVerbrauchGesperrt(event, verbrauchGesperrt)) {
+    eventUpdate.status = 'verbrauchErfasst';
+  }
+  batch.set(eventRef, eventUpdate, {merge: true});
 
   await batch.commit();
 
   return {eventId, changes};
 });
 
-exports._internal = {gebindeZuLiter, impliedRate};
+exports._internal = {gebindeZuLiter, impliedRate, alleGetraenkeVerbrauchGesperrt};

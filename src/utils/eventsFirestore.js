@@ -191,14 +191,18 @@ export const setEventStatus = async (uid, eventId, status) => {
 
 /**
  * Call the submitConsumption Cloud Function: records the actual consumption
- * of a finished event and updates the user's calibrated rates.
+ * of a finished event and updates the user's calibrated rates. Der Event-Status
+ * wird serverseitig nur dann auf "verbrauchErfasst" gesetzt, wenn alle Getraenke
+ * des Events gesperrt sind (siehe verbrauchGesperrtKategorien).
  * @param {string} eventId - ID of the event
  * @param {Object} gebinde - { kategorie: { eingekauft, uebrig } } in Gebinde-Einheiten
+ * @param {string[]} [verbrauchGesperrtKategorien] - Kategorien, die aktuell (auch
+ *   client-seitig noch nicht durchgeschrieben) als "Verbrauch gesperrt" gelten
  * @returns {Promise<Object>} { eventId, changes }
  */
-export const submitConsumption = async (eventId, gebinde) => {
+export const submitConsumption = async (eventId, gebinde, verbrauchGesperrtKategorien) => {
   const fn = httpsCallable(functions, 'submitConsumption');
-  const result = await fn({ eventId, gebinde });
+  const result = await fn({ eventId, gebinde, verbrauchGesperrtKategorien });
   return result.data;
 };
 
