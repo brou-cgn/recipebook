@@ -506,7 +506,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
                 </div>
                 <div className="events-form-row events-einheit-row">
                   <label className="events-form-field">
-                    <span>Einheiten pro Gebinde</span>
+                    <span>Menge/Gebinde</span>
                     <input
                       type="number"
                       min="1"
