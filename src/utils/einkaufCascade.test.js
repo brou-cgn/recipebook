@@ -69,6 +69,23 @@ describe('calculateCascadingEinkauf', () => {
     expect(calculateCascadingEinkauf(undefined, 10).values).toEqual({});
   });
 
+  it('befuellt eine mittlere (nicht kleinste) Einheit mit eigenem Gebinde in Gebindeeinheiten, nicht in Einzel-Einheiten', () => {
+    // große Flasche (0,5 l) mit Gebinde Kasten (10 l) und kleine Flasche
+    // (0,33 l) mit Gebinde Kasten (7,92 l). Die große Flasche ist nicht die
+    // kleinste Einheit, hat aber trotzdem ein eigenes Gebinde -- die Anzahl
+    // muss in Kästen (nicht in Einzelflaschen) übergeben werden.
+    const units = [
+      { key: 'grosseFlasche', einheitsgroesseLiter: 0.5, gebindeGroesseLiter: 10 },
+      { key: 'kleineFlasche', einheitsgroesseLiter: 0.33, gebindeGroesseLiter: 7.92 },
+    ];
+    const { values, warnings } = calculateCascadingEinkauf(units, 22);
+    // 22 / 10 = 2,2 -> 2 ganze Kästen (nicht 44 Einzelflaschen), Rest 2 l
+    expect(values.grosseFlasche).toBe(2);
+    // Rest 2 l / 7,92 = 0,2525... -> naechste Stufe 1/3 -> 0,333...
+    expect(values.kleineFlasche).toBeCloseTo(0.333, 3);
+    expect(warnings).toHaveLength(0);
+  });
+
   it('behandelt Bedarf 0 als 0 in allen Feldern', () => {
     const units = [
       { key: 'fass', einheitsgroesseLiter: 50, gebindeGroesseLiter: null },
