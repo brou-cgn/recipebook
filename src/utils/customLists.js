@@ -141,6 +141,8 @@ export const DEFAULT_PACKAGE_UNITS = [
   { id: 'kasten', singular: 'Kasten', plural: 'Kästen' },
   { id: 'kiste', singular: 'Kiste', plural: 'Kisten' },
   { id: 'fass', singular: 'Fass', plural: 'Fässer' },
+  { id: 'pittermännchen', singular: 'Pittermännchen', plural: 'Pittermännchen' },
+  { id: 'fässchen', singular: 'Fässchen', plural: 'Fässchen' },
 ];
 
 export const DEFAULT_DRINK_UNITS = [

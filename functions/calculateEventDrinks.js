@@ -195,8 +195,8 @@ function getConfiguredUnitLabel(liters) {
   if (value === 1) return '1,0 l';
   if (value === 1.5) return '1,5 l';
   if (value === 2) return '2,0 l';
-  if (value === 5) return '5,0 l (Pittermännchen)';
-  if (value === 10) return '10,0 l (Fässchen)';
+  if (value === 5) return '5,0 l';
+  if (value === 10) return '10,0 l';
   return null;
 }
 
