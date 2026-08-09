@@ -42,9 +42,7 @@ jobs:
           REACT_APP_FIREBASE_MEASUREMENT_ID: ${{ secrets.REACT_APP_FIREBASE_MEASUREMENT_ID }}
           REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
         run: |
-          REACT_APP_VERSION=$(node -p "require('./package.json').version")
-          export REACT_APP_VERSION
-          npm run build
+          REACT_APP_VERSION=$(node -p "require('./package.json').version") npm run build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
