@@ -39,11 +39,16 @@ function roundToWholeNumber(value) {
 /**
  * Verteilt den Liter-Bedarf eines Getraenks kaskadierend auf seine Einheiten.
  *
- * Ablauf: Einheiten werden nach ihrer eigenen Groesse (Liter) absteigend
- * sortiert. Fuer alle bis auf die kleinste Einheit wird ganzzahlig so viel
- * wie moeglich vom Restbedarf abgezogen (floor). Die kleinste Einheit erhaelt
- * den verbleibenden Rest, umgerechnet in ihre Gebindegroesse (falls vorhanden,
- * sonst ihre eigene Groesse) und auf die naechste Rundungsstufe aufgerundet.
+ * Ablauf: Fuer jede Einheit wird zunaechst ihre Basisgroesse ermittelt --
+ * die Groesse ihrer Gebindeeinheit (falls vorhanden, z.B. Kasten), sonst ihre
+ * eigene Groesse (z.B. Fass ohne Gebinde). Die Einheiten werden nach dieser
+ * Basisgroesse absteigend sortiert. Fuer alle bis auf die kleinste Einheit
+ * wird ganzzahlig so viel wie moeglich vom Restbedarf abgezogen (floor),
+ * gerechnet in ihrer Basisgroesse -- damit auch eine "mittlere" Einheit mit
+ * eigenem Gebinde (z.B. Flasche mit Kasten) in Gebindeeinheiten befuellt
+ * wird und nicht in Einzel-Einheiten. Die kleinste Einheit erhaelt den
+ * verbleibenden Rest, umgerechnet in ihre Basisgroesse und auf die naechste
+ * Rundungsstufe aufgerundet.
  *
  * @param {Array<{key: string, einheitsgroesseLiter: number, gebindeGroesseLiter?: number|null}>} units
  *   Einheiten des Getraenks. `einheitsgroesseLiter` ist die Groesse der Einheit selbst
@@ -69,14 +74,17 @@ export function calculateCascadingEinkauf(units, bedarfLiter) {
       warnings.push(`Einheit "${unit.key}" hat keine gültige Größe (Liter) - Feld bleibt leer.`);
       return;
     }
-    validUnits.push({ ...unit, einheitsgroesseLiter: size });
+    const gebindeSize = Number(unit.gebindeGroesseLiter);
+    const hatGebindeeinheit = Number.isFinite(gebindeSize) && gebindeSize > 0;
+    const basisLiter = hatGebindeeinheit ? gebindeSize : size;
+    validUnits.push({ ...unit, einheitsgroesseLiter: size, basisLiter, hatGebindeeinheit });
   });
 
   if (validUnits.length === 0) {
     return { values, warnings };
   }
 
-  const sorted = [...validUnits].sort((a, b) => b.einheitsgroesseLiter - a.einheitsgroesseLiter);
+  const sorted = [...validUnits].sort((a, b) => b.basisLiter - a.basisLiter);
   const smallest = sorted[sorted.length - 1];
   const grossUnits = sorted.slice(0, -1);
 
@@ -84,25 +92,16 @@ export function calculateCascadingEinkauf(units, bedarfLiter) {
   if (!Number.isFinite(rest) || rest < 0) rest = 0;
 
   grossUnits.forEach((unit) => {
-    const anzahl = Math.floor(rest / unit.einheitsgroesseLiter);
-    rest -= anzahl * unit.einheitsgroesseLiter;
+    const anzahl = Math.floor(rest / unit.basisLiter);
+    rest -= anzahl * unit.basisLiter;
     values[unit.key] = anzahl;
   });
 
-  const gebindeSize = Number(smallest.gebindeGroesseLiter);
-  const hatGebindeeinheit = Number.isFinite(gebindeSize) && gebindeSize > 0;
-  const basisLiter = hatGebindeeinheit ? gebindeSize : smallest.einheitsgroesseLiter;
-
-  if (!Number.isFinite(basisLiter) || basisLiter <= 0) {
-    values[smallest.key] = null;
-    warnings.push(`Einheit "${smallest.key}" hat keine gültige Gebinde-/Einheitsgröße - Feld bleibt leer.`);
-  } else {
-    const verhaeltnis = rest / basisLiter;
-    // Ohne Gebindeeinheit (z.B. lose Flaschen ohne Kasten) wird immer auf
-    // ganze Zahlen aufgerundet, da Bruchteile einer Einheit nicht gekauft
-    // werden koennen.
-    values[smallest.key] = hatGebindeeinheit ? roundToNextStage(verhaeltnis) : roundToWholeNumber(verhaeltnis);
-  }
+  const verhaeltnis = rest / smallest.basisLiter;
+  // Ohne Gebindeeinheit (z.B. lose Flaschen ohne Kasten) wird immer auf
+  // ganze Zahlen aufgerundet, da Bruchteile einer Einheit nicht gekauft
+  // werden koennen.
+  values[smallest.key] = smallest.hatGebindeeinheit ? roundToNextStage(verhaeltnis) : roundToWholeNumber(verhaeltnis);
 
   return { values, warnings };
 }
