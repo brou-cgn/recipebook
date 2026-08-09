@@ -1123,6 +1123,10 @@
     font-size: 16px;
   }
 
+  .events-form-row .events-form-field > span:first-child {
+    min-height: 2.4em;
+  }
+
   .events-category-checkbox {
     font-size: 16px;
   }

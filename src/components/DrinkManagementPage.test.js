@@ -152,7 +152,7 @@ describe('DrinkManagementPage', () => {
     expect(screen.queryByLabelText(/Distributionsfaktor/i)).not.toBeInTheDocument();
   });
 
-  test('form contains new unit fields (Einheitsgröße, Einheit, Gebindeinheit, Einheiten pro Gebinde)', () => {
+  test('form contains new unit fields (Einheitsgröße, Einheit, Gebindeinheit, Menge/Gebinde)', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Getränk anlegen' }));
@@ -160,7 +160,7 @@ describe('DrinkManagementPage', () => {
     expect(screen.getByText('Einheitsgröße')).toBeInTheDocument();
     expect(screen.getByText('Einheit')).toBeInTheDocument();
     expect(screen.getByText('Gebindeinheit')).toBeInTheDocument();
-    expect(screen.getByText('Einheiten pro Gebinde')).toBeInTheDocument();
+    expect(screen.getByText('Menge/Gebinde')).toBeInTheDocument();
   });
 
   test('saves drink with einheiten payload', async () => {
@@ -179,8 +179,8 @@ describe('DrinkManagementPage', () => {
     const gebindeinheitInput = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
     fireEvent.change(gebindeinheitInput, { target: { value: 'Flasche' } });
 
-    // Fill the Einheiten pro Gebinde field
-    const einheitenProGebindeInput = screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    // Fill the Menge/Gebinde field
+    const einheitenProGebindeInput = screen.getByRole('spinbutton', { name: /Menge\/Gebinde/i });
     fireEvent.change(einheitenProGebindeInput, { target: { value: '24' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
@@ -215,7 +215,7 @@ describe('DrinkManagementPage', () => {
     // Fill first einheit
     const firstGebindeinheit = screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten');
     fireEvent.change(firstGebindeinheit, { target: { value: 'Flasche' } });
-    const firstEinheitenProGebinde = screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    const firstEinheitenProGebinde = screen.getByRole('spinbutton', { name: /Menge\/Gebinde/i });
     fireEvent.change(firstEinheitenProGebinde, { target: { value: '1' } });
 
     // Add a second einheit
@@ -227,7 +227,7 @@ describe('DrinkManagementPage', () => {
 
     // Fill second einheit
     fireEvent.change(gebindeinheitInputs[1], { target: { value: 'Kasten' } });
-    const einheitenProGebindeInputs = screen.getAllByRole('spinbutton', { name: /Einheiten pro Gebinde/i });
+    const einheitenProGebindeInputs = screen.getAllByRole('spinbutton', { name: /Menge\/Gebinde/i });
     fireEvent.change(einheitenProGebindeInputs[1], { target: { value: '24' } });
 
     // Change unit size for second einheit
@@ -261,7 +261,7 @@ describe('DrinkManagementPage', () => {
 
     fireEvent.change(screen.getByRole('textbox', { name: /Name/i }), { target: { value: 'Test-Getränk' } });
 
-    // Don't fill Gebindeinheit or Einheiten pro Gebinde
+    // Don't fill Gebindeinheit or Menge/Gebinde
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() => {
@@ -456,7 +456,7 @@ describe('DrinkManagementPage', () => {
 
     expect(screen.getByPlaceholderText('z. B. Glas, Flasche, Dose')).toHaveValue('Flasche');
     expect(screen.getByPlaceholderText('z. B. Flasche, Dose, Kasten')).toHaveValue('Kasten');
-    expect(screen.getByRole('spinbutton', { name: /Einheiten pro Gebinde/i })).toHaveValue(12);
+    expect(screen.getByRole('spinbutton', { name: /Menge\/Gebinde/i })).toHaveValue(12);
   });
 
   describe('recipe linking in the name field', () => {
