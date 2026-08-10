@@ -1251,10 +1251,13 @@
 
 .events-drink-row {
   position: relative;
-  /* Only clip horizontally (for the swipe-to-delete panel) so the unit
-     typeahead dropdown, which opens below the input, isn't cut off. */
-  overflow-x: hidden;
-  overflow-y: visible;
+  /* No overflow clipping here: the unit typeahead dropdown opens below the
+     input and must be able to spill outside the row's bottom edge. Mixing
+     overflow-x: hidden with overflow-y: visible doesn't work for that,
+     since browsers compute the visible axis as auto once the other axis is
+     non-visible, which re-clips the dropdown anyway. The swipe-to-delete
+     background below has its own matching border-radius instead, so it
+     never needs to be clipped by this container. */
   border-radius: 10px;
   background: white;
   border: 1px solid #e8e8e8;
@@ -1264,6 +1267,7 @@
 .events-drink-row-swipe-background {
   position: absolute;
   inset: 0;
+  border-radius: 10px;
   background: #e05245;
   color: #fff;
   display: flex;
