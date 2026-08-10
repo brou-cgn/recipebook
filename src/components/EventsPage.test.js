@@ -346,4 +346,41 @@ describe('EventsPage', () => {
     expect(screen.getAllByText('Craft Bier')).toHaveLength(1);
     expect(screen.getAllByText(/24,0 l/)).toHaveLength(1);
   });
+
+  test('shows tatsächlicher Verbrauch table with resolved custom drink names when status is verbrauchErfasst', () => {
+    const event = {
+      id: 'e8',
+      eventName: 'Gartenparty',
+      date: '2026-06-01',
+      durationHours: 6,
+      eventType: 'party',
+      status: 'verbrauchErfasst',
+      guests: { adults: 8, children: 0 },
+      berechnung: {
+        ergebnis: [
+          {
+            kategorie: 'custom_2',
+            drinkId: 'custom_2',
+            drinkLabel: 'Mineralwasser',
+            literMitPuffer: 7.1,
+            isCustomDrink: true,
+            gebindeGroesseLiter: 1.5,
+          },
+        ],
+      },
+      istVerbrauch: { custom_2: 6.75 },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Gartenparty'));
+
+    expect(screen.getByText('Tatsächlicher Verbrauch')).toBeInTheDocument();
+    expect(screen.getAllByText('Mineralwasser')).toHaveLength(2);
+    expect(screen.getByText('6,8 l')).toBeInTheDocument();
+  });
 });
