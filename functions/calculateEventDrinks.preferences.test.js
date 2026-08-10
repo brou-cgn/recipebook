@@ -44,7 +44,7 @@ test('calculate distributes budget based on per-guest preferences (wein preferre
   // With preference: wein should have more than baseline (wasser dominated by weight).
   // Key: total budget is still the same (2 guests x budget).
   const totalLiters = wein.literOhnePuffer + wasser.literOhnePuffer;
-  const expectedTotal = 2 * BASE_RATE_PER_PERSON_PER_HOUR * 2 * 1.2; // 2 adults, 2 hours, sommer 1.2
+  const expectedTotal = 2 * BASE_RATE_PER_PERSON_PER_HOUR * 2 * 1.3; // 2 adults, 2 hours, sommer 1.3
   assert.ok(Math.abs(totalLiters - expectedTotal) < 0.05,
       `Total should be ~${expectedTotal} L, got ${totalLiters.toFixed(4)} L`);
   // Wein should be higher than it would be for a guest with no preference
