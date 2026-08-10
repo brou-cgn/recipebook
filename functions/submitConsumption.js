@@ -22,18 +22,29 @@ function round4(n) {
 
 /**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
- * Verbrauch in Litern pro Kategorie.
+ * Verbrauch in Litern pro Kategorie. Fuer benutzerdefinierte Getraenke gibt es
+ * keinen Eintrag in der Rate-DB (die ist nur nach den festen Standard-
+ * Kategorien indiziert) -- dafuer wird die Gebindegroesse aus der Event-
+ * Berechnung (event.berechnung.ergebnis[].gebindeGroesseLiter) verwendet.
  * @param {object} gebinde { kategorie: { eingekauft, uebrig } }
  * @param {object} ratesDb Rate-DB fuer Gebindegroessen.
+ * @param {object} event Event-Dokument (fuer Custom-Drink-Gebindegroessen).
  * @return {object} { kategorie: literGemessen }
  */
-function gebindeZuLiter(gebinde, ratesDb) {
+function gebindeZuLiter(gebinde, ratesDb, event) {
+  const gebindeLiterAusBerechnung = {};
+  (event?.berechnung?.ergebnis || []).forEach((row) => {
+    if (row.kategorie && Number.isFinite(row.gebindeGroesseLiter) && row.gebindeGroesseLiter > 0) {
+      gebindeLiterAusBerechnung[row.kategorie] = row.gebindeGroesseLiter;
+    }
+  });
+
   const result = {};
   for (const [cat, {eingekauft, uebrig}] of Object.entries(gebinde)) {
-    const entry = ratesDb[cat];
-    if (!entry || !entry.gebindeLiter) continue;
+    const gebindeLiter = ratesDb[cat]?.gebindeLiter || gebindeLiterAusBerechnung[cat];
+    if (!gebindeLiter) continue;
     const verbrauchtGebinde = Math.max((eingekauft || 0) - (uebrig || 0), 0);
-    result[cat] = verbrauchtGebinde * entry.gebindeLiter;
+    result[cat] = verbrauchtGebinde * gebindeLiter;
   }
   return result;
 }
@@ -131,7 +142,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
     ratesDb[doc.id] = {...(ratesDb[doc.id] || {}), ...doc.data()};
   });
 
-  const literGemessen = gebindeZuLiter(gebinde, ratesDb);
+  const literGemessen = gebindeZuLiter(gebinde, ratesDb, event);
 
   const changes = [];
   const batch = db.batch();

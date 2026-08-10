@@ -291,12 +291,18 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(selectedEvent.istVerbrauch).map(([kategorie, liter]) => (
-                      <tr key={kategorie}>
-                        <td>{CATEGORY_LABELS[kategorie] || kategorie}</td>
-                        <td className="events-table-amount">{formatLiter(liter)} l</td>
-                      </tr>
-                    ))}
+                    {Object.entries(selectedEvent.istVerbrauch).map(([kategorie, liter]) => {
+                      const ergebnisRow = (berechnung?.ergebnis || []).find((row) => row.kategorie === kategorie);
+                      const label = ergebnisRow?.isCustomDrink && ergebnisRow.drinkLabel
+                        ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes).displayName
+                        : (CATEGORY_LABELS[kategorie] || kategorie);
+                      return (
+                        <tr key={kategorie}>
+                          <td>{label}</td>
+                          <td className="events-table-amount">{formatLiter(liter)} l</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
