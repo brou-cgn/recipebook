@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
@@ -213,6 +213,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   const children = event.guests?.children || 0;
   const hours = event.durationHours;
   const seasonFactor = SEASON_FACTORS[event.season] ?? 1.0;
+  const timeFac = timeFactor(event.startTime, hours);
   const pufferProzent = normalizePufferProzent(event.pufferProzent);
   const puffer = pufferProzent / 100;
   const durFactor = durationFactor(hours);
@@ -237,13 +238,14 @@ function calculate(event, ratesDb, customDrinksMap) {
   const warnungen = [];
 
   // --- Step 1: Compute total beverage requirement for the event ---
-  // Adults: total = adults x base_rate x hours x season_factor x duration_factor.
-  // Children: total = children x children_base_rate x hours x season_factor x duration_factor.
+  // Adults: total = adults x base_rate x hours x season_factor x time_factor x duration_factor.
+  // Children: total = children x children_base_rate x hours x season_factor x time_factor x duration_factor.
+  // season_factor is applied first, time_factor (hours before 18:00) reduces the result further.
   // Both budgets are distributed independently across selected categories and then summed.
   const totalBeverage =
-      adults * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
+      adults * BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * timeFac * durFactor;
   const childrenTotalBeverage =
-      children * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * durFactor;
+      children * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * hours * seasonFactor * timeFac * durFactor;
 
   // --- Step 2: Compute effective category weights from DRINK_WEIGHTS (adults) ---
   // Each offered category receives its raw DRINK_WEIGHTS basis value.
@@ -582,10 +584,10 @@ function calculate(event, ratesDb, customDrinksMap) {
 
     let literErwachsene;
     if (modus === 'pauschal') {
-      literErwachsene = adults * anteilTrinker * (entry.erwachsene || 0) * seasonFactor;
+      literErwachsene = adults * anteilTrinker * (entry.erwachsene || 0) * seasonFactor * timeFac;
     } else {
       literErwachsene =
-          adults * anteilTrinker * (entry.erwachsene || 0) * hours * seasonFactor * durFactor;
+          adults * anteilTrinker * (entry.erwachsene || 0) * hours * seasonFactor * timeFac * durFactor;
     }
 
     const preferenceMultiplier = 1;
@@ -614,6 +616,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     gaeste: {erwachsene: adults, kinder: children},
     dauerStunden: hours,
     saisonFaktor: seasonFactor,
+    zeitFaktor: timeFac,
     eventTyp: event.eventType,
     pufferProzent,
     ergebnis,

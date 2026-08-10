@@ -62,7 +62,39 @@ const DEFAULT_RATES = {
   },
 };
 
-const SEASON_FACTORS = {sommer: 1.2, uebergang: 1.0, winter: 0.85};
+const SEASON_FACTORS = {sommer: 1.3, uebergang: 1.0, winter: 0.85};
+
+// Uhrzeit-Grenze: Stunden vor 18 Uhr gelten als "tagsueber" und werden
+// geringer gewichtet (weniger Konsum als am Abend).
+const TIME_FACTOR_BOUNDARY_HOUR = 18;
+const TIME_FACTOR_BEFORE_BOUNDARY = 0.8;
+
+/**
+ * Berechnet den Zeitfaktor eines Events aus Startuhrzeit und Dauer.
+ * Der SEASON_FACTOR wird zuerst auf den Gesamtbedarf angewendet, danach
+ * zusaetzlich dieser Zeitfaktor: Stunden vor 18:00 Uhr zaehlen mit
+ * TIME_FACTOR_BEFORE_BOUNDARY (0.8), Stunden ab 18:00 Uhr mit 1.0. Der
+ * zurueckgegebene Wert ist der stundengewichtete Mittelwert ueber die
+ * gesamte Event-Dauer. Ohne bekannte Startuhrzeit laesst sich der Anteil
+ * nicht bestimmen -- dann wird 1.0 (keine Anpassung) zurueckgegeben.
+ * @param {string} [startTime] Startuhrzeit im Format "HH:MM".
+ * @param {number} hours Dauer des Events in Stunden.
+ * @return {number} Multiplikator zwischen TIME_FACTOR_BEFORE_BOUNDARY und 1.0.
+ */
+function timeFactor(startTime, hours) {
+  if (!startTime || !hours || hours <= 0) return 1.0;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(startTime);
+  if (!match) return 1.0;
+  const startHour = Number(match[1]) + Number(match[2]) / 60;
+  if (!Number.isFinite(startHour)) return 1.0;
+
+  const hoursBeforeBoundary = Math.min(
+      Math.max(TIME_FACTOR_BOUNDARY_HOUR - startHour, 0),
+      hours,
+  );
+  const hoursAfterBoundary = hours - hoursBeforeBoundary;
+  return (hoursBeforeBoundary * TIME_FACTOR_BEFORE_BOUNDARY + hoursAfterBoundary * 1.0) / hours;
+}
 
 /**
  * Gewichtungsmatrix fuer Getraenkekategorien.
@@ -248,4 +280,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};
+module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, TIME_FACTOR_BOUNDARY_HOUR, TIME_FACTOR_BEFORE_BOUNDARY, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};

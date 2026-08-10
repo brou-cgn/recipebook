@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor} = require('./drinkRates');
+const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, timeFactor} = require('./drinkRates');
 
 /**
  * Rundet auf 2 Nachkommastellen.
@@ -54,6 +54,7 @@ function impliedRate(cat, literGemessen, event, ratesDb) {
   const children = event.guests?.children || 0;
   const hours = event.durationHours;
   const seasonFactor = SEASON_FACTORS[event.season] ?? 1.0;
+  const timeFac = timeFactor(event.startTime, hours);
   const typeFactor = (EVENT_TYPE_FACTORS[event.eventType] || {})[cat] ?? 1.0;
   const durFactor = durationFactor(hours);
   const entry = ratesDb[cat] || DEFAULT_RATES[cat];
@@ -66,11 +67,11 @@ function impliedRate(cat, literGemessen, event, ratesDb) {
   let literKinderGeschaetzt;
   let nenner;
   if (modus === 'pauschal') {
-    literKinderGeschaetzt = children * rateKinderAlt * seasonFactor;
-    nenner = adults * anteilTrinker * seasonFactor * typeFactor;
+    literKinderGeschaetzt = children * rateKinderAlt * seasonFactor * timeFac;
+    nenner = adults * anteilTrinker * seasonFactor * timeFac * typeFactor;
   } else {
     literKinderGeschaetzt = children * rateKinderAlt * hours * durFactor;
-    nenner = adults * anteilTrinker * hours * seasonFactor * typeFactor * durFactor;
+    nenner = adults * anteilTrinker * hours * seasonFactor * timeFac * typeFactor * durFactor;
   }
 
   const literErwachsene = Math.max(literGemessen - literKinderGeschaetzt, 0);
