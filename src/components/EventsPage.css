@@ -869,7 +869,8 @@
   border-bottom: none;
 }
 
-.events-table-amount {
+.events-table th.events-table-amount,
+.events-table td.events-table-amount {
   text-align: right;
 }
 

@@ -383,4 +383,48 @@ describe('EventsPage', () => {
     expect(screen.getAllByText('Mineralwasser')).toHaveLength(2);
     expect(screen.getByText('6,8 l')).toBeInTheDocument();
   });
+
+  test('consolidates tatsächlicher Verbrauch per Getränk, even when multiple Einheiten wurden erfasst', () => {
+    const event = {
+      id: 'e9',
+      eventName: 'Bierfest',
+      date: '2026-01-10',
+      durationHours: 3,
+      eventType: 'party',
+      status: 'verbrauchErfasst',
+      guests: { adults: 20, children: 0 },
+      berechnung: {
+        ergebnis: [
+          {
+            kategorie: 'custom_1:0',
+            drinkId: 'custom_1',
+            drinkLabel: 'Craft Bier',
+            literMitPuffer: 24,
+            isCustomDrink: true,
+            einheitIdx: 0,
+          },
+          {
+            kategorie: 'custom_1:1',
+            drinkId: 'custom_1',
+            drinkLabel: 'Craft Bier',
+            literMitPuffer: 24,
+            isCustomDrink: true,
+            einheitIdx: 1,
+          },
+        ],
+      },
+      istVerbrauch: { 'custom_1:0': 10, 'custom_1:1': 5.5 },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+
+    render(<EventsPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByText('Bierfest'));
+
+    expect(screen.getAllByText('Craft Bier')).toHaveLength(2);
+    expect(screen.getByText('15,5 l')).toBeInTheDocument();
+  });
 });
