@@ -285,4 +285,20 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
 
     expect(screen.queryByText(/Bevorzugt:/)).not.toBeInTheDocument();
   });
+
+  test('guest overview is sorted by nachname then vorname ascending', () => {
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'g1', vorname: 'Bernd', nachname: 'Zimmer', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+        { id: 'g2', vorname: 'Zora', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+        { id: 'g3', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    const names = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+    expect(names).toEqual(['Anna Adler', 'Zora Adler', 'Bernd Zimmer']);
+  });
 });

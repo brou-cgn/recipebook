@@ -58,6 +58,21 @@
   gap: 12px;
 }
 
+.drink-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drink-category-group-header {
+  margin: 4px 0 -2px;
+  color: #2F5D50;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .events-card {
   display: flex;
   justify-content: space-between;

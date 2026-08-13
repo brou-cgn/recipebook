@@ -103,7 +103,7 @@ describe('DrinkManagementPage', () => {
 
     render(<DrinkManagementPage currentUser={currentUser} />);
 
-    expect(screen.getByText('Weißwein')).toBeInTheDocument();
+    expect(screen.getAllByText('Weißwein').length).toBeGreaterThan(0);
   });
 
   test('displays Kölsch subcategory label in drink list', () => {
@@ -114,7 +114,46 @@ describe('DrinkManagementPage', () => {
 
     render(<DrinkManagementPage currentUser={currentUser} />);
 
-    expect(screen.getByText('Kölsch')).toBeInTheDocument();
+    expect(screen.getAllByText('Kölsch').length).toBeGreaterThan(0);
+  });
+
+  test('drink list is grouped by category and sorted by name within each group', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'd1', name: 'Cola', kategorie: 'softdrinks' },
+        { id: 'd2', name: 'Rotwein Trocken', kategorie: 'wein_rotwein' },
+        { id: 'd3', name: 'Apfelschorle', kategorie: 'softdrinks' },
+      ]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    const list = screen.getByText('Getränke verwalten').closest('.events-page-container').querySelector('.events-list');
+    const headers = within(list).getAllByRole('heading', { level: 3, name: /Wasser|Softdrinks|Rotwein/ });
+    const headerTexts = headers.map((h) => h.textContent);
+    // "Wasser" (predefined Mineralwasser) comes before "Softdrinks", which comes before "Rotwein"
+    // per the DRINK_CATEGORIES order.
+    expect(headerTexts.indexOf('Wasser')).toBeLessThan(headerTexts.indexOf('Softdrinks'));
+    expect(headerTexts.indexOf('Softdrinks')).toBeLessThan(headerTexts.indexOf('Rotwein'));
+
+    const softdrinksHeader = screen.getByRole('heading', { level: 3, name: 'Softdrinks' });
+    const softdrinksGroup = softdrinksHeader.closest('.drink-category-group');
+    const namesInGroup = within(softdrinksGroup).getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+      .filter((text) => text !== 'Softdrinks');
+    expect(namesInGroup).toEqual(['Apfelschorle', 'Cola']);
+  });
+
+  test('drinks without a category are grouped under "Ohne Kategorie"', () => {
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([{ id: 'd1', name: 'Mystery Drink', kategorie: '' }]);
+      return jest.fn();
+    });
+
+    render(<DrinkManagementPage currentUser={currentUser} />);
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Ohne Kategorie' })).toBeInTheDocument();
   });
 
   test('unit size select contains the configurable accepted sizes', () => {
@@ -387,7 +426,7 @@ describe('DrinkManagementPage', () => {
   test('predefined drink shows category label "Wasser"', () => {
     render(<DrinkManagementPage currentUser={currentUser} />);
 
-    expect(screen.getByText('Wasser')).toBeInTheDocument();
+    expect(screen.getAllByText('Wasser').length).toBeGreaterThan(0);
   });
 
   test('predefined drink name field is disabled in edit form', () => {

@@ -13,6 +13,41 @@ import { updateRecipe } from '../utils/recipeFirestore';
 
 const DRINK_RECIPE_CATEGORY = 'Drinks';
 
+const CATEGORY_ORDER = DRINK_CATEGORIES.reduce((acc, cat) => {
+  acc.push(cat.id);
+  if (Array.isArray(cat.subcategories)) {
+    cat.subcategories.forEach((sub) => acc.push(sub.id));
+  }
+  return acc;
+}, []);
+const UNCATEGORIZED_GROUP_ID = '__uncategorized__';
+
+const groupDrinksByCategory = (drinksList, recipes) => {
+  const groups = new Map();
+  drinksList.forEach((drink) => {
+    const groupId = drink.kategorie && CATEGORY_ORDER.includes(drink.kategorie)
+      ? drink.kategorie
+      : UNCATEGORIZED_GROUP_ID;
+    if (!groups.has(groupId)) groups.set(groupId, []);
+    groups.get(groupId).push(drink);
+  });
+
+  const orderedGroupIds = [...CATEGORY_ORDER.filter((id) => groups.has(id))];
+  if (groups.has(UNCATEGORIZED_GROUP_ID)) orderedGroupIds.push(UNCATEGORIZED_GROUP_ID);
+
+  return orderedGroupIds.map((groupId) => ({
+    id: groupId,
+    label: groupId === UNCATEGORIZED_GROUP_ID ? 'Ohne Kategorie' : getDrinkCategoryLabel(groupId),
+    drinks: [...groups.get(groupId)].sort((a, b) =>
+      resolveDrinkDisplay(a, recipes).displayName.localeCompare(
+        resolveDrinkDisplay(b, recipes).displayName,
+        'de',
+        { sensitivity: 'base' },
+      )
+    ),
+  }));
+};
+
 const isDrinkRecipe = (recipe) =>
   Array.isArray(recipe?.speisekategorie)
     ? recipe.speisekategorie.includes(DRINK_RECIPE_CATEGORY)
@@ -229,6 +264,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
     [recipes]
   );
   const allDrinks = useMemo(() => mergePredefinedDrinks(drinks), [drinks]);
+  const groupedDrinks = useMemo(() => groupDrinksByCategory(allDrinks, recipes), [allDrinks, recipes]);
 
   const nameDrinkDisplay = resolveDrinkDisplay(form.name, recipes);
 
@@ -692,15 +728,20 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
         <div className="events-empty-state">Laden...</div>
       ) : (
         <div className="events-list">
-          {allDrinks.map((drink) => (
-            <DrinkRow
-              key={drink.id}
-              drink={drink}
-              displayName={resolveDrinkDisplay(drink, recipes).displayName}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              swipeDeleteIcon={swipeDeleteIcon}
-            />
+          {groupedDrinks.map((group) => (
+            <div key={group.id} className="drink-category-group">
+              <h3 className="drink-category-group-header">{group.label}</h3>
+              {group.drinks.map((drink) => (
+                <DrinkRow
+                  key={drink.id}
+                  drink={drink}
+                  displayName={resolveDrinkDisplay(drink, recipes).displayName}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  swipeDeleteIcon={swipeDeleteIcon}
+                />
+              ))}
+            </div>
           ))}
           {drinks.length === 0 && (
             <p className="events-info-text">Noch keine eigenen Getränke angelegt.</p>
