@@ -498,8 +498,8 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         <div className="events-list">
           {profiles.map((profile) => {
             const fullName = getGuestDisplayName(profile);
-            const preferredDrinkNames = Array.isArray(profile.bevorzugteGetraenke)
-              ? profile.bevorzugteGetraenke.map(
+            const preferredDrinkNames = Array.isArray(profile.bevorzugteGetränke)
+              ? profile.bevorzugteGetränke.map(
                   (drinkId) => availableDrinks.find((d) => d.id === drinkId)?.label || drinkId
                 )
               : [];
