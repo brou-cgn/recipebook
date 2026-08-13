@@ -394,6 +394,25 @@ test('keeps status as Neu when current status is Neu', async () => {
   global.fetch = originalFetch;
 });
 
+test('does not update source for Neu entries', async () => {
+  referenceData = {
+    status: 'Neu',
+    kalorien_ai: 18,
+  };
+  loadWrappedFunction();
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({ok: false});
+
+  await wrappedFunction({auth: {uid: 'u1'}, data: {ingredientID: 'zutat'}});
+
+  assert.ok(setCalls.length > 0);
+  // 'Neu' entries must not have their source updated.
+  assert.equal(Object.hasOwn(setCalls[0].payload, 'source'), false);
+
+  global.fetch = originalFetch;
+});
+
 test('does not change status for Freigegeben entries', async () => {
   referenceData = {
     status: 'Freigegeben',
