@@ -49,6 +49,29 @@ const groupErgebnisRowsByDrink = (rows) => {
   return grouped;
 };
 
+// Fasst den tatsaechlichen Verbrauch pro Getraenk zusammen (istVerbrauch ist
+// pro Ergebniszeile gespeichert, also ggf. mehrere Eintraege pro Getraenk,
+// wenn mehrere Gebinde-Einheiten ausgewaehlt wurden).
+const groupIstVerbrauchByDrink = (istVerbrauch, ergebnis, recipes) => {
+  const groups = [];
+  const groupsByKey = new Map();
+  Object.entries(istVerbrauch || {}).forEach(([kategorie, liter]) => {
+    const ergebnisRow = (ergebnis || []).find((row) => row.kategorie === kategorie);
+    const key = ergebnisRow?.drinkId || kategorie;
+    let group = groupsByKey.get(key);
+    if (!group) {
+      const label = ergebnisRow?.isCustomDrink && ergebnisRow.drinkLabel
+        ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes).displayName
+        : (CATEGORY_LABELS[kategorie] || kategorie);
+      group = { key, label, liter: 0 };
+      groupsByKey.set(key, group);
+      groups.push(group);
+    }
+    group.liter += Number(liter) || 0;
+  });
+  return groups;
+};
+
 const formatDrinkSummary = (berechnung) => {
   const ergebnis = berechnung?.ergebnis;
   if (!ergebnis || ergebnis.length === 0) return null;
@@ -291,18 +314,12 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(selectedEvent.istVerbrauch).map(([kategorie, liter]) => {
-                      const ergebnisRow = (berechnung?.ergebnis || []).find((row) => row.kategorie === kategorie);
-                      const label = ergebnisRow?.isCustomDrink && ergebnisRow.drinkLabel
-                        ? resolveDrinkDisplay(ergebnisRow.drinkLabel, recipes).displayName
-                        : (CATEGORY_LABELS[kategorie] || kategorie);
-                      return (
-                        <tr key={kategorie}>
-                          <td>{label}</td>
-                          <td className="events-table-amount">{formatLiter(liter)} l</td>
-                        </tr>
-                      );
-                    })}
+                    {groupIstVerbrauchByDrink(selectedEvent.istVerbrauch, berechnung?.ergebnis, recipes).map((group) => (
+                      <tr key={group.key}>
+                        <td>{group.label}</td>
+                        <td className="events-table-amount">{formatLiter(group.liter)} l</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
