@@ -3743,6 +3743,10 @@
   color: #7fb8a3;
 }
 
+[data-theme="dark"] .drink-category-group-header {
+  color: #7fb8a3;
+}
+
 [data-theme="dark"] .events-close-btn {
   color: #ccc;
 }

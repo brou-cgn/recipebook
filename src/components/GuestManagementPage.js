@@ -83,6 +83,14 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
     return customDrinks.map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes).displayName || drink.id }));
   }, [customDrinks, recipes]);
 
+  const sortedProfiles = useMemo(() => {
+    return [...profiles].sort((a, b) => {
+      const nachnameDiff = (a.nachname || '').localeCompare(b.nachname || '', 'de', { sensitivity: 'base' });
+      if (nachnameDiff !== 0) return nachnameDiff;
+      return (a.vorname || '').localeCompare(b.vorname || '', 'de', { sensitivity: 'base' });
+    });
+  }, [profiles]);
+
   const openNew = () => {
     setEditId(null);
     setForm(emptyForm());
@@ -496,7 +504,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         </div>
       ) : (
         <div className="events-list">
-          {profiles.map((profile) => {
+          {sortedProfiles.map((profile) => {
             const fullName = getGuestDisplayName(profile);
             const preferredDrinkNames = Array.isArray(profile.bevorzugteGetraenke)
               ? profile.bevorzugteGetraenke.map(
