@@ -491,11 +491,12 @@ function NutritionReferenceTab({ currentUser }) {
 
       await withPreservedTableScroll(async () => {
         if (hasMeaningfulGeneratedNutrition(values)) {
+          const currentStatus = parseNutritionReferenceStatus(row);
           await setDoc(
             doc(db, 'nutritionReferences', ingredientID),
             {
-              source: String(source || '').trim(),
-              status: getStatusAfterNutritionFetch(parseNutritionReferenceStatus(row)),
+              ...(currentStatus !== NUTRITION_REFERENCE_NEW_STATUS ? { source: String(source || '').trim() } : {}),
+              status: getStatusAfterNutritionFetch(currentStatus),
               ...(searchTerm ? { searchTerm } : {}),
               ...parsedValues,
               ...buildSourceNutritionFields(parsedValues, source),

@@ -804,9 +804,11 @@ describe('NutritionReferenceTab', () => {
     });
     expect(mockSetDoc.mock.calls[0][1]).toEqual(expect.objectContaining({
       status: 'Neu',
-      source: 'openfoodfacts',
       searchTerm: 'oats',
       kalorien: 60,
+    }));
+    expect(mockSetDoc.mock.calls[0][1]).not.toEqual(expect.objectContaining({
+      source: expect.anything(),
     }));
   });
 

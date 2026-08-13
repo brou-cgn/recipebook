@@ -3400,7 +3400,7 @@ exports.generateNutritionFromReference = onCall(
         ...aiSourceFields,
         ...trackingFields,
       };
-      if (nextSource && status !== 'Freigegeben') {
+      if (nextSource && status !== 'Freigegeben' && status !== 'Neu') {
         updatePayload.source = nextSource;
       }
       // Advance status to 'Prüfung ausstehend' for entries that still need review.
