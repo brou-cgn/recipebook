@@ -48,6 +48,25 @@ function getRowPurchaseUnit(row) {
   return row.gebinde || '';
 }
 
+// Loest die Pluralform einer (als Singular gespeicherten) Gebinde-/Getraenkeeinheit auf,
+// indem die Einheit anhand ihres Singulars in den Gebinde-/Getraenkeeinheiten-Listen
+// gesucht wird. Ohne Treffer (z.B. Freitext-Einheit) wird die Einheit unveraendert
+// zurueckgegeben.
+function getPluralUnit(unitSingular, packageUnits, drinkUnits) {
+  if (!unitSingular) return unitSingular;
+  const match = [...packageUnits, ...drinkUnits].find((u) => u.singular === unitSingular);
+  return match ? match.plural : unitSingular;
+}
+
+// Waehlt Singular oder Plural einer Einheit passend zur Menge: nur bei Menge = 1
+// wird der Singular verwendet, bei allen anderen Mengen (0,5, 1/4, 1 1/4, 2, ...) der Plural.
+function getUnitForQuantity(unitSingular, quantity, packageUnits, drinkUnits) {
+  if (!unitSingular) return unitSingular;
+  const EPSILON = 1e-9;
+  if (Number.isFinite(quantity) && Math.abs(quantity - 1) < EPSILON) return unitSingular;
+  return getPluralUnit(unitSingular, packageUnits, drinkUnits);
+}
+
 // Einzel-Einheit (z.B. Flasche) fuer den Verbrauch -- im Unterschied zur
 // Gebindeeinheit (z.B. Kasten) beim Einkauf.
 function getRowConsumptionUnit(row) {
@@ -289,6 +308,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [conversionTable, setConversionTable] = useState([]);
+  const [packageUnits, setPackageUnits] = useState([]);
+  const [drinkUnits, setDrinkUnits] = useState([]);
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [buttonIcons, setButtonIcons] = useState(DEFAULT_BUTTON_ICONS);
@@ -313,6 +334,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     const loadShoppingListSettings = async () => {
       const [icons, lists] = await Promise.all([getButtonIcons(), getCustomLists()]);
       setConversionTable(lists.conversionTable || []);
+      setPackageUnits(lists.packageUnits || []);
+      setDrinkUnits(lists.drinkUnits || []);
       setBringButtonIcon(getEffectiveIcon(icons, 'bringButton', getDarkModePreference()) || 'Bring');
       setShoppingListIcon(getEffectiveIcon(icons, 'shoppingList', getDarkModePreference()) || 'Einkauf');
       setButtonIcons(icons);
@@ -356,8 +379,10 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
       const safeDrinkName = group.drinkName.replace(/,/g, '.');
       group.rows.forEach((row) => {
         const quantityText = (values[row.kategorie]?.eingekauft || '').trim();
-        if (!quantityText || !parseFractionQuantity(quantityText)) return;
-        const unit = getRowPurchaseUnit(row);
+        const parsedQuantity = parseFractionQuantity(quantityText);
+        if (!quantityText || !parsedQuantity) return;
+        const unitSingular = getRowPurchaseUnit(row);
+        const unit = getUnitForQuantity(unitSingular, parsedQuantity, packageUnits, drinkUnits);
         const quantity = unit ? `${quantityText} ${unit}` : quantityText;
         items.push(`${safeDrinkName}, ${quantity}`);
       });
