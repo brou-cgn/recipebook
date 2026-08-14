@@ -207,6 +207,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Kalibrierungs-Snapshots: Ist-Bedarfsdaten pro abgeschlossenem Event, gesammelt
+    // fuer eine spaetere Kalibrierung von DRINK_WEIGHTS/BASE_RATE_PER_PERSON_PER_HOUR
+    // (Phase 1, reines Sammeln -- siehe Konzept "Sammlung von Ist-Bedarfsdaten").
+    // Nur ueber submitConsumption Cloud Function beschreibbar (Admin SDK bypasst
+    // diese Regeln); Lesezugriff ist Admins fuer die spaetere Auswertung vorbehalten.
+    match /kalibrierungsSnapshots/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Settings collection
     match /settings/{settingId} {
       // settings/app and settings/images are publicly readable so unauthenticated
