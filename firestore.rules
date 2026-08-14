@@ -84,6 +84,19 @@ service cloud.firestore {
       allow create, update, delete: if isModeratorOrAdmin();
     }
 
+    // Getraenke-Gewichtungsmatrizen (Erwachsene + Kinder) fuer die Event-
+    // Getraenkekalkulation. Dokument-ID = Kategorie-ID (siehe
+    // functions/drinkRates.js DRINK_WEIGHTS / CHILDREN_DRINK_WEIGHTS).
+    match /drinkWeights/{categoryId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isModeratorOrAdmin();
+    }
+
+    match /drinkWeightsChildren/{categoryId} {
+      allow read: if isAnyUser();
+      allow create, update, delete: if isModeratorOrAdmin();
+    }
+
     // Nutrition reference values (stored per 100g from OpenFoodFacts lookups)
     // Public read is required so unauthenticated share-link viewers can render nutrition data.
     match /nutritionReferences/{entryId} {

@@ -1,6 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DRINK_WEIGHTS} = require('./drinkRates');
+const {loadDrinkWeightsFromFirestore} = require('./drinkRates');
 
 /**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
@@ -75,7 +75,8 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   }
   const event = eventSnap.data();
 
-  const literGemessen = gebindeZuLiter(gebinde, DRINK_WEIGHTS, event);
+  const ratesDb = await loadDrinkWeightsFromFirestore(db);
+  const literGemessen = gebindeZuLiter(gebinde, ratesDb, event);
 
   const batch = db.batch();
 

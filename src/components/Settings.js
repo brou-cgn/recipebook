@@ -5,7 +5,7 @@ import { getOnboardingTestmodeActive, saveOnboardingTestmodeActive } from '../ut
 import PrintFormatEditor from './PrintFormatEditor';
 import PrintPreview from './PrintPreview';
 import { invalidateUnitsCache } from '../utils/ingredientUtils';
-import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix } from '../utils/userManagement';
+import { isCurrentUserAdmin, ROLES, getRolePermissions, canManageSeasonMatrix, canManageDrinkWeights } from '../utils/userManagement';
 import UserManagement from './UserManagement';
 import { getCategoryImages, addCategoryImage, updateCategoryImage, removeCategoryImage, getAlreadyAssignedCategories } from '../utils/categoryImages';
 import { fileToBase64, isBase64Image, compressImage } from '../utils/imageUtils';
@@ -14,6 +14,7 @@ import { uploadAppLogoToStorage, deleteAppLogoFromStorage } from '../utils/stora
 import { addFaq, updateFaq, deleteFaq, subscribeToFaqs, importFaqsFromMarkdown } from '../utils/faqFirestore';
 import SeasonMatrixTab from './SeasonMatrixTab';
 import NutritionReferenceTab from './NutritionReferenceTab';
+import DrinkWeightsTab from './DrinkWeightsTab';
 import {
   DndContext,
   closestCenter,
@@ -374,6 +375,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
   // Whether the current user can rename cuisine types and meal categories
   const canEditLists = isAdmin || rolePermissions?.[currentUser?.role]?.editLists === true;
   const canAccessSeasonMatrix = canManageSeasonMatrix(currentUser);
+  const canAccessDrinkWeights = canManageDrinkWeights(currentUser);
 
   const resizeInspirationTextarea = useCallback((textarea) => {
     if (!textarea) return;
@@ -1463,7 +1465,7 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
     { label: 'Zeitleisten-Icon (Kochereignisse)', icon: timelineCookEventBubbleIcon, uploading: uploadingTimelineCookEventBubbleIcon, onChange: handleTimelineCookEventBubbleIconUpload, onRemove: handleRemoveTimelineCookEventBubbleIcon, fileId: 'timelineCookEventBubbleIconFile' },
   ];
 
-  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte'].includes(activeTab);
+  const isFullWidthTab = ['users', 'saisonmatrix', 'naehrwerte', 'getraenkegewichte'].includes(activeTab);
 
   return (
     <div className="settings-container">
@@ -1554,6 +1556,14 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
                     onClick={() => setActiveTab('naehrwerte')}
                   >
                     Nährwerte
+                  </button>
+                )}
+                {canAccessDrinkWeights && (
+                  <button
+                    className={`tab-button ${activeTab === 'getraenkegewichte' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('getraenkegewichte')}
+                  >
+                    Getränkegewichtung
                   </button>
                 )}
               </nav>
@@ -3270,6 +3280,8 @@ function Settings({ onBack, currentUser, allUsers = [], allRecipes = [], onUpdat
           <SeasonMatrixTab currentUser={currentUser} />
         ) : activeTab === 'naehrwerte' ? (
           <NutritionReferenceTab currentUser={currentUser} allRecipes={allRecipes} />
+        ) : activeTab === 'getraenkegewichte' ? (
+          <DrinkWeightsTab currentUser={currentUser} />
         ) : (
           <UserManagement onBack={() => setActiveTab('general')} currentUser={currentUser} allUsers={allUsers} />
         )}

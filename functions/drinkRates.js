@@ -210,8 +210,8 @@ function getParentTotal(categoryAmounts, parentKey) {
  * @param {string} [timeOfDay] Tageszeit (nachmittag) -- reserviert fuer spaeteren Einsatz.
  * @return {number} Gewicht fuer die Kategorie (0 wenn nicht bekannt).
  */
-function getDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no-unused-vars
-  const entry = DRINK_WEIGHTS[category];
+function getDrinkWeight(category, season, timeOfDay, weightsTable = DRINK_WEIGHTS) { // eslint-disable-line no-unused-vars
+  const entry = weightsTable[category];
   if (!entry) return 0;
   const seasonDelta = (season === 'sommer' || season === 'winter') ? entry[season] : 0;
   return Math.max(0, entry.basis + seasonDelta);
@@ -246,11 +246,46 @@ const CHILDREN_DRINK_WEIGHTS = {
  * @param {string} [timeOfDay] Tageszeit (nachmittag) -- reserviert fuer spaeteren Einsatz.
  * @return {number} Kinder-Gewicht fuer die Kategorie (0 wenn nicht bekannt).
  */
-function getChildrenDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no-unused-vars
-  const entry = CHILDREN_DRINK_WEIGHTS[category];
+function getChildrenDrinkWeight(category, season, timeOfDay, weightsTable = CHILDREN_DRINK_WEIGHTS) { // eslint-disable-line no-unused-vars
+  const entry = weightsTable[category];
   if (!entry) return 0;
   const seasonDelta = (season === 'sommer' || season === 'winter') ? entry[season] : 0;
   return Math.max(0, entry.basis + seasonDelta);
+}
+
+/**
+ * Laedt die admin-editierbare Erwachsenen-Gewichtungsmatrix aus Firestore
+ * (Collection 'drinkWeights', Dokument-ID = Kategorie) und mischt sie ueber
+ * die hartcodierten Startwerte aus DRINK_WEIGHTS (Firestore-Feld gewinnt pro
+ * Kategorie, wo vorhanden). Unbekannte Dokument-IDs (keine Entsprechung in
+ * DRINK_WEIGHTS) werden ignoriert, da Kategorien strukturell fest sind.
+ * @param {object} db Firestore-Instanz.
+ * @return {Promise<object>} Gewichtungsmatrix, Kategorie -> Werte.
+ */
+async function loadDrinkWeightsFromFirestore(db) {
+  const weights = JSON.parse(JSON.stringify(DRINK_WEIGHTS)); // deep copy
+  const snap = await db.collection('drinkWeights').get();
+  snap.forEach((doc) => {
+    const cat = doc.id;
+    if (weights[cat]) weights[cat] = {...weights[cat], ...doc.data()};
+  });
+  return weights;
+}
+
+/**
+ * Laedt die admin-editierbare Kinder-Gewichtungsmatrix aus Firestore
+ * (Collection 'drinkWeightsChildren'), analog zu loadDrinkWeightsFromFirestore().
+ * @param {object} db Firestore-Instanz.
+ * @return {Promise<object>} Kinder-Gewichtungsmatrix, Kategorie -> Werte.
+ */
+async function loadChildrenDrinkWeightsFromFirestore(db) {
+  const weights = JSON.parse(JSON.stringify(CHILDREN_DRINK_WEIGHTS)); // deep copy
+  const snap = await db.collection('drinkWeightsChildren').get();
+  snap.forEach((doc) => {
+    const cat = doc.id;
+    if (weights[cat]) weights[cat] = {...weights[cat], ...doc.data()};
+  });
+  return weights;
 }
 
 const EVENT_TYPE_FACTORS = {
@@ -273,4 +308,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, TIME_FACTOR_BOUNDARY_HOUR, TIME_FACTOR_BEFORE_BOUNDARY, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};
+module.exports = {SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, TIME_FACTOR_BOUNDARY_HOUR, TIME_FACTOR_BEFORE_BOUNDARY, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight, loadDrinkWeightsFromFirestore, loadChildrenDrinkWeightsFromFirestore};

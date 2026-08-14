@@ -1,18 +1,18 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DRINK_WEIGHTS, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
+const {DRINK_WEIGHTS, CHILDREN_DRINK_WEIGHTS, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight, loadDrinkWeightsFromFirestore, loadChildrenDrinkWeightsFromFirestore} = require('./drinkRates');
 
 /**
- * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
- * den Startwerten aus DRINK_WEIGHTS (Erfahrungswert gewinnt pro Kategorie,
- * wo vorhanden; ueberschreibt aber nicht die Gewichtsverteilung selbst,
- * siehe getDrinkWeight()).
+ * Laedt die admin-editierbare Erwachsenen-Gewichtungsmatrix aus Firestore und
+ * mischt zusaetzlich die kalibrierten Erfahrungswerte des Nutzers darueber
+ * (Erfahrungswert gewinnt pro Kategorie, wo vorhanden; ueberschreibt aber
+ * nicht die Gewichtsverteilung selbst, siehe getDrinkWeight()).
  * @param {object} db Firestore-Instanz.
  * @param {string} uid Firebase-Nutzer-ID.
  * @return {Promise<object>} Rate-DB, Kategorie -> Werte.
  */
 async function loadRatesDb(db, uid) {
-  const ratesDb = JSON.parse(JSON.stringify(DRINK_WEIGHTS)); // deep copy
+  const ratesDb = await loadDrinkWeightsFromFirestore(db);
   const snap = await db.collection('users').doc(uid).collection('erfahrungswerte').get();
   snap.forEach((doc) => {
     const cat = doc.id;
@@ -208,9 +208,10 @@ function getConfiguredUnitLabel(liters) {
  *   eventType, categories, customDrinkIds, drinkDistributionFactors, pufferProzent).
  * @param {object} ratesDb Rate-Datenbank (Default + ggf. Erfahrungswerte).
  * @param {object} [customDrinksMap] Map von drinkId -> Getraenke-Definition.
+ * @param {object} [childrenRatesDb] Kinder-Gewichtungsmatrix (Default oder admin-editiert).
  * @return {object} Ergebnis pro Kategorie + Warnungen.
  */
-function calculate(event, ratesDb, customDrinksMap) {
+function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_DRINK_WEIGHTS) {
   const adults = event.guests?.adults || 0;
   const children = event.guests?.children || 0;
   const hours = event.durationHours;
@@ -257,7 +258,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   const categorySet = new Set(categories);
 
   for (const cat of categories) {
-    const drinkWeight = getDrinkWeight(cat, event.season);
+    const drinkWeight = getDrinkWeight(cat, event.season, undefined, ratesDb);
     if (drinkWeight <= 0) continue;
 
     categoryRawWeights[cat] = drinkWeight;
@@ -277,7 +278,7 @@ function calculate(event, ratesDb, customDrinksMap) {
         .some(([child, parent]) => parent === subCategory && categorySet.has(child));
     if (hasOfferedChild) continue;
 
-    const subCategoryWeight = getDrinkWeight(subCategory, event.season);
+    const subCategoryWeight = getDrinkWeight(subCategory, event.season, undefined, ratesDb);
     if (subCategoryWeight <= 0) continue;
 
     categoryRawWeights[parentCategory] = (categoryRawWeights[parentCategory] || 0) + subCategoryWeight;
@@ -289,7 +290,7 @@ function calculate(event, ratesDb, customDrinksMap) {
   let childrenTotalRawWeight = 0;
 
   for (const cat of categories) {
-    const childWeight = getChildrenDrinkWeight(cat, event.season);
+    const childWeight = getChildrenDrinkWeight(cat, event.season, undefined, childrenRatesDb);
     if (childWeight <= 0) continue;
 
     childrenCategoryRawWeights[cat] = childWeight;
@@ -304,7 +305,7 @@ function calculate(event, ratesDb, customDrinksMap) {
         .some(([child, parent]) => parent === subCategory && categorySet.has(child));
     if (hasOfferedChild) continue;
 
-    const subCategoryChildWeight = getChildrenDrinkWeight(subCategory, event.season);
+    const subCategoryChildWeight = getChildrenDrinkWeight(subCategory, event.season, undefined, childrenRatesDb);
     if (subCategoryChildWeight <= 0) continue;
 
     childrenCategoryRawWeights[parentCategory] =
@@ -647,11 +648,12 @@ exports.calculateEventDrinks = onCall({maxInstances: 10}, async (request) => {
   }
 
   const db = admin.firestore();
-  const [ratesDb, customDrinksMap] = await Promise.all([
+  const [ratesDb, customDrinksMap, childrenRatesDb] = await Promise.all([
     loadRatesDb(db, uid),
     loadCustomDrinks(db, uid, event.customDrinkIds),
+    loadChildrenDrinkWeightsFromFirestore(db),
   ]);
-  const result = calculate(event, ratesDb, customDrinksMap);
+  const result = calculate(event, ratesDb, customDrinksMap, childrenRatesDb);
 
   const eventsRef = db.collection('users').doc(uid).collection('events');
   let docRef;
