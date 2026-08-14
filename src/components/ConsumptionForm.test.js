@@ -160,7 +160,7 @@ describe('ConsumptionForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Einkaufsliste erstellen/ }));
 
-    expect(await screen.findByText('1 3/4 Kasten Cola')).toBeInTheDocument();
+    expect(await screen.findByText('Cola, 1 3/4 Kasten')).toBeInTheDocument();
   });
 
   it('übernimmt bei Getränken mit Rezeptlink nur die auf der Getränk-bearbeiten-Karte aktivierten Zutaten', async () => {

@@ -345,14 +345,21 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   }
 
   // Getraenke ohne Rezeptlink: in Gebindeeinheit (falls vorhanden, sonst Einheit) uebernehmen.
+  // Bring! trennt einen uebergebenen Zutaten-Text am ersten Komma: alles davor wird
+  // zum Kachel-Titel, alles danach zum Feld Menge/Beschreibung. Damit der Getraenke-Name
+  // immer vollstaendig im Titel landet und Menge+Einheit immer im Beschreibungsfeld,
+  // wird hier explizit "Name, Menge Einheit" gebaut. Ein Komma im Namen selbst (z.B.
+  // Alkoholgehalt "0,0%") wuerde diesen Split verfaelschen und wird deshalb ersetzt.
   const getOtherDrinkItems = () => {
     const items = [];
     nonRecipeGroups.forEach((group) => {
+      const safeDrinkName = group.drinkName.replace(/,/g, '.');
       group.rows.forEach((row) => {
         const quantityText = (values[row.kategorie]?.eingekauft || '').trim();
         if (!quantityText || !parseFractionQuantity(quantityText)) return;
         const unit = getRowPurchaseUnit(row);
-        items.push(unit ? `${quantityText} ${unit} ${group.drinkName}` : `${quantityText} ${group.drinkName}`);
+        const quantity = unit ? `${quantityText} ${unit}` : quantityText;
+        items.push(`${safeDrinkName}, ${quantity}`);
       });
     });
     return items;
