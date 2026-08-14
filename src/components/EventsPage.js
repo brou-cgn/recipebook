@@ -415,13 +415,15 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
               <div key={event.id} className="events-card" onClick={() => handleSelectEvent(event)}>
                 <div className="events-card-main">
                   <h3>{event.eventName}</h3>
-                  <p className="events-card-meta">
-                    {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
-                  </p>
+                  <div className="events-card-meta-row">
+                    <p className="events-card-meta">
+                      {formatDate(event.date)} · {EVENT_TYPE_LABELS[event.eventType] || event.eventType}
+                    </p>
+                    <span className={`events-status-badge events-status-${event.status}`}>
+                      {STATUS_LABELS[event.status] || event.status}
+                    </span>
+                  </div>
                 </div>
-                <span className={`events-status-badge events-status-${event.status}`}>
-                  {STATUS_LABELS[event.status] || event.status}
-                </span>
               </div>
             );
           })}
