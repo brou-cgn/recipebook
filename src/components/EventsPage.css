@@ -74,9 +74,7 @@
 }
 
 .events-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: block;
   background: white;
   border: 1px solid #ececec;
   border-radius: 10px;
@@ -95,6 +93,13 @@
   margin: 0 0 4px;
   color: #2F5D50;
   font-size: 18px;
+}
+
+.events-card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .events-card-meta {
