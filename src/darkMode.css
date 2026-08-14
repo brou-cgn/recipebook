@@ -1406,6 +1406,27 @@
   color: #aaa;
 }
 
+/* Event-Variante hat eigene helle Hover-/Border-Farben mit gleicher
+   Spezifität wie die generischen Dark-Mode-Regeln oben – hier explizit
+   unter .shopping-list-modal--event überschreiben, damit sie sicher
+   gewinnen (unabhängig von der CSS-Ladereihenfolge). */
+[data-theme="dark"] .shopping-list-modal--event .shopping-list-item:hover {
+  background: #2a3d38;
+}
+
+[data-theme="dark"] .shopping-list-modal--event .shopping-list-edit-input {
+  border-color: #4a8f7c;
+}
+
+[data-theme="dark"] .shopping-list-modal--event .shopping-list-reset-btn:hover {
+  border-color: #4a8f7c;
+  color: #e8e8e8;
+}
+
+[data-theme="dark"] .shopping-list-modal--event .shopping-list-edit-btn:hover:not(:disabled) {
+  color: #4a8f7c;
+}
+
 /* ---- Nutrition modal ---- */
 [data-theme="dark"] .nutrition-table th {
   background: #2a2a2a;
