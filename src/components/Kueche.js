@@ -16,7 +16,7 @@ import {
 import { getAllCookDates } from '../utils/recipeCookDates';
 import { getCategoryImages } from '../utils/categoryImages';
 import { getAppCalls } from '../utils/appCallsFirestore';
-import { getRecipeCalls } from '../utils/recipeCallsFirestore';
+import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
 import { isBase64Image } from '../utils/imageUtils';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import { getCuisineProposals } from '../utils/cuisineProposalsFirestore';
@@ -257,7 +257,7 @@ function Kueche({ recipes, menus = [], groups = [], onSelectRecipe, onSelectMenu
 
   useEffect(() => {
     if (!currentUser) return;
-    getRecipeCalls().then(calls => setRecipeCalls(calls)).catch(() => {});
+    getRecentRecipeCalls(14).then(calls => setRecipeCalls(calls)).catch(() => {});
   }, [currentUser]);
 
   useEffect(() => {
