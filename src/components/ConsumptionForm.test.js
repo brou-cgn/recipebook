@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ConsumptionForm from './ConsumptionForm';
 import { encodeRecipeLink } from '../utils/recipeLinks';
 
@@ -9,6 +9,7 @@ const mockUnlockEinkaufMengen = jest.fn(() => Promise.resolve());
 const mockLockVerbrauchMengen = jest.fn(() => Promise.resolve());
 const mockUnlockVerbrauchMengen = jest.fn(() => Promise.resolve());
 const mockSetEventStatus = jest.fn(() => Promise.resolve());
+const mockGetCustomLists = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   submitConsumption: (...args) => mockSubmitConsumption(...args),
@@ -18,6 +19,14 @@ jest.mock('../utils/eventsFirestore', () => ({
   unlockVerbrauchMengen: (...args) => mockUnlockVerbrauchMengen(...args),
   setEventStatus: (...args) => mockSetEventStatus(...args),
 }));
+
+jest.mock('../utils/customLists', () => {
+  const actual = jest.requireActual('../utils/customLists');
+  return {
+    ...actual,
+    getCustomLists: (...args) => mockGetCustomLists(...args),
+  };
+});
 
 jest.mock('./EventForm', () => ({
   CATEGORY_LABELS: { wasser: 'Wasser' },
@@ -43,6 +52,7 @@ describe('ConsumptionForm', () => {
     // (siehe handleToggleVerbrauchLock) -- Standard-Resolve, damit Tests, die das nur
     // beilaeufig ausloesen, nicht an einem unbehandelten Promise-Fehler scheitern.
     mockSubmitConsumption.mockResolvedValue({ eventId: 'event1' });
+    mockGetCustomLists.mockResolvedValue({ conversionTable: [], packageUnits: [], drinkUnits: [] });
   });
 
   it('befüllt Fass und Flasche kaskadierend aus dem kalkulierten Bedarf (Fass=1, Flasche=1,75)', () => {
@@ -161,6 +171,76 @@ describe('ConsumptionForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /Einkaufsliste erstellen/ }));
 
     expect(await screen.findByText('Cola, 1 3/4 Kasten')).toBeInTheDocument();
+  });
+
+  it('übergibt an Bring nur bei Menge = 1 den Singular der Gebindeeinheit, sonst den Plural', async () => {
+    mockGetCustomLists.mockResolvedValue({
+      conversionTable: [],
+      packageUnits: [{ id: 'kasten', singular: 'Kasten', plural: 'Kästen' }],
+      drinkUnits: [],
+    });
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+
+    render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+    await waitFor(() => expect(mockGetCustomLists).toHaveBeenCalled());
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+    const eingekauftInput = screen.getByLabelText('Eingekauft');
+    fireEvent.change(eingekauftInput, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste erstellen' }));
+
+    expect(await screen.findByText('Cola, 1 Kasten')).toBeInTheDocument();
+  });
+
+  it('übergibt an Bring bei Menge 2 den Plural der Gebindeeinheit', async () => {
+    mockGetCustomLists.mockResolvedValue({
+      conversionTable: [],
+      packageUnits: [{ id: 'kasten', singular: 'Kasten', plural: 'Kästen' }],
+      drinkUnits: [],
+    });
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+
+    render(<ConsumptionForm event={makeEvent(ergebnis)} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} />);
+    await waitFor(() => expect(mockGetCustomLists).toHaveBeenCalled());
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
+    const eingekauftInput = screen.getByLabelText('Eingekauft');
+    fireEvent.change(eingekauftInput, { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Einkaufsliste erstellen' }));
+
+    expect(await screen.findByText('Cola, 2 Kästen')).toBeInTheDocument();
   });
 
   it('übernimmt bei Getränken mit Rezeptlink nur die auf der Getränk-bearbeiten-Karte aktivierten Zutaten', async () => {
