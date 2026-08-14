@@ -8,6 +8,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   addDoc,
   setDoc,
   deleteDoc,
@@ -229,6 +230,27 @@ export const subscribeToCustomDrinks = (uid, callback) => {
     console.error('Error subscribing to customDrinks:', error);
     callback([]);
   });
+};
+
+/**
+ * Get a user's custom drinks (one-time fetch, ordered by name).
+ * @param {string} uid - Current user ID
+ * @returns {Promise<Array>} The custom drinks
+ */
+export const getCustomDrinks = async (uid) => {
+  try {
+    const ref = collection(db, 'users', uid, 'customDrinks');
+    const q = query(ref, orderBy('name', 'asc'));
+    const snapshot = await getDocs(q);
+    const drinks = [];
+    snapshot.forEach((docSnap) => {
+      drinks.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    return drinks;
+  } catch (error) {
+    console.error('Error getting customDrinks:', error);
+    return [];
+  }
 };
 
 /**

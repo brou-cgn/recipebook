@@ -301,6 +301,65 @@
   max-width: 100%;
 }
 
+.menu-drinks-empty {
+  text-align: center;
+}
+
+.menu-drinks-link-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.menu-drinks-link-btn {
+  background: #402C1C;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.menu-drinks-link-btn:hover {
+  background: #2c1f13;
+}
+
+.drink-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.drink-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.drink-card-content {
+  padding: 1rem;
+}
+
+.drink-card-content h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.15rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drink-card-amount {
+  margin: 0.75rem 0 0 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
 @media (max-width: 768px) {
   .recipes-grid {
     grid-template-columns: repeat(auto-fill, minmax(var(--tile-size-min, 250px), 1fr));

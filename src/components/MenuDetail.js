@@ -1,17 +1,38 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLongPress } from '../utils/useLongPress';
 import './MenuDetail.css';
+import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
 import { groupRecipesBySections } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
-import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
+import { enableMenuSharing, disableMenuSharing, updateMenu } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
+import { getEvent, subscribeToEvents, getCustomDrinks } from '../utils/eventsFirestore';
+import { mergePredefinedDrinks } from '../utils/drinkCategories';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
+import EventForm from './EventForm';
+import DrinkManagementPage from './DrinkManagementPage';
+
+const formatEventDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('de-DE');
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatEventLiter = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value;
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+};
 
 const MOBILE_TABLET_BREAKPOINT = 768;
 
@@ -43,6 +64,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [linkedPortionCounts, setLinkedPortionCounts] = useState({});
   const [conversionTable, setConversionTable] = useState([]);
   const missingSavedRef = useRef(false);
+  const [drinksSubView, setDrinksSubView] = useState('main'); // main | linkPicker | newEvent | manageDrinks
+  const [linkedEvent, setLinkedEvent] = useState(null);
+  const [linkedEventLoading, setLinkedEventLoading] = useState(false);
+  const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
+  const [expandedDrinkId, setExpandedDrinkId] = useState(null);
+  const [availableEvents, setAvailableEvents] = useState([]);
   const {
     activeId: portionMinusLongPressActiveId,
     triggeredRef: portionMinusLongPressTriggeredRef,
@@ -106,6 +133,60 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     };
     loadFavorites();
   }, [currentUser?.id]);
+
+  // Load the linked event's drinks once when the menu is opened (no live sync).
+  useEffect(() => {
+    if (!menu.eventId || !menu.eventOwnerId) {
+      setLinkedEvent(null);
+      setLinkedEventCustomDrinks([]);
+      return undefined;
+    }
+    let cancelled = false;
+    setLinkedEventLoading(true);
+    Promise.all([
+      getEvent(menu.eventOwnerId, menu.eventId),
+      getCustomDrinks(menu.eventOwnerId),
+    ]).then(([event, customDrinks]) => {
+      if (cancelled) return;
+      setLinkedEvent(event);
+      setLinkedEventCustomDrinks(customDrinks);
+    }).finally(() => {
+      if (!cancelled) setLinkedEventLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [menu.eventId, menu.eventOwnerId]);
+
+  // Load the current user's events while the "Event verknüpfen" picker is open.
+  useEffect(() => {
+    if (drinksSubView !== 'linkPicker' || !currentUser?.id) return undefined;
+    const unsubscribe = subscribeToEvents(currentUser.id, setAvailableEvents);
+    return unsubscribe;
+  }, [drinksSubView, currentUser?.id]);
+
+  const eventDrinks = useMemo(() => {
+    if (!linkedEvent) return [];
+    const allDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
+    const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
+    return ids.map((drinkId) => {
+      const drink = allDrinks.find((d) => d.id === drinkId);
+      const display = resolveDrinkDisplay(drink || drinkId, recipes);
+      const ergebnisRow = (linkedEvent.berechnung?.ergebnis || []).find((row) => row.drinkId === drinkId);
+      return {
+        id: drinkId,
+        displayName: display.displayName || drinkId,
+        literMitPuffer: ergebnisRow?.literMitPuffer ?? null,
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedEvent, linkedEventCustomDrinks, recipes]);
+
+  const handleLinkEvent = async (eventId) => {
+    await updateMenu(menu.id, { eventId, eventOwnerId: currentUser.id });
+    setMenu((prev) => ({ ...prev, eventId, eventOwnerId: currentUser.id }));
+    setDrinksSubView('main');
+  };
 
   const authorName = useMemo(() => {
     if (!menu.authorId || !allUsers || allUsers.length === 0) return null;
@@ -387,6 +468,66 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     return combineIngredients(converted);
   };
 
+  if (drinksSubView === 'newEvent') {
+    return (
+      <EventForm
+        currentUser={currentUser}
+        recipes={recipes}
+        onCancel={() => setDrinksSubView('main')}
+        onSaved={async (eventId) => {
+          await updateMenu(menu.id, { eventId, eventOwnerId: currentUser.id });
+          setMenu((prev) => ({ ...prev, eventId, eventOwnerId: currentUser.id }));
+          setDrinksSubView('main');
+        }}
+        onManageDrinks={() => setDrinksSubView('manageDrinks')}
+      />
+    );
+  }
+
+  if (drinksSubView === 'manageDrinks') {
+    return (
+      <DrinkManagementPage
+        onBack={() => setDrinksSubView('newEvent')}
+        currentUser={currentUser}
+        recipes={recipes}
+      />
+    );
+  }
+
+  if (drinksSubView === 'linkPicker') {
+    return (
+      <div className="events-page-container">
+        <div className="events-page-header">
+          <h2>Event verknüpfen</h2>
+          <button
+            className="events-close-btn"
+            onClick={() => setDrinksSubView('main')}
+            aria-label="Abbrechen"
+            title="Abbrechen"
+          >
+            ×
+          </button>
+        </div>
+        {availableEvents.length === 0 ? (
+          <div className="events-empty-state">
+            <p>Noch keine Events vorhanden.</p>
+          </div>
+        ) : (
+          <div className="events-list">
+            {availableEvents.map((event) => (
+              <div key={event.id} className="events-card" onClick={() => handleLinkEvent(event.id)}>
+                <div className="events-card-main">
+                  <h3>{event.eventName}</h3>
+                  <p className="events-card-meta">{formatEventDate(event.date)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="menu-detail-container">
       <div className="menu-detail-header">
@@ -542,6 +683,57 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             )}
           </section>
         ))}
+
+        <section className="menu-section menu-drinks-section">
+          <h2 className="section-title">Getränke</h2>
+          {!menu.eventId ? (
+            canEditMenu(currentUser, menu) ? (
+              <div className="menu-drinks-empty">
+                <p className="no-recipes">Noch kein Event verknüpft.</p>
+                <div className="menu-drinks-link-actions">
+                  <button type="button" className="menu-drinks-link-btn" onClick={() => setDrinksSubView('linkPicker')}>
+                    Event verknüpfen
+                  </button>
+                  <button type="button" className="menu-drinks-link-btn" onClick={() => setDrinksSubView('newEvent')}>
+                    Event erstellen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="no-recipes">Kein Event verknüpft.</p>
+            )
+          ) : linkedEventLoading ? (
+            <p className="no-recipes">Getränke werden geladen …</p>
+          ) : !linkedEvent ? (
+            <p className="no-recipes">Verknüpftes Event konnte nicht geladen werden.</p>
+          ) : eventDrinks.length === 0 ? (
+            <p className="no-recipes">Keine Getränke in diesem Event.</p>
+          ) : (
+            <div className="recipes-grid drinks-grid">
+              {eventDrinks.map((drink) => {
+                const isExpanded = expandedDrinkId === drink.id;
+                return (
+                  <div
+                    key={drink.id}
+                    className={`drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
+                    onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
+                  >
+                    <div className="drink-card-content">
+                      <h3>{drink.displayName}</h3>
+                      {isExpanded && (
+                        <p className="drink-card-amount">
+                          {drink.literMitPuffer != null
+                            ? `${formatEventLiter(drink.literMitPuffer)} l`
+                            : 'Noch nicht berechnet'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
       {isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
         <button
