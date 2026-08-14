@@ -1,24 +1,6 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, timeFactor} = require('./drinkRates');
-
-/**
- * Rundet auf 2 Nachkommastellen.
- * @param {number} n Zahl.
- * @return {number} Gerundete Zahl.
- */
-function round2(n) {
-  return Math.round(n * 100) / 100;
-}
-
-/**
- * Rundet auf 4 Nachkommastellen.
- * @param {number} n Zahl.
- * @return {number} Gerundete Zahl.
- */
-function round4(n) {
-  return Math.round(n * 10000) / 10000;
-}
+const {DEFAULT_RATES} = require('./drinkRates');
 
 /**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
@@ -50,47 +32,6 @@ function gebindeZuLiter(gebinde, ratesDb, event) {
 }
 
 /**
- * Rechnet aus dem gemessenen Gesamtverbrauch einer Kategorie die implizite
- * Rate (Liter pro trinkendem Erwachsenen pro Stunde bzw. pauschal) zurueck,
- * unter denselben Saison-/Event-Typ-/Dauer-Anpassungen wie bei der
- * Vorwaerts-Berechnung, damit die Rate wieder "roh" gespeichert wird.
- * @param {string} cat Kategorie.
- * @param {number} literGemessen Gemessener Gesamtverbrauch.
- * @param {object} event Event-Dokument.
- * @param {object} ratesDb Aktuelle Rate-DB.
- * @return {?number} Implizite Rate oder null wenn nicht berechenbar.
- */
-function impliedRate(cat, literGemessen, event, ratesDb) {
-  const adults = event.guests?.adults || 0;
-  const children = event.guests?.children || 0;
-  const hours = event.durationHours;
-  const seasonFactor = SEASON_FACTORS[event.season] ?? 1.0;
-  const timeFac = timeFactor(event.startTime, hours);
-  const typeFactor = (EVENT_TYPE_FACTORS[event.eventType] || {})[cat] ?? 1.0;
-  const durFactor = durationFactor(hours);
-  const entry = ratesDb[cat] || DEFAULT_RATES[cat];
-  if (!entry) return null;
-
-  const anteilTrinker = entry.anteilTrinker ?? 1.0;
-  const modus = entry.modus || 'stunde';
-  const rateKinderAlt = entry.kinder || 0;
-
-  let literKinderGeschaetzt;
-  let nenner;
-  if (modus === 'pauschal') {
-    literKinderGeschaetzt = children * rateKinderAlt * seasonFactor * timeFac;
-    nenner = adults * anteilTrinker * seasonFactor * timeFac * typeFactor;
-  } else {
-    literKinderGeschaetzt = children * rateKinderAlt * hours * durFactor;
-    nenner = adults * anteilTrinker * hours * seasonFactor * timeFac * typeFactor * durFactor;
-  }
-
-  const literErwachsene = Math.max(literGemessen - literKinderGeschaetzt, 0);
-  if (nenner <= 0) return null;
-  return literErwachsene / nenner;
-}
-
-/**
  * Prueft, ob fuer alle Getraenke-Kategorien eines Events die "Verbraucht/Uebrig"-Menge
  * gesperrt (also final erfasst) ist. Nur dann darf der Event-Status auf
  * "verbrauchErfasst" gesetzt werden.
@@ -111,10 +52,9 @@ function alleGetraenkeVerbrauchGesperrt(event, verbrauchGesperrt) {
  * - eventId: ID des Event-Dokuments (muss existieren und berechnet sein)
  * - gebinde: { kategorie: { eingekauft: <Anzahl>, uebrig: <Anzahl> } }
  *   in Gebinde-Einheiten (Flaschen/Kisten/Tassen je nach Kategorie)
- * Aktualisiert users/{uid}/erfahrungswerte/* per gewichtetem Durchschnitt und
- * setzt den Event-Status erst dann auf "verbrauchErfasst", wenn fuer ALLE
- * Getraenke des Events die Verbraucht/Uebrig-Menge gesperrt ist.
- * Gibt eine Zusammenfassung der Aenderungen zurueck.
+ * Speichert den tatsaechlichen Verbrauch am Event und setzt den Event-Status
+ * erst dann auf "verbrauchErfasst", wenn fuer ALLE Getraenke des Events die
+ * Verbraucht/Uebrig-Menge gesperrt ist.
  */
 exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   if (!request.auth) {
@@ -135,44 +75,9 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   }
   const event = eventSnap.data();
 
-  const erfahrungswerteRef = db.collection('users').doc(uid).collection('erfahrungswerte');
-  const ratesSnap = await erfahrungswerteRef.get();
-  const ratesDb = JSON.parse(JSON.stringify(DEFAULT_RATES));
-  ratesSnap.forEach((doc) => {
-    ratesDb[doc.id] = {...(ratesDb[doc.id] || {}), ...doc.data()};
-  });
+  const literGemessen = gebindeZuLiter(gebinde, DEFAULT_RATES, event);
 
-  const literGemessen = gebindeZuLiter(gebinde, ratesDb, event);
-
-  const changes = [];
   const batch = db.batch();
-
-  for (const [cat, liter] of Object.entries(literGemessen)) {
-    const alteEntry = ratesDb[cat] || DEFAULT_RATES[cat];
-    if (!alteEntry) continue;
-    const alteRate = alteEntry.erwachsene;
-    const nEvents = alteEntry._nEvents || 0;
-
-    const neueImpliziteRate = impliedRate(cat, liter, event, ratesDb);
-    if (neueImpliziteRate === null) continue;
-
-    const neueRate = (alteRate * nEvents + neueImpliziteRate) / (nEvents + 1);
-
-    const docRef = erfahrungswerteRef.doc(cat);
-    batch.set(docRef, {
-      ...alteEntry,
-      erwachsene: round4(neueRate),
-      _nEvents: nEvents + 1,
-    }, {merge: true});
-
-    changes.push({
-      kategorie: cat,
-      alteRateProErwStunde: round4(alteRate),
-      neueRateProErwStunde: round4(neueRate),
-      beobachteteLiter: round2(liter),
-      anzahlEventsGesamt: nEvents + 1,
-    });
-  }
 
   const eventUpdate = {
     istVerbrauch: literGemessen,
@@ -193,7 +98,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
 
   await batch.commit();
 
-  return {eventId, changes};
+  return {eventId};
 });
 
-exports._internal = {gebindeZuLiter, impliedRate, alleGetraenkeVerbrauchGesperrt};
+exports._internal = {gebindeZuLiter, alleGetraenkeVerbrauchGesperrt};
