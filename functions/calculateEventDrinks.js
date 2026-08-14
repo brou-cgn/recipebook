@@ -425,8 +425,6 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
       continue;
     }
 
-    const anteilTrinker = entry.anteilTrinker ?? 1.0;
-
     const adultsLiterGesamt = categoryAdultsLiters[cat] || 0;
     const childrenLiterGesamt = childrenTotalRawWeight > 0 ?
         childrenTotalBeverage * ((childrenCategoryRawWeights[cat] || 0) / childrenTotalRawWeight) :
@@ -445,7 +443,7 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
       gebindeGroesseLiter: null,
       anzahlGebinde: null,
       ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
-      anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
+      anteilTrinkerAngenommen: null,
       praeferenzFaktor: null,
     });
   }

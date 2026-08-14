@@ -75,7 +75,7 @@ export const getChildrenDrinkWeightsOnce = () => getCollectionOnce(CHILDREN_DRIN
 /**
  * Create or update one category entry of the adults drink weight matrix.
  * @param {string} categoryId Category id (document id).
- * @param {Object} data Fields to write (basis, winter, sommer, nachmittag, anteilTrinker).
+ * @param {Object} data Fields to write (basis, winter, sommer, nachmittag).
  * @param {string} [updatedBy] Optional user name / email for the audit field.
  */
 export const setDrinkWeightEntry = (categoryId, data, updatedBy) =>
