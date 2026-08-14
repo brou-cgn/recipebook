@@ -12,14 +12,11 @@ import { canManageDrinkWeights } from '../utils/userManagement';
 
 const NUMBER_FIELDS = ['basis', 'winter', 'sommer', 'nachmittag'];
 
-const createFormData = (row, hasAnteilTrinker) => ({
+const createFormData = (row) => ({
   basis: row.basis,
   winter: row.winter,
   sommer: row.sommer,
-  nachmittag: row.nachmittag,
-  ...(hasAnteilTrinker ? {
-    anteilTrinker: row.anteilTrinker ?? ''
-  } : {})
+  nachmittag: row.nachmittag
 });
 
 const formatGermanDate = (timestamp) => {
@@ -42,7 +39,7 @@ const buildRows = (defaults, overrides) =>
     ...(overrides[id] || {})
   }));
 
-function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, defaults, onSave, currentUser }) {
+function DrinkWeightMatrixTable({ title, description, rows, defaults, onSave, currentUser }) {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -52,7 +49,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, de
 
   const handleEdit = (row) => {
     setEditingId(row.id);
-    setFormData(createFormData(row, hasAnteilTrinker));
+    setFormData(createFormData(row));
     setErrorMessage('');
   };
 
@@ -80,14 +77,6 @@ function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, de
       }
     }
     if (Number(formData.basis) < 0) return 'Das Basis-Gewicht darf nicht negativ sein.';
-    if (hasAnteilTrinker) {
-      if (formData.anteilTrinker !== '' && formData.anteilTrinker !== undefined) {
-        const anteilTrinker = Number(formData.anteilTrinker);
-        if (!Number.isFinite(anteilTrinker) || anteilTrinker <= 0 || anteilTrinker > 1) {
-          return 'Der Anteil Trinker muss zwischen 0 (exklusiv) und 1 liegen.';
-        }
-      }
-    }
     return '';
   };
 
@@ -107,11 +96,6 @@ function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, de
       sommer: Number(formData.sommer),
       nachmittag: Number(formData.nachmittag)
     };
-    if (hasAnteilTrinker) {
-      payload.anteilTrinker = formData.anteilTrinker === '' || formData.anteilTrinker === undefined
-        ? undefined
-        : Number(formData.anteilTrinker);
-    }
 
     try {
       await onSave(editingId, payload, resolveUpdatedBy(currentUser));
@@ -144,7 +128,6 @@ function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, de
               <th>Winter Δ</th>
               <th>Sommer Δ</th>
               <th>Nachmittag Δ</th>
-              {hasAnteilTrinker && <th>Anteil Trinker</th>}
               <th>Letzte Änderung</th>
               <th>Aktionen</th>
             </tr>
@@ -207,23 +190,6 @@ function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, de
                       />
                     ) : row.nachmittag}
                   </td>
-                  {hasAnteilTrinker && (
-                    <td>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="1"
-                          className="drink-weights-inline-input"
-                          aria-label={`Anteil Trinker für ${row.id}`}
-                          placeholder="1.0"
-                          value={formData.anteilTrinker}
-                          onChange={(event) => setFormData((prev) => ({ ...prev, anteilTrinker: event.target.value }))}
-                        />
-                      ) : (row.anteilTrinker ?? '—')}
-                    </td>
-                  )}
                   <td>{formatGermanDate(row.updatedAt)}</td>
                   <td>
                     <div className="drink-weights-actions">
@@ -302,7 +268,6 @@ function DrinkWeightsTab({ currentUser }) {
           title="Erwachsene"
           description="Basis-Gewichte und saisonale Anpassungen je Kategorie."
           rows={adultsRows}
-          hasAnteilTrinker
           defaults={DEFAULT_DRINK_WEIGHTS}
           onSave={setDrinkWeightEntry}
           currentUser={currentUser}
@@ -312,7 +277,6 @@ function DrinkWeightsTab({ currentUser }) {
           title="Kinder"
           description="Basis-Gewichte und saisonale Anpassungen für den Kinderanteil des Getränkebedarfs. Alkoholische Kategorien bleiben bei 0."
           rows={childrenRows}
-          hasAnteilTrinker={false}
           defaults={DEFAULT_CHILDREN_DRINK_WEIGHTS}
           onSave={setChildrenDrinkWeightEntry}
           currentUser={currentUser}
