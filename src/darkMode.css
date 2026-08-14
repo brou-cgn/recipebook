@@ -3759,8 +3759,7 @@
 [data-theme="dark"] .events-empty-state,
 [data-theme="dark"] .events-card-meta,
 [data-theme="dark"] .events-info-text,
-[data-theme="dark"] .events-detail-meta,
-[data-theme="dark"] .events-changes-list {
+[data-theme="dark"] .events-detail-meta {
   color: #bbb;
 }
 

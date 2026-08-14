@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ConsumptionForm from './ConsumptionForm';
 import { encodeRecipeLink } from '../utils/recipeLinks';
 
@@ -42,7 +42,7 @@ describe('ConsumptionForm', () => {
     // Sperren der letzten Verbraucht/Uebrig-Gruppe loest submitConsumption automatisch aus
     // (siehe handleToggleVerbrauchLock) -- Standard-Resolve, damit Tests, die das nur
     // beilaeufig ausloesen, nicht an einem unbehandelten Promise-Fehler scheitern.
-    mockSubmitConsumption.mockResolvedValue({ changes: [] });
+    mockSubmitConsumption.mockResolvedValue({ eventId: 'event1' });
   });
 
   it('befüllt Fass und Flasche kaskadierend aus dem kalkulierten Bedarf (Fass=1, Flasche=1,75)', () => {
@@ -508,9 +508,10 @@ describe('ConsumptionForm', () => {
       },
     ];
     const event = { ...makeEvent(ergebnis), status: 'eingekauft', einkaufGesperrt: { 'drink2:0': '2' } };
+    const onDone = jest.fn();
 
     render(
-      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+      <ConsumptionForm event={event} recipes={[]} onDone={onDone} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
@@ -523,13 +524,13 @@ describe('ConsumptionForm', () => {
     expect(screen.getByLabelText('Übrig (Flasche)')).toBeDisabled();
 
     // Diese Gruppe ist die einzige des Events -- das Sperren loest also auch
-    // automatisch submitConsumption aus; hier nur abwarten, damit der Test
-    // sauber endet (siehe eigener Test unten fuer die Details dazu).
-    await screen.findByText('Verbrauch gespeichert');
+    // automatisch submitConsumption aus, das die Seite direkt verlaesst
+    // (siehe eigener Test unten fuer die Details dazu).
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('event1'));
   });
 
-  it('loest submitConsumption automatisch aus, sobald alle Getraenke-Gruppen fuer Verbraucht/Uebrig gesperrt sind', async () => {
-    mockSubmitConsumption.mockResolvedValue({ changes: [] });
+  it('loest submitConsumption automatisch aus, sobald alle Getraenke-Gruppen fuer Verbraucht/Uebrig gesperrt sind, und verlaesst die Seite', async () => {
+    mockSubmitConsumption.mockResolvedValue({ eventId: 'event1' });
     const einheiten = [
       { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
     ];
@@ -547,16 +548,17 @@ describe('ConsumptionForm', () => {
       },
     ];
     const event = { ...makeEvent(ergebnis), status: 'eingekauft', einkaufGesperrt: { 'drink2:0': '2' } };
+    const onDone = jest.fn();
 
     render(
-      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+      <ConsumptionForm event={event} recipes={[]} onDone={onDone} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauch bearbeiten' }));
     fireEvent.change(screen.getByLabelText('Übrig (Flasche)'), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Verbrauchte Menge sperren' }));
 
-    expect(await screen.findByText('Verbrauch gespeichert')).toBeInTheDocument();
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('event1'));
     expect(mockSubmitConsumption).toHaveBeenCalledWith('event1', { 'drink2:0': { eingekauft: 2, uebrig: 0 } }, ['drink2:0']);
   });
 
@@ -578,9 +580,10 @@ describe('ConsumptionForm', () => {
       },
     ];
     const event = { ...makeEvent(ergebnis), status: 'berechnet' };
+    const onDone = jest.fn();
 
     render(
-      <ConsumptionForm event={event} recipes={[]} onDone={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+      <ConsumptionForm event={event} recipes={[]} onDone={onDone} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Einkauf bearbeiten' }));
@@ -594,7 +597,39 @@ describe('ConsumptionForm', () => {
     expect(mockLockEinkaufMengen).toHaveBeenCalledWith('user1', 'event1', { 'drink2:0': '2' });
     expect(mockSetEventStatus).toHaveBeenCalledWith('user1', 'event1', 'eingekauft');
 
-    await screen.findByText('Verbrauch gespeichert');
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('event1'));
+  });
+
+  it('verlaesst die Seite ueber onDone beim Klick auf "Verbrauch speichern", ohne Bestaetigungsseite anzuzeigen', async () => {
+    mockSubmitConsumption.mockResolvedValue({ eventId: 'event1' });
+    const einheiten = [
+      { einheitsgroesse: 0.33, einheit: 'Flasche', gebindeinheit: 'Kasten', einheitenProGebinde: 24 },
+    ];
+    const ergebnis = [
+      {
+        kategorie: 'drink2:0',
+        drinkId: 'drink2',
+        drinkLabel: 'Cola',
+        isCustomDrink: true,
+        einheitIdx: 0,
+        literMitPuffer: 12.7,
+        gebinde: 'Kasten',
+        gebindeGroesseLiter: 0.33,
+        einheiten,
+      },
+    ];
+    const event = { ...makeEvent(ergebnis), status: 'eingekauft', einkaufGesperrt: { 'drink2:0': '2' } };
+    const onDone = jest.fn();
+
+    render(
+      <ConsumptionForm event={event} recipes={[]} onDone={onDone} onCancel={jest.fn()} currentUser={{ id: 'user1' }} />
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Verbrauch speichern' })[0]);
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('event1'));
+    expect(mockSubmitConsumption).toHaveBeenCalledWith('event1', { 'drink2:0': { eingekauft: 2, uebrig: 0 } }, []);
+    expect(screen.queryByText('Verbrauch gespeichert')).not.toBeInTheDocument();
   });
 
   it('zeigt im Verbrauch-Button immer Einkauf minus Uebrig als Liter-Menge an', () => {

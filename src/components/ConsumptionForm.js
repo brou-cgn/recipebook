@@ -288,7 +288,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [changes, setChanges] = useState(null);
   const [conversionTable, setConversionTable] = useState([]);
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
@@ -466,8 +465,8 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     setError('');
     try {
       const gesperrt = verbrauchGesperrtKategorien || verbrauchLock.lockedKategorien;
-      const result = await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt));
-      setChanges(result.changes || []);
+      await submitConsumption(event.id, buildGebindePayload(), Array.from(gesperrt));
+      onDone(event.id);
     } catch (err) {
       console.error('Error submitting consumption:', err);
       setError('Der Verbrauch konnte nicht gespeichert werden. Bitte versuche es erneut.');
@@ -502,40 +501,6 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
     e.preventDefault();
     runSubmitConsumption();
   };
-
-  if (changes) {
-    return (
-      <div className="events-page-container">
-        <div className="events-page-header">
-          <h2>Verbrauch gespeichert</h2>
-        </div>
-        <div className="events-result-card">
-          <p className="events-info-text">
-            Danke! Die Kalkulation wird für zukünftige Events genauer.
-          </p>
-          {changes.length === 0 ? (
-            <p className="events-empty-hint">Keine Rate konnte angepasst werden.</p>
-          ) : (
-            <ul className="events-changes-list">
-              {changes.map((change) => (
-                <li key={change.kategorie}>
-                  <strong>{CATEGORY_LABELS[change.kategorie] || change.kategorie}</strong>
-                  {'-Rate angepasst: '}
-                  {change.alteRateProErwStunde} → {change.neueRateProErwStunde} L/Person/Std.
-                  {' '}(Event Nr. {change.anzahlEventsGesamt})
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="events-form-actions">
-            <button type="button" className="events-primary-btn" onClick={() => onDone(event.id)}>
-              Fertig
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="events-page-container">

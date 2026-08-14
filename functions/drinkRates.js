@@ -2,9 +2,7 @@
  * Startwerte, Anpassungsfaktoren und Formel-Bausteine fuer die
  * Getraenkekalkulation fuer Events.
  *
- * Das sind KEINE gemessenen Werte, sondern konservative Startpunkte, die
- * durch die Kalibrierung (submitConsumption) pro Nutzer ueberschrieben
- * werden, sobald echte Event-Daten vorliegen.
+ * Das sind KEINE gemessenen Werte, sondern konservative Startpunkte.
  */
 
 // Gesamter Getraenkebedarf pro Person und Stunde (alle Kategorien zusammen).
