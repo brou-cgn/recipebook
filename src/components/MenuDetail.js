@@ -34,6 +34,17 @@ const formatEventLiter = (value) => {
   return num.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
+const getDrinkImageUrl = (recipe) => {
+  if (!recipe) return null;
+  if (Array.isArray(recipe.images) && recipe.images.length > 0) {
+    const defaultImg = recipe.images.find((img) => img.isDefault) || recipe.images[0];
+    return defaultImg?.url || null;
+  }
+  return recipe.image || null;
+};
+
+const DRINKS_SECTION_NAME = 'Drinks';
+
 const MOBILE_TABLET_BREAKPOINT = 768;
 
 function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
@@ -176,6 +187,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       return {
         id: drinkId,
         displayName: display.displayName || drinkId,
+        imageUrl: getDrinkImageUrl(display.recipe),
         literMitPuffer: ergebnisRow?.literMitPuffer ?? null,
       };
     });
@@ -352,6 +364,16 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       recipes: menuRecipes
     }];
   }, [menu, recipes]);
+
+  // Ensure a "Drinks" section is always available so the linked event's drinks
+  // (and the event-linking controls) have somewhere to appear.
+  const displaySections = useMemo(() => {
+    const hasDrinksSection = recipeSections.some(
+      (section) => section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase()
+    );
+    if (hasDrinksSection) return recipeSections;
+    return [...recipeSections, { name: DRINKS_SECTION_NAME, recipes: [] }];
+  }, [recipeSections]);
 
   // Collect all unique linked (sub-)recipes referenced in menu recipe ingredients
   const allLinkedRecipes = useMemo(() => {
@@ -658,38 +680,71 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           <p className="menu-description">{menu.description}</p>
         )}
 
-        {recipeSections.map((section, index) => (
-          <section key={index} className="menu-section">
-            <h2 className="section-title">{section.name}</h2>
-            {section.recipes.length === 0 ? (
-              <p className="no-recipes">Keine Rezepte in diesem Abschnitt</p>
-            ) : (
-              <div className="recipes-grid">
-                {section.recipes.map((recipe) => {
-                  const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
-                  return (
-                    <RecipeCard
-                      key={recipe.id}
-                      recipe={recipe}
-                      onClick={() => onSelectRecipe(recipe)}
-                      isFavorite={isRecipeFav}
-                      favoriteActiveIcon={favoritesButtonActiveIcon}
-                      authorName={getRecipeAuthorName(recipe)}
-                      currentUser={currentUser}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        ))}
+        {displaySections.map((section, index) => {
+          const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
+          const sectionDrinks = isDrinksSection ? eventDrinks : [];
+          const isLoadingDrinks = isDrinksSection && linkedEventLoading;
+          const hasCards = section.recipes.length > 0 || sectionDrinks.length > 0;
 
-        <section className="menu-section menu-drinks-section">
-          <h2 className="section-title">Getränke</h2>
-          {!menu.eventId ? (
-            canEditMenu(currentUser, menu) ? (
-              <div className="menu-drinks-empty">
-                <p className="no-recipes">Noch kein Event verknüpft.</p>
+          let emptyText = 'Keine Rezepte in diesem Abschnitt';
+          if (isDrinksSection && !menu.eventId) {
+            emptyText = 'Noch kein Event verknüpft.';
+          } else if (isDrinksSection && menu.eventId && !linkedEventLoading && !linkedEvent) {
+            emptyText = 'Verknüpftes Event konnte nicht geladen werden.';
+          }
+
+          return (
+            <section key={index} className="menu-section">
+              <h2 className="section-title">{section.name}</h2>
+              {isLoadingDrinks ? (
+                <p className="no-recipes">Getränke werden geladen …</p>
+              ) : hasCards ? (
+                <div className="recipes-grid">
+                  {section.recipes.map((recipe) => {
+                    const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
+                    return (
+                      <RecipeCard
+                        key={recipe.id}
+                        recipe={recipe}
+                        onClick={() => onSelectRecipe(recipe)}
+                        isFavorite={isRecipeFav}
+                        favoriteActiveIcon={favoritesButtonActiveIcon}
+                        authorName={getRecipeAuthorName(recipe)}
+                        currentUser={currentUser}
+                      />
+                    );
+                  })}
+                  {sectionDrinks.map((drink) => {
+                    const isExpanded = expandedDrinkId === drink.id;
+                    return (
+                      <div
+                        key={drink.id}
+                        className={`drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
+                        onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
+                      >
+                        {drink.imageUrl && (
+                          <div className="recipe-image">
+                            <img src={drink.imageUrl} alt={drink.displayName} />
+                          </div>
+                        )}
+                        <div className="drink-card-content">
+                          <h3>{drink.displayName}</h3>
+                          {isExpanded && (
+                            <p className="drink-card-amount">
+                              {drink.literMitPuffer != null
+                                ? `${formatEventLiter(drink.literMitPuffer)} l`
+                                : 'Noch nicht berechnet'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="no-recipes">{emptyText}</p>
+              )}
+              {isDrinksSection && !menu.eventId && canEditMenu(currentUser, menu) && (
                 <div className="menu-drinks-link-actions">
                   <button type="button" className="menu-drinks-link-btn" onClick={() => setDrinksSubView('linkPicker')}>
                     Event verknüpfen
@@ -698,42 +753,10 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                     Event erstellen
                   </button>
                 </div>
-              </div>
-            ) : (
-              <p className="no-recipes">Kein Event verknüpft.</p>
-            )
-          ) : linkedEventLoading ? (
-            <p className="no-recipes">Getränke werden geladen …</p>
-          ) : !linkedEvent ? (
-            <p className="no-recipes">Verknüpftes Event konnte nicht geladen werden.</p>
-          ) : eventDrinks.length === 0 ? (
-            <p className="no-recipes">Keine Getränke in diesem Event.</p>
-          ) : (
-            <div className="recipes-grid drinks-grid">
-              {eventDrinks.map((drink) => {
-                const isExpanded = expandedDrinkId === drink.id;
-                return (
-                  <div
-                    key={drink.id}
-                    className={`drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
-                    onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
-                  >
-                    <div className="drink-card-content">
-                      <h3>{drink.displayName}</h3>
-                      {isExpanded && (
-                        <p className="drink-card-amount">
-                          {drink.literMitPuffer != null
-                            ? `${formatEventLiter(drink.literMitPuffer)} l`
-                            : 'Noch nicht berechnet'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+              )}
+            </section>
+          );
+        })}
       </div>
       {isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
         <button
