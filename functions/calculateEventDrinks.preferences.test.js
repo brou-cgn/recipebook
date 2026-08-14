@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./calculateEventDrinks');
-const {DEFAULT_RATES, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS} = require('./drinkRates');
+const {BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS} = require('./drinkRates');
 
 function roundTo2(value) {
   return Math.round(value * 100) / 100;
@@ -29,7 +29,7 @@ test('calculate distributes budget based on per-guest preferences (wein preferre
           ],
         },
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -65,7 +65,7 @@ test('calculate uses the event-specific puffer percentage instead of a fixed buf
         customDrinkIds: [],
         pufferProzent: 10,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -87,7 +87,7 @@ test('calculate falls back to 0 percent buffer when no event puffer is configure
         categories: ['wasser'],
         customDrinkIds: [],
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -110,7 +110,7 @@ test('calculate normalizes configured custom drink unit labels for legacy entrie
         customDrinkIds: ['drink-1'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         'drink-1': {
           name: 'Pittermännchen Kölsch',
@@ -142,7 +142,7 @@ test('calculate includes new-model custom drinks with einheiten in results with 
         customDrinkIds: ['craft-bier'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         'craft-bier': {
           name: 'Craft-Bier',
@@ -183,10 +183,9 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
         pufferProzent: 0,
       },
       {
-        ...DEFAULT_RATES,
+        ...DRINK_WEIGHTS,
         wasser: {
-          ...DEFAULT_RATES.wasser,
-          erwachsene: 0.5,
+          ...DRINK_WEIGHTS.wasser,
           _nEvents: 3,
         },
       },
@@ -228,7 +227,7 @@ test('calculate ergibt realistischen Gesamtgetraenkebedarf: 1 Gast, 4 Stunden = 
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -264,7 +263,7 @@ test('calculate bier_alkoholfrei-Fallback: bier erhaelt bier_alkoholfrei-Gewicht
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -300,7 +299,7 @@ test('calculate ergibt doppelten Gesamtgetraenkebedarf fuer 2 Gaeste gegenueber 
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -330,7 +329,7 @@ test('calculate addiert Kinderbedarf zum Erwachsenenbedarf (Standardkalkulation)
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -360,7 +359,7 @@ test('calculate ignoriert Kinder bei Legacy-Custom-Drink-Mengenkalkulation', () 
         customDrinkIds: ['kinderdrink'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         kinderdrink: {
           name: 'Kinderdrink',
@@ -405,7 +404,7 @@ test('calculate: Gast ohne Präferenz erhält normale Gewichtsverteilung', () =>
           ],
         },
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -447,7 +446,7 @@ test('calculate: alle Präferenzen angeboten - Szenario aus Issue #2772', () => 
           ],
         },
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -486,7 +485,7 @@ test('calculate: keine Präferenz angeboten - Vorliebe wird ignoriert', () => {
           ],
         },
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -518,7 +517,7 @@ test('calculate: gesamtbudget bleibt gleich mit und ohne Präferenzen', () => {
           ],
         } : {perGuest: []},
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 

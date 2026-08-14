@@ -12,54 +12,6 @@ const BASE_RATE_PER_PERSON_PER_HOUR = 0.5;
 // Gesamter Getraenkebedarf pro Kind und Stunde (alle Kategorien zusammen).
 const CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR = 0.35;
 
-// Liter pro Person pro Stunde (bzw. pauschal, siehe modus).
-const DEFAULT_RATES = {
-  wasser: {
-    erwachsene: 0.20, kinder: 0.15,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche', modus: 'stunde',
-  },
-  softdrinks: {
-    erwachsene: 0.15, kinder: 0.25,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche', modus: 'stunde',
-  },
-  saft: {
-    erwachsene: 0.10, kinder: 0.20,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche', modus: 'stunde',
-  },
-  bier: {
-    erwachsene: 0.25, kinder: 0.0,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
-  },
-  bier_alkoholfrei: {
-    erwachsene: 0.25, kinder: 0.0,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', modus: 'stunde', anteilTrinker: 0.5,
-  },
-  wein: {
-    erwachsene: 0.10, kinder: 0.0,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', modus: 'stunde', anteilTrinker: 0.3,
-  },
-  sekt: {
-    erwachsene: 0.06, kinder: 0.0,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', modus: 'stunde', anteilTrinker: 0.4,
-  },
-  spirituosen: {
-    erwachsene: 0.02, kinder: 0.0,
-    gebindeLiter: 0.7, gebindeName: '0,7L-Flasche', modus: 'stunde', anteilTrinker: 0.25,
-  },
-  longdrinks: {
-    erwachsene: 0.03, kinder: 0.0,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche (Mixer)', modus: 'stunde', anteilTrinker: 0.35,
-  },
-  kaffee: {
-    erwachsene: 0.30, kinder: 0.0,
-    gebindeLiter: 0.0625, gebindeName: 'Tasse (125ml)', modus: 'pauschal',
-  },
-  tee: {
-    erwachsene: 0.15, kinder: 0.05,
-    gebindeLiter: 0.2, gebindeName: 'Tasse (200ml)', modus: 'pauschal',
-  },
-};
-
 const SEASON_FACTORS = {sommer: 1.3, uebergang: 1.0, winter: 0.85};
 
 // Uhrzeit-Grenze: Stunden vor 18 Uhr gelten als "tagsueber" und werden
@@ -109,6 +61,12 @@ function timeFactor(startTime, hours) {
  * Beziehungen im Getraenke-Modell (siehe getWeightSubcategoryParents(),
  * getParentTotal() sowie DRINK_CATEGORY_PARENTS in calculateEventDrinks.js).
  *
+ * `gebindeLiter`/`gebindeName` beschreiben die Standard-Gebindegroesse der
+ * Kategorie (Einkaufs-/Verbrauchseinheit), `anteilTrinker` den angenommenen
+ * Anteil der erwachsenen Gaeste, der die Kategorie ueberhaupt konsumiert
+ * (fehlt das Feld, wird 1.0 angenommen). Dies ist die einzige Quelle der
+ * Wahrheit fuer beides -- es gibt keine separate Raten-Tabelle mehr.
+ *
  * bier_alkoholfrei (85/15-Split von "bier") und longdrinks (40/60-Split von
  * "spirituosen") sind beides ungeprueft geschaetzte Aufteilungen ohne
  * Kalibrierungsgrundlage und sollten nachgeschaerft werden, sobald genug
@@ -121,6 +79,7 @@ const DRINK_WEIGHTS = {
     winter: -0.016,
     sommer: 0.010,
     nachmittag: -0.040,
+    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
   },
   bier_alkoholfrei: {
     parent: 'bier',
@@ -128,13 +87,23 @@ const DRINK_WEIGHTS = {
     winter: -0.002,
     sommer: 0.004,
     nachmittag: 0.005,
+    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
   },
   wein: {
     parent: null,
-    basis: 0.150,
+    basis: 0.137,
     winter: 0.042,
     sommer: -0.053,
     nachmittag: -0.020,
+    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.3,
+  },
+  sekt: {
+    parent: null,
+    basis: 0.015,
+    winter: 0.010,
+    sommer: -0.008,
+    nachmittag: -0.006,
+    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.4,
   },
   softdrinks: {
     parent: null,
@@ -142,41 +111,55 @@ const DRINK_WEIGHTS = {
     winter: -0.048,
     sommer: 0.056,
     nachmittag: 0.020,
+    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
+  },
+  saft: {
+    parent: null,
+    basis: 0.025,
+    winter: -0.005,
+    sommer: 0.006,
+    nachmittag: 0.002,
+    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
   spirituosen: {
     parent: null,
-    basis: 0.012,
+    basis: 0.011,
     winter: 0.007,
     sommer: -0.010,
     nachmittag: -0.010,
+    gebindeLiter: 0.7, gebindeName: '0,7L-Flasche', anteilTrinker: 0.25,
   },
   longdrinks: {
     parent: 'spirituosen',
-    basis: 0.018,
+    basis: 0.017,
     winter: -0.002,
     sommer: 0.002,
     nachmittag: -0.005,
+    gebindeLiter: 1.0, gebindeName: '1L-Flasche (Mixer)', anteilTrinker: 0.35,
   },
   kaffee: {
     parent: null,
-    basis: 0.090,
+    basis: 0.083,
     winter: 0.046,
     sommer: -0.039,
     nachmittag: 0.035,
+    gebindeLiter: 0.0625, gebindeName: 'Tasse (125ml)',
   },
   tee: {
     parent: null,
-    basis: 0.040,
+    basis: 0.037,
     winter: 0.025,
     sommer: -0.021,
     nachmittag: 0.015,
+    gebindeLiter: 0.2, gebindeName: 'Tasse (200ml)',
   },
   wasser: {
     parent: null,
-    basis: 0.170,
+    basis: 0.155,
     winter: -0.051,
     sommer: 0.050,
     nachmittag: 0.000,
+    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
 };
 
@@ -243,6 +226,7 @@ const CHILDREN_DRINK_WEIGHTS = {
   bier: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
   bier_alkoholfrei: {parent: 'bier', basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
   wein: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
+  sekt: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
   spirituosen: {parent: null, basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
   longdrinks: {parent: 'spirituosen', basis: 0.0, winter: 0.0, sommer: 0.0, nachmittag: 0.0},
   softdrinks: {parent: null, basis: 0.280, winter: -0.040, sommer: 0.050, nachmittag: 0.010},
@@ -289,4 +273,4 @@ function durationFactor(hours) {
   return Math.max(0.75, 1.0 - 0.03 * extra);
 }
 
-module.exports = {DEFAULT_RATES, SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, TIME_FACTOR_BOUNDARY_HOUR, TIME_FACTOR_BEFORE_BOUNDARY, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};
+module.exports = {SEASON_FACTORS, EVENT_TYPE_FACTORS, durationFactor, TIME_FACTOR_BOUNDARY_HOUR, TIME_FACTOR_BEFORE_BOUNDARY, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, DRINK_WEIGHTS, getDrinkWeight, getWeightSubcategoryParents, getParentTotal, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, CHILDREN_DRINK_WEIGHTS, getChildrenDrinkWeight};

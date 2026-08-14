@@ -1,11 +1,11 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES} = require('./drinkRates');
+const {DRINK_WEIGHTS} = require('./drinkRates');
 
 /**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
  * Verbrauch in Litern pro Kategorie. Fuer benutzerdefinierte Getraenke gibt es
- * keinen Eintrag in der Rate-DB (die ist nur nach den festen Standard-
+ * keinen Eintrag in DRINK_WEIGHTS (das ist nur nach den festen Standard-
  * Kategorien indiziert) -- dafuer wird die Gebindegroesse aus der Event-
  * Berechnung (event.berechnung.ergebnis[].gebindeGroesseLiter) verwendet.
  * @param {object} gebinde { kategorie: { eingekauft, uebrig } }
@@ -75,7 +75,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   }
   const event = eventSnap.data();
 
-  const literGemessen = gebindeZuLiter(gebinde, DEFAULT_RATES, event);
+  const literGemessen = gebindeZuLiter(gebinde, DRINK_WEIGHTS, event);
 
   const batch = db.batch();
 

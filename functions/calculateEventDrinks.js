@@ -1,16 +1,18 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {DEFAULT_RATES, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
+const {DRINK_WEIGHTS, SEASON_FACTORS, durationFactor, timeFactor, BASE_RATE_PER_PERSON_PER_HOUR, getDrinkWeight, getWeightSubcategoryParents, CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR, getChildrenDrinkWeight} = require('./drinkRates');
 
 /**
  * Laedt die kalibrierten Erfahrungswerte eines Nutzers und mischt sie mit
- * den Startwerten (Erfahrungswert gewinnt pro Kategorie, wo vorhanden).
+ * den Startwerten aus DRINK_WEIGHTS (Erfahrungswert gewinnt pro Kategorie,
+ * wo vorhanden; ueberschreibt aber nicht die Gewichtsverteilung selbst,
+ * siehe getDrinkWeight()).
  * @param {object} db Firestore-Instanz.
  * @param {string} uid Firebase-Nutzer-ID.
  * @return {Promise<object>} Rate-DB, Kategorie -> Werte.
  */
 async function loadRatesDb(db, uid) {
-  const ratesDb = JSON.parse(JSON.stringify(DEFAULT_RATES)); // deep copy
+  const ratesDb = JSON.parse(JSON.stringify(DRINK_WEIGHTS)); // deep copy
   const snap = await db.collection('users').doc(uid).collection('erfahrungswerte').get();
   snap.forEach((doc) => {
     const cat = doc.id;
@@ -231,7 +233,7 @@ function calculate(event, ratesDb, customDrinksMap) {
     event.categories :
     derivedCategoriesFromCustomDrinks.length > 0 ?
       derivedCategoriesFromCustomDrinks :
-      Object.keys(DEFAULT_RATES);
+      Object.keys(DRINK_WEIGHTS);
   const guestPreferences = event.guestPreferenceMultipliers?.perGuest ?? null;
 
   const ergebnis = [];

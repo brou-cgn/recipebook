@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./calculateEventDrinks');
-const {DEFAULT_RATES, DRINK_WEIGHTS} = require('./drinkRates');
+const {DRINK_WEIGHTS} = require('./drinkRates');
 
 test('resolveTopLevelCategory gibt fuer Oberkategorie die ID selbst zurueck', () => {
   assert.equal(_internal.resolveTopLevelCategory('softdrinks'), 'softdrinks');
@@ -43,7 +43,7 @@ test('calculate vererbt longdrinks-Gewicht auf spirituosen, wenn longdrinks nich
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -77,7 +77,7 @@ test('calculate behandelt longdrinks als eigene Kategorie mit eigenem Budget, we
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -111,7 +111,7 @@ test('calculate leitet Kategorie "longdrinks" (eigenes Budget) aus custom drinks
         customDrinkIds: ['ginTonic'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         ginTonic: {
           name: 'Gin Tonic',
@@ -143,7 +143,7 @@ test('calculate verteilt Softdrink-Kategoriebedarf gleichmaessig auf zwei Getrae
         customDrinkIds: ['cola', 'fanta'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -186,7 +186,7 @@ test('calculate setzt ratenQuelle auf "kategorie-verteilung" wenn Kategorie beka
         customDrinkIds: ['koelsch'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         koelsch: {
           name: 'Kölsch',
@@ -214,7 +214,7 @@ test('calculate verteilt Bier-Kategoriebedarf auch auf Biervarianten (Unterkateg
         customDrinkIds: ['koelsch', 'weizen'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         koelsch: {
           name: 'Kölsch',
@@ -257,7 +257,7 @@ test('calculate berechnet anzahlGebinde fuer Getraenke mit verteiltem Kategorieb
         customDrinkIds: ['mineralwasser'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         mineralwasser: {
           name: 'Mineralwasser',
@@ -285,7 +285,7 @@ test('calculate behaelt null-Liter fuer Getraenke ohne Kategorie-Zuordnung', () 
         customDrinkIds: ['unbekannt'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         unbekannt: {
           name: 'Unbekanntes Getraenk',
@@ -316,7 +316,7 @@ test('calculate teilt Kategoriebedarf auf drei Getraenke einer Kategorie auf', (
         customDrinkIds: ['cola', 'fanta', 'sprite'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -365,7 +365,7 @@ test('calculate verteilt Kategoriebedarf gewichtet anhand event-spezifischer Fak
         drinkDistributionFactors: {cola: 1.0, fanta: 1.0, sprite: 1.5},
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -415,7 +415,7 @@ test('calculate nutzt default distributionFactor 1.0 bei ungueltigen Event-Werte
         drinkDistributionFactors: {cola: 5.0}, // ungueltig -> default 1.0
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -450,7 +450,7 @@ test('calculate verteilt bier und bier_alkoholfrei in getrennten Budgets', () =>
         drinkDistributionFactors: {pils: 2.0, weizen: 1.0, alkfrei: 0.5},
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         pils: {
           name: 'Pils',
@@ -502,7 +502,7 @@ test('calculate verteilt Softdrink-Kategoriebedarf auf einzelnes Getraenk ohne B
         customDrinkIds: ['cola'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -539,7 +539,7 @@ test('calculate gibt jedem Getraenk nur den Bedarf seiner eigenen Kategorie', ()
         customDrinkIds: ['cola', 'mineralwasser'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -583,7 +583,7 @@ test('calculate 1 Person 4 Stunden bier+softdrinks mit 2 Softdrinks: jeder Drink
         customDrinkIds: ['cola', 'fanta'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -629,7 +629,7 @@ test('calculate addiert bier_alkoholfrei Gewicht NICHT zu bier, wenn bier_alkoho
         categories: ['bier', 'bier_alkoholfrei', 'softdrinks'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -672,7 +672,7 @@ test('calculate weist custom drink mit bier_alkoholfrei-Kategorie das bier_alkoh
         customDrinkIds: ['bitburger-0-0'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         'bitburger-0-0': {
           name: 'Bitburger 0,0%',
@@ -711,7 +711,7 @@ test('calculate leitet Kategorien mit eigenem Budget aus custom drinks ab, wenn 
         customDrinkIds: ['bitburger-0-0'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         'bitburger-0-0': {
           name: 'Bitburger 0,0%',
@@ -818,7 +818,7 @@ test('calculate erzeugt fuer "predefined_mineralwasser" keine Warnung und eine i
         customDrinkIds: ['predefined_mineralwasser'],
         pufferProzent: 0,
       },
-      DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         predefined_mineralwasser: {
           name: 'Mineralwasser',

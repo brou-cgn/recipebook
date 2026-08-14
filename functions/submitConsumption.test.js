@@ -2,11 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {_internal} = require('./submitConsumption');
-const {DEFAULT_RATES} = require('./drinkRates');
+const {DRINK_WEIGHTS} = require('./drinkRates');
 
 test('gebindeZuLiter berechnet Liter fuer Standard-Kategorien aus der Rate-DB', () => {
   const gebinde = {bier: {eingekauft: 10, uebrig: 4}};
-  const result = _internal.gebindeZuLiter(gebinde, DEFAULT_RATES, {});
+  const result = _internal.gebindeZuLiter(gebinde, DRINK_WEIGHTS, {});
   assert.equal(result.bier, 3);
 });
 
@@ -33,6 +33,6 @@ test('gebindeZuLiter ueberspringt Kategorien ohne bekannte Gebindegroesse', () =
 
 test('gebindeZuLiter behandelt fehlenden/negativen Verbrauch als 0', () => {
   const gebinde = {bier: {eingekauft: 2, uebrig: 5}};
-  const result = _internal.gebindeZuLiter(gebinde, DEFAULT_RATES, {});
+  const result = _internal.gebindeZuLiter(gebinde, DRINK_WEIGHTS, {});
   assert.equal(result.bier, 0);
 });
