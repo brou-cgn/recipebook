@@ -50,7 +50,7 @@ describe('EventForm', () => {
           id: 'g1',
           vorname: 'Anna',
           nachname: 'Beispiel',
-          alkoholischeGetränke: false,
+          alkoholischeGetränke: true,
           bevorzugteGetränke: ['custom-wasser'],
           präferenzFaktor: 1,
         },

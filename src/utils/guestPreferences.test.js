@@ -110,6 +110,33 @@ describe('guestPreferences', () => {
     expect(result.perGuest[0].preferredCategoryIds).toContain('wein_rotwein');
   });
 
+  test('drivers are forced to allowsAlcohol=false even if their preference allows alcohol', () => {
+    const result = computeGuestPreferenceMultipliers(
+      [
+        {
+          id: 'g1',
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          präferenzFaktor: 0,
+        },
+        {
+          id: 'g2',
+          alkoholischeGetränke: true,
+          bevorzugteGetränke: [],
+          präferenzFaktor: 0,
+        },
+      ],
+      [
+        { id: 'bier-1', kategorie: 'bier' },
+      ],
+      ['g1'],
+    );
+
+    expect(result.perGuest).toHaveLength(2);
+    expect(result.perGuest[0].allowsAlcohol).toBe(false);
+    expect(result.perGuest[1].allowsAlcohol).toBe(true);
+  });
+
   test('children are excluded from perGuest array', () => {
     const result = computeGuestPreferenceMultipliers(
       [

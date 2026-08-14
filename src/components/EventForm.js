@@ -130,8 +130,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks)),
-    [selectedGuests, customDrinks],
+    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks), driverGuestIds),
+    [selectedGuests, customDrinks, driverGuestIds],
   );
 
   useEffect(() => {

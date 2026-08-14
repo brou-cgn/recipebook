@@ -60,10 +60,13 @@ const isDrinkAlcoholic = (drinkId, drinkKategorie) => {
  *
  * @param {Array} selectedGuests - Array of guest objects with preference properties.
  * @param {Array} drinks - Array of drink objects or IDs (used to resolve preferred drink categories).
+ * @param {Array} driverGuestIds - IDs of guests marked as drivers for this event; drivers always
+ *   cover their full budget with non-alcoholic drinks, regardless of their alcohol preference.
  * @returns {{ perGuest: Array }} Per-guest preference profiles for adult guests.
  */
-export const computeGuestPreferenceMultipliers = (selectedGuests, drinks) => {
+export const computeGuestPreferenceMultipliers = (selectedGuests, drinks, driverGuestIds) => {
   const allDrinks = Array.isArray(drinks) ? drinks : [];
+  const driverIds = Array.isArray(driverGuestIds) ? driverGuestIds : [];
   if (!Array.isArray(selectedGuests) || selectedGuests.length === 0) {
     return { perGuest: [] };
   }
@@ -84,7 +87,8 @@ export const computeGuestPreferenceMultipliers = (selectedGuests, drinks) => {
       ? [...new Set(guest.bevorzugteKategorien.filter((id) => typeof id === 'string' && id.trim()))]
       : [];
     const preferenceFactor = normalizePreferenceFactor(guest?.präferenzFaktor);
-    const allowsAlcohol = guest?.alkoholischeGetränke !== false;
+    const isDriver = guest?.id !== undefined && driverIds.includes(guest.id);
+    const allowsAlcohol = guest?.alkoholischeGetränke !== false && !isDriver;
 
     // Resolve categories for specifically preferred drink IDs
     const preferredCategoryIdsFromDrinks = preferredDrinkIds.flatMap((drinkId) => {
