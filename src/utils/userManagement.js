@@ -598,6 +598,17 @@ export const canManageSeasonMatrix = (user) => {
 };
 
 /**
+ * Check if user may manage the Getraenke-Gewichtungsmatrizen (Erwachsene + Kinder)
+ * in the admin area. Moderators and administrators may edit entries.
+ * @param {Object} user - User object
+ * @returns {boolean}
+ */
+export const canManageDrinkWeights = (user) => {
+  if (!user) return false;
+  return hasPermission(user, ROLES.MODERATOR);
+};
+
+/**
  * Check if user may view the recipe index field in recipe detail.
  * If role-based feature permissions are loaded, use the dedicated recipeIndex flag.
  * Otherwise fall back to moderators/administrators by hierarchy.

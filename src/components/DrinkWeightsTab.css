@@ -1,0 +1,118 @@
+.drink-weights-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.drink-weights-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.drink-weights-section-header h3 {
+  margin: 0 0 0.2rem;
+  color: #402c1c;
+}
+
+.drink-weights-section-header .section-description {
+  margin: 0 0 0.3rem;
+}
+
+.drink-weights-basis-sum {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.drink-weights-table-container {
+  overflow-x: auto;
+}
+
+.drink-weights-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 850px;
+}
+
+.drink-weights-table th,
+.drink-weights-table td {
+  border-bottom: 1px solid #eee;
+  padding: 0.6rem 0.55rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.drink-weights-table th {
+  background: #f8f9fa;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #555;
+}
+
+.drink-weights-parent-hint {
+  color: #777;
+  font-size: 0.82rem;
+}
+
+.drink-weights-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.drink-weights-edit-btn,
+.drink-weights-delete-btn {
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.drink-weights-delete-btn {
+  border-color: #ffc7c7;
+  color: #b12626;
+}
+
+.drink-weights-inline-input {
+  width: 100%;
+  min-width: 4.5rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.84rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .drink-weights-section-header h3 {
+  color: #f0e6da;
+}
+
+[data-theme="dark"] .drink-weights-basis-sum {
+  color: #d0d0d0;
+}
+
+[data-theme="dark"] .drink-weights-table th {
+  background: #2a2a2a;
+  color: #c7c7c7;
+}
+
+[data-theme="dark"] .drink-weights-table td {
+  border-bottom-color: #3a3a3a;
+}
+
+[data-theme="dark"] .drink-weights-parent-hint {
+  color: #999;
+}
+
+[data-theme="dark"] .drink-weights-edit-btn,
+[data-theme="dark"] .drink-weights-delete-btn,
+[data-theme="dark"] .drink-weights-inline-input {
+  background: #1d1d1d;
+  border-color: #444;
+  color: #e8e8e8;
+}
