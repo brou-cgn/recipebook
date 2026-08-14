@@ -201,11 +201,15 @@ test('calculate uses calibrated rates (erfahrungswert) when available', () => {
   assert.equal(wasser.ratenQuelle, 'erfahrungswert');
   assert.equal(bier.ratenQuelle, 'standard-faustwert');
   // bier erhaelt hier auch das bier_alkoholfrei-Gewicht per Fallback, da bier_alkoholfrei nicht angeboten ist.
-  // totalRawWeight = wasser + bier + bier_alkoholfrei
+  // Saison ist 'winter' -> die jeweiligen winter-Deltas werden auf die Basis-Gewichte addiert.
+  // totalRawWeight = wasser + bier + bier_alkoholfrei (jeweils Basis+winter-Delta)
   // totalBeverage = 10 * 0.5 (BASE_RATE) * 3 * 0.85 = 12.75
-  const totalRawWeight = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis;
-  assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * DRINK_WEIGHTS.wasser.basis / totalRawWeight));
-  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * (DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier_alkoholfrei.basis) / totalRawWeight));
+  const wasserWeight = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.wasser.winter;
+  const bierWeight = DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier.winter +
+      DRINK_WEIGHTS.bier_alkoholfrei.basis + DRINK_WEIGHTS.bier_alkoholfrei.winter;
+  const totalRawWeight = wasserWeight + bierWeight;
+  assert.equal(wasser.literOhnePuffer, roundTo2(12.75 * wasserWeight / totalRawWeight));
+  assert.equal(bier.literOhnePuffer, roundTo2(12.75 * bierWeight / totalRawWeight));
   assert.ok(bier.literOhnePuffer > wasser.literOhnePuffer,
       'bier (higher DRINK_WEIGHT) should dominate wasser');
 });

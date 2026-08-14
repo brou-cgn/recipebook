@@ -25,15 +25,32 @@ test('getDrinkWeight gibt Basis-Gewicht fuer bekannte Kategorien zurueck', () =>
   assert.equal(getDrinkWeight('wasser'), DRINK_WEIGHTS.wasser.basis);
 });
 
-test('getDrinkWeight gibt Basis-Gewicht unabhaengig von uebergebener Saison zurueck', () => {
-  // Saisonfaktoren werden in separatem Ticket implementiert; Ergebnis ist derzeit
-  // immer die Basis-Gewichtung.
-  assert.equal(getDrinkWeight('bier', 'sommer'), DRINK_WEIGHTS.bier.basis);
-  assert.equal(getDrinkWeight('bier', 'winter'), DRINK_WEIGHTS.bier.basis);
+test('getDrinkWeight wendet das saisonale Delta additiv auf die Basis an', () => {
+  assert.equal(getDrinkWeight('bier', 'sommer'), DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier.sommer);
+  assert.equal(getDrinkWeight('bier', 'winter'), DRINK_WEIGHTS.bier.basis + DRINK_WEIGHTS.bier.winter);
+  // uebergang und unbekannte/fehlende Saison bekommen kein Delta -> nur Basis.
   assert.equal(getDrinkWeight('bier', 'uebergang'), DRINK_WEIGHTS.bier.basis);
+  assert.equal(getDrinkWeight('bier'), DRINK_WEIGHTS.bier.basis);
+});
+
+test('getDrinkWeight kappt das Ergebnis bei 0, falls Basis+Delta negativ waere', () => {
+  assert.ok(getDrinkWeight('wasser', 'winter') >= 0);
+});
+
+test('DRINK_WEIGHTS Basis+Delta ergibt je Saison in Summe weiterhin ~1.0', () => {
+  for (const season of ['sommer', 'winter']) {
+    const sum = Object.values(DRINK_WEIGHTS)
+        .reduce((acc, entry) => acc + Math.max(0, entry.basis + entry[season]), 0);
+    assert.ok(
+        Math.abs(sum - 1.0) < 0.005,
+        `Summe fuer ${season} sollte ~1.0 sein, ist aber ${sum.toFixed(4)}`,
+    );
+  }
 });
 
 test('getDrinkWeight gibt Basis-Gewicht unabhaengig von Tageszeit zurueck', () => {
+  // timeOfDay ('nachmittag') ist noch nicht verdrahtet -- keine Aufrufstelle
+  // uebergibt ihn derzeit, daher bleibt er ohne Effekt (reserviert).
   assert.equal(getDrinkWeight('kaffee', 'uebergang', 'nachmittag'), DRINK_WEIGHTS.kaffee.basis);
   assert.equal(getDrinkWeight('kaffee', undefined, 'nachmittag'), DRINK_WEIGHTS.kaffee.basis);
 });

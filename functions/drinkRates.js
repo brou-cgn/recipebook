@@ -97,8 +97,12 @@ function timeFactor(startTime, hours) {
 /**
  * Gewichtungsmatrix fuer Getraenkekategorien.
  * Basis-Gewicht bestimmt den proportionalen Anteil einer Kategorie am
- * Gesamtgetraenkebedarf. Saisonale und Tageszeit-Anpassungen folgen in
- * separaten Tickets.
+ * Gesamtgetraenkebedarf. `winter`/`sommer` sind additive Verschiebungen auf
+ * `basis`, die in getDrinkWeight() fuer die jeweilige Saison angewendet
+ * werden (uebergang bleibt bei `basis`, ohne Delta). Je Saison summieren
+ * sich die Deltas ueber alle Kategorien auf ~0, sodass die Gesamtsumme aller
+ * Gewichte weiterhin ~1.0 ergibt. `nachmittag` ist bislang nicht verdrahtet
+ * (keine Aufrufstelle uebergibt timeOfDay) und bleibt reserviert.
  *
  * `parent` verweist auf den Key der uebergeordneten Kategorie (oder null bei
  * Top-Level-Kategorien) und ist die Referenz-Quelle fuer alle Eltern/Kind-
@@ -212,17 +216,22 @@ function getParentTotal(categoryAmounts, parentKey) {
 
 /**
  * Gibt das Gewicht einer Getraenkekategorie zurueck.
- * Aktuell wird nur die Basis-Gewichtung verwendet; Saison- und Tageszeitanpassungen
- * folgen in einem separaten Ticket.
+ * Bei season 'sommer'/'winter' wird das jeweilige Delta additiv auf die
+ * Basis-Gewichtung angewendet (uebergang/unbekannt -> nur Basis). Das
+ * Ergebnis wird bei 0 gekappt, falls ein Delta die Basis rechnerisch
+ * unterschreiten wuerde. Tageszeitanpassungen (timeOfDay) sind noch nicht
+ * verdrahtet -- keine Aufrufstelle uebergibt sie derzeit -- und bleiben
+ * fuer ein separates Ticket reserviert.
  * @param {string} category Getraenkekategorie-ID.
- * @param {string} [season] Jahreszeit (sommer/winter/uebergang) -- reserviert fuer spaeteren Einsatz.
+ * @param {string} [season] Jahreszeit (sommer/winter/uebergang).
  * @param {string} [timeOfDay] Tageszeit (nachmittag) -- reserviert fuer spaeteren Einsatz.
  * @return {number} Gewicht fuer die Kategorie (0 wenn nicht bekannt).
  */
 function getDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no-unused-vars
   const entry = DRINK_WEIGHTS[category];
   if (!entry) return 0;
-  return entry.basis;
+  const seasonDelta = (season === 'sommer' || season === 'winter') ? entry[season] : 0;
+  return Math.max(0, entry.basis + seasonDelta);
 }
 
 /**
@@ -245,17 +254,19 @@ const CHILDREN_DRINK_WEIGHTS = {
 
 /**
  * Gibt das Kinder-Gewicht einer Getraenkekategorie zurueck.
- * Aktuell wird nur die Basis-Gewichtung verwendet; Saison- und Tageszeitanpassungen
- * folgen in einem separaten Ticket.
+ * Wendet wie getDrinkWeight() das saisonale Delta additiv auf die
+ * Basis-Gewichtung an (uebergang/unbekannt -> nur Basis), gekappt bei 0.
+ * Tageszeitanpassungen (timeOfDay) sind noch nicht verdrahtet.
  * @param {string} category Getraenkekategorie-ID.
- * @param {string} [season] Jahreszeit (sommer/winter/uebergang) -- reserviert fuer spaeteren Einsatz.
+ * @param {string} [season] Jahreszeit (sommer/winter/uebergang).
  * @param {string} [timeOfDay] Tageszeit (nachmittag) -- reserviert fuer spaeteren Einsatz.
  * @return {number} Kinder-Gewicht fuer die Kategorie (0 wenn nicht bekannt).
  */
 function getChildrenDrinkWeight(category, season, timeOfDay) { // eslint-disable-line no-unused-vars
   const entry = CHILDREN_DRINK_WEIGHTS[category];
   if (!entry) return 0;
-  return entry.basis;
+  const seasonDelta = (season === 'sommer' || season === 'winter') ? entry[season] : 0;
+  return Math.max(0, entry.basis + seasonDelta);
 }
 
 const EVENT_TYPE_FACTORS = {
