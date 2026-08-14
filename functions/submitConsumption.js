@@ -1,19 +1,16 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {loadDrinkWeightsFromFirestore} = require('./drinkRates');
 
 /**
  * Rechnet aus "eingekauft minus uebrig" (in Gebinden) den tatsaechlichen
- * Verbrauch in Litern pro Kategorie. Fuer benutzerdefinierte Getraenke gibt es
- * keinen Eintrag in DRINK_WEIGHTS (das ist nur nach den festen Standard-
- * Kategorien indiziert) -- dafuer wird die Gebindegroesse aus der Event-
- * Berechnung (event.berechnung.ergebnis[].gebindeGroesseLiter) verwendet.
+ * Verbrauch in Litern pro Kategorie. Die Gebindegroesse je Kategorie kommt
+ * aus der Event-Berechnung (event.berechnung.ergebnis[].gebindeGroesseLiter),
+ * die wiederum von der eigenen Einheit des jeweiligen Getraenks stammt.
  * @param {object} gebinde { kategorie: { eingekauft, uebrig } }
- * @param {object} ratesDb Rate-DB fuer Gebindegroessen.
  * @param {object} event Event-Dokument (fuer Custom-Drink-Gebindegroessen).
  * @return {object} { kategorie: literGemessen }
  */
-function gebindeZuLiter(gebinde, ratesDb, event) {
+function gebindeZuLiter(gebinde, event) {
   const gebindeLiterAusBerechnung = {};
   (event?.berechnung?.ergebnis || []).forEach((row) => {
     if (row.kategorie && Number.isFinite(row.gebindeGroesseLiter) && row.gebindeGroesseLiter > 0) {
@@ -23,7 +20,7 @@ function gebindeZuLiter(gebinde, ratesDb, event) {
 
   const result = {};
   for (const [cat, {eingekauft, uebrig}] of Object.entries(gebinde)) {
-    const gebindeLiter = ratesDb[cat]?.gebindeLiter || gebindeLiterAusBerechnung[cat];
+    const gebindeLiter = gebindeLiterAusBerechnung[cat];
     if (!gebindeLiter) continue;
     const verbrauchtGebinde = Math.max((eingekauft || 0) - (uebrig || 0), 0);
     result[cat] = verbrauchtGebinde * gebindeLiter;
@@ -75,8 +72,7 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   }
   const event = eventSnap.data();
 
-  const ratesDb = await loadDrinkWeightsFromFirestore(db);
-  const literGemessen = gebindeZuLiter(gebinde, ratesDb, event);
+  const literGemessen = gebindeZuLiter(gebinde, event);
 
   const batch = db.batch();
 

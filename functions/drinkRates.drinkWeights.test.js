@@ -70,13 +70,6 @@ test('DRINK_WEIGHTS enthaelt alle erwarteten Kategorien', () => {
   }
 });
 
-test('DRINK_WEIGHTS-Eintraege enthalten Gebinde-Metadaten fuer Einkauf/Verbrauch', () => {
-  for (const [cat, entry] of Object.entries(DRINK_WEIGHTS)) {
-    assert.ok(entry.gebindeLiter > 0, `${cat} hat keine gebindeLiter`);
-    assert.ok(entry.gebindeName, `${cat} hat keinen gebindeName`);
-  }
-});
-
 // --- parent / getWeightSubcategoryParents / getParentTotal ---
 
 test('DRINK_WEIGHTS.parent bildet die Eltern/Kind-Beziehungen ab', () => {
