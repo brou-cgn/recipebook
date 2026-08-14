@@ -1,7 +1,5 @@
 # RecipeBook 🍳
 
-[![Node.js Compatibility](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml/badge.svg)](https://github.com/brou-cgn/recipebook/actions/workflows/test-node-update.yml)
-
 A Progressive Web App (PWA) for managing your favorite recipes. Built with React and optimized for mobile devices.
 
 ## Features
