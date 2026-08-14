@@ -8,8 +8,6 @@ const {_internal} = require('./calculateEventDrinks');
 
 test('getDrinkWeight gibt 0 fuer unbekannte Kategorie zurueck', () => {
   assert.equal(getDrinkWeight('unbekannt'), 0);
-  assert.equal(getDrinkWeight('sekt'), 0);
-  assert.equal(getDrinkWeight('saft'), 0);
   assert.equal(getDrinkWeight(''), 0);
   assert.equal(getDrinkWeight(undefined), 0);
 });
@@ -18,7 +16,9 @@ test('getDrinkWeight gibt Basis-Gewicht fuer bekannte Kategorien zurueck', () =>
   assert.equal(getDrinkWeight('bier'), DRINK_WEIGHTS.bier.basis);
   assert.equal(getDrinkWeight('bier_alkoholfrei'), DRINK_WEIGHTS.bier_alkoholfrei.basis);
   assert.equal(getDrinkWeight('wein'), DRINK_WEIGHTS.wein.basis);
+  assert.equal(getDrinkWeight('sekt'), DRINK_WEIGHTS.sekt.basis);
   assert.equal(getDrinkWeight('softdrinks'), DRINK_WEIGHTS.softdrinks.basis);
+  assert.equal(getDrinkWeight('saft'), DRINK_WEIGHTS.saft.basis);
   assert.equal(getDrinkWeight('spirituosen'), DRINK_WEIGHTS.spirituosen.basis);
   assert.equal(getDrinkWeight('kaffee'), DRINK_WEIGHTS.kaffee.basis);
   assert.equal(getDrinkWeight('tee'), DRINK_WEIGHTS.tee.basis);
@@ -47,9 +47,16 @@ test('DRINK_WEIGHTS Basis-Gewichte ergeben in Summe 1.0', () => {
 });
 
 test('DRINK_WEIGHTS enthaelt alle erwarteten Kategorien', () => {
-  const expected = ['bier', 'bier_alkoholfrei', 'wein', 'softdrinks', 'spirituosen', 'longdrinks', 'kaffee', 'tee', 'wasser'];
+  const expected = ['bier', 'bier_alkoholfrei', 'wein', 'sekt', 'softdrinks', 'saft', 'spirituosen', 'longdrinks', 'kaffee', 'tee', 'wasser'];
   for (const cat of expected) {
     assert.ok(Object.prototype.hasOwnProperty.call(DRINK_WEIGHTS, cat), `${cat} fehlt in DRINK_WEIGHTS`);
+  }
+});
+
+test('DRINK_WEIGHTS-Eintraege enthalten Gebinde-Metadaten fuer Einkauf/Verbrauch', () => {
+  for (const [cat, entry] of Object.entries(DRINK_WEIGHTS)) {
+    assert.ok(entry.gebindeLiter > 0, `${cat} hat keine gebindeLiter`);
+    assert.ok(entry.gebindeName, `${cat} hat keinen gebindeName`);
   }
 });
 
@@ -103,7 +110,7 @@ test('calculate verteilt Gesamtgetraenkebedarf proportional per DRINK_WEIGHTS (I
         customDrinkIds: ['cola', 'fanta'],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {
         cola: {
           name: 'Cola',
@@ -139,8 +146,10 @@ test('calculate verteilt Gesamtgetraenkebedarf proportional per DRINK_WEIGHTS (I
   assert.equal(wein.literOhnePuffer, expectedWein, 'Weinbedarf stimmt nicht');
 });
 
-test('calculate vergibt Null-Liter fuer Kategorien ohne DRINK_WEIGHTS-Eintrag', () => {
-  // 'sekt' ist nicht in DRINK_WEIGHTS → bekommt 0 Liter
+test('calculate ueberspringt komplett unbekannte Kategorien mit Warnung', () => {
+  // Kategorien ohne DRINK_WEIGHTS-Eintrag (z.B. Tippfehler) erhalten keine
+  // Ergebniszeile, sondern eine Warnung -- anders als frueher 'sekt'/'saft',
+  // die zwar ratenDB-Eintraege hatten, aber kein Gewicht (Bug, jetzt behoben).
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -148,21 +157,51 @@ test('calculate vergibt Null-Liter fuer Kategorien ohne DRINK_WEIGHTS-Eintrag', 
         guests: {adults: 10, children: 0},
         season: 'uebergang',
         eventType: 'familienfeier',
-        categories: ['wasser', 'sekt'],
+        categories: ['wasser', 'nichtvorhanden'],
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
   const wasser = result.ergebnis.find((item) => item.kategorie === 'wasser');
-  const sekt = result.ergebnis.find((item) => item.kategorie === 'sekt');
+  const unbekannt = result.ergebnis.find((item) => item.kategorie === 'nichtvorhanden');
 
   assert.ok(wasser, 'wasser vorhanden');
-  assert.ok(sekt, 'sekt vorhanden');
   assert.ok(wasser.literOhnePuffer > 0, 'wasser hat Liter > 0');
-  assert.equal(sekt.literOhnePuffer, 0, 'sekt bekommt 0 Liter (kein DRINK_WEIGHT)');
+  assert.equal(unbekannt, undefined, 'unbekannte Kategorie erhaelt keine Ergebniszeile');
+  assert.ok(
+      result.warnungen.some((w) => w.includes('nichtvorhanden')),
+      'Warnung fuer unbekannte Kategorie vorhanden',
+  );
+});
+
+test('calculate berechnet fuer sekt und saft nun einen Erwachsenen-Anteil (Bugfix)', () => {
+  // sekt/saft fehlten frueher in DRINK_WEIGHTS und bekamen dadurch immer
+  // 0 Liter fuer Erwachsene, unabhaengig von der Gaestezahl.
+  const result = _internal.calculate(
+      {
+        eventName: 'Test',
+        durationHours: 4,
+        guests: {adults: 10, children: 0},
+        season: 'uebergang',
+        eventType: 'familienfeier',
+        categories: ['wasser', 'sekt', 'saft'],
+        customDrinkIds: [],
+        pufferProzent: 0,
+      },
+      DRINK_WEIGHTS,
+      {},
+  );
+
+  const sekt = result.ergebnis.find((item) => item.kategorie === 'sekt');
+  const saft = result.ergebnis.find((item) => item.kategorie === 'saft');
+
+  assert.ok(sekt, 'sekt vorhanden');
+  assert.ok(saft, 'saft vorhanden');
+  assert.ok(sekt.literOhnePuffer > 0, 'sekt bekommt jetzt einen Anteil');
+  assert.ok(saft.literOhnePuffer > 0, 'saft bekommt jetzt einen Anteil (Erwachsene)');
 });
 
 test('calculate liefert Gesamtgetraenkebedarf = totalBeverage fuer alle DRINK_WEIGHTS-Kategorien', () => {
@@ -178,7 +217,7 @@ test('calculate liefert Gesamtgetraenkebedarf = totalBeverage fuer alle DRINK_WE
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -208,7 +247,7 @@ test('calculate speichert guestPreferenceMultipliers in praeferenzFaktor, beeinf
         pufferProzent: 0,
         guestPreferenceMultipliers: {bier: 0},
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -244,7 +283,7 @@ test('calculate vererbt bier_alkoholfrei-Gewicht auf bier, wenn bier_alkoholfrei
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -277,7 +316,7 @@ test('calculate behandelt bier_alkoholfrei als eigene Kategorie, wenn angeboten'
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -339,12 +378,8 @@ test('calculate addiert Kinderbedarf (Wasser/Saft) zu Erwachsenenbedarf', () => 
   // 10 Erwachsene + 10 Kinder, 4 Stunden, uebergang
   // Erwachsene: 10 * 0.5 * 4 = 20 L total
   // Kinder: 10 * 0.35 * 4 = 14 L total
-  // Kinder-Gewichte fuer [wasser, saft]: wasser=0.370, saft=0.320 => sum=0.690
-  // Kinder-wasser: 14 * (0.370/0.690)
-  // Kinder-saft: 14 * (0.320/0.690)
-  // Erwachsene-Gewichte fuer [wasser, saft]: wasser=0.170, saft=0 (kein DRINK_WEIGHT) => sum=0.170
-  // Erwachsene-wasser: 20 * (0.170/0.170) = 20 L
-  // Erwachsene-saft: 0 L (kein DRINK_WEIGHT-Eintrag fuer saft)
+  // Sowohl Erwachsene als auch Kinder haben fuer wasser+saft ein DRINK_WEIGHT
+  // (saft bekam frueher faelschlicherweise kein Erwachsenen-Gewicht, siehe Bugfix-Test).
   const result = _internal.calculate(
       {
         eventName: 'Test',
@@ -356,7 +391,7 @@ test('calculate addiert Kinderbedarf (Wasser/Saft) zu Erwachsenenbedarf', () => 
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -369,17 +404,19 @@ test('calculate addiert Kinderbedarf (Wasser/Saft) zu Erwachsenenbedarf', () => 
   const childrenTotal = 10 * CHILDREN_BASE_RATE_PER_PERSON_PER_HOUR * 4;
   const adultsTotal = 10 * BASE_RATE_PER_PERSON_PER_HOUR * 4;
   const childrenWeightSum = CHILDREN_DRINK_WEIGHTS.wasser.basis + CHILDREN_DRINK_WEIGHTS.saft.basis;
+  const adultsWeightSum = DRINK_WEIGHTS.wasser.basis + DRINK_WEIGHTS.saft.basis;
 
   const expectedWasserKinder = childrenTotal * (CHILDREN_DRINK_WEIGHTS.wasser.basis / childrenWeightSum);
-  const expectedWasserErwachsene = adultsTotal; // wasser is the only category with DRINK_WEIGHT > 0
+  const expectedWasserErwachsene = adultsTotal * (DRINK_WEIGHTS.wasser.basis / adultsWeightSum);
   const expectedWasser = Math.round((expectedWasserErwachsene + expectedWasserKinder) * 100) / 100;
 
   const expectedSaftKinder = childrenTotal * (CHILDREN_DRINK_WEIGHTS.saft.basis / childrenWeightSum);
-  const expectedSaft = Math.round(expectedSaftKinder * 100) / 100; // no adult contribution
+  const expectedSaftErwachsene = adultsTotal * (DRINK_WEIGHTS.saft.basis / adultsWeightSum);
+  const expectedSaft = Math.round((expectedSaftErwachsene + expectedSaftKinder) * 100) / 100;
 
   assert.equal(wasser.literOhnePuffer, expectedWasser, 'Wasser: Erwachsene + Kinder');
-  assert.equal(saft.literOhnePuffer, expectedSaft, 'Saft: nur Kinder');
-  assert.ok(saft.literOhnePuffer > 0, 'Saft hat Bedarf (Kinder)');
+  assert.equal(saft.literOhnePuffer, expectedSaft, 'Saft: Erwachsene + Kinder');
+  assert.ok(saft.literOhnePuffer > 0, 'Saft hat Bedarf');
 });
 
 test('calculate berechnet nur Kinderbedarf wenn keine Erwachsenen vorhanden', () => {
@@ -397,7 +434,7 @@ test('calculate berechnet nur Kinderbedarf wenn keine Erwachsenen vorhanden', ()
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 

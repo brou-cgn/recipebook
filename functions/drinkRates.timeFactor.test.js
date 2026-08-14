@@ -7,6 +7,7 @@ const {
   TIME_FACTOR_BEFORE_BOUNDARY,
   timeFactor,
   BASE_RATE_PER_PERSON_PER_HOUR,
+  DRINK_WEIGHTS,
 } = require('./drinkRates');
 const {_internal} = require('./calculateEventDrinks');
 
@@ -63,7 +64,7 @@ test('calculate wendet SEASON_FACTOR und TIME_FACTOR multiplikativ auf den Gesam
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
@@ -92,7 +93,7 @@ test('calculate wendet TIME_FACTOR nicht an, wenn keine Startuhrzeit gesetzt ist
         customDrinkIds: [],
         pufferProzent: 0,
       },
-      require('./drinkRates').DEFAULT_RATES,
+      DRINK_WEIGHTS,
       {},
   );
 
