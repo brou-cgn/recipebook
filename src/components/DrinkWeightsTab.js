@@ -12,14 +12,12 @@ import { canManageDrinkWeights } from '../utils/userManagement';
 
 const NUMBER_FIELDS = ['basis', 'winter', 'sommer', 'nachmittag'];
 
-const createFormData = (row, hasGebinde) => ({
+const createFormData = (row, hasAnteilTrinker) => ({
   basis: row.basis,
   winter: row.winter,
   sommer: row.sommer,
   nachmittag: row.nachmittag,
-  ...(hasGebinde ? {
-    gebindeLiter: row.gebindeLiter ?? '',
-    gebindeName: row.gebindeName ?? '',
+  ...(hasAnteilTrinker ? {
     anteilTrinker: row.anteilTrinker ?? ''
   } : {})
 });
@@ -44,7 +42,7 @@ const buildRows = (defaults, overrides) =>
     ...(overrides[id] || {})
   }));
 
-function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults, onSave, currentUser }) {
+function DrinkWeightMatrixTable({ title, description, rows, hasAnteilTrinker, defaults, onSave, currentUser }) {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +52,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults
 
   const handleEdit = (row) => {
     setEditingId(row.id);
-    setFormData(createFormData(row, hasGebinde));
+    setFormData(createFormData(row, hasAnteilTrinker));
     setErrorMessage('');
   };
 
@@ -82,14 +80,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults
       }
     }
     if (Number(formData.basis) < 0) return 'Das Basis-Gewicht darf nicht negativ sein.';
-    if (hasGebinde) {
-      const gebindeLiter = Number(formData.gebindeLiter);
-      if (!Number.isFinite(gebindeLiter) || gebindeLiter <= 0) {
-        return 'Bitte eine gültige Gebinde-Größe (Liter) eingeben.';
-      }
-      if (!String(formData.gebindeName || '').trim()) {
-        return 'Bitte eine Gebinde-Bezeichnung eingeben.';
-      }
+    if (hasAnteilTrinker) {
       if (formData.anteilTrinker !== '' && formData.anteilTrinker !== undefined) {
         const anteilTrinker = Number(formData.anteilTrinker);
         if (!Number.isFinite(anteilTrinker) || anteilTrinker <= 0 || anteilTrinker > 1) {
@@ -116,9 +107,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults
       sommer: Number(formData.sommer),
       nachmittag: Number(formData.nachmittag)
     };
-    if (hasGebinde) {
-      payload.gebindeLiter = Number(formData.gebindeLiter);
-      payload.gebindeName = String(formData.gebindeName).trim();
+    if (hasAnteilTrinker) {
       payload.anteilTrinker = formData.anteilTrinker === '' || formData.anteilTrinker === undefined
         ? undefined
         : Number(formData.anteilTrinker);
@@ -155,9 +144,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults
               <th>Winter Δ</th>
               <th>Sommer Δ</th>
               <th>Nachmittag Δ</th>
-              {hasGebinde && <th>Gebinde-Größe (L)</th>}
-              {hasGebinde && <th>Gebinde-Bezeichnung</th>}
-              {hasGebinde && <th>Anteil Trinker</th>}
+              {hasAnteilTrinker && <th>Anteil Trinker</th>}
               <th>Letzte Änderung</th>
               <th>Aktionen</th>
             </tr>
@@ -220,34 +207,7 @@ function DrinkWeightMatrixTable({ title, description, rows, hasGebinde, defaults
                       />
                     ) : row.nachmittag}
                   </td>
-                  {hasGebinde && (
-                    <td>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="drink-weights-inline-input"
-                          aria-label={`Gebinde-Größe für ${row.id}`}
-                          value={formData.gebindeLiter}
-                          onChange={(event) => setFormData((prev) => ({ ...prev, gebindeLiter: event.target.value }))}
-                        />
-                      ) : row.gebindeLiter}
-                    </td>
-                  )}
-                  {hasGebinde && (
-                    <td>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className="drink-weights-inline-input"
-                          aria-label={`Gebinde-Bezeichnung für ${row.id}`}
-                          value={formData.gebindeName}
-                          onChange={(event) => setFormData((prev) => ({ ...prev, gebindeName: event.target.value }))}
-                        />
-                      ) : row.gebindeName}
-                    </td>
-                  )}
-                  {hasGebinde && (
+                  {hasAnteilTrinker && (
                     <td>
                       {isEditing ? (
                         <input
@@ -340,9 +300,9 @@ function DrinkWeightsTab({ currentUser }) {
 
         <DrinkWeightMatrixTable
           title="Erwachsene"
-          description="Basis-Gewichte und saisonale Anpassungen je Kategorie, inklusive Gebinde-Metadaten für Einkauf und Verbrauch."
+          description="Basis-Gewichte und saisonale Anpassungen je Kategorie."
           rows={adultsRows}
-          hasGebinde
+          hasAnteilTrinker
           defaults={DEFAULT_DRINK_WEIGHTS}
           onSave={setDrinkWeightEntry}
           currentUser={currentUser}
@@ -352,7 +312,7 @@ function DrinkWeightsTab({ currentUser }) {
           title="Kinder"
           description="Basis-Gewichte und saisonale Anpassungen für den Kinderanteil des Getränkebedarfs. Alkoholische Kategorien bleiben bei 0."
           rows={childrenRows}
-          hasGebinde={false}
+          hasAnteilTrinker={false}
           defaults={DEFAULT_CHILDREN_DRINK_WEIGHTS}
           onSave={setChildrenDrinkWeightEntry}
           currentUser={currentUser}

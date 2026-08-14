@@ -43,7 +43,7 @@ export const PREDEFINED_DRINKS = [
     id: 'predefined_mineralwasser',
     name: 'Mineralwasser',
     kategorie: 'wasser',
-    einheiten: [],
+    einheiten: [{ einheitsgroesse: 1.0, gebindeinheit: 'Flasche', einheitenProGebinde: 1 }],
     predefined: true,
   },
 ];

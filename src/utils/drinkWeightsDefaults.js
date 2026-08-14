@@ -10,57 +10,52 @@ export const DEFAULT_DRINK_WEIGHTS = {
   bier: {
     parent: null,
     basis: 0.221, winter: -0.016, sommer: 0.010, nachmittag: -0.040,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
+    anteilTrinker: 0.5,
   },
   bier_alkoholfrei: {
     parent: 'bier',
     basis: 0.039, winter: -0.002, sommer: 0.004, nachmittag: 0.005,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
+    anteilTrinker: 0.5,
   },
   wein: {
     parent: null,
     basis: 0.137, winter: 0.042, sommer: -0.053, nachmittag: -0.020,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.3,
+    anteilTrinker: 0.3,
   },
   sekt: {
     parent: null,
     basis: 0.015, winter: 0.010, sommer: -0.008, nachmittag: -0.006,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.4,
+    anteilTrinker: 0.4,
   },
   softdrinks: {
     parent: null,
     basis: 0.260, winter: -0.048, sommer: 0.056, nachmittag: 0.020,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
   saft: {
     parent: null,
     basis: 0.025, winter: -0.005, sommer: 0.006, nachmittag: 0.002,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
   spirituosen: {
     parent: null,
     basis: 0.011, winter: 0.007, sommer: -0.010, nachmittag: -0.010,
-    gebindeLiter: 0.7, gebindeName: '0,7L-Flasche', anteilTrinker: 0.25,
+    anteilTrinker: 0.25,
   },
   longdrinks: {
     parent: 'spirituosen',
     basis: 0.017, winter: -0.002, sommer: 0.002, nachmittag: -0.005,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche (Mixer)', anteilTrinker: 0.35,
+    anteilTrinker: 0.35,
   },
   kaffee: {
     parent: null,
     basis: 0.083, winter: 0.046, sommer: -0.039, nachmittag: 0.035,
-    gebindeLiter: 0.0625, gebindeName: 'Tasse (125ml)',
   },
   tee: {
     parent: null,
     basis: 0.037, winter: 0.025, sommer: -0.021, nachmittag: 0.015,
-    gebindeLiter: 0.2, gebindeName: 'Tasse (200ml)',
   },
   wasser: {
     parent: null,
     basis: 0.155, winter: -0.051, sommer: 0.050, nachmittag: 0.000,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
 };
 

@@ -61,11 +61,11 @@ function timeFactor(startTime, hours) {
  * Beziehungen im Getraenke-Modell (siehe getWeightSubcategoryParents(),
  * getParentTotal() sowie DRINK_CATEGORY_PARENTS in calculateEventDrinks.js).
  *
- * `gebindeLiter`/`gebindeName` beschreiben die Standard-Gebindegroesse der
- * Kategorie (Einkaufs-/Verbrauchseinheit), `anteilTrinker` den angenommenen
- * Anteil der erwachsenen Gaeste, der die Kategorie ueberhaupt konsumiert
- * (fehlt das Feld, wird 1.0 angenommen). Dies ist die einzige Quelle der
- * Wahrheit fuer beides -- es gibt keine separate Raten-Tabelle mehr.
+ * `anteilTrinker` beschreibt den angenommenen Anteil der erwachsenen Gaeste,
+ * der die Kategorie ueberhaupt konsumiert (fehlt das Feld, wird 1.0
+ * angenommen). Gebindegroessen fuer Einkauf/Verbrauch kommen ausschliesslich
+ * von den einzelnen Getraenken (deren `einheiten`), nicht mehr aus dieser
+ * Matrix.
  *
  * bier_alkoholfrei (85/15-Split von "bier") und longdrinks (40/60-Split von
  * "spirituosen") sind beides ungeprueft geschaetzte Aufteilungen ohne
@@ -79,7 +79,7 @@ const DRINK_WEIGHTS = {
     winter: -0.016,
     sommer: 0.010,
     nachmittag: -0.040,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
+    anteilTrinker: 0.5,
   },
   bier_alkoholfrei: {
     parent: 'bier',
@@ -87,7 +87,7 @@ const DRINK_WEIGHTS = {
     winter: -0.002,
     sommer: 0.004,
     nachmittag: 0.005,
-    gebindeLiter: 0.5, gebindeName: '0,5L-Flasche', anteilTrinker: 0.5,
+    anteilTrinker: 0.5,
   },
   wein: {
     parent: null,
@@ -95,7 +95,7 @@ const DRINK_WEIGHTS = {
     winter: 0.042,
     sommer: -0.053,
     nachmittag: -0.020,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.3,
+    anteilTrinker: 0.3,
   },
   sekt: {
     parent: null,
@@ -103,7 +103,7 @@ const DRINK_WEIGHTS = {
     winter: 0.010,
     sommer: -0.008,
     nachmittag: -0.006,
-    gebindeLiter: 0.75, gebindeName: '0,75L-Flasche', anteilTrinker: 0.4,
+    anteilTrinker: 0.4,
   },
   softdrinks: {
     parent: null,
@@ -111,7 +111,6 @@ const DRINK_WEIGHTS = {
     winter: -0.048,
     sommer: 0.056,
     nachmittag: 0.020,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
   saft: {
     parent: null,
@@ -119,7 +118,6 @@ const DRINK_WEIGHTS = {
     winter: -0.005,
     sommer: 0.006,
     nachmittag: 0.002,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
   spirituosen: {
     parent: null,
@@ -127,7 +125,7 @@ const DRINK_WEIGHTS = {
     winter: 0.007,
     sommer: -0.010,
     nachmittag: -0.010,
-    gebindeLiter: 0.7, gebindeName: '0,7L-Flasche', anteilTrinker: 0.25,
+    anteilTrinker: 0.25,
   },
   longdrinks: {
     parent: 'spirituosen',
@@ -135,7 +133,7 @@ const DRINK_WEIGHTS = {
     winter: -0.002,
     sommer: 0.002,
     nachmittag: -0.005,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche (Mixer)', anteilTrinker: 0.35,
+    anteilTrinker: 0.35,
   },
   kaffee: {
     parent: null,
@@ -143,7 +141,6 @@ const DRINK_WEIGHTS = {
     winter: 0.046,
     sommer: -0.039,
     nachmittag: 0.035,
-    gebindeLiter: 0.0625, gebindeName: 'Tasse (125ml)',
   },
   tee: {
     parent: null,
@@ -151,7 +148,6 @@ const DRINK_WEIGHTS = {
     winter: 0.025,
     sommer: -0.021,
     nachmittag: 0.015,
-    gebindeLiter: 0.2, gebindeName: 'Tasse (200ml)',
   },
   wasser: {
     parent: null,
@@ -159,7 +155,6 @@ const DRINK_WEIGHTS = {
     winter: -0.051,
     sommer: 0.050,
     nachmittag: 0.000,
-    gebindeLiter: 1.0, gebindeName: '1L-Flasche',
   },
 };
 

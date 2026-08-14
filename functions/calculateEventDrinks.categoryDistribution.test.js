@@ -800,7 +800,9 @@ test('loadCustomDrinks verwendet fallback fuer predefined_mineralwasser ohne Fir
   const result = await _internal.loadCustomDrinks(db, 'user-1', ['predefined_mineralwasser']);
 
   assert.ok(result.predefined_mineralwasser, 'predefined_mineralwasser wurde aufgeloest');
-  assert.deepEqual(result.predefined_mineralwasser.einheiten, []);
+  assert.deepEqual(result.predefined_mineralwasser.einheiten, [
+    {einheitsgroesse: 1.0, gebindeinheit: 'Flasche', einheitenProGebinde: 1},
+  ]);
   assert.equal(result.predefined_mineralwasser.name, 'Mineralwasser');
   assert.equal(result.predefined_mineralwasser.kategorie, 'wasser');
   assert.equal(result.predefined_mineralwasser.predefined, true);
@@ -839,6 +841,6 @@ test('calculate erzeugt fuer "predefined_mineralwasser" keine Warnung und eine i
   assert.equal(predefinedRow.isPredefinedDrink, true, 'Zeile ist als isPredefinedDrink markiert');
   assert.equal(predefinedRow.drinkLabel, 'Mineralwasser', 'drinkLabel ist gesetzt');
   assert.equal(predefinedRow.drinkKategorie, 'wasser', 'drinkKategorie ist gesetzt');
-  assert.equal(predefinedRow.gebindeGroesseLiter, wasser.gebindeGroesseLiter, 'Gebinde aus Kategorie-Zeile uebernommen');
+  assert.equal(predefinedRow.gebindeGroesseLiter, null, 'Kategorie-Zeile liefert keine Gebinde-Daten mehr (kommen aus einheiten)');
   assert.equal(predefinedRow.literOhnePuffer, wasser.literOhnePuffer, 'Literbedarf aus Kategorie-Zeile uebernommen');
 });

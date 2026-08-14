@@ -29,7 +29,7 @@ const PREDEFINED_DRINKS = {
   predefined_mineralwasser: {
     name: 'Mineralwasser',
     kategorie: 'wasser',
-    einheiten: [],
+    einheiten: [{einheitsgroesse: 1.0, gebindeinheit: 'Flasche', einheitenProGebinde: 1}],
     predefined: true,
   },
 };
@@ -433,16 +433,17 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
         0;
     const literGesamt = adultsLiterGesamt + childrenLiterGesamt;
     const literMitPuffer = literGesamt * (1 + puffer);
-    const anzahlGebinde =
-        entry.gebindeLiter ? Math.ceil(literMitPuffer / entry.gebindeLiter) : null;
 
+    // Gebindegroesse/-bezeichnung kommen nicht mehr aus DRINK_WEIGHTS, sondern
+    // ausschliesslich von den einzelnen Getraenken (deren `einheiten`) -- die
+    // Kategorie-Zeile selbst liefert daher keine Gebinde-Angaben mehr.
     ergebnis.push({
       kategorie: cat,
       literOhnePuffer: round2(literGesamt),
       literMitPuffer: round2(literMitPuffer),
-      gebinde: entry.gebindeName,
-      gebindeGroesseLiter: entry.gebindeLiter,
-      anzahlGebinde,
+      gebinde: null,
+      gebindeGroesseLiter: null,
+      anzahlGebinde: null,
       ratenQuelle: entry._nEvents ? 'erfahrungswert' : 'standard-faustwert',
       anteilTrinkerAngenommen: anteilTrinker !== 1.0 ? anteilTrinker : null,
       praeferenzFaktor: null,
@@ -496,11 +497,13 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
       continue;
     }
 
-    // Vordefinierte Getraenke ohne eigene Gebinde (z.B. Mineralwasser) haben
-    // keine eigenen Einheiten. Ihr Bedarf steckt bereits in der normalen
-    // Kategorie-Zeile. Wir erzeugen trotzdem eine eigene Zeile mit
-    // isPredefinedDrink: true, damit die Verbrauch-Form das Getraenk
-    // anzeigen kann (mit den Gebinde-Daten der Kategorie-Zeile).
+    // Fallback fuer vordefinierte Getraenke, denen (noch) keine eigene
+    // Einheit zugewiesen wurde -- eigentlich sollte z.B. Mineralwasser immer
+    // eine Einheit haben (siehe PREDEFINED_DRINKS), das hier faengt nur
+    // unvollstaendig gepflegte Bestandsdaten ab. Ihr Bedarf steckt bereits in
+    // der normalen Kategorie-Zeile, Gebinde-Angaben (gebinde/gebindeGroesseLiter)
+    // liefert diese Zeile aber nicht mehr, da DRINK_WEIGHTS keine
+    // Gebinde-Metadaten mehr fuehrt.
     if (entry.predefined && (!Array.isArray(entry.einheiten) || entry.einheiten.length === 0)) {
       const catRow = ergebnis.find((r) => !r.isCustomDrink && r.kategorie === entry.kategorie);
       ergebnis.push({
