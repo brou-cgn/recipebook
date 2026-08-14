@@ -623,8 +623,15 @@ function calculate(event, ratesDb, customDrinksMap, childrenRatesDb = CHILDREN_D
     dauerStunden: hours,
     saisonFaktor: seasonFactor,
     zeitFaktor: timeFac,
+    dauerFaktor: durFactor,
     eventTyp: event.eventType,
     pufferProzent,
+    // Gesamtbedarf vor Kategorie-Verteilung (ohne Puffer) -- fuer spaetere
+    // Kalibrierungs-Snapshots (siehe submitConsumption.js) explizit
+    // mitgespeichert, damit er nicht aus ggf. spaeter geaenderten Konstanten
+    // (BASE_RATE_PER_PERSON_PER_HOUR etc.) neu abgeleitet werden muss.
+    gesamtbedarfErwachseneLiter: round2(totalBeverage),
+    gesamtbedarfKinderLiter: round2(childrenTotalBeverage),
     ergebnis,
     warnungen,
   };

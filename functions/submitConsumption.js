@@ -45,6 +45,51 @@ function alleGetraenkeVerbrauchGesperrt(event, verbrauchGesperrt) {
 }
 
 /**
+ * Baut den Ist-Bedarfs-Snapshot fuer die spaetere Kalibrierung von
+ * DRINK_WEIGHTS/BASE_RATE_PER_PERSON_PER_HOUR (Phase 1: reines Sammeln, siehe
+ * Konzept "Sammlung von Ist-Bedarfsdaten fuer spaetere Kalibrierung"). Rahmendaten
+ * und Soll-Werte werden explizit aus dem zum Berechnungszeitpunkt gespeicherten
+ * event.berechnung uebernommen (nicht aus den *aktuellen* Konstanten neu
+ * abgeleitet), damit der Snapshot auch nach spaeteren Aenderungen an den
+ * Kalkulationskonstanten unabhaengig auswertbar bleibt.
+ * @param {object} event Event-Dokument (inkl. berechnung).
+ * @param {object} literGemessen Ist-Verbrauch pro Getraenke-Zeile in Litern (siehe gebindeZuLiter).
+ * @return {object|null} Snapshot-Dokument, oder null, wenn keine Berechnung vorliegt.
+ */
+function buildKalibrierungsSnapshot(event, literGemessen) {
+  const berechnung = event.berechnung;
+  if (!berechnung) return null;
+
+  const kategorien = (berechnung.ergebnis || [])
+      .filter((row) => (row.isCustomDrink || row.isPredefinedDrink) && row.gebindeGroesseLiter)
+      .map((row) => ({
+        rowKategorie: row.kategorie,
+        drinkKategorie: row.drinkKategorie || null,
+        sollLiter: row.literOhnePuffer ?? null,
+        istLiter: literGemessen[row.kategorie] ?? null,
+      }));
+
+  const guestPreferencesActive = Array.isArray(event.guestPreferenceMultipliers?.perGuest) &&
+      event.guestPreferenceMultipliers.perGuest.length > 0;
+
+  return {
+    adults: event.guests?.adults ?? null,
+    children: event.guests?.children ?? null,
+    season: event.season ?? null,
+    startTime: event.startTime ?? null,
+    hours: event.durationHours ?? null,
+    eventType: event.eventType ?? null,
+    seasonFactor: berechnung.saisonFaktor ?? null,
+    timeFactor: berechnung.zeitFaktor ?? null,
+    durationFactor: berechnung.dauerFaktor ?? null,
+    guestPreferencesActive,
+    totalBeverageCalculated: berechnung.gesamtbedarfErwachseneLiter ?? null,
+    childrenTotalBeverageCalculated: berechnung.gesamtbedarfKinderLiter ?? null,
+    kategorien,
+  };
+}
+
+/**
  * Callable: submitConsumption({ eventId, gebinde })
  * - eventId: ID des Event-Dokuments (muss existieren und berechnet sein)
  * - gebinde: { kategorie: { eingekauft: <Anzahl>, uebrig: <Anzahl> } }
@@ -90,6 +135,19 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   });
   if (alleGetraenkeVerbrauchGesperrt(event, verbrauchGesperrt)) {
     eventUpdate.status = 'verbrauchErfasst';
+
+    // Phase 1 der Kalibrierung (siehe Konzept): reines Sammeln von
+    // Ist-Bedarfsdaten, keine Rueckwirkung auf DRINK_WEIGHTS/BASE_RATE_PER_PERSON_PER_HOUR.
+    const snapshot = buildKalibrierungsSnapshot({...event, ...eventUpdate}, literGemessen);
+    if (snapshot) {
+      const snapshotRef = db.collection('kalibrierungsSnapshots').doc(eventId);
+      batch.set(snapshotRef, {
+        ...snapshot,
+        eventId,
+        uid,
+        erstelltAm: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   }
   batch.set(eventRef, eventUpdate, {merge: true});
 
@@ -98,4 +156,4 @@ exports.submitConsumption = onCall({maxInstances: 10}, async (request) => {
   return {eventId};
 });
 
-exports._internal = {gebindeZuLiter, alleGetraenkeVerbrauchGesperrt};
+exports._internal = {gebindeZuLiter, alleGetraenkeVerbrauchGesperrt, buildKalibrierungsSnapshot};
