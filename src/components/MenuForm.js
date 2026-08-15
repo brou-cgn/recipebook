@@ -369,7 +369,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(TouchSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
