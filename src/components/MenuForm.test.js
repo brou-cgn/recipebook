@@ -341,4 +341,32 @@ describe('MenuForm - linked event drinks display', () => {
     expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
     expect(screen.getAllByText('Cola').length).toBeGreaterThan(0);
   });
+
+  test('does not show a drink recipe twice when its linked drink was carried over into the event', async () => {
+    // Mirrors what handleStartNewEvent does when creating an event from a menu:
+    // a drink recipe already in the "Drinks" section gets a matching custom
+    // drink (linked via "#recipe:id:name") added to the event's customDrinkIds.
+    const linkedDrink = { id: 'drink-mojito-link', name: '#recipe:recipe-2:Mojito', kategorie: null, einheiten: [{ einheitsgroesse: 0.5 }] };
+    mockGetEvent.mockResolvedValue({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [linkedDrink.id] });
+    mockGetCustomDrinks.mockResolvedValue([linkedDrink]);
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: ['recipe-2'], drinkIds: [] }],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
+    expect(screen.getAllByText('Mojito')).toHaveLength(1);
+  });
 });

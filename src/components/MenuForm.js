@@ -76,11 +76,15 @@ function SortableSection({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // De-duplicate manually added drinks against the event's planned drinks so
-  // the same drink never shows up twice in the merged list below.
-  const eventDrinkIds = eventDrinks.map((drink) => drink.id);
+  // De-duplicate the event's planned drinks against recipes already listed
+  // in this section (a drink recipe carried over into the event's
+  // customDrinkIds links back to the same recipe) and against manually
+  // added drinks, so the same drink never shows up twice in the merged list
+  // below.
+  const dedupedEventDrinks = eventDrinks.filter((drink) => !drink.recipeId || !section.recipeIds.includes(drink.recipeId));
+  const eventDrinkIds = dedupedEventDrinks.map((drink) => drink.id);
   const manualDrinkIds = (section.drinkIds || []).filter((drinkId) => !eventDrinkIds.includes(drinkId));
-  const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || eventDrinks.length > 0 || manualDrinkIds.length > 0;
+  const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || dedupedEventDrinks.length > 0 || manualDrinkIds.length > 0;
 
   const selectedRecipesList = section.recipeIds.length > 0 && (
     <DndContext
@@ -145,7 +149,7 @@ function SortableSection({
             <div className="selected-recipes">
               <h5>Ausgewählte Rezepte & Getränke:</h5>
               {selectedRecipesList}
-              {eventDrinks.map((drink) => (
+              {dedupedEventDrinks.map((drink) => (
                 <div key={`event-drink-${drink.id}`} className="selected-recipe-item event-drink-item">
                   <span className="recipe-name">{drink.displayName}</span>
                 </div>
@@ -262,8 +266,8 @@ function SortableSection({
       )}
       <div className="section-summary">
         {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
-        {isDrinksSection && (eventDrinks.length + manualDrinkIds.length) > 0
-          ? `, ${eventDrinks.length + manualDrinkIds.length} Getränk${(eventDrinks.length + manualDrinkIds.length) !== 1 ? 'e' : ''}`
+        {isDrinksSection && (dedupedEventDrinks.length + manualDrinkIds.length) > 0
+          ? `, ${dedupedEventDrinks.length + manualDrinkIds.length} Getränk${(dedupedEventDrinks.length + manualDrinkIds.length) !== 1 ? 'e' : ''}`
           : ''}
       </div>
     </div>
@@ -435,7 +439,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
     return ids.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
-      return { id: drinkId, displayName: resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId };
+      const resolved = resolveDrinkDisplay(drink || drinkId, recipes);
+      return { id: drinkId, displayName: resolved.displayName || drinkId, recipeId: resolved.recipeId };
     });
   }, [linkedEvent, linkedEventCustomDrinks, recipes]);
 
