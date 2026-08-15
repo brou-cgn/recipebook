@@ -55,6 +55,10 @@ jest.mock('../utils/menuFirestore', () => ({
   disableMenuSharing: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('../utils/categoryImages', () => ({
+  getImageForCategory: () => Promise.resolve(null),
+}));
+
 const mockMenu = {
   id: 'menu-1',
   name: 'Testmenü',
