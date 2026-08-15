@@ -1,7 +1,7 @@
 .menu-form-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 1rem;
   overflow-x: hidden;
 }
 
@@ -210,22 +210,23 @@
   gap: 1.5rem;
 }
 
-.section-block {
+.menu-form-container .section-block {
   background: #f9f6f3;
   border: 1px solid #e0d5c7;
   border-radius: 8px;
   padding: 1rem;
 }
 
-.section-header {
+.menu-form-container .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
 }
 
-.section-header h4 {
+.menu-form-container .section-header h4 {
+  flex: 1;
   margin: 0;
   color: #402C1C;
   font-size: 1.1rem;
@@ -233,17 +234,19 @@
   overflow-wrap: break-word;
 }
 
-.section-actions {
+.menu-form-container .section-actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
-.section-drag-handle {
+.menu-form-container .section-drag-handle {
   font-size: 1.1rem;
   margin-right: 0.5rem;
 }
 
-.section-block.dragging {
+.menu-form-container .section-block.dragging {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   border-color: #402C1C;
 }
@@ -428,23 +431,32 @@
   border: 1px solid #402C1C;
 }
 
-.drag-handle {
+.menu-form-container .drag-handle {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  min-width: 0;
   background: none;
   border: none;
   color: #bbb;
   cursor: grab;
   font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 0.25rem;
   line-height: 1;
   touch-action: none;
   flex-shrink: 0;
 }
 
-.drag-handle:hover {
+.menu-form-container .drag-handle:hover {
   color: #402C1C;
 }
 
-.drag-handle:active {
+.menu-form-container .drag-handle:active {
   cursor: grabbing;
 }
 
