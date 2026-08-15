@@ -42,13 +42,23 @@ const formatEventDate = (dateStr) => {
   }
 };
 
+// A recipe is selectable in the menu's "Drinks" section only if it's tagged
+// with the "Drinks" Speisekategorie.
+const recipeHasDrinksCategory = (recipe) => {
+  const categories = Array.isArray(recipe?.speisekategorie)
+    ? recipe.speisekategorie
+    : (recipe?.speisekategorie ? [recipe.speisekategorie] : []);
+  return categories.some((cat) => typeof cat === 'string' && cat.trim().toLowerCase() === 'drinks');
+};
+
 // Sortable Section Component for drag & drop reordering of menu sections
 function SortableSection({
   id, section, sectionIndex, recipes, favoriteIds, searchQueries, sensors, closeIcon,
   onRemoveSection, onDragEndRecipes, onRemoveRecipeFromSection,
   onSearchChange, onAddRecipeToSection, getFilteredRecipes,
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
-  onRemoveDrinkFromSection, getFilteredDrinks, getDrinkDisplayName,
+  onAddRecipeToDrinksSection, onRemoveDrinkFromSection, getFilteredDrinkSectionOptions,
+  getDrinkDisplayName,
 }) {
   const {
     attributes,
@@ -126,41 +136,43 @@ function SortableSection({
           </div>
         )}
 
-        <div className="typeahead-container">
-          <input
-            type="text"
-            className="typeahead-input"
-            placeholder="Rezept suchen und hinzufügen..."
-            value={searchQueries[sectionIndex] || ''}
-            onChange={(e) => onSearchChange(sectionIndex, e.target.value)}
-          />
+        {!isDrinksSection && (
+          <div className="typeahead-container">
+            <input
+              type="text"
+              className="typeahead-input"
+              placeholder="Rezept suchen und hinzufügen..."
+              value={searchQueries[sectionIndex] || ''}
+              onChange={(e) => onSearchChange(sectionIndex, e.target.value)}
+            />
 
-          {searchQueries[sectionIndex] && searchQueries[sectionIndex].trim() && (
-            <div className="typeahead-dropdown">
-              {(() => {
-                const filteredRecipes = getFilteredRecipes(sectionIndex);
-                if (filteredRecipes.length === 0) {
-                  return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
-                }
-                return filteredRecipes.slice(0, 10).map(recipe => {
-                  const isFavorite = favoriteIds.includes(recipe.id);
-                  return (
-                    <div
-                      key={recipe.id}
-                      className="typeahead-item"
-                      onClick={() => onAddRecipeToSection(sectionIndex, recipe.id)}
-                    >
-                      <span className="recipe-name">
-                        {recipe.title}
-                      </span>
-                      {isFavorite && <span className="favorite-indicator">★</span>}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          )}
-        </div>
+            {searchQueries[sectionIndex] && searchQueries[sectionIndex].trim() && (
+              <div className="typeahead-dropdown">
+                {(() => {
+                  const filteredRecipes = getFilteredRecipes(sectionIndex);
+                  if (filteredRecipes.length === 0) {
+                    return <div className="typeahead-no-results">Keine Rezepte gefunden</div>;
+                  }
+                  return filteredRecipes.slice(0, 10).map(recipe => {
+                    const isFavorite = favoriteIds.includes(recipe.id);
+                    return (
+                      <div
+                        key={recipe.id}
+                        className="typeahead-item"
+                        onClick={() => onAddRecipeToSection(sectionIndex, recipe.id)}
+                      >
+                        <span className="recipe-name">
+                          {recipe.title}
+                        </span>
+                        {isFavorite && <span className="favorite-indicator">★</span>}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {isDrinksSection && (
         <div className="recipe-selection drink-selection">
@@ -187,7 +199,7 @@ function SortableSection({
             <input
               type="text"
               className="typeahead-input"
-              placeholder="Getränk aus dem Eventbereich suchen und hinzufügen..."
+              placeholder="Rezept oder Getränk suchen und hinzufügen..."
               value={drinkSearchQueries[sectionIndex] || ''}
               onChange={(e) => onDrinkSearchChange(sectionIndex, e.target.value)}
             />
@@ -195,19 +207,34 @@ function SortableSection({
             {drinkSearchQueries[sectionIndex] && drinkSearchQueries[sectionIndex].trim() && (
               <div className="typeahead-dropdown">
                 {(() => {
-                  const filteredDrinks = getFilteredDrinks(sectionIndex);
-                  if (filteredDrinks.length === 0) {
-                    return <div className="typeahead-no-results">Keine Getränke gefunden</div>;
+                  const filteredOptions = getFilteredDrinkSectionOptions(sectionIndex);
+                  if (filteredOptions.length === 0) {
+                    return <div className="typeahead-no-results">Keine Rezepte oder Getränke gefunden</div>;
                   }
-                  return filteredDrinks.slice(0, 10).map(drink => (
-                    <div
-                      key={drink.id}
-                      className="typeahead-item"
-                      onClick={() => onAddDrinkToSection(sectionIndex, drink.id)}
-                    >
-                      <span className="recipe-name">{getDrinkDisplayName(drink.id)}</span>
-                    </div>
-                  ));
+                  return filteredOptions.slice(0, 10).map(option => {
+                    if (option.type === 'recipe') {
+                      const isFavorite = favoriteIds.includes(option.recipe.id);
+                      return (
+                        <div
+                          key={`recipe-${option.id}`}
+                          className="typeahead-item"
+                          onClick={() => onAddRecipeToDrinksSection(sectionIndex, option.id)}
+                        >
+                          <span className="recipe-name">{option.recipe.title}</span>
+                          {isFavorite && <span className="favorite-indicator">★</span>}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div
+                        key={`drink-${option.id}`}
+                        className="typeahead-item"
+                        onClick={() => onAddDrinkToSection(sectionIndex, option.id)}
+                      >
+                        <span className="recipe-name">{getDrinkDisplayName(option.id)}</span>
+                      </div>
+                    );
+                  });
                 })()}
               </div>
             )}
@@ -443,18 +470,31 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     }));
   };
 
-  const getFilteredDrinks = (sectionIndex) => {
+  // Merged search results for the Drinks section's single search field:
+  // recipes tagged with the "Drinks" Speisekategorie, plus drinks from the
+  // event area (custom + predefined), ranked together by match quality.
+  const getFilteredDrinkSectionOptions = (sectionIndex) => {
     const query = drinkSearchQueries[sectionIndex] || '';
     const section = sections[sectionIndex];
+    const selectedRecipeIds = section?.recipeIds || [];
     const selectedDrinkIds = section?.drinkIds || [];
 
-    const availableDrinks = allDrinks.filter((drink) => !selectedDrinkIds.includes(drink.id));
+    const recipeOptions = recipes
+      .filter(recipeHasDrinksCategory)
+      .filter((recipe) => !selectedRecipeIds.includes(recipe.id))
+      .map((recipe) => ({ type: 'recipe', id: recipe.id, recipe, searchLabel: recipe.title }));
+
+    const drinkOptions = allDrinks
+      .filter((drink) => !selectedDrinkIds.includes(drink.id))
+      .map((drink) => ({ type: 'drink', id: drink.id, drink, searchLabel: resolveDrinkDisplay(drink, recipes).displayName }));
+
+    const combinedOptions = [...recipeOptions, ...drinkOptions];
 
     if (!query.trim()) {
-      return availableDrinks;
+      return combinedOptions;
     }
 
-    return fuzzyFilter(availableDrinks, query, (drink) => resolveDrinkDisplay(drink, recipes).displayName);
+    return fuzzyFilter(combinedOptions, query, (option) => option.searchLabel);
   };
 
   // Manually added drinks in the "Drinks" section, used to pre-fill a newly
@@ -845,6 +885,16 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     });
   };
 
+  // Same as handleAddRecipeToSection, but for the Drinks section's merged
+  // search field, which clears the drink search query instead.
+  const handleAddRecipeToDrinksSection = (sectionIndex, recipeId) => {
+    handleToggleRecipeInSection(sectionIndex, recipeId);
+    setDrinkSearchQueries({
+      ...drinkSearchQueries,
+      [sectionIndex]: ''
+    });
+  };
+
   const handleRemoveRecipeFromSection = (sectionIndex, recipeId) => {
     const newSections = [...sections];
     newSections[sectionIndex].recipeIds = newSections[sectionIndex].recipeIds.filter(id => id !== recipeId);
@@ -1166,8 +1216,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   drinkSearchQueries={drinkSearchQueries}
                   onDrinkSearchChange={handleDrinkSearchChange}
                   onAddDrinkToSection={handleAddDrinkToSection}
+                  onAddRecipeToDrinksSection={handleAddRecipeToDrinksSection}
                   onRemoveDrinkFromSection={handleRemoveDrinkFromSection}
-                  getFilteredDrinks={getFilteredDrinks}
+                  getFilteredDrinkSectionOptions={getFilteredDrinkSectionOptions}
                   getDrinkDisplayName={getDrinkDisplayName}
                 />
                 {isMobile && (
