@@ -1347,28 +1347,33 @@
   border-bottom-color: #3d3d3d;
 }
 
-[data-theme="dark"] .shopping-list-item {
+[data-theme="dark"] .shopping-list-item,
+[data-theme="dark"] .shopping-list-modal .shopping-list-item {
   background: #2a2a2a;
   color: #e8e8e8;
   border-color: #3d3d3d;
   border-bottom-color: #3d3d3d;
 }
 
-[data-theme="dark"] .shopping-list-item:hover {
+[data-theme="dark"] .shopping-list-item:hover,
+[data-theme="dark"] .shopping-list-modal .shopping-list-item:hover {
   background: #333;
 }
 
-[data-theme="dark"] .shopping-list-item.checked {
+[data-theme="dark"] .shopping-list-item.checked,
+[data-theme="dark"] .shopping-list-modal .shopping-list-item.checked {
   background: #1e1e1e;
   border-color: #3d3d3d;
   color: #777;
 }
 
-[data-theme="dark"] .shopping-list-item-text {
+[data-theme="dark"] .shopping-list-item-text,
+[data-theme="dark"] .shopping-list-modal .shopping-list-item-text {
   color: #e8e8e8;
 }
 
-[data-theme="dark"] .shopping-list-item.checked .shopping-list-item-text {
+[data-theme="dark"] .shopping-list-item.checked .shopping-list-item-text,
+[data-theme="dark"] .shopping-list-modal .shopping-list-item.checked .shopping-list-item-text {
   color: #777;
 }
 
