@@ -6,6 +6,7 @@ const mockSubscribeToCustomDrinks = jest.fn();
 const mockSubscribeToEvents = jest.fn();
 const mockGetEvent = jest.fn();
 const mockGetCustomDrinks = jest.fn();
+const mockSaveCustomDrink = jest.fn();
 
 jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: () => Promise.resolve([]),
@@ -52,6 +53,7 @@ jest.mock('../utils/eventsFirestore', () => ({
   subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
   getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+  saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
 }));
 
 jest.mock('./DrinkManagementPage', () => function MockDrinkManagementPage() {
@@ -122,6 +124,7 @@ beforeEach(() => {
     return () => {};
   });
   mockSubscribeToEvents.mockImplementation(() => () => {});
+  mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
 });
 
 describe('MenuForm - Drinks section manual drink selection', () => {
@@ -201,6 +204,81 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       expect(capturedEventFormProps).not.toBeNull();
     });
     expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-cola']);
+  });
+
+  test('creates a linked drink for a drink recipe without one yet, and carries it over to a new event', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    const searchInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+    fireEvent.change(searchInput, { target: { value: 'Mojito' } });
+    fireEvent.click(await screen.findByText('Mojito'));
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+
+    await waitFor(() => {
+      expect(mockSaveCustomDrink).toHaveBeenCalledWith('user-1', {
+        name: '#recipe:recipe-2:Mojito',
+        kategorie: null,
+        einheiten: [{ einheitsgroesse: 0.5 }],
+      });
+    });
+
+    await waitFor(() => {
+      expect(capturedEventFormProps).not.toBeNull();
+    });
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-new-mojito']);
+  });
+
+  test('reuses an existing linked drink for a drink recipe instead of creating a duplicate', async () => {
+    const existingLinkedDrink = {
+      id: 'drink-existing-mojito',
+      name: '#recipe:recipe-2:Mojito',
+      kategorie: null,
+      einheiten: [{ einheitsgroesse: 0.3 }],
+    };
+    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+      callback([...customDrinks, existingLinkedDrink]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    const searchInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+    fireEvent.change(searchInput, { target: { value: 'Mojito' } });
+    // Both the "Mojito" recipe and its already-linked drink match the query;
+    // the recipe option (added via handleAddRecipeToDrinksSection) is listed first.
+    const [recipeOption] = await screen.findAllByText('Mojito');
+    fireEvent.click(recipeOption);
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+
+    await waitFor(() => {
+      expect(capturedEventFormProps).not.toBeNull();
+    });
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-existing-mojito']);
+    expect(mockSaveCustomDrink).not.toHaveBeenCalled();
   });
 
   test('merged search offers Drinks-category recipes and event drinks, but not other recipes', async () => {
