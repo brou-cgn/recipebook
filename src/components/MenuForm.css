@@ -725,22 +725,11 @@
   font-weight: 600;
 }
 
-.menu-event-drinks-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.menu-event-drinks-item {
-  padding: 0.5rem 0.75rem;
-  background: #f9f6f3;
-  border-radius: 6px;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.menu-event-drinks-item:last-child {
-  margin-bottom: 0;
+/* Drinks planned via a linked event, shown read-only in the Drinks section's
+   merged "Ausgewählte Rezepte & Getränke" list (no remove button, unlike
+   manually added drinks). */
+.selected-recipe-item.event-drink-item {
+  background: #f3ede6;
 }
 
 .menu-drinks-link-actions {
