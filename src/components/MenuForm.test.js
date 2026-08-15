@@ -195,7 +195,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     fireEvent.change(drinkInput, { target: { value: 'Cola' } });
     fireEvent.click(await screen.findByText('Cola'));
 
-    fireEvent.click(screen.getByText('Event erstellen'));
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
 
     await waitFor(() => {
       expect(capturedEventFormProps).not.toBeNull();
