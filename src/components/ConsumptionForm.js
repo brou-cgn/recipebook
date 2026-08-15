@@ -622,68 +622,81 @@ function ConsumptionForm({ event, recipes, onDone, onCancel, currentUser }) {
 
               {activeSection === 'einkauf' && (
                 <div className="events-consumption-detail">
-                  {group.rows.map((row) => (
-                    <div className="events-form-row" key={row.kategorie}>
-                      {getRowUnitSubtitle(row) && (
-                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
-                      )}
-                      <label className="events-form-field">
-                        <span>Eingekauft</span>
-                        <input
-                          type="text"
-                          inputMode="text"
-                          placeholder="z.B. 1 3/4"
-                          title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
-                          value={values[row.kategorie].eingekauft}
-                          onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
-                          disabled={einkaufGroupLocked}
-                        />
-                      </label>
-                    </div>
-                  ))}
-                  <div className="events-consumption-detail-footer">
-                    <LockToggleButton
-                      locked={einkaufGroupLocked}
-                      onToggle={() => handleToggleEinkaufLock(group)}
-                      lockedLabel="Eingekaufte Menge entsperren"
-                      unlockedLabel="Eingekaufte Menge sperren"
-                      lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
-                      unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
-                    />
-                  </div>
+                  {group.rows.map((row, idx) => {
+                    const inputId = `${row.kategorie}-eingekauft`;
+                    return (
+                      <div className="events-form-row" key={row.kategorie}>
+                        {getRowUnitSubtitle(row) && (
+                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row)}</span>
+                        )}
+                        <div className="events-form-field">
+                          <span className="events-form-field-label-row">
+                            <label htmlFor={inputId}>Eingekauft</label>
+                            {idx === 0 && (
+                              <LockToggleButton
+                                locked={einkaufGroupLocked}
+                                onToggle={() => handleToggleEinkaufLock(group)}
+                                lockedLabel="Eingekaufte Menge entsperren"
+                                unlockedLabel="Eingekaufte Menge sperren"
+                                lockedTitle="Eingekaufte Menge entsperren (wird beim Öffnen wieder neu berechnet)"
+                                unlockedTitle="Eingekaufte Menge sperren (keine automatische Neuberechnung mehr)"
+                              />
+                            )}
+                          </span>
+                          <input
+                            id={inputId}
+                            type="text"
+                            inputMode="text"
+                            placeholder="z.B. 1 3/4"
+                            title="Menge als Bruch (z.B. 1/2 oder 1 3/4) oder Zahl"
+                            value={values[row.kategorie].eingekauft}
+                            onChange={(e) => updateValue(row.kategorie, 'eingekauft', e.target.value)}
+                            disabled={einkaufGroupLocked}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
               {activeSection === 'verbrauch' && (
                 <div className="events-consumption-detail">
-                  {group.rows.map((row) => (
-                    <div className="events-form-row" key={row.kategorie}>
-                      {getRowUnitSubtitle(row, getRowConsumptionUnit(row)) && (
-                        <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, getRowConsumptionUnit(row))}</span>
-                      )}
-                      <label className="events-form-field">
-                        <span>{getRowConsumptionUnit(row) ? `Übrig (${getRowConsumptionUnit(row)})` : 'Übrig'}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={values[row.kategorie].uebrig}
-                          onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
-                          disabled={verbrauchGroupLocked}
-                        />
-                      </label>
-                    </div>
-                  ))}
-                  <div className="events-consumption-detail-footer">
-                    <LockToggleButton
-                      locked={verbrauchGroupLocked}
-                      onToggle={() => handleToggleVerbrauchLock(group)}
-                      lockedLabel="Verbrauchte Menge entsperren"
-                      unlockedLabel="Verbrauchte Menge sperren"
-                      lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
-                      unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
-                      disabled={saving}
-                    />
-                  </div>
+                  {group.rows.map((row, idx) => {
+                    const inputId = `${row.kategorie}-uebrig`;
+                    const label = getRowConsumptionUnit(row) ? `Übrig (${getRowConsumptionUnit(row)})` : 'Übrig';
+                    return (
+                      <div className="events-form-row" key={row.kategorie}>
+                        {getRowUnitSubtitle(row, getRowConsumptionUnit(row)) && (
+                          <span className="events-consumption-unit-subtitle">{getRowUnitSubtitle(row, getRowConsumptionUnit(row))}</span>
+                        )}
+                        <div className="events-form-field">
+                          <span className="events-form-field-label-row">
+                            <label htmlFor={inputId}>{label}</label>
+                            {idx === 0 && (
+                              <LockToggleButton
+                                locked={verbrauchGroupLocked}
+                                onToggle={() => handleToggleVerbrauchLock(group)}
+                                lockedLabel="Verbrauchte Menge entsperren"
+                                unlockedLabel="Verbrauchte Menge sperren"
+                                lockedTitle="Verbrauchte Menge entsperren (kann wieder bearbeitet werden)"
+                                unlockedTitle="Verbrauchte Menge sperren (keine automatische Änderung mehr)"
+                                disabled={saving}
+                              />
+                            )}
+                          </span>
+                          <input
+                            id={inputId}
+                            type="number"
+                            min="0"
+                            value={values[row.kategorie].uebrig}
+                            onChange={(e) => updateValue(row.kategorie, 'uebrig', e.target.value)}
+                            disabled={verbrauchGroupLocked}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

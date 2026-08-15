@@ -454,9 +454,11 @@
   background: #fafaf8;
 }
 
-.events-consumption-detail-footer {
+.events-form-field-label-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .events-consumption-unit-subtitle {
