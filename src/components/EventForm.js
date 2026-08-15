@@ -7,6 +7,7 @@ import {
   subscribeToCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
+import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
 import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS, mergePredefinedDrinks } from '../utils/drinkCategories';
 import {
   computeGuestPreferenceMultipliers,
@@ -198,6 +199,34 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         pufferProzent: Number(pufferProzent),
       };
       const result = await calculateEventDrinks(event, isEditing ? initialEvent.id : undefined);
+
+      // Drinks removed here should disappear from any menu they were also
+      // added to, so the menu stays in sync with this event's Getränke.
+      // Drinks added here need no extra propagation: a linked menu reads the
+      // event live and already merges its drinks into the "Drinks" section.
+      const removedDrinkIds = (initialEvent?.customDrinkIds ?? []).filter(
+        (id) => !customDrinkIds.includes(id)
+      );
+      if (removedDrinkIds.length > 0 && currentUser?.id) {
+        try {
+          const linkedMenus = await getMenusByEventId(currentUser.id, result.eventId);
+          await Promise.all(linkedMenus.map((linkedMenu) => {
+            let changed = false;
+            const nextSections = (linkedMenu.sections || []).map((section) => {
+              if (!Array.isArray(section.drinkIds) || section.drinkIds.length === 0) return section;
+              const filteredDrinkIds = section.drinkIds.filter((id) => !removedDrinkIds.includes(id));
+              if (filteredDrinkIds.length === section.drinkIds.length) return section;
+              changed = true;
+              return { ...section, drinkIds: filteredDrinkIds };
+            });
+            if (!changed) return null;
+            return updateMenu(linkedMenu.id, { sections: nextSections });
+          }));
+        } catch (err) {
+          console.error('Error syncing removed drinks to linked menus:', err);
+        }
+      }
+
       onSaved(result.eventId);
     } catch (err) {
       console.error('Error calculating event drinks:', err);

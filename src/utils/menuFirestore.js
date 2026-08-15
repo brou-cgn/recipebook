@@ -183,6 +183,24 @@ export const deleteMenu = async (menuId) => {
 };
 
 /**
+ * Get all menus linked to a given event (one-time fetch).
+ * @param {string} eventOwnerId - uid of the event's owner (menu.eventOwnerId)
+ * @param {string} eventId - ID of the linked event (menu.eventId)
+ * @returns {Promise<Array>} Promise resolving to the linked menus
+ */
+export const getMenusByEventId = async (eventOwnerId, eventId) => {
+  try {
+    const menusRef = collection(db, 'menus');
+    const q = query(menusRef, where('eventId', '==', eventId), where('eventOwnerId', '==', eventOwnerId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  } catch (error) {
+    console.error('Error getting menus by eventId:', error);
+    return [];
+  }
+};
+
+/**
  * Get a menu by its shareId (public access, no authentication required)
  * @param {string} shareId - The shareId of the menu
  * @returns {Promise<Object|null>} Promise resolving to the menu or null if not found

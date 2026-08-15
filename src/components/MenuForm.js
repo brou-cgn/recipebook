@@ -8,8 +8,8 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getEvent, subscribeToEvents, getCustomDrinks, subscribeToCustomDrinks, saveCustomDrink } from '../utils/eventsFirestore';
-import { mergePredefinedDrinks } from '../utils/drinkCategories';
+import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
 import EventForm from './EventForm';
@@ -59,7 +59,7 @@ function SortableSection({
   onSearchChange, onAddRecipeToSection, getFilteredRecipes,
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
   onAddRecipeToDrinksSection, onRemoveDrinkFromSection, getFilteredDrinkSectionOptions,
-  getDrinkDisplayName, eventDrinks = [],
+  getDrinkDisplayName, eventDrinks = [], onRemoveEventDrink,
 }) {
   const {
     attributes,
@@ -152,6 +152,14 @@ function SortableSection({
               {dedupedEventDrinks.map((drink) => (
                 <div key={`event-drink-${drink.id}`} className="selected-recipe-item event-drink-item">
                   <span className="recipe-name">{drink.displayName}</span>
+                  <button
+                    type="button"
+                    className="remove-recipe-button"
+                    onClick={() => onRemoveEventDrink(drink.id)}
+                    title="Getränk aus Event entfernen"
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
               {manualDrinkIds.map(drinkId => (
@@ -350,6 +358,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [linkedEvent, setLinkedEvent] = useState(null);
   const [linkedEventLoading, setLinkedEventLoading] = useState(false);
   const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
+  // Drinks the user removed from the linked event via this menu's "Drinks"
+  // section, staged locally until the menu is saved (see handleSubmit).
+  const [removedEventDrinkIds, setRemovedEventDrinkIds] = useState([]);
   const [availableEvents, setAvailableEvents] = useState([]);
   const [userCustomDrinks, setUserCustomDrinks] = useState([]);
   const [drinkSearchQueries, setDrinkSearchQueries] = useState({});
@@ -407,29 +418,43 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load the name and drinks of the currently linked event, if any.
+  // Live-track the name and drinks of the currently linked event, so any
+  // change made on the event side (add/remove drink, recalculation) shows up
+  // here immediately without having to reopen the menu.
   useEffect(() => {
     if (!eventId || !eventOwnerId) {
       setLinkedEvent(null);
       setLinkedEventCustomDrinks([]);
       return undefined;
     }
-    let cancelled = false;
     setLinkedEventLoading(true);
-    Promise.all([
-      getEvent(eventOwnerId, eventId),
-      getCustomDrinks(eventOwnerId),
-    ]).then(([event, customDrinks]) => {
-      if (cancelled) return;
+    let firstEventSnapshot = true;
+    let firstDrinksSnapshot = true;
+    const unsubEvent = subscribeToEvent(eventOwnerId, eventId, (event) => {
       setLinkedEvent(event);
-      setLinkedEventCustomDrinks(customDrinks);
-    }).finally(() => {
-      if (!cancelled) setLinkedEventLoading(false);
+      if (firstEventSnapshot) {
+        firstEventSnapshot = false;
+        if (!firstDrinksSnapshot) setLinkedEventLoading(false);
+      }
+    });
+    const unsubDrinks = subscribeToCustomDrinks(eventOwnerId, (drinks) => {
+      setLinkedEventCustomDrinks(drinks);
+      if (firstDrinksSnapshot) {
+        firstDrinksSnapshot = false;
+        if (!firstEventSnapshot) setLinkedEventLoading(false);
+      }
     });
     return () => {
-      cancelled = true;
+      unsubEvent();
+      unsubDrinks();
     };
   }, [eventId, eventOwnerId]);
+
+  // Discard any pending "remove drink from event" staging when switching to a
+  // different (or no) linked event.
+  useEffect(() => {
+    setRemovedEventDrinkIds([]);
+  }, [eventId]);
 
   // Drinks assigned via the linked event. Shown read-only inside the menu's
   // "Drinks" section (never in the header) alongside the manually added ones.
@@ -498,6 +523,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       ...drinkSearchQueries,
       [sectionIndex]: ''
     });
+    // Re-adding a drink that was staged for removal from the event cancels
+    // that removal.
+    setRemovedEventDrinkIds((prev) => prev.filter((id) => id !== drinkId));
   };
 
   const handleRemoveDrinkFromSection = (sectionIndex, drinkId) => {
@@ -505,6 +533,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       if (i !== sectionIndex) return s;
       return { ...s, drinkIds: (s.drinkIds || []).filter((id) => id !== drinkId) };
     }));
+  };
+
+  // Stages the removal of one of the linked event's drinks; it's actually
+  // removed from the event (and the event's Getränkeverteilung recalculated)
+  // once the menu is saved, see handleSubmit.
+  const handleRemoveEventDrink = (drinkId) => {
+    setRemovedEventDrinkIds((prev) => (prev.includes(drinkId) ? prev : [...prev, drinkId]));
   };
 
   // Merged search results for the Drinks section's single search field:
@@ -534,8 +569,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return fuzzyFilter(combinedOptions, query, (option) => option.searchLabel);
   };
 
-  // Manually added drinks in the "Drinks" section, used to pre-fill a newly
-  // created event's drink selection so nothing has to be re-entered there.
+  // Manually added drinks in the "Drinks" section. Used both to pre-fill a
+  // newly created event's drink selection and, on every save, to sync this
+  // menu's drinks into an already-linked event (see handleSubmit).
   const drinksSectionManualDrinkIds = useMemo(() => {
     const ids = [];
     sections.forEach((s) => {
@@ -549,8 +585,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   }, [sections]);
 
   // Drink recipes (recipes tagged with the "Drinks" Speisekategorie) added to
-  // the "Drinks" section, used to pre-fill a newly created event's drink
-  // selection alongside the manually added drinks above.
+  // the "Drinks" section. Used to pre-fill a newly created event's drink
+  // selection alongside the manually added drinks above, and (via
+  // ensureDrinkForRecipe) synced into an already-linked event on every save.
   const drinksSectionRecipeIds = useMemo(() => {
     const ids = [];
     sections.forEach((s) => {
@@ -946,6 +983,60 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         sectionsCount: menuData.sections.length,
         recipeIdsCount: menuData.recipeIds.length,
       });
+
+      // Keep the linked event's drinks in sync with this menu's "Drinks"
+      // section: every manually added/removed drink (and every drink recipe)
+      // here is mirrored into the event's customDrinkIds, and its
+      // Getränkeverteilung is recalculated to match. Drinks that live only on
+      // the event side (never touched from the menu) are left untouched.
+      // Only possible when the current user owns the linked event, since the
+      // calculateEventDrinks Cloud Function only ever writes to the caller's
+      // own events collection.
+      if (eventId && linkedEvent && eventOwnerId === currentUser?.id) {
+        try {
+          const recipeDrinkIds = await Promise.all(drinksSectionRecipeIds.map(ensureDrinkForRecipe));
+          const existingEventDrinkIds = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
+          const targetDrinkIds = existingEventDrinkIds.filter((id) => !removedEventDrinkIds.includes(id));
+          [...drinksSectionManualDrinkIds, ...recipeDrinkIds].forEach((id) => {
+            if (id && !targetDrinkIds.includes(id)) targetDrinkIds.push(id);
+          });
+
+          const drinksChanged =
+            targetDrinkIds.length !== existingEventDrinkIds.length ||
+            targetDrinkIds.some((id) => !existingEventDrinkIds.includes(id));
+
+          if (drinksChanged) {
+            const drinkDistributionFactors = { ...(linkedEvent.drinkDistributionFactors || {}) };
+            const drinkSelectedEinheiten = { ...(linkedEvent.drinkSelectedEinheiten || {}) };
+            Object.keys(drinkDistributionFactors).forEach((id) => {
+              if (!targetDrinkIds.includes(id)) delete drinkDistributionFactors[id];
+            });
+            Object.keys(drinkSelectedEinheiten).forEach((id) => {
+              if (!targetDrinkIds.includes(id)) delete drinkSelectedEinheiten[id];
+            });
+
+            const { id: _linkedEventId, berechnung: _berechnung, ...eventFields } = linkedEvent;
+            const allEventDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
+            const categories = [...new Set(
+              targetDrinkIds
+                .map((drinkId) => allEventDrinks.find((d) => d.id === drinkId)?.kategorie)
+                .filter(Boolean)
+                .map((categoryId) => (categoryHasOwnBudget(categoryId) ? categoryId : getDrinkParentCategoryId(categoryId) || categoryId))
+            )];
+            console.log('[MenuForm:handleSubmit] Syncing drinks to linked event and recalculating Getränkeverteilung:', targetDrinkIds);
+            await calculateEventDrinks({
+              ...eventFields,
+              customDrinkIds: targetDrinkIds,
+              drinkDistributionFactors,
+              drinkSelectedEinheiten,
+              categories,
+            }, eventId);
+          }
+        } catch (err) {
+          console.error('[MenuForm:handleSubmit] Fehler beim Synchronisieren der Event-Getränke:', err);
+        }
+      }
+
       console.log('=== [MenuForm:handleSubmit] END (%.1fms) ===', performance.now() - t0);
 
       onSave(menuData);
@@ -1303,7 +1394,10 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   onRemoveDrinkFromSection={handleRemoveDrinkFromSection}
                   getFilteredDrinkSectionOptions={getFilteredDrinkSectionOptions}
                   getDrinkDisplayName={getDrinkDisplayName}
-                  eventDrinks={section.name?.toLowerCase() === 'drinks' ? eventDrinks : []}
+                  eventDrinks={section.name?.toLowerCase() === 'drinks'
+                    ? eventDrinks.filter((drink) => !removedEventDrinkIds.includes(drink.id))
+                    : []}
+                  onRemoveEventDrink={handleRemoveEventDrink}
                 />
                 {isMobile && (
                   <div className="add-section-gap">

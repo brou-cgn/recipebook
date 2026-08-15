@@ -65,6 +65,24 @@ export const subscribeToEvents = (uid, callback) => {
 };
 
 /**
+ * Set up a real-time listener for a single event, so callers (e.g. a linked
+ * menu) always see the event's current drinks and Getränkeverteilung.
+ * @param {string} uid - Owner of the event
+ * @param {string} eventId - ID of the event
+ * @param {Function} callback - Receives the event ({ id, ...data }) or null if it doesn't exist
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToEvent = (uid, eventId, callback) => {
+  const eventRef = doc(db, 'users', uid, 'events', eventId);
+  return onSnapshot(eventRef, (snap) => {
+    callback(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+  }, (error) => {
+    console.error('Error subscribing to event:', error);
+    callback(null);
+  });
+};
+
+/**
  * Get a single event by ID (one-time fetch).
  * @param {string} uid - Current user ID
  * @param {string} eventId - ID of the event
