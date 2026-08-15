@@ -8,9 +8,10 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getEvent, subscribeToEvents, getCustomDrinks, subscribeToCustomDrinks } from '../utils/eventsFirestore';
+import { getEvent, subscribeToEvents, getCustomDrinks, subscribeToCustomDrinks, saveCustomDrink } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
 import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import {
@@ -348,6 +349,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [availableEvents, setAvailableEvents] = useState([]);
   const [userCustomDrinks, setUserCustomDrinks] = useState([]);
   const [drinkSearchQueries, setDrinkSearchQueries] = useState({});
+  const [newEventDrinkIds, setNewEventDrinkIds] = useState([]);
+  const [preparingNewEvent, setPreparingNewEvent] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -539,6 +542,54 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     });
     return ids;
   }, [sections]);
+
+  // Drink recipes (recipes tagged with the "Drinks" Speisekategorie) added to
+  // the "Drinks" section, used to pre-fill a newly created event's drink
+  // selection alongside the manually added drinks above.
+  const drinksSectionRecipeIds = useMemo(() => {
+    const ids = [];
+    sections.forEach((s) => {
+      if (s.name?.toLowerCase() === 'drinks') {
+        (s.recipeIds || []).forEach((id) => {
+          if (!ids.includes(id)) ids.push(id);
+        });
+      }
+    });
+    return ids;
+  }, [sections]);
+
+  // Find (or, if none exists yet, create) the custom drink linked via
+  // "#recipe:id:name" to the given recipe, so drink recipes selected in the
+  // menu's Drinks section can be carried over when creating a new event.
+  const ensureDrinkForRecipe = async (recipeId) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return null;
+    const existing = userCustomDrinks.find((drink) => decodeRecipeLink(drink.name)?.recipeId === recipeId);
+    if (existing) return existing.id;
+    return saveCustomDrink(currentUser.id, {
+      name: encodeRecipeLink(recipe.id, recipe.title),
+      kategorie: null,
+      einheiten: [{ einheitsgroesse: 0.5 }],
+    });
+  };
+
+  // Opens the "new event" form, first making sure every drink recipe in the
+  // menu's Drinks section has a matching custom drink so it's pre-selected
+  // alongside the manually added drinks instead of being left out.
+  const handleStartNewEvent = async () => {
+    setPreparingNewEvent(true);
+    try {
+      const recipeDrinkIds = await Promise.all(drinksSectionRecipeIds.map(ensureDrinkForRecipe));
+      const combinedIds = [...drinksSectionManualDrinkIds];
+      recipeDrinkIds.forEach((id) => {
+        if (id && !combinedIds.includes(id)) combinedIds.push(id);
+      });
+      setNewEventDrinkIds(combinedIds);
+      setFormSubView('newEvent');
+    } finally {
+      setPreparingNewEvent(false);
+    }
+  };
 
   const handleLinkEvent = (id) => {
     setEventId(id);
@@ -968,7 +1019,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       <EventForm
         currentUser={currentUser}
         recipes={recipes}
-        initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: drinksSectionManualDrinkIds }}
+        initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: newEventDrinkIds }}
         onCancel={() => setFormSubView('main')}
         onSaved={(newEventId) => {
           setEventId(newEventId);
@@ -1119,8 +1170,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
                 Bestehende Kalkulation verknüpfen
               </button>
-              <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('newEvent')}>
-                Neue Kalkulation erstellen
+              <button
+                type="button"
+                className="menu-drinks-link-btn"
+                onClick={handleStartNewEvent}
+                disabled={preparingNewEvent}
+              >
+                {preparingNewEvent ? 'Wird vorbereitet …' : 'Neue Kalkulation erstellen'}
               </button>
             </div>
           )}
