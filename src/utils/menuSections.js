@@ -75,12 +75,15 @@ export const groupRecipesBySections = (menuSections, allRecipes) => {
   if (!menuSections || !Array.isArray(menuSections) || !allRecipes || !Array.isArray(allRecipes)) {
     return [];
   }
-  
+
   return menuSections.map(section => ({
     name: section.name,
     recipes: (section.recipeIds || [])
       .map(id => allRecipes.find(recipe => recipe.id === id))
-      .filter(Boolean)
+      .filter(Boolean),
+    // Manually added drink-catalog IDs (see the "Drinks" section) aren't recipes,
+    // so they're passed through as-is for the UI to resolve and render separately.
+    ...(Array.isArray(section.drinkIds) ? { drinkIds: section.drinkIds } : {}),
   }));
 };
 
@@ -88,12 +91,14 @@ export const groupRecipesBySections = (menuSections, allRecipes) => {
  * Create a new menu section object
  * @param {string} name - Section name
  * @param {Array} recipeIds - Array of recipe IDs in this section
+ * @param {Array} [drinkIds] - Array of manually added drink-catalog IDs (only meaningful for the "Drinks" section)
  * @returns {Object} Section object
  */
-export const createMenuSection = (name, recipeIds = []) => {
+export const createMenuSection = (name, recipeIds = [], drinkIds = undefined) => {
   return {
     name: name.trim(),
-    recipeIds: recipeIds
+    recipeIds: recipeIds,
+    ...(drinkIds !== undefined ? { drinkIds } : {}),
   };
 };
 

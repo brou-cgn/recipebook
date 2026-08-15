@@ -33,9 +33,10 @@ jest.mock('../utils/menuFavorites', () => ({
   getUserMenuFavorites: () => Promise.resolve([]),
 }));
 
-jest.mock('../utils/menuSections', () => ({
-  groupRecipesBySections: () => [],
-}));
+jest.mock('../utils/menuSections', () => {
+  const actual = jest.requireActual('../utils/menuSections');
+  return { ...actual, groupRecipesBySections: actual.groupRecipesBySections };
+});
 
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({ menuCloseButton: '✕', copyLink: '📋' }),
@@ -57,6 +58,12 @@ jest.mock('../utils/menuFirestore', () => ({
 
 jest.mock('../utils/categoryImages', () => ({
   getImageForCategory: () => Promise.resolve(null),
+}));
+
+const mockGetCustomDrinks = jest.fn(() => Promise.resolve([]));
+jest.mock('../utils/eventsFirestore', () => ({
+  getEvent: jest.fn(() => Promise.resolve(null)),
+  getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
 }));
 
 const mockMenu = {
@@ -303,6 +310,65 @@ describe('MenuDetail - Metadata before Description', () => {
     expect(
       authorDate.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+});
+
+describe('MenuDetail - Manually added drinks in the Drinks section', () => {
+  beforeEach(() => {
+    mockGetCustomDrinks.mockReset();
+  });
+
+  const menuWithManualDrinks = {
+    id: 'menu-drinks',
+    name: 'Menü mit Drinks',
+    sections: [
+      { name: 'Hauptspeise', recipeIds: [] },
+      { name: 'Drinks', recipeIds: [], drinkIds: ['drink-cola'] },
+    ],
+  };
+
+  test('renders a manually added drink as a recipe-style card', async () => {
+    mockGetCustomDrinks.mockResolvedValue([
+      { id: 'drink-cola', name: 'Cola', kategorie: 'softdrinks', einheiten: [{ einheitsgroesse: 0.5 }] },
+    ]);
+
+    render(
+      <MenuDetail
+        menu={menuWithManualDrinks}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(await screen.findByText('Cola')).toBeInTheDocument();
+    // Uses the same "recipe-card"/"drink-card" classes as the recipe grid - no separate layout/design.
+    const drinkCard = screen.getByText('Cola').closest('.drink-card');
+    expect(drinkCard).toBeInTheDocument();
+    expect(drinkCard.className).toContain('recipe-card');
+  });
+
+  test('does not fetch the drink catalog when no drinks were manually added', () => {
+    render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(mockGetCustomDrinks).not.toHaveBeenCalled();
   });
 });
 
