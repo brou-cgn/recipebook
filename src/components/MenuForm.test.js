@@ -418,4 +418,43 @@ describe('MenuForm - linked event drinks display', () => {
     expect(screen.queryByText('Mojito')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Getränk aus Event entfernen')).not.toBeInTheDocument();
   });
+
+  test('removing a drink that is both manually added and in the linked event removes it in one click, not two', async () => {
+    // The same drinkId ("drink-cola") sits both in the section's own
+    // drinkIds (manually added) and in the linked event's customDrinkIds.
+    // manualDrinkIds dedupes it away by id, so only the merged event-drink
+    // entry (and its "Getränk aus Event entfernen" x) is shown. Clicking it
+    // used to only stage removal from the event, leaving the untouched
+    // section.drinkIds entry to resurface as its own manual entry - with its
+    // own "x" - requiring a second click to fully remove it.
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: ['drink-cola'] });
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: [], drinkIds: ['drink-cola'] }],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
+    expect(screen.getAllByText('Cola')).toHaveLength(1);
+    expect(screen.queryByTitle('Getränk entfernen')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Getränk aus Event entfernen'));
+
+    expect(screen.queryByText('Cola')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Getränk entfernen')).not.toBeInTheDocument();
+  });
 });
