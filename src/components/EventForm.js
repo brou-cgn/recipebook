@@ -8,6 +8,7 @@ import {
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
 import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
+import { decodeRecipeLink } from '../utils/recipeLinks';
 import { getDrinkParentCategoryId, categoryHasOwnBudget, PREDEFINED_DRINKS, mergePredefinedDrinks } from '../utils/drinkCategories';
 import {
   computeGuestPreferenceMultipliers,
@@ -207,17 +208,35 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
       const removedDrinkIds = (initialEvent?.customDrinkIds ?? []).filter(
         (id) => !customDrinkIds.includes(id)
       );
+      // A removed drink may be a drink recipe (its underlying drink name
+      // encodes a #recipe:id:name link) that a linked menu stores as a
+      // regular recipe entry in section.recipeIds rather than section.drinkIds
+      // - strip that recipeId too so the recipe disappears along with it.
+      const removedRecipeIds = removedDrinkIds
+        .map((id) => decodeRecipeLink(allDrinks.find((drink) => drink.id === id)?.name)?.recipeId)
+        .filter(Boolean);
       if (removedDrinkIds.length > 0 && currentUser?.id) {
         try {
           const linkedMenus = await getMenusByEventId(currentUser.id, result.eventId);
           await Promise.all(linkedMenus.map((linkedMenu) => {
             let changed = false;
             const nextSections = (linkedMenu.sections || []).map((section) => {
-              if (!Array.isArray(section.drinkIds) || section.drinkIds.length === 0) return section;
-              const filteredDrinkIds = section.drinkIds.filter((id) => !removedDrinkIds.includes(id));
-              if (filteredDrinkIds.length === section.drinkIds.length) return section;
-              changed = true;
-              return { ...section, drinkIds: filteredDrinkIds };
+              let nextSection = section;
+              if (Array.isArray(section.drinkIds) && section.drinkIds.length > 0) {
+                const filteredDrinkIds = section.drinkIds.filter((id) => !removedDrinkIds.includes(id));
+                if (filteredDrinkIds.length !== section.drinkIds.length) {
+                  changed = true;
+                  nextSection = { ...nextSection, drinkIds: filteredDrinkIds };
+                }
+              }
+              if (removedRecipeIds.length > 0 && Array.isArray(section.recipeIds) && section.recipeIds.length > 0) {
+                const filteredRecipeIds = section.recipeIds.filter((id) => !removedRecipeIds.includes(id));
+                if (filteredRecipeIds.length !== section.recipeIds.length) {
+                  changed = true;
+                  nextSection = { ...nextSection, recipeIds: filteredRecipeIds };
+                }
+              }
+              return nextSection;
             });
             if (!changed) return null;
             return updateMenu(linkedMenu.id, { sections: nextSections });
