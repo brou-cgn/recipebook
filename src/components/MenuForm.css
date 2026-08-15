@@ -2,6 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 1rem;
+  overflow-x: hidden;
 }
 
 .menu-form-header {
@@ -228,6 +229,8 @@
   margin: 0;
   color: #402C1C;
   font-size: 1.1rem;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .section-actions {
@@ -324,6 +327,8 @@
 
 .recipe-name {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
   font-weight: 500;
   color: #333;
 }
