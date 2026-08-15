@@ -540,6 +540,18 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   // once the menu is saved, see handleSubmit.
   const handleRemoveEventDrink = (drinkId) => {
     setRemovedEventDrinkIds((prev) => (prev.includes(drinkId) ? prev : [...prev, drinkId]));
+    // The same drink can also sit in a section's own drinkIds (manualDrinkIds
+    // is deduped by id against the event drinks, so only the merged
+    // event-drink entry was visible). Leaving it there would make it
+    // resurface as its own manual entry - with its own "x" - as soon as this
+    // one is filtered out, needing a second click to actually remove it, and
+    // would re-add it to the event's customDrinkIds on save via
+    // drinksSectionManualDrinkIds. Strip it from every section too.
+    setSections((prevSections) => prevSections.map((s) => (
+      (s.drinkIds || []).includes(drinkId)
+        ? { ...s, drinkIds: s.drinkIds.filter((id) => id !== drinkId) }
+        : s
+    )));
   };
 
   // Merged search results for the Drinks section's single search field:
