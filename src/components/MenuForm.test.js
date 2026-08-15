@@ -111,6 +111,7 @@ const customDrinks = [
 
 const recipes = [
   { id: 'recipe-1', title: 'Nudelsalat', portionen: 4, ingredients: [] },
+  { id: 'recipe-2', title: 'Mojito', portionen: 1, ingredients: [], speisekategorie: ['Drinks'] },
 ];
 
 beforeEach(() => {
@@ -139,7 +140,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
     fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
 
-    const drinkInput = await screen.findByPlaceholderText('Getränk aus dem Eventbereich suchen und hinzufügen...');
+    const drinkInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
     fireEvent.change(drinkInput, { target: { value: 'Cola' } });
 
     const option = await screen.findByText('Cola');
@@ -163,7 +164,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
     fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
 
-    const drinkInput = await screen.findByPlaceholderText('Getränk aus dem Eventbereich suchen und hinzufügen...');
+    const drinkInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
     fireEvent.change(drinkInput, { target: { value: 'Cola' } });
     fireEvent.click(await screen.findByText('Cola'));
 
@@ -190,7 +191,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
     fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
 
-    const drinkInput = await screen.findByPlaceholderText('Getränk aus dem Eventbereich suchen und hinzufügen...');
+    const drinkInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
     fireEvent.change(drinkInput, { target: { value: 'Cola' } });
     fireEvent.click(await screen.findByText('Cola'));
 
@@ -200,5 +201,37 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       expect(capturedEventFormProps).not.toBeNull();
     });
     expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-cola']);
+  });
+
+  test('merged search offers Drinks-category recipes and event drinks, but not other recipes', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    // The Drinks section renders a single merged search field, not two.
+    const searchInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+
+    fireEvent.change(searchInput, { target: { value: 'Mojito' } });
+    expect(await screen.findByText('Mojito')).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: 'Nudelsalat' } });
+    expect(screen.queryByText('Nudelsalat')).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: 'Cola' } });
+    expect(await screen.findByText('Cola')).toBeInTheDocument();
+
+    // Selecting the recipe option adds it to the section's recipe list.
+    fireEvent.change(searchInput, { target: { value: 'Mojito' } });
+    fireEvent.click(await screen.findByText('Mojito'));
+    expect(await screen.findByText('Ausgewählte Rezepte:')).toBeInTheDocument();
   });
 });
