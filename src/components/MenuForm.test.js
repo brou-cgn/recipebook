@@ -146,7 +146,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     const option = await screen.findByText('Cola');
     fireEvent.click(option);
 
-    expect(await screen.findByText('Manuell hinzugefügte Getränke:')).toBeInTheDocument();
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
     expect(screen.getAllByText('Cola').length).toBeGreaterThan(0);
   });
 
@@ -168,12 +168,12 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     fireEvent.change(drinkInput, { target: { value: 'Cola' } });
     fireEvent.click(await screen.findByText('Cola'));
 
-    expect(await screen.findByText('Manuell hinzugefügte Getränke:')).toBeInTheDocument();
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTitle('Getränk entfernen'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Manuell hinzugefügte Getränke:')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ausgewählte Rezepte & Getränke:')).not.toBeInTheDocument();
     });
   });
 
@@ -232,6 +232,35 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     // Selecting the recipe option adds it to the section's recipe list.
     fireEvent.change(searchInput, { target: { value: 'Mojito' } });
     fireEvent.click(await screen.findByText('Mojito'));
-    expect(await screen.findByText('Ausgewählte Rezepte:')).toBeInTheDocument();
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
+  });
+});
+
+describe('MenuForm - linked event drinks display', () => {
+  test('shows the linked event\'s planned drinks in the Drinks section, not in the header', async () => {
+    mockGetEvent.mockResolvedValue({ id: 'event-1', eventName: 'Testparty', customDrinkIds: ['drink-cola'] });
+    mockGetCustomDrinks.mockResolvedValue(customDrinks);
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: [], drinkIds: [] }],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    const linkedEventBlock = (await screen.findByText('Testparty')).closest('.menu-event-linked');
+    expect(linkedEventBlock.querySelector('ul')).not.toBeInTheDocument();
+
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
+    expect(screen.getAllByText('Cola').length).toBeGreaterThan(0);
   });
 });

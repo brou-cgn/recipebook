@@ -58,7 +58,7 @@ function SortableSection({
   onSearchChange, onAddRecipeToSection, getFilteredRecipes,
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
   onAddRecipeToDrinksSection, onRemoveDrinkFromSection, getFilteredDrinkSectionOptions,
-  getDrinkDisplayName,
+  getDrinkDisplayName, eventDrinks = [],
 }) {
   const {
     attributes,
@@ -74,6 +74,41 @@ function SortableSection({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  // De-duplicate manually added drinks against the event's planned drinks so
+  // the same drink never shows up twice in the merged list below.
+  const eventDrinkIds = eventDrinks.map((drink) => drink.id);
+  const manualDrinkIds = (section.drinkIds || []).filter((drinkId) => !eventDrinkIds.includes(drinkId));
+  const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || eventDrinks.length > 0 || manualDrinkIds.length > 0;
+
+  const selectedRecipesList = section.recipeIds.length > 0 && (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={(event) => onDragEndRecipes(sectionIndex, event)}
+    >
+      <SortableContext
+        items={section.recipeIds}
+        strategy={verticalListSortingStrategy}
+      >
+        {section.recipeIds.map(recipeId => {
+          const recipe = recipes.find(r => r.id === recipeId);
+          if (!recipe) return null;
+          const isFavorite = favoriteIds.includes(recipe.id);
+          return (
+            <SortableRecipeItem
+              key={recipe.id}
+              id={recipe.id}
+              recipe={recipe}
+              isFavorite={isFavorite}
+              sectionIndex={sectionIndex}
+              onRemove={onRemoveRecipeFromSection}
+            />
+          );
+        })}
+      </SortableContext>
+    </DndContext>
+  );
 
   return (
     <div ref={setNodeRef} style={style} className={`section-block${isDragging ? ' dragging' : ''}`}>
@@ -104,36 +139,38 @@ function SortableSection({
         </div>
       </div>
       <div className="recipe-selection">
-        {section.recipeIds.length > 0 && (
-          <div className="selected-recipes">
-            <h5>Ausgewählte Rezepte:</h5>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(event) => onDragEndRecipes(sectionIndex, event)}
-            >
-              <SortableContext
-                items={section.recipeIds}
-                strategy={verticalListSortingStrategy}
-              >
-                {section.recipeIds.map(recipeId => {
-                  const recipe = recipes.find(r => r.id === recipeId);
-                  if (!recipe) return null;
-                  const isFavorite = favoriteIds.includes(recipe.id);
-                  return (
-                    <SortableRecipeItem
-                      key={recipe.id}
-                      id={recipe.id}
-                      recipe={recipe}
-                      isFavorite={isFavorite}
-                      sectionIndex={sectionIndex}
-                      onRemove={onRemoveRecipeFromSection}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </DndContext>
-          </div>
+        {isDrinksSection ? (
+          hasSelectedRecipesOrDrinks && (
+            <div className="selected-recipes">
+              <h5>Ausgewählte Rezepte & Getränke:</h5>
+              {selectedRecipesList}
+              {eventDrinks.map((drink) => (
+                <div key={`event-drink-${drink.id}`} className="selected-recipe-item event-drink-item">
+                  <span className="recipe-name">{drink.displayName}</span>
+                </div>
+              ))}
+              {manualDrinkIds.map(drinkId => (
+                <div key={drinkId} className="selected-recipe-item">
+                  <span className="recipe-name">{getDrinkDisplayName(drinkId)}</span>
+                  <button
+                    type="button"
+                    className="remove-recipe-button"
+                    onClick={() => onRemoveDrinkFromSection(sectionIndex, drinkId)}
+                    title="Getränk entfernen"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          section.recipeIds.length > 0 && (
+            <div className="selected-recipes">
+              <h5>Ausgewählte Rezepte:</h5>
+              {selectedRecipesList}
+            </div>
+          )
         )}
 
         {!isDrinksSection && (
@@ -176,25 +213,6 @@ function SortableSection({
       </div>
       {isDrinksSection && (
         <div className="recipe-selection drink-selection">
-          {(section.drinkIds || []).length > 0 && (
-            <div className="selected-recipes">
-              <h5>Manuell hinzugefügte Getränke:</h5>
-              {(section.drinkIds || []).map(drinkId => (
-                <div key={drinkId} className="selected-recipe-item">
-                  <span className="recipe-name">{getDrinkDisplayName(drinkId)}</span>
-                  <button
-                    type="button"
-                    className="remove-recipe-button"
-                    onClick={() => onRemoveDrinkFromSection(sectionIndex, drinkId)}
-                    title="Getränk entfernen"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
           <div className="typeahead-container">
             <input
               type="text"
@@ -243,8 +261,8 @@ function SortableSection({
       )}
       <div className="section-summary">
         {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
-        {isDrinksSection && (section.drinkIds || []).length > 0
-          ? `, ${section.drinkIds.length} Getränk${section.drinkIds.length !== 1 ? 'e' : ''}`
+        {isDrinksSection && (eventDrinks.length + manualDrinkIds.length) > 0
+          ? `, ${eventDrinks.length + manualDrinkIds.length} Getränk${(eventDrinks.length + manualDrinkIds.length) !== 1 ? 'e' : ''}`
           : ''}
       </div>
     </div>
@@ -406,17 +424,28 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     };
   }, [eventId, eventOwnerId]);
 
-  // Names of the drinks assigned via the linked event, for a plain-text
-  // list display (no drink tiles here, unlike the menu detail view).
-  const eventDrinkNames = useMemo(() => {
+  // Drinks assigned via the linked event. Shown read-only inside the menu's
+  // "Drinks" section (never in the header) alongside the manually added ones.
+  const eventDrinks = useMemo(() => {
     if (!linkedEvent) return [];
     const allDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
     const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
     return ids.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
-      return resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId;
+      return { id: drinkId, displayName: resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId };
     });
   }, [linkedEvent, linkedEventCustomDrinks, recipes]);
+
+  // Ensure a "Drinks" section exists once an event is linked, so the event's
+  // planned drinks have somewhere to display within "Abschnitte & Rezepte".
+  useEffect(() => {
+    if (!eventId) return;
+    setSections((prevSections) => {
+      const hasDrinksSection = prevSections.some((s) => s.name?.toLowerCase() === 'drinks');
+      if (hasDrinksSection) return prevSections;
+      return [...prevSections, createMenuSection('Drinks', [])];
+    });
+  }, [eventId]);
 
   // Load the current user's events while the "Event verknüpfen" picker is open.
   useEffect(() => {
@@ -1076,13 +1105,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               <p className="menu-event-linked-name">
                 {linkedEventLoading ? 'Lädt …' : (linkedEvent?.eventName || 'Verknüpftes Event konnte nicht geladen werden.')}
               </p>
-              {eventDrinkNames.length > 0 && (
-                <ul className="menu-event-drinks-list">
-                  {eventDrinkNames.map((drinkName, index) => (
-                    <li key={`${drinkName}-${index}`} className="menu-event-drinks-item">{drinkName}</li>
-                  ))}
-                </ul>
-              )}
               <div className="menu-drinks-link-actions">
                 <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
                   Event ändern
@@ -1220,6 +1242,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   onRemoveDrinkFromSection={handleRemoveDrinkFromSection}
                   getFilteredDrinkSectionOptions={getFilteredDrinkSectionOptions}
                   getDrinkDisplayName={getDrinkDisplayName}
+                  eventDrinks={section.name?.toLowerCase() === 'drinks' ? eventDrinks : []}
                 />
                 {isMobile && (
                   <div className="add-section-gap">
