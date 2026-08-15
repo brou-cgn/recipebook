@@ -301,30 +301,6 @@
   max-width: 100%;
 }
 
-.menu-drinks-link-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-
-.menu-drinks-link-btn {
-  background: #402C1C;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.menu-drinks-link-btn:hover {
-  background: #2c1f13;
-}
-
 .drink-card-amount {
   margin: 0.75rem 0 0 0;
   color: #666;

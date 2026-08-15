@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MenuForm.css';
+import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
@@ -7,6 +8,9 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
+import { getEvent, subscribeToEvents } from '../utils/eventsFirestore';
+import EventForm from './EventForm';
+import DrinkManagementPage from './DrinkManagementPage';
 import {
   DndContext,
   closestCenter,
@@ -26,6 +30,15 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 const MOBILE_BREAKPOINT = 768;
+
+const formatEventDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toLocaleDateString('de-DE');
+  } catch {
+    return dateStr;
+  }
+};
 
 // Sortable Section Component for drag & drop reordering of menu sections
 function SortableSection({
@@ -222,6 +235,12 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [addSectionIcon, setAddSectionIcon] = useState('+');
   const [addSectionFabPressedIndex, setAddSectionFabPressedIndex] = useState(null);
   const [insertSectionAtIndex, setInsertSectionAtIndex] = useState(null);
+  const [eventId, setEventId] = useState(null);
+  const [eventOwnerId, setEventOwnerId] = useState(null);
+  const [formSubView, setFormSubView] = useState('main'); // main | linkPicker | newEvent | manageDrinks
+  const [linkedEvent, setLinkedEvent] = useState(null);
+  const [linkedEventLoading, setLinkedEventLoading] = useState(false);
+  const [availableEvents, setAvailableEvents] = useState([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -274,6 +293,42 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Load the name of the currently linked event, if any.
+  useEffect(() => {
+    if (!eventId || !eventOwnerId) {
+      setLinkedEvent(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setLinkedEventLoading(true);
+    getEvent(eventOwnerId, eventId).then((event) => {
+      if (!cancelled) setLinkedEvent(event);
+    }).finally(() => {
+      if (!cancelled) setLinkedEventLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, eventOwnerId]);
+
+  // Load the current user's events while the "Event verknüpfen" picker is open.
+  useEffect(() => {
+    if (formSubView !== 'linkPicker' || !currentUser?.id) return undefined;
+    const unsubscribe = subscribeToEvents(currentUser.id, setAvailableEvents);
+    return unsubscribe;
+  }, [formSubView, currentUser?.id]);
+
+  const handleLinkEvent = (id) => {
+    setEventId(id);
+    setEventOwnerId(currentUser.id);
+    setFormSubView('main');
+  };
+
+  const handleUnlinkEvent = () => {
+    setEventId(null);
+    setEventOwnerId(null);
+  };
+
   useEffect(() => {
     // Load available section names
     setAvailableSections(getSavedSections());
@@ -282,6 +337,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       setName(menu.name || '');
       setDescription(menu.description || '');
       setMenuImage(menu.image || '');
+      setEventId(menu.eventId || null);
+      setEventOwnerId(menu.eventOwnerId || null);
       // Initialize menuDate: use existing menuDate, or fall back to createdAt, or today
       if (menu.menuDate) {
         setMenuDate(menu.menuDate);
@@ -318,6 +375,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       // New menu - create default section
       setSections([createMenuSection('Hauptspeise', [])]);
       setMenuDate(new Date().toISOString().slice(0, 10));
+      setEventId(null);
+      setEventOwnerId(null);
     }
   }, [menu]);
 
@@ -594,7 +653,9 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         gridImageDark: gridImageDark || null,
         createdBy: menu?.createdBy || currentUser?.id,
         sections: sections,
-        recipeIds: allRecipeIds // Keep for backward compatibility
+        recipeIds: allRecipeIds, // Keep for backward compatibility
+        eventId: eventId || null,
+        eventOwnerId: eventId ? eventOwnerId : null,
       };
 
       console.log('[MenuForm:handleSubmit] Final menuData:', {
@@ -669,6 +730,66 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const handleAddSectionFabPressStart = (index) => setAddSectionFabPressedIndex(index);
   const handleAddSectionFabPressEnd = () => setAddSectionFabPressedIndex(null);
 
+  if (formSubView === 'newEvent') {
+    return (
+      <EventForm
+        currentUser={currentUser}
+        recipes={recipes}
+        onCancel={() => setFormSubView('main')}
+        onSaved={(newEventId) => {
+          setEventId(newEventId);
+          setEventOwnerId(currentUser.id);
+          setFormSubView('main');
+        }}
+        onManageDrinks={() => setFormSubView('manageDrinks')}
+      />
+    );
+  }
+
+  if (formSubView === 'manageDrinks') {
+    return (
+      <DrinkManagementPage
+        onBack={() => setFormSubView('newEvent')}
+        currentUser={currentUser}
+        recipes={recipes}
+      />
+    );
+  }
+
+  if (formSubView === 'linkPicker') {
+    return (
+      <div className="events-page-container">
+        <div className="events-page-header">
+          <h2>Event verknüpfen</h2>
+          <button
+            className="events-close-btn"
+            onClick={() => setFormSubView('main')}
+            aria-label="Abbrechen"
+            title="Abbrechen"
+          >
+            ×
+          </button>
+        </div>
+        {availableEvents.length === 0 ? (
+          <div className="events-empty-state">
+            <p>Noch keine Events vorhanden.</p>
+          </div>
+        ) : (
+          <div className="events-list">
+            {availableEvents.map((event) => (
+              <div key={event.id} className="events-card" onClick={() => handleLinkEvent(event.id)}>
+                <div className="events-card-main">
+                  <h3>{event.eventName}</h3>
+                  <p className="events-card-meta">{formatEventDate(event.date)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="menu-form-container">
       <div className="menu-form-header">
@@ -741,6 +862,34 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             style={{ display: 'none' }}
             disabled={uploadingMenuImage}
           />
+        </div>
+
+        <div className="form-group">
+          <label>Event (für Getränke)</label>
+          {eventId ? (
+            <div className="menu-event-linked">
+              <p className="menu-event-linked-name">
+                {linkedEventLoading ? 'Lädt …' : (linkedEvent?.eventName || 'Verknüpftes Event konnte nicht geladen werden.')}
+              </p>
+              <div className="menu-drinks-link-actions">
+                <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
+                  Event ändern
+                </button>
+                <button type="button" className="menu-drinks-link-btn" onClick={handleUnlinkEvent}>
+                  Verknüpfung entfernen
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="menu-drinks-link-actions">
+              <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
+                Event verknüpfen
+              </button>
+              <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('newEvent')}>
+                Event erstellen
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="form-section sections-management">

@@ -714,6 +714,39 @@
   color: white;
 }
 
+.menu-event-linked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.menu-event-linked-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.menu-drinks-link-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.menu-drinks-link-btn {
+  background: #402C1C;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.menu-drinks-link-btn:hover {
+  background: #2c1f13;
+}
+
 .menu-image-remove-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
