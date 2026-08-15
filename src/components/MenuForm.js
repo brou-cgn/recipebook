@@ -570,6 +570,10 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
 
     const drinkOptions = allDrinks
       .filter((drink) => !selectedDrinkIds.includes(drink.id))
+      // Drinks linked to a recipe (via "#recipe:id:name") are already
+      // offered as their underlying recipe in recipeOptions above - listing
+      // both would show the same name twice.
+      .filter((drink) => !decodeRecipeLink(drink.name))
       .map((drink) => ({ type: 'drink', id: drink.id, drink, searchLabel: resolveDrinkDisplay(drink, recipes).displayName }));
 
     const combinedOptions = [...recipeOptions, ...drinkOptions];
