@@ -105,19 +105,26 @@ function SortableSection({
   const manualDrinkIds = (section.drinkIds || []).filter((drinkId) => !eventDrinkIds.includes(drinkId));
   const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || dedupedEventDrinks.length > 0 || manualDrinkIds.length > 0;
 
-  const selectedRecipesList = section.recipeIds.length > 0 && (
+  // section.recipeIds can contain ids of recipes that no longer resolve (e.g.
+  // deleted or no longer visible to this user); those are skipped below and
+  // render nothing. SortableContext's `items` must match the actually
+  // rendered nodes exactly, or dnd-kit's items.indexOf(id) lookups go out of
+  // sync with real DOM order and every handle after the gap gets a wrong,
+  // displaced transform even at rest.
+  const renderableRecipeIds = section.recipeIds.filter(recipeId => recipes.some(r => r.id === recipeId));
+
+  const selectedRecipesList = renderableRecipeIds.length > 0 && (
     <DndContext
       sensors={recipeSensors}
       collisionDetection={closestCenter}
       onDragEnd={(event) => onDragEndRecipes(sectionIndex, event)}
     >
       <SortableContext
-        items={section.recipeIds}
+        items={renderableRecipeIds}
         strategy={verticalListSortingStrategy}
       >
-        {section.recipeIds.map(recipeId => {
+        {renderableRecipeIds.map(recipeId => {
           const recipe = recipes.find(r => r.id === recipeId);
-          if (!recipe) return null;
           const isFavorite = favoriteIds.includes(recipe.id);
           return (
             <SortableRecipeItem
