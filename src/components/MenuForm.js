@@ -1072,9 +1072,21 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   };
 
   const handleRemoveRecipeFromSection = (sectionIndex, recipeId) => {
-    const newSections = [...sections];
-    newSections[sectionIndex].recipeIds = newSections[sectionIndex].recipeIds.filter(id => id !== recipeId);
-    setSections(newSections);
+    // If this recipe is a drink recipe deduped against a linked event drink
+    // (see the `eventDrinks` useMemo above), removing it here would only
+    // hide the recipe entry - the event drink would then reappear as its
+    // own entry (dedup no longer applies) and need a second click to
+    // actually go away. Stage its removal too so both disappear together.
+    const section = sections[sectionIndex];
+    if (section?.name?.toLowerCase() === 'drinks') {
+      const linkedEventDrink = eventDrinks.find((drink) => drink.recipeId === recipeId);
+      if (linkedEventDrink) {
+        setRemovedEventDrinkIds((prev) => (prev.includes(linkedEventDrink.id) ? prev : [...prev, linkedEventDrink.id]));
+      }
+    }
+    setSections((prevSections) => prevSections.map((s, i) => (
+      i === sectionIndex ? { ...s, recipeIds: s.recipeIds.filter((id) => id !== recipeId) } : s
+    )));
   };
 
   const handleDragEndRecipes = (sectionIndex, event) => {

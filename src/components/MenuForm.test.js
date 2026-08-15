@@ -378,4 +378,44 @@ describe('MenuForm - linked event drinks display', () => {
     expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
     expect(screen.getAllByText('Mojito')).toHaveLength(1);
   });
+
+  test('removing a drink recipe deduped against a linked event drink removes it in one click, not two', async () => {
+    // Same setup as above: the recipe's linked drink is deduped away, so
+    // only the recipe's own "x" is shown. Clicking it used to just drop the
+    // recipe, leaving the now-undeduped event drink behind as a second
+    // entry with its own "x" - requiring a second click to fully remove it.
+    const linkedDrink = { id: 'drink-mojito-link', name: '#recipe:recipe-2:Mojito', kategorie: null, einheiten: [{ einheitsgroesse: 0.5 }] };
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [linkedDrink.id] });
+      return () => {};
+    });
+    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+      callback([linkedDrink]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Drinks', recipeIds: ['recipe-2'], drinkIds: [] }],
+          eventId: 'event-1',
+          eventOwnerId: 'user-1',
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    expect(await screen.findByText('Ausgewählte Rezepte & Getränke:')).toBeInTheDocument();
+    expect(screen.queryByTitle('Getränk aus Event entfernen')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Rezept entfernen'));
+
+    expect(screen.queryByText('Mojito')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Getränk aus Event entfernen')).not.toBeInTheDocument();
+  });
 });
