@@ -282,6 +282,39 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     expect(mockSaveCustomDrink).not.toHaveBeenCalled();
   });
 
+  test('does not list a drink linked to a recipe separately from that recipe (avoids duplicates)', async () => {
+    const existingLinkedDrink = {
+      id: 'drink-existing-mojito',
+      name: '#recipe:recipe-2:Mojito',
+      kategorie: null,
+      einheiten: [{ einheitsgroesse: 0.3 }],
+    };
+    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+      callback([...customDrinks, existingLinkedDrink]);
+      return () => {};
+    });
+
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    const searchInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+    fireEvent.change(searchInput, { target: { value: 'Mojito' } });
+
+    // The recipe "Mojito" and the drink linked to it via "#recipe:..." would
+    // otherwise both match - only the recipe should be listed.
+    expect(await screen.findAllByText('Mojito')).toHaveLength(1);
+  });
+
   test('merged search offers Drinks-category recipes and event drinks, but not other recipes', async () => {
     render(
       <MenuForm
