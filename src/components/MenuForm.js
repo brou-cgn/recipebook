@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './MenuForm.css';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
@@ -8,7 +8,9 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getEvent, subscribeToEvents } from '../utils/eventsFirestore';
+import { getEvent, subscribeToEvents, getCustomDrinks } from '../utils/eventsFirestore';
+import { mergePredefinedDrinks } from '../utils/drinkCategories';
+import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import EventForm from './EventForm';
 import DrinkManagementPage from './DrinkManagementPage';
 import {
@@ -240,6 +242,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [formSubView, setFormSubView] = useState('main'); // main | linkPicker | newEvent | manageDrinks
   const [linkedEvent, setLinkedEvent] = useState(null);
   const [linkedEventLoading, setLinkedEventLoading] = useState(false);
+  const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
   const [availableEvents, setAvailableEvents] = useState([]);
 
   const sensors = useSensors(
@@ -293,16 +296,22 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load the name of the currently linked event, if any.
+  // Load the name and drinks of the currently linked event, if any.
   useEffect(() => {
     if (!eventId || !eventOwnerId) {
       setLinkedEvent(null);
+      setLinkedEventCustomDrinks([]);
       return undefined;
     }
     let cancelled = false;
     setLinkedEventLoading(true);
-    getEvent(eventOwnerId, eventId).then((event) => {
-      if (!cancelled) setLinkedEvent(event);
+    Promise.all([
+      getEvent(eventOwnerId, eventId),
+      getCustomDrinks(eventOwnerId),
+    ]).then(([event, customDrinks]) => {
+      if (cancelled) return;
+      setLinkedEvent(event);
+      setLinkedEventCustomDrinks(customDrinks);
     }).finally(() => {
       if (!cancelled) setLinkedEventLoading(false);
     });
@@ -310,6 +319,18 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       cancelled = true;
     };
   }, [eventId, eventOwnerId]);
+
+  // Names of the drinks assigned via the linked event, for a plain-text
+  // list display (no drink tiles here, unlike the menu detail view).
+  const eventDrinkNames = useMemo(() => {
+    if (!linkedEvent) return [];
+    const allDrinks = mergePredefinedDrinks(linkedEventCustomDrinks);
+    const ids = Array.isArray(linkedEvent.customDrinkIds) ? linkedEvent.customDrinkIds : [];
+    return ids.map((drinkId) => {
+      const drink = allDrinks.find((d) => d.id === drinkId);
+      return resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId;
+    });
+  }, [linkedEvent, linkedEventCustomDrinks, recipes]);
 
   // Load the current user's events while the "Event verknüpfen" picker is open.
   useEffect(() => {
@@ -735,6 +756,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       <EventForm
         currentUser={currentUser}
         recipes={recipes}
+        initialEvent={{ eventName: name.trim(), date: menuDate }}
         onCancel={() => setFormSubView('main')}
         onSaved={(newEventId) => {
           setEventId(newEventId);
@@ -871,6 +893,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               <p className="menu-event-linked-name">
                 {linkedEventLoading ? 'Lädt …' : (linkedEvent?.eventName || 'Verknüpftes Event konnte nicht geladen werden.')}
               </p>
+              {eventDrinkNames.length > 0 && (
+                <ul className="menu-event-drinks-list">
+                  {eventDrinkNames.map((drinkName, index) => (
+                    <li key={`${drinkName}-${index}`} className="menu-event-drinks-item">{drinkName}</li>
+                  ))}
+                </ul>
+              )}
               <div className="menu-drinks-link-actions">
                 <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
                   Event ändern
