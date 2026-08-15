@@ -447,7 +447,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     });
   }, [eventId]);
 
-  // Load the current user's events while the "Event verknüpfen" picker is open.
+  // Load the current user's events while the "Bestehende Kalkulation verknüpfen" picker is open.
   useEffect(() => {
     if (formSubView !== 'linkPicker' || !currentUser?.id) return undefined;
     const unsubscribe = subscribeToEvents(currentUser.id, setAvailableEvents);
@@ -994,7 +994,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     return (
       <div className="events-page-container">
         <div className="events-page-header">
-          <h2>Event verknüpfen</h2>
+          <h2>Bestehende Kalkulation verknüpfen</h2>
           <button
             className="events-close-btn"
             onClick={() => setFormSubView('main')}
@@ -1099,7 +1099,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
         </div>
 
         <div className="form-group">
-          <label>Event (für Getränke)</label>
+          <label>Mengenkalkulation (für Getränke)</label>
           {eventId ? (
             <div className="menu-event-linked">
               <p className="menu-event-linked-name">
@@ -1107,20 +1107,20 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
               </p>
               <div className="menu-drinks-link-actions">
                 <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
-                  Event ändern
+                  Kalkulation ändern
                 </button>
                 <button type="button" className="menu-drinks-link-btn" onClick={handleUnlinkEvent}>
-                  Verknüpfung entfernen
+                  Kalkulation entfernen
                 </button>
               </div>
             </div>
           ) : (
             <div className="menu-drinks-link-actions">
               <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('linkPicker')}>
-                Event verknüpfen
+                Bestehende Kalkulation verknüpfen
               </button>
               <button type="button" className="menu-drinks-link-btn" onClick={() => setFormSubView('newEvent')}>
-                Event erstellen
+                Neue Kalkulation erstellen
               </button>
             </div>
           )}
