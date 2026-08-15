@@ -106,6 +106,17 @@ describe('menuSections utility functions', () => {
       const section = createMenuSection('  Dessert  ');
       expect(section.name).toBe('Dessert');
     });
+
+    test('does not add a drinkIds key when none is given', () => {
+      const section = createMenuSection('Drinks', ['recipe1']);
+      expect(section).toEqual({ name: 'Drinks', recipeIds: ['recipe1'] });
+      expect('drinkIds' in section).toBe(false);
+    });
+
+    test('includes manually added drink IDs when provided', () => {
+      const section = createMenuSection('Drinks', [], ['drink1', 'drink2']);
+      expect(section).toEqual({ name: 'Drinks', recipeIds: [], drinkIds: ['drink1', 'drink2'] });
+    });
   });
 
   describe('groupRecipesBySections', () => {
@@ -145,6 +156,24 @@ describe('menuSections utility functions', () => {
 
       const grouped = groupRecipesBySections(menuSections, recipes);
       expect(grouped[0].recipes).toHaveLength(0);
+    });
+
+    test('passes through manually added drinkIds on the Drinks section', () => {
+      const menuSections = [
+        { name: 'Drinks', recipeIds: [], drinkIds: ['drink1', 'drink2'] },
+      ];
+
+      const grouped = groupRecipesBySections(menuSections, recipes);
+      expect(grouped[0].drinkIds).toEqual(['drink1', 'drink2']);
+    });
+
+    test('does not add a drinkIds key for sections without manually added drinks', () => {
+      const menuSections = [
+        { name: 'Hauptspeise', recipeIds: ['recipe1'] },
+      ];
+
+      const grouped = groupRecipesBySections(menuSections, recipes);
+      expect('drinkIds' in grouped[0]).toBe(false);
     });
 
     test('preserves recipe order from recipeIds, not from allRecipes order', () => {

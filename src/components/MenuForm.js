@@ -8,7 +8,7 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { getEvent, subscribeToEvents, getCustomDrinks } from '../utils/eventsFirestore';
+import { getEvent, subscribeToEvents, getCustomDrinks, subscribeToCustomDrinks } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import EventForm from './EventForm';
@@ -47,6 +47,8 @@ function SortableSection({
   id, section, sectionIndex, recipes, favoriteIds, searchQueries, sensors, closeIcon,
   onRemoveSection, onDragEndRecipes, onRemoveRecipeFromSection,
   onSearchChange, onAddRecipeToSection, getFilteredRecipes,
+  isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
+  onRemoveDrinkFromSection, getFilteredDrinks, getDrinkDisplayName,
 }) {
   const {
     attributes,
@@ -160,8 +162,63 @@ function SortableSection({
           )}
         </div>
       </div>
+      {isDrinksSection && (
+        <div className="recipe-selection drink-selection">
+          {(section.drinkIds || []).length > 0 && (
+            <div className="selected-recipes">
+              <h5>Manuell hinzugefügte Getränke:</h5>
+              {(section.drinkIds || []).map(drinkId => (
+                <div key={drinkId} className="selected-recipe-item">
+                  <span className="recipe-name">{getDrinkDisplayName(drinkId)}</span>
+                  <button
+                    type="button"
+                    className="remove-recipe-button"
+                    onClick={() => onRemoveDrinkFromSection(sectionIndex, drinkId)}
+                    title="Getränk entfernen"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="typeahead-container">
+            <input
+              type="text"
+              className="typeahead-input"
+              placeholder="Getränk aus dem Eventbereich suchen und hinzufügen..."
+              value={drinkSearchQueries[sectionIndex] || ''}
+              onChange={(e) => onDrinkSearchChange(sectionIndex, e.target.value)}
+            />
+
+            {drinkSearchQueries[sectionIndex] && drinkSearchQueries[sectionIndex].trim() && (
+              <div className="typeahead-dropdown">
+                {(() => {
+                  const filteredDrinks = getFilteredDrinks(sectionIndex);
+                  if (filteredDrinks.length === 0) {
+                    return <div className="typeahead-no-results">Keine Getränke gefunden</div>;
+                  }
+                  return filteredDrinks.slice(0, 10).map(drink => (
+                    <div
+                      key={drink.id}
+                      className="typeahead-item"
+                      onClick={() => onAddDrinkToSection(sectionIndex, drink.id)}
+                    >
+                      <span className="recipe-name">{getDrinkDisplayName(drink.id)}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <div className="section-summary">
         {section.recipeIds.length} Rezept{section.recipeIds.length !== 1 ? 'e' : ''}
+        {isDrinksSection && (section.drinkIds || []).length > 0
+          ? `, ${section.drinkIds.length} Getränk${section.drinkIds.length !== 1 ? 'e' : ''}`
+          : ''}
       </div>
     </div>
   );
@@ -244,6 +301,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   const [linkedEventLoading, setLinkedEventLoading] = useState(false);
   const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
   const [availableEvents, setAvailableEvents] = useState([]);
+  const [userCustomDrinks, setUserCustomDrinks] = useState([]);
+  const [drinkSearchQueries, setDrinkSearchQueries] = useState({});
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -338,6 +397,79 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     const unsubscribe = subscribeToEvents(currentUser.id, setAvailableEvents);
     return unsubscribe;
   }, [formSubView, currentUser?.id]);
+
+  // Load the current user's drink catalog (custom + predefined) so drinks from
+  // the event area can be manually added to the menu's "Drinks" section.
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setUserCustomDrinks([]);
+      return undefined;
+    }
+    const unsubscribe = subscribeToCustomDrinks(currentUser.id, setUserCustomDrinks);
+    return unsubscribe;
+  }, [currentUser?.id]);
+
+  const allDrinks = useMemo(() => mergePredefinedDrinks(userCustomDrinks), [userCustomDrinks]);
+
+  const getDrinkDisplayName = (drinkId) => {
+    const drink = allDrinks.find((d) => d.id === drinkId);
+    return resolveDrinkDisplay(drink || drinkId, recipes).displayName || drinkId;
+  };
+
+  const handleDrinkSearchChange = (sectionIndex, query) => {
+    setDrinkSearchQueries({
+      ...drinkSearchQueries,
+      [sectionIndex]: query
+    });
+  };
+
+  const handleAddDrinkToSection = (sectionIndex, drinkId) => {
+    setSections((prevSections) => prevSections.map((s, i) => {
+      if (i !== sectionIndex) return s;
+      const existingDrinkIds = s.drinkIds || [];
+      if (existingDrinkIds.includes(drinkId)) return s;
+      return { ...s, drinkIds: [...existingDrinkIds, drinkId] };
+    }));
+    setDrinkSearchQueries({
+      ...drinkSearchQueries,
+      [sectionIndex]: ''
+    });
+  };
+
+  const handleRemoveDrinkFromSection = (sectionIndex, drinkId) => {
+    setSections((prevSections) => prevSections.map((s, i) => {
+      if (i !== sectionIndex) return s;
+      return { ...s, drinkIds: (s.drinkIds || []).filter((id) => id !== drinkId) };
+    }));
+  };
+
+  const getFilteredDrinks = (sectionIndex) => {
+    const query = drinkSearchQueries[sectionIndex] || '';
+    const section = sections[sectionIndex];
+    const selectedDrinkIds = section?.drinkIds || [];
+
+    const availableDrinks = allDrinks.filter((drink) => !selectedDrinkIds.includes(drink.id));
+
+    if (!query.trim()) {
+      return availableDrinks;
+    }
+
+    return fuzzyFilter(availableDrinks, query, (drink) => resolveDrinkDisplay(drink, recipes).displayName);
+  };
+
+  // Manually added drinks in the "Drinks" section, used to pre-fill a newly
+  // created event's drink selection so nothing has to be re-entered there.
+  const drinksSectionManualDrinkIds = useMemo(() => {
+    const ids = [];
+    sections.forEach((s) => {
+      if (s.name?.toLowerCase() === 'drinks') {
+        (s.drinkIds || []).forEach((id) => {
+          if (!ids.includes(id)) ids.push(id);
+        });
+      }
+    });
+    return ids;
+  }, [sections]);
 
   const handleLinkEvent = (id) => {
     setEventId(id);
@@ -463,8 +595,8 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
-    if (sections[index].recipeIds.length > 0) {
-      if (!window.confirm('Dieser Abschnitt enthält Rezepte. Wirklich löschen?')) {
+    if (sections[index].recipeIds.length > 0 || (sections[index].drinkIds?.length || 0) > 0) {
+      if (!window.confirm('Dieser Abschnitt enthält Rezepte oder Getränke. Wirklich löschen?')) {
         return;
       }
     }
@@ -540,10 +672,11 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       return;
     }
 
-    // Check if at least one recipe is selected
+    // Check if at least one recipe or manually added drink is selected
     const totalRecipes = sections.reduce((sum, section) => sum + section.recipeIds.length, 0);
-    if (totalRecipes === 0) {
-      alert('Bitte wählen Sie mindestens ein Rezept aus');
+    const totalDrinks = sections.reduce((sum, section) => sum + (section.drinkIds?.length || 0), 0);
+    if (totalRecipes === 0 && totalDrinks === 0) {
+      alert('Bitte wählen Sie mindestens ein Rezept oder Getränk aus');
       return;
     }
 
@@ -756,7 +889,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       <EventForm
         currentUser={currentUser}
         recipes={recipes}
-        initialEvent={{ eventName: name.trim(), date: menuDate }}
+        initialEvent={{ eventName: name.trim(), date: menuDate, customDrinkIds: drinksSectionManualDrinkIds }}
         onCancel={() => setFormSubView('main')}
         onSaved={(newEventId) => {
           setEventId(newEventId);
@@ -1029,6 +1162,13 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   onSearchChange={handleSearchChange}
                   onAddRecipeToSection={handleAddRecipeToSection}
                   getFilteredRecipes={getFilteredRecipes}
+                  isDrinksSection={section.name?.toLowerCase() === 'drinks'}
+                  drinkSearchQueries={drinkSearchQueries}
+                  onDrinkSearchChange={handleDrinkSearchChange}
+                  onAddDrinkToSection={handleAddDrinkToSection}
+                  onRemoveDrinkFromSection={handleRemoveDrinkFromSection}
+                  getFilteredDrinks={getFilteredDrinks}
+                  getDrinkDisplayName={getDrinkDisplayName}
                 />
                 {isMobile && (
                   <div className="add-section-gap">

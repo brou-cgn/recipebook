@@ -70,6 +70,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
   const [expandedDrinkId, setExpandedDrinkId] = useState(null);
   const [drinksCategoryImage, setDrinksCategoryImage] = useState(null);
+  const [manualDrinkCatalog, setManualDrinkCatalog] = useState([]);
   const {
     activeId: portionMinusLongPressActiveId,
     triggeredRef: portionMinusLongPressTriggeredRef,
@@ -169,6 +170,44 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       cancelled = true;
     };
   }, []);
+
+  // Whether any section carries manually added drink-catalog IDs (see MenuForm's
+  // "Drinks" section), independent of whether an event is linked.
+  const hasManualDrinks = useMemo(
+    () => (menu.sections || []).some((section) => Array.isArray(section.drinkIds) && section.drinkIds.length > 0),
+    [menu.sections]
+  );
+
+  // Load the drink catalog needed to resolve manually added drinks, once, only
+  // when the menu actually has any (no live sync, matching the event drinks load).
+  useEffect(() => {
+    if (!hasManualDrinks || !currentUser?.id) {
+      setManualDrinkCatalog([]);
+      return undefined;
+    }
+    let cancelled = false;
+    getCustomDrinks(currentUser.id).then((drinks) => {
+      if (!cancelled) setManualDrinkCatalog(drinks);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasManualDrinks, currentUser?.id]);
+
+  const resolveManualDrinks = (drinkIds) => {
+    if (!Array.isArray(drinkIds) || drinkIds.length === 0) return [];
+    const allDrinks = mergePredefinedDrinks(manualDrinkCatalog);
+    return drinkIds.map((drinkId) => {
+      const drink = allDrinks.find((d) => d.id === drinkId);
+      const display = resolveDrinkDisplay(drink || drinkId, recipes);
+      return {
+        id: drinkId,
+        displayName: display.displayName || drinkId,
+        imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
+        literMitPuffer: null,
+      };
+    });
+  };
 
   const eventDrinks = useMemo(() => {
     if (!linkedEvent) return [];
@@ -610,7 +649,11 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
         {displaySections.map((section, index) => {
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
-          const sectionDrinks = isDrinksSection ? eventDrinks : [];
+          const manualDrinks = isDrinksSection ? resolveManualDrinks(section.drinkIds) : [];
+          const eventDrinkIds = new Set(eventDrinks.map((drink) => drink.id));
+          const sectionDrinks = isDrinksSection
+            ? [...eventDrinks, ...manualDrinks.filter((drink) => !eventDrinkIds.has(drink.id))]
+            : [];
           const isLoadingDrinks = isDrinksSection && linkedEventLoading;
           const hasCards = section.recipes.length > 0 || sectionDrinks.length > 0;
 
