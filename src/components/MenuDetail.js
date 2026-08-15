@@ -14,6 +14,7 @@ import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
 import { getEvent, subscribeToEvents, getCustomDrinks } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
+import { getImageForCategory } from '../utils/categoryImages';
 import ShoppingListModal from './ShoppingListModal';
 import RecipeCard from './RecipeCard';
 import EventForm from './EventForm';
@@ -44,6 +45,7 @@ const getDrinkImageUrl = (recipe) => {
 };
 
 const DRINKS_SECTION_NAME = 'Drinks';
+const DRINKS_MEAL_CATEGORY_NAME = 'Drinks';
 
 const MOBILE_TABLET_BREAKPOINT = 768;
 
@@ -81,6 +83,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [linkedEventCustomDrinks, setLinkedEventCustomDrinks] = useState([]);
   const [expandedDrinkId, setExpandedDrinkId] = useState(null);
   const [availableEvents, setAvailableEvents] = useState([]);
+  const [drinksCategoryImage, setDrinksCategoryImage] = useState(null);
   const {
     activeId: portionMinusLongPressActiveId,
     triggeredRef: portionMinusLongPressTriggeredRef,
@@ -169,6 +172,18 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     };
   }, [menu.eventId, menu.eventOwnerId]);
 
+  // Load the default category image for the "Drinks" meal category once, used
+  // as a fallback picture for drink cards that have no image of their own.
+  useEffect(() => {
+    let cancelled = false;
+    getImageForCategory(DRINKS_MEAL_CATEGORY_NAME).then((image) => {
+      if (!cancelled) setDrinksCategoryImage(image);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Load the current user's events while the "Event verknüpfen" picker is open.
   useEffect(() => {
     if (drinksSubView !== 'linkPicker' || !currentUser?.id) return undefined;
@@ -187,12 +202,12 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       return {
         id: drinkId,
         displayName: display.displayName || drinkId,
-        imageUrl: getDrinkImageUrl(display.recipe),
+        imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
         literMitPuffer: ergebnisRow?.literMitPuffer ?? null,
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linkedEvent, linkedEventCustomDrinks, recipes]);
+  }, [linkedEvent, linkedEventCustomDrinks, recipes, drinksCategoryImage]);
 
   const handleLinkEvent = async (eventId) => {
     await updateMenu(menu.id, { eventId, eventOwnerId: currentUser.id });
@@ -719,7 +734,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                     return (
                       <div
                         key={drink.id}
-                        className={`drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
+                        className={`recipe-card drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
                         onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
                       >
                         {drink.imageUrl && (
@@ -727,7 +742,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                             <img src={drink.imageUrl} alt={drink.displayName} />
                           </div>
                         )}
-                        <div className="drink-card-content">
+                        <div className="recipe-card-content">
                           <h3>{drink.displayName}</h3>
                           {isExpanded && (
                             <p className="drink-card-amount">
