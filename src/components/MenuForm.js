@@ -54,7 +54,7 @@ const recipeHasDrinksCategory = (recipe) => {
 
 // Sortable Section Component for drag & drop reordering of menu sections
 function SortableSection({
-  id, section, sectionIndex, recipes, favoriteIds, searchQueries, sensors, closeIcon,
+  id, section, sectionIndex, recipes, favoriteIds, searchQueries, closeIcon,
   onRemoveSection, onDragEndRecipes, onRemoveRecipeFromSection,
   onSearchChange, onAddRecipeToSection, getFilteredRecipes,
   isDrinksSection, drinkSearchQueries, onDrinkSearchChange, onAddDrinkToSection,
@@ -69,6 +69,25 @@ function SortableSection({
     transition,
     isDragging,
   } = useSortable({ id });
+
+  // Own sensor instances for this section's recipe-reordering DndContext.
+  // Sharing sensor instances with the outer, section-reordering DndContext
+  // (an ancestor of this component) makes dnd-kit's two nested contexts
+  // fight over the same PointerSensor/TouchSensor activation state, which
+  // is what caused a section's own drag handle to render displaced with a
+  // stray transform even at rest.
+  const recipeSensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -88,7 +107,7 @@ function SortableSection({
 
   const selectedRecipesList = section.recipeIds.length > 0 && (
     <DndContext
-      sensors={sensors}
+      sensors={recipeSensors}
       collisionDetection={closestCenter}
       onDragEnd={(event) => onDragEndRecipes(sectionIndex, event)}
     >
@@ -1411,7 +1430,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   recipes={recipes}
                   favoriteIds={favoriteIds}
                   searchQueries={searchQueries}
-                  sensors={sensors}
                   closeIcon={getEffectiveIcon(buttonIcons, 'menuCloseButton', isDarkMode)}
                   onRemoveSection={handleRemoveSection}
                   onDragEndRecipes={handleDragEndRecipes}
