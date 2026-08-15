@@ -5,6 +5,8 @@ import EventForm from './EventForm';
 const mockCalculateEventDrinks = jest.fn();
 const mockSubscribeToGuestProfiles = jest.fn();
 const mockSubscribeToCustomDrinks = jest.fn();
+const mockGetMenusByEventId = jest.fn();
+const mockUpdateMenu = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   EVENT_TYPES: ['party'],
@@ -12,6 +14,11 @@ jest.mock('../utils/eventsFirestore', () => ({
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+}));
+
+jest.mock('../utils/menuFirestore', () => ({
+  getMenusByEventId: (...args) => mockGetMenusByEventId(...args),
+  updateMenu: (...args) => mockUpdateMenu(...args),
 }));
 
 jest.mock('./EventGuestSelectionPage', () => function MockEventGuestSelectionPage({ onSave, onBack }) {
@@ -44,6 +51,8 @@ describe('EventForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-1' });
+    mockGetMenusByEventId.mockResolvedValue([]);
+    mockUpdateMenu.mockResolvedValue();
     mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
       cb([
         {
@@ -464,6 +473,98 @@ describe('EventForm', () => {
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser']);
     expect(event.drinkDistributionFactors).toEqual({ 'custom-wasser': 1.4 });
+  });
+
+  test('removes a deleted drink from linked menus\' drinkIds on save', async () => {
+    const onSaved = jest.fn();
+    const initialEvent = {
+      id: 'event-42',
+      eventName: 'Geburtstag',
+      date: '2025-06-15',
+      durationHours: 5,
+      guests: { adults: 8, children: 2 },
+      eventType: 'party',
+      customDrinkIds: ['custom-wasser', 'custom-bier'],
+      selectedGuestIds: [],
+      pufferProzent: 10,
+    };
+    mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-42' });
+    mockGetMenusByEventId.mockResolvedValue([
+      {
+        id: 'menu-1',
+        sections: [
+          { name: 'Drinks', recipeIds: [], drinkIds: ['custom-bier', 'custom-cola'] },
+        ],
+      },
+    ]);
+    render(
+      <EventForm
+        onSaved={onSaved}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'u1' }}
+        initialEvent={initialEvent}
+      />,
+    );
+
+    // Mock sub-page saves only custom-wasser, dropping custom-bier
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Berechnung aktualisieren' }));
+
+    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalledTimes(1));
+    expect(mockGetMenusByEventId).toHaveBeenCalledWith('u1', 'event-42');
+    const [menuId, updates] = mockUpdateMenu.mock.calls[0];
+    expect(menuId).toBe('menu-1');
+    expect(updates.sections[0].drinkIds).toEqual(['custom-cola']);
+  });
+
+  test('removes a deleted drink recipe from linked menus\' recipeIds on save', async () => {
+    const onSaved = jest.fn();
+    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
+        { id: 'custom-bier-rezept', name: '#recipe:recipe-1:Craft Bier', kategorie: 'bier' },
+      ]);
+      return jest.fn();
+    });
+    const initialEvent = {
+      id: 'event-42',
+      eventName: 'Geburtstag',
+      date: '2025-06-15',
+      durationHours: 5,
+      guests: { adults: 8, children: 2 },
+      eventType: 'party',
+      customDrinkIds: ['custom-wasser', 'custom-bier-rezept'],
+      selectedGuestIds: [],
+      pufferProzent: 10,
+    };
+    mockCalculateEventDrinks.mockResolvedValue({ eventId: 'event-42' });
+    mockGetMenusByEventId.mockResolvedValue([
+      {
+        id: 'menu-1',
+        sections: [
+          { name: 'Drinks', recipeIds: ['recipe-1', 'recipe-2'], drinkIds: [] },
+        ],
+      },
+    ]);
+    render(
+      <EventForm
+        onSaved={onSaved}
+        onCancel={jest.fn()}
+        currentUser={{ id: 'u1' }}
+        initialEvent={initialEvent}
+      />,
+    );
+
+    // Mock sub-page saves only custom-wasser, dropping the recipe-linked drink
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke speichern' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Berechnung aktualisieren' }));
+
+    await waitFor(() => expect(mockUpdateMenu).toHaveBeenCalledTimes(1));
+    const [menuId, updates] = mockUpdateMenu.mock.calls[0];
+    expect(menuId).toBe('menu-1');
+    expect(updates.sections[0].recipeIds).toEqual(['recipe-2']);
   });
 
   test('does not show "Getränke nach Gästewunsch filtern" button', () => {
