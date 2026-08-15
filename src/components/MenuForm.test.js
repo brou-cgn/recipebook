@@ -70,8 +70,12 @@ jest.mock('@dnd-kit/core', () => ({
   useSensors: jest.fn(() => []),
 }));
 
+const mockSortableContextItemsCalls = [];
 jest.mock('@dnd-kit/sortable', () => ({
-  SortableContext: ({ children }) => <div>{children}</div>,
+  SortableContext: ({ children, items }) => {
+    mockSortableContextItemsCalls.push(items);
+    return <div>{children}</div>;
+  },
   arrayMove: jest.fn((array, oldIndex, newIndex) => {
     const newArray = [...array];
     const [item] = newArray.splice(oldIndex, 1);
@@ -118,6 +122,7 @@ const recipes = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSortableContextItemsCalls.length = 0;
   capturedEventFormProps = null;
   mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
     callback(customDrinks);
@@ -489,5 +494,30 @@ describe('MenuForm - linked event drinks display', () => {
 
     expect(screen.queryByText('Cola')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Getränk entfernen')).not.toBeInTheDocument();
+  });
+});
+
+describe('MenuForm - recipe drag-and-drop items', () => {
+  test('excludes recipeIds with no matching recipe from the sortable items list, so dnd-kit\'s index lookups stay aligned with the rendered handles', async () => {
+    render(
+      <MenuForm
+        menu={{
+          id: 'menu-1',
+          name: 'Testmenü',
+          sections: [{ name: 'Hauptspeise', recipeIds: ['recipe-1', 'recipe-deleted'] }],
+        }}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    await screen.findByText('Nudelsalat');
+
+    const recipeItemsCall = mockSortableContextItemsCalls.find(
+      (items) => Array.isArray(items) && items.includes('recipe-1')
+    );
+    expect(recipeItemsCall).toEqual(['recipe-1']);
   });
 });
