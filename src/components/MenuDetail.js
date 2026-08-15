@@ -10,7 +10,7 @@ import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
-import { getEvent, getCustomDrinks } from '../utils/eventsFirestore';
+import { subscribeToEvent, subscribeToCustomDrinks, getCustomDrinks } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { getImageForCategory } from '../utils/categoryImages';
@@ -135,27 +135,34 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     loadFavorites();
   }, [currentUser?.id]);
 
-  // Load the linked event's drinks once when the menu is opened (no live sync).
+  // Live-track the linked event's drinks, so changes made on the event side
+  // (or synced back from another menu edit) show up immediately here too.
   useEffect(() => {
     if (!menu.eventId || !menu.eventOwnerId) {
       setLinkedEvent(null);
       setLinkedEventCustomDrinks([]);
       return undefined;
     }
-    let cancelled = false;
     setLinkedEventLoading(true);
-    Promise.all([
-      getEvent(menu.eventOwnerId, menu.eventId),
-      getCustomDrinks(menu.eventOwnerId),
-    ]).then(([event, customDrinks]) => {
-      if (cancelled) return;
+    let firstEventSnapshot = true;
+    let firstDrinksSnapshot = true;
+    const unsubEvent = subscribeToEvent(menu.eventOwnerId, menu.eventId, (event) => {
       setLinkedEvent(event);
-      setLinkedEventCustomDrinks(customDrinks);
-    }).finally(() => {
-      if (!cancelled) setLinkedEventLoading(false);
+      if (firstEventSnapshot) {
+        firstEventSnapshot = false;
+        if (!firstDrinksSnapshot) setLinkedEventLoading(false);
+      }
+    });
+    const unsubDrinks = subscribeToCustomDrinks(menu.eventOwnerId, (drinks) => {
+      setLinkedEventCustomDrinks(drinks);
+      if (firstDrinksSnapshot) {
+        firstDrinksSnapshot = false;
+        if (!firstEventSnapshot) setLinkedEventLoading(false);
+      }
     });
     return () => {
-      cancelled = true;
+      unsubEvent();
+      unsubDrinks();
     };
   }, [menu.eventId, menu.eventOwnerId]);
 

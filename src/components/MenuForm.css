@@ -730,9 +730,10 @@
   font-weight: 600;
 }
 
-/* Drinks planned via a linked event, shown read-only in the Drinks section's
-   merged "Ausgewählte Rezepte & Getränke" list (no remove button, unlike
-   manually added drinks). */
+/* Drinks planned via a linked event, shown in the Drinks section's merged
+   "Ausgewählte Rezepte & Getränke" list. Removing one here also removes it
+   from the linked event's customDrinkIds (and recalculates its
+   Getränkeverteilung) once the menu is saved. */
 .selected-recipe-item.event-drink-item {
   background: #f3ede6;
 }

@@ -4,9 +4,9 @@ import MenuForm from './MenuForm';
 
 const mockSubscribeToCustomDrinks = jest.fn();
 const mockSubscribeToEvents = jest.fn();
-const mockGetEvent = jest.fn();
-const mockGetCustomDrinks = jest.fn();
+const mockSubscribeToEvent = jest.fn();
 const mockSaveCustomDrink = jest.fn();
+const mockCalculateEventDrinks = jest.fn();
 
 jest.mock('../utils/userFavorites', () => ({
   getUserFavorites: () => Promise.resolve([]),
@@ -49,11 +49,11 @@ jest.mock('../utils/categoryImages', () => ({
 }));
 
 jest.mock('../utils/eventsFirestore', () => ({
-  getEvent: (...args) => mockGetEvent(...args),
+  subscribeToEvent: (...args) => mockSubscribeToEvent(...args),
   subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
-  getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
+  calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
 }));
 
 jest.mock('./DrinkManagementPage', () => function MockDrinkManagementPage() {
@@ -124,6 +124,7 @@ beforeEach(() => {
     return () => {};
   });
   mockSubscribeToEvents.mockImplementation(() => () => {});
+  mockSubscribeToEvent.mockImplementation(() => () => {});
   mockSaveCustomDrink.mockResolvedValue('drink-new-mojito');
 });
 
@@ -316,8 +317,10 @@ describe('MenuForm - Drinks section manual drink selection', () => {
 
 describe('MenuForm - linked event drinks display', () => {
   test('shows the linked event\'s planned drinks in the Drinks section, not in the header', async () => {
-    mockGetEvent.mockResolvedValue({ id: 'event-1', eventName: 'Testparty', customDrinkIds: ['drink-cola'] });
-    mockGetCustomDrinks.mockResolvedValue(customDrinks);
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: ['drink-cola'] });
+      return () => {};
+    });
 
     render(
       <MenuForm
@@ -347,8 +350,14 @@ describe('MenuForm - linked event drinks display', () => {
     // a drink recipe already in the "Drinks" section gets a matching custom
     // drink (linked via "#recipe:id:name") added to the event's customDrinkIds.
     const linkedDrink = { id: 'drink-mojito-link', name: '#recipe:recipe-2:Mojito', kategorie: null, einheiten: [{ einheitsgroesse: 0.5 }] };
-    mockGetEvent.mockResolvedValue({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [linkedDrink.id] });
-    mockGetCustomDrinks.mockResolvedValue([linkedDrink]);
+    mockSubscribeToEvent.mockImplementation((uid, eventId, callback) => {
+      callback({ id: 'event-1', eventName: 'Testparty', customDrinkIds: [linkedDrink.id] });
+      return () => {};
+    });
+    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+      callback([linkedDrink]);
+      return () => {};
+    });
 
     render(
       <MenuForm
