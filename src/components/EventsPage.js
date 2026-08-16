@@ -84,7 +84,7 @@ const formatDrinkSummary = (berechnung) => {
     .join(', ');
 };
 
-function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled }) {
+function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
@@ -144,6 +144,28 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingEventReminderId, currentUser?.id]);
+
+  // Deep link from a menu's "open linked event" button: jump straight to the event detail.
+  useEffect(() => {
+    if (!pendingEventDetailRequest) return;
+    const { ownerId, eventId } = pendingEventDetailRequest;
+    if (!ownerId || !eventId) {
+      onPendingEventDetailRequestHandled?.();
+      return;
+    }
+    let cancelled = false;
+    getEvent(ownerId, eventId).then((event) => {
+      if (cancelled || !event) return;
+      setFallbackEvent(event);
+      setSelectedEventId(event.id);
+      setSubView('detail');
+    });
+    onPendingEventDetailRequestHandled?.();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEventDetailRequest]);
 
   const selectedEvent = useMemo(() => {
     return events.find((e) => e.id === selectedEventId) || fallbackEvent || null;

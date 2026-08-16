@@ -37,12 +37,13 @@ const DRINKS_MEAL_CATEGORY_NAME = 'Drinks';
 
 const MOBILE_TABLET_BREAKPOINT = 768;
 
-function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, currentUser, allUsers, isSharedView }) {
+function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPublish, onSelectRecipe, onToggleMenuFavorite, onOpenEvent, currentUser, allUsers, isSharedView }) {
   const [menu, setMenu] = useState(initialMenu);
   const [favoriteMenuIds, setFavoriteMenuIds] = useState([]);
   const [favoriteRecipeIds, setFavoriteRecipeIds] = useState([]);
   const [closeButtonIcon, setCloseButtonIcon] = useState('×');
   const [copyLinkIcon, setCopyLinkIcon] = useState('Link');
+  const [openEventIcon, setOpenEventIcon] = useState('📅');
   const [shoppingListIcon, setShoppingListIcon] = useState('Einkauf');
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
@@ -95,6 +96,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     const eff = (key) => getEffectiveIcon(allButtonIcons, key, isDarkMode);
     setCloseButtonIcon(eff('menuCloseButton') || '×');
     setCopyLinkIcon(eff('copyLink') || 'Link');
+    setOpenEventIcon(eff('openLinkedEvent') || '📅');
     setShoppingListIcon(eff('shoppingList') || 'Einkauf');
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
@@ -596,6 +598,19 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 ) : (
                   copyLinkIcon
                 )
+              )}
+            </button>
+          )}
+          {menu.eventId && menu.eventOwnerId === currentUser?.id && onOpenEvent && (
+            <button
+              className="open-event-button"
+              onClick={() => onOpenEvent(menu.eventOwnerId, menu.eventId)}
+              title="Verknüpftes Event öffnen"
+            >
+              {isBase64Image(openEventIcon) ? (
+                <img src={openEventIcon} alt="Event öffnen" className="open-event-icon-img" />
+              ) : (
+                openEventIcon
               )}
             </button>
           )}

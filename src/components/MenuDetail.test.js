@@ -64,6 +64,8 @@ const mockGetCustomDrinks = jest.fn(() => Promise.resolve([]));
 jest.mock('../utils/eventsFirestore', () => ({
   getEvent: jest.fn(() => Promise.resolve(null)),
   getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
+  subscribeToEvent: () => () => {},
+  subscribeToCustomDrinks: () => () => {},
 }));
 
 const mockMenu = {
@@ -281,6 +283,73 @@ describe('MenuDetail - Share Buttons', () => {
     );
 
     expect(screen.getByTitle('Share-Link kopieren')).toBeInTheDocument();
+  });
+});
+
+describe('MenuDetail - Open Linked Event Button', () => {
+  test('does not render when menu has no linked event', () => {
+    render(
+      <MenuDetail
+        menu={mockMenu}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        onOpenEvent={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(screen.queryByTitle('Verknüpftes Event öffnen')).toBeNull();
+  });
+
+  test('renders for the event owner and calls onOpenEvent with owner and event id', () => {
+    const menuWithEvent = { ...mockMenu, eventId: 'event-1', eventOwnerId: 'user-1' };
+    const onOpenEvent = jest.fn();
+
+    render(
+      <MenuDetail
+        menu={menuWithEvent}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        onOpenEvent={onOpenEvent}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const button = screen.getByTitle('Verknüpftes Event öffnen');
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    expect(onOpenEvent).toHaveBeenCalledWith('user-1', 'event-1');
+  });
+
+  test('does not render for a non-owner even if the menu has a linked event', () => {
+    const menuWithEvent = { ...mockMenu, eventId: 'event-1', eventOwnerId: 'someone-else' };
+
+    render(
+      <MenuDetail
+        menu={menuWithEvent}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        onOpenEvent={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(screen.queryByTitle('Verknüpftes Event öffnen')).toBeNull();
   });
 });
 

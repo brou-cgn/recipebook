@@ -171,6 +171,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'filterButton', label: 'Filter-Button' },
   { key: 'filterButtonActive', label: 'Filter-Button (aktiv)' },
   { key: 'copyLink', label: 'Link kopieren' },
+  { key: 'openLinkedEvent', label: 'Verknüpftes Event öffnen (Menü)' },
   { key: 'nutritionEmpty', label: 'Nährwerte hinzufügen' },
   { key: 'nutritionFilled', label: 'Nährwerte vorhanden' },
   { key: 'nutritionRecalc', label: 'Nährwerte nachkalkulieren' },
