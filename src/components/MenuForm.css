@@ -663,7 +663,7 @@
 /* Menu photo upload styles */
 .menu-date-row {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
@@ -678,13 +678,30 @@
   padding-bottom: 0;
 }
 
-.menu-photo-upload-btn {
+.menu-photo-upload-wrap {
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
-  display: inline-flex;
+}
+
+.menu-photo-upload-spacer {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  visibility: hidden;
+}
+
+.menu-photo-upload-wrap .menu-photo-upload-btn {
+  flex-shrink: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 48px;
   height: 48px;
+  margin: 0;
+  padding: 0;
   background: #402C1C;
   color: white;
   border-radius: 8px;
@@ -694,18 +711,20 @@
   transition: background 0.2s ease;
 }
 
-.menu-photo-upload-btn:hover {
+.menu-photo-upload-wrap .menu-photo-upload-btn:hover {
   background: #1a1a1a;
 }
 
-.menu-photo-upload-btn.uploading {
+.menu-photo-upload-wrap .menu-photo-upload-btn.uploading {
   opacity: 0.6;
   pointer-events: none;
 }
 
-.menu-photo-upload-btn .button-icon-image {
+.menu-photo-upload-wrap .menu-photo-upload-btn .button-icon-image {
+  display: block;
   width: 1.4rem;
   height: 1.4rem;
+  margin: auto;
   object-fit: contain;
 }
 
