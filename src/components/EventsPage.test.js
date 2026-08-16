@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import EventsPage from './EventsPage';
 
 const mockSubscribeToEvents = jest.fn();
@@ -106,6 +106,58 @@ describe('EventsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+  });
+
+  test('pendingEventDetailRequest opens the linked event directly, without flashing the events overview', async () => {
+    const otherEvent = {
+      id: 'other',
+      eventName: 'Anderes Event',
+      date: '2025-08-01',
+      durationHours: 2,
+      eventType: 'party',
+      status: 'geplant',
+      guests: { adults: 1, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([otherEvent]);
+      return jest.fn();
+    });
+    const linkedEvent = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    let resolveGetEvent;
+    mockGetEvent.mockImplementation(() => new Promise((resolve) => { resolveGetEvent = resolve; }));
+
+    render(
+      <EventsPage
+        currentUser={currentUser}
+        pendingEventDetailRequest={{ ownerId: 'owner-1', eventId: 'e1' }}
+        onPendingEventDetailRequestHandled={() => {}}
+      />
+    );
+
+    // While the linked event is still loading, the full events overview (list of
+    // all events, "Getränke verwalten" links, ...) must not be shown.
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+    expect(screen.queryByText('Getränke verwalten')).toBeNull();
+    expect(screen.queryByText('Anderes Event')).toBeNull();
+
+    await act(async () => {
+      resolveGetEvent(linkedEvent);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Sommerfest' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+    expect(screen.queryByText('Anderes Event')).toBeNull();
   });
 
   test('shows mobile edit FAB in detail view and removes inline edit and delete buttons', () => {

@@ -91,7 +91,14 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [subView, setSubView] = useState('list'); // list | new | edit | detail | consumption | drinks | guests
+  // Deep links (push notification reminder, menu's "open linked event" button) know their
+  // target subView before the event data has loaded, so start there instead of flashing
+  // the full events overview first.
+  const [subView, setSubView] = useState(() => {
+    if (pendingEventDetailRequest?.eventId) return 'detail';
+    if (pendingEventReminderId) return 'consumption';
+    return 'list';
+  }); // list | new | edit | detail | consumption | drinks | guests
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
 
@@ -133,7 +140,11 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     if (!pendingEventReminderId || !currentUser?.id) return;
     let cancelled = false;
     getEvent(currentUser.id, pendingEventReminderId).then((event) => {
-      if (cancelled || !event) return;
+      if (cancelled) return;
+      if (!event) {
+        setSubView('list');
+        return;
+      }
       setFallbackEvent(event);
       setSelectedEventId(event.id);
       setSubView('consumption');
@@ -155,7 +166,11 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     }
     let cancelled = false;
     getEvent(ownerId, eventId).then((event) => {
-      if (cancelled || !event) return;
+      if (cancelled) return;
+      if (!event) {
+        setSubView('list');
+        return;
+      }
       setFallbackEvent(event);
       setSelectedEventId(event.id);
       setSubView('detail');
@@ -390,6 +405,16 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             )}
           </button>
         )}
+      </div>
+    );
+  }
+
+  // Deep link data (see effects above) hasn't resolved yet: show a lightweight loading
+  // state instead of falling through to the full events overview below.
+  if ((subView === 'detail' || subView === 'consumption') && !selectedEvent) {
+    return (
+      <div className="events-page-container">
+        <div className="events-empty-state">Laden...</div>
       </div>
     );
   }
