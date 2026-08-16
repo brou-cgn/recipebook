@@ -174,13 +174,19 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       if (!event) {
         setSubView('list');
         setOpenedFromMenuLink(false);
-        return;
+      } else {
+        setFallbackEvent(event);
+        setSelectedEventId(event.id);
+        setSubView('detail');
       }
-      setFallbackEvent(event);
-      setSelectedEventId(event.id);
-      setSubView('detail');
+      // Clearing the request (via the parent's state) is deferred until here,
+      // after the fetch has actually resolved. Calling it synchronously above
+      // used to clear pendingEventDetailRequest in the parent immediately,
+      // which re-ran this effect's dependency, triggered this effect's own
+      // cleanup (cancelled = true) before getEvent() had a chance to resolve,
+      // and left the page stuck on "Laden..." forever.
+      onPendingEventDetailRequestHandled?.();
     });
-    onPendingEventDetailRequestHandled?.();
     return () => {
       cancelled = true;
     };
