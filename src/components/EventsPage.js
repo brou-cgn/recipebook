@@ -84,14 +84,24 @@ const formatDrinkSummary = (berechnung) => {
     .join(', ');
 };
 
-function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled }) {
+function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPendingEventReminderHandled, pendingEventDetailRequest, onPendingEventDetailRequestHandled, onCloseLinkedEventDetail }) {
   const [isMobileView, setIsMobileView] = useState(() => window.innerWidth <= 768);
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [subView, setSubView] = useState('list'); // list | new | edit | detail | consumption | drinks | guests
+  // Deep links (push notification reminder, menu's "open linked event" button) know their
+  // target subView before the event data has loaded, so start there instead of flashing
+  // the full events overview first.
+  const [subView, setSubView] = useState(() => {
+    if (pendingEventDetailRequest?.eventId) return 'detail';
+    if (pendingEventReminderId) return 'consumption';
+    return 'list';
+  }); // list | new | edit | detail | consumption | drinks | guests
+  // Tracks whether the current detail view was opened via the deep link from a menu's
+  // Drinks section, so closing it can return to that menu instead of the events list.
+  const [openedFromMenuLink, setOpenedFromMenuLink] = useState(() => !!pendingEventDetailRequest?.eventId);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [fallbackEvent, setFallbackEvent] = useState(null); // used right after calculation, before onSnapshot syncs
 
@@ -133,7 +143,11 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
     if (!pendingEventReminderId || !currentUser?.id) return;
     let cancelled = false;
     getEvent(currentUser.id, pendingEventReminderId).then((event) => {
-      if (cancelled || !event) return;
+      if (cancelled) return;
+      if (!event) {
+        setSubView('list');
+        return;
+      }
       setFallbackEvent(event);
       setSelectedEventId(event.id);
       setSubView('consumption');
@@ -153,9 +167,15 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
       onPendingEventDetailRequestHandled?.();
       return;
     }
+    setOpenedFromMenuLink(true);
     let cancelled = false;
     getEvent(ownerId, eventId).then((event) => {
-      if (cancelled || !event) return;
+      if (cancelled) return;
+      if (!event) {
+        setSubView('list');
+        setOpenedFromMenuLink(false);
+        return;
+      }
       setFallbackEvent(event);
       setSelectedEventId(event.id);
       setSubView('detail');
@@ -173,6 +193,7 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
   const editEventIcon = getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode);
 
   const handleSelectEvent = (event) => {
+    setOpenedFromMenuLink(false);
     setSelectedEventId(event.id);
     setFallbackEvent(event);
     setSubView('detail');
@@ -270,9 +291,18 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
           <h2>{selectedEvent.eventName}</h2>
           <button
             className="events-close-btn"
-            onClick={() => { setSubView('list'); setSelectedEventId(null); setFallbackEvent(null); }}
-            aria-label="Zurück zur Liste"
-            title="Zurück zur Liste"
+            onClick={() => {
+              if (openedFromMenuLink && onCloseLinkedEventDetail) {
+                setOpenedFromMenuLink(false);
+                onCloseLinkedEventDetail();
+                return;
+              }
+              setSubView('list');
+              setSelectedEventId(null);
+              setFallbackEvent(null);
+            }}
+            aria-label={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
+            title={openedFromMenuLink ? 'Zurück zum Menü' : 'Zurück zur Liste'}
           >
             ×
           </button>
@@ -390,6 +420,16 @@ function EventsPage({ onBack, currentUser, recipes, pendingEventReminderId, onPe
             )}
           </button>
         )}
+      </div>
+    );
+  }
+
+  // Deep link data (see effects above) hasn't resolved yet: show a lightweight loading
+  // state instead of falling through to the full events overview below.
+  if ((subView === 'detail' || subView === 'consumption') && !selectedEvent) {
+    return (
+      <div className="events-page-container">
+        <div className="events-empty-state">Laden...</div>
       </div>
     );
   }

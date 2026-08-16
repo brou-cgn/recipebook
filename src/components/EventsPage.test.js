@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import EventsPage from './EventsPage';
 
 const mockSubscribeToEvents = jest.fn();
@@ -106,6 +106,122 @@ describe('EventsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.getByText('EventForm geöffnet')).toBeInTheDocument();
+  });
+
+  test('pendingEventDetailRequest opens the linked event directly, without flashing the events overview', async () => {
+    const otherEvent = {
+      id: 'other',
+      eventName: 'Anderes Event',
+      date: '2025-08-01',
+      durationHours: 2,
+      eventType: 'party',
+      status: 'geplant',
+      guests: { adults: 1, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([otherEvent]);
+      return jest.fn();
+    });
+    const linkedEvent = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    let resolveGetEvent;
+    mockGetEvent.mockImplementation(() => new Promise((resolve) => { resolveGetEvent = resolve; }));
+
+    render(
+      <EventsPage
+        currentUser={currentUser}
+        pendingEventDetailRequest={{ ownerId: 'owner-1', eventId: 'e1' }}
+        onPendingEventDetailRequestHandled={() => {}}
+      />
+    );
+
+    // While the linked event is still loading, the full events overview (list of
+    // all events, "Getränke verwalten" links, ...) must not be shown.
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+    expect(screen.queryByText('Getränke verwalten')).toBeNull();
+    expect(screen.queryByText('Anderes Event')).toBeNull();
+
+    await act(async () => {
+      resolveGetEvent(linkedEvent);
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Sommerfest' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+    expect(screen.queryByText('Anderes Event')).toBeNull();
+  });
+
+  test('closing an event opened via pendingEventDetailRequest calls onCloseLinkedEventDetail instead of showing the events list', async () => {
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([]);
+      return jest.fn();
+    });
+    const linkedEvent = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockGetEvent.mockResolvedValue(linkedEvent);
+    const onCloseLinkedEventDetail = jest.fn();
+
+    render(
+      <EventsPage
+        currentUser={currentUser}
+        pendingEventDetailRequest={{ ownerId: 'owner-1', eventId: 'e1' }}
+        onPendingEventDetailRequestHandled={() => {}}
+        onCloseLinkedEventDetail={onCloseLinkedEventDetail}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Sommerfest' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Zurück zum Menü'));
+
+    expect(onCloseLinkedEventDetail).toHaveBeenCalledTimes(1);
+    // The events overview must not appear after closing back to the menu.
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+  });
+
+  test('closing an event opened from the list falls back to the events overview, not onCloseLinkedEventDetail', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+    const onCloseLinkedEventDetail = jest.fn();
+
+    render(<EventsPage currentUser={currentUser} onCloseLinkedEventDetail={onCloseLinkedEventDetail} />);
+
+    fireEvent.click(screen.getByText('Sommerfest'));
+    expect(screen.getByTitle('Zurück zur Liste')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Zurück zur Liste'));
+
+    expect(onCloseLinkedEventDetail).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
   });
 
   test('shows mobile edit FAB in detail view and removes inline edit and delete buttons', () => {

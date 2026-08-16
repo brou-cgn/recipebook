@@ -331,6 +331,31 @@ describe('MenuDetail - Open Linked Event Button', () => {
     expect(onOpenEvent).toHaveBeenCalledWith('user-1', 'event-1');
   });
 
+  test('renders next to the Drinks section heading, not in the page header', () => {
+    const menuWithEvent = { ...mockMenu, eventId: 'event-1', eventOwnerId: 'user-1' };
+
+    render(
+      <MenuDetail
+        menu={menuWithEvent}
+        recipes={[]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        onOpenEvent={() => {}}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    const button = screen.getByTitle('Verknüpftes Event öffnen');
+    expect(button.closest('.action-buttons')).toBeNull();
+    const titleRow = button.closest('.section-title-row');
+    expect(titleRow).not.toBeNull();
+    expect(titleRow.querySelector('.section-title')).toHaveTextContent('Drinks');
+  });
+
   test('does not render for a non-owner even if the menu has a linked event', () => {
     const menuWithEvent = { ...mockMenu, eventId: 'event-1', eventOwnerId: 'someone-else' };
 

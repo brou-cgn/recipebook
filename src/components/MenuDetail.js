@@ -601,19 +601,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )}
             </button>
           )}
-          {menu.eventId && menu.eventOwnerId === currentUser?.id && onOpenEvent && (
-            <button
-              className="open-event-button"
-              onClick={() => onOpenEvent(menu.eventOwnerId, menu.eventId)}
-              title="Verknüpftes Event öffnen"
-            >
-              {isBase64Image(openEventIcon) ? (
-                <img src={openEventIcon} alt="Event öffnen" className="open-event-icon-img" />
-              ) : (
-                openEventIcon
-              )}
-            </button>
-          )}
           {!isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
             <button
               className="menu-edit-button"
@@ -705,7 +692,22 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
           return (
             <section key={index} className="menu-section">
-              <h2 className="section-title">{section.name}</h2>
+              <div className="section-title-row">
+                <h2 className="section-title">{section.name}</h2>
+                {isDrinksSection && menu.eventId && menu.eventOwnerId === currentUser?.id && onOpenEvent && (
+                  <button
+                    className="open-event-button"
+                    onClick={() => onOpenEvent(menu.eventOwnerId, menu.eventId)}
+                    title="Verknüpftes Event öffnen"
+                  >
+                    {isBase64Image(openEventIcon) ? (
+                      <img src={openEventIcon} alt="Event öffnen" className="open-event-icon-img" />
+                    ) : (
+                      openEventIcon
+                    )}
+                  </button>
+                )}
+              </div>
               {isLoadingDrinks ? (
                 <p className="no-recipes">Getränke werden geladen …</p>
               ) : hasCards ? (

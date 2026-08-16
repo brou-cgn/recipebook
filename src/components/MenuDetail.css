@@ -294,11 +294,24 @@
   border-top: none;
 }
 
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .section-title {
-  margin: 0 0 1.5rem 0;
+  margin: 0;
   color: #402C1C;
   font-size: 1.5rem;
   font-weight: 700;
+}
+
+.section-title-row .open-event-button {
+  width: 40px;
+  height: 40px;
 }
 
 .menu-recipes-section {
