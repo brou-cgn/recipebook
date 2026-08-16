@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './MenuForm.css';
 import './EventsPage.css';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getSavedSections, saveSectionNames, createMenuSection } from '../utils/menuSections';
+import { getSavedSections, saveSectionNames, createMenuSection, applyItemOrder } from '../utils/menuSections';
 import { fuzzyFilter } from '../utils/fuzzySearch';
 import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, isBase64Image } from '../utils/imageUtils';
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
@@ -52,31 +52,30 @@ const recipeHasDrinksCategory = (recipe) => {
   return categories.some((cat) => typeof cat === 'string' && cat.trim().toLowerCase() === 'drinks');
 };
 
-// Reconciles a saved display order (array of keys) against the current set of
-// items: items whose key is in `order` keep that relative order, and any
-// item not yet in `order` (e.g. newly added) is appended at the end.
-const applyOrder = (order, items, keyFn) => {
-  const byKey = new Map(items.map((item) => [keyFn(item), item]));
-  const ordered = order.map((key) => byKey.get(key)).filter(Boolean);
-  const seen = new Set(order);
-  items.forEach((item) => {
-    if (!seen.has(keyFn(item))) ordered.push(item);
-  });
-  return ordered;
-};
-
-// Builds the merged, ordered list of drink items (event-linked + manually
-// added) shown in a menu section's "Drinks" list, so both the section's
-// render and the drag-end handler compute the exact same composite order.
-const getDrinkListItems = (section, eventDrinksForSection, getDrinkDisplayName) => {
+// Builds the merged, freely-orderable list of items (recipes + event-linked
+// drinks + manually added drinks) shown in a menu section's "Drinks" list, so
+// both the section's render and the drag-end handler compute the exact same
+// composite order. Recipes and drinks can be interleaved in any order; the
+// persisted section.itemOrder is reconciled against the current items via
+// applyItemOrder, falling back to "recipes, then event drinks, then manual
+// drinks" for sections that don't have a saved order yet.
+const getDrinksSectionItems = (section, recipes, eventDrinksForSection, getDrinkDisplayName) => {
+  const renderableRecipeIds = (section.recipeIds || []).filter((recipeId) => recipes.some((r) => r.id === recipeId));
   const dedupedEventDrinks = eventDrinksForSection.filter((drink) => !drink.recipeId || !section.recipeIds.includes(drink.recipeId));
   const eventDrinkIds = dedupedEventDrinks.map((drink) => drink.id);
   const manualDrinkIds = (section.drinkIds || []).filter((drinkId) => !eventDrinkIds.includes(drinkId));
-  const items = [
+  const baseItems = [
+    ...renderableRecipeIds.map((recipeId) => ({
+      compositeId: `recipe:${recipeId}`,
+      type: 'recipe',
+      id: recipeId,
+      displayName: recipes.find((r) => r.id === recipeId)?.title || recipeId,
+    })),
     ...dedupedEventDrinks.map((drink) => ({ compositeId: `event:${drink.id}`, type: 'event', id: drink.id, displayName: drink.displayName })),
     ...manualDrinkIds.map((drinkId) => ({ compositeId: `manual:${drinkId}`, type: 'manual', id: drinkId, displayName: getDrinkDisplayName(drinkId) })),
   ];
-  return { dedupedEventDrinks, manualDrinkIds, items };
+  const items = applyItemOrder(section.itemOrder, baseItems, (item) => item.compositeId);
+  return { renderableRecipeIds, dedupedEventDrinks, manualDrinkIds, items };
 };
 
 // Sortable Section Component for drag & drop reordering of menu sections
@@ -127,7 +126,7 @@ function SortableSection({
   // customDrinkIds links back to the same recipe) and against manually
   // added drinks, so the same drink never shows up twice in the merged list
   // below.
-  const { dedupedEventDrinks, manualDrinkIds, items: drinkItems } = getDrinkListItems(section, eventDrinks, getDrinkDisplayName);
+  const { dedupedEventDrinks, manualDrinkIds, items: drinkSectionItems } = getDrinksSectionItems(section, recipes, eventDrinks, getDrinkDisplayName);
   const hasSelectedRecipesOrDrinks = section.recipeIds.length > 0 || dedupedEventDrinks.length > 0 || manualDrinkIds.length > 0;
 
   // section.recipeIds can contain ids of recipes that no longer resolve (e.g.
@@ -199,24 +198,28 @@ function SortableSection({
           hasSelectedRecipesOrDrinks && (
             <div className="selected-recipes">
               <h5>Ausgewählte Rezepte & Getränke:</h5>
-              {selectedRecipesList}
-              {drinkItems.length > 0 && (
+              {drinkSectionItems.length > 0 && (
                 <DndContext
                   sensors={recipeSensors}
                   collisionDetection={closestCenter}
                   onDragEnd={(event) => onDragEndDrinks(sectionIndex, event)}
                 >
                   <SortableContext
-                    items={drinkItems.map((item) => item.compositeId)}
+                    items={drinkSectionItems.map((item) => item.compositeId)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {drinkItems.map((item) => (
+                    {drinkSectionItems.map((item) => (
                       <SortableDrinkItem
                         key={item.compositeId}
                         id={item.compositeId}
                         displayName={item.displayName}
-                        onRemove={() => (item.type === 'event' ? onRemoveEventDrink(item.id) : onRemoveDrinkFromSection(sectionIndex, item.id))}
-                        removeTitle={item.type === 'event' ? 'Getränk aus Event entfernen' : 'Getränk entfernen'}
+                        isFavorite={item.type === 'recipe' && favoriteIds.includes(item.id)}
+                        onRemove={() => {
+                          if (item.type === 'recipe') onRemoveRecipeFromSection(sectionIndex, item.id);
+                          else if (item.type === 'event') onRemoveEventDrink(item.id);
+                          else onRemoveDrinkFromSection(sectionIndex, item.id);
+                        }}
+                        removeTitle={item.type === 'recipe' ? 'Rezept entfernen' : item.type === 'event' ? 'Getränk aus Event entfernen' : 'Getränk entfernen'}
                       />
                     ))}
                   </SortableContext>
@@ -377,10 +380,10 @@ function SortableRecipeItem({ id, recipe, isFavorite, onRemove, sectionIndex }) 
   );
 }
 
-// Sortable Drink Item Component for the menu's "Drinks" section. Renders
-// event-linked and manually added drinks identically to SortableRecipeItem,
-// both draggable within the same merged list.
-function SortableDrinkItem({ id, displayName, onRemove, removeTitle }) {
+// Sortable item for the menu's "Drinks" section, which mixes drink recipes,
+// event-linked drinks, and manually added drinks in a single freely
+// reorderable list (see getDrinksSectionItems).
+function SortableDrinkItem({ id, displayName, isFavorite, onRemove, removeTitle }) {
   const {
     attributes,
     listeners,
@@ -407,11 +410,14 @@ function SortableDrinkItem({ id, displayName, onRemove, removeTitle }) {
         className="drag-handle"
         {...attributes}
         {...listeners}
-        aria-label="Getränk verschieben"
+        aria-label="Eintrag verschieben"
       >
         ⋮⋮
       </button>
-      <span className="recipe-name">{displayName}</span>
+      <span className="recipe-name">
+        {displayName}
+        {isFavorite && <span className="favorite-indicator">★</span>}
+      </span>
       <button
         type="button"
         className="remove-recipe-button"
@@ -581,7 +587,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     [eventDrinks, removedEventDrinkIds]
   );
   const orderedEventDrinks = useMemo(
-    () => applyOrder(eventDrinkOrder, visibleEventDrinks, (drink) => drink.id),
+    () => applyItemOrder(eventDrinkOrder, visibleEventDrinks, (drink) => drink.id),
     [eventDrinkOrder, visibleEventDrinks]
   );
 
@@ -1245,12 +1251,15 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     }
   };
 
-  // Reorders the merged "Drinks" list (event-linked + manually added drinks)
-  // via drag & drop, exactly like handleDragEndRecipes does for recipeIds.
-  // Since the two kinds of drinks come from different sources, the resulting
-  // composite order is split back into section.drinkIds (manual) and
+  // Freely reorders the merged "Drinks" list - drink recipes, event-linked
+  // drinks, and manually added drinks together - via drag & drop, so any of
+  // the three can be interleaved in any order instead of recipes always
+  // sitting above drinks. The resulting composite order is split back into
+  // section.recipeIds (recipes), section.drinkIds (manual), and
   // eventDrinkOrder (event-linked, persisted into the linked event's
-  // customDrinkIds on save - see handleSubmit).
+  // customDrinkIds on save - see handleSubmit), and also saved in full as
+  // section.itemOrder so the exact interleaving persists and is reused by
+  // MenuDetail's read-only view.
   const handleDragEndDrinks = (sectionIndex, event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -1259,7 +1268,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     if (!section) return;
 
     const sectionEventDrinks = section.name?.toLowerCase() === 'drinks' ? orderedEventDrinks : [];
-    const { items } = getDrinkListItems(section, sectionEventDrinks, getDrinkDisplayName);
+    const { items } = getDrinksSectionItems(section, recipes, sectionEventDrinks, getDrinkDisplayName);
     const currentOrder = items.map((item) => item.compositeId);
     const oldIndex = currentOrder.indexOf(active.id);
     const newIndex = currentOrder.indexOf(over.id);
@@ -1269,11 +1278,23 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
     setEventDrinkOrder(
       newOrder.filter((compositeId) => compositeId.startsWith('event:')).map((compositeId) => compositeId.slice('event:'.length))
     );
-    setSections((prevSections) => prevSections.map((s, i) => (
-      i === sectionIndex
-        ? { ...s, drinkIds: newOrder.filter((compositeId) => compositeId.startsWith('manual:')).map((compositeId) => compositeId.slice('manual:'.length)) }
-        : s
-    )));
+    setSections((prevSections) => prevSections.map((s, i) => {
+      if (i !== sectionIndex) return s;
+      // Recipe IDs that don't currently resolve to a visible recipe aren't
+      // part of `items`/`newOrder` (see renderableRecipeIds in
+      // getDrinksSectionItems), so they'd otherwise be silently dropped here;
+      // keep them around, just not reflected in the visible order.
+      const unresolvedRecipeIds = (s.recipeIds || []).filter((id) => !recipes.some((r) => r.id === id));
+      return {
+        ...s,
+        recipeIds: [
+          ...newOrder.filter((compositeId) => compositeId.startsWith('recipe:')).map((compositeId) => compositeId.slice('recipe:'.length)),
+          ...unresolvedRecipeIds,
+        ],
+        drinkIds: newOrder.filter((compositeId) => compositeId.startsWith('manual:')).map((compositeId) => compositeId.slice('manual:'.length)),
+        itemOrder: newOrder,
+      };
+    }));
   };
 
   const getFilteredRecipes = (sectionIndex) => {
