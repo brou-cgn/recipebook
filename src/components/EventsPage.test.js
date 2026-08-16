@@ -160,6 +160,70 @@ describe('EventsPage', () => {
     expect(screen.queryByText('Anderes Event')).toBeNull();
   });
 
+  test('closing an event opened via pendingEventDetailRequest calls onCloseLinkedEventDetail instead of showing the events list', async () => {
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([]);
+      return jest.fn();
+    });
+    const linkedEvent = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockGetEvent.mockResolvedValue(linkedEvent);
+    const onCloseLinkedEventDetail = jest.fn();
+
+    render(
+      <EventsPage
+        currentUser={currentUser}
+        pendingEventDetailRequest={{ ownerId: 'owner-1', eventId: 'e1' }}
+        onPendingEventDetailRequestHandled={() => {}}
+        onCloseLinkedEventDetail={onCloseLinkedEventDetail}
+      />
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Sommerfest' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Zurück zum Menü'));
+
+    expect(onCloseLinkedEventDetail).toHaveBeenCalledTimes(1);
+    // The events overview must not appear after closing back to the menu.
+    expect(screen.queryByRole('heading', { name: 'Events' })).toBeNull();
+  });
+
+  test('closing an event opened from the list falls back to the events overview, not onCloseLinkedEventDetail', () => {
+    const event = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    mockSubscribeToEvents.mockImplementation((_uid, cb) => {
+      cb([event]);
+      return jest.fn();
+    });
+    const onCloseLinkedEventDetail = jest.fn();
+
+    render(<EventsPage currentUser={currentUser} onCloseLinkedEventDetail={onCloseLinkedEventDetail} />);
+
+    fireEvent.click(screen.getByText('Sommerfest'));
+    expect(screen.getByTitle('Zurück zur Liste')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Zurück zur Liste'));
+
+    expect(onCloseLinkedEventDetail).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
+  });
+
   test('shows mobile edit FAB in detail view and removes inline edit and delete buttons', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 480 });
     window.dispatchEvent(new Event('resize'));

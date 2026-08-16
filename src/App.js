@@ -322,6 +322,7 @@ function App() {
   const [menus, setMenus] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [pendingEventDetailRequest, setPendingEventDetailRequest] = useState(null);
+  const [menuBeforeEventDetail, setMenuBeforeEventDetail] = useState(null);
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -1296,8 +1297,17 @@ function App() {
 
   const handleOpenMenuEvent = (eventOwnerId, eventId) => {
     if (!eventId) return;
+    setMenuBeforeEventDetail(selectedMenu);
     setPendingEventDetailRequest({ ownerId: eventOwnerId, eventId });
     handleViewChange('events');
+  };
+
+  // Closing the event card that was opened from a menu's Drinks section should
+  // return to that menu instead of the events overview.
+  const handleCloseLinkedEventDetail = () => {
+    if (!menuBeforeEventDetail) return;
+    setSelectedMenu(menuBeforeEventDetail);
+    setMenuBeforeEventDetail(null);
   };
 
   const handleAddMenu = () => {
@@ -2077,6 +2087,7 @@ function App() {
           }}
           pendingEventDetailRequest={pendingEventDetailRequest}
           onPendingEventDetailRequestHandled={() => setPendingEventDetailRequest(null)}
+          onCloseLinkedEventDetail={handleCloseLinkedEventDetail}
         />
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
