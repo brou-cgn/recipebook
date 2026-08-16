@@ -1418,7 +1418,6 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
           </div>
           {!menuImage && (
             <div className="menu-photo-upload-wrap">
-              <span className="menu-photo-upload-spacer" aria-hidden="true">&nbsp;</span>
               <label
                 htmlFor="menuImageFile"
                 className={`menu-photo-upload-btn${uploadingMenuImage ? ' uploading' : ''}`}
