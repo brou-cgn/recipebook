@@ -1417,23 +1417,26 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
             />
           </div>
           {!menuImage && (
-            <label
-              htmlFor="menuImageFile"
-              className={`menu-photo-upload-btn${uploadingMenuImage ? ' uploading' : ''}`}
-              title="Foto hochladen"
-              aria-label="Foto hochladen"
-            >
-              {isBase64Image(getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)) ? (
-                <img
-                  src={getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)}
-                  alt=""
-                  className="button-icon-image"
-                  draggable="false"
-                />
-              ) : (
-                getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)
-              )}
-            </label>
+            <div className="menu-photo-upload-wrap">
+              <span className="menu-photo-upload-spacer" aria-hidden="true">&nbsp;</span>
+              <label
+                htmlFor="menuImageFile"
+                className={`menu-photo-upload-btn${uploadingMenuImage ? ' uploading' : ''}`}
+                title="Foto hochladen"
+                aria-label="Foto hochladen"
+              >
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)) ? (
+                  <img
+                    src={getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)}
+                    alt=""
+                    className="button-icon-image"
+                    draggable="false"
+                  />
+                ) : (
+                  getEffectiveIcon(buttonIcons, 'menuPhotoUpload', isDarkMode)
+                )}
+              </label>
+            </div>
           )}
           <input
             type="file"
