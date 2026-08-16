@@ -160,6 +160,47 @@ describe('EventsPage', () => {
     expect(screen.queryByText('Anderes Event')).toBeNull();
   });
 
+  test('pendingEventDetailRequest still resolves when the parent clears the request immediately (like App.js does), instead of getting stuck on "Laden..."', async () => {
+    const linkedEvent = {
+      id: 'e1',
+      eventName: 'Sommerfest',
+      date: '2025-07-01',
+      durationHours: 4,
+      eventType: 'party',
+      status: 'berechnet',
+      guests: { adults: 10, children: 0 },
+      berechnung: { ergebnis: [] },
+    };
+    let resolveGetEvent;
+    mockGetEvent.mockImplementation(() => new Promise((resolve) => { resolveGetEvent = resolve; }));
+
+    // Mirrors App.js: onPendingEventDetailRequestHandled synchronously clears
+    // pendingEventDetailRequest, which changes the prop EventsPage receives.
+    function Wrapper() {
+      const [pendingEventDetailRequest, setPendingEventDetailRequest] = React.useState({ ownerId: 'owner-1', eventId: 'e1' });
+      return (
+        <EventsPage
+          currentUser={currentUser}
+          pendingEventDetailRequest={pendingEventDetailRequest}
+          onPendingEventDetailRequestHandled={() => setPendingEventDetailRequest(null)}
+        />
+      );
+    }
+
+    render(<Wrapper />);
+
+    expect(screen.getByText('Laden...')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveGetEvent(linkedEvent);
+      await Promise.resolve();
+    });
+
+    // Must resolve to the linked event's detail card, not stay stuck on "Laden...".
+    expect(await screen.findByRole('heading', { name: 'Sommerfest' })).toBeInTheDocument();
+    expect(screen.queryByText('Laden...')).toBeNull();
+  });
+
   test('closing an event opened via pendingEventDetailRequest calls onCloseLinkedEventDetail instead of showing the events list', async () => {
     mockSubscribeToEvents.mockImplementation((_uid, cb) => {
       cb([]);
