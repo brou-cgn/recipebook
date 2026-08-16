@@ -3,7 +3,7 @@ import { useLongPress } from '../utils/useLongPress';
 import './MenuDetail.css';
 import { getUserFavorites } from '../utils/userFavorites';
 import { getUserMenuFavorites } from '../utils/menuFavorites';
-import { groupRecipesBySections } from '../utils/menuSections';
+import { groupRecipesBySections, applyItemOrder } from '../utils/menuSections';
 import { canEditMenu, canDeleteMenu } from '../utils/userManagement';
 import { isBase64Image } from '../utils/imageUtils';
 import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
@@ -673,11 +673,26 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
           const manualDrinks = isDrinksSection ? resolveManualDrinks(section.drinkIds) : [];
           const eventDrinkIds = new Set(eventDrinks.map((drink) => drink.id));
-          const sectionDrinks = isDrinksSection
-            ? [...eventDrinks, ...manualDrinks.filter((drink) => !eventDrinkIds.has(drink.id))]
-            : [];
+          const dedupedManualDrinks = manualDrinks.filter((drink) => !eventDrinkIds.has(drink.id));
+          const sectionDrinks = isDrinksSection ? [...eventDrinks, ...dedupedManualDrinks] : [];
           const isLoadingDrinks = isDrinksSection && linkedEventLoading;
           const hasCards = section.recipes.length > 0 || sectionDrinks.length > 0;
+
+          // Recipes and drinks are shown in the free-sort order saved from
+          // the menu editor (section.itemOrder), interleaved rather than
+          // recipes always rendering above drinks; sections without a saved
+          // order (or non-"Drinks" sections) fall back to recipes only.
+          const sectionCards = isDrinksSection
+            ? applyItemOrder(
+                section.itemOrder,
+                [
+                  ...section.recipes.map((recipe) => ({ compositeId: `recipe:${recipe.id}`, type: 'recipe', recipe })),
+                  ...eventDrinks.map((drink) => ({ compositeId: `event:${drink.id}`, type: 'drink', drink })),
+                  ...dedupedManualDrinks.map((drink) => ({ compositeId: `manual:${drink.id}`, type: 'drink', drink })),
+                ],
+                (card) => card.compositeId
+              )
+            : section.recipes.map((recipe) => ({ compositeId: `recipe:${recipe.id}`, type: 'recipe', recipe }));
 
           let emptyText = 'Keine Rezepte in diesem Abschnitt';
           if (isDrinksSection && !menu.eventId) {
@@ -695,25 +710,27 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 <p className="no-recipes">Getränke werden geladen …</p>
               ) : hasCards ? (
                 <div className="recipes-grid">
-                  {section.recipes.map((recipe) => {
-                    const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
-                    return (
-                      <RecipeCard
-                        key={recipe.id}
-                        recipe={recipe}
-                        onClick={() => onSelectRecipe(recipe)}
-                        isFavorite={isRecipeFav}
-                        favoriteActiveIcon={favoritesButtonActiveIcon}
-                        authorName={getRecipeAuthorName(recipe)}
-                        currentUser={currentUser}
-                      />
-                    );
-                  })}
-                  {sectionDrinks.map((drink) => {
+                  {sectionCards.map((card) => {
+                    if (card.type === 'recipe') {
+                      const recipe = card.recipe;
+                      const isRecipeFav = favoriteRecipeIds.includes(recipe.id);
+                      return (
+                        <RecipeCard
+                          key={card.compositeId}
+                          recipe={recipe}
+                          onClick={() => onSelectRecipe(recipe)}
+                          isFavorite={isRecipeFav}
+                          favoriteActiveIcon={favoritesButtonActiveIcon}
+                          authorName={getRecipeAuthorName(recipe)}
+                          currentUser={currentUser}
+                        />
+                      );
+                    }
+                    const drink = card.drink;
                     const isExpanded = expandedDrinkId === drink.id;
                     return (
                       <div
-                        key={drink.id}
+                        key={card.compositeId}
                         className={`recipe-card drink-card${isExpanded ? ' drink-card-expanded' : ''}`}
                         onClick={() => setExpandedDrinkId(isExpanded ? null : drink.id)}
                       >

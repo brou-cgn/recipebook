@@ -84,7 +84,33 @@ export const groupRecipesBySections = (menuSections, allRecipes) => {
     // Manually added drink-catalog IDs (see the "Drinks" section) aren't recipes,
     // so they're passed through as-is for the UI to resolve and render separately.
     ...(Array.isArray(section.drinkIds) ? { drinkIds: section.drinkIds } : {}),
+    // Free-sort order (recipe/event/manual composite IDs) for the "Drinks"
+    // section, so recipes and drinks can be interleaved instead of recipes
+    // always rendering above drinks. See applyItemOrder.
+    ...(Array.isArray(section.itemOrder) ? { itemOrder: section.itemOrder } : {}),
   }));
+};
+
+/**
+ * Reconciles a saved display order (array of composite item keys) against the
+ * current set of items: items whose key is in `order` keep that relative
+ * order, and any item not yet in `order` (e.g. newly added) is appended at
+ * the end in its natural position. Used to render/persist the free-sort
+ * order of a menu section's "Drinks" list (recipes + drinks interleaved).
+ * @param {Array} order - Saved array of composite item keys
+ * @param {Array} items - Current items to order
+ * @param {Function} keyFn - Extracts the composite key from an item
+ * @returns {Array} Items ordered per `order`, with unseen items appended
+ */
+export const applyItemOrder = (order, items, keyFn) => {
+  const safeOrder = Array.isArray(order) ? order : [];
+  const byKey = new Map(items.map((item) => [keyFn(item), item]));
+  const ordered = safeOrder.map((key) => byKey.get(key)).filter(Boolean);
+  const seen = new Set(safeOrder);
+  items.forEach((item) => {
+    if (!seen.has(keyFn(item))) ordered.push(item);
+  });
+  return ordered;
 };
 
 /**
