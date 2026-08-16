@@ -661,20 +661,46 @@
 }
 
 /* Menu photo upload styles */
-.menu-image-upload-label {
-  display: inline-block;
+.menu-date-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.menu-date-row .menu-date-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-photo-upload-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
   background: #402C1C;
   color: white;
-  padding: 0.6rem 1.2rem;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.3rem;
+  line-height: 1;
   transition: background 0.2s ease;
 }
 
-.menu-image-upload-label:hover {
+.menu-photo-upload-btn:hover {
   background: #1a1a1a;
+}
+
+.menu-photo-upload-btn.uploading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.menu-photo-upload-btn .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
 }
 
 .menu-image-preview {
@@ -740,14 +766,6 @@
 .menu-event-linked-name {
   margin: 0;
   font-weight: 600;
-}
-
-/* Drinks planned via a linked event, shown in the Drinks section's merged
-   "Ausgewählte Rezepte & Getränke" list. Removing one here also removes it
-   from the linked event's customDrinkIds (and recalculates its
-   Getränkeverteilung) once the menu is saved. */
-.selected-recipe-item.event-drink-item {
-  background: #f3ede6;
 }
 
 .menu-drinks-link-actions {
