@@ -4,7 +4,12 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getFunctions } from 'firebase/functions';
 import { getStorage } from 'firebase/storage';
@@ -34,8 +39,24 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore
-const db = getFirestore(app);
+// Initialize Firestore with offline persistence shared safely across multiple
+// open tabs. `enableIndexedDbPersistence` (single-tab only) was replaced
+// because it throws an internal assertion error ("Failed to obtain exclusive
+// access to the persistence layer") whenever the app is open in more than
+// one tab at the same time.
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch (err) {
+  // Falls back to in-memory cache if persistence isn't supported
+  // (e.g. private browsing) or Firestore was already initialized.
+  console.warn('Firestore persistent cache unavailable, falling back:', err.message);
+  db = getFirestore(app);
+}
 
 // Initialize Firebase Authentication
 const auth = getAuth(app);
@@ -45,17 +66,6 @@ const functions = getFunctions(app);
 
 // Initialize Firebase Storage
 const storage = getStorage(app);
-
-// Enable offline persistence for PWA support
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    // Multiple tabs open, persistence can only be enabled in one tab at a time.
-    console.warn('Firebase persistence failed: Multiple tabs open');
-  } else if (err.code === 'unimplemented') {
-    // The current browser does not support offline persistence
-    console.warn('Firebase persistence not supported in this browser');
-  }
-});
 
 // Initialize Firebase Cloud Messaging (only in supported environments)
 // Exported as a Promise so consumers can await the resolved Messaging instance
