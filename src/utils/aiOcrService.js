@@ -17,12 +17,33 @@ const RETRYABLE_CODES = ['unavailable', 'deadline-exceeded'];
 const INVOKER_ERROR_MESSAGE_OCR = 'Die OCR-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.';
 const INVOKER_ERROR_MESSAGE_HTML = 'Die KI-Import-Funktion ist aktuell nicht korrekt freigeschaltet. Bitte Administrator kontaktieren.';
 
+// Max time to wait for the Firestore-backed custom lists (cuisine types/meal categories)
+// before giving up and falling back to the base prompt. Without this, a stalled Firestore
+// read (e.g. flaky mobile network) hangs forever and freezes the progress bar mid-scan.
+const CUSTOM_LISTS_TIMEOUT_MS = 8000;
+
 /**
  * Sleep helper for retry delays
  * @param {number} ms - Milliseconds to wait
  */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Rejects with an error if the given promise doesn't settle within `ms` milliseconds.
+ * @param {Promise} promise
+ * @param {number} ms
+ * @returns {Promise}
+ */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
 }
 
 function getCallableErrorDetails(error) {
@@ -102,7 +123,7 @@ export async function processHtmlWithGemini(rawHtml, lang = 'de', onProgress = n
   let mealCategories;
   try {
     clearSettingsCache();
-    const lists = await getCustomLists();
+    const lists = await withTimeout(getCustomLists(), CUSTOM_LISTS_TIMEOUT_MS);
     cuisineTypes = lists.cuisineTypes;
     mealCategories = lists.mealCategories;
   } catch (e) {
@@ -214,7 +235,7 @@ export async function recognizeRecipeWithGemini(imageBase64, lang = 'de', onProg
   let mealCategories;
   try {
     clearSettingsCache();
-    const lists = await getCustomLists();
+    const lists = await withTimeout(getCustomLists(), CUSTOM_LISTS_TIMEOUT_MS);
     cuisineTypes = lists.cuisineTypes;
     mealCategories = lists.mealCategories;
   } catch (e) {
