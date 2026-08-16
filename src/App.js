@@ -321,6 +321,7 @@ function App() {
   const [groupsOpenedFromStartseite, setGroupsOpenedFromStartseite] = useState(false);
   const [menus, setMenus] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState(null);
+  const [pendingEventDetailRequest, setPendingEventDetailRequest] = useState(null);
   const [isMenuFormOpen, setIsMenuFormOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -1293,6 +1294,12 @@ function App() {
     setSelectedMenu(null);
   };
 
+  const handleOpenMenuEvent = (eventOwnerId, eventId) => {
+    if (!eventId) return;
+    setPendingEventDetailRequest({ ownerId: eventOwnerId, eventId });
+    handleViewChange('events');
+  };
+
   const handleAddMenu = () => {
     setEditingMenu(null);
     setIsMenuFormOpen(true);
@@ -2023,6 +2030,7 @@ function App() {
           onPublish={handlePublishMenu}
           onSelectRecipe={handleSelectRecipe}
           onToggleMenuFavorite={handleToggleMenuFavorite}
+          onOpenEvent={handleOpenMenuEvent}
           currentUser={currentUser}
           allUsers={allUsers}
         />
@@ -2067,6 +2075,8 @@ function App() {
               // Ignore storage errors (e.g. restricted environments)
             }
           }}
+          pendingEventDetailRequest={pendingEventDetailRequest}
+          onPendingEventDetailRequestHandled={() => setPendingEventDetailRequest(null)}
         />
         ) : currentView === 'tagesmenu' ? (
         <Tagesmenu
