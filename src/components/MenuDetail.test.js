@@ -61,11 +61,16 @@ jest.mock('../utils/categoryImages', () => ({
 }));
 
 const mockGetCustomDrinks = jest.fn(() => Promise.resolve([]));
+// CRA's jest config resets mock implementations (including the one passed to
+// jest.fn()) before every test, so these fall back to a no-op unsubscribe
+// whenever a test hasn't set its own mockImplementation.
+const mockSubscribeToEvent = jest.fn();
+const mockSubscribeToCustomDrinks = jest.fn();
 jest.mock('../utils/eventsFirestore', () => ({
   getEvent: jest.fn(() => Promise.resolve(null)),
   getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
-  subscribeToEvent: () => () => {},
-  subscribeToCustomDrinks: () => () => {},
+  subscribeToEvent: (...args) => mockSubscribeToEvent(...args) || (() => {}),
+  subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args) || (() => {}),
 }));
 
 const mockMenu = {
@@ -463,6 +468,48 @@ describe('MenuDetail - Manually added drinks in the Drinks section', () => {
     );
 
     expect(mockGetCustomDrinks).not.toHaveBeenCalled();
+  });
+});
+
+describe('MenuDetail - Event drink linked to a recipe already in the Drinks section', () => {
+  const mojitoRecipe = { id: 'mojito', title: 'Mojito', ingredients: [] };
+
+  const menuWithRecipeAndLinkedEvent = {
+    id: 'menu-event-drinks',
+    name: 'Menü mit Event',
+    eventId: 'event-1',
+    eventOwnerId: 'user-1',
+    sections: [
+      { name: 'Drinks', recipeIds: ['mojito'] },
+    ],
+  };
+
+  test('shows the recipe only once, not also as a separate event drink card', async () => {
+    mockSubscribeToEvent.mockImplementation((ownerId, eventId, cb) => {
+      cb({ customDrinkIds: ['drink-mojito'], berechnung: { ergebnis: [] } });
+      return () => {};
+    });
+    mockSubscribeToCustomDrinks.mockImplementation((ownerId, cb) => {
+      cb([{ id: 'drink-mojito', name: '#recipe:mojito:Mojito' }]);
+      return () => {};
+    });
+
+    render(
+      <MenuDetail
+        menu={menuWithRecipeAndLinkedEvent}
+        recipes={[mojitoRecipe]}
+        onBack={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onSelectRecipe={() => {}}
+        onToggleMenuFavorite={() => Promise.resolve()}
+        currentUser={currentUser}
+        allUsers={[]}
+      />
+    );
+
+    expect(await screen.findAllByText('Mojito')).toHaveLength(1);
+    expect(screen.getByText('Mojito').closest('.drink-card')).toBeNull();
   });
 });
 

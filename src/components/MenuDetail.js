@@ -214,6 +214,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         displayName: display.displayName || drinkId,
         imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
         literMitPuffer: null,
+        recipeId: display.recipeId,
       };
     });
   };
@@ -231,6 +232,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
         displayName: display.displayName || drinkId,
         imageUrl: getDrinkImageUrl(display.recipe) || drinksCategoryImage,
         literMitPuffer: ergebnisRow?.literMitPuffer ?? null,
+        recipeId: display.recipeId,
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -658,10 +660,19 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
         {displaySections.map((section, index) => {
           const isDrinksSection = section.name?.toLowerCase() === DRINKS_SECTION_NAME.toLowerCase();
+          // Drinks (event-linked or manual) that resolve to a recipe already shown
+          // as its own recipe card in this section are hidden here, so the same
+          // recipe doesn't appear twice (once as a recipe card, once as a drink card).
+          const sectionRecipeIds = new Set(section.recipes.map((recipe) => recipe.id));
           const manualDrinks = isDrinksSection ? resolveManualDrinks(section.drinkIds) : [];
-          const eventDrinkIds = new Set(eventDrinks.map((drink) => drink.id));
-          const dedupedManualDrinks = manualDrinks.filter((drink) => !eventDrinkIds.has(drink.id));
-          const sectionDrinks = isDrinksSection ? [...eventDrinks, ...dedupedManualDrinks] : [];
+          const dedupedEventDrinks = isDrinksSection
+            ? eventDrinks.filter((drink) => !drink.recipeId || !sectionRecipeIds.has(drink.recipeId))
+            : [];
+          const eventDrinkIds = new Set(dedupedEventDrinks.map((drink) => drink.id));
+          const dedupedManualDrinks = manualDrinks.filter((drink) =>
+            !eventDrinkIds.has(drink.id) && (!drink.recipeId || !sectionRecipeIds.has(drink.recipeId))
+          );
+          const sectionDrinks = isDrinksSection ? [...dedupedEventDrinks, ...dedupedManualDrinks] : [];
           const isLoadingDrinks = isDrinksSection && linkedEventLoading;
           const hasCards = section.recipes.length > 0 || sectionDrinks.length > 0;
 
@@ -674,7 +685,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                 section.itemOrder,
                 [
                   ...section.recipes.map((recipe) => ({ compositeId: `recipe:${recipe.id}`, type: 'recipe', recipe })),
-                  ...eventDrinks.map((drink) => ({ compositeId: `event:${drink.id}`, type: 'drink', drink })),
+                  ...dedupedEventDrinks.map((drink) => ({ compositeId: `event:${drink.id}`, type: 'drink', drink })),
                   ...dedupedManualDrinks.map((drink) => ({ compositeId: `manual:${drink.id}`, type: 'drink', drink })),
                 ],
                 (card) => card.compositeId
