@@ -40,9 +40,10 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
-  flex-wrap: nowrap;
-  align-items: center;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .favorite-button {
@@ -93,6 +94,15 @@
   transition: all 0.3s ease;
   width: 1.5rem;
   height: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Teilen- bzw. Share-Link-kopieren-Button ist immer rechtsbündig in der Buttonleiste */
+.share-button,
+.share-copy-url-button {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .shopping-list-trigger-button:hover,
@@ -154,6 +164,7 @@
   cursor: pointer;
   transition: background 0.2s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .publish-menu-button:hover {
@@ -170,6 +181,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .menu-edit-button {
