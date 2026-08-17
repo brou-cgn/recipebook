@@ -215,6 +215,10 @@
   flex: 1;
 }
 
+.menu-private-row {
+  margin-bottom: 1rem;
+}
+
 .private-indicator {
   background: #402C1C;
   color: white;
