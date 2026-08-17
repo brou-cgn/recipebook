@@ -764,6 +764,24 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       recipeDrinkIds.forEach((id) => {
         if (id && !combinedIds.includes(id)) combinedIds.push(id);
       });
+
+      // Unless the menu already has it, the predefined Mineralwasser drink is
+      // added here to both the new event and this menu's own "Drinks" section.
+      if (!combinedIds.includes('predefined_mineralwasser')) {
+        combinedIds.push('predefined_mineralwasser');
+        setSections((prevSections) => {
+          const drinksSectionIndex = prevSections.findIndex((s) => s.name?.toLowerCase() === 'drinks');
+          if (drinksSectionIndex === -1) {
+            return [...prevSections, createMenuSection('Drinks', [], ['predefined_mineralwasser'])];
+          }
+          return prevSections.map((s, i) => (
+            i === drinksSectionIndex
+              ? { ...s, drinkIds: [...(s.drinkIds || []), 'predefined_mineralwasser'] }
+              : s
+          ));
+        });
+      }
+
       setNewEventDrinkIds(combinedIds);
       setFormSubView('newEvent');
     } finally {

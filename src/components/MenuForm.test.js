@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import MenuForm from './MenuForm';
 
 const mockSubscribeToCustomDrinks = jest.fn();
@@ -209,7 +209,66 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     await waitFor(() => {
       expect(capturedEventFormProps).not.toBeNull();
     });
-    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-cola']);
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-cola', 'predefined_mineralwasser']);
+  });
+
+  test('adds the predefined Mineralwasser drink to both the new event and the menu\'s Drinks section when missing', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    const drinkInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+    fireEvent.change(drinkInput, { target: { value: 'Cola' } });
+    fireEvent.click(await screen.findByText('Cola'));
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+
+    await waitFor(() => {
+      expect(capturedEventFormProps).not.toBeNull();
+    });
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toContain('predefined_mineralwasser');
+
+    // Also reflected in the menu's own "Drinks" section, not just the event -
+    // back out of the (mocked) EventForm to see the menu's section state.
+    act(() => {
+      capturedEventFormProps.onCancel();
+    });
+    expect(await screen.findAllByText('Mineralwasser')).not.toHaveLength(0);
+  });
+
+  test('does not duplicate the predefined Mineralwasser drink when the menu already has it', async () => {
+    render(
+      <MenuForm
+        menu={null}
+        recipes={recipes}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+        currentUser={currentUser}
+      />
+    );
+
+    fireEvent.click(screen.getByText('+ Abschnitt hinzufügen'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Drinks' }));
+
+    const drinkInput = await screen.findByPlaceholderText('Rezept oder Getränk suchen und hinzufügen...');
+    fireEvent.change(drinkInput, { target: { value: 'Mineralwasser' } });
+    fireEvent.click(await screen.findByText('Mineralwasser'));
+
+    fireEvent.click(screen.getByText('Neue Kalkulation erstellen'));
+
+    await waitFor(() => {
+      expect(capturedEventFormProps).not.toBeNull();
+    });
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['predefined_mineralwasser']);
   });
 
   test('creates a linked drink for a drink recipe without one yet, and carries it over to a new event', async () => {
@@ -243,7 +302,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     await waitFor(() => {
       expect(capturedEventFormProps).not.toBeNull();
     });
-    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-new-mojito']);
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-new-mojito', 'predefined_mineralwasser']);
   });
 
   test('reuses an existing linked drink for a drink recipe instead of creating a duplicate', async () => {
@@ -283,7 +342,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
     await waitFor(() => {
       expect(capturedEventFormProps).not.toBeNull();
     });
-    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-existing-mojito']);
+    expect(capturedEventFormProps.initialEvent.customDrinkIds).toEqual(['drink-existing-mojito', 'predefined_mineralwasser']);
     expect(mockSaveCustomDrink).not.toHaveBeenCalled();
   });
 
