@@ -563,6 +563,34 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               shoppingListIcon
             )}
           </button>
+          {!isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
+            <button
+              className="menu-edit-button"
+              onClick={() => onEdit(menu)}
+              title="Menü bearbeiten"
+            >
+              Bearbeiten
+            </button>
+          )}
+          {!isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
+            <button
+              className="publish-menu-button"
+              onClick={handlePublish}
+              disabled={publishLoading}
+              title="Menü veröffentlichen"
+            >
+              {publishLoading ? '…' : 'Veröffentlichen'}
+            </button>
+          )}
+          {!isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
+            <button
+              className="menu-delete-button"
+              onClick={handleDelete}
+              title="Menü löschen"
+            >
+              Löschen
+            </button>
+          )}
           {canEditMenu(currentUser, menu) && !menu.shareId && (
             <button
               className="share-button"
@@ -601,34 +629,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
                   copyLinkIcon
                 )
               )}
-            </button>
-          )}
-          {!isMobileOrTablet && canEditMenu(currentUser, menu) && onEdit && !showShoppingListModal && !showPortionSelector && (
-            <button
-              className="menu-edit-button"
-              onClick={() => onEdit(menu)}
-              title="Menü bearbeiten"
-            >
-              Bearbeiten
-            </button>
-          )}
-          {!isMobileOrTablet && menu.privat && canEditMenu(currentUser, menu) && onPublish && (
-            <button
-              className="publish-menu-button"
-              onClick={handlePublish}
-              disabled={publishLoading}
-              title="Menü veröffentlichen"
-            >
-              {publishLoading ? '…' : 'Veröffentlichen'}
-            </button>
-          )}
-          {!isMobileOrTablet && canDeleteMenu(currentUser, menu) && onDelete && (
-            <button
-              className="menu-delete-button"
-              onClick={handleDelete}
-              title="Menü löschen"
-            >
-              Löschen
             </button>
           )}
         </div>
