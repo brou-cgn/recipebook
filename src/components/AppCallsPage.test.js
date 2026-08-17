@@ -775,6 +775,65 @@ describe('AppCallsPage – Nährwertberechnungen tab', () => {
     ));
   });
 
+  test('allows searching the full ingredient catalog and selecting a match not among the suggestions', async () => {
+    mockNutritionReferenceState = {
+      rows: [
+        { ingredientID: 'tomate', displayName: 'Tomate', synonyms: ['Tomate'] },
+        { ingredientID: 'zitrone', displayName: 'Zitrone', synonyms: ['Zitrone'] },
+      ],
+      loading: false,
+      reload: jest.fn(),
+      lastUpdatedAt: null,
+    };
+    mockGetIngredientIdSuggestions.mockReturnValue([
+      { ingredientID: 'tomate', displayName: 'Tomate', confidencePercent: 39 },
+    ]);
+    const onUpdateRecipe = jest.fn(() => Promise.resolve());
+
+    render(
+      <AppCallsPage
+        onBack={jest.fn()}
+        currentUser={adminUser}
+        recipes={[
+          {
+            id: 'r1',
+            title: 'Gemüsepfanne',
+            ingredients: [{ type: 'ingredient', text: '1 Bio-Zitrone' }],
+            naehrwerte: { calcPending: false, calcCompletedAt: 1720000000000, calcNotIncluded: [{ ingredient: '1 Bio-Zitrone', error: 'Nicht gefunden' }] },
+          },
+        ]}
+        onUpdateRecipe={onUpdateRecipe}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Nährwertberechnungen'));
+    fireEvent.click(screen.getByRole('button', { name: 'Öffnen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'IDs prüfen' }));
+    expect(await screen.findByRole('dialog', { name: 'ingredientID-Zuordnung' })).toBeInTheDocument();
+
+    expect(screen.getByRole('option', { name: 'Bestehende Zutaten durchsuchen…' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('ingredientID für 1 Bio-Zitrone'), {
+      target: { value: '__ingredient_match_search_existing__' },
+    });
+
+    const searchDialog = await screen.findByRole('dialog', { name: 'Bestehende Zutaten durchsuchen' });
+    fireEvent.change(within(searchDialog).getByLabelText('Zutat suchen'), { target: { value: 'zitro' } });
+    fireEvent.click(within(searchDialog).getByRole('button', { name: /Zitrone/ }));
+
+    expect(screen.queryByRole('dialog', { name: 'Bestehende Zutaten durchsuchen' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('ingredientID für 1 Bio-Zitrone')).toHaveValue('zitrone');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Übernehmen & berechnen' }));
+
+    await waitFor(() => expect(onUpdateRecipe).toHaveBeenCalledWith(
+      'r1',
+      {
+        ingredients: [{ type: 'ingredient', text: '1 Bio-Zitrone', ingredientID: 'zitrone' }],
+      }
+    ));
+  });
+
   test('shows ingredient info panel when info button is clicked', async () => {
     mockNutritionReferenceState = {
       rows: [

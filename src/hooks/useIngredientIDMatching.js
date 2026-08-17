@@ -4,6 +4,7 @@ import { decodeRecipeLink } from '../utils/recipeLinks';
 
 export const INGREDIENT_MATCH_CREATE_NEW_OPTION = '__ingredient_match_create_new__';
 export const INGREDIENT_MATCH_IGNORE_OPTION = '__ingredient_match_ignore__';
+export const INGREDIENT_MATCH_SEARCH_EXISTING_OPTION = '__ingredient_match_search_existing__';
 
 function defaultGetNutritionIngredientSource(recipe) {
   if (!recipe) return { fieldName: 'ingredients', rawIngredients: [] };

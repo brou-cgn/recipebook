@@ -34,6 +34,7 @@ import { isBase64Image } from '../utils/imageUtils';
 import { enableRecipeSharing } from '../utils/recipeFirestore';
 import { useNutritionReference } from '../contexts/NutritionReferenceContext';
 import NutritionModal from './NutritionModal';
+import IngredientIDSelect from './IngredientIDSelect';
 import { db, functions } from '../firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
@@ -2161,30 +2162,14 @@ function AppCallsPage({ onBack, currentUser, recipes = [], onUpdateRecipe, onSel
                         </div>
                       </dl>
                     )}
-                    <select
-                      value={ingredientMatchDialog.selections?.[entry.index] || ''}
-                      onChange={(e) => handleIngredientMatchSelectionChange(entry.index, e.target.value)}
-                      aria-label={`ingredientID für ${entry.ingredient}`}
-                    >
-                      <option value="">Bitte auswählen</option>
-                      {entry.suggestions.map((suggestion) => (
-                        <option key={suggestion.ingredientID} value={suggestion.ingredientID}>
-                          {suggestion.displayName || suggestion.ingredientID} ({suggestion.confidencePercent}%)
-                        </option>
-                      ))}
-                      <option value={INGREDIENT_MATCH_CREATE_NEW_OPTION}>Neue Zutat</option>
-                      <option value={INGREDIENT_MATCH_IGNORE_OPTION}>Zutat ignorieren</option>
-                    </select>
-                    {entry.suggestions.length > 0 && (
-                      <label className="ingredient-match-learn-label">
-                        <input
-                          type="checkbox"
-                          checked={ingredientMatchDialog.learnSynonyms?.[entry.index] !== false}
-                          onChange={(e) => handleIngredientMatchLearnChange(entry.index, e.target.checked)}
-                        />
-                        {' '}Synonym lernen
-                      </label>
-                    )}
+                    <IngredientIDSelect
+                      entry={entry}
+                      value={ingredientMatchDialog.selections?.[entry.index]}
+                      onChange={handleIngredientMatchSelectionChange}
+                      nutritionReferenceRows={nutritionReferenceRows}
+                      learnSynonymChecked={ingredientMatchDialog.learnSynonyms?.[entry.index]}
+                      onLearnSynonymChange={handleIngredientMatchLearnChange}
+                    />
                   </li>
                 );
               })}
