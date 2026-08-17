@@ -637,7 +637,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       <div className="menu-detail-content">
         <div className="menu-title-row">
           <h1 className="menu-title">{menu.name}</h1>
-          {menu.privat && <span className="private-indicator">Privat</span>}
           <button className="close-button" onClick={onBack} title="Schließen">
             {isBase64Image(closeButtonIcon) ? (
               <img src={closeButtonIcon} alt="Schließen" className="close-button-icon-img" />
@@ -646,7 +645,13 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             )}
           </button>
         </div>
-        
+
+        {menu.privat && (
+          <div className="menu-private-row">
+            <span className="private-indicator">Privat</span>
+          </div>
+        )}
+
         {(formattedMenuDate || authorName) && (
           <div className="menu-author-date">
             {authorName && <span className="menu-author"><span className="menu-author-label">Autor:</span> {authorName}</span>}
