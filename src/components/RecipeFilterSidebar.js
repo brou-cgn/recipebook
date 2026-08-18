@@ -179,7 +179,7 @@ function RecipeFilterSidebar({
             title={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
             aria-label={activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
           >
-            {activePrivateListId ? 'Privates Rezept hinzufügen' : 'Rezept hinzufügen'}
+            {activePrivateListId ? '+ Privates Rezept' : '+ Rezept'}
           </button>
         )}
         <button
