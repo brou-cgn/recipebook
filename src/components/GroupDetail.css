@@ -112,6 +112,23 @@
   justify-content: flex-end;
 }
 
+/* Filter/sort/add controls for the recipe tab, kept on their own row below
+   the title so the shopping-list/settings/close buttons in
+   .group-header-actions always stay next to the heading (matching the
+   layout of the Einstellungen tab, which has no toolbar row). */
+.group-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.group-toolbar-row:empty {
+  display: none;
+  margin-bottom: 0;
+}
+
 .group-header-actions .shopping-list-trigger-button {
   background: transparent;
   border: none;
