@@ -286,13 +286,15 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}
+        pufferProzent={pufferProzent}
         recipes={recipes}
         buttonIcons={buttonIcons}
         isDarkMode={isDarkMode}
-        onSave={(newDrinkIds, newDrinkDistributionFactors, newDrinkSelectedEinheiten) => {
+        onSave={(newDrinkIds, newDrinkDistributionFactors, newDrinkSelectedEinheiten, newPufferProzent) => {
           setCustomDrinkIds(newDrinkIds);
           setDrinkDistributionFactors(newDrinkDistributionFactors || {});
           setDrinkSelectedEinheiten(newDrinkSelectedEinheiten || {});
+          setPufferProzent(newPufferProzent);
           setShowDrinkSelection(false);
         }}
         onBack={() => setShowDrinkSelection(false)}
@@ -404,7 +406,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         <div className="events-form-field">
           <span>Eigene Getränke</span>
           {customDrinks.length > 0 ? (
-            <>
+            <div className="events-form-row events-form-row--guests">
               {customDrinkIds.length > 0 ? (
                 <p className="events-info-text">
                   {customDrinkIds.length} {customDrinkIds.length === 1 ? 'Getränk' : 'Getränke'} ausgewählt
@@ -414,12 +416,25 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
               )}
               <button
                 type="button"
-                className="events-secondary-btn"
+                className="events-secondary-btn events-guests-manage-btn"
                 onClick={() => setShowDrinkSelection(true)}
+                aria-label="Getränke verwalten"
+                title="Getränke verwalten"
               >
-                Getränke verwalten
+                {isBase64Image(getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)) ? (
+                  <img
+                    src={getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)}
+                    alt=""
+                    className="button-icon-image"
+                    draggable="false"
+                  />
+                ) : (
+                  <span className="events-guests-manage-btn-icon">
+                    {getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)}
+                  </span>
+                )}
               </button>
-            </>
+            </div>
           ) : (
             <p className="events-info-text">
               Noch keine eigenen Getränke angelegt.
@@ -438,17 +453,6 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
             </p>
           )}
         </div>
-
-        <label className="events-form-field">
-          <span>Puffer (%)</span>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={pufferProzent}
-            onChange={(e) => setPufferProzent(e.target.value)}
-          />
-        </label>
 
         {error && <p className="events-error-text">{error}</p>}
 

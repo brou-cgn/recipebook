@@ -31,14 +31,21 @@ jest.mock('./EventGuestSelectionPage', () => function MockEventGuestSelectionPag
   );
 });
 
-jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPage({ onSave, onBack }) {
+jest.mock('./EventDrinkSelectionPage', () => function MockEventDrinkSelectionPage({ onSave, onBack, pufferProzent }) {
   return (
     <div>
+      <span>Puffer-Weiterleitung: {pufferProzent}</span>
       <button
         type="button"
-        onClick={() => onSave(['custom-wasser'], { 'custom-wasser': 1.4 })}
+        onClick={() => onSave(['custom-wasser'], { 'custom-wasser': 1.4 }, undefined, pufferProzent)}
       >
         Getränke speichern
+      </button>
+      <button
+        type="button"
+        onClick={() => onSave(['custom-wasser'], {}, undefined, 50)}
+      >
+        Getränke mit neuem Puffer speichern
       </button>
       <button type="button" onClick={onBack}>Getränke abbrechen</button>
     </div>
@@ -214,10 +221,18 @@ describe('EventForm', () => {
     expect(screen.queryByRole('button', { name: 'Getränke verwalten' })).not.toBeInTheDocument();
   });
 
-  test('uses 25 percent as default puffer for new events', () => {
+  test('no longer shows the Puffer (%) field on the main event form', () => {
     render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
 
-    expect(screen.getByLabelText('Puffer (%)')).toHaveValue(25);
+    expect(screen.queryByLabelText('Puffer (%)')).not.toBeInTheDocument();
+  });
+
+  test('passes default puffer of 25 percent to the Getränke verwalten sub-page for new events', () => {
+    render(<EventForm onSaved={jest.fn()} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+
+    expect(screen.getByText('Puffer-Weiterleitung: 25')).toBeInTheDocument();
   });
 
   test('shows mobile FAB buttons on the new event page', () => {
@@ -321,7 +336,9 @@ describe('EventForm', () => {
     expect(screen.getByLabelText('Startuhrzeit')).toHaveValue('14:30');
     expect(screen.getByLabelText('Erwachsene')).toHaveValue(8);
     expect(screen.getByLabelText('Kinder')).toHaveValue(2);
-    expect(screen.getByLabelText('Puffer (%)')).toHaveValue(10);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    expect(screen.getByText('Puffer-Weiterleitung: 10')).toBeInTheDocument();
   });
 
   test('passes eventId to calculateEventDrinks when editing', async () => {
@@ -463,6 +480,21 @@ describe('EventForm', () => {
     const [event] = mockCalculateEventDrinks.mock.calls[0];
     expect(event.customDrinkIds).toEqual(['custom-wasser']);
     expect(event.drinkDistributionFactors).toEqual({ 'custom-wasser': 1.4 });
+  });
+
+  test('submits the puffer percent returned from the Getränke verwalten sub-page', async () => {
+    const onSaved = jest.fn();
+    render(<EventForm onSaved={onSaved} onCancel={jest.fn()} currentUser={{ id: 'u1' }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke verwalten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Getränke mit neuem Puffer speichern' }));
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Sommerfest' } });
+    fireEvent.click(getInlineCalculateButton());
+
+    await waitFor(() => expect(mockCalculateEventDrinks).toHaveBeenCalledTimes(1));
+    const [event] = mockCalculateEventDrinks.mock.calls[0];
+    expect(event.pufferProzent).toBe(50);
   });
 
   test('removes a deleted drink from linked menus\' drinkIds on save', async () => {

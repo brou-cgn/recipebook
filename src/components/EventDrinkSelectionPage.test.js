@@ -114,6 +114,7 @@ describe('EventDrinkSelectionPage', () => {
       ['custom-wasser', 'custom-bier'],
       { 'custom-wasser': 1.2 },
       {},
+      25,
     );
   });
 
@@ -245,7 +246,7 @@ describe('EventDrinkSelectionPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier'], {}, {});
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser', 'custom-bier'], {}, {}, 25);
   });
 
   test('uses default factor 1.0 for invalid values', () => {
@@ -266,7 +267,7 @@ describe('EventDrinkSelectionPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {});
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {}, 25);
   });
 
   test('calls onBack when Abbrechen button is clicked', () => {
@@ -403,6 +404,7 @@ describe('EventDrinkSelectionPage', () => {
       ['custom-bier-multi'],
       {},
       { 'custom-bier-multi': [0, 1] },
+      25,
     );
   });
 
@@ -455,5 +457,50 @@ describe('EventDrinkSelectionPage', () => {
 
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(screen.getByText('1,0 l (Flasche)')).toBeInTheDocument();
+  });
+
+  test('shows Puffer (%) field with 25 as default', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={[]}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Puffer (%)')).toHaveValue(25);
+  });
+
+  test('pre-populates Puffer (%) field from pufferProzent prop', () => {
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={[]}
+        pufferProzent={10}
+        onSave={jest.fn()}
+        onBack={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Puffer (%)')).toHaveValue(10);
+  });
+
+  test('passes updated Puffer (%) value to onSave', () => {
+    const onSave = jest.fn();
+    render(
+      <EventDrinkSelectionPage
+        customDrinks={customDrinks}
+        customDrinkIds={['custom-wasser']}
+        pufferProzent={10}
+        onSave={onSave}
+        onBack={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Puffer (%)'), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(onSave).toHaveBeenCalledWith(['custom-wasser'], {}, {}, 30);
   });
 });
