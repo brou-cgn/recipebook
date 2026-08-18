@@ -346,13 +346,20 @@
 
 .events-form-row--guests {
   align-items: flex-end;
+  flex-wrap: nowrap;
+}
+
+.events-form-row--guests .events-form-field {
+  min-width: 0;
 }
 
 .events-guests-manage-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   margin-left: auto;
+  padding: 12px;
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 

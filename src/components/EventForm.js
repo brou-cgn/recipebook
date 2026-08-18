@@ -397,7 +397,6 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
                   {getEffectiveIcon(buttonIcons, 'editRecipe', isDarkMode)}
                 </span>
               )}
-              Gäste verwalten
             </button>
           )}
         </div>
