@@ -179,7 +179,6 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'ratingHeartEmpty', label: 'Bewertung (leer)' },
   { key: 'ratingHeartEmptyModal', label: 'Bewertung Modal (leer)' },
   { key: 'ratingHeartFilled', label: 'Bewertung (gefüllt)' },
-  { key: 'privateListBack', label: 'Private Liste zurück' },
   { key: 'shoppingList', label: 'Einkaufslisten-Button' },
   { key: 'listSettings', label: 'Einstellungen-Button (private Liste)' },
   { key: 'listSettingsActive', label: 'Einstellungen-Button (private Liste geöffnet)' },
