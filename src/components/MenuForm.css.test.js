@@ -39,4 +39,29 @@ describe('MenuForm CSS mobile drag-handle layout', () => {
     expect(fieldRule).toContain('min-width: 150px;');
     expect(dateInputRule).toContain('min-width: 0;');
   });
+
+  test('clips the native date control instead of letting it visually spill onto the photo button', () => {
+    const fieldRule = getRuleBody(css, '.menu-date-row .menu-date-field');
+    const dateInputRule = getRuleBody(css, '.menu-date-row .menu-date-field input[type="date"]');
+
+    // Some browsers (notably iOS Safari) can paint the native date control
+    // wider than its layout box instead of shrinking it, so the field wraps
+    // to the date input's own width but still visually overlaps the photo
+    // button next to it. Clipping the field's overflow, and constraining
+    // the input to its own box, guarantees the button stays uncovered.
+    expect(fieldRule).toContain('overflow: hidden;');
+    expect(dateInputRule).toContain('width: 100%;');
+    expect(dateInputRule).toContain('max-width: 100%;');
+    expect(dateInputRule).toContain('box-sizing: border-box;');
+  });
+
+  test('does not cap the date input width with a stray max-width rule', () => {
+    // A leftover `.form-group input[type="date"] { max-width: 200px; }`
+    // rule (from before the photo button existed) capped the input's width
+    // on narrow viewports while the surrounding flex row was sized for the
+    // full-width layout below, leaving an unexplained gap before the
+    // button. The row's own rules are the single source of truth for the
+    // date input's width now.
+    expect(css).not.toMatch(/\.form-group input\[type="date"\]\s*\{\s*max-width:\s*200px;/);
+  });
 });
