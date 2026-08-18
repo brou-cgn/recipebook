@@ -1306,17 +1306,24 @@
 
 .events-drink-row {
   position: relative;
-  /* No overflow clipping here: the unit typeahead dropdown opens below the
-     input and must be able to spill outside the row's bottom edge. Mixing
-     overflow-x: hidden with overflow-y: visible doesn't work for that,
-     since browsers compute the visible axis as auto once the other axis is
-     non-visible, which re-clips the dropdown anyway. The swipe-to-delete
-     background below has its own matching border-radius instead, so it
-     never needs to be clipped by this container. */
+  /* No overflow clipping here by default: the unit typeahead dropdown opens
+     below the input and must be able to spill outside the row's bottom
+     edge. Mixing overflow-x: hidden with overflow-y: visible doesn't work
+     for that, since browsers compute the visible axis as auto once the
+     other axis is non-visible, which re-clips the dropdown anyway. The
+     swipe-to-delete background below has its own matching border-radius
+     instead, so it never needs to be clipped by this container.
+     While a swipe is active (see .swipe-delete-active below) the dropdown
+     can't be open, so clipping is safe and prevents the sliding content
+     from spilling past the row's left edge over the red background. */
   border-radius: 10px;
   background: white;
   border: 1px solid #e8e8e8;
   box-shadow: none;
+}
+
+.events-drink-row.swipe-delete-active {
+  overflow: hidden;
 }
 
 .events-drink-row-swipe-background {
