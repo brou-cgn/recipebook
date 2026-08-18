@@ -330,9 +330,9 @@
   transition: color 0.2s ease;
 }
 
-.remove-section-button.app-close-button:hover {
-  color: #dc3545;
-  opacity: 1;
+.remove-section-button.app-close-button:hover,
+.remove-section-button.app-close-button:active {
+  opacity: 0.7;
 }
 
 .remove-section-button .button-icon-image {
