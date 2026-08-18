@@ -361,6 +361,9 @@
   padding: 12px;
   flex: 0 0 auto;
   white-space: nowrap;
+  height: 44px;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
 .events-guests-manage-btn .button-icon-image {
