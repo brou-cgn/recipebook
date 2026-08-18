@@ -1,6 +1,31 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import './SortCarousel.css';
 
+// Newton-Raphson solver for a CSS-style cubic-bezier(x1, y1, x2, y2) easing
+// curve, so the scrollLeft reset in collapseNow (below) can move on exactly
+// the same curve as the CSS max-width transition instead of the browser's
+// own (differently-timed) native smooth scroll.
+function cubicBezier(x1, y1, x2, y2) {
+  const a = (a1, a2) => 1.0 - 3.0 * a2 + 3.0 * a1;
+  const b = (a1, a2) => 3.0 * a2 - 6.0 * a1;
+  const c = (a1) => 3.0 * a1;
+
+  const calc = (t, a1, a2) => ((a(a1, a2) * t + b(a1, a2)) * t + c(a1)) * t;
+  const slope = (t, a1, a2) => 3.0 * a(a1, a2) * t * t + 2.0 * b(a1, a2) * t + c(a1);
+
+  const solveT = (x) => {
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const currentSlope = slope(t, x1, x2);
+      if (currentSlope === 0) return t;
+      t -= (calc(t, x1, x2) - x) / currentSlope;
+    }
+    return t;
+  };
+
+  return (x) => calc(solveT(x), y1, y2);
+}
+
 export const SORT_OPTIONS = [
   { id: 'alphabetical', label: 'Alphabetisch' },
   { id: 'trending', label: 'Im Trend' },
@@ -26,6 +51,15 @@ const EXPAND_COLLAPSE_DELAY_MS = 2600;
 // ourselves.
 const IGNORE_SCROLL_MS = 400;
 
+// Must match the `max-width` transition on .sort-carousel-item in
+// SortCarousel.css (duration and curve). The active pill's on-screen
+// position during collapse is the sum of that width transition (which
+// shifts it as shrinking siblings reflow) and the scrollLeft reset below;
+// if the two run on different timings they drift apart mid-collapse and
+// the pill visibly jumps instead of moving smoothly to its resting spot.
+const COLLAPSE_DURATION_MS = 340;
+const collapseEasing = cubicBezier(0.32, 0.72, 0, 1);
+
 // Tap-to-select pill bar with native horizontal scrolling/snapping. Only
 // the active pill is shown until the user swipes (or taps/focuses it),
 // which reveals the rest. Expansion is driven purely by the browser's own
@@ -38,6 +72,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   const collapseTimer = useRef(null);
   const ignoreScrollTimer = useRef(null);
   const ignoreScroll = useRef(false);
+  const scrollAnimFrame = useRef(null);
   // Starts collapsed, showing just the active pill, until the user swipes,
   // taps, or focuses it (see the expand handlers below).
   const [expanded, setExpanded] = useState(false);
@@ -65,27 +100,51 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
     () => () => {
       clearTimeout(collapseTimer.current);
       clearTimeout(ignoreScrollTimer.current);
+      cancelAnimationFrame(scrollAnimFrame.current);
     },
     []
   );
 
-  // Collapsing itself can trigger a spurious scroll event (see
-  // IGNORE_SCROLL_MS above), so every path that collapses the carousel
-  // goes through here rather than calling setExpanded(false) directly.
-  //
   // Once collapsed, only the active pill remains (the rest shrink to
   // max-width: 0), so the container's scroll position always ends up at
   // 0. Left to itself the browser only clamps scrollLeft once the
   // shrinking content can no longer contain it, and that clamp is an
   // instant jump, not part of the width transition — most jarring for a
   // pill that was scrolled deep into the middle (e.g. "Neue Rezepte",
-  // "Nach Bewertung"), since it has the furthest to snap back. Animating
-  // scrollLeft to 0 in step with the collapse avoids that jump.
+  // "Nach Bewertung"), since it has the furthest to snap back.
+  //
+  // Native `scrollTo({ behavior: 'smooth' })` avoids that clamp, but runs
+  // on the browser's own (unrelated) timing and easing, not the pills'
+  // CSS transition — the two drift apart mid-collapse and the active pill
+  // visibly wobbles. Driving scrollLeft by hand on the same duration and
+  // curve as the CSS keeps it moving in lockstep with the shrinking pills
+  // instead.
+  const animateScrollToStart = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    cancelAnimationFrame(scrollAnimFrame.current);
+    const startLeft = el.scrollLeft;
+    if (startLeft === 0) return;
+    const startTime = performance.now();
+
+    const step = (now) => {
+      const progress = Math.min((now - startTime) / COLLAPSE_DURATION_MS, 1);
+      el.scrollLeft = startLeft * (1 - collapseEasing(progress));
+      if (progress < 1) {
+        scrollAnimFrame.current = requestAnimationFrame(step);
+      }
+    };
+    scrollAnimFrame.current = requestAnimationFrame(step);
+  }, []);
+
+  // Collapsing itself can trigger a spurious scroll event (see
+  // IGNORE_SCROLL_MS above), so every path that collapses the carousel
+  // goes through here rather than calling setExpanded(false) directly.
   const collapseNow = useCallback(() => {
     suppressScroll();
-    containerRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
+    animateScrollToStart();
     setExpanded(false);
-  }, [suppressScroll]);
+  }, [suppressScroll, animateScrollToStart]);
 
   const scheduleCollapse = useCallback(
     (delay) => {
