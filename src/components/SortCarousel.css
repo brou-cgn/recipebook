@@ -24,7 +24,11 @@
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
 
-    background: rgba(223, 122, 0, 0.14);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    background: rgba(58, 38, 22, 0.14);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border-radius: 999px;
