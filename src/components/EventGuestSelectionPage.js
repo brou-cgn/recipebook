@@ -92,14 +92,6 @@ function EventGuestSelectionPage({
     <div className="events-page-container">
       <div className="events-page-header">
         <h2>Gäste</h2>
-        <button
-          className="events-close-btn"
-          onClick={onBack}
-          aria-label="Abbrechen"
-          title="Abbrechen"
-        >
-          ×
-        </button>
       </div>
 
       <div className="events-form">

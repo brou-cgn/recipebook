@@ -370,14 +370,6 @@ function EventDrinkSelectionPage({
     <div className="events-page-container events-drink-selection-page">
       <div className="events-page-header">
         <h2>Getränke</h2>
-        <button
-          className="events-close-btn"
-          onClick={onBack}
-          aria-label="Abbrechen"
-          title="Abbrechen"
-        >
-          ×
-        </button>
       </div>
 
       <div className="events-form">
