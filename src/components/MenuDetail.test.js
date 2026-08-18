@@ -121,7 +121,7 @@ describe('MenuDetail - Action Buttons', () => {
     expect(screen.getByTitle('Menü teilen')).toBeInTheDocument();
   });
 
-  test('action-buttons container wraps all buttons except delete', () => {
+  test('action-buttons header contains edit and delete, mobile-action-buttons contains favorite/shopping-list/share', () => {
     const { container } = render(
       <MenuDetail
         menu={mockMenu}
@@ -138,8 +138,13 @@ describe('MenuDetail - Action Buttons', () => {
 
     const actionButtons = container.querySelector('.action-buttons');
     expect(actionButtons).toBeInTheDocument();
-    const buttons = actionButtons.querySelectorAll('button');
-    expect(buttons.length).toBe(5);
+    const headerButtons = actionButtons.querySelectorAll('button');
+    expect(headerButtons.length).toBe(2);
+
+    const belowImageButtons = container.querySelector('.mobile-action-buttons');
+    expect(belowImageButtons).toBeInTheDocument();
+    const quickButtons = belowImageButtons.querySelectorAll('button');
+    expect(quickButtons.length).toBe(3);
   });
 
   test('desktop view does not render floating action buttons', () => {
