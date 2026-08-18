@@ -255,6 +255,7 @@
   flex-direction: column;
   flex-wrap: wrap;
   align-content: flex-start;
+  align-items: flex-start;
   gap: 8px;
   padding: 4px 12px 8px;
   /* Limit to exactly 2 rows; excess pills overflow into a horizontal carousel.
