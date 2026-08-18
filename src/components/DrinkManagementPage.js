@@ -196,7 +196,7 @@ function DrinkRow({ drink, displayName, ownerName, canManage, onEdit, onDelete, 
                   .map((e) => getUnitSizeLabel(e.einheitsgroesse) || String(e.einheitsgroesse))
                   .join(', ')
               : null,
-            !canManage && ownerName ? `von ${ownerName}` : null,
+            ownerName ? `von ${ownerName}` : null,
           ].filter(Boolean).join(' · ')}
         </p>
       </div>
@@ -210,7 +210,9 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [editOwnerId, setEditOwnerId] = useState(null);
   const [isPredefined, setIsPredefined] = useState(false);
+  const isAdmin = currentUser?.isAdmin === true;
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -283,6 +285,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
 
   const openNew = () => {
     setEditId(null);
+    setEditOwnerId(null);
     setIsPredefined(false);
     setForm(emptyForm());
     setError('');
@@ -292,6 +295,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
 
   const openEdit = (drink) => {
     setEditId(drink.id);
+    setEditOwnerId(drink.ownerId || null);
     setIsPredefined(Boolean(drink.predefined));
     setForm({
       name: drink.name || '',
@@ -395,15 +399,16 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
           return einheit;
         }),
       };
+      const targetOwnerId = editId ? (editOwnerId || currentUser.id) : currentUser.id;
       if (isPredefined) {
-        await saveCustomDrink(currentUser.id, {
+        await saveCustomDrink(targetOwnerId, {
           ...payload,
           name: form.name.trim(),
           kategorie: form.kategorie || null,
           predefined: true,
         }, editId || undefined);
       } else {
-        await saveCustomDrink(currentUser.id, payload, editId || undefined);
+        await saveCustomDrink(targetOwnerId, payload, editId || undefined);
       }
       setShowForm(false);
     } catch (err) {
@@ -416,7 +421,7 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
 
   const handleDelete = async (drink) => {
     try {
-      await deleteCustomDrink(currentUser.id, drink.id);
+      await deleteCustomDrink(drink.ownerId || currentUser.id, drink.id);
       const id = deleteBannerCounterRef.current;
       deleteBannerCounterRef.current = (id + 1) % 100000;
       const deletedDisplayName = resolveDrinkDisplay(drink, recipes).displayName;
@@ -746,8 +751,8 @@ function DrinkManagementPage({ onBack, currentUser, recipes }) {
                   key={`${drink.ownerId || ''}_${drink.id}`}
                   drink={drink}
                   displayName={resolveDrinkDisplay(drink, recipes).displayName}
-                  ownerName={getOwnerFirstName(drink.ownerId)}
-                  canManage={drink.predefined || !drink.ownerId || drink.ownerId === currentUser?.id}
+                  ownerName={drink.ownerId && drink.ownerId !== currentUser?.id ? getOwnerFirstName(drink.ownerId) : null}
+                  canManage={drink.predefined || !drink.ownerId || drink.ownerId === currentUser?.id || isAdmin}
                   onEdit={openEdit}
                   onDelete={handleDelete}
                   swipeDeleteIcon={swipeDeleteIcon}

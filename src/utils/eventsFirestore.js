@@ -148,11 +148,12 @@ export const deleteEvent = async (uid, eventId) => {
  * @param {Object} event - Event parameters (eventName, date, durationHours, guests,
  *   season, eventType, categories, pufferProzent)
  * @param {string} [eventId] - ID of an existing event to recalculate
+ * @param {string} [ownerId] - Owner of the event, if different from the caller (admin editing another user's event)
  * @returns {Promise<Object>} { eventId, ...Berechnungsergebnis }
  */
-export const calculateEventDrinks = async (event, eventId) => {
+export const calculateEventDrinks = async (event, eventId, ownerId) => {
   const fn = httpsCallable(functions, 'calculateEventDrinks');
-  const result = await fn({ event, eventId });
+  const result = await fn({ event, eventId, ownerId });
   return result.data;
 };
 
@@ -242,11 +243,12 @@ export const setEventStatus = async (uid, eventId, status) => {
  * @param {Object} gebinde - { kategorie: { eingekauft, uebrig } } in Gebinde-Einheiten
  * @param {string[]} [verbrauchGesperrtKategorien] - Kategorien, die aktuell (auch
  *   client-seitig noch nicht durchgeschrieben) als "Verbrauch gesperrt" gelten
+ * @param {string} [ownerId] - Owner of the event, if different from the caller (admin editing another user's event)
  * @returns {Promise<Object>} { eventId }
  */
-export const submitConsumption = async (eventId, gebinde, verbrauchGesperrtKategorien) => {
+export const submitConsumption = async (eventId, gebinde, verbrauchGesperrtKategorien, ownerId) => {
   const fn = httpsCallable(functions, 'submitConsumption');
-  const result = await fn({ eventId, gebinde, verbrauchGesperrtKategorien });
+  const result = await fn({ eventId, gebinde, verbrauchGesperrtKategorien, ownerId });
   return result.data;
 };
 
@@ -430,14 +432,16 @@ export const subscribeToAllGuestProfiles = (callback) => {
  * @param {string} uid - Current user ID
  * @param {Object} profile - { name, adults, children }
  * @param {string} [profileId] - If provided, update existing profile
+ * @param {string} [ownerId] - Owner of the profile, if different from the caller (admin editing another user's guest)
  * @returns {Promise<string>} The profile ID
  */
-export const saveGuestProfile = async (_uid, profile, profileId) => {
+export const saveGuestProfile = async (_uid, profile, profileId, ownerId) => {
   const fn = httpsCallable(functions, 'manageGuestProfile');
   const result = await fn({
     action: profileId ? 'update' : 'create',
     profileId: profileId || null,
     profile,
+    ownerId,
   });
   return result?.data?.id || profileId;
 };
@@ -446,14 +450,16 @@ export const saveGuestProfile = async (_uid, profile, profileId) => {
  * Delete a guest profile.
  * @param {string} uid - Current user ID
  * @param {string} profileId - ID of the profile to delete
+ * @param {string} [ownerId] - Owner of the profile, if different from the caller (admin deleting another user's guest)
  * @returns {Promise<void>}
  */
-export const deleteGuestProfile = async (_uid, profileId) => {
+export const deleteGuestProfile = async (_uid, profileId, ownerId) => {
   try {
     const fn = httpsCallable(functions, 'manageGuestProfile');
     await fn({
       action: 'delete',
       profileId,
+      ownerId,
     });
   } catch (error) {
     console.error('Error deleting guestProfile:', error);

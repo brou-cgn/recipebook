@@ -62,8 +62,9 @@ const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 const currentHourStartTime = () => `${String(new Date().getHours()).padStart(2, '0')}:00`;
 
-function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, initialEvent, recipes }) {
+function EventForm({ onSaved, onCancel, onDelete, currentUser, ownerId, onManageDrinks, initialEvent, recipes }) {
   const isEditing = Boolean(initialEvent?.id);
+  const effectiveOwnerId = ownerId || currentUser?.id;
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
   const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
@@ -91,8 +92,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   const [showDrinkSelection, setShowDrinkSelection] = useState(false);
 
   useEffect(() => {
-    if (!currentUser?.id) return undefined;
-    const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
+    if (!effectiveOwnerId) return undefined;
+    const unsubGuests = subscribeToGuestProfiles(effectiveOwnerId, setGuests);
     const unsubDrinks = subscribeToAllCustomDrinks((drinks) => {
       setCustomDrinks(drinks);
       // Auto-select only Mineralwasser for new events
@@ -107,7 +108,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
       unsubGuests();
       unsubDrinks();
     };
-  }, [currentUser?.id]);
+  }, [effectiveOwnerId]);
 
   useEffect(() => {
     const loadButtonIcons = async () => {
@@ -134,8 +135,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks, currentUser?.id), driverGuestIds),
-    [selectedGuests, customDrinks, driverGuestIds, currentUser?.id],
+    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks, effectiveOwnerId), driverGuestIds),
+    [selectedGuests, customDrinks, driverGuestIds, effectiveOwnerId],
   );
 
   useEffect(() => {
@@ -162,7 +163,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     setSaving(true);
     setError('');
     try {
-      const allDrinks = mergePredefinedDrinks(customDrinks, currentUser?.id);
+      const allDrinks = mergePredefinedDrinks(customDrinks, effectiveOwnerId);
       const categories = [...new Set(
         customDrinkIds
           .map((drinkId) => allDrinks.find((drink) => drink.id === drinkId)?.kategorie)
@@ -201,7 +202,11 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
         }, {}),
         pufferProzent: Number(pufferProzent),
       };
-      const result = await calculateEventDrinks(event, isEditing ? initialEvent.id : undefined);
+      const result = await calculateEventDrinks(
+        event,
+        isEditing ? initialEvent.id : undefined,
+        effectiveOwnerId !== currentUser?.id ? effectiveOwnerId : undefined,
+      );
 
       // Drinks removed here should disappear from any menu they were also
       // added to, so the menu stays in sync with this event's Getränke.
@@ -217,9 +222,9 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
       const removedRecipeIds = removedDrinkIds
         .map((id) => decodeRecipeLink(allDrinks.find((drink) => drink.id === id)?.name)?.recipeId)
         .filter(Boolean);
-      if (removedDrinkIds.length > 0 && currentUser?.id) {
+      if (removedDrinkIds.length > 0 && effectiveOwnerId) {
         try {
-          const linkedMenus = await getMenusByEventId(currentUser.id, result.eventId);
+          const linkedMenus = await getMenusByEventId(effectiveOwnerId, result.eventId);
           await Promise.all(linkedMenus.map((linkedMenu) => {
             let changed = false;
             const nextSections = (linkedMenu.sections || []).map((section) => {
@@ -261,6 +266,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     return (
       <EventGuestSelectionPage
         currentUser={currentUser}
+        ownerId={effectiveOwnerId}
         selectedGuestIds={selectedGuestIds}
         driverGuestIds={driverGuestIds}
         buttonIcons={buttonIcons}
@@ -284,7 +290,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   if (showDrinkSelection) {
     return (
       <EventDrinkSelectionPage
-        customDrinks={mergePredefinedDrinks(customDrinks, currentUser?.id)}
+        customDrinks={mergePredefinedDrinks(customDrinks, effectiveOwnerId)}
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}

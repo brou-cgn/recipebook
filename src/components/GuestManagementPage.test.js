@@ -346,10 +346,20 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
     });
 
-    test('admin can switch to "Alle Anwender" and sees another user\'s guest without a delete button', async () => {
+    test('admin can switch to "Alle Anwender" and edit/delete another user\'s guest', async () => {
+      window.confirm = jest.fn(() => true);
       mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
         cb([
-          { id: 'g1', vorname: 'Ben', nachname: 'Beispiel', ownerId: 'other-user' },
+          {
+            id: 'g1',
+            vorname: 'Ben',
+            nachname: 'Beispiel',
+            ownerId: 'other-user',
+            alkoholischeGetränke: true,
+            bevorzugteGetränke: [],
+            bevorzugteKategorien: [],
+            präferenzFaktor: 0.5,
+          },
         ]);
         return jest.fn();
       });
@@ -359,7 +369,41 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
 
       expect(await screen.findByText('Ben Beispiel')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Ben Beispiel löschen' })).not.toBeInTheDocument();
+
+      const deleteBtn = screen.getByRole('button', { name: 'Ben Beispiel löschen' });
+      expect(deleteBtn).toBeInTheDocument();
+
+      // Clicking the card opens the edit form for the other user's guest.
+      fireEvent.click(screen.getByText('Ben Beispiel'));
+      expect(screen.getByRole('heading', { level: 2, name: 'Gast bearbeiten' })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Vorname'), { target: { value: 'Benjamin' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+      await waitFor(() => {
+        expect(mockSaveGuestProfile).toHaveBeenCalledWith(
+          adminUser.id,
+          expect.objectContaining({ vorname: 'Benjamin' }),
+          'g1',
+          'other-user',
+        );
+      });
+    });
+
+    test('admin deleting another user\'s guest passes the owner id through', () => {
+      window.confirm = jest.fn(() => true);
+      mockSubscribeToAllGuestProfiles.mockImplementation((cb) => {
+        cb([
+          { id: 'g1', vorname: 'Ben', nachname: 'Beispiel', ownerId: 'other-user' },
+        ]);
+        return jest.fn();
+      });
+
+      render(<GuestManagementPage currentUser={adminUser} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Ben Beispiel löschen' }));
+
+      expect(mockDeleteGuestProfile).toHaveBeenCalledWith(adminUser.id, 'g1', 'other-user');
     });
   });
 });

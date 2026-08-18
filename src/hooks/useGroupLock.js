@@ -8,11 +8,13 @@ import { useState } from 'react';
  * @param {Object} options
  * @param {Object} [options.initialLocked] - Bereits gesperrte Werte { kategorie: wert } aus Firestore
  * @param {Object} [options.currentUser] - Aktueller Nutzer ({ id })
+ * @param {string} [options.ownerId] - Event-Eigentuemer, falls abweichend vom Aufrufer (Admin bearbeitet fremdes Event)
  * @param {string} options.eventId - ID des Events
  * @param {Function} options.lockFn - (uid, eventId, werteByKategorie) => Promise
  * @param {Function} options.unlockFn - (uid, eventId, kategorien) => Promise
  */
-export function useGroupLock({ initialLocked, currentUser, eventId, lockFn, unlockFn }) {
+export function useGroupLock({ initialLocked, currentUser, ownerId, eventId, lockFn, unlockFn }) {
+  const targetUid = ownerId || currentUser?.id;
   const [lockedKategorien, setLockedKategorien] = useState(
     () => new Set(Object.keys(initialLocked || {}))
   );
@@ -34,16 +36,16 @@ export function useGroupLock({ initialLocked, currentUser, eventId, lockFn, unlo
     if (isGroupLocked(group)) {
       kategorienKeys.forEach((kategorie) => next.delete(kategorie));
       setLockedKategorien(next);
-      if (currentUser?.id) {
-        unlockFn(currentUser.id, eventId, kategorienKeys).catch((err) => {
+      if (targetUid) {
+        unlockFn(targetUid, eventId, kategorienKeys).catch((err) => {
           console.error('Error unlocking values:', err);
         });
       }
     } else {
       kategorienKeys.forEach((kategorie) => next.add(kategorie));
       setLockedKategorien(next);
-      if (currentUser?.id) {
-        lockFn(currentUser.id, eventId, buildLockPayload(kategorienKeys)).catch((err) => {
+      if (targetUid) {
+        lockFn(targetUid, eventId, buildLockPayload(kategorienKeys)).catch((err) => {
           console.error('Error locking values:', err);
         });
       }
