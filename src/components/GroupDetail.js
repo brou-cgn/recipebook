@@ -64,7 +64,11 @@ function GroupDetail({
   activeFilters,
   showFavoritesOnly = false,
   showSeasonalOnly = false,
-  onActiveTabChange
+  onActiveTabChange,
+  onAddToPrivateList,
+  onRemoveFromPrivateList,
+  publicGroupId,
+  onMoveRecipeToPublic
 }) {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_RECIPES);
@@ -142,7 +146,7 @@ function GroupDetail({
       if (currentUser?.id) {
         try {
           const favorites = await getUserFavorites(currentUser.id);
-          setFavoriteIds(favorites);
+          setFavoriteIds(Array.isArray(favorites) ? favorites : []);
         } catch {
           setFavoriteIds([]);
         }
@@ -591,6 +595,14 @@ function GroupDetail({
                   recipe={recipe}
                   onClick={() => onSelectRecipe && onSelectRecipe(recipe)}
                   currentUser={currentUser}
+                  isFavorite={favoriteIds.includes(recipe.id)}
+                  favoriteActiveIcon={getEffectiveIcon(allButtonIcons, 'menuFavoritesButtonActive', isDarkMode)}
+                  privateLists={privateLists}
+                  onAddToPrivateList={onAddToPrivateList}
+                  onRemoveFromPrivateList={onRemoveFromPrivateList}
+                  swipeRightIcon={getEffectiveIcon(allButtonIcons, 'recipeCardSwipeRight', isDarkMode)}
+                  publicGroupId={publicGroupId}
+                  onMoveRecipeToPublic={onMoveRecipeToPublic}
                 />
               ))}
             </div>
