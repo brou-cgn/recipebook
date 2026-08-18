@@ -521,6 +521,23 @@
   color: #e8e8e8;
 }
 
+[data-theme="dark"] .recipe-form-header-cancel,
+[data-theme="dark"] .recipe-form-header-save {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .recipe-form-header-cancel:hover {
+  background: #333;
+}
+
+[data-theme="dark"] .recipe-form-header-save:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+  border-color: #402C1C;
+}
+
 [data-theme="dark"] .form-section {
   background: #1e1e1e;
   border-color: #3d3d3d;
@@ -1020,6 +1037,23 @@
 
 [data-theme="dark"] .menu-form-header h2 {
   color: #e8e8e8;
+}
+
+[data-theme="dark"] .menu-form-header-cancel,
+[data-theme="dark"] .menu-form-header-save {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #555;
+}
+
+[data-theme="dark"] .menu-form-header-cancel:hover:not(:disabled) {
+  background: #333;
+}
+
+[data-theme="dark"] .menu-form-header-save:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+  border-color: #402C1C;
 }
 
 [data-theme="dark"] .menu-form .form-group label {

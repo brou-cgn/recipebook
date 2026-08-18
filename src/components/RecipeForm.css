@@ -17,6 +17,72 @@
   font-size: 1.75rem;
 }
 
+.recipe-form-header-actions {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.recipe-form-header-cancel,
+.recipe-form-header-save {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.recipe-form-header-cancel {
+  border: 1px solid #ddd;
+  color: #666;
+}
+
+.recipe-form-header-cancel:hover {
+  background: #f5f5f5;
+}
+
+.recipe-form-header-save {
+  border: 1px solid #402C1C;
+  color: #402C1C;
+}
+
+.recipe-form-header-save:hover:not(:disabled) {
+  background: #402C1C;
+  color: white;
+}
+
+.recipe-form-header-save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Desktop: buttons live in the header instead of floating FABs */
+@media (min-width: 769px) {
+  .recipe-form-header-title {
+    display: none;
+  }
+
+  .recipe-form-header-actions {
+    display: flex;
+  }
+
+  .recipe-form-header {
+    justify-content: flex-end;
+  }
+
+  .cancel-fab-button,
+  .save-fab-button {
+    display: none;
+  }
+}
+
 /* Toolbar row: private list selector + import buttons on one line */
 .recipe-form-toolbar {
   display: flex;

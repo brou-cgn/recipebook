@@ -1280,9 +1280,30 @@ function RecipeForm({ recipe, onSave, onBulkImport, onCancel, currentUser, isCre
   return (
     <div className="recipe-form-container">
       <div className="recipe-form-header">
-        <h2>
+        <h2 className="recipe-form-header-title">
           {isCreatingVersion ? 'Eigene Version erstellen' : (recipe ? 'Rezept bearbeiten' : 'Neues Rezept hinzufügen')}
         </h2>
+        <div className="recipe-form-header-actions">
+          <button
+            type="button"
+            className="recipe-form-header-cancel"
+            onClick={onCancel}
+            title="Abbrechen"
+            aria-label="Rezeptbearbeitung abbrechen"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            className="recipe-form-header-save"
+            onClick={handleFabClick}
+            disabled={isSaving}
+            title={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+            aria-label={recipe ? 'Rezept aktualisieren' : 'Rezept speichern'}
+          >
+            {isSaving ? '…' : (recipe ? 'Aktualisieren' : 'Speichern')}
+          </button>
+        </div>
       </div>
 
       {isCreatingVersion && (
