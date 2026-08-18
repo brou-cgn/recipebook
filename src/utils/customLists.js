@@ -696,7 +696,6 @@ export const DEFAULT_BUTTON_ICONS = {
   closeButtonAlt: '×',
   // Icon shown when the recipe uses the default category image (light mode)
   closeButtonDefaultImg: '×',
-  menuCloseButton: '×',
   filterButton: '⚙',
   filterButtonActive: '▼',
   copyLink: 'Link',
@@ -774,7 +773,6 @@ export const DEFAULT_BUTTON_ICONS = {
   closeButtonAltDark: '',
   // Dark mode variant for the default category image icon
   closeButtonDefaultImgDark: '',
-  menuCloseButtonDark: '',
   filterButtonDark: '',
   filterButtonActiveDark: '',
   copyLinkDark: '',

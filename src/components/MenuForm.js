@@ -1641,7 +1641,7 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
                   recipes={recipes}
                   favoriteIds={favoriteIds}
                   searchQueries={searchQueries}
-                  closeIcon={getEffectiveIcon(buttonIcons, 'menuCloseButton', isDarkMode)}
+                  closeIcon={getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode)}
                   onRemoveSection={handleRemoveSection}
                   onDragEndRecipes={handleDragEndRecipes}
                   onRemoveRecipeFromSection={handleRemoveRecipeFromSection}
