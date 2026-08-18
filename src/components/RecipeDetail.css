@@ -209,6 +209,8 @@
   font-size: 1.5rem;
   color: #333;
   transition: opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .recipe-detail__close:hover {
