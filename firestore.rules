@@ -345,6 +345,25 @@ service cloud.firestore {
                     || isAdmin();
     }
 
+    // Collection-group rules: queries via collectionGroup() (subscribeToAllEvents,
+    // subscribeToAllGuestProfiles, subscribeToAllCustomDrinks/getAllCustomDrinks) are only
+    // authorized by a recursive-wildcard match – the path-specific rules above cover direct
+    // get()/collection reads but do NOT extend to collection-group list requests. Without
+    // these, an admin's "Alle Anwender" view (and everyone's shared custom-drinks library)
+    // briefly shows the locally cached snapshot before the live query is permission-denied,
+    // clearing the list again.
+    match /{path=**}/events/{eventId} {
+      allow read: if isAdmin();
+    }
+
+    match /{path=**}/customDrinks/{drinkId} {
+      allow read: if isAnyUser();
+    }
+
+    match /{path=**}/profiles/{guestId} {
+      allow read: if isAdmin();
+    }
+
     // Cuisine proposals collection - tracks user-proposed cuisine types for admin review
     match /cuisineProposals/{proposalId} {
       // Any authenticated user can read proposals
