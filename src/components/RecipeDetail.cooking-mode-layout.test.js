@@ -66,7 +66,6 @@ jest.mock('../utils/customLists', () => ({
     ratingHeartEmpty: '♡',
     ratingHeartEmptyModal: '♡',
     ratingHeartFilled: '♥',
-    privateListBack: '✕',
     shoppingList: '🛒',
     bringButton: '🛍️',
     timerStart: '⏱',

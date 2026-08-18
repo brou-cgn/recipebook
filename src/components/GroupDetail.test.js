@@ -15,7 +15,6 @@ const mockSortSettings = {
 // Mock customLists utility so it resolves quickly in tests
 jest.mock('../utils/customLists', () => ({
   getButtonIcons: () => Promise.resolve({
-    privateListBack: '←',
     listSettings: '⚙',
     listSettingsActive: '✎',
     editRecipe: '✎',
@@ -26,7 +25,6 @@ jest.mock('../utils/customLists', () => ({
   }),
   getSortSettings: () => Promise.resolve(mockSortSettings),
   DEFAULT_BUTTON_ICONS: {
-    privateListBack: '←',
     listSettings: '⚙',
     listSettingsActive: '✎',
     editRecipe: '✎',
