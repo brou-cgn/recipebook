@@ -1,0 +1,152 @@
+/* Persistent left-hand filter navigation for the menu overview, mirrors
+   RecipeFilterSidebar.css's visual language. Unlike the recipe sidebar this
+   stays visible on narrow viewports (non-sticky, full width) since menus
+   have no separate mobile filter entry point to fall back on. */
+
+.menu-filter-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  width: 280px;
+  flex-shrink: 0;
+  padding: 1.5rem 1.25rem;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border: 1px solid #E6E2DD;
+  border-radius: 16px;
+  align-self: flex-start;
+  position: sticky;
+  top: 1rem;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+.menu-filter-sidebar--collapsed {
+  width: auto;
+  gap: 0;
+  padding: 1rem 0.6rem;
+  align-items: center;
+}
+
+.menu-filter-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.menu-filter-sidebar--collapsed .menu-filter-sidebar-header {
+  justify-content: center;
+}
+
+.menu-filter-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1.5px solid #211F1C;
+  background: white;
+  color: #211F1C;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s ease;
+}
+
+.menu-filter-sidebar-toggle:hover {
+  border-color: #DF7A00;
+}
+
+.menu-filter-sidebar-toggle:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.menu-filter-sidebar-add-button {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  background: white;
+  border: 1.5px solid #211F1C;
+  border-radius: 10px;
+  color: #211F1C;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+}
+
+.menu-filter-sidebar-add-button:hover {
+  background: #211F1C;
+  color: white;
+}
+
+.menu-filter-sidebar-add-button:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+.menu-filter-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.menu-filter-sidebar-quickfilters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.menu-filter-sidebar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid #E6E2DD;
+  background: #F4F2F0;
+  color: #2C2925;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.menu-filter-sidebar-pill--quick {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 11px 18px;
+}
+
+.menu-filter-sidebar-pill:hover {
+  border-color: #DF7A00;
+}
+
+.menu-filter-sidebar-pill.active {
+  background: #DF7A00;
+  color: white;
+  font-weight: 700;
+  border-color: #DF7A00;
+}
+
+.menu-filter-sidebar-pill:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .menu-filter-sidebar {
+    position: static;
+    width: 100%;
+  }
+}
