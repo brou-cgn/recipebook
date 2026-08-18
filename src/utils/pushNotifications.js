@@ -26,7 +26,7 @@ export const registerMessagingServiceWorker = async () => {
   try {
     const registration = await navigator.serviceWorker.register(
       '/firebase-messaging-sw.js',
-      { scope: '/' }
+      { scope: '/firebase-cloud-messaging-push-scope' }
     );
 
     // Give the service worker time to activate, then send the config

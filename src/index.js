@@ -13,14 +13,19 @@ root.render(
   </React.StrictMode>
 );
 
+// Guard against triggering more than one reload: onUpdate can fire again
+// before the pending reload has happened, and controllerchange can also
+// fire for unrelated service worker registrations (e.g. Firebase Messaging).
+let refreshingAfterSwUpdate = false;
+navigator.serviceWorker?.addEventListener('controllerchange', () => {
+  if (refreshingAfterSwUpdate) return;
+  refreshingAfterSwUpdate = true;
+  window.location.reload();
+});
+
 serviceWorkerRegistration.register({
   onUpdate: (registration) => {
     if (registration && registration.waiting) {
-      // Erst auf controllerchange warten, DANN neu laden
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      });
-      // Neuen Service Worker aktivieren
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
     }
   },
