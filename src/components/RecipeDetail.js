@@ -727,6 +727,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     if (!onPublish) return;
     if (window.confirm(`Möchten Sie "${recipe.title}" in der Liste "Öffentlich" veröffentlichen?`)) {
       setPublishLoading(true);
+      setSelectedRecipe(prev => ({ ...prev, publishedToPublic: true }));
       try {
         await onPublish(recipe.id);
       } finally {
