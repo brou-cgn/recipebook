@@ -301,4 +301,37 @@ describe('GuestManagementPage – Bevorzugte Getränke', () => {
     const names = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(names).toEqual(['Anna Adler', 'Zora Adler', 'Bernd Zimmer']);
   });
+
+  test('clicking the delete button on a guest card deletes the guest without opening the edit form', () => {
+    window.confirm = jest.fn(() => true);
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'g1', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
+
+    expect(window.confirm).toHaveBeenCalledWith('Möchtest du "Anna Adler" wirklich löschen?');
+    expect(mockDeleteGuestProfile).toHaveBeenCalledWith('u1', 'g1');
+  });
+
+  test('delete button click does not trigger the edit form to open', () => {
+    window.confirm = jest.fn(() => true);
+    mockSubscribeToGuestProfiles.mockImplementation((_uid, cb) => {
+      cb([
+        { id: 'g1', vorname: 'Anna', nachname: 'Adler', alkoholischeGetränke: true, bevorzugteGetränke: [], bevorzugteKategorien: [], präferenzFaktor: 0.5 },
+      ]);
+      return jest.fn();
+    });
+
+    render(<GuestManagementPage currentUser={currentUser} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anna Adler löschen' }));
+
+    expect(screen.queryByRole('heading', { name: 'Gast bearbeiten' })).not.toBeInTheDocument();
+  });
 });
