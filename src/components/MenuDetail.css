@@ -264,21 +264,27 @@
   flex: 1;
 }
 
-.menu-private-row {
-  margin-bottom: 1rem;
-}
-
-.private-indicator {
-  background: #402C1C;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
+.private-badge-button {
+  width: 48px;
+  height: 48px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  white-space: nowrap;
+  justify-content: center;
+  flex-shrink: 0;
+
+  background: #fff;
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 12px !important;
+
+  line-height: 1;
+  font-size: 1.4rem;
+}
+
+.private-badge-button .button-icon-image {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
 }
 
 .menu-description {
@@ -444,6 +450,11 @@
   }
 
   .favorite-button {
+    width: 48px;
+    flex-shrink: 0;
+  }
+
+  .private-badge-button {
     width: 48px;
     flex-shrink: 0;
   }

@@ -48,6 +48,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
   const [bringButtonIcon, setBringButtonIcon] = useState('Bring');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
+  const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
   const [editMenuIcon, setEditMenuIcon] = useState('Edit');
   const [editFabPressed, setEditFabPressed] = useState(false);
   const [deleteMenuIcon, setDeleteMenuIcon] = useState('🗑');
@@ -101,6 +102,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     setBringButtonIcon(eff('bringButton') || 'Bring');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setPrivateBadgeIcon(eff('privateBadge') || '🔒');
     setEditMenuIcon(eff('editRecipe') || 'Edit');
     setDeleteMenuIcon(eff('deleteRecipe') || '🗑');
     setPublishMenuIcon(eff('publishRecipe') || '↑');
@@ -599,6 +601,15 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
               )
             )}
           </button>
+          {menu.privat && (
+            <div className="private-badge-button" title="Privates Menü" aria-label="Privates Menü">
+              {isBase64Image(privateBadgeIcon) ? (
+                <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+              ) : (
+                privateBadgeIcon
+              )}
+            </div>
+          )}
           <button
             className="shopping-list-trigger-button"
             onClick={handleShoppingListClick}
@@ -664,12 +675,6 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
             )}
           </button>
         </div>
-
-        {menu.privat && (
-          <div className="menu-private-row">
-            <span className="private-indicator">Privat</span>
-          </div>
-        )}
 
         {(formattedMenuDate || authorName) && (
           <div className="menu-author-date">

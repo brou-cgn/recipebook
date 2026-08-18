@@ -200,6 +200,7 @@ const DARK_MODE_ICON_ROWS = [
   { key: 'swipeDelete', label: 'Swipe löschen (Rezeptformular)' },
   { key: 'menuFavoritesButton', label: 'Menü-Favoriten' },
   { key: 'menuFavoritesButtonActive', label: 'Menü-Favoriten (aktiv)' },
+  { key: 'privateBadge', label: 'Privat-Badge (Menü/Rezept)' },
   { key: 'tagesmenuFilterButton', label: 'Tagesmenü-Filter' },
   { key: 'tagesmenuZumTagesMenu', label: 'Zum Tagesmenü' },
   { key: 'tagesmenuMeineAuswahl', label: 'Meine Auswahl' },

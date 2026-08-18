@@ -137,6 +137,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
   const [newVersionIcon, setNewVersionIcon] = useState('Version');
   const [favoritesButtonIcon, setFavoritesButtonIcon] = useState('☆');
   const [favoritesButtonActiveIcon, setFavoritesButtonActiveIcon] = useState('★');
+  const [privateBadgeIcon, setPrivateBadgeIcon] = useState('🔒');
   const [newVersionFabPressed, setNewVersionFabPressed] = useState(false);
   const [publishRecipeIcon, setPublishRecipeIcon] = useState('↑');
   const [publishFabPressed, setPublishFabPressed] = useState(false);
@@ -210,6 +211,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
       setNewVersionIcon(eff('newVersion') || 'Version');
       setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
       setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+      setPrivateBadgeIcon(eff('privateBadge') || '🔒');
       setPublishRecipeIcon(eff('publishRecipe') || '↑');
       setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
       setResetThumbnailIcon(eff('resetThumbnail') || '📷');
@@ -257,6 +259,7 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
     setNewVersionIcon(eff('newVersion') || 'Version');
     setFavoritesButtonIcon(eff('menuFavoritesButton') || '☆');
     setFavoritesButtonActiveIcon(eff('menuFavoritesButtonActive') || '★');
+    setPrivateBadgeIcon(eff('privateBadge') || '🔒');
     setPublishRecipeIcon(eff('publishRecipe') || '↑');
     setDeleteRecipeIcon(eff('deleteRecipe') || '🗑');
     setResetThumbnailIcon(eff('resetThumbnail') || '📷');
@@ -2293,6 +2296,15 @@ function RecipeDetail({ recipe: initialRecipe, onBack, onEdit, onDelete, onPubli
                     )
                   )}
                 </button>
+                )}
+                {recipe.isPrivate && (
+                  <div className="private-badge-button" title="Unveröffentlichtes Rezept" aria-label="Unveröffentlichtes Rezept">
+                    {isBase64Image(privateBadgeIcon) ? (
+                      <img src={privateBadgeIcon} alt="Privat" className="button-icon-image" draggable="false" />
+                    ) : (
+                      privateBadgeIcon
+                    )}
+                  </div>
                 )}
                 <button
                   className="shopping-list-trigger-button"
