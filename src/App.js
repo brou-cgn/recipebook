@@ -1075,6 +1075,9 @@ function App() {
 
     try {
       await updateRecipeInFirestore(recipeId, { publishedToPublic: true, publishedAt: serverTimestamp() });
+      if (selectedRecipe && selectedRecipe.id === recipeId) {
+        setSelectedRecipe({ ...selectedRecipe, publishedToPublic: true });
+      }
     } catch (error) {
       console.error('Error publishing recipe:', error);
       alert('Fehler beim Veröffentlichen des Rezepts. Bitte versuchen Sie es erneut.');
