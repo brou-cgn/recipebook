@@ -6,6 +6,13 @@ const DEBOUNCE_DELAY_MS = 200;
 // a head-start before the keyboard appears, preventing a jarring layout jump.
 const FOCUS_DELAY_MS = 120;
 
+/** Reorders a row's pills so active (selected) ones come first, without changing row membership. */
+function reorderActiveFirst(items, selected) {
+  const active = items.filter((name) => selected.includes(name));
+  const inactive = items.filter((name) => !selected.includes(name));
+  return [...active, ...inactive];
+}
+
 /**
  * Filter overlay for the Tagesmenü page.
  *
@@ -116,12 +123,26 @@ function TagesmenuFilterOverlay({
     onSelectCategory?.(newValue);
   };
 
-  // Active (selected) category pills are shown first
-  const orderedCategoryPills = useMemo(() => {
-    const active = categoryOptions.filter((name) => selectedCategories.includes(name));
-    const inactive = categoryOptions.filter((name) => !selectedCategories.includes(name));
-    return [...active, ...inactive];
-  }, [categoryOptions, selectedCategories]);
+  // Split into two independent rows (first half / second half) so the
+  // two-row carousel doesn't need pills to line up in columns – see
+  // MobileSearchOverlay's splitIntoTwoRows for the same pattern. Row
+  // membership is derived from the stable categoryOptions list (not the
+  // active-first ordering below) so a pill never jumps rows just because it
+  // becomes active, which would force React to unmount/remount it.
+  const [categoryRow1Base, categoryRow2Base] = useMemo(() => {
+    const half = Math.ceil(categoryOptions.length / 2);
+    return [categoryOptions.slice(0, half), categoryOptions.slice(half)];
+  }, [categoryOptions]);
+
+  // Within each row, active (selected) pills are always shown first (leftmost)
+  const categoryPillsRow1 = useMemo(
+    () => reorderActiveFirst(categoryRow1Base, selectedCategories),
+    [categoryRow1Base, selectedCategories]
+  );
+  const categoryPillsRow2 = useMemo(
+    () => reorderActiveFirst(categoryRow2Base, selectedCategories),
+    [categoryRow2Base, selectedCategories]
+  );
 
   const handleClear = () => {
     setSearchTerm('');
@@ -142,16 +163,20 @@ function TagesmenuFilterOverlay({
       <div className="mobile-search-panel" style={{ bottom: panelBottom }}>
         {categoryOptions.length > 0 && (
           <div className="mobile-search-cuisine-grid">
-            {orderedCategoryPills.map((category) => (
-              <button
-                key={category}
-                className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(category) ? ' active' : ''}`}
-                onClick={() => handleCategoryPillClick(category)}
-                aria-pressed={selectedCategories.includes(category)}
-                title={selectedCategories.includes(category) ? 'Filter aufheben' : `Nach ${category} filtern`}
-              >
-                {category}
-              </button>
+            {[categoryPillsRow1, categoryPillsRow2].filter((row) => row.length > 0).map((row, rowIndex) => (
+              <div className="mobile-search-cuisine-row" key={rowIndex}>
+                {row.map((category) => (
+                  <button
+                    key={category}
+                    className={`mobile-search-filter-pill mobile-search-cuisine-pill${selectedCategories.includes(category) ? ' active' : ''}`}
+                    onClick={() => handleCategoryPillClick(category)}
+                    aria-pressed={selectedCategories.includes(category)}
+                    title={selectedCategories.includes(category) ? 'Filter aufheben' : `Nach ${category} filtern`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         )}

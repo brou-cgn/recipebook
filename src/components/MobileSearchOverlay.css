@@ -253,17 +253,8 @@
 .mobile-search-cuisine-grid {
   display: flex;
   flex-direction: column;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: flex-start;
   gap: 8px;
   padding: 4px 12px 8px;
-  /* Limit to exactly 2 rows; excess pills overflow into a horizontal carousel.
-     Pill height = 12 px vertical padding + 3 px border + ~17 px line-height
-                 ≈ 32 px. Two rows + one 8 px gap = 72 px (content area).
-     Because box-sizing: border-box applies globally, the container padding
-     (4 px top + 8 px bottom = 12 px) must be added: 72 + 12 = 84 px. */
-  max-height: 84px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -274,6 +265,16 @@
 
 .mobile-search-cuisine-grid::-webkit-scrollbar {
   display: none;
+}
+
+/* Each row scrolls its own pills independently of the other row, so pills
+   never need to line up in columns – this keeps the gap between pills
+   uniform even when their widths differ. */
+.mobile-search-cuisine-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
 }
 
 /* ─── Autorenkarussell single-row carousel (below cuisine filter) ─────────── */
