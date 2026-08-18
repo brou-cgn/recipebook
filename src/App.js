@@ -1307,6 +1307,9 @@ function App() {
   // Menu handlers
   const handleSelectMenu = (menu) => {
     setSelectedMenu(menu);
+    // Always open the menu detail view at the top, regardless of how far
+    // the menu overview had been scrolled.
+    window.scrollTo(0, 0);
   };
 
   const handleBackToMenuList = () => {
