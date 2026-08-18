@@ -560,6 +560,16 @@
   line-height: 1.4;
 }
 
+.events-form-field input[type="date"],
+.events-form-field input[type="time"] {
+  line-height: normal;
+}
+
+.events-form-field input[type="date"]::-webkit-date-and-time-value,
+.events-form-field input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .events-form-field input:focus,
 .events-form-field select:focus,
 .events-guest-search-input:focus {
