@@ -665,10 +665,6 @@
   .menu-form {
     padding: 1rem;
   }
-  
-  .form-group input[type="date"] {
-    max-width: 200px;
-  }
 }
 
 /* Mobile: Add-section FAB buttons in section gaps */
@@ -745,13 +741,21 @@
 .menu-date-row .menu-date-field {
   flex: 1;
   min-width: 150px;
+  /* Safety net: some browsers (notably iOS Safari) can render the native
+     date control wider than the box its layout size allows, letting it
+     visually spill onto the photo button instead of shrinking to fit.
+     Clipping here guarantees the button never gets covered. */
+  overflow: hidden;
 }
 
 .menu-date-row .menu-date-field input[type="date"] {
   height: 48px;
   padding-top: 0;
   padding-bottom: 0;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .menu-photo-upload-wrap {
