@@ -147,6 +147,16 @@
   border-color: #DF7A00;
 }
 
+/* On desktop the recipe overview's filter sidebar already provides search
+   and filtering, so this heading button would be a redundant second entry
+   point. Scoped to the main recipe overview only (.recipe-overview-main) so
+   other views without the sidebar (e.g. private list detail) keep it. */
+@media (min-width: 901px) {
+  .recipe-overview-main .filter-button {
+    display: none;
+  }
+}
+
 .add-button {
   background: white;
   color: white;

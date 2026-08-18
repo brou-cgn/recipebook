@@ -265,6 +265,14 @@
   align-items: center;
 }
 
+/* On desktop the recipe overview's filter sidebar already provides search,
+   so the header search button would be a redundant second entry point. */
+@media (min-width: 901px) {
+  .search-container {
+    display: none;
+  }
+}
+
 .search-btn {
   background: transparent;
   border: none;
