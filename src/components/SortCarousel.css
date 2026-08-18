@@ -1,7 +1,10 @@
 /* ─── SortCarousel ─────────────────────────────────────────────────────────── */
+/* Material-glass pill bar: a translucent, blurred track that itself
+   shrinks down to a single fitted pill once collapsed (see "Track" below),
+   rather than just hiding its inactive children. Mobile-only: hidden on
+   desktop, visible only at ≤ 480 px, where it takes the place of the
+   recipe overview heading. */
 
-/* Mobile-only: hidden on desktop, visible only at ≤ 480 px, where it takes
-   the place of the recipe overview heading. */
 .sort-carousel {
   display: none;
 }
@@ -10,23 +13,36 @@
   .sort-carousel {
     display: flex;
     align-items: center;
-    /* Break out of the recipe-list-container's 1rem side padding so the
-       carousel spans the full viewport width; the matching horizontal
-       padding below re-creates that 1rem gap for the pill at each end,
-       while pills mid-scroll can bleed all the way to the screen edge. */
-    width: calc(100% + 2rem);
-    margin: 0 -1rem;
+    gap: 2px;
+    padding: 2px;
     min-width: 0;
+    width: fit-content;
+    max-width: 200px;
     overflow-x: auto;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    padding: 0.15rem 1rem;
+
+    background: rgba(223, 122, 0, 0.14);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 0.5px rgba(74, 52, 34, 0.12);
+    transition: max-width 0.34s cubic-bezier(0.32, 0.72, 0, 1), background 0.24s ease,
+      box-shadow 0.24s ease;
   }
 
   .sort-carousel::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Expanded: the track grows to the full row width so all pills fit
+     (or can be swiped through); collapsed, it shrinks back to fit just
+     the active pill via the max-width transition above. */
+  .sort-carousel--expanded {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -35,31 +51,32 @@
 .sort-carousel-item {
   flex: 0 0 auto;
   min-width: 0;
+  box-sizing: border-box;
   scroll-snap-align: center;
 
   appearance: none;
   -webkit-appearance: none;
-  background: white;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 20px;
+  background: transparent;
+  color: rgba(74, 52, 34, 0.62);
+  border: 0.5px solid transparent;
+  border-radius: 999px;
 
-  padding: 0.45rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
-  margin-right: 0.5rem;
+  overflow: hidden;
 
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease,
-    max-width 0.25s ease, opacity 0.2s ease, margin-right 0.25s ease, padding 0.25s ease,
-    border-width 0.25s ease;
+  box-shadow: none;
+  transition: max-width 0.34s cubic-bezier(0.32, 0.72, 0, 1),
+    padding 0.34s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s ease, background 0.24s ease,
+    color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, transform 0.15s ease;
   -webkit-tap-highlight-color: transparent;
-}
-
-.sort-carousel-item:last-child {
-  margin-right: 0;
 }
 
 /* Collapsed (default) state: only the active pill is shown. The other
@@ -69,12 +86,9 @@
    carousel expands. */
 .sort-carousel:not(.sort-carousel--expanded) .sort-carousel-item:not(.sort-carousel-item--active) {
   max-width: 0;
-  margin-right: 0;
   padding-left: 0;
   padding-right: 0;
-  border-width: 0;
   opacity: 0;
-  overflow: hidden;
   pointer-events: none;
 }
 
@@ -87,9 +101,13 @@
 }
 
 .sort-carousel-item--active {
-  background: linear-gradient(135deg, #DF7A00 0%, #c46900 100%);
-  color: white;
-  border-color: #DF7A00;
+  background: rgba(255, 252, 249, 0.72);
+  backdrop-filter: blur(18px) saturate(200%);
+  -webkit-backdrop-filter: blur(18px) saturate(200%);
+  border-color: rgba(255, 240, 228, 0.45);
+  color: #33231a;
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgba(58, 38, 22, 0.16), 0 1px 1px rgba(58, 38, 22, 0.06);
 }
 
 .sort-carousel-item:focus-visible {
