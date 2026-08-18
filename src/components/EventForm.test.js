@@ -4,7 +4,7 @@ import EventForm from './EventForm';
 
 const mockCalculateEventDrinks = jest.fn();
 const mockSubscribeToGuestProfiles = jest.fn();
-const mockSubscribeToCustomDrinks = jest.fn();
+const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockGetMenusByEventId = jest.fn();
 const mockUpdateMenu = jest.fn();
 
@@ -13,7 +13,7 @@ jest.mock('../utils/eventsFirestore', () => ({
   deriveSeason: jest.fn(() => 'sommer'),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
   subscribeToGuestProfiles: (...args) => mockSubscribeToGuestProfiles(...args),
-  subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
 }));
 
 jest.mock('../utils/menuFirestore', () => ({
@@ -82,7 +82,7 @@ describe('EventForm', () => {
       ]);
       return jest.fn();
     });
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([
         { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
         { id: 'custom-bier', name: 'Bier (eigen)', kategorie: 'bier_alkoholfrei' },
@@ -177,7 +177,7 @@ describe('EventForm', () => {
   });
 
   test('shows Getränke verwalten link when no custom drinks and onManageDrinks is provided', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([]);
       return jest.fn();
     });
@@ -212,7 +212,7 @@ describe('EventForm', () => {
   });
 
   test('does not show Getränke verwalten link when onManageDrinks is not provided', () => {
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([]);
       return jest.fn();
     });
@@ -542,7 +542,7 @@ describe('EventForm', () => {
 
   test('removes a deleted drink recipe from linked menus\' recipeIds on save', async () => {
     const onSaved = jest.fn();
-    mockSubscribeToCustomDrinks.mockImplementation((_uid, cb) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((cb) => {
       cb([
         { id: 'custom-wasser', name: 'Wasser (eigen)', kategorie: 'wasser' },
         { id: 'custom-bier-rezept', name: '#recipe:recipe-1:Craft Bier', kategorie: 'bier' },

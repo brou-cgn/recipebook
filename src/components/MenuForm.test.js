@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import MenuForm from './MenuForm';
 
 const mockSubscribeToCustomDrinks = jest.fn();
+const mockSubscribeToAllCustomDrinks = jest.fn();
 const mockSubscribeToEvents = jest.fn();
 const mockSubscribeToEvent = jest.fn();
 const mockSaveCustomDrink = jest.fn();
@@ -52,6 +53,7 @@ jest.mock('../utils/eventsFirestore', () => ({
   subscribeToEvent: (...args) => mockSubscribeToEvent(...args),
   subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args),
+  subscribeToAllCustomDrinks: (...args) => mockSubscribeToAllCustomDrinks(...args),
   saveCustomDrink: (...args) => mockSaveCustomDrink(...args),
   calculateEventDrinks: (...args) => mockCalculateEventDrinks(...args),
 }));
@@ -125,6 +127,10 @@ beforeEach(() => {
   mockSortableContextItemsCalls.length = 0;
   capturedEventFormProps = null;
   mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+    callback(customDrinks);
+    return () => {};
+  });
+  mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
     callback(customDrinks);
     return () => {};
   });
@@ -312,7 +318,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       kategorie: null,
       einheiten: [{ einheitsgroesse: 0.3 }],
     };
-    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
       callback([...customDrinks, existingLinkedDrink]);
       return () => {};
     });
@@ -353,7 +359,7 @@ describe('MenuForm - Drinks section manual drink selection', () => {
       kategorie: null,
       einheiten: [{ einheitsgroesse: 0.3 }],
     };
-    mockSubscribeToCustomDrinks.mockImplementation((uid, callback) => {
+    mockSubscribeToAllCustomDrinks.mockImplementation((callback) => {
       callback([...customDrinks, existingLinkedDrink]);
       return () => {};
     });

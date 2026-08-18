@@ -60,7 +60,7 @@ jest.mock('../utils/categoryImages', () => ({
   getImageForCategory: () => Promise.resolve(null),
 }));
 
-const mockGetCustomDrinks = jest.fn(() => Promise.resolve([]));
+const mockGetAllCustomDrinks = jest.fn(() => Promise.resolve([]));
 // CRA's jest config resets mock implementations (including the one passed to
 // jest.fn()) before every test, so these fall back to a no-op unsubscribe
 // whenever a test hasn't set its own mockImplementation.
@@ -68,7 +68,7 @@ const mockSubscribeToEvent = jest.fn();
 const mockSubscribeToCustomDrinks = jest.fn();
 jest.mock('../utils/eventsFirestore', () => ({
   getEvent: jest.fn(() => Promise.resolve(null)),
-  getCustomDrinks: (...args) => mockGetCustomDrinks(...args),
+  getAllCustomDrinks: (...args) => mockGetAllCustomDrinks(...args),
   subscribeToEvent: (...args) => mockSubscribeToEvent(...args) || (() => {}),
   subscribeToCustomDrinks: (...args) => mockSubscribeToCustomDrinks(...args) || (() => {}),
 }));
@@ -419,7 +419,7 @@ describe('MenuDetail - Metadata before Description', () => {
 
 describe('MenuDetail - Manually added drinks in the Drinks section', () => {
   beforeEach(() => {
-    mockGetCustomDrinks.mockReset();
+    mockGetAllCustomDrinks.mockReset();
   });
 
   const menuWithManualDrinks = {
@@ -432,7 +432,7 @@ describe('MenuDetail - Manually added drinks in the Drinks section', () => {
   };
 
   test('renders a manually added drink as a recipe-style card', async () => {
-    mockGetCustomDrinks.mockResolvedValue([
+    mockGetAllCustomDrinks.mockResolvedValue([
       { id: 'drink-cola', name: 'Cola', kategorie: 'softdrinks', einheiten: [{ einheitsgroesse: 0.5 }] },
     ]);
 
@@ -472,7 +472,7 @@ describe('MenuDetail - Manually added drinks in the Drinks section', () => {
       />
     );
 
-    expect(mockGetCustomDrinks).not.toHaveBeenCalled();
+    expect(mockGetAllCustomDrinks).not.toHaveBeenCalled();
   });
 });
 

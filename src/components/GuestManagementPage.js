@@ -3,11 +3,12 @@ import './EventsPage.css';
 import OverviewAddFab from './OverviewAddFab';
 import {
   subscribeToGuestProfiles,
+  subscribeToAllGuestProfiles,
   saveGuestProfile,
   deleteGuestProfile,
-  subscribeToCustomDrinks,
+  subscribeToAllCustomDrinks,
 } from '../utils/eventsFirestore';
-import { canEditRecipes } from '../utils/userManagement';
+import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { getGuestDisplayName, normalizePreferenceFactor } from '../utils/guestPreferences';
 import { DRINK_CATEGORIES, getDrinkCategoryLabel } from '../utils/drinkCategories';
 import { DEFAULT_BUTTON_ICONS, getButtonIcons, getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
@@ -53,6 +54,32 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   const canManageGuests = canEditRecipes(currentUser);
   const closeIcon = getEffectiveIcon(buttonIcons, 'closeButtonDefaultImg', isDarkMode) || getEffectiveIcon(buttonIcons, 'closeButton', isDarkMode);
 
+  // Admin-only: browse all users' guest profiles instead of just the current user's own.
+  const isAdmin = currentUser?.isAdmin === true;
+  const [showAllGuests, setShowAllGuests] = useState(false);
+  const [allProfiles, setAllProfiles] = useState([]);
+  const [allProfilesLoading, setAllProfilesLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    getUsers().then(setAllUsers).catch(() => setAllUsers([]));
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || !showAllGuests) return undefined;
+    const unsubscribe = subscribeToAllGuestProfiles((loaded) => {
+      setAllProfiles(loaded);
+      setAllProfilesLoading(false);
+    });
+    return unsubscribe;
+  }, [isAdmin, showAllGuests]);
+
+  const getOwnerFirstName = (ownerId) => {
+    if (!ownerId) return null;
+    return allUsers.find((u) => u.id === ownerId)?.vorname || null;
+  };
+
   useEffect(() => {
     const loadIcons = async () => {
       const icons = await getButtonIcons();
@@ -73,7 +100,7 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
       setProfiles(loaded);
       setLoading(false);
     });
-    const unsubscribeDrinks = subscribeToCustomDrinks(currentUser.id, setCustomDrinks);
+    const unsubscribeDrinks = subscribeToAllCustomDrinks(setCustomDrinks);
     return () => {
       unsubscribeProfiles();
       unsubscribeDrinks();
@@ -81,16 +108,26 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
   }, [currentUser?.id]);
 
   const availableDrinks = useMemo(() => {
-    return customDrinks.map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes).displayName || drink.id }));
-  }, [customDrinks, recipes]);
+    // Predefined drinks can be overridden per-owner but share the same fixed
+    // id, so when drinks from multiple owners are present, only keep the
+    // current user's own entry for a given id to avoid duplicate options.
+    const byId = new Map();
+    customDrinks.forEach((drink) => {
+      if (!byId.has(drink.id) || drink.ownerId === currentUser?.id) byId.set(drink.id, drink);
+    });
+    return [...byId.values()].map((drink) => ({ id: drink.id, label: resolveDrinkDisplay(drink, recipes).displayName || drink.id }));
+  }, [customDrinks, recipes, currentUser?.id]);
 
-  const sortedProfiles = useMemo(() => {
-    return [...profiles].sort((a, b) => {
+  const sortByName = (list) => {
+    return [...list].sort((a, b) => {
       const nachnameDiff = (a.nachname || '').localeCompare(b.nachname || '', 'de', { sensitivity: 'base' });
       if (nachnameDiff !== 0) return nachnameDiff;
       return (a.vorname || '').localeCompare(b.vorname || '', 'de', { sensitivity: 'base' });
     });
-  }, [profiles]);
+  };
+
+  const sortedProfiles = useMemo(() => sortByName(profiles), [profiles]);
+  const sortedAllProfiles = useMemo(() => sortByName(allProfiles), [allProfiles]);
 
   const openNew = () => {
     setEditId(null);
@@ -494,7 +531,54 @@ function GuestManagementPage({ onBack, currentUser, recipes }) {
         )}
       </div>
 
-      {loading ? (
+      {isAdmin && (
+        <div className="events-manage-links">
+          <button
+            type="button"
+            className="events-manage-link-btn"
+            aria-pressed={!showAllGuests}
+            onClick={() => setShowAllGuests(false)}
+          >
+            Meine Gäste
+          </button>
+          <button
+            type="button"
+            className="events-manage-link-btn"
+            aria-pressed={showAllGuests}
+            onClick={() => setShowAllGuests(true)}
+          >
+            Alle Anwender
+          </button>
+        </div>
+      )}
+
+      {showAllGuests && isAdmin ? (
+        allProfilesLoading ? (
+          <div className="events-empty-state">Laden...</div>
+        ) : sortedAllProfiles.length === 0 ? (
+          <div className="events-empty-state">
+            <p>Keine Gäste vorhanden.</p>
+          </div>
+        ) : (
+          <div className="events-list">
+            {sortedAllProfiles.map((profile) => {
+              const fullName = getGuestDisplayName(profile);
+              const ownerName = getOwnerFirstName(profile.ownerId);
+              return (
+                <div key={`${profile.ownerId}_${profile.id}`} className="events-card events-guest-card">
+                  <div className="events-card-main">
+                    <h3>{fullName || 'Unbenannter Gast'}</h3>
+                    {profile.kind === true && <p className="events-info-text">Kind</p>}
+                    {ownerName && (
+                      <p className="events-card-meta">von {ownerName}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : loading ? (
         <div className="events-empty-state">Laden...</div>
       ) : profiles.length === 0 ? (
         <div className="events-empty-state">

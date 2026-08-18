@@ -3,11 +3,13 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import EventsPage from './EventsPage';
 
 const mockSubscribeToEvents = jest.fn();
+const mockSubscribeToAllEvents = jest.fn();
 const mockDeleteEvent = jest.fn();
 const mockGetEvent = jest.fn();
 
 jest.mock('../utils/eventsFirestore', () => ({
   subscribeToEvents: (...args) => mockSubscribeToEvents(...args),
+  subscribeToAllEvents: (...args) => mockSubscribeToAllEvents(...args),
   deleteEvent: (...args) => mockDeleteEvent(...args),
   getEvent: (...args) => mockGetEvent(...args),
 }));
@@ -40,6 +42,7 @@ jest.mock('./GuestManagementPage', () => function MockGuestManagementPage() {
 
 jest.mock('../utils/userManagement', () => ({
   canEditRecipes: () => true,
+  getUsers: () => Promise.resolve([]),
 }));
 
 jest.mock('../utils/customLists', () => ({
@@ -65,6 +68,10 @@ describe('EventsPage', () => {
       return jest.fn();
     });
     mockGetEvent.mockResolvedValue(null);
+    mockSubscribeToAllEvents.mockImplementation((cb) => {
+      cb([]);
+      return jest.fn();
+    });
   });
 
   afterAll(() => {
@@ -583,5 +590,44 @@ describe('EventsPage', () => {
 
     expect(screen.getAllByText('Craft Bier')).toHaveLength(2);
     expect(screen.getByText('15,5 l')).toBeInTheDocument();
+  });
+
+  describe('admin cross-user event visibility', () => {
+    const adminUser = { id: 'admin1', isAdmin: true };
+
+    test('non-admins do not see the "Alle Anwender" toggle', () => {
+      render(<EventsPage currentUser={currentUser} />);
+      expect(screen.queryByRole('button', { name: 'Alle Anwender' })).not.toBeInTheDocument();
+    });
+
+    test('admin can switch to "Alle Anwender" and open another user\'s event read-only', async () => {
+      const othersEvent = {
+        id: 'e1',
+        eventName: 'Fremdes Fest',
+        date: '2025-07-01',
+        durationHours: 4,
+        eventType: 'party',
+        status: 'berechnet',
+        guests: { adults: 10, children: 0 },
+        berechnung: { ergebnis: [] },
+        ownerId: 'other-user',
+      };
+      mockSubscribeToAllEvents.mockImplementation((cb) => {
+        cb([othersEvent]);
+        return jest.fn();
+      });
+
+      render(<EventsPage currentUser={adminUser} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Alle Anwender' }));
+      expect(await screen.findByText('Fremdes Fest')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Fremdes Fest'));
+
+      expect(await screen.findByRole('heading', { name: 'Fremdes Fest' })).toBeInTheDocument();
+      // Read-only: no edit affordances for another user's event.
+      expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Event bearbeiten' })).not.toBeInTheDocument();
+    });
   });
 });

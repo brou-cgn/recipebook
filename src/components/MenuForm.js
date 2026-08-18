@@ -8,7 +8,7 @@ import { fileToBase64, compressImage, selectMenuGridImages, buildMenuGridImage, 
 import { uploadMenuGridImage, uploadMenuGridImageDark, deleteMenuGridImage, deleteMenuGridImageDark, isStorageUrl } from '../utils/storageUtils';
 import { DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getButtonIcons } from '../utils/customLists';
 import { getCategoryImages } from '../utils/categoryImages';
-import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
+import { subscribeToEvent, subscribeToEvents, subscribeToCustomDrinks, subscribeToAllCustomDrinks, saveCustomDrink, calculateEventDrinks } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks, getDrinkParentCategoryId, categoryHasOwnBudget } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { encodeRecipeLink, decodeRecipeLink } from '../utils/recipeLinks';
@@ -616,11 +616,14 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
       setUserCustomDrinks([]);
       return undefined;
     }
-    const unsubscribe = subscribeToCustomDrinks(currentUser.id, setUserCustomDrinks);
+    const unsubscribe = subscribeToAllCustomDrinks(setUserCustomDrinks);
     return unsubscribe;
   }, [currentUser?.id]);
 
-  const allDrinks = useMemo(() => mergePredefinedDrinks(userCustomDrinks), [userCustomDrinks]);
+  const allDrinks = useMemo(
+    () => mergePredefinedDrinks(userCustomDrinks, currentUser?.id),
+    [userCustomDrinks, currentUser?.id]
+  );
 
   const getDrinkDisplayName = (drinkId) => {
     const drink = allDrinks.find((d) => d.id === drinkId);

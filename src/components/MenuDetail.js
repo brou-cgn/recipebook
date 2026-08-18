@@ -10,7 +10,7 @@ import { enableMenuSharing, disableMenuSharing } from '../utils/menuFirestore';
 import { scaleIngredient, combineIngredients, convertIngredientUnits, isWaterIngredient } from '../utils/ingredientUtils';
 import { decodeRecipeLink } from '../utils/recipeLinks';
 import { getDarkModePreference, getEffectiveIcon } from '../utils/customLists';
-import { subscribeToEvent, subscribeToCustomDrinks, getCustomDrinks } from '../utils/eventsFirestore';
+import { subscribeToEvent, subscribeToCustomDrinks, getAllCustomDrinks } from '../utils/eventsFirestore';
 import { mergePredefinedDrinks } from '../utils/drinkCategories';
 import { resolveDrinkDisplay } from '../utils/drinkDisplay';
 import { getImageForCategory } from '../utils/categoryImages';
@@ -197,7 +197,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
       return undefined;
     }
     let cancelled = false;
-    getCustomDrinks(currentUser.id).then((drinks) => {
+    getAllCustomDrinks().then((drinks) => {
       if (!cancelled) setManualDrinkCatalog(drinks);
     });
     return () => {
@@ -207,7 +207,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
 
   const resolveManualDrinks = (drinkIds) => {
     if (!Array.isArray(drinkIds) || drinkIds.length === 0) return [];
-    const allDrinks = mergePredefinedDrinks(manualDrinkCatalog);
+    const allDrinks = mergePredefinedDrinks(manualDrinkCatalog, currentUser?.id);
     return drinkIds.map((drinkId) => {
       const drink = allDrinks.find((d) => d.id === drinkId);
       const display = resolveDrinkDisplay(drink || drinkId, recipes);

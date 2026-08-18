@@ -4,7 +4,7 @@ import {
   EVENT_TYPES,
   deriveSeason,
   calculateEventDrinks,
-  subscribeToCustomDrinks,
+  subscribeToAllCustomDrinks,
   subscribeToGuestProfiles,
 } from '../utils/eventsFirestore';
 import { getMenusByEventId, updateMenu } from '../utils/menuFirestore';
@@ -93,7 +93,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   useEffect(() => {
     if (!currentUser?.id) return undefined;
     const unsubGuests = subscribeToGuestProfiles(currentUser.id, setGuests);
-    const unsubDrinks = subscribeToCustomDrinks(currentUser.id, (drinks) => {
+    const unsubDrinks = subscribeToAllCustomDrinks((drinks) => {
       setCustomDrinks(drinks);
       // Auto-select only Mineralwasser for new events
       setCustomDrinkIds((prev) => {
@@ -134,8 +134,8 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   );
 
   const guestPreferenceMultipliers = useMemo(
-    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks), driverGuestIds),
-    [selectedGuests, customDrinks, driverGuestIds],
+    () => computeGuestPreferenceMultipliers(selectedGuests, mergePredefinedDrinks(customDrinks, currentUser?.id), driverGuestIds),
+    [selectedGuests, customDrinks, driverGuestIds, currentUser?.id],
   );
 
   useEffect(() => {
@@ -162,7 +162,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
     setSaving(true);
     setError('');
     try {
-      const allDrinks = mergePredefinedDrinks(customDrinks);
+      const allDrinks = mergePredefinedDrinks(customDrinks, currentUser?.id);
       const categories = [...new Set(
         customDrinkIds
           .map((drinkId) => allDrinks.find((drink) => drink.id === drinkId)?.kategorie)
@@ -284,7 +284,7 @@ function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, i
   if (showDrinkSelection) {
     return (
       <EventDrinkSelectionPage
-        customDrinks={mergePredefinedDrinks(customDrinks)}
+        customDrinks={mergePredefinedDrinks(customDrinks, currentUser?.id)}
         customDrinkIds={customDrinkIds}
         drinkDistributionFactors={drinkDistributionFactors}
         drinkSelectedEinheiten={drinkSelectedEinheiten}

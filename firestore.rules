@@ -174,14 +174,21 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Event drink-calculation planning (Menüpunkt "Events")
+    // Event drink-calculation planning (Menüpunkt "Events").
+    // Admins may additionally read (but not write) any user's events, so they
+    // can see all events across the app.
     match /users/{userId}/events/{eventId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // User-defined custom drinks library (reusable across events)
+    // User-defined custom drinks library (reusable across events).
+    // Readable by any recognised user – drinks are a shared library visible to
+    // everyone – but only the owner may create/update/delete their own entries,
+    // so existing drinks from other users cannot be edited, only newly added.
     match /users/{userId}/customDrinks/{drinkId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAnyUser();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Reusable guest profiles for drink planning
@@ -192,9 +199,10 @@ service cloud.firestore {
 
     // Guest profiles (new data model):
     // /guests/{userId}/profiles/{guestId}
-    // Reads are limited to the owner; writes happen via Cloud Function (Admin SDK).
+    // Reads are limited to the owner, plus admins who may read (but not write)
+    // any user's guest profiles. Writes happen via Cloud Function (Admin SDK).
     match /guests/{userId}/profiles/{guestId} {
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow write: if false;
     }
 
