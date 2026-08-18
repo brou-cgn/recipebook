@@ -501,49 +501,6 @@ function GroupDetail({
           )}
         </div>
         <div className="group-header-actions">
-          {!isPublic && activeTab === TAB_RECIPES && (
-            <button
-              className={`filter-button ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
-              onTouchStart={handleFilterTouchStart}
-              onTouchEnd={handleFilterTouchEnd}
-              onTouchCancel={handleFilterTouchCancel}
-              onClick={handleFilterClick}
-              onMouseDown={() => setFilterPressed(true)}
-              onMouseUp={() => setFilterPressed(false)}
-              onMouseLeave={() => setFilterPressed(false)}
-              title="Weitere Filter"
-              aria-label="Weitere Filter"
-            >
-              {isBase64Image(filterIcon) ? (
-                <img src={filterIcon} alt={hasActiveFilters ? 'Filter aktiv' : 'Filter'} className="button-icon-image" draggable="false" />
-              ) : (
-                filterIcon
-              )}
-            </button>
-          )}
-          {!isPublic && activeTab === TAB_RECIPES && currentUser?.sortCarousel && (
-            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
-          )}
-          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (isPublic || activeTab === TAB_RECIPES) && (
-            <button
-              className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
-              onClick={() => onAddRecipe(group.id)}
-              onTouchStart={() => setAddPressed(true)}
-              onTouchEnd={() => setAddPressed(false)}
-              onTouchCancel={() => setAddPressed(false)}
-              onMouseDown={() => setAddPressed(true)}
-              onMouseUp={() => setAddPressed(false)}
-              onMouseLeave={() => setAddPressed(false)}
-              title={addRecipeLabel}
-              aria-label={addRecipeLabel}
-            >
-              {isBase64Image(addRecipeIcon) ? (
-                <img src={addRecipeIcon} alt={addRecipeLabel} className="button-icon-image" draggable="false" />
-              ) : (
-                addRecipeIcon
-              )}
-            </button>
-          )}
           {groupRecipes.length > 0 && (
             <button
               className="shopping-list-trigger-button"
@@ -581,6 +538,54 @@ function GroupDetail({
           </button>
         </div>
       </div>
+
+      {activeTab === TAB_RECIPES && (
+        <div className="group-toolbar-row">
+          {!isPublic && (
+            <button
+              className={`filter-button ${hasActiveFilters ? 'has-active-filters' : ''} ${filterPressed ? 'pressed' : ''}`}
+              onTouchStart={handleFilterTouchStart}
+              onTouchEnd={handleFilterTouchEnd}
+              onTouchCancel={handleFilterTouchCancel}
+              onClick={handleFilterClick}
+              onMouseDown={() => setFilterPressed(true)}
+              onMouseUp={() => setFilterPressed(false)}
+              onMouseLeave={() => setFilterPressed(false)}
+              title="Weitere Filter"
+              aria-label="Weitere Filter"
+            >
+              {isBase64Image(filterIcon) ? (
+                <img src={filterIcon} alt={hasActiveFilters ? 'Filter aktiv' : 'Filter'} className="button-icon-image" draggable="false" />
+              ) : (
+                filterIcon
+              )}
+            </button>
+          )}
+          {!isPublic && currentUser?.sortCarousel && (
+            <SortCarousel activeSort={activeSort} onSortChange={setActiveSort} />
+          )}
+          {onAddRecipe && (isOwner || isMember) && !showPortionSelector && !showShoppingListModal && (
+            <button
+              className={`add-icon-button ${addPressed ? 'pressed' : ''}`}
+              onClick={() => onAddRecipe(group.id)}
+              onTouchStart={() => setAddPressed(true)}
+              onTouchEnd={() => setAddPressed(false)}
+              onTouchCancel={() => setAddPressed(false)}
+              onMouseDown={() => setAddPressed(true)}
+              onMouseUp={() => setAddPressed(false)}
+              onMouseLeave={() => setAddPressed(false)}
+              title={addRecipeLabel}
+              aria-label={addRecipeLabel}
+            >
+              {isBase64Image(addRecipeIcon) ? (
+                <img src={addRecipeIcon} alt={addRecipeLabel} className="button-icon-image" draggable="false" />
+              ) : (
+                addRecipeIcon
+              )}
+            </button>
+          )}
+        </div>
+      )}
 
       {(isPublic || activeTab === TAB_RECIPES) && (
         <div className="group-detail-section group-recipes-section">
