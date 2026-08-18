@@ -2180,6 +2180,10 @@ function App() {
             showFavoritesOnly={showFavoritesOnly}
             showSeasonalOnly={showSeasonalOnly}
             onActiveTabChange={(tab) => setIsPrivateListSettingsTabOpen(tab === 'einstellungen')}
+            onAddToPrivateList={handleAddRecipeToPrivateList}
+            onRemoveFromPrivateList={handleRemoveRecipeFromPrivateList}
+            publicGroupId={publicGroupId}
+            onMoveRecipeToPublic={handleMoveRecipeToPublic}
           />
         ) : (
           <GroupList
