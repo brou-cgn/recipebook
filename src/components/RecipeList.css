@@ -8,6 +8,35 @@
   padding: 1rem;
 }
 
+.recipe-overview-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 1rem 1rem 0;
+}
+
+.recipe-overview-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-overview-main .recipe-list-container {
+  padding: 0 0 1rem;
+}
+
+@media (max-width: 900px) {
+  .recipe-overview-layout {
+    display: block;
+    padding: 0;
+  }
+
+  .recipe-overview-main .recipe-list-container {
+    padding: 1rem;
+  }
+}
+
 
 /* =========================================================
    2. Header Layout
