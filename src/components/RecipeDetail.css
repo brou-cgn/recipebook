@@ -296,11 +296,25 @@
   flex-shrink: 0;
 
   background: #fff;
-  border: 1px solid #f0f0f0 !important;
+  border: 1px solid #DF7A00 !important;
   border-radius: 12px !important;
 
   line-height: 1;
   font-size: 1.4rem;
+}
+
+button.private-badge-button {
+  cursor: pointer;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+}
+
+button.private-badge-button:active {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  opacity: 0.2;
 }
 
 .private-badge-button .button-icon-image {
