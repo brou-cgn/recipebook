@@ -311,6 +311,7 @@ function MenuDetail({ menu: initialMenu, recipes, onBack, onEdit, onDelete, onPu
     if (!onPublish) return;
     if (window.confirm(`Möchten Sie "${menu.name}" in der Liste "Öffentlich" veröffentlichen?`)) {
       setPublishLoading(true);
+      setMenu(prev => ({ ...prev, privat: false }));
       try {
         await onPublish(menu.id);
       } finally {
