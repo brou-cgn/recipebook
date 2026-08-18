@@ -317,23 +317,22 @@
   border-color: #402C1C;
 }
 
-.remove-section-button {
-  background: transparent;
-  border: none;
+/* Shares base look/touch behavior with .app-close-button (App.css); these
+   overrides keep its distinct compact size and red hover tint, and win on
+   specificity regardless of CSS file order. */
+.remove-section-button.app-close-button {
   color: #999;
   font-size: 1.2rem;
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.2s ease;
+  margin-left: 0;
   padding: 0;
+  transition: color 0.2s ease;
 }
 
-.remove-section-button:hover {
+.remove-section-button.app-close-button:hover {
   color: #dc3545;
+  opacity: 1;
 }
 
 .remove-section-button .button-icon-image {
