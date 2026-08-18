@@ -195,6 +195,16 @@ function matchesCuisineFilter(recipe, selectedCuisines, cuisineGroups) {
   return expanded.includes(recipe.kulinarik);
 }
 
+// Helper function to check if a recipe matches the Speisekategorie filter
+// selected via the Search Overlay's meal category pills.
+function matchesMealCategoryFilter(recipe, selectedCategories) {
+  if (!selectedCategories || selectedCategories.length === 0) return true;
+  if (Array.isArray(recipe.speisekategorie)) {
+    return selectedCategories.some(c => recipe.speisekategorie.includes(c));
+  }
+  return selectedCategories.includes(recipe.speisekategorie);
+}
+
 // Helper function to check if a recipe matches the author filter
 function matchesAuthorFilter(recipe, selectedAuthors) {
   if (!selectedAuthors || selectedAuthors.length === 0) return true;
@@ -351,12 +361,14 @@ function App() {
   const [showSeasonalOnly, setShowSeasonalOnly] = useState(false);
   const [cuisineGroups, setCuisineGroups] = useState([]);
   const [cuisineTypes, setCuisineTypes] = useState([]);
+  const [mealCategories, setMealCategories] = useState([]);
   const [seasonMatrixEntries, setSeasonMatrixEntries] = useState([]);
   const [nutritionReferenceRows, setNutritionReferenceRows] = useState([]);
   const [cookDatesMap, setCookDatesMap] = useState(new Map());
   const [recipeFilters, setRecipeFilters] = useState({
     showDrafts: 'all',
     selectedCuisines: [],
+    selectedCategories: [],
     selectedAuthors: [],
     selectedPrivateLists: [],
     selectedGroup: ''
@@ -507,6 +519,7 @@ function App() {
 
     return selectedGroupUnfilteredRecipes.filter((recipe) =>
       matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
+      matchesMealCategoryFilter(recipe, recipeFilters.selectedCategories) &&
       matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
       matchesSeasonalFilter(recipe, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows) &&
       (
@@ -514,7 +527,7 @@ function App() {
         matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups)
       )
     );
-  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows]);
+  }, [selectedGroupUnfilteredRecipes, selectedGroup, recipeFilters.selectedCuisines, recipeFilters.selectedCategories, recipeFilters.selectedAuthors, recipeFilters.selectedPrivateLists, cuisineGroups, groups, showSeasonalOnly, seasonMatrixEntries, nutritionReferenceRows]);
 
   // Detect share URL: #share/:shareId or /share/:shareId (pathname)
   const getShareIdFromHash = () => {
@@ -704,9 +717,11 @@ function App() {
     getCustomLists().then(lists => {
       setCuisineGroups(lists.cuisineGroups || []);
       setCuisineTypes(lists.cuisineTypes || []);
+      setMealCategories(lists.mealCategories || []);
     }).catch(() => {
       setCuisineGroups([]);
       setCuisineTypes([]);
+      setMealCategories([]);
     });
   }, []);
 
@@ -1262,6 +1277,7 @@ function App() {
     setRecipeFilters({
       showDrafts: 'all',
       selectedCuisines: [],
+      selectedCategories: [],
       selectedAuthors: [],
       selectedPrivateLists: [],
       selectedGroup: groupId || ''
@@ -1273,6 +1289,7 @@ function App() {
     setRecipeFilters({
       showDrafts: 'all',
       selectedCuisines: [],
+      selectedCategories: [],
       selectedAuthors: [],
       selectedPrivateLists: [],
       selectedGroup: ''
@@ -1759,6 +1776,7 @@ function App() {
     setRecipeFilters({
       showDrafts: 'all',
       selectedCuisines: [],
+      selectedCategories: [],
       selectedAuthors: [],
       selectedPrivateLists: [],
       selectedGroup: ''
@@ -1774,6 +1792,10 @@ function App() {
 
   const handleCuisineFilterChangeFromSearch = (newSelectedCuisines) => {
     setRecipeFilters(prev => ({ ...prev, selectedCuisines: newSelectedCuisines }));
+  };
+
+  const handleMealCategoryFilterChangeFromSearch = (newSelectedCategories) => {
+    setRecipeFilters(prev => ({ ...prev, selectedCategories: newSelectedCategories }));
   };
 
   const handleAuthorFilterChangeFromSearch = (newSelectedAuthors) => {
@@ -1825,6 +1847,21 @@ function App() {
 
     return cuisineTypes.filter((type) => availableTypes.has(type));
   }, [isPrivateListSearchContext, cuisineTypes, overlayRecipes]);
+  const overlayMealCategories = useMemo(() => {
+    if (!isPrivateListSearchContext) return mealCategories;
+
+    const availableCategories = new Set();
+    overlayRecipes.forEach((recipe) => {
+      const speisekategorie = Array.isArray(recipe.speisekategorie)
+        ? recipe.speisekategorie
+        : recipe.speisekategorie
+          ? [recipe.speisekategorie]
+          : [];
+      speisekategorie.forEach((category) => availableCategories.add(category));
+    });
+
+    return mealCategories.filter((category) => availableCategories.has(category));
+  }, [isPrivateListSearchContext, mealCategories, overlayRecipes]);
   const overlayCuisineGroups = useMemo(() => {
     if (!isPrivateListSearchContext) return cuisineGroups;
 
@@ -2171,9 +2208,10 @@ function App() {
         <>
           <RecipeList
             recipes={(isSeasonalRecipesView ? seasonalTaggedRecipes : recipes).filter(recipe => 
-              matchesCategoryFilter(recipe, categoryFilter) && 
+              matchesCategoryFilter(recipe, categoryFilter) &&
               matchesDraftFilter(recipe, recipeFilters.showDrafts) &&
               matchesCuisineFilter(recipe, recipeFilters.selectedCuisines, cuisineGroups) &&
+              matchesMealCategoryFilter(recipe, recipeFilters.selectedCategories) &&
               matchesAuthorFilter(recipe, recipeFilters.selectedAuthors) &&
               matchesGroupFilter(recipe, recipeFilters.selectedGroup, groups) &&
               matchesPrivateListsFilter(recipe, recipeFilters.selectedPrivateLists, groups) &&
@@ -2242,6 +2280,9 @@ function App() {
           cuisineGroups={overlayCuisineGroups}
           onCuisineFilterChange={handleCuisineFilterChangeFromSearch}
           selectedCuisines={recipeFilters.selectedCuisines}
+          mealCategories={overlayMealCategories}
+          onMealCategoryFilterChange={handleMealCategoryFilterChangeFromSearch}
+          selectedCategories={recipeFilters.selectedCategories}
           availableAuthors={overlayAvailableAuthors}
           onAuthorFilterChange={handleAuthorFilterChangeFromSearch}
           selectedAuthors={recipeFilters.selectedAuthors}

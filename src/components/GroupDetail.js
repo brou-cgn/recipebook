@@ -256,6 +256,7 @@ function GroupDetail({
   const hasActiveFilters = !!(searchTerm?.trim() || showFavoritesOnly || showSeasonalOnly || (activeFilters && (
     hasSelectedGroup ||
     activeFilters.selectedCuisines?.length > 0 ||
+    activeFilters.selectedCategories?.length > 0 ||
     activeFilters.selectedAuthors?.length > 0
   )));
 
