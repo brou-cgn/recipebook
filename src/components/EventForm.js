@@ -60,12 +60,14 @@ const normalizeDistributionFactor = (value) => {
 
 const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
+const currentHourStartTime = () => `${String(new Date().getHours()).padStart(2, '0')}:00`;
+
 function EventForm({ onSaved, onCancel, onDelete, currentUser, onManageDrinks, initialEvent, recipes }) {
   const isEditing = Boolean(initialEvent?.id);
 
   const [eventName, setEventName] = useState(initialEvent?.eventName ?? '');
   const [date, setDate] = useState(initialEvent?.date ?? todayIsoDate());
-  const [startTime, setStartTime] = useState(initialEvent?.startTime ?? '');
+  const [startTime, setStartTime] = useState(initialEvent?.startTime ?? currentHourStartTime());
   const [durationHours, setDurationHours] = useState(initialEvent?.durationHours ?? 4);
   const [adults, setAdults] = useState(initialEvent?.guests?.adults ?? 10);
   const [children, setChildren] = useState(initialEvent?.guests?.children ?? 0);
