@@ -1397,7 +1397,29 @@ function MenuForm({ menu, recipes, onSave, onCancel, currentUser }) {
   return (
     <div className="menu-form-container">
       <div className="menu-form-header">
-        <h2>{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
+        <h2 className="menu-form-header-title">{menu ? 'Menü bearbeiten' : 'Neues Menü erstellen'}</h2>
+        <div className="menu-form-header-actions">
+          <button
+            type="button"
+            className="menu-form-header-cancel"
+            onClick={onCancel}
+            disabled={savingMenu}
+            title="Abbrechen"
+            aria-label="Menübearbeitung abbrechen"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            className="menu-form-header-save"
+            onClick={handleFabClick}
+            disabled={savingMenu}
+            title={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+            aria-label={menu ? 'Menü aktualisieren' : 'Menü speichern'}
+          >
+            {savingMenu ? '…' : (menu ? 'Aktualisieren' : 'Speichern')}
+          </button>
+        </div>
       </div>
 
       <form ref={formRef} className="menu-form" onSubmit={handleSubmit}>
