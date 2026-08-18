@@ -3,7 +3,7 @@ import './RecipeList.css';
 import { canEditRecipes, getUsers } from '../utils/userManagement';
 import { groupRecipesByParent, sortRecipeVersions } from '../utils/recipeVersioning';
 import { getUserFavorites } from '../utils/userFavorites';
-import { getCustomLists, getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
+import { getButtonIcons, DEFAULT_BUTTON_ICONS, getEffectiveIcon, getDarkModePreference, getSortSettings, DEFAULT_TRENDING_DAYS, DEFAULT_TRENDING_MIN_VIEWS, DEFAULT_NEW_RECIPE_DAYS, DEFAULT_RATING_MIN_VOTES } from '../utils/customLists';
 import { isBase64Image } from '../utils/imageUtils';
 import SortCarousel from './SortCarousel';
 import { getRecentRecipeCalls } from '../utils/recipeCallsFirestore';
@@ -128,7 +128,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
   const handleSortChange = useCallback((sort) => setActiveSort(sort), []);
   const [allUsers, setAllUsers] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
-  const [customLists, setCustomLists] = useState({ mealCategories: [] });
   const [buttonIcons, setButtonIcons] = useState({ ...DEFAULT_BUTTON_ICONS });
   const [isDarkMode, setIsDarkMode] = useState(getDarkModePreference);
   const [sortSettings, setSortSettings] = useState(null);
@@ -167,21 +166,6 @@ function RecipeList({ recipes, onSelectRecipe, onAddRecipe, categoryFilter, curr
       setAllUsers(users);
     };
     loadUsers();
-  }, []);
-
-  // Load custom lists (meal categories) on mount
-  useEffect(() => {
-    const loadCustomLists = async () => {
-      try {
-        const lists = await getCustomLists();
-        setCustomLists(lists);
-      } catch (error) {
-        console.error('Error loading custom lists:', error);
-        // Set to empty on error, component will still work
-        setCustomLists({ mealCategories: [] });
-      }
-    };
-    loadCustomLists();
   }, []);
 
   // Load sort settings on mount

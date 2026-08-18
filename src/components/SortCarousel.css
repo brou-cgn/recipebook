@@ -11,14 +11,19 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    max-width: 100%;
+    /* Break out of the recipe-list-container's 1rem side padding so the
+       carousel spans the full viewport width; the matching horizontal
+       padding below re-creates that 1rem gap for the pill at each end,
+       while pills mid-scroll can bleed all the way to the screen edge. */
+    width: calc(100% + 2rem);
+    margin: 0 -1rem;
     min-width: 0;
     overflow-x: auto;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    padding: 0.15rem 0.05rem;
+    padding: 0.15rem 1rem;
   }
 
   .sort-carousel::-webkit-scrollbar {
