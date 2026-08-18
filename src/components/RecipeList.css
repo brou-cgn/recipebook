@@ -63,39 +63,6 @@
    3. Header Controls / Buttons
    ========================================================= */
 
-.category-filter-arrow {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 12px 12px;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  margin-left: 6px;
-  padding: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
-  color: transparent;
-  font-size: 1px;
-  transition: all 0.3s ease;
-}
-
-.category-filter-arrow option {
-  background: white;
-  color: #333;
-  font-size: 1rem;
-}
-
-.category-filter-arrow:focus,
-.category-filter-arrow:focus-visible {
-  outline: none;
-}
-
 .view-mode-button {
   background: white;
   color: #1A1A1A;
