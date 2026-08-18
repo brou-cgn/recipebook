@@ -37,6 +37,7 @@ const IGNORE_SCROLL_MS = 400;
 // unlike the previous long-press + drag gesture carousel, whose
 // reimplemented touch physics reacted unpredictably.
 function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
+  const containerRef = useRef(null);
   const itemRefs = useRef([]);
   const collapseTimer = useRef(null);
   const ignoreScrollTimer = useRef(null);
@@ -75,8 +76,18 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
   // Collapsing itself can trigger a spurious scroll event (see
   // IGNORE_SCROLL_MS above), so every path that collapses the carousel
   // goes through here rather than calling setExpanded(false) directly.
+  //
+  // Once collapsed, only the active pill remains (the rest shrink to
+  // max-width: 0), so the container's scroll position always ends up at
+  // 0. Left to itself the browser only clamps scrollLeft once the
+  // shrinking content can no longer contain it, and that clamp is an
+  // instant jump, not part of the width transition — most jarring for a
+  // pill that was scrolled deep into the middle (e.g. "Neue Rezepte",
+  // "Nach Bewertung"), since it has the furthest to snap back. Animating
+  // scrollLeft to 0 in step with the collapse avoids that jump.
   const collapseNow = useCallback(() => {
     suppressScroll();
+    containerRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
     setExpanded(false);
   }, [suppressScroll]);
 
@@ -154,6 +165,7 @@ function SortCarousel({ activeSort = 'alphabetical', onSortChange }) {
 
   return (
     <div
+      ref={containerRef}
       className={`sort-carousel${expanded ? ' sort-carousel--expanded' : ''}`}
       role="tablist"
       aria-label="Sortierung"
