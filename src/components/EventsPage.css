@@ -1348,11 +1348,14 @@
 }
 
 .events-drink-row-swipe-action {
+  -webkit-appearance: none;
+  appearance: none;
   border: none;
   background: transparent;
   color: inherit;
   width: 2.5rem;
   height: 100%;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1364,6 +1367,8 @@
   position: relative;
   z-index: 1;
   padding: 16px;
+  background: white;
+  border-radius: 10px;
 }
 
 .events-drink-row-name {
